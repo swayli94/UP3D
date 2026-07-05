@@ -7,7 +7,7 @@ name = "pyfp3d"
 version = "0.0.1"
 description = "3D Unstructured-mesh Full-Potential Transonic Flow Solver"
 authors = [
-    {name = "swayli94", email = "swayli94@github"},
+    {name = "swayli94", email = "swayli94@users.noreply.github.com"},
 ]
 readme = "README.md"
 license = {text = "MIT"}

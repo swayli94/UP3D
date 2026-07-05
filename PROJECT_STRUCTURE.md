@@ -63,18 +63,23 @@ setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
 
 ### ✓ Complete (P0)
 - **pyfp3d/physics/isentropic.py** — All physics scalars, numba-jitted
+- **pyfp3d/mesh/reader.py** — Mesh I/O (meshio → SoA), mesh validation
+- **pyfp3d/mesh/metrics.py** — Geometry: volumes, gradients, face adjacency (Numba)
+- **pyfp3d/mesh/coloring.py** — Element graph coloring for @prange
+- **pyfp3d/post/vtk_out.py** — VTK writer (point fields)
 - **tests/conftest.py** — Pytest fixtures
-- **tests/test_v0_freestream.py** — Smoke tests + regression baseline
+- **tests/test_v0_freestream.py** — Smoke tests + regression baseline ✓
+- **tests/test_mesh_volume.py** — Gate G0.1 (volume conservation) ✓
+- **tests/test_mesh_gradient.py** — Gate G0.2 (gradient recovery) ✓
+- **tests/test_mesh_coloring.py** — Gate G0.3 (element coloring) ✓
+- **tests/test_io_vtk.py** — Gate G0.4 (VTK round-trip) ✓
 - **pyproject.toml** — Build metadata and dependencies
 - **.copilot-instructions.md** — AI agent instructions for P0–P5
 
-### ⏳ Not Yet (P0)
-- `pyfp3d/mesh/reader.py` — Mesh I/O (meshio)
-- `pyfp3d/mesh/metrics.py` — Geometry: volumes, gradients, face adjacency
-- `pyfp3d/mesh/coloring.py` — Element graph coloring for @prange
-- `pyfp3d/post/vtk_out.py` — VTK writer
-- `tests/test_mesh_*.py` — Gates G0.1–G0.4
-- `cases/meshes/naca0012_2.5d/*` — Gmsh-generated mesh family
+### ⏳ Next (P0→M0 → P1)
+- Generate NACA0012 mesh family (M0 gate)
+- Create P1 residual assembly (Laplace)
+- Create P1 linear solver (CG + PyAMG)
 
 ## Quick Start
 

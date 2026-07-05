@@ -6,4 +6,6 @@
 Reference: design.md §7 (Architecture)
 """
 
-__all__ = []
+from . import vtk_out
+
+__all__ = ["vtk_out"]
