@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyfp3d"
+version = "0.0.1"
+description = "3D Unstructured-mesh Full-Potential Transonic Flow Solver"
+authors = [
+    {name = "swayli94", email = "swayli94@github"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+keywords = ["CFD", "aerodynamics", "full-potential", "transonic", "unstructured mesh"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.10",
+    "numba>=0.56",
+    "meshio>=5.3",
+    "pyamg>=4.2",
+    "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+viz = [
+    "pyvista>=0.37",
+    "vtk>=9.2",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+all = ["pyfp3d[viz,dev]"]
+
+[project.urls]
+Repository = "https://github.com/swayli94/UP3D"
+Documentation = "https://github.com/swayli94/UP3D/tree/main/docs"
+
+[tool.setuptools]
+packages = ["pyfp3d"]
+
+[tool.setuptools.package-dir]
+pyfp3d = "pyfp3d"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["pyfp3d"]
+omit = ["*/tests/*"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Relaxed for now
+disallow_incomplete_defs = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+select = ["E", "F", "W"]
+ignore = ["E501"]  # Line length handled separately

@@ -1,0 +1,8 @@
+"""Setup script for pyFP3D (legacy support; use pyproject.toml preferentially)."""
+
+from setuptools import setup, find_packages
+
+setup(
+    packages=find_packages(),
+    include_package_data=True,
+)
