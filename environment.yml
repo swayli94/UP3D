@@ -1,0 +1,16 @@
+name: up3d-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - matplotlib
+  - pyamg
+  - meshio
+  - pyvista
+  - vtk
+  - numba
+  - python=3.11
+  - gmsh
+  - scipy
+  - pytest

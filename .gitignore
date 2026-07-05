@@ -1,0 +1,58 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python packaging/build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Conda local metadata
+.conda/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Type checker / linter caches
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# Solver and visualization artifacts
+artifacts/
+*.vtk
+*.vtu
+*.pvtu
+*.xdmf
+*.xmf
+*.pvd
+
+# Logs and runtime dumps
+*.log
+
+# Local env files
+.env
+.env.*
