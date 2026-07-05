@@ -36,9 +36,9 @@ def create_unit_cube_mesh():
     return nodes, elements
 
 
-def create_unit_sphere_mesh_coarse():
-    """Create a coarse spherical shell (r=1, thickness = 0.2)."""
-    # Simplified: just a few tets around the origin
+def create_unit_octahedron_mesh():
+    """Create a regular octahedron (vertex-to-center distance 1), fan-tessellated
+    into 8 tets from the origin. Analytic volume is 4/3 * r^3 = 4/3."""
     nodes = np.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -48,15 +48,19 @@ def create_unit_sphere_mesh_coarse():
         [0, -1, 0],
         [0, 0, -1],
     ], dtype=np.float64)
-    
-    # 4 tets approximating an octahedron
+
+    # 8 tets: fan from origin covering both the +z and -z apex pyramids
     elements = np.array([
         [0, 1, 2, 3],
-        [0, 1, 3, 5],
         [0, 2, 4, 3],
         [0, 4, 5, 3],
+        [0, 5, 1, 3],
+        [0, 1, 2, 6],
+        [0, 2, 4, 6],
+        [0, 4, 5, 6],
+        [0, 5, 1, 6],
     ], dtype=np.int32)
-    
+
     return nodes, elements
 
 
@@ -73,17 +77,16 @@ class TestVolumeConservation:
         
         assert error < 1e-12, f"Cube volume error: {error:.2e}, got {total_volume}"
     
-    def test_unit_sphere_volume(self):
-        """Octahedron should have volume ≈ √2/3 ≈ 0.471."""
-        nodes, elements = create_unit_sphere_mesh_coarse()
+    def test_unit_octahedron_volume(self):
+        """Regular octahedron (vertex-to-center distance 1) has volume 4/3."""
+        nodes, elements = create_unit_octahedron_mesh()
         volumes = compute_tet_volumes(nodes, elements)
-        
+
         total_volume = np.sum(volumes)
-        expected_volume = np.sqrt(2) / 3.0  # Regular octahedron
+        expected_volume = 4.0 / 3.0
         error = abs(total_volume - expected_volume)
-        
-        # Coarse mesh, allow 50% error (very loose tolerance for test mesh)
-        assert error < 0.5 * expected_volume, \
+
+        assert error < 1e-12, \
             f"Octahedron volume error: {error:.2e}, expected {expected_volume}"
     
     def test_positive_volumes(self):

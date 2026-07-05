@@ -41,9 +41,11 @@ def density_isentropic(q_squared, M_inf, gamma=GAMMA):
     Returns:
         Nondimensional density ρ
 
-    Note: 
-        At q² = 0 (stagnation), ρ(0) = 1.0 (reference state)
-        At q² = 1 (sonic), ρ → 0.528 (M = 1 condition)
+    Note:
+        q is normalized by U∞, so q² = 1 is the freestream state:
+        ρ(1) = 1.0 (reference density ρ∞).
+        q² = 0 is the stagnation point (V = 0): ρ(0) = [1 + (γ−1)/2 · M∞²]^{1/(γ−1)} > 1.
+        Sonic (M = 1) occurs at q² = q*² (see critical_speed_squared), not at q² = 1.
     """
     exponent = 1.0 / (gamma - 1.0)
     base = 1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2 * (1.0 - q_squared)
@@ -232,19 +234,20 @@ if __name__ == "__main__":
     M_inf = 0.5
     print(f"Freestream Mach M∞ = {M_inf}\n")
 
-    # Test 1: Stagnation point (q² = 0)
+    # Test 1: Stagnation point (q² = 0) -- density above reference, Cp > 0
     q_sq_0 = 0.0
     rho_0 = density_isentropic(q_sq_0, M_inf)
+    expected_rho_0 = (1.0 + 0.5 * (GAMMA - 1.0) * M_inf ** 2) ** (1.0 / (GAMMA - 1.0))
     print(f"At stagnation (q² = 0):")
-    print(f"  ρ = {rho_0:.6f} (expected 1.0)")
-    print(f"  Cp = {pressure_coefficient(q_sq_0, M_inf):.6f} (expected 1.0)")
+    print(f"  ρ = {rho_0:.6f} (expected {expected_rho_0:.6f})")
+    print(f"  Cp = {pressure_coefficient(q_sq_0, M_inf):.6f} (expected > 0)")
 
-    # Test 2: Freestream (q² = 1)
+    # Test 2: Freestream (q² = 1, since q is normalized by U∞) -- reference state
     q_sq_inf = 1.0
     rho_inf = density_isentropic(q_sq_inf, M_inf)
     M_inf_check = np.sqrt(mach_number_squared(q_sq_inf, M_inf))
     print(f"\nAt freestream (q² = 1):")
-    print(f"  ρ = {rho_inf:.6f}")
+    print(f"  ρ = {rho_inf:.6f} (expected 1.0)")
     print(f"  M = {M_inf_check:.6f} (expected {M_inf})")
     print(f"  Cp = {pressure_coefficient(q_sq_inf, M_inf):.6f} (expected 0.0)")
 

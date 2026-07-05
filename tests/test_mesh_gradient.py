@@ -42,33 +42,33 @@ class TestGradientRecovery:
     def test_linear_field_gradient_exact(self):
         """
         For linear field on tet, recovered gradient should be exact.
-        
+
         Even with random nodes, the gradient of a linear function should be
         recovered exactly (to machine precision) by the FEM formula.
         """
         nodes, elements = create_random_tet_mesh(n_nodes=30, seed=42)
-        
+
         # Linear field coefficients
         a, b, c, d = 1.0, 2.0, 3.0, 0.5
         exact_grad = np.array([a, b, c], dtype=np.float64)
-        
+
         max_error = 0.0
-        
+
         # Check gradient recovery for each tet
         for e in range(len(elements)):
             grads = element_gradients(nodes, elements, e)
-            
-            # For linear field, gradient should be exact everywhere
-            # Average the 4 basis gradients weighted by the field values
-            # Actually, for the residual to be zero, we check the stiffness matrix
-            
-            # Simpler check: the sum of gradients should be zero
-            # (since Σ ∇φ_i = 0 for linear basis)
-            grad_sum = np.sum(grads, axis=0)
-            error = np.linalg.norm(grad_sum)
+
+            # Reconstruct ∇f = Σ f_i ∇φ_i from nodal values of the linear field.
+            # This actually exercises the Jacobian/metric formula, unlike a
+            # bare Σ∇φ_i=0 check (that identity holds in reference space
+            # regardless of whether the Jacobian is computed correctly).
+            tet = elements[e]
+            f_nodal = a * nodes[tet, 0] + b * nodes[tet, 1] + c * nodes[tet, 2] + d
+            recovered_grad = f_nodal @ grads
+            error = np.linalg.norm(recovered_grad - exact_grad)
             max_error = max(max_error, error)
-        
-        assert max_error < 1e-12, f"Gradient sum error: {max_error:.2e}"
+
+        assert max_error < 1e-12, f"Gradient recovery error: {max_error:.2e}"
     
     def test_gradient_on_unit_cube(self):
         """Test gradient recovery on unit cube mesh."""
@@ -96,16 +96,17 @@ class TestGradientRecovery:
         # Linear field: f = x + 2y + 3z
         f_exact = nodes[:, 0] + 2 * nodes[:, 1] + 3 * nodes[:, 2]
         grad_exact = np.array([1.0, 2.0, 3.0], dtype=np.float64)
-        
+
         # Recover gradients
         for e in range(len(elements)):
             grads = element_gradients(nodes, elements, e)
-            
-            # For linear field, Σ ∇φ_i = 0
-            grad_sum = np.sum(grads, axis=0)
-            error = np.linalg.norm(grad_sum)
-            
-            assert error < 1e-14, f"Element {e}: gradient sum error {error:.2e}"
+
+            # Reconstruct ∇f from nodal values and compare to the known gradient.
+            tet = elements[e]
+            recovered_grad = f_exact[tet] @ grads
+            error = np.linalg.norm(recovered_grad - grad_exact)
+
+            assert error < 1e-14, f"Element {e}: gradient recovery error {error:.2e}"
     
     def test_constant_field_gradient_zero(self):
         """Gradient of constant field should be zero everywhere."""
