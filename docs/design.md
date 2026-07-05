@@ -360,6 +360,13 @@ second — otherwise model error and code error are confounded.
 
 ## 11. Development roadmap (vibe-coding phases)
 
+> **Superseded numbering.** The phase order below (P0–P6) is the original design-time
+> sketch. [docs/roadmap.md](roadmap.md) Track P is the *active* phase order and takes
+> precedence where the two disagree — notably, roadmap.md's P2 is wake cut/circulation/
+> Kutta (critical phase) and P3 is subsonic compressible, the reverse of the ordering
+> below. Treat this section as theory/gate reference only (§10 gates, phase content
+> descriptions); for "what phase are we in" and gate sequencing, follow roadmap.md.
+
 Each phase is a self-contained PR-sized unit with its gate from §10.
 
 - **P0 — Mesh infrastructure.** meshio reader, metrics (B_e, V_e), adjacency,

@@ -6,7 +6,7 @@ This file tracks the phase order, gates, and progress ledger. [docs/design.md](d
 ## 0. Working rules
 
 - A phase is complete only when its medium-mesh gate passes and the full coarse regression suite stays green.
-- After any kernel change, run `pytest cases/test_v0_freestream.py` before any broader validation.
+- After any kernel change, run `pytest tests/test_v0_freestream.py` before any broader validation.
 - Use SciPy/PyAMG for linear algebra, keep Numba kernels SoA-only, and validate against full-potential references before Euler.
 - Keep state in git plus this file; update the progress ledger when a gate closes.
 - Every visual gate must have a headless path: generate PNG/CSV artifacts by script (no GUI-only checks).
@@ -212,8 +212,8 @@ Eisenstat–Walker inexact-solve schedule, profiling report.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
-| M0 | ☐ | | |
-| P0 | ☐ | | |
+| M0 | ☐ | | Not started: `cases/meshes/` empty, no Gmsh script yet. |
+| P0 | ☐ (in progress) | | `mesh/reader.py`, `metrics.py`, `coloring.py`, `physics/isentropic.py`, `post/vtk_out.py` implemented; G0.1–G0.4 unit tests pass (25/25 in `tests/`). Not yet closed: no M0 mesh family to validate against on real geometry, and the full coarse regression suite per §0 hasn't been run against real case meshes. |
 | P1 | ☐ | | |
 | P2 | ☐ | | |
 | M1 | ☐ | | |

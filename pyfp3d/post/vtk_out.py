@@ -59,28 +59,27 @@ def write_vtu(
             assert data.shape[0] == len(nodes), f"Point data '{name}' size mismatch"
             point_data_dict[name] = data
     
-    # Process cell data
+    # Process cell data. meshio expects {name: [array_per_cell_block]};
+    # there is exactly one block ("tetra") here.
     cell_data_dict = {}
     if cell_data:
         for name, data in cell_data.items():
-            if "tetra" not in cell_data_dict:
-                cell_data_dict["tetra"] = {}
             data = np.asarray(data, dtype=np.float64, order='C')
             if len(data.shape) == 1:
                 data = data.reshape(-1, 1)  # Make 2D
             assert data.shape[0] == len(elements), f"Cell data '{name}' size mismatch"
-            cell_data_dict["tetra"][name] = data
-    
-    # Create and write meshio mesh (note: cell_data not used for now)
-    mesh = meshio.Mesh(nodes, cells, point_data=point_data_dict)
+            cell_data_dict[name] = [data]
+
+    # Create and write meshio mesh
+    mesh = meshio.Mesh(nodes, cells, point_data=point_data_dict, cell_data=cell_data_dict)
     meshio.write(str(filepath), mesh)
-    
+
     if verbose:
         print(f"Wrote VTU to {filepath}")
         if point_data_dict:
             print(f"  Point fields: {list(point_data_dict.keys())}")
-        if cell_data_dict.get("tetra"):
-            print(f"  Cell fields: {list(cell_data_dict['tetra'].keys())}")
+        if cell_data_dict:
+            print(f"  Cell fields: {list(cell_data_dict.keys())}")
 
 
 def write_nodal_field_heatmap(
@@ -130,10 +129,11 @@ def read_vtu(filepath: Path | str) -> Tuple[np.ndarray, np.ndarray, Dict]:
     if mesh.point_data:
         for name, data in mesh.point_data.items():
             fields[name] = np.asarray(data, dtype=np.float64)
-    if mesh.cell_data and "tetra" in mesh.cell_data:
-        for name, data in mesh.cell_data["tetra"].items():
-            fields[f"cell_{name}"] = np.asarray(data, dtype=np.float64)
-    
+    if mesh.cell_data_dict:
+        for name, block_data in mesh.cell_data_dict.items():
+            if "tetra" in block_data:
+                fields[f"cell_{name}"] = np.asarray(block_data["tetra"], dtype=np.float64)
+
     return nodes, elements, fields
 
 

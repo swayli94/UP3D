@@ -7,7 +7,7 @@ Authoritative docs:
 - [docs/roadmap.md](roadmap.md): phases, gates, and progress ledger.
 
 Hard rules:
-1. After any kernel or assembly change, run `pytest cases/test_v0_freestream.py` first.
+1. After any kernel or assembly change, run `pytest tests/test_v0_freestream.py` first.
 2. A phase closes only when its medium-mesh gate and the full coarse regression suite are green.
 3. Numba kernels use SoA arrays only, no Python objects inside `@njit`, colored assembly for `prange`, zero allocation in hot loops, `cache=True`, and the `PYFP3D_NOJIT` switch.
 4. All sparse linear algebra stays in SciPy/PyAMG.
