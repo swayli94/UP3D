@@ -18,13 +18,13 @@ pyfp3d/                    # Main package
 │   └── isentropic.py     # ✓ [P0] ρ(q²), M(q²), a(q²), Cp, etc. (complete)
 ├── kernels/              # Element-wise assembly kernels (Numba-jitted)
 │   ├── __init__.py
-│   ├── residual.py       # [P1] Laplace residual + stiffness assembly (done) → [P3] isentropic → [P4] Newton
-│   └── upwind.py         # [P3] Artificial compressibility
+│   ├── residual.py       # [P1] Laplace residual + stiffness assembly (done) → [P3] isentropic → [P6] Newton
+│   └── upwind.py         # [P4] Artificial compressibility
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done)
 │   ├── picard.py         # [P1] Laplace driver (single linear solve, no outer loop) (done)
-│   └── newton.py         # [P4] Newton method
+│   └── newton.py         # [P6] Newton method
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -58,8 +58,9 @@ tests/                     # Unit and gate tests
 ├── test_laplace_cg_iterations.py    # ✓ [P1] Gate G1.3 -- PASSES
 ├── test_laplace_sphere.py           # ✓ [P1] Gate G1.2 -- strict xfail, see "Known gaps"
 ├── test_laplace_picard.py           # ✓ [P1] Regression test for solve_laplace residual_norm fix
-├── test_wake_*.py        # [P2] Gates G2.1–G2.3
-└── test_transonic_*.py   # [P3] Gates G3.1–G3.2
+├── test_wake_*.py        # [P2] Gates G2.1–G2.4
+├── test_subsonic_*.py    # [P3] Gates G3.1–G3.3
+└── test_transonic_*.py   # [P4] Gates G4.1–G4.3
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap
@@ -89,7 +90,7 @@ setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
 - **tests/test_mesh_adjacency.py**, **tests/test_mesh_reader_roundtrip.py** — regression tests for
   two bugs found by manual audit (see below)
 - **pyproject.toml** — Build metadata and dependencies
-- **.copilot-instructions.md** — AI agent instructions for P0–P5
+- **.copilot-instructions.md** — AI agent instructions for P0–P7
 
 Three latent bugs found by manual code audit (not caught by the existing suite, because nothing
 exercised these code paths) have been fixed, each now with a regression test:

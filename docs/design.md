@@ -212,7 +212,7 @@ physics enters through the residual/RHS lag. This is the classical, very robust
 scheme; its convergence rate degrades with shock strength, motivating the
 Newton option in §8.
 
-**Newton Jacobian (Phase 5+):** differentiate (6.1) w.r.t. φ_k:
+**Newton Jacobian (Phase 6+):** differentiate (6.1) w.r.t. φ_k:
 
     ∂R_i/∂φ_k = Σ_e V_e [ ρ̃_e ∇N_i·∇N_k
                 + (∂ρ̃_e/∂q²_e) · 2(∇φ_e·∇N_k)(∇φ_e·∇N_i) ]              (6.3)
@@ -279,7 +279,7 @@ pyfp3d/
 ├── solve/
 │   ├── linear.py        # CG/GMRES + AMG/ILU wrappers, tolerances
 │   ├── picard.py        # outer loop: ρ̃ update → Γ update → linear solve → relax
-│   ├── newton.py        # Phase 5: exact Jacobian, line search / pseudo-transient
+│   ├── newton.py        # Phase 6: exact Jacobian, line search / pseudo-transient
 │   └── continuation.py  # Mach/α ramping for hard cases
 ├── post/
 │   ├── surface.py       # nodal Cp, sectional cl, forces & moments
@@ -292,7 +292,7 @@ pyfp3d/
 
 ## 8. Nonlinear solution strategy
 
-**Baseline: relaxed Picard (Phases 1–4).**
+**Baseline: relaxed Picard (Phases 1–5).**
 
 ```
 assemble sparsity, coloring, wake elimination map      # once
@@ -360,30 +360,34 @@ second — otherwise model error and code error are confounded.
 
 ## 11. Development roadmap (vibe-coding phases)
 
-> **Superseded numbering.** The phase order below (P0–P6) is the original design-time
-> sketch. [docs/roadmap.md](roadmap.md) Track P is the *active* phase order and takes
-> precedence where the two disagree — notably, roadmap.md's P2 is wake cut/circulation/
-> Kutta (critical phase) and P3 is subsonic compressible, the reverse of the ordering
-> below. Treat this section as theory/gate reference only (§10 gates, phase content
-> descriptions); for "what phase are we in" and gate sequencing, follow roadmap.md.
+> Phase numbering follows [docs/roadmap.md](roadmap.md) Track P, the *active*
+> tracker (gate checklists, progress ledger, and the parallel mesh Track M live
+> there). This section summarizes phase content and maps it onto the §10
+> verification ladder; for detailed gates and current status, follow roadmap.md.
 
 Each phase is a self-contained PR-sized unit with its gate from §10.
 
-- **P0 — Mesh infrastructure.** meshio reader, metrics (B_e, V_e), adjacency,
-  coloring, VTK writer. Gate: metrics unit tests (ΣV_e = volume of unit cube;
-  ∇(linear field) exact), coloring validity assert.
+- **P0 — Repo scaffolding + mesh infrastructure.** meshio reader, metrics
+  (B_e, V_e), adjacency, coloring, VTK writer. Gate: metrics unit tests
+  (ΣV_e = volume of unit cube; ∇(linear field) exact), coloring validity assert.
 - **P1 — Laplace solver.** ρ ≡ 1, Dirichlet far field, natural walls, CG+AMG.
   Gates: V0 (without wake), V1, V2.
-- **P2 — Subsonic compressible, non-lifting.** Density law + Picard loop, no
-  upwinding, no wake. Gate: sphere at M∞ = 0.3 vs Prandtl–Glauert-corrected V2;
-  convergence in <30 Picard its.
-- **P3 — Lift: wake cut + Kutta.** Node duplication, constraint elimination,
-  Γ update, vortex far-field correction. Gates: V0 *with* wake cut, V3, V6.
+- **P2 — Lift: wake cut + Kutta, on Laplace (★ critical phase).** Node
+  duplication, constraint elimination, Γ update, vortex far-field correction
+  (incompressible form) — all the hard topology/constraint machinery lands
+  against the linear operator. Gates: V0 *with* wake cut, V3 (incompressible
+  variant), V6.
+- **P3 — Subsonic compressible.** Density law + Picard loop with
+  under-relaxation, no upwinding; Prandtl–Glauert-scaled vortex far field.
+  Gates: sphere at M∞ = 0.3 vs Prandtl–Glauert-corrected V2; V3; convergence
+  in <30 Picard its; P1/P2 gates stay green (ν ≡ 0 path identical to Laplace).
 - **P4 — Transonic: artificial density.** Upwind element search, ν switch,
-  ρ̃; relaxation + Mach continuation. Gates: V4, then V5.
-- **P5 — Performance & robustness.** Newton (6.3), pseudo-transient, AMG
+  ρ̃; relaxation + Mach continuation. Gate: V4.
+- **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
+  Track M1). Gates: V5; V6 consistency in 3D.
+- **P6 — Performance & robustness.** Newton (6.3), pseudo-transient, AMG
   reuse, profiling (target: ONERA M6 medium mesh < 5 min single node).
-- **P6 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
+- **P7 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
   alternative; VII coupling hook (transpiration BC ∂φ/∂n = d(u_e δ*)/ds —
   reuses the IBL work from pyTSFoil); adjoint via the Newton Jacobian
   transpose (nearly free once (6.3) exists — high value for the MDO thread).
