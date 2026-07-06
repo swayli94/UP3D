@@ -1,6 +1,6 @@
 # pyFP3D Agent Rules
 
-Current phase: P1 in progress (G1.1 MMS and G1.3 CG-iteration gates closed; G1.2 sphere-Cp gate open — real xfail tracking a genuine accuracy gap, not a loosened threshold, see PROJECT_STRUCTURE.md "Known gaps"), P0 in progress (mesh infra done, M0 mesh family still missing), M0 (meshing) not started — per [docs/roadmap.md](roadmap.md).
+Current phase: P1 in progress (G1.1 MMS and G1.3 CG-iteration gates closed; G1.2 sphere-Cp gate open — root-caused to a curved-wall/flat-facet geometric consistency error in the volume solve, not the surface recovery scheme; see PROJECT_STRUCTURE.md "Known gaps" before proposing more h-refinement or recovery-scheme tweaks), P0 in progress (mesh infra done, M0 mesh family still missing), M0 (meshing) not started — per [docs/roadmap.md](roadmap.md).
 
 Authoritative docs:
 - [docs/design.md](design.md): theory, discretization, architecture, and validation formulas.

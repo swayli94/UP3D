@@ -4,28 +4,55 @@ Gate G1.2: Incompressible sphere Cp vs 1 - 9/4 sin^2(theta).
 Setup: uniform flow past a unit sphere (cases/meshes/sphere_shell), Dirichlet
 BC from the exact potential phi = x(1 + a^3/(2r^3)) at the far field, natural
 (zero-flux) BC at the wall. Surface Cp = 1 - q^2 is evaluated from the wall's
-own tangential gradient (post/surface.py::wall_tangential_gradient) rather
-than by extrapolating the volume-element gradient -- see that function's
-docstring for why the volume-based approach was rejected (systematic
-underestimate at the boundary, and an ill-conditioned failure mode for a
-naive least-squares fix).
+own tangential gradient (post/surface.py::wall_tangential_gradient_quadratic)
+rather than by extrapolating the volume-element gradient -- see that
+function's docstring for why the volume-based approach was rejected
+(systematic underestimate at the boundary, and an ill-conditioned failure
+mode for a naive least-squares fix).
 
 Status (see docs/roadmap.md P1 ledger and PROJECT_STRUCTURE.md "Known gaps"):
 this does NOT yet meet the <2% max-error target from design.md Sec 10 (V2)
-on the medium mesh. Measured max error is ~12% on medium and does not fall
-below ~3.5% even on a much finer (h_min=0.015, ~1.2M-node) mesh -- so the
+on the medium mesh. Measured max error is ~11.6% on medium (down from ~12.0%
+with the older linear-only recovery) and only reaches ~4% even at h_min=0.02
+(~540k nodes) on a clean, single-variable h_min refinement sweep -- so the
 remaining gap is not simply "refine the mesh more," and is left open rather
-than papered over with a loosened threshold. The xfail below tracks the
-*actual* gate criterion so it turns into a hard failure (strict=True) the
-day someone fixes the underlying accuracy issue and forgets to remove the
-marker.
+than papered over with a loosened threshold.
+
+Root cause (see PROJECT_STRUCTURE.md "Known gaps" for the full investigation
+and evidence): NOT the surface recovery scheme -- an oracle test that feeds
+the *exact* analytic potential through the recovery step with no FEM solve at
+all shows the recovery operator's own bias is a small fraction (well under a
+tenth) of the total error at every mesh level tested, for both the linear and
+quadratic recovery schemes. NOT under-resolved bulk mesh either -- tightening
+the far-field mesh at fixed h_min helps a little then plateaus. The dominant
+error source is the volume PDE solve's own accuracy next to the wall: the
+natural (zero-flux) BC is satisfied on the flat polyhedral wall-facet
+approximation, not the true curved sphere, a geometric/variational-crime
+inconsistency that pollutes the whole domain through ellipticity and shows up
+as sub-first-order convergence (order ~0.4-0.9, decreasing as h shrinks) of
+the raw nodal potential itself, not just its recovered gradient. A first
+attempt at a direct fix (a Nitsche/penalty term weakly forcing each
+wall-adjacent tet's own volumetric gradient toward zero along the true
+surface normal) was tried and rejected: it made the error *worse* with
+increasing penalty strength, because a P1 tet spanning from the wall inward
+necessarily has a nonzero radial gradient component representing the
+interior falloff of tangential velocity -- that's correct FEM behavior, not a
+BC violation, so penalizing it fights the physically-correct solution. Closing
+this gate for real looks like it needs genuine curved/isoparametric boundary
+elements (curving the wall-adjacent tets' geometric mapping to match the true
+surface) rather than a post-processing or penalty patch; that is a
+substantially larger, separately-scoped effort, not attempted here.
+
+The xfail below tracks the *actual* gate criterion so it turns into a hard
+failure (strict=True) the day someone fixes the underlying accuracy issue and
+forgets to remove the marker.
 """
 
 import numpy as np
 import pytest
 
 from pyfp3d.mesh.reader import read_mesh
-from pyfp3d.post.surface import wall_tangential_gradient
+from pyfp3d.post.surface import wall_tangential_gradient_quadratic
 from pyfp3d.solve.picard import solve_laplace
 
 A = 1.0  # sphere radius
@@ -46,7 +73,7 @@ def run_sphere_case(mesh_path):
     )
     phi = result["phi"]
 
-    grad_wall = wall_tangential_gradient(nodes, wall_faces, phi)
+    grad_wall = wall_tangential_gradient_quadratic(nodes, wall_faces, phi)
     q_squared = np.sum(grad_wall[wall_nodes] ** 2, axis=1)
     cp_numeric = 1.0 - q_squared
 
@@ -70,9 +97,10 @@ class TestSphereCp:
     @pytest.mark.xfail(
         strict=True,
         reason=(
-            "Known open gap: current wall_tangential_gradient recovery gives "
-            "~12% max Cp error on the medium mesh, not <2%. See module "
-            "docstring and docs/roadmap.md P1 ledger."
+            "Known open gap: max Cp error on the medium mesh is ~11.6% (quadratic "
+            "surface recovery), not <2%. Root cause is the volume PDE solve's "
+            "accuracy at the flat-faceted wall, not the recovery scheme -- see "
+            "module docstring and PROJECT_STRUCTURE.md 'Known gaps'."
         ),
     )
     def test_sphere_cp_medium_mesh(self, mesh_dir):

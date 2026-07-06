@@ -110,8 +110,10 @@ exercised these code paths) have been fixed, each now with a regression test:
 - **pyfp3d/kernels/residual.py** — Laplace residual (6.1) + SPD stiffness matrix (6.2) assembly
 - **pyfp3d/solve/linear.py** — Dirichlet elimination (principal-submatrix reduction) + CG+PyAMG
 - **pyfp3d/solve/picard.py** — `solve_laplace()` driver (P1's Picard loop degenerates to one solve)
-- **pyfp3d/post/surface.py** — `nodal_gradient_recovery()` (volume-weighted, interior fields) and
-  `wall_tangential_gradient()` (surface-only recovery, for wall Cp)
+- **pyfp3d/post/surface.py** — `nodal_gradient_recovery()` (volume-weighted, interior fields),
+  `wall_tangential_gradient()` (surface-only linear recovery, for wall Cp), and
+  `wall_tangential_gradient_quadratic()` (surface-only quadratic patch recovery; a real but modest
+  improvement, see below)
 - **tests/mesh_utils.py**, **cases/meshes/sphere_shell/** — structured-cube (MMS) and sphere-shell
   (G1.2) mesh generators; sphere-shell coarse/medium `.msh` + inspection PNGs are committed
 - **tests/test_laplace_mms.py** — Gate G1.1 (MMS convergence) ✓ — L2 slope ≈ 1.94–1.96 with a
@@ -141,13 +143,66 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
   → 0.02 → 0.015, up to ~1.2M nodes / 7.4M tets) only reaches ~3.6% max error and visibly
   saturates rather than continuing to converge, so the remaining gap is *not* simply "refine the
   mesh more."
-- Still open: whether the saturation is from near-wall graded-mesh element quality, the faceted
-  (vs. true curved) wall geometry, or a genuine need for quadratic (not linear) surface patch
-  recovery. Worth investigating before spending more mesh-refinement compute on it.
+- **Root-caused (this session)** by isolating each candidate error source on a *clean*,
+  single-variable h_min refinement sweep (h_min = 0.08 → 0.05 → 0.03 → 0.02, everything else in
+  `generate_sphere_shell.py` held fixed — the earlier sweep above changed h_max/r_out/dist_max
+  simultaneously with h_min, confounding the picture):
+  - **Recovery scheme ruled out as the dominant cause.** An oracle test feeds the *exact* analytic
+    potential straight into the recovery step, bypassing the FEM solve entirely. The recovery
+    operator's own bias measured this way is 9.3%→0.7% (linear) or 0.5%→0.005% (quadratic, see
+    below) across the same h_min range where the *full* FEM pipeline gives 12%→4.2% — i.e.
+    recovery is a small fraction of the total error at every mesh size tested, for both schemes.
+  - **Under-refined bulk/far mesh is a minor contributor, not the dominant one.** Tightening
+    h_max/dist_max at a fixed h_min=0.03 helps a bit (5.6% → 4.3% max error) but plateaus by
+    ~4% even with a much finer far mesh (0.5 vs 3.0 h_max, 4.5M vs 1.4M tets) — refining the bulk
+    mesh alone doesn't close the gap either.
+  - **Confirmed dominant cause: the volume PDE solve's own accuracy next to the wall**, not
+    anything in post-processing. The raw nodal potential φ itself (not just its recovered
+    gradient) has the same sub-first-order error at the wall as the derived Cp, and the
+    convergence *order* measured on the clean sweep is decreasing as h shrinks (0.88 → 0.56 → 0.42
+    for max nodal φ error) rather than settling to a fixed rate — a signature of a genuine
+    geometric/consistency error, not plain discretization error. Mechanism: the natural
+    (zero-flux) BC is satisfied on the flat *polyhedral* wall-facet approximation (Γ_h), not the
+    true curved sphere (Γ); solving `Δφ_h = 0` on the (slightly wrong) domain bounded by Γ_h
+    pollutes the whole solution through ellipticity, not just the boundary nodes. This is a
+    textbook "variational crime" for Neumann conditions on curved boundaries meshed with flat
+    (non-isoparametric) elements.
+  - **A direct fix was tried and rejected**: a Nitsche/penalty term added to the stiffness matrix,
+    weakly forcing each wall-adjacent tet's own volumetric gradient toward zero along the *true*
+    (here, analytically known) surface normal, swept over penalty strength β. Result: error and CG
+    iteration count both got *worse* monotonically with increasing β (e.g. medium mesh max error
+    12%→17%→40%→98%→211% for β=1→10→100→1000→1e4). Diagnosis: a P1 tet spanning from the wall
+    inward necessarily has a nonzero radial gradient component representing the interior falloff
+    of tangential velocity (the exact solution's normal derivative is zero only exactly *at* the
+    wall, not throughout the adjacent tet's finite thickness) — that's correct FEM behavior, not a
+    BC violation, so this penalty fights the physically-correct solution instead of correcting an
+    inconsistency. Don't resurrect this approach; a correct fix needs to change how the boundary
+    integral/geometry itself is represented (see below), not add a volumetric penalty.
+  - **Implemented as a genuine (if modest) improvement**: `wall_tangential_gradient_quadratic()`
+    fits a local quadratic model per wall node (in its own reconstructed tangent plane, over its
+    1-ring — expanded to 2-ring, then falling back to a 2-parameter linear fit, if the patch is
+    rank-deficient for the 6-parameter fit; uses `np.linalg.lstsq`'s SVD-based minimum-norm
+    solution throughout, never a normal-equations solve or 3D extrapolation, so it can't hit the
+    ill-conditioned blowup the earlier volume-based SPR attempt did). This is exact for a locally
+    quadratic field (vs. linear recovery's exactness only for locally linear fields) and cuts the
+    recovery-only oracle error by roughly 20x, but — consistent with recovery not being the
+    dominant error source — only trims medium-mesh total error from ~12.0% to ~11.6%. Adopted as
+    the default for the G1.2 test since it's a strict, low-risk improvement, but it does not (and
+    was never going to) close the gate alone. See `tests/test_post_surface.py` for regression
+    coverage locking in both facts (recovery-only accuracy, and the fact that it's still not
+    enough).
+- **What would actually close this gate**: genuine curved/isoparametric boundary elements (curve
+  the geometric mapping of wall-adjacent tets to match the true surface, so the natural BC's
+  implicit "do nothing" trick is applied on Γ instead of Γ_h) — a properly-derived shape/geometry
+  correction, not a bolt-on penalty. This is a substantially larger, separately-scoped effort
+  (touches `mesh/metrics.py` element-Jacobian machinery and `kernels/residual.py` assembly, not
+  just `post/surface.py`) and should get its own design pass before implementation, rather than
+  being rushed in alongside other P1/P2 work.
 
 ### ⏳ Next
-- Investigate the G1.2 saturation (see above) — likely needs mesh-quality diagnostics on the
-  sphere-shell graded region, or a quadratic surface recovery scheme, not more h-refinement.
+- Scope a curved/isoparametric wall-boundary treatment as its own design item (see root-cause
+  writeup above) — this is the concrete next step to actually close G1.2, not further h-refinement
+  or more post-processing tweaks (both now ruled out as sufficient, with evidence).
 - Generate NACA0012 mesh family (M0 gate) — not started.
 
 ## Quick Start
@@ -203,10 +258,14 @@ Critical speed q*² = 0.923077 where M = 1.0:
 P0 (mesh I/O, metrics, coloring, VTK writer, gates G0.1–G0.4) is done. G1.1 and G1.3 are done. To
 close P1, only G1.2 remains:
 
-1. **Investigate the G1.2 Cp-accuracy saturation** (see "Known gaps" above) — mesh refinement
-   alone plateaus around ~3.6% max error, well above the 2% target. Candidate next steps: check
-   near-wall element quality/aspect ratio in the graded region, or implement a quadratic (not
-   linear) surface patch-recovery scheme in `post/surface.py`.
+1. **Implement a curved/isoparametric wall-boundary treatment** (see "Known gaps" above for the
+   full root-cause investigation) — mesh refinement and surface-recovery improvements (both tried
+   this session; see below) are now ruled out as sufficient, with evidence. The confirmed cause is
+   a geometric/variational-crime inconsistency from enforcing the natural BC on the flat
+   polyhedral wall approximation instead of the true curved sphere; closing G1.2 needs the
+   boundary geometry itself represented correctly (isoparametric wall elements or an equivalent
+   shape correction in `mesh/metrics.py`/`kernels/residual.py`), which deserves its own design
+   pass before implementation.
 
 2. **Create test meshes** (M0, parallel track)
    - Gmsh script: extruded NACA0012 + embedded wake surface
@@ -224,5 +283,11 @@ close P1, only G1.2 remains:
 
 **Last updated:** 2026-07-06  
 **Status:** P0 closed (G0.1–G0.4 green). P1: G1.1 (MMS) and G1.3 (CG+AMG mesh-independence) closed;
-G1.2 (sphere Cp) open with a `strict=True` xfail tracking the real 2% criterion — see "Known gaps"
-for what's been tried and ruled out. 41 tests total (40 passed, 1 xfailed), full suite ~9s.
+G1.2 (sphere Cp) open with a `strict=True` xfail tracking the real 2% criterion. The saturation
+cause is now root-caused (not just hypothesized) — a geometric/variational-crime inconsistency
+from the natural BC being enforced on the flat polyhedral wall approximation rather than the true
+curved sphere; recovery-scheme quality and bulk-mesh refinement were both tested and ruled out as
+the dominant cause. A quadratic surface-patch recovery (`wall_tangential_gradient_quadratic`) was
+implemented as a genuine but modest improvement (~12.0%→~11.6% max error on medium); closing the
+gate for real needs curved/isoparametric wall elements — see "Known gaps" and "Next Steps" above.
+45 tests total (44 passed, 1 xfailed), full suite ~10s.
