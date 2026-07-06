@@ -1,0 +1,7 @@
+gate,check,value,criterion,status,note
+M0,topology asserts on 7 committed meshes,all pass,no assert fires (hard rule 7),PASS,
+M0,min tet volume (3 families),1.3e-06,> 0 (no degenerate/inverted tets),PASS,
+M0,isotropic sphere family aspect max,3.5,< 5 (matches sphere_stats 3.5),PASS,quasi-2D families are anisotropic in the far field by design (fixed dz)
+M0,cylinder solve residual (all levels),3.1e-11,< 1e-8,PASS,
+M0,max |Cp err| drops >= 25% per level,True,monotone refinement,PASS,
+M0,Cp error slope vs h,1.02,in [0.85; 1.25] (~O(h); documented limit),PASS,

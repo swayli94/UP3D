@@ -1,0 +1,8 @@
+metric,value
+M0 topology asserts on 7 committed meshes,all pass [PASS]
+M0 min tet volume (3 families),1.3e-06 [PASS]
+M0 isotropic sphere family aspect max,3.5 [PASS]
+M0 cylinder solve residual (all levels),3.1e-11 [PASS]
+M0 max |Cp err| drops >= 25% per level,True [PASS]
+M0 Cp error slope vs h,1.02 [PASS]
+runtime_seconds,6.8

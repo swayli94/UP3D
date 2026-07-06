@@ -1,0 +1,3 @@
+level,cl_pressure,cl_gamma,cl_panel,gamma_vs_pressure_pct
+coarse,0.468051,0.469532,0.482556,0.3163
+medium,0.478576,0.478646,0.482556,0.0146

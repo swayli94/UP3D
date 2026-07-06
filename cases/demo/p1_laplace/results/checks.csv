@@ -1,0 +1,11 @@
+gate,check,value,criterion,status,note
+V0,max interior residual; phi=x,8.82e-14,< 1e-12,PASS,
+G1.1,MMS L2 slope (4 levels),1.960,>= 1.9,PASS,
+G1.2,CG iteration growth over 64x nodes,1.75x,< 2.0x,PASS,
+V2-sanity,residual norm (medium sphere solve),5.7e-10,< 1e-8,PASS,
+V2-sanity,wall speed at stagnation poles,0.197,< 0.2 (exact 0),PASS,
+V2-sanity,wall speed at equator (exact 1.5),1.448,in [1.3; 1.6],PASS,
+G1.6,max |Cp err| sphere medium,11.6%,< 2% (gate),XFAIL,open gate; strict xfail in tests/test_laplace_sphere.py
+G1.4,Option A t-form RHS magnitude (medium),6.8e-05,< 1e-3 (near-zero data defect),PASS,body-fitted wall leaves ~no flux defect; G1.3 cylinder analogue is exactly machine zero (1.5e-17)
+G1.4,correction moves max |Cp err| by,0.23 pp,< 0.5 pp (correction ineffective),PASS,
+DP1,best oracle-corrected max |Cp err|,11.3%,> 5% (confirms '>5%' branch),PASS,boundary-data corrections ruled out; route = Option C

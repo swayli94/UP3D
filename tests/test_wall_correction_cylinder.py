@@ -30,7 +30,7 @@ nothing for a boundary-DATA correction to correct.
    sphere's decreasing sub-first order).
 
 DP1 decision (recorded in roadmap.md): G1.3 fails -> ">5%" branch. A
-direct sphere-oracle run (G1.4, cases/demo/g14_sphere_oracle_experiment.py)
+direct sphere-oracle run (G1.4, absorbed into cases/demo/p1_laplace/run_demo.py)
 confirms it on the gate geometry: full-flux oracle ceiling ~11.3% vs 11.6%
 uncorrected on the medium sphere mesh.
 

@@ -1,0 +1,3 @@
+level,max_w_freestream_interp,p99_w_lifting,rms_w_lifting,max_w_lifting
+coarse,8.50e-15,4.819e-03,1.618e-03,6.419e-02
+medium,8.93e-15,2.352e-03,8.216e-04,4.478e-02

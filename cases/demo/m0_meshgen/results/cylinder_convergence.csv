@@ -1,0 +1,4 @@
+level,n_tets,h_wall,max_cp_err,mean_cp_err,residual_norm
+coarse,6894,0.1,9.0979e-02,4.5061e-02,3.05e-11
+medium,17301,0.05,4.4903e-02,2.2431e-02,1.70e-11
+fine,50190,0.025,2.2219e-02,1.1134e-02,7.92e-12

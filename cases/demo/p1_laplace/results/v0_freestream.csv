@@ -1,0 +1,5 @@
+mesh,max_interior_residual
+structured cube (Kuhn; 3.1k tets),8.674e-19
+icosphere shell (11.5k tets),2.854e-14
+gmsh sphere_shell medium (95k tets),1.470e-14
+gmsh naca0012_2.5d medium (62k tets),8.819e-14

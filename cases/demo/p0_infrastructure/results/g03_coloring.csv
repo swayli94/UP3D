@@ -1,0 +1,5 @@
+mesh,n_elements,n_colors,valid,min_class,max_class,seconds
+Kuhn cube n=8,3072,31,True,3,153,0.05
+naca0012_2.5d coarse,16386,29,True,1,972,0.21
+cylinder_2.5d coarse,6894,24,True,1,440,0.09
+sphere_shell coarse,17502,45,True,1,576,0.41

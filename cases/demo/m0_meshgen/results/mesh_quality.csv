@@ -1,0 +1,6 @@
+mesh,n_tets,min_edge,max_edge,max_aspect
+naca0012 coarse,16386,0.0140,3.553,
+naca0012 medium,61788,0.0063,1.929,
+naca0012_2.5d coarse,16386,,,88.82
+cylinder_2.5d coarse,6894,,,16.24
+sphere_shell coarse,17502,,,3.52

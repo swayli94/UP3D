@@ -85,6 +85,13 @@ cases/                     # Test cases and reference data
 │                                 #   cl_reference.csv / cp_alpha4.csv / convergence.csv +
 │                                 #   README provenance; two independent lift routes agree
 │                                 #   to 0.09%, panel-count converged)
+├── demo/                 # ✓ Per-phase evidence demos (docs/demo_report.md; one
+│   ├── README.md         #   self-checking run_demo.py + committed results/ per phase)
+│   ├── _common.py        #   shared chart style + CheckList acceptance recorder
+│   ├── p0_infrastructure/  # G0.1-G0.4: volume/gradient exactness, coloring, VTK I/O
+│   ├── p1_laplace/         # V0/G1.1/G1.2 + G1.4 oracle (absorbed) + G1.6 open-gate XFAIL
+│   ├── p2_kutta_lifting/   # G2.1-G2.5: cut exactness, Kutta, cl vs panel, spanwise decay
+│   └── m0_meshgen/         # mesh gallery, hard-rule-7 topology matrix, cylinder convergence
 └── test_*.py             # [Deprecated] Integration tests (use tests/ now)
 
 tests/                     # Unit and gate tests
@@ -302,15 +309,16 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
 
 The Option A (true-normal weak-flux correction) verification chain ran to completion the same
 day it was renumbered, and falsified the route (full evidence: roadmap G1.3/G1.4/DP1 entries,
-design.md §5.1.2, `artifacts/G1.3/` + `artifacts/G1.4/`):
+design.md §5.1.2, `artifacts/G1.3/` + oracle results in `cases/demo/p1_laplace/results/`):
 
 - **Delivered code**: `pyfp3d/solve/wall_correction.py` (closest_point_normal callback interface
   with analytic cylinder/sphere implementations, domain-outward facet orientation from the
   owning tet, 3-point edge-midpoint facet quadrature, RHS assembly verified against a
   hand-computed single-facet case); `pyfp3d/post/section_cut.py` (P2's final interface,
   degenerate single-layer path); `tests/test_wall_correction_cylinder.py` (10 tests);
-  `cases/demo/g14_sphere_oracle_experiment.py`; cylinder `fine.msh` (50.2k tets); shared
-  cylinder-case helpers moved into `tests/mesh_utils.py`.
+  the sphere-oracle experiment (now absorbed into `cases/demo/p1_laplace/run_demo.py`,
+  2026-07-07); cylinder `fine.msh` (50.2k tets); shared cylinder-case helpers moved into
+  `tests/mesh_utils.py`.
 - **Core finding**: for a harmonic potential with body-fitted wall vertices, the exact net flux
   through every flat facet is exactly zero (divergence theorem over the facet/true-surface
   sliver), so boundary-DATA corrections have (almost) nothing to correct. Measured: the full

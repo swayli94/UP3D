@@ -1,0 +1,7 @@
+level,variant,max_cp_err,max_rhs
+coarse,uncorrected,0.2305,
+coarse,t-form,0.2233,1.29e-03
+coarse,full-flux,0.2055,1.41e-03
+medium,uncorrected,0.1156,
+medium,t-form,0.1164,6.82e-05
+medium,full-flux,0.1133,7.11e-05

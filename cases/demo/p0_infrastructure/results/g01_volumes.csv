@@ -1,0 +1,6 @@
+case,n_tets,sum_volumes,exact,rel_error
+unit cube; 5 tets,5,1.000000000000000,1.0,1.110e-16
+octahedron; 8 tets,8,1.333333333333333,1.3333333333333333,0.000e+00
+Kuhn cube n=4; 384 tets,384,1.000000000000000,1.0,0.000e+00
+Kuhn cube n=16; 24576 tets,24576,1.000000000000000,1.0,0.000e+00
+unit cube scaled x2 (V=8),5,7.999999999999999,8.0,1.110e-16

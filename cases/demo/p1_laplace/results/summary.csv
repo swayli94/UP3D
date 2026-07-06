@@ -1,0 +1,12 @@
+metric,value
+V0 max interior residual; phi=x,8.82e-14 [PASS]
+G1.1 MMS L2 slope (4 levels),1.960 [PASS]
+G1.2 CG iteration growth over 64x nodes,1.75x [PASS]
+V2-sanity residual norm (medium sphere solve),5.7e-10 [PASS]
+V2-sanity wall speed at stagnation poles,0.197 [PASS]
+V2-sanity wall speed at equator (exact 1.5),1.448 [PASS]
+G1.6 max |Cp err| sphere medium,11.6% [XFAIL]
+G1.4 Option A t-form RHS magnitude (medium),6.8e-05 [PASS]
+G1.4 correction moves max |Cp err| by,0.23 pp [PASS]
+DP1 best oracle-corrected max |Cp err|,11.3% [PASS]
+runtime_seconds,14.1

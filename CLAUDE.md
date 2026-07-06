@@ -13,6 +13,10 @@ workstation-scale (minutes for 1–3 M nodes).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
+- [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
+  phases (P0, P1-partial, P2, M0): one self-checking demo per phase under
+  `cases/demo/<phase>/` with committed figures + measured gate numbers. When a
+  phase closes, add its demo + report section here.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
   **"Known gaps"**: read it before touching the G1.6 sphere-Cp problem (formerly
   G1.2; P1 gates renumbered 2026-07-06, mapping in roadmap.md) — it is already

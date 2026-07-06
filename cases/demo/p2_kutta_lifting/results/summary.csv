@@ -1,0 +1,13 @@
+metric,value
+G2.1 max free-dof residual; phi=x on cut,8.4e-13 [PASS]
+G2.1 max wake-master row residual,6.9e-16 [PASS]
+G2.2 max |[phi] - Gamma|; prescribed jump,7.2e-16 [PASS]
+G2.3 Kutta converged (medium),True [PASS]
+G2.3 Kutta updates (medium),2 [PASS]
+G2.3 cl vs panel reference (medium),-0.82% [PASS]
+G2.3 suction peak on upper surface,-1.54 [PASS]
+G2.4 cl(Gamma) vs cl(pressure); medium,0.015% [PASS]
+Kutta-sanity max speed in TE neighborhood,0.96 [PASS]
+G2.5a spanwise gradient of interpolated phi=x,8.9e-15 [PASS]
+G2.5b p99 |w| decay ratio coarse/medium,2.05 [PASS]
+runtime_seconds,16.9

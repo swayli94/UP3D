@@ -1,0 +1,8 @@
+mesh,n_tets,tags_complete,quad_split,wake_cut
+cylinder_2.5d/coarse,6894,pass,pass,n/a
+cylinder_2.5d/fine,50190,pass,pass,n/a
+cylinder_2.5d/medium,17301,pass,pass,n/a
+naca0012_2.5d/coarse,16386,pass,pass,pass
+naca0012_2.5d/medium,61788,pass,pass,pass
+sphere_shell/coarse,17502,pass,n/a,n/a
+sphere_shell/medium,95067,pass,n/a,n/a
