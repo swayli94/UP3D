@@ -441,7 +441,7 @@ the G2.5 acceptance link wait on P2 (`mesh/wake_cut.py` topology asserts), and G
 criterion (b) needs re-spec — the solved-field spanwise gradient is O(h) by construction for
 3-tet prism splits, not machine-zero (evidence in roadmap.md G2.5 note and the M0 section
 above). P0 gates G0.1–G0.4 green; the full coarse regression suite now runs against real case
-meshes (cylinder + NACA0012), leaving P0 closure a bookkeeping decision. P1 (gates renumbered
+meshes (cylinder + NACA0012); P0 closed 2026-07-06 (G0.1–G0.4 ticked in the roadmap). P1 (gates renumbered
 in workflow order 2026-07-06, old → new: G1.3 → G1.2, G1.2-a0 → G1.3, G1.2-a → G1.4,
 G1.2-c → DP1, G1.2-b → G1.5, G1.2 → G1.6): G1.1 (MMS) and G1.2 (CG+AMG mesh-independence)
 closed; G1.3 (cylinder oracle) and G1.4 (sphere oracle ceiling) completed 2026-07-06 with
