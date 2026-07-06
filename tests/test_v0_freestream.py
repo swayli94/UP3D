@@ -8,6 +8,9 @@ Run with: pytest tests/test_v0_freestream.py -xvs
 """
 
 import pytest
+import numpy as np
+
+from .mesh_utils import generate_structured_cube_mesh, cube_boundary_mask
 
 
 def test_import_pyfp3d():
@@ -92,6 +95,32 @@ def test_pressure_coefficient_bounds():
     
     # Should not raise an error
     validate_physics_bounds(rho_array, q_array, M_array, Cp_array, M_inf)
+
+
+def test_residual_freestream_preservation():
+    """
+    Mesh-level freestream preservation (design.md Sec 3): phi = x on any
+    tet mesh must give a machine-zero assembled residual. This is the
+    check agent-rules.md hard rule #1 refers to -- run this test first
+    after any kernel/assembly change.
+
+    Only interior nodes are checked: a boundary node's residual is the
+    divergence-theorem flux integral of grad(phi) through its own boundary
+    support, which is nonzero whenever the boundary isn't a solid wall (zero
+    flux) or isn't force-free by symmetry -- that row gets overwritten by
+    the BC anyway, so it isn't part of the "residual should vanish" claim.
+    """
+    from pyfp3d.kernels.residual import assemble_residual
+
+    nodes, elements = generate_structured_cube_mesh(n=4, L=1.0)
+    phi = nodes[:, 0].copy()  # uniform freestream aligned with x
+
+    R = assemble_residual(nodes, elements, phi)
+    interior = ~cube_boundary_mask(nodes, L=1.0)
+
+    assert np.max(np.abs(R[interior])) < 1e-12, (
+        f"Freestream residual not machine-zero: {np.max(np.abs(R[interior])):.3e}"
+    )
 
 
 if __name__ == "__main__":

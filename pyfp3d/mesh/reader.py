@@ -123,11 +123,33 @@ def read_mesh(filepath: Path | str, verbose: bool = False) -> Mesh:
     if len(tets) == 0:
         raise ValueError("No tetrahedral elements found in mesh")
     
-    # Extract boundary faces (triangles on domain boundary)
+    # Extract boundary faces (triangles on domain boundary), split by physical
+    # surface tag name (e.g. "wall", "farfield") when available so BCs can be
+    # applied per named boundary; falls back to a single "all_triangles" group
+    # for untagged meshes.
     boundary_faces_dict = {}
     if "triangle" in mesh_obj.cells_dict:
         triangles = np.asarray(mesh_obj.cells_dict["triangle"], dtype=np.int32, order='C')
-        boundary_faces_dict["all_triangles"] = triangles
+
+        surface_tags = None
+        if "gmsh:physical" in mesh_obj.cell_data_dict:
+            physical_tags = mesh_obj.cell_data_dict["gmsh:physical"]
+            if "triangle" in physical_tags:
+                surface_tags = np.asarray(physical_tags["triangle"], dtype=np.int32)
+
+        surface_name_by_tag = {}
+        if hasattr(mesh_obj, "field_data"):
+            surface_name_by_tag = {
+                tag_id: name for name, (tag_id, dim) in mesh_obj.field_data.items() if dim == 2
+            }
+
+        if surface_tags is not None and surface_name_by_tag:
+            for tag_id, name in surface_name_by_tag.items():
+                mask = surface_tags == tag_id
+                if np.any(mask):
+                    boundary_faces_dict[name] = triangles[mask]
+        else:
+            boundary_faces_dict["all_triangles"] = triangles
     
     # Organize boundary tags (if cell_data exists)
     element_tags = np.zeros(len(tets), dtype=np.int32)
@@ -153,7 +175,7 @@ def read_mesh(filepath: Path | str, verbose: bool = False) -> Mesh:
     mesh.elements = tets
     mesh.boundary_faces = boundary_faces_dict
     mesh.element_tags = element_tags
-    mesh.tag_names = [name for name in tag_names if name]
+    mesh.tag_names = tag_names  # keep aligned with element_tags (indices are tag ids)
     mesh.name = filepath.stem
     
     # Validate

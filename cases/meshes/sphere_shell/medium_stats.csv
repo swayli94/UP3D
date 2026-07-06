@@ -1,0 +1,10 @@
+metric,value
+n_nodes,16793
+n_tets,95067
+n_wall_nodes,2379
+n_farfield_nodes,687
+total_volume,33232.63898692775
+aspect_ratio_min,1.0072289625623103
+aspect_ratio_mean,1.5765271579787603
+aspect_ratio_max,3.242304060671612
+aspect_ratio_p99,2.15365470065042
