@@ -38,62 +38,12 @@ import pytest
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.meshgen.extrude import assert_quad_split_consistency
-from pyfp3d.post.surface import wall_tangential_gradient_quadratic
-from pyfp3d.solve.picard import solve_laplace
 
-A = 1.0  # cylinder radius
-
-
-def element_gradients_all(nodes, elements, phi):
-    """Constant P1 gradient of phi in every tet, vectorized."""
-    p, el = nodes, elements
-    e = np.stack(
-        [p[el[:, 1]] - p[el[:, 0]],
-         p[el[:, 2]] - p[el[:, 0]],
-         p[el[:, 3]] - p[el[:, 0]]], axis=1
-    )
-    d = np.stack(
-        [phi[el[:, 1]] - phi[el[:, 0]],
-         phi[el[:, 2]] - phi[el[:, 0]],
-         phi[el[:, 3]] - phi[el[:, 0]]], axis=1
-    )
-    return np.linalg.solve(e, d[:, :, None])[:, :, 0]
-
-
-def run_cylinder_case(mesh_path):
-    mesh = read_mesh(mesh_path)
-    nodes, elements = mesh.nodes, mesh.elements
-    wall_faces = mesh.boundary_faces["wall"]
-    wall_nodes = np.unique(wall_faces)
-    farfield_nodes = np.unique(mesh.boundary_faces["farfield"])
-
-    r2 = nodes[:, 0] ** 2 + nodes[:, 1] ** 2
-    phi_exact = nodes[:, 0] * (1.0 + A**2 / r2)
-
-    result = solve_laplace(
-        nodes, elements, farfield_nodes, phi_exact[farfield_nodes],
-        rtol=1e-11, maxiter=3000,
-    )
-    phi = result["phi"]
-
-    grad_wall = wall_tangential_gradient_quadratic(nodes, wall_faces, phi)
-    q_squared = np.sum(grad_wall[wall_nodes] ** 2, axis=1)
-    cp_numeric = 1.0 - q_squared
-
-    sin2 = nodes[wall_nodes, 1] ** 2 / r2[wall_nodes]
-    cp_exact = 1.0 - 4.0 * sin2
-
-    return {
-        "mesh": mesh,
-        "phi": phi,
-        "wall_nodes": wall_nodes,
-        "sin2": sin2,
-        "cp_numeric": cp_numeric,
-        "cp_exact": cp_exact,
-        "error": np.abs(cp_numeric - cp_exact),
-        "n_cg_iterations": result["n_cg_iterations"],
-        "residual_norm": result["residual_norm"],
-    }
+from .mesh_utils import (
+    CYLINDER_RADIUS as A,
+    element_gradients_all,
+    run_cylinder_case,
+)
 
 
 class TestCylinderMeshIngestion:

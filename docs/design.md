@@ -201,7 +201,14 @@ implementation footprint. (Standing prohibitions remain: do **not** re-propose
 further h-refinement or recovery-scheme tweaks — both are ruled out with
 evidence.)
 
-**Option A (recommended, implement first): true-normal weak-flux correction
+> **Verification outcome (2026-07-06, see §5.1.2):** the G1.3/G1.4 oracle
+> experiments ruled Option A out — on body-fitted meshes the boundary-data
+> defect it corrects is (near-)zero and the measured ceiling is ≈ 11.3% vs
+> the < 2% target. DP1 took the "> 5%" branch: Option C + separately-scoped
+> curved elements. §§ Option A/B below are kept as the design record.
+
+**Option A (recommended, implement first — RULED OUT by the G1.3/G1.4
+oracles, see §5.1.2): true-normal weak-flux correction
 (lagged flux correction).**
 
 Provenance (two independent lines of work, same practical recipe):
@@ -323,7 +330,50 @@ Theoretical expectations and ceiling (recorded to manage expectations):
   the medium-mesh error drops below 2%; the exact ceiling is measured by the
   oracle experiment (gate G1.4).
 
-**Option B (escalation if Option A falls short): Gap-SBM gap correction.**
+#### 5.1.2 Pre-study outcome (2026-07-06): Option A ruled out on body-fitted meshes
+
+The G1.3 cylinder pre-study and the G1.4 sphere oracle run the same day
+falsified the expectation above (full evidence: roadmap G1.3/G1.4 entries;
+`tests/test_wall_correction_cylinder.py`; `artifacts/G1.3/`,
+`artifacts/G1.4/`). The mechanism, in hindsight elementary:
+
+- For a **harmonic** potential and **body-fitted** wall vertices, the region
+  between a flat facet and the true curved surface is closed by exactly those
+  two surfaces; the true surface carries zero flux, so by the divergence
+  theorem the exact solution's **net flux through every facet is exactly
+  zero**. The natural-BC consistency defect ⟨v, ∇φ_exact·ñ⟩ is only a
+  first-moment residue — measured ~2e-5 max on the coarse cylinder, shrinking
+  ~O(h⁴). The SBM/BDT corrections earn their keep on *unfitted* boundaries
+  with O(h) gaps; with an O(h²) body-fitted gap there is nothing to correct.
+- Option A's t-form ⟨v, ∇φ_exact·t⟩ additionally assembles to machine zero on
+  the cylinder (exact adjacent-facet cancellation on the uniformly spaced
+  circle); the assembly was verified against a hand-computed single-facet
+  case, so the zero is real.
+- Measured ceilings: cylinder Cp error unchanged
+  (9.10e-2/4.49e-2/2.22e-2 max over coarse/medium/fine, slope 1.02, corrected
+  ≡ uncorrected); sphere medium-mesh max |Cp err| 0.1156 → 0.1133 with the
+  full consistency defect restored — an **11.3% ceiling** vs the < 2% target.
+- Bonus finding that re-frames the cylinder case: ~76% of its Cp error at
+  every level is reproduced by feeding the *exact* potential through the
+  surface recovery — on the quasi-2D single-layer strip the sliver-shaped
+  wall triangulation dominates the recovery error, and the wall nodal φ
+  converges at a healthy ~1.2 order. The cylinder therefore does **not**
+  exhibit the sphere's sub-first-order pathology and is no longer the
+  designated testbed for it (§5.1.1's "same variational crime" rationale is
+  superseded on this point; the meshes and the analytic-Cp validation remain
+  in use as the M0 end-to-end check).
+
+Consequences (DP1 "> 5%" branch, recorded in the roadmap): the sphere's
+remaining error is attributed to the domain perturbation (the missing
+facet/surface slivers in ∫_Ωh vs ∫_Ω) plus P1 gradient approximation — i.e.
+exactly the terms Gap-SBM's gap integrals model (Option B below), which is
+why B survives as optional pre-study material for the curved-element design
+pass; but with O(h²) gap thickness its payoff is expected second-order-small.
+The accuracy route is curved/isoparametric wall elements as a
+separately-scoped effort, and gate G1.6 is to be redefined per Option C.
+
+**Option B (escalation if Option A falls short — per §5.1.2 now optional
+pre-study material only): Gap-SBM gap correction.**
 
 Collins, Li, Lozinski & Scovazzi, "Gap-SBM" (arXiv:2508.09613, 2025) targets
 exactly the P1 Neumann suboptimality above. It builds an approximate gap

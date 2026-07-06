@@ -16,8 +16,9 @@ workstation-scale (minutes for 1–3 M nodes).
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
   **"Known gaps"**: read it before touching the G1.6 sphere-Cp problem (formerly
   G1.2; P1 gates renumbered 2026-07-06, mapping in roadmap.md) — it is already
-  root-caused (curved-wall/flat-facet variational crime; tiered fix routes in
-  design.md §5.1); do not re-propose h-refinement, recovery tweaks, or Nitsche.
+  root-caused, and the G1.3/G1.4 oracles ruled out boundary-data corrections
+  (design.md §5.1.2); do not re-propose h-refinement, recovery tweaks, Nitsche,
+  or flux-data corrections. Open route: Option C gate re-spec + curved elements.
 - `cases/reference_data/` — ground truth, never edit.
 
 ## Hard rules and current phase

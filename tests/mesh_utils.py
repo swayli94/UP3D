@@ -1,10 +1,13 @@
 """
-Shared synthetic mesh generators for solver validation gates (P1+).
+Shared synthetic mesh generators and case helpers for solver validation
+gates (P1+).
 
-These are dependency-free (no Gmsh) so P1 gates don't block on mesh
-generation tooling: a structured cube (Kuhn triangulation, for MMS
+The generators are dependency-free (no Gmsh) so P1 gates don't block on
+mesh generation tooling: a structured cube (Kuhn triangulation, for MMS
 convergence studies) and a spherical shell (icosphere extruded radially,
-for the incompressible-sphere Cp gate).
+for the incompressible-sphere Cp gate). The cylinder_2.5d case helpers
+(analytic solution + end-to-end solve/Cp recovery) are shared between the
+M0 pipeline validation and the G1.3 cylinder oracle pre-study.
 """
 
 import numpy as np
@@ -163,3 +166,86 @@ def generate_sphere_shell_mesh(
     farfield_nodes = np.arange(n_layers * n_v, (n_layers + 1) * n_v, dtype=np.int64)
 
     return nodes, elements, wall_nodes, farfield_nodes
+
+
+# ---------------------------------------------------------------------------
+# Shared cylinder_2.5d case helpers (used by test_m0_cylinder.py and the
+# G1.3 cylinder oracle pre-study, test_wall_correction_cylinder.py)
+# ---------------------------------------------------------------------------
+
+CYLINDER_RADIUS = 1.0
+
+
+def element_gradients_all(nodes, elements, phi):
+    """Constant P1 gradient of phi in every tet, vectorized."""
+    p, el = nodes, elements
+    e = np.stack(
+        [p[el[:, 1]] - p[el[:, 0]],
+         p[el[:, 2]] - p[el[:, 0]],
+         p[el[:, 3]] - p[el[:, 0]]], axis=1
+    )
+    d = np.stack(
+        [phi[el[:, 1]] - phi[el[:, 0]],
+         phi[el[:, 2]] - phi[el[:, 0]],
+         phi[el[:, 3]] - phi[el[:, 0]]], axis=1
+    )
+    return np.linalg.solve(e, d[:, :, None])[:, :, 0]
+
+
+def cylinder_phi_exact(nodes, a=CYLINDER_RADIUS):
+    """phi = U x (1 + a^2/r^2) for unit freestream past a unit cylinder."""
+    r2 = nodes[:, 0] ** 2 + nodes[:, 1] ** 2
+    return nodes[:, 0] * (1.0 + a**2 / r2)
+
+
+def cylinder_grad_exact(points, a=CYLINDER_RADIUS):
+    """Analytic gradient of cylinder_phi_exact at arbitrary points, (m, 3)."""
+    x, y = points[:, 0], points[:, 1]
+    r2 = x**2 + y**2
+    grad = np.zeros_like(points, dtype=np.float64)
+    grad[:, 0] = 1.0 + a**2 / r2 - 2.0 * a**2 * x**2 / r2**2
+    grad[:, 1] = -2.0 * a**2 * x * y / r2**2
+    return grad
+
+
+def run_cylinder_case(mesh_path, body_source_rhs=None, mesh=None):
+    """Solve incompressible flow past the quasi-2D cylinder and recover wall
+    Cp(theta); pass body_source_rhs to solve with a wall-flux correction."""
+    from pyfp3d.mesh.reader import read_mesh
+    from pyfp3d.post.surface import wall_tangential_gradient_quadratic
+    from pyfp3d.solve.picard import solve_laplace
+
+    if mesh is None:
+        mesh = read_mesh(mesh_path)
+    nodes, elements = mesh.nodes, mesh.elements
+    wall_faces = mesh.boundary_faces["wall"]
+    wall_nodes = np.unique(wall_faces)
+    farfield_nodes = np.unique(mesh.boundary_faces["farfield"])
+
+    phi_exact = cylinder_phi_exact(nodes)
+
+    result = solve_laplace(
+        nodes, elements, farfield_nodes, phi_exact[farfield_nodes],
+        body_source_rhs=body_source_rhs, rtol=1e-11, maxiter=3000,
+    )
+    phi = result["phi"]
+
+    grad_wall = wall_tangential_gradient_quadratic(nodes, wall_faces, phi)
+    q_squared = np.sum(grad_wall[wall_nodes] ** 2, axis=1)
+    cp_numeric = 1.0 - q_squared
+
+    r2 = nodes[:, 0] ** 2 + nodes[:, 1] ** 2
+    sin2 = nodes[wall_nodes, 1] ** 2 / r2[wall_nodes]
+    cp_exact = 1.0 - 4.0 * sin2
+
+    return {
+        "mesh": mesh,
+        "phi": phi,
+        "wall_nodes": wall_nodes,
+        "sin2": sin2,
+        "cp_numeric": cp_numeric,
+        "cp_exact": cp_exact,
+        "error": np.abs(cp_numeric - cp_exact),
+        "n_cg_iterations": result["n_cg_iterations"],
+        "residual_norm": result["residual_norm"],
+    }

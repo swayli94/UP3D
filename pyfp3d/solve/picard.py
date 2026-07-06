@@ -32,8 +32,10 @@ def solve_laplace(
         elements: (n_tets, 4) tetrahedral connectivity
         dirichlet_nodes: node indices with prescribed phi (e.g. far field)
         dirichlet_values: prescribed phi values at dirichlet_nodes
-        body_source_rhs: optional (n_nodes,) RHS body source (MMS-only; the
-            physical full-potential equation has no volumetric source term)
+        body_source_rhs: optional (n_nodes,) assembled RHS vector -- an MMS
+            load vector, or a wall-flux boundary correction
+            (solve/wall_correction.py); the physical full-potential equation
+            itself has no volumetric source term
         rtol, maxiter: CG convergence controls (see solve.linear.solve_cg_amg)
 
     Returns:
