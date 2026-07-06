@@ -257,6 +257,49 @@ Implementation notes (binding for the eventual implementation):
   `_wall_vertex_normals` is a precondition for this correction and must not be
   removed.
 
+#### 5.1.1 Cylinder pre-study (G1.2-a0)
+
+`cases/meshes/cylinder_2.5d/` is the **designated rapid testbed** for the
+Option A/B route, to be exercised before the sphere (roadmap G1.2-a0 precedes
+G1.2-a). Rationale: it exhibits the **same** curved-wall variational crime,
+already quantified — max |Cp err| 0.091 (coarse) → 0.045 (medium), ~O(h)
+(`tests/test_m0_cylinder.py`); every geometric ingredient Option A needs is
+available in closed form; the meshes are cheap (6.9k / 17.3k tets); and the
+diagnostic is a one-dimensional curve Cp(θ).
+
+Closed forms for the cylinder (radius a, axis z, freestream U along x, with
+r_xy² = x² + y²):
+
+    φ_exact = U x (1 + a²/r²),    p(x) = a (x, y, 0)/r_xy,    n = (x, y, 0)/r_xy
+
+The `closest_point_normal(x)` callback of §5.1 gets one analytic implementation
+each for the cylinder and the sphere (n = (x − c)/|x − c|); the interface design
+itself is unchanged.
+
+Caveats (all three are binding; none may be dropped when citing this pre-study):
+
+1. **Necessary, not sufficient.** The cylinder has single curvature, the sphere
+   double curvature. **The G1.2 gate closes only on the sphere.** Cylinder
+   results serve solely as prerequisite evidence for entering the sphere
+   experiment G1.2-a.
+2. **Spanwise-noise floor.** The quasi-2D mesh carries the O(h) spanwise noise
+   inherent to the 3-tet prism split (max |w|/U∞ ≈ 2.9e-2 on coarse), which
+   pollutes in-plane gradient recovery at the same O(h). The cylinder
+   acceptance criterion is therefore: corrected error significantly below the
+   uncorrected one **and** the Cp-error convergence order recovering from
+   sub-first to ≈ first order — **no absolute threshold**. The oracle run
+   measures this floor as a by-product; its magnitude feeds back into the
+   G2.5(b) re-spec.
+3. The cylinder suction peak Cp = −3 is stronger than the sphere's −1.25 — a
+   harsher stress test; percentage figures must not be compared across the two
+   geometries.
+
+Visualization: on the single-layer mesh, slicing degenerates to a trivial
+operation — the symmetry plane carries its own 2D triangulation, so fields plot
+directly via tripcolor. The helper is to be defined with the final interface
+prototype of P2's `post/section_cut.py` (signature reserves the z = const
+parameter); P2 then adds the general 3D interpolation path.
+
 Distinction from the rejected Nitsche/penalty prototype (record this explicitly
 to prevent misclassification as a repeat experiment): the earlier attempt
 changed the **enforcement mechanism** for the same condition on the same wrong

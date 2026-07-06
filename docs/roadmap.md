@@ -81,7 +81,29 @@ linear solve), Dirichlet far field, natural walls; `solve/linear.py`
       **Fix plan (researched 2026-07-06, see design.md §5.1 — supersedes the
       "curved/isoparametric elements only" next step above with a tiered
       Option A/B/C route; the root cause itself stands unchanged):**
-      - **G1.2-a — Oracle ceiling experiment** (do first, ~half a day): take the
+      - **G1.2-a0 — Cylinder oracle pre-study** (do first, ~half a day; see
+        design.md §5.1.1): on the coarse/medium (optionally fine)
+        `cylinder_2.5d` meshes, assemble Option A's correction RHS on the wall
+        facets using the **exact gradient + exact normal** (all closed-form on
+        the cylinder: φ_exact = U x (1 + a²/r²), n = (x, y, 0)/r_xy), solve
+        once, measure the Cp(θ) error and its convergence order. Acceptance:
+        corrected error significantly below uncorrected **and** Cp-error
+        convergence order recovering from sub-first to ≈ first — **no absolute
+        threshold**; the G1.2 gate closes only on the sphere, so this step is
+        prerequisite evidence, not a gate criterion. Decision chain: a0 passes
+        → proceed to the sphere experiment G1.2-a; a0 fails → go directly to
+        the G1.2-c "oracle > 5%" branch (skip the sphere experiment). The
+        oracle run also measures the quasi-2D spanwise-noise floor as a
+        by-product (magnitude reference for the G2.5(b) re-spec).
+        Headless artifacts (§0.1 policy):
+        `artifacts/G1.2-a0/cp_theta_overlay.png` (exact / uncorrected /
+        oracle-corrected Cp(θ), coarse+medium);
+        `artifacts/G1.2-a0/error_vs_h.png` (max |Cp err| vs h, log-log,
+        uncorrected and corrected lines with fitted slopes);
+        `artifacts/G1.2-a0/normal_deviation.png` (facet-normal deviation angle
+        ∠(ñ, n) vs θ — geometric-error self-check); plus `summary.csv`
+        (per-level errors, slopes, spanwise-noise floor).
+      - **G1.2-a — Oracle ceiling experiment** (sphere; run after G1.2-a0 passes, ~half a day): take the
         exact sphere-flow potential φ_exact = U (r + R³/(2r²)) cosθ, assemble
         Option A's correction RHS on the wall facets using the **exact gradient
         + exact normal**, solve once, and measure the medium-mesh Cp error. That
@@ -118,7 +140,11 @@ correction (incompressible form); `post/section_cut.py`: given z = const,
 extract (a) a field slice (φ, |V|, later M/ρ/Cp) and (b) wall-surface Cp(x/c)
 split into upper/lower curves — headless per §0.1, writes
 `artifacts/<gate_id>/*.png` (matplotlib) + numeric CSV, no GUI; needed for
-V2.3 visuals and reused heavily in P3/P4 debugging.
+V2.3 visuals and reused heavily in P3/P4 debugging. The degenerate single-layer
+implementation (symmetry-plane tripcolor) is pre-warmed by the G1.2-a0
+visualization work: the interface is defined with its final signature (z = const
+parameter) already at the a0 stage, so P2 only adds the general z = const
+interpolation path.
 **Topology asserts (run at preprocess time, every mesh):**
 - each wake face has exactly one ⁺-side and one ⁻-side element
 - TE nodes are NOT duplicated; wake–symmetry-plane edges handled; no orphan
@@ -150,7 +176,9 @@ V2.3 visuals and reused heavily in P3/P4 debugging.
       in the V2.5 heatmap (the bug-detector intent survives; the machine-zero
       wording does not). Achieving literal 1e-12 would require a
       z-mirror-symmetric subdivision, which needs Steiner points and violates
-      the M0 3-tet spec.
+      the M0 3-tet spec. The corrected-error floor measured by G1.2-a0 (cylinder
+      oracle pre-study, same quasi-2D mesh family) provides a magnitude
+      reference for re-setting criterion (b)'s threshold.
 **Visual test examples:**
 - V2.1 on cut mesh with Γ=0, display residual magnitude on wake-adjacent cells; expect no hot stripe along wake.
 - V2.2 with prescribed constant Γ, plot φ+ and φ- on paired wake nodes and their difference [φ]; expect a flat spanwise profile at target Γ.
@@ -269,7 +297,7 @@ Eisenstat–Walker inexact-solve schedule, profiling report.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
-| M0 | ◐ (mesh-side items delivered 2026-07-06; acceptance link waits on P2) | | Delivered: `pyfp3d/meshgen/` (extrude.py: single-layer extrusion + globally consistent min-global-index prism→3-tet split + `assert_quad_split_consistency`; planar.py: vanilla-Gmsh 2D builders, wake line via `gmsh.model.mesh.embed`); `cases/meshes/naca0012_2.5d/generate_naca0012.py` — one parameter (h_wall) per level, coarse/medium committed (16.4k / 61.8k tets, on-target vs ~15k/60k spec; fine on demand); plus an extra **cylinder-flow test case** `cases/meshes/cylinder_2.5d/` (6.9k / 17.3k tets) validating the pipeline end-to-end against the analytic Cp = 1 − 4 sin²θ (max err 9.1% coarse → 4.5% medium with quadratic recovery — same curved-wall variational crime as G1.2, ~O(h), expected). Gate items verified by `tests/test_m0_{extrude,cylinder,naca0012}.py` (21 tests): reader ingests the family; quad-split consistency assert passes (and provably fires on a broken split); wake is one continuous planar interior sheet TE→farfield conforming to tet faces, nodes not duplicated; symmetry planes planar/disjoint from wall; single spanwise station. Still open for M0 closure: P2's wake-cut topology asserts (need `mesh/wake_cut.py`) and the G2.5 acceptance link — where criterion (b) needs re-spec, see the evidence note under G2.5 (solved-field spanwise noise is O(h) by construction for 3-tet prisms, not machine-zero). |
+| M0 | ◐ (mesh-side items delivered 2026-07-06; acceptance link waits on P2) | | Delivered: `pyfp3d/meshgen/` (extrude.py: single-layer extrusion + globally consistent min-global-index prism→3-tet split + `assert_quad_split_consistency`; planar.py: vanilla-Gmsh 2D builders, wake line via `gmsh.model.mesh.embed`); `cases/meshes/naca0012_2.5d/generate_naca0012.py` — one parameter (h_wall) per level, coarse/medium committed (16.4k / 61.8k tets, on-target vs ~15k/60k spec; fine on demand); plus an extra **cylinder-flow test case** `cases/meshes/cylinder_2.5d/` (6.9k / 17.3k tets) validating the pipeline end-to-end against the analytic Cp = 1 − 4 sin²θ (max err 9.1% coarse → 4.5% medium with quadratic recovery — same curved-wall variational crime as G1.2, ~O(h), expected; now also the designated G1.2 fix-route testbed, see roadmap G1.2-a0 / design.md §5.1.1). Gate items verified by `tests/test_m0_{extrude,cylinder,naca0012}.py` (21 tests): reader ingests the family; quad-split consistency assert passes (and provably fires on a broken split); wake is one continuous planar interior sheet TE→farfield conforming to tet faces, nodes not duplicated; symmetry planes planar/disjoint from wall; single spanwise station. Still open for M0 closure: P2's wake-cut topology asserts (need `mesh/wake_cut.py`) and the G2.5 acceptance link — where criterion (b) needs re-spec, see the evidence note under G2.5 (solved-field spanwise noise is O(h) by construction for 3-tet prisms, not machine-zero). |
 | P0 | ☐ (in progress) | | `mesh/reader.py`, `metrics.py`, `coloring.py`, `physics/isentropic.py`, `post/vtk_out.py` implemented; G0.1–G0.4 unit tests pass. Three latent bugs found by manual audit and fixed, each now locked in by a regression test (`test_mesh_adjacency.py`, `test_mesh_reader_roundtrip.py`, `test_laplace_picard.py`): `metrics.py::build_face_adjacency` crashed under `@njit` (reflected-list dict values), `reader.py::write_mesh` dropped all named boundary tags (`.msh` writer ambiguity + only handled a legacy `"all_triangles"` block), `solve/picard.py::solve_laplace` reported a `residual_norm` dominated by Dirichlet-row flux imbalance instead of the free-dof residual. None were caught by the pre-existing test suite because nothing exercised those paths. Second audit (2026-07-06), same fix-plus-regression-test pattern: `tests/conftest.py` now writes gate artifacts to the persistent `artifacts/` dir instead of a deleted tempdir (`test_conftest_artifacts.py`); `metrics.py::element_gradients` raises on degenerate tets with a scale-relative threshold instead of silently returning zero gradients (`test_metrics_degenerate.py`); `reader.py` keeps the default "bulk" volume tag for meshes without named 3D groups (`test_mesh_reader_roundtrip.py`) — details in PROJECT_STRUCTURE.md. Not yet closed: no M0 mesh family to validate against on real geometry, and the full coarse regression suite per §0 hasn't been run against real case meshes. |
 | P1 | ☐ (in progress, 2/3 gates closed) | | `kernels/residual.py`, `solve/linear.py`, `solve/picard.py`, `post/surface.py`, `tests/mesh_utils.py`, `tests/test_post_surface.py`, `cases/meshes/sphere_shell/{coarse,medium}.msh` implemented/committed. G1.1 (`test_laplace_mms.py`) and G1.3 (`test_laplace_cg_iterations.py`) pass. G1.2 (`test_laplace_sphere.py`) is a `strict=True` xfail, now root-caused rather than just hypothesized: added `post/surface.py::wall_tangential_gradient_quadratic` (quadratic tangential patch recovery, well-conditioned via SVD-based `lstsq` + rank-deficiency fallback), which improved medium-mesh max error from ~12.0% to ~11.6% — a real but modest gain, because a controlled investigation (clean single-variable h_min sweep + an oracle exact-potential-in recovery test + a rejected Nitsche/penalty prototype) showed the recovery scheme was never the dominant error source. The dominant source is the volume PDE solve's own accuracy at the wall: the natural BC is satisfied on the flat polyhedral wall-facet approximation instead of the true curved sphere, a geometric/variational-crime inconsistency evidenced by sub-first-order, decreasing convergence order of the raw nodal potential itself (not just its gradient). Closing G1.2 needs curved/isoparametric wall boundary elements — a separately-scoped effort — not more h-refinement or post-processing. See PROJECT_STRUCTURE.md "Known gaps" for the full evidence trail. Second audit (2026-07-06): `post/surface.py::_wall_vertex_normals` now raises on inconsistent wall-triangle winding instead of silently averaging cancelling normals into garbage tangent planes (`test_post_surface.py::test_inconsistent_wall_winding_raises`). 52 tests total (51 passed, 1 xfailed), full suite runs in ~10 s. 2026-07-06: G1.2 fix-route research complete — three-tier Option A/B/C plan (lagged true-normal flux correction / Gap-SBM / gate redefinition) with oracle-first verification order defined; see design.md §5.1 and the G1.2-a/b/c steps under the G1.2 gate entry. |
 | P2 | ☐ | | |

@@ -48,7 +48,8 @@ cases/                     # Test cases and reference data
 │   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.2 (coarse/medium generated)
 │   ├── cylinder_2.5d/    # ✓ [M0] Single-layer extruded cylinder-flow test case
 │   │                       #   (generate_cylinder.py; coarse 6.9k / medium 17.3k tets
-│   │                       #   committed; analytic Cp = 1 - 4 sin^2(theta) validation)
+│   │                       #   committed; analytic Cp = 1 - 4 sin^2(theta) validation);
+│   │                       #   G1.2 fix-route testbed (design.md §5.1.1, roadmap G1.2-a0)
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
@@ -260,7 +261,10 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
   elements — now demoted to the option of last resort, taken up as its own scoped effort only if
   both A and B fall short — with G1.2 redefined per Option C's geometry-consistent-reference
   yardstick in that case. Still do **not** propose further h-refinement or recovery-scheme
-  tweaks; both remain ruled out with evidence.
+  tweaks; both remain ruled out with evidence. `cases/meshes/cylinder_2.5d/` is confirmed to
+  share the same root cause with quantified error (max |Cp err| 0.091 coarse → 0.045 medium,
+  ~O(h)) and is the designated fix-route testbed — see design.md §5.1.1 / roadmap G1.2-a0; the
+  gate criterion itself stays on the sphere.
 
 ### ✓ M0 mesh-side items delivered (2026-07-06)
 
