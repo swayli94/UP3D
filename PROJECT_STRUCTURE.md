@@ -70,7 +70,7 @@ artifacts/                 # Gate outputs (auto-generated, gitignored)
 
 pyproject.toml            # ✓ Project metadata and dependencies
 setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
-.copilot-instructions.md  # ✓ This AI agent's domain-specific rules
+CLAUDE.md                 # ✓ Claude Code project instructions (doc map + workflow; imports docs/agent-rules.md)
 ```
 
 ## Implementation Status
@@ -90,7 +90,9 @@ setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
 - **tests/test_mesh_adjacency.py**, **tests/test_mesh_reader_roundtrip.py** — regression tests for
   two bugs found by manual audit (see below)
 - **pyproject.toml** — Build metadata and dependencies
-- **.copilot-instructions.md** — AI agent instructions for P0–P7
+- **CLAUDE.md** — Claude Code project instructions, auto-loaded each session (replaces the
+  former `.copilot-instructions.md`, whose content largely duplicated design.md/roadmap.md
+  and had drifted; details now live only in the authoritative docs)
 
 Three latent bugs found by manual code audit (not caught by the existing suite, because nothing
 exercised these code paths) have been fixed, each now with a regression test:
