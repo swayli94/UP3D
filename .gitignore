@@ -56,3 +56,6 @@ artifacts/
 # Local env files
 .env
 .env.*
+
+# Mesh files
+m6_wing_unstructured.msh
