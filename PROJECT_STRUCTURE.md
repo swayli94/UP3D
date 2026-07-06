@@ -13,6 +13,14 @@ pyfp3d/                    # Main package
 │   ├── metrics.py        # [P0] volumes, gradients, face adjacency
 │   ├── coloring.py       # [P0] element graph coloring
 │   └── wake_cut.py       # [P2] node duplication from wake surface (PLANNED, file not created yet)
+├── meshgen/              # ✓ [M0] Quasi-2D mesh generation (roadmap Track M)
+│   ├── __init__.py
+│   ├── extrude.py        # ✓ single-layer extrusion; globally consistent
+│   │                       #   prism→3-tet split (min-global-index diagonal rule);
+│   │                       #   assert_quad_split_consistency (M0 preprocessor assert)
+│   └── planar.py         # ✓ vanilla-Gmsh 2D builders: cylinder annulus, NACA0012
+│                           #   with wake line embedded via gmsh.model.mesh.embed
+│                           #   (gmsh imported lazily; solver tests don't need it)
 ├── physics/              # Physics constants and constitutive relations
 │   ├── __init__.py
 │   └── isentropic.py     # ✓ [P0] ρ(q²), M(q²), a(q²), Cp, etc. (complete)
@@ -38,7 +46,12 @@ pyfp3d/                    # Main package
 cases/                     # Test cases and reference data
 ├── meshes/               # Mesh families (coarse/medium/fine)
 │   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.2 (coarse/medium generated)
-│   ├── naca0012_2.5d/    # [M0] Extruded NACA0012 + wake surface -- not started
+│   ├── cylinder_2.5d/    # ✓ [M0] Single-layer extruded cylinder-flow test case
+│   │                       #   (generate_cylinder.py; coarse 6.9k / medium 17.3k tets
+│   │                       #   committed; analytic Cp = 1 - 4 sin^2(theta) validation)
+│   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
+│   │                       #   (generate_naca0012.py, one parameter h_wall per level;
+│   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
 │   └── onera_m6/         # [M1] Swept wing -- not started
 ├── reference_data/       # Ground truth (DO NOT EDIT) -- currently EMPTY; the files below are
 │   ├── sphere_incomp_cp.csv   #   planned digitized references. The P1 sphere gate compares
@@ -61,6 +74,9 @@ tests/                     # Unit and gate tests
 ├── test_laplace_cg_iterations.py    # ✓ [P1] Gate G1.3 -- PASSES
 ├── test_laplace_sphere.py           # ✓ [P1] Gate G1.2 -- strict xfail, see "Known gaps"
 ├── test_laplace_picard.py           # ✓ [P1] Regression test for solve_laplace residual_norm fix
+├── test_m0_extrude.py               # ✓ [M0] Prism-split unit tests (pure numpy, no Gmsh)
+├── test_m0_cylinder.py              # ✓ [M0] Cylinder-flow validation (analytic Cp, spanwise)
+├── test_m0_naca0012.py              # ✓ [M0] NACA0012 family topology/wake-sheet/ingestion
 ├── test_wake_*.py        # [P2] Gates G2.1–G2.4
 ├── test_subsonic_*.py    # [P3] Gates G3.1–G3.3
 └── test_transonic_*.py   # [P4] Gates G4.1–G4.3
@@ -242,11 +258,53 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
   just `post/surface.py`) and should get its own design pass before implementation, rather than
   being rushed in alongside other P1/P2 work.
 
+### ✓ M0 mesh-side items delivered (2026-07-06)
+
+- **pyfp3d/meshgen/extrude.py** — single-layer quasi-2D extrusion: one cell layer in z, both
+  planes tagged `symmetry`; every prism split into 3 tets with the globally consistent
+  min-global-index diagonal rule (Dompierre et al. "indirect" subdivision — since top-layer
+  indices are bottom + n_2d, the smallest index on any lateral quad is always the smaller
+  *bottom* node, so both sides of every shared quad pick the same diagonal by construction);
+  tagged interior edge sheets (the wake) split by the same rule so they coincide exactly with
+  tet faces. `assert_quad_split_consistency()` is the M0 preprocessor assert: single-owner tet
+  faces must equal the tagged boundary set, interior-sheet faces must have exactly two owner
+  tets; unit tests prove it fires on a deliberately broken split (`tests/test_m0_extrude.py`).
+- **pyfp3d/meshgen/planar.py** — vanilla-Gmsh 2D builders (Distance+Threshold grading like the
+  sphere case): `cylinder_annulus_2d()` and `naca0012_wake_2d()` (closed-TE NACA0012, circular
+  far field r=15c centered at mid-chord, wake line TE→farfield embedded with
+  `gmsh.model.mesh.embed` so triangle edges conform to it). Gmsh imported lazily.
+- **cases/meshes/naca0012_2.5d/** (the M0 deliverable) — `generate_naca0012.py`, one parameter
+  (h_wall) per level, everything else derived: coarse 16.4k / medium 61.8k tets committed
+  (on-target vs the ~15k/60k spec; fine ~240k on demand). Per-level stats CSV + layer-inspection
+  PNG written at generation time (headless, roadmap §0.1).
+- **cases/meshes/cylinder_2.5d/** (extra validation case) — quasi-2D circular-cylinder flow,
+  no wake (non-lifting), analytic solution phi = x(1 + a²/r²), Cp = 1 − 4 sin²θ. The simplest
+  end-to-end check of pipeline + P1 solver: measured max |Cp err| 9.1% (coarse, 6.9k tets) →
+  4.5% (medium, 17.3k tets) with quadratic surface recovery — same curved-wall/flat-facet
+  variational crime as G1.2, converging ~O(h), fully expected on this geometry.
+- **tests/test_m0_extrude.py / test_m0_cylinder.py / test_m0_naca0012.py** — 21 tests covering
+  the M0 gate items: reader ingestion, tags, quad-split consistency, wake-sheet topology (one
+  connected planar interior sheet TE→farfield, both z-planes, nodes not duplicated), symmetry
+  planes planar/disjoint from wall, cylinder Cp vs analytic, spanwise-gradient behavior.
+
+**G2.5(b) finding (evidence in roadmap.md G2.5 note — the gate criterion needs re-spec before
+P2 closes it):** the *interpolated* freestream phi = x is spanwise-zero to machine precision
+(G2.5(a) verified), but the *solved* field is not and cannot be: a 3-tet prism split is
+necessarily asymmetric under the z-mirror (on a lateral quad face, ∫N_i dS is S/3 or S/6
+depending on the diagonal direction), so a z-invariant field does not satisfy the discrete
+equations and the discrete minimizer carries O(h) spanwise velocity noise. Measured (non-lifting
+solves): cylinder max|w|/U∞ 2.9e-2 (coarse) → 1.5e-2 (medium); NACA0012 α=0 5.4e-2 (coarse) —
+clean ~O(h) decay, 10 orders above the literal 1e-12 criterion. Literal machine-zero would need
+a z-mirror-symmetric subdivision (requires Steiner points, violating the 3-tet M0 spec). The
+tests assert the honest behavior instead: machine-zero for the interpolant, small-and-decreasing
+under refinement for solved fields.
+
 ### ⏳ Next
+- **P2 (wake cut, circulation, Kutta) on the M0 mesh** — `mesh/wake_cut.py` + its topology
+  asserts are also the last items blocking M0 closure (together with the G2.5(b) re-spec above).
 - Scope a curved/isoparametric wall-boundary treatment as its own design item (see root-cause
   writeup above) — this is the concrete next step to actually close G1.2, not further h-refinement
   or more post-processing tweaks (both now ruled out as sufficient, with evidence).
-- Generate NACA0012 mesh family (M0 gate) — not started.
 
 ## Quick Start
 
@@ -310,10 +368,10 @@ close P1, only G1.2 remains:
    shape correction in `mesh/metrics.py`/`kernels/residual.py`), which deserves its own design
    pass before implementation.
 
-2. **Create test meshes** (M0, parallel track)
-   - Gmsh script: extruded NACA0012 + embedded wake surface
-   - Generate coarse (30k), medium (150k), fine (700k) families
-   - Validate topology with asserts
+2. ~~**Create test meshes** (M0, parallel track)~~ — DONE 2026-07-06 (single-layer re-spec
+   targets ~15k/60k/240k tets, not the older 30k/150k/700k): `pyfp3d/meshgen/` +
+   `cases/meshes/naca0012_2.5d/` + `cases/meshes/cylinder_2.5d/`, topology validated by
+   `tests/test_m0_*.py`. See "M0 mesh-side items delivered" above.
 
 ## References
 
@@ -325,14 +383,15 @@ close P1, only G1.2 remains:
 ---
 
 **Last updated:** 2026-07-06  
-**Status:** P0 gates G0.1–G0.4 green, but the phase itself is still open (closure per roadmap.md
-ledger needs the M0 mesh family and a full coarse-regression run on real case meshes). P1: G1.1
-(MMS) and G1.3 (CG+AMG mesh-independence) closed;
-G1.2 (sphere Cp) open with a `strict=True` xfail tracking the real 2% criterion. The saturation
-cause is now root-caused (not just hypothesized) — a geometric/variational-crime inconsistency
-from the natural BC being enforced on the flat polyhedral wall approximation rather than the true
-curved sphere; recovery-scheme quality and bulk-mesh refinement were both tested and ruled out as
-the dominant cause. A quadratic surface-patch recovery (`wall_tangential_gradient_quadratic`) was
-implemented as a genuine but modest improvement (~12.0%→~11.6% max error on medium); closing the
-gate for real needs curved/isoparametric wall elements — see "Known gaps" and "Next Steps" above.
-52 tests total (51 passed, 1 xfailed), full suite ~10 s.
+**Status:** M0 mesh-side items delivered (`pyfp3d/meshgen/`, NACA0012 quasi-2D family with
+embedded wake, cylinder-flow validation case with analytic-Cp end-to-end check); M0 closure and
+the G2.5 acceptance link wait on P2 (`mesh/wake_cut.py` topology asserts), and G2.5's
+criterion (b) needs re-spec — the solved-field spanwise gradient is O(h) by construction for
+3-tet prism splits, not machine-zero (evidence in roadmap.md G2.5 note and the M0 section
+above). P0 gates G0.1–G0.4 green; the full coarse regression suite now runs against real case
+meshes (cylinder + NACA0012), leaving P0 closure a bookkeeping decision. P1: G1.1 (MMS) and
+G1.3 (CG+AMG mesh-independence) closed; G1.2 (sphere Cp) open with a `strict=True` xfail
+tracking the real 2% criterion — root-caused to the curved-wall/flat-facet variational crime
+(needs isoparametric wall elements; see "Known gaps"). The M0 cylinder case shows the same
+~O(h) wall-Cp behavior on its curved wall (9.1% → 4.5% max), consistent with that root cause.
+79 tests total (78 passed, 1 xfailed), full suite ~13 s.

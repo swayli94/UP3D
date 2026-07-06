@@ -1,0 +1,12 @@
+metric,value
+n_nodes,2412
+n_elements,6894
+total_volume,250.06483552246317
+min_volume,0.00016722815017885544
+max_volume,0.2767424230783985
+mean_volume,0.03627282209493229
+min_edge_length,0.07210696989406506
+max_edge_length,3.2470593867943105
+mean_edge_length,0.6758682912013901
+n_2d_triangles,2298
+dz,0.2
