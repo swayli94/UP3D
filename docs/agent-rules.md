@@ -1,6 +1,6 @@
 # pyFP3D Agent Rules
 
-Current phase: P1 in progress (G1.1 MMS and G1.3 CG-iteration gates closed; G1.2 sphere-Cp gate open — root-caused to a curved-wall/flat-facet geometric consistency error in the volume solve, not the surface recovery scheme; see PROJECT_STRUCTURE.md "Known gaps" before proposing more h-refinement or recovery-scheme tweaks), P0 in progress (mesh infra done, M0 mesh family still missing), M0 (meshing) not started — per [docs/roadmap.md](roadmap.md).
+Current phase: **M0 (meshing) is the active priority** — re-specified 2026-07-06 as a single-layer extruded NACA0012 quasi-2D testbed (one cell layer in z, globally consistent prism→3-tet split, embedded wake; see roadmap.md Track M and gate G2.5). Also: P1 in progress (G1.1 MMS and G1.3 CG-iteration gates closed; G1.2 sphere-Cp gate open — root-caused to a curved-wall/flat-facet geometric consistency error in the volume solve, not the surface recovery scheme; see PROJECT_STRUCTURE.md "Known gaps" before proposing more h-refinement or recovery-scheme tweaks), P0 in progress (mesh infra done, M0 mesh family still missing) — per [docs/roadmap.md](roadmap.md).
 
 Authoritative docs:
 - [docs/design.md](design.md): theory, discretization, architecture, and validation formulas.
