@@ -382,6 +382,17 @@ def solve_subsonic_lifting(
     maxiter: int = 3000,
     amg_rebuild_every: int = 4,
     forcing: float = 0.0,
+    upwind_c: float = 1.5,
+    m_crit: float = 0.95,
+    phi_init: Optional[np.ndarray] = None,
+    gamma_init: Optional[np.ndarray] = None,
+    kutta_per_outer: Optional[int] = None,
+    m_cap: float = 3.0,
+    omega_rho: float = 1.0,
+    pseudo_dt: Optional[float] = None,
+    pseudo_dt_growth: float = 1.1,
+    pseudo_dt_max_ratio: float = 100.0,
+    tol_residual: Optional[float] = None,
 ) -> Dict[str, object]:
     """
     Lifting subsonic full-potential solve on a wake-cut mesh: NESTED
@@ -420,21 +431,51 @@ def solve_subsonic_lifting(
     1.0 bitwise, so outer iteration 1 IS solve_laplace_lifting
     bit-for-bit and the loop exits after it.
 
-    Converged when the density lag ||rho(phi_new) - rho_matrix||_inf <
-    tol_rho AND the inner Kutta loop met tol_gamma.
+    P4 transonic support (design.md Sec 3): when `upwind_c` > 0 and
+    m_inf > 0, the matrix/residual weight is the UPWINDED density
+    rho_tilde_e = rho_e - nu_e (rho_e - rho_u(e)) with the (3.2) switch
+    nu = upwind_c * max(0, 1 - m_crit^2/M^2) (kernels/upwind.py). In the
+    subcritical range nu == 0.0 exactly and rho_tilde == rho bitwise, so
+    a subcritical solve with the machinery active is bit-identical to the
+    P3 path (gate G4.2); upwind_c = 0 (or m_inf = 0) bypasses the sweep
+    entirely. `phi_init`/`gamma_init` seed the loop for Mach continuation
+    (solve/continuation.py); phi_init also warm-starts the first inner CG.
+
+    `kutta_per_outer`: None (default) converges the inner secant Kutta
+    loop per outer iteration -- correct at subcritical, where the frozen-
+    rho map is benign. At transonic this is UNSTABLE: solving the Kutta
+    condition exactly against a stale rho_tilde overshoots Gamma, the
+    shock strengthens in response, and the composite outer map runs away
+    (measured on the coarse NACA mesh, M 0.70 -> 0.75 continuation step:
+    Gamma escalated 0.115 -> 4.99). Transonic runs pass kutta_per_outer=1:
+    ONE plain under-relaxed Gamma step per density update (no secant --
+    its slope estimate is polluted when the matrix changes between
+    solves), which co-converges Gamma with the shock. Transonic tuning
+    ladder (design.md Sec 12.4): raise upwind_c -> lower omega (and
+    omega_gamma) -> Mach continuation.
+
+    Converged when the density lag ||rho_tilde(phi_new) -
+    rho_tilde_matrix||_inf < tol_rho AND the inner Kutta loop met
+    tol_gamma.
 
     Returns:
         dict: phi (cut-mesh), gamma, n_picard (outer iterations),
         converged, kutta_converged, residual_history (per-outer nonlinear
         ||T^T R||_inf on free reduced dofs), drho_history, gamma_history,
-        rho, mach2_max, n_cg_total, n_solves_total
+        rho (UPWINDED element densities actually used as the matrix
+        weight), mach2_max, nu_max, n_nu_active (elements with nu > 0),
+        n_cg_total, n_solves_total
     """
     import scipy.sparse.linalg as spla
 
     from pyfp3d.constraints.dirichlet import farfield_dirichlet, freestream_phi
     from pyfp3d.constraints.wake import WakeConstraint, kutta_targets
     from pyfp3d.kernels.jacobian import PicardOperator
-    from pyfp3d.physics.isentropic import density_field, mach_squared_field
+    from pyfp3d.physics.isentropic import (
+        density_field,
+        limit_q2_field,
+        mach_squared_field,
+    )
     from pyfp3d.solve.linear import build_amg_preconditioner
 
     if not 0.0 <= m_inf < 1.0:
@@ -442,6 +483,10 @@ def solve_subsonic_lifting(
     beta = float(np.sqrt(1.0 - m_inf**2))
 
     op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
+    use_upwind = upwind_c > 0.0 and m_inf > 0.0
+    if use_upwind:
+        from pyfp3d.kernels.upwind import UpwindOperator
+        upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements)
     con = WakeConstraint(op.assemble_matrix(), wc)
     n_red = con.n_reduced
     b_zero = np.zeros(op.n_nodes, dtype=np.float64)
@@ -456,6 +501,22 @@ def solve_subsonic_lifting(
     is_dir[dir_red] = True
     free = np.where(~is_dir)[0]
 
+    # Pseudo-transient term (design.md Sec 8 acceleration 4, pulled into
+    # the P4 Picard loop as the transonic stabilizer of last resort):
+    # A' = A + diag(m_lumped/dtau), b' = b + diag(...) phi_k -- an implicit
+    # pseudo-time step that bounds the per-iteration update and breaks the
+    # shock-position limit cycle; consistent at steady state (the added
+    # term vanishes when phi stops changing). None = off (P3 bit-path).
+    d_tau_free = None
+    m_red_free = None
+    dt_cur = pseudo_dt
+    if pseudo_dt is not None:
+        m_lumped = np.zeros(op.n_nodes, dtype=np.float64)
+        v_quarter = np.repeat(op.V / 4.0, 4)
+        np.add.at(m_lumped, np.asarray(op.elements).reshape(-1), v_quarter)
+        m_red_free = (con.T.T @ m_lumped)[free]
+        d_tau_free = m_red_free / dt_cur
+
     def _solve_for(gamma: np.ndarray, A_free, A_coupling, M, x0):
         nodes_d, vals_d = farfield_dirichlet(
             mesh_cut, wc, alpha_deg, gamma, u_inf, vortex_center, beta=beta,
@@ -463,6 +524,8 @@ def solve_subsonic_lifting(
         _, vals_red = con.to_reduced_dirichlet(nodes_d, vals_d)
         b_red = con.reduced_rhs(b_zero, gamma)
         b_free = b_red[free] - A_coupling @ vals_red
+        if d_tau_free is not None and x0 is not None:
+            b_free = b_free + d_tau_free * x0
         # Inexact-Picard forcing term (design.md Sec 8 acceleration 2):
         # each inner solve must cut ITS OWN starting residual by 1/eta;
         # the final accuracy is still governed by rtol (scipy cg stops at
@@ -490,44 +553,63 @@ def solve_subsonic_lifting(
             np.atleast_1d(np.asarray(gamma_fixed, dtype=np.float64)),
             (wc.n_stations,),
         ).copy()
+    elif gamma_init is not None:
+        gamma = np.atleast_1d(np.asarray(gamma_init, dtype=np.float64)).copy()
     else:
         gamma = np.zeros(wc.n_stations, dtype=np.float64)
 
-    # Freestream start (design.md Sec 8): rho of the uniform field.
-    phi_cut = freestream_phi(mesh_cut.nodes, alpha_deg, u_inf)
-    _, q2 = op.velocities(phi_cut)
-    rho = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
+    # Freestream start (design.md Sec 8), or the continuation seed.
+    if phi_init is not None:
+        phi_cut = np.asarray(phi_init, dtype=np.float64).copy()
+    else:
+        phi_cut = freestream_phi(mesh_cut.nodes, alpha_deg, u_inf)
+    grad, q2 = op.velocities(phi_cut)
+    q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
+    rho = density_field(q2l, m_inf, gamma_air)
+    if use_upwind:
+        rho_t = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
+                              gamma_air).copy()
+    else:
+        rho_t = rho
 
     residual_history = []
     drho_history = []
+    n_limited = 0
     gamma_history = [gamma.copy()]
     n_cg_total = 0
     n_solves_total = 0
-    phi_red = None
+    # A continuation seed also warm-starts the first inner CG solve.
+    phi_red = phi_cut[:n_red].copy() if phi_init is not None else None
     M = None
     converged = False
     kutta_converged = gamma_fixed is not None
     max_kutta_updates = 30
 
     for outer in range(n_picard_max):
-        A = op.assemble_matrix(rho)
+        A = op.assemble_matrix(rho_t)
         con.update_matrix(A)
         A_csr = con.A_reduced
         A_free = A_csr[free][:, free].tocsr()
         A_coupling = A_csr[free][:, dir_red].tocsr()
+        if d_tau_free is not None:
+            import scipy.sparse as _sp
+            A_free = (A_free + _sp.diags(d_tau_free)).tocsr()
         if M is None or outer % amg_rebuild_every == 0:
             _, M = build_amg_preconditioner(A_free)
         x0 = phi_red[free] if (m_inf > 0.0 and phi_red is not None) else None
 
         # Inner Kutta loop at frozen rho: exactly the P2 secant iteration
         # (the map target(Gamma) is affine when the matrix is fixed).
+        # kutta_per_outer caps it (transonic: 1 relaxed step, no secant).
         prev_gamma = prev_target = None
+        n_inner = (max_kutta_updates if kutta_per_outer is None
+                   else kutta_per_outer)
         if gamma_fixed is not None:
             phi_red_new, n_cg = _solve_for(gamma, A_free, A_coupling, M, x0)
             n_cg_total += n_cg
             n_solves_total += 1
         else:
-            for _ in range(max_kutta_updates):
+            for _ in range(n_inner):
                 phi_red_new, n_cg = _solve_for(gamma, A_free, A_coupling, M, x0)
                 n_cg_total += n_cg
                 n_solves_total += 1
@@ -539,7 +621,7 @@ def solve_subsonic_lifting(
                 )
                 if kutta_converged:
                     break
-                if prev_gamma is None:
+                if prev_gamma is None or kutta_per_outer is not None:
                     new_gamma = gamma + omega_gamma * (target - gamma)
                 else:
                     dg = gamma - prev_gamma
@@ -565,15 +647,44 @@ def solve_subsonic_lifting(
             phi_red = phi_red + omega * (phi_red_new - phi_red)
         phi_cut = con.expand(phi_red, gamma)
 
-        _, q2 = op.velocities(phi_cut)
-        rho_new = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
-        R_red = con.T.T @ op.assemble_residual(phi_cut, rho_new)
+        grad, q2 = op.velocities(phi_cut)
+        q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
+        n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
+        rho_new = density_field(q2l, m_inf, gamma_air)
+        if use_upwind:
+            rho_t_new = upw.rho_tilde(grad, q2l, rho_new, m_inf, upwind_c,
+                                      m_crit, gamma_air).copy()
+        else:
+            rho_t_new = rho_new
+        R_red = con.T.T @ op.assemble_residual(phi_cut, rho_t_new)
         residual_history.append(float(np.max(np.abs(R_red[free]))))
-        drho = float(np.max(np.abs(rho_new - rho)))
+        drho = float(np.max(np.abs(rho_t_new - rho_t)))
         drho_history.append(drho)
-        rho = rho_new
+        # Density under-relaxation (transonic stabilizer; omega_rho = 1.0
+        # adopts rho_t_new exactly -- bit-identical subcritical path).
+        if omega_rho == 1.0:
+            rho, rho_t = rho_new, rho_t_new
+        else:
+            rho = rho_new
+            rho_t = rho_t + omega_rho * (rho_t_new - rho_t)
 
-        if kutta_converged and drho < tol_rho:
+        # SER ramp of the pseudo-time step: grow while the density lag
+        # falls (approaching pure Picard, which is locally fine near the
+        # converged shock), back off on a rebound.
+        if pseudo_dt is not None and len(drho_history) >= 2:
+            if drho < drho_history[-2]:
+                dt_cur = min(dt_cur * pseudo_dt_growth,
+                             pseudo_dt * pseudo_dt_max_ratio)
+            elif drho > 2.0 * drho_history[-2]:
+                dt_cur = max(dt_cur / 2.0, pseudo_dt)
+            d_tau_free = m_red_free / dt_cur
+
+        # With pseudo-time the per-iteration change is bounded by dtau, so
+        # a small drho alone can be damping, not convergence -- require
+        # the nonlinear residual too when tol_residual is given.
+        res_ok = (tol_residual is None
+                  or residual_history[-1] < tol_residual)
+        if kutta_converged and drho < tol_rho and res_ok:
             converged = True
             break
 
@@ -589,8 +700,12 @@ def solve_subsonic_lifting(
         "residual_history": residual_history,
         "drho_history": drho_history,
         "gamma_history": gamma_history,
-        "rho": rho,
+        "rho": rho_t,
         "mach2_max": mach2_max,
+        "nu_max": upw.nu_max if use_upwind else 0.0,
+        "n_nu_active": upw.n_supersonic if use_upwind else 0,
+        "n_limited": n_limited,
+        "n_floored": upw.n_floored if use_upwind else 0,
         "n_cg_total": n_cg_total,
         "n_solves_total": n_solves_total,
     }

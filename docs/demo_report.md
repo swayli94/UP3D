@@ -26,6 +26,7 @@ not as gaps to hide.
 | P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced |
 | M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced |
 | P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced |
+| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced |
 
 ---
 
@@ -241,6 +242,77 @@ the density law, β = 1 reduces the PG vortex bit-exactly, the P1/P2 drivers
 share the rewritten assembly, and pyamg's unseeded spectral-radius RNG — the
 one source of run-to-run scatter, measured at 2e-11 between *identical*
 solves — is now pinned in `solve/linear.py::build_amg_preconditioner`.
+
+---
+
+## P4 — transonic artificial density (G4.1–G4.3, closed)
+
+**Purpose.** Show that the artificial-density upwinding produces sharp,
+monotone, correctly-placed shocks; that it is an *exact* no-op below
+critical Mach; and record the scheme-hardening evidence trail that P4's
+"main risk" phase actually consumed (four instability mechanisms found
+and fixed with measurements).
+
+**Case setup.** NACA0012 quasi-2D family, M∞ = 0.80, α = 1.25° — the
+canonical transonic benchmark (strong upper shock, weak lower shock).
+Pipeline: Mach continuation (0.70 → 0.75 → 0.80), each supercritical
+level closing the Kutta condition by an outer per-station secant around
+frozen-Γ pseudo-time density solves. Reference:
+`cases/reference_data/naca0012_m080/` (Euler anchor ~0.60c/0.35c +
+documented conservative-FP aft-shift band; provenance in its README —
+an open digitized FP table for this case was not retrievable, and the
+README says so rather than inventing one).
+
+**Key figures.**
+
+![upwind reach evidence](../cases/demo/p4_transonic/results/p4_upwind_reach.png)
+![G4.1 Cp and shock](../cases/demo/p4_transonic/results/g41_cp_shock.png)
+
+**Measured results (coarse evidence run; medium gate + sweep in
+artifacts/G4.1, G4.3).**
+
+| Gate | Check | Measured | Criterion |
+|---|---|---|---|
+| G4.2 | ν at M∞ = 0.5 with machinery active | max ν = 0.0 exactly | ν ≡ 0 |
+| G4.2 | φ/Γ vs the P3 code path (upwind_c = 0) | bitwise identical | bit-identical |
+| scheme | single-hop upstream reach (M0.70 pocket) | median 0.37 extents | documented root cause |
+| scheme | multi-hop walk reach | median 1.00 extents | ~1 streamwise cell |
+| G4.1 | upper shock x/c | 0.599 | 0.62 ± 0.03 (ref band) |
+| G4.1 | shock monotone / expansion shock | monotone, none | required |
+| G4.1 | shock sharpness | 1 deduped station (2–3 raw cells) | 2–3 cells |
+| G4.1 | lower weak shock x/c | 0.362 | ~0.35 (reported) |
+| G4.1 | M_max | 1.363 | physical, no limited cells |
+| G4.1 | Γ closure | secant \|F\| = 9.3e-5 in 8 evals | < 2e-4 |
+
+**Conclusion & analysis.** The shipped scheme is the design.md §3
+artificial density plus four evidence-forced hardenings, each of which
+was found by a measured failure: (1) a **multi-hop upstream walk** —
+on the prism-split meshes a single face-neighbor hop reaches only ~1/3
+of an element's streamwise extent, putting the effective ν below the
+(M²−1)/M² stability bound for M ≳ 1.2 (measured blow-up at M0.75 for
+every ω ∈ 0.3–0.9, C ∈ 1.5–2.0, while marginally-stable M0.70 crawled);
+(2) a **speed limiter** q² ≤ q²(M=3) — without it, transients run to the
+vacuum limit and the positivity guards then stabilize *spurious* dead-
+cell solutions (measured: off-body supersonic blobs acting as fake
+blockage); (3) a **shock-point operator** ν = max(ν_e, ν_upstream) — the
+first subsonic cell downstream of the shock is otherwise purely central
+on the field's largest jump; and (4) a **pseudo-transient term**
+diag(m/Δτ) (design.md §8 acceleration 4 pulled forward) — the exact-
+solve Picard limit-cycles at M0.80 shock strength for every relaxation
+tried (φ, ρ̃, or both), while Δτ ≈ 1e-3–3e-3 bounds the update and
+yields the physical field (M_max 1.36–1.46); Δτ-ramping (SER) re-ignites
+the instability, so Δτ stays fixed and the sharp-shock residual settles
+into a slowly-decaying engineering tail (cl drift < 1e-3 per hundreds of
+iterations) instead of 1e-10 — the documented P4 convergence semantics,
+with Newton (P6) as the designed cure. Γ closure had to move OUTSIDE the
+density loop entirely: nested exact-Kutta runs away (Γ 0.115 → 4.99) and
+damped interleaving limit-cycles, because the transonic target map's
+slope crosses 1 where relaxed fixed-point updates provably diverge — the
+outer secant on density-converged evaluations converges in ~4–8 warm-
+started evaluations. The result lands where the references say it
+should: upper shock 0.599 (Euler anchor 0.60–0.63 band), weak lower
+shock 0.362 (~0.35), monotone with no expansion shock, and the
+subcritical bit-identity G4.2 guarantees P3 behavior is untouched.
 
 ---
 

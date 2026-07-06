@@ -11,7 +11,8 @@ pyfp3d/                    # Main package
 │   ├── __init__.py
 │   ├── reader.py         # [P0] meshio → SoA arrays + boundary tags
 │   ├── metrics.py        # [P0] volumes, gradients, face adjacency; ✓ [P3] adds
-│   │                       #   precompute_element_geometry (B_e/V_e once per mesh)
+│   │                       #   precompute_element_geometry (B_e/V_e once per mesh);
+│   │                       #   ✓ [P4] precompute_face_normals (adjacency-ordered outward)
 │   ├── coloring.py       # [P0] element graph coloring; ✓ [P3] greedy loop numba-jitted
 │   │                       #   (same visit order => identical assignment) + color_partition_csr
 │   └── wake_cut.py       # ✓ [P2] wake-sheet node duplication (per-node flood-fill side
@@ -54,7 +55,11 @@ pyfp3d/                    # Main package
 │   ├── residual.py       # [P1] serial reference kernels (KEPT, regression-tested against)
 │   │                       #   + ✓ [P3] assemble_residual_colored; assemble_stiffness_matrix
 │   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P6] Newton
-│   └── upwind.py         # [P4] Artificial compressibility (PLANNED, file not created yet)
+│   └── upwind.py         # ✓ [P4] artificial density (3.1)-(3.2): MULTI-HOP upstream walk
+│                           #   (single-hop reaches only ~1/3 extent on prism-split meshes --
+│                           #   measured dissipation starvation), shock-point operator
+│                           #   nu = max(nu_e, nu_up), rho_tilde floor, UpwindOperator workspace;
+│                           #   exact bitwise no-op below M_crit (G4.2)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -67,17 +72,26 @@ pyfp3d/                    # Main package
 │   │                       #   solve_subsonic_lifting (NESTED: outer ρ update, inner P2
 │   │                       #   secant Kutta at frozen ρ -- interleaved Γ steps rejected with
 │   │                       #   measurements; AMG reuse every 4 outers; opt-in forcing-term
-│   │                       #   inexact inner solves, default off; M∞=0 bitwise ≡ P2)
+│   │                       #   inexact inner solves, default off; M∞=0 bitwise ≡ P2);
+│   │                       #   ✓ [P4] upwind_c/m_crit (ρ̃ in matrix+residual), q² limiter
+│   │                       #   (m_cap), pseudo-transient diag(m/Δτ), omega_rho, kutta_per_outer,
+│   │                       #   phi_init/gamma_init continuation seeds
 │   ├── wall_correction.py # ✓ [P1/G1.3] true-normal weak-flux correction RHS (Option A);
 │   │                       #   assembly-verified; correction itself RULED OUT by the
 │   │                       #   G1.3/G1.4 oracles (design.md §5.1.2) -- kept as reusable
 │   │                       #   facet-integral infrastructure (e.g. Gap-SBM terms)
+│   ├── continuation.py   # ✓ [P4] Mach continuation + transonic Γ closure: outer per-station
+│   │                       #   SECANT on F(Γ) = kutta_target(density-converged φ at fixed Γ) − Γ
+│   │                       #   around frozen-Γ pseudo-time solves (nested/interleaved Kutta both
+│   │                       #   fail at transonic -- measured; see module docstring)
 │   └── newton.py         # [P6] Newton method (PLANNED, file not created yet)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
     │                       #      (export_error_heatmap, export_matplotlib_plot) live here, not
     │                       #      in a separate artifacts.py
+    ├── shock.py          # ✓ [P4] shock monitors: Cp* sonic-crossing detection, shock x/c,
+    │                       #      jump-width cell count, monotonicity + expansion-shock detectors
     ├── surface.py        # [P1] nodal_gradient_recovery() (volume-weighted, for interior fields)
     │                       #      ✓ [P3] m_inf param: exact isentropic Cp (2.5) in the force integral
     │                       #      and wall_tangential_gradient() (surface-only, for wall Cp --
@@ -108,9 +122,12 @@ cases/                     # Test cases and reference data
 │   │                             #   cl_reference.csv / cp_alpha4.csv / convergence.csv +
 │   │                             #   README provenance; two independent lift routes agree
 │   │                             #   to 0.09%, panel-count converged)
-│   └── naca0012_m05/     # ✓ [P3] the same panel solution under Prandtl-Glauert AND
-│                                 #   Karman-Tsien corrections (G3.2 reference = PG/KT
-│                                 #   midpoint + inside-bracket assert; README provenance)
+│   ├── naca0012_m05/     # ✓ [P3] the same panel solution under Prandtl-Glauert AND
+│   │                             #   Karman-Tsien corrections (G3.2 reference = PG/KT
+│   │                             #   midpoint + inside-bracket assert; README provenance)
+│   └── naca0012_m080/    # ✓ [P4] transonic shock reference: Euler anchor (~0.60c upper,
+│                                 #   ~0.35c lower) + documented conservative-FP aft-shift band;
+│                                 #   README records that no open FP table was retrievable
 ├── demo/                 # ✓ Per-phase evidence demos (docs/demo_report.md; one
 │   ├── README.md         #   self-checking run_demo.py + committed results/ per phase)
 │   ├── _common.py        #   shared chart style + CheckList acceptance recorder
@@ -119,6 +136,8 @@ cases/                     # Test cases and reference data
 │   ├── p2_kutta_lifting/   # G2.1-G2.5: cut exactness, Kutta, cl vs panel, spanwise decay
 │   ├── p3_subsonic/        # G3.1-G3.3: assembly-debt evidence, sphere-vs-PG, cl bracket,
 │   │                       #   monotone nested Picard, M=0 bit-identity (14 checks)
+│   ├── p4_transonic/       # G4.1-G4.3: subcritical bitwise no-op, upwind-reach evidence,
+│   │                       #   coarse M0.80 shock quality vs reference band (10 checks)
 │   └── m0_meshgen/         # mesh gallery, hard-rule-7 topology matrix, cylinder convergence
 └── test_*.py             # [Deprecated] Integration tests (use tests/ now)
 

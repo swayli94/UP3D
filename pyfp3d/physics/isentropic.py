@@ -49,6 +49,12 @@ def density_isentropic(q_squared, M_inf, gamma=GAMMA):
     """
     exponent = 1.0 / (gamma - 1.0)
     base = 1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2 * (1.0 - q_squared)
+    # Vacuum guard (P4): a diverging transient iterate can push q^2 past
+    # the vacuum limit where base <= 0 and rho would be NaN, poisoning the
+    # whole Picard matrix. Floor the base instead; any physically
+    # meaningful state (q < q_vacuum) is bitwise unaffected.
+    if base < 1e-10:
+        base = 1e-10
     return base ** exponent
 
 
@@ -223,6 +229,62 @@ def density_field(q_squared, M_inf, gamma=GAMMA):
     out = np.empty_like(q_squared)
     for i in range(q_squared.shape[0]):
         out[i] = density_isentropic(q_squared[i], M_inf, gamma)
+    return out
+
+
+@numba.njit(cache=True)
+def q2_at_mach(mach, M_inf, gamma=GAMMA):
+    r"""
+    Invert (2.3): the q² at which the local Mach equals `mach`.
+
+        q²(M) = M² (1 + (γ−1)/2 M∞²) / (M∞² (1 + (γ−1)/2 M²))
+
+    Used by the P4 speed limiter (q² capped at q²(M_cap)): a diverging
+    transient can otherwise run q² toward the vacuum limit, where ρ → 0
+    produces effectively decoupled "dead cells" that the positivity
+    guards then stabilize into spurious converged states (measured:
+    off-body supersonic blobs at |y| ≈ 0.6 acting as fake blockage).
+    Returns +inf at M∞ = 0 (limiter inactive, bitwise no-op).
+
+    Args:
+        mach: local Mach number of the cap
+        M_inf: freestream Mach number
+        gamma: specific heat ratio
+
+    Returns:
+        q² at local Mach `mach` (+inf when M_inf == 0)
+    """
+    if M_inf == 0.0:
+        return np.inf
+    m2 = mach * mach
+    return (
+        m2 * (1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2)
+        / (M_inf ** 2 * (1.0 + 0.5 * (gamma - 1.0) * m2))
+    )
+
+
+@numba.njit(cache=True)
+def limit_q2_field(q_squared, M_inf, m_cap, gamma=GAMMA):
+    r"""
+    Elementwise speed limiter: q²_eff = min(q², q²(M_cap)) (see q2_at_mach
+    for why). Any state with local M ≤ M_cap is bitwise unaffected, so
+    subcritical solves (gates G3.3/G4.2) and healthy converged transonic
+    states (M ≲ 1.5) never see it; the caller monitors how many elements
+    are being limited.
+
+    Args:
+        q_squared: (n,) nondimensional speed squared per element
+        M_inf: freestream Mach number
+        m_cap: local-Mach cap (P4 default 3.0)
+        gamma: specific heat ratio
+
+    Returns:
+        (n,) limited q² array
+    """
+    cap = q2_at_mach(m_cap, M_inf, gamma)
+    out = np.empty_like(q_squared)
+    for i in range(q_squared.shape[0]):
+        out[i] = q_squared[i] if q_squared[i] < cap else cap
     return out
 
 
