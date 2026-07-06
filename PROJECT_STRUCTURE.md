@@ -250,13 +250,17 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
     was never going to) close the gate alone. See `tests/test_post_surface.py` for regression
     coverage locking in both facts (recovery-only accuracy, and the fact that it's still not
     enough).
-- **What would actually close this gate**: genuine curved/isoparametric boundary elements (curve
-  the geometric mapping of wall-adjacent tets to match the true surface, so the natural BC's
-  implicit "do nothing" trick is applied on Γ instead of Γ_h) — a properly-derived shape/geometry
-  correction, not a bolt-on penalty. This is a substantially larger, separately-scoped effort
-  (touches `mesh/metrics.py` element-Jacobian machinery and `kernels/residual.py` assembly, not
-  just `post/surface.py`) and should get its own design pass before implementation, rather than
-  being rushed in alongside other P1/P2 work.
+- **Fix routes researched and tiered (2026-07-06, see design.md §5.1 for the full writeup)**:
+  verify **Option A** first — the true-normal weak-flux correction (lagged/SBM-style: correct the
+  natural-BC *data* via closest-point projection onto the true surface; RHS-only, stiffness matrix
+  unchanged, AMG hierarchy fully reused). An oracle experiment (exact analytic potential + exact
+  normals in the correction RHS, roadmap G1.2-a) measures the accuracy ceiling of this
+  first-order normal correction, then the roadmap G1.2-c decision point picks the route:
+  Option B (Gap-SBM gap terms) if the ceiling lands at 2–5%, or curved/isoparametric wall
+  elements — now demoted to the option of last resort, taken up as its own scoped effort only if
+  both A and B fall short — with G1.2 redefined per Option C's geometry-consistent-reference
+  yardstick in that case. Still do **not** propose further h-refinement or recovery-scheme
+  tweaks; both remain ruled out with evidence.
 
 ### ✓ M0 mesh-side items delivered (2026-07-06)
 
@@ -302,9 +306,12 @@ under refinement for solved fields.
 ### ⏳ Next
 - **P2 (wake cut, circulation, Kutta) on the M0 mesh** — `mesh/wake_cut.py` + its topology
   asserts are also the last items blocking M0 closure (together with the G2.5(b) re-spec above).
-- Scope a curved/isoparametric wall-boundary treatment as its own design item (see root-cause
-  writeup above) — this is the concrete next step to actually close G1.2, not further h-refinement
-  or more post-processing tweaks (both now ruled out as sufficient, with evidence).
+- **G1.2-a oracle experiment** (roadmap G1.2 fix plan; design.md §5.1) — the concrete next step
+  toward closing G1.2 is now the oracle ceiling measurement for Option A (true-normal weak-flux
+  correction), defined in the docs but not yet started in code; the roadmap G1.2-c decision point
+  then picks between Option A rollout, Gap-SBM (Option B), or a curved-element effort with the
+  gate redefined per Option C. Not further h-refinement or more post-processing tweaks (both
+  ruled out as sufficient, with evidence).
 
 ## Quick Start
 
@@ -359,14 +366,15 @@ Critical speed q*² = 0.923077 where M = 1.0:
 P0 (mesh I/O, metrics, coloring, VTK writer, gates G0.1–G0.4) is done. G1.1 and G1.3 are done. To
 close P1, only G1.2 remains:
 
-1. **Implement a curved/isoparametric wall-boundary treatment** (see "Known gaps" above for the
-   full root-cause investigation) — mesh refinement and surface-recovery improvements (both tried
-   this session; see below) are now ruled out as sufficient, with evidence. The confirmed cause is
-   a geometric/variational-crime inconsistency from enforcing the natural BC on the flat
-   polyhedral wall approximation instead of the true curved sphere; closing G1.2 needs the
-   boundary geometry itself represented correctly (isoparametric wall elements or an equivalent
-   shape correction in `mesh/metrics.py`/`kernels/residual.py`), which deserves its own design
-   pass before implementation.
+1. **Run the G1.2-a oracle experiment, then follow the roadmap G1.2-c decision point** (see
+   "Known gaps" above for the full root-cause investigation, and design.md §5.1 for the tiered
+   fix routes) — mesh refinement and surface-recovery improvements (both tried; see below) are
+   ruled out as sufficient, with evidence. The confirmed cause is a geometric/variational-crime
+   inconsistency from enforcing the natural BC on the flat polyhedral wall approximation instead
+   of the true curved sphere; the first-line candidate fix is Option A (lagged true-normal
+   weak-flux correction — RHS-only, stiffness matrix and AMG unchanged), whose accuracy ceiling
+   the oracle experiment measures; curved/isoparametric wall elements are the fallback effort
+   only if Options A and B both fall short.
 
 2. ~~**Create test meshes** (M0, parallel track)~~ — DONE 2026-07-06 (single-layer re-spec
    targets ~15k/60k/240k tets, not the older 30k/150k/700k): `pyfp3d/meshgen/` +
@@ -391,7 +399,8 @@ criterion (b) needs re-spec — the solved-field spanwise gradient is O(h) by co
 above). P0 gates G0.1–G0.4 green; the full coarse regression suite now runs against real case
 meshes (cylinder + NACA0012), leaving P0 closure a bookkeeping decision. P1: G1.1 (MMS) and
 G1.3 (CG+AMG mesh-independence) closed; G1.2 (sphere Cp) open with a `strict=True` xfail
-tracking the real 2% criterion — root-caused to the curved-wall/flat-facet variational crime
-(needs isoparametric wall elements; see "Known gaps"). The M0 cylinder case shows the same
+tracking the real 2% criterion — root-caused to the curved-wall/flat-facet variational crime;
+fix routes researched and tiered (see design.md §5.1 and "Known gaps"), next action is the
+G1.2-a oracle experiment. The M0 cylinder case shows the same
 ~O(h) wall-Cp behavior on its curved wall (9.1% → 4.5% max), consistent with that root cause.
 79 tests total (78 passed, 1 xfailed), full suite ~13 s.

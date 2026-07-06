@@ -182,6 +182,131 @@ One subtlety: with all-Neumann walls and Dirichlet far field the system is
 well-posed; if a pure-Neumann variant is ever used (e.g. channel flows), pin
 one node.
 
+### 5.1 Boundary-flux correction for the wall geometric error (G1.2 candidate fix routes)
+
+Context (G1.2, incompressible sphere): the medium-mesh Cp error is ~11.6%
+against a <2% target, root-caused (see PROJECT_STRUCTURE.md "Known gaps") to a
+geometric/variational inconsistency, not to the surface gradient recovery. After
+integration by parts, the P1 Galerkin wall term ⟨v, ∇φ·ñ⟩ is dropped as a
+natural BC — which enforces "zero flux through the **flat facet** (normal ñ)",
+whereas the physical condition is "zero flux through the **true curved surface**
+(normal n)". The facet normal deviates from the true normal by O(h), producing a
+first-order geometric error in wall velocity/Cp; the raw nodal potential shows
+sub-first-order wall convergence, consistent with this mechanism. The previously
+recorded conclusion was "a true fix needs curved/isoparametric wall elements, a
+separately-scoped effort". The literature survey below found intermediate routes
+with a far smaller footprint; they should be verified first, before deciding
+whether the curved-element effort is still needed. Options are ordered by
+implementation footprint. (Standing prohibitions remain: do **not** re-propose
+further h-refinement or recovery-scheme tweaks — both are ruled out with
+evidence.)
+
+**Option A (recommended, implement first): true-normal weak-flux correction
+(lagged flux correction).**
+
+Provenance (two independent lines of work, same practical recipe):
+
+- Krivodonova & Berger (JCP 2006): on straight-sided meshes, impose the solid
+  wall condition using the normal of the *physical* geometry rather than the
+  *computational* geometry; for the Euler equations this dramatically improves
+  solution quality without curved meshes. Ciallella, Gaburro, Lorini &
+  Ricchiuto (Appl. Math. Comput. 2023) extend the same polynomial correction to
+  general 2D/3D boundary conditions.
+- The Shifted Boundary Method (Main & Scovazzi 2018; the Atallah, Canuto &
+  Scovazzi analysis series) and the earlier Bramble–Dupont–Thomée (1972)
+  boundary-value corrections: correct the boundary-condition **data** onto the
+  approximate boundary so as to cancel the geometric consistency error.
+
+Mathematical form. At a point x on a wall facet, let p(x) be the closest-point
+projection of x onto the true surface (the sphere), n = n(p(x)) the true unit
+outward normal, and ñ the facet unit outward normal. Decompose
+
+    ñ = (ñ·n) n + t,    t := ñ − (ñ·n) n    (t lies in the true tangent plane, |t| = O(h))
+
+so that ∇φ·ñ = (ñ·n)(∇φ·n) + ∇φ·t. The physical boundary condition
+∇φ·n(p(x)) = 0 eliminates the first term; the wall term is no longer zero but
+⟨v, ∇φ·t⟩. Move it to the right-hand side in a **lagged (Picard)** fashion:
+
+    ∫_Ω ∇φ^{k+1}·∇v dV = ⟨ v,  ∇φ^k · ( ñ − (ñ·n) n ) ⟩_{Γ_h,wall}
+    (all other boundary conditions unchanged)
+
+Implementation notes (binding for the eventual implementation):
+
+- The stiffness matrix is **completely unchanged**: it stays SPD, and the AMG
+  hierarchy and preconditioner are reused as-is. The only change is one
+  RHS-assembly loop over wall facets.
+- New geometric data required: closest-point projections and true normals at
+  facet quadrature points. For the sphere these are analytic,
+  n = (x − c)/|x − c|; for the wing phase later they come from CAD/analytic
+  geometry or a fine reference surface — design the interface as a replaceable
+  `closest_point_normal(x)` callback, precomputed into SoA arrays (per the
+  agent-rules Numba hard constraints: no Python-object operations in hot loops).
+- Quadrature: 3-point Gauss on each facet (or whatever rule the existing surface
+  integrals use); ∇φ^k is the piecewise-constant gradient of the adjacent
+  element.
+- Fixed-point loop: the correction is O(h), so the iteration is contractive. For
+  the pure-Laplace validation, run a fixed 3–5 outer iterations (repeated solves
+  with the same matrix — cheap); once in the full-potential regime, fold it into
+  the existing ρ-Picard loop at zero marginal cost.
+- Freestream-preservation check: uniform flow φ = U∞·x does not satisfy the
+  sphere wall condition, so a nonzero correction term on wall-bearing meshes is
+  expected; but it must be confirmed that the V0 freestream gate
+  (`tests/test_v0_freestream.py`, which uses wall-free / all-far-field
+  configurations) never triggers this correction path.
+- Prerequisite: consistent wall-facet winding — the existing winding assert in
+  `_wall_vertex_normals` is a precondition for this correction and must not be
+  removed.
+
+Distinction from the rejected Nitsche/penalty prototype (record this explicitly
+to prevent misclassification as a repeat experiment): the earlier attempt
+changed the **enforcement mechanism** for the same condition on the same wrong
+(flat-facet) geometry; Option A corrects the boundary condition's **data
+itself** — the closest-point projection brings in the true normal. That is the
+substantive contribution of the "shift" in SBM, independent of the enforcement
+mechanism.
+
+Theoretical expectations and ceiling (recorded to manage expectations):
+
+- The SBM analyses show that for P1 elements — piecewise-constant gradient, zero
+  Hessian, hence no second-order Taylor expansion available — the naive shifted
+  Neumann condition loses one order in L², but the H¹ seminorm retains its
+  optimal first order. Cp is a gradient quantity controlled by H¹, so this
+  ceiling is not an obstacle for this project.
+- This project uses **body-fitted** meshes (vertices lie on the true surface):
+  the geometric gap has thickness O(h²), far better than the O(h) gap of
+  unfitted SBM; the first-order normal-rotation correction is therefore the
+  dominant error term.
+- Expectation: Cp recovers close to first-order convergence, with a good chance
+  the medium-mesh error drops below 2%; the exact ceiling is measured by the
+  oracle experiment (roadmap G1.2-a).
+
+**Option B (escalation if Option A falls short): Gap-SBM gap correction.**
+
+Collins, Li, Lozinski & Scovazzi, "Gap-SBM" (arXiv:2508.09613, 2025) targets
+exactly the P1 Neumann suboptimality above. It builds an approximate gap
+geometry from the distance map between the true and computational boundaries,
+extends the solution and test functions into the gap, and applies approximate
+quadrature to the corrected variational form; no extra degrees of freedom, no
+cut cells, no ghost-penalty terms, with proven optimal L² and H¹ convergence for
+the Neumann problem. The concrete footprint is: wall-facet surface integrals
+multiplied by a gap-thickness coefficient, plus a few distance-vector correction
+terms at wall nodes — implementable as SoA arrays + a facet loop, Numba-friendly.
+Caveats: the paper's analysis is 2D (the authors state 3D is a direct
+extension), and in the body-fitted case the gap coefficient is O(h²), so these
+extra terms are small to begin with — which is precisely the rationale for
+"Option A first".
+
+**Option C (pragmatic fallback): redefine the gate rather than the scheme.**
+
+If curved elements ultimately still require their own effort, redefine the G1.2
+acceptance criterion as "Cp error / convergence order relative to a
+**geometry-consistent reference solution** (a high-accuracy reference on the
+same polyhedral domain, e.g. BEM or an ultra-fine mesh)", stripping the
+geometric model error out of the code-correctness verification. This conforms to
+the §10 validation-ladder principle of not confounding model error with code
+error. This option does not improve physical accuracy; it only adjusts the
+verification yardstick.
+
 ---
 
 ## 6. Spatial discretization
@@ -436,3 +561,25 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   transonic potential-flow calculations" — FV/FEM equivalence viewpoint.
 - Drela, M., *Flight Vehicle Aerodynamics*, MIT Press 2014 — wake/Kutta and
   Trefftz-plane treatment in potential methods.
+
+Boundary-flux correction for curved walls on flat-facet meshes (§5.1):
+
+- Krivodonova, L., Berger, M., "High-order accurate implementation of solid
+  wall boundary conditions in curved geometries," *J. Comput. Phys.* 211
+  (2006) 492–512.
+- Ciallella, M., Gaburro, E., Lorini, M., Ricchiuto, M., "Shifted boundary
+  polynomial corrections for compressible flows: high order on curved domains
+  using linear meshes," *Appl. Math. Comput.* (2023).
+- Main, A., Scovazzi, G., "The shifted boundary method for embedded domain
+  computations. Part I: Poisson and Stokes problems," *J. Comput. Phys.* 372
+  (2018) 972–995.
+- Atallah, N.M., Canuto, C., Scovazzi, G., "The high-order Shifted Boundary
+  Method and its analysis," *CMAME* 394 (2022) 114885.
+- Collins, J.H., Li, C., Lozinski, A., Scovazzi, G., "Gap-SBM: A New
+  Conceptualization of the Shifted Boundary Method with Optimal Convergence
+  for the Neumann and Dirichlet Problems," arXiv:2508.09613 (2025).
+- Bramble, J.H., Dupont, T., Thomée, V., "Projection methods for Dirichlet's
+  problem in approximating polygonal domains with boundary-value corrections,"
+  *Math. Comp.* 26 (1972) 869–879.
+- Burman, E., Hansbo, P., Larson, M.G., "A cut finite element method with
+  boundary value correction," *Math. Comp.* 87 (2018) 633–657.
