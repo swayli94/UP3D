@@ -170,20 +170,56 @@ its final signature (z = const parameter) already at the G1.3 stage, so P2 only
 adds the general z = const interpolation path.
 **Topology asserts (run at preprocess time, every mesh):**
 - each wake face has exactly one ⁺-side and one ⁻-side element
-- TE nodes are NOT duplicated; wake–symmetry-plane edges handled; no orphan
-  duplicated nodes
-- duplicated-node count equals interior-wake-node count
+- TE nodes **ARE duplicated** (**re-spec 2026-07-06** — the original "TE
+  nodes are NOT duplicated" was implemented first and is quantitatively
+  wrong: in the continuum [φ](TE) = Γ — that *is* the Kutta condition — so
+  a single-valued TE node tapers the jump to zero over the first wake cell,
+  which is equivalent to parking a point vortex of strength Γ at the TE.
+  Measured on the coarse NACA0012 mesh with Γ = 0.3 prescribed: peak wall
+  |V| = 4.6 U∞ at the TE, a spurious suction force of −0.27 out of an
+  expected cl ≈ 0.6 from just the 6 TE-adjacent wall triangles, and the
+  spike scales like Γ²/h — it *diverges* under refinement. With the TE
+  duplicated: cl = 0.6012 vs the Kutta–Joukowski 0.6 (+0.2%). Evidence:
+  `mesh/wake_cut.py` module docstring); wake–symmetry-plane edges handled;
+  no orphan duplicated nodes
+- duplicated-node count equals wake-sheet-node count (TE included, per the
+  re-spec above)
 **Gates:**
-- [ ] G2.1 = V0-with-cut: φ = x on the cut mesh, ‖R‖∞ < 1e−12 with Γ = 0
-- [ ] G2.2 jump consistency: prescribe Γ = const analytically, verify [φ]
+- [x] G2.1 = V0-with-cut: φ = x on the cut mesh, ‖R‖∞ < 1e−12 with Γ = 0
+      *(closed 2026-07-06: ‖R‖∞ = 8.4e-13 over all free non-wall reduced
+      dofs, 6.9e-16 on the folded wake-master rows — synthetic strip +
+      NACA0012 coarse, `tests/test_p2_wake_cut.py`)*
+- [x] G2.2 jump consistency: prescribe Γ = const analytically, verify [φ]
       reproduced exactly and residual clean at the cut
-- [ ] G2.3 = V3(incompressible): NACA0012 α = 4°, cl vs 2D panel/XFOIL-inviscid
+      *(closed 2026-07-06: [φ] = Γ to 1e-13 abs at every wake pair,
+      free-dof residual < 1e-8 · scale; artifacts/G2.2)*
+- [x] G2.3 = V3(incompressible): NACA0012 α = 4°, cl vs 2D panel/XFOIL-inviscid
       reference, Δcl < 2%; Kutta loop converges in < 20 updates
-- [ ] G2.4 = V6: sectional cl from Γ vs surface-pressure integration, < 1%
-- [ ] G2.5 quasi-2D consistency: on the M0 single-layer mesh, max over elements
-      of |(∇φ_e)_z| < 1e-12 (relative to freestream speed), checked for
-      (a) φ = x freestream and (b) the converged incompressible lifting
-      solution of G2.3
+      *(closed 2026-07-06: medium mesh cl_p = 0.47858 vs Hess–Smith panel
+      reference 0.482556 (`cases/reference_data/naca0012_incompressible/`,
+      provenance in its README) → **−0.82%**; coarse −3.0% (recorded, not
+      gated). Kutta loop: **2 updates** via per-station secant acceleration
+      on the affine Γ-map — plain ω-relaxation alone would need O(100)
+      updates because the measured map slope is b ≈ 0.93;
+      `solve/picard.py::solve_laplace_lifting` docstring. artifacts/G2.3)*
+- [x] G2.4 = V6: sectional cl from Γ vs surface-pressure integration, < 1%
+      *(closed 2026-07-06: medium 0.478646 vs 0.478576 → **0.01%**; coarse
+      0.32%. artifacts/G2.4)*
+- [x] G2.5 quasi-2D consistency (criterion (b) **re-specified 2026-07-06**
+      per the evidence note below): on the M0 single-layer mesh,
+      (a) φ = x freestream: max over elements of |(∇φ_e)_z|/U∞ < 1e-12;
+      (b) converged incompressible lifting solution of G2.3: the
+      field-wide spanwise noise — 99th percentile of |(∇φ_e)_z|/U∞ over
+      elements — decays at ≥ ~1st order across the mesh family, AND the
+      V2.5 mid-plane |w| heatmap shows no coherent stripe along wake/TE.
+      The single-element max is recorded but not gated (it sits in the
+      leading-edge peak-gradient region and tracks local h·|∇²φ|, not the
+      split asymmetry).
+      *(closed 2026-07-06: (a) 8.5e-15 / 8.9e-15 coarse/medium;
+      (b) p99 4.82e-3 → 2.35e-3 (ratio 2.05, h ratio 2 — clean 1st order),
+      RMS 1.62e-3 → 8.2e-4 (1.97), max 6.4e-2 → 4.5e-2 at the LE
+      ((0.014, −0.024) → (−0.0001, −0.0074)), heatmap stripe-free;
+      artifacts/G2.5, `tests/test_p2_kutta_naca0012.py`)*
       **Evidence note (2026-07-06, from M0 delivery — criterion (b) needs
       re-spec before P2 closes it:** (a) holds at machine precision (verified,
       `tests/test_m0_extrude.py`, `tests/test_m0_cylinder.py`), but for any
@@ -322,10 +358,10 @@ Eisenstat–Walker inexact-solve schedule, profiling report.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
-| M0 | ◐ (mesh-side items delivered 2026-07-06; acceptance link waits on P2) | | Delivered: `pyfp3d/meshgen/` (extrude.py: single-layer extrusion + globally consistent min-global-index prism→3-tet split + `assert_quad_split_consistency`; planar.py: vanilla-Gmsh 2D builders, wake line via `gmsh.model.mesh.embed`); `cases/meshes/naca0012_2.5d/generate_naca0012.py` — one parameter (h_wall) per level, coarse/medium committed (16.4k / 61.8k tets, on-target vs ~15k/60k spec; fine on demand); plus an extra **cylinder-flow test case** `cases/meshes/cylinder_2.5d/` (6.9k / 17.3k tets) validating the pipeline end-to-end against the analytic Cp = 1 − 4 sin²θ (max err 9.1% coarse → 4.5% medium with quadratic recovery, ~O(h); initially attributed to the same curved-wall variational crime as the sphere-Cp gate G1.6 and designated the fix-route testbed — **corrected by the G1.3 pre-study 2026-07-06**: on this quasi-2D geometry ~76% of the Cp error is the single-layer sliver-strip surface *recovery*, and the wall nodal φ converges at a healthy ~1.2 order, unlike the sphere; see G1.3 evidence / design.md §5.1.1). Gate items verified by `tests/test_m0_{extrude,cylinder,naca0012}.py` (21 tests): reader ingests the family; quad-split consistency assert passes (and provably fires on a broken split); wake is one continuous planar interior sheet TE→farfield conforming to tet faces, nodes not duplicated; symmetry planes planar/disjoint from wall; single spanwise station. Still open for M0 closure: P2's wake-cut topology asserts (need `mesh/wake_cut.py`) and the G2.5 acceptance link — where criterion (b) needs re-spec, see the evidence note under G2.5 (solved-field spanwise noise is O(h) by construction for 3-tet prisms, not machine-zero). |
+| M0 | ✓ | 2026-07-06 | **Closed with P2 the same day**: the two remaining items landed — `mesh/wake_cut.py` topology asserts pass on the whole family (`tests/test_p2_wake_cut.py::test_topology_asserts_all_wake_meshes`, hard rule 7) and the G2.5 acceptance link is green under its re-specced criterion (b) (see G2.5 gate entry). Mesh-side delivery record: Delivered: `pyfp3d/meshgen/` (extrude.py: single-layer extrusion + globally consistent min-global-index prism→3-tet split + `assert_quad_split_consistency`; planar.py: vanilla-Gmsh 2D builders, wake line via `gmsh.model.mesh.embed`); `cases/meshes/naca0012_2.5d/generate_naca0012.py` — one parameter (h_wall) per level, coarse/medium committed (16.4k / 61.8k tets, on-target vs ~15k/60k spec; fine on demand); plus an extra **cylinder-flow test case** `cases/meshes/cylinder_2.5d/` (6.9k / 17.3k tets) validating the pipeline end-to-end against the analytic Cp = 1 − 4 sin²θ (max err 9.1% coarse → 4.5% medium with quadratic recovery, ~O(h); initially attributed to the same curved-wall variational crime as the sphere-Cp gate G1.6 and designated the fix-route testbed — **corrected by the G1.3 pre-study 2026-07-06**: on this quasi-2D geometry ~76% of the Cp error is the single-layer sliver-strip surface *recovery*, and the wall nodal φ converges at a healthy ~1.2 order, unlike the sphere; see G1.3 evidence / design.md §5.1.1). Gate items verified by `tests/test_m0_{extrude,cylinder,naca0012}.py` (21 tests): reader ingests the family; quad-split consistency assert passes (and provably fires on a broken split); wake is one continuous planar interior sheet TE→farfield conforming to tet faces, nodes not duplicated; symmetry planes planar/disjoint from wall; single spanwise station. Still open for M0 closure: P2's wake-cut topology asserts (need `mesh/wake_cut.py`) and the G2.5 acceptance link — where criterion (b) needs re-spec, see the evidence note under G2.5 (solved-field spanwise noise is O(h) by construction for 3-tet prisms, not machine-zero). |
 | P0 | ✓ | 2026-07-06 | `mesh/reader.py`, `metrics.py`, `coloring.py`, `physics/isentropic.py`, `post/vtk_out.py` implemented; G0.1–G0.4 unit tests pass. Three latent bugs found by manual audit and fixed, each now locked in by a regression test (`test_mesh_adjacency.py`, `test_mesh_reader_roundtrip.py`, `test_laplace_picard.py`): `metrics.py::build_face_adjacency` crashed under `@njit` (reflected-list dict values), `reader.py::write_mesh` dropped all named boundary tags (`.msh` writer ambiguity + only handled a legacy `"all_triangles"` block), `solve/picard.py::solve_laplace` reported a `residual_norm` dominated by Dirichlet-row flux imbalance instead of the free-dof residual. None were caught by the pre-existing test suite because nothing exercised those paths. Second audit (2026-07-06), same fix-plus-regression-test pattern: `tests/conftest.py` now writes gate artifacts to the persistent `artifacts/` dir instead of a deleted tempdir (`test_conftest_artifacts.py`); `metrics.py::element_gradients` raises on degenerate tets with a scale-relative threshold instead of silently returning zero gradients (`test_metrics_degenerate.py`); `reader.py` keeps the default "bulk" volume tag for meshes without named 3D groups (`test_mesh_reader_roundtrip.py`) — details in PROJECT_STRUCTURE.md. Closed 2026-07-06: the two remaining blockers were resolved by the M0 delivery — the mesh family exists on real geometry (cylinder + NACA0012) and the full coarse regression suite runs against those case meshes (87 passed, 2 xfailed); G0.1–G0.4 all green (`test_mesh_volume.py`, `test_mesh_gradient.py`, `test_mesh_coloring.py`, `test_io_vtk.py`). |
 | P1 | ☐ (in progress; G1.1, G1.2 closed; G1.3, G1.4 completed 2026-07-06 with negative results, DP1 decided "> 5%" branch, G1.5 void; open: G1.6 pending its Option C re-spec) | | `kernels/residual.py`, `solve/linear.py`, `solve/picard.py`, `post/surface.py`, `tests/mesh_utils.py`, `tests/test_post_surface.py`, `cases/meshes/sphere_shell/{coarse,medium}.msh` implemented/committed. G1.1 (`test_laplace_mms.py`) and G1.3 (now renumbered G1.2; `test_laplace_cg_iterations.py`) pass. G1.2 (now renumbered G1.6; `test_laplace_sphere.py`) is a `strict=True` xfail, now root-caused rather than just hypothesized: added `post/surface.py::wall_tangential_gradient_quadratic` (quadratic tangential patch recovery, well-conditioned via SVD-based `lstsq` + rank-deficiency fallback), which improved medium-mesh max error from ~12.0% to ~11.6% — a real but modest gain, because a controlled investigation (clean single-variable h_min sweep + an oracle exact-potential-in recovery test + a rejected Nitsche/penalty prototype) showed the recovery scheme was never the dominant error source. The dominant source is the volume PDE solve's own accuracy at the wall: the natural BC is satisfied on the flat polyhedral wall-facet approximation instead of the true curved sphere, a geometric/variational-crime inconsistency evidenced by sub-first-order, decreasing convergence order of the raw nodal potential itself (not just its gradient). Closing G1.2 needs curved/isoparametric wall boundary elements — a separately-scoped effort — not more h-refinement or post-processing. See PROJECT_STRUCTURE.md "Known gaps" for the full evidence trail. Second audit (2026-07-06): `post/surface.py::_wall_vertex_normals` now raises on inconsistent wall-triangle winding instead of silently averaging cancelling normals into garbage tangent planes (`test_post_surface.py::test_inconsistent_wall_winding_raises`). 52 tests total (51 passed, 1 xfailed), full suite runs in ~10 s. 2026-07-06: sphere-Cp fix-route research complete — three-tier Option A/B/C plan (lagged true-normal flux correction / Gap-SBM / gate redefinition) with oracle-first verification order defined; see design.md §5.1. Same day: P1 gates renumbered in workflow order (old → new: G1.3 → G1.2, G1.2-a0 → G1.3, G1.2-a → G1.4, G1.2-c → DP1, G1.2-b → G1.5, G1.2 → G1.6; see the renumbering note in the P1 section). Same day, after renumbering: G1.3 cylinder oracle pre-study and G1.4 sphere oracle ceiling both completed with **negative results** (delivered: `solve/wall_correction.py` assembly-verified correction infrastructure, `post/section_cut.py` degenerate single-layer interface, `tests/test_wall_correction_cylinder.py` 10 tests, `cases/demo/g14_sphere_oracle_experiment.py`, cylinder fine.msh 50.2k tets, `artifacts/G1.3/` + `artifacts/G1.4/`): boundary-data corrections have (near-)zero lever on body-fitted meshes — exact per-facet net flux is zero by the divergence theorem — so the Option A ceiling is ≈ 11.3% on the medium sphere vs the < 2% target; DP1 "> 5%" branch taken (Option C gate re-spec + separately-scoped curved elements); the cylinder case additionally shown to be recovery-dominated (~76%), not crime-dominated, and de-designated as the G1.6 pathology testbed. See the G1.3/G1.4/DP1 gate entries for the full evidence. |
-| P2 | ☐ | | |
+| P2 | ✓ | 2026-07-06 | Delivered: `mesh/wake_cut.py` (per-node flood-fill side classification — no planarity assumption, works for the M1 swept wake; ⁺-side slaves appended after original nodes so the reduced dof space is exactly the original node set; stations group TE nodes by (x,y), collapsing a quasi-2D extrusion to the single scalar Γ of the M0 spec; preprocess-time topology asserts), `constraints/wake.py` (master–slave elimination via sparse T, A_red = TᵀAT assembled once, Γ enters RHS-only through precomputed per-station vectors; folding the slave rows into masters enforces weak flux continuity (4.2)), `constraints/dirichlet.py` (far-field freestream + incompressible 2D vortex correction with the branch cut ON the wake sheet, so eliminated ⁺-side far-field wake nodes are automatically consistent), `solve/picard.py::solve_laplace_lifting` (Kutta outer loop, matrix+AMG hierarchy built once, secant-accelerated), `post/surface.py` (triangle-wise wall force integration, owner-tet-oriented normals, KJ sectional cl), `post/section_cut.py` (general marching-tets z=const path + sectional wall Cp(x/c) curves), Hess–Smith panel reference `cases/reference_data/naca0012_incompressible/` (two independent lift routes agree to 0.09%, lift slope 6.91/rad vs thickness-corrected 6.90). **One spec deviation with evidence: TE nodes ARE duplicated** — the originally specified single-valued TE produces a spurious TE suction ~Γ²/h that diverges under refinement (measured −0.27 of cl 0.6 on coarse; see the re-specced topology-assert block). Gates: G2.1 8.4e-13 (wake-master rows 6.9e-16); G2.2 [φ]−Γ < 1e-13; G2.3 medium cl −0.82% vs panel, Kutta 2 updates (secant; measured map slope b≈0.93 would need O(100) plain relaxed updates); G2.4 0.01%; G2.5 re-specced criterion (b) closed (p99 ratio 2.05 = 1st order, stripe-free heatmap). Suite: 100 passed + 2 xfailed (G1.6 strict xfail unchanged), ~38 s. Artifacts: `artifacts/G2.{1,2,3,4,5}/` PNG+CSV. |
 | M1 | ☐ | | |
 | P3 | ☐ | | |
 | P4 | ☐ | | |

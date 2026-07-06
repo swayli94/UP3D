@@ -33,7 +33,7 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite is fast (~10 s): `pytest tests/`
+3. Full suite is fast (~40 s since P2's medium-mesh gates): `pytest tests/`
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.

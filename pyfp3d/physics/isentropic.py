@@ -138,6 +138,23 @@ def pressure_coefficient(q_squared, M_inf, gamma=GAMMA):
 
 
 @numba.njit(cache=True)
+def pressure_coefficient_incompressible(q_squared):
+    r"""
+    Incompressible (Bernoulli) pressure coefficient, Cp = 1 − q²/U∞².
+
+    The M∞ → 0 limit of `pressure_coefficient` (which divides by γ M∞² and
+    is singular at exactly M∞ = 0). Used by the P2 lifting-Laplace gates.
+
+    Args:
+        q_squared: Nondimensional speed squared (q/U∞)²
+
+    Returns:
+        Cp (incompressible)
+    """
+    return 1.0 - q_squared
+
+
+@numba.njit(cache=True)
 def density_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
     r"""
     Derivative dρ/d(q²) evaluated at q².

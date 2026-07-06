@@ -75,6 +75,146 @@ def nodal_gradient_recovery(nodes: np.ndarray, elements: np.ndarray, phi: np.nda
     return grad_sum / weight_sum[:, None]
 
 
+def triangle_tangential_gradients(
+    nodes: np.ndarray, wall_faces: np.ndarray, phi: np.ndarray
+):
+    """Constant P1 gradient of phi in each wall triangle's own tangent plane.
+
+    At a solid wall the natural BC gives dphi/dn = 0, so this in-plane
+    gradient IS the full wall velocity (see wall_tangential_gradient's
+    docstring). Kept triangle-wise (no nodal averaging) so consumers like
+    the force integral and the sectional-Cp curve stay well-defined across
+    sharp creases (thin TE), where vertex averaging would mix the two
+    sides' tangent planes.
+
+    Returns:
+        (grad_tri, area, tri_normal): (n_tris, 3) tangential gradient,
+        (n_tris,) triangle areas, (n_tris, 3) unit normals of the STORED
+        winding (no outward orientation implied).
+    """
+    p0 = nodes[wall_faces[:, 0]]
+    p1 = nodes[wall_faces[:, 1]]
+    p2 = nodes[wall_faces[:, 2]]
+
+    edge1 = p1 - p0
+    area_vec = np.cross(edge1, p2 - p0)
+    twice_area = np.linalg.norm(area_vec, axis=1)
+    tri_normal = area_vec / twice_area[:, None]
+    e1 = edge1 / np.linalg.norm(edge1, axis=1)[:, None]
+    e2 = np.cross(tri_normal, e1)
+
+    u1, v1 = np.sum(edge1 * e1, axis=1), np.sum(edge1 * e2, axis=1)
+    edge2 = p2 - p0
+    u2, v2 = np.sum(edge2 * e1, axis=1), np.sum(edge2 * e2, axis=1)
+    df1 = phi[wall_faces[:, 1]] - phi[wall_faces[:, 0]]
+    df2 = phi[wall_faces[:, 2]] - phi[wall_faces[:, 0]]
+
+    det = u1 * v2 - v1 * u2
+    du = (v2 * df1 - v1 * df2) / det
+    dv = (-u2 * df1 + u1 * df2) / det
+    grad_tri = du[:, None] * e1 + dv[:, None] * e2
+    return grad_tri, 0.5 * twice_area, tri_normal
+
+
+def wall_outward_normals(
+    nodes: np.ndarray, elements: np.ndarray, wall_faces: np.ndarray
+) -> np.ndarray:
+    """Unit wall-triangle normals oriented OUT of the body (into the fluid).
+
+    Orientation is taken from each face's owning tet (the fluid is where
+    the tet is), so it needs no assumption about the stored winding or the
+    body's shape.
+    """
+    el = np.asarray(elements, dtype=np.int64)
+    tet_faces = np.concatenate(
+        [el[:, [1, 2, 3]], el[:, [0, 2, 3]], el[:, [0, 1, 3]], el[:, [0, 1, 2]]]
+    )
+    tet_faces.sort(axis=1)
+    tet_faces = np.ascontiguousarray(tet_faces)
+    keys = tet_faces.view([("", tet_faces.dtype)] * 3).ravel()
+    owners = np.tile(np.arange(len(el), dtype=np.int64), 4)
+    order = np.argsort(keys)
+    keys_sorted, owners_sorted = keys[order], owners[order]
+
+    wf = np.ascontiguousarray(np.sort(np.asarray(wall_faces, dtype=np.int64), axis=1))
+    wf_keys = wf.view([("", wf.dtype)] * 3).ravel()
+    lo = np.searchsorted(keys_sorted, wf_keys, side="left")
+    hi = np.searchsorted(keys_sorted, wf_keys, side="right")
+    if np.any(hi - lo != 1):
+        raise ValueError(
+            f"{int(np.sum(hi - lo != 1))} wall face(s) not owned by exactly "
+            "one tet"
+        )
+    owner = owners_sorted[lo]
+
+    p0 = nodes[wall_faces[:, 0]]
+    area_vec = np.cross(nodes[wall_faces[:, 1]] - p0, nodes[wall_faces[:, 2]] - p0)
+    normal = area_vec / np.linalg.norm(area_vec, axis=1)[:, None]
+    face_center = nodes[wall_faces].mean(axis=1)
+    owner_centroid = nodes[np.asarray(elements)[owner]].mean(axis=1)
+    # Fluid side = owner side; body-outward means pointing toward the fluid.
+    flip = np.sum(normal * (owner_centroid - face_center), axis=1) < 0
+    normal[flip] *= -1.0
+    return normal
+
+
+def wall_force_coefficients(
+    nodes: np.ndarray,
+    elements: np.ndarray,
+    wall_faces: np.ndarray,
+    phi: np.ndarray,
+    alpha_deg: float = 0.0,
+    u_inf: float = 1.0,
+    s_ref: float = 1.0,
+) -> dict:
+    """Pressure-integrated force coefficients on the wall (design.md Sec 9).
+
+    Per wall triangle: velocity = in-plane tangential gradient (exactly the
+    wall velocity under the natural BC), Cp from Bernoulli (incompressible,
+    P2), force  dC_F = -Cp n_out dA / S_ref  with n_out the body-outward
+    normal. Everything stays triangle-wise; no nodal averaging, so the
+    sharp TE needs no special-casing.
+
+    Args:
+        nodes, elements: CUT-mesh arrays (used to orient normals)
+        wall_faces: (n, 3) wall triangles
+        phi: (n_nodes,) potential on the cut mesh
+        alpha_deg: incidence; lift is measured normal to the freestream
+        u_inf: freestream speed
+        s_ref: reference area (chord x span for the quasi-2D cases)
+
+    Returns:
+        dict: cl, cd_pressure, cf (3-vector), cp_tri (per-triangle Cp)
+    """
+    from pyfp3d.physics.isentropic import pressure_coefficient_incompressible
+
+    grad_tri, area, _ = triangle_tangential_gradients(nodes, wall_faces, phi)
+    n_out = wall_outward_normals(nodes, elements, wall_faces)
+
+    q2 = np.sum(grad_tri * grad_tri, axis=1) / u_inf**2
+    cp_tri = np.array([pressure_coefficient_incompressible(q) for q in q2])
+
+    cf = -(cp_tri * area) @ n_out / s_ref
+    a = np.deg2rad(alpha_deg)
+    lift_dir = np.array([-np.sin(a), np.cos(a), 0.0])
+    drag_dir = np.array([np.cos(a), np.sin(a), 0.0])
+    return {
+        "cl": float(cf @ lift_dir),
+        "cd_pressure": float(cf @ drag_dir),
+        "cf": cf,
+        "cp_tri": cp_tri,
+    }
+
+
+def sectional_cl_from_gamma(
+    gamma: np.ndarray, chord: float = 1.0, u_inf: float = 1.0
+) -> np.ndarray:
+    """Kutta-Joukowski sectional lift, cl_j = 2 Gamma_j / (U_inf c)
+    (design.md Sec 9) -- the cross-check against pressure integration
+    that gate G2.4 holds to < 1%."""
+    return 2.0 * np.atleast_1d(np.asarray(gamma, dtype=np.float64)) / (u_inf * chord)
+
+
 def wall_tangential_gradient(nodes: np.ndarray, wall_faces: np.ndarray, phi: np.ndarray) -> np.ndarray:
     """
     Surface velocity at a solid wall, computed directly from the wall's own

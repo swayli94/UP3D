@@ -58,37 +58,151 @@ def section_cut(mesh, point_fields: Dict[str, np.ndarray], z: float,
         atol = 1e-9 * extent if extent > 0 else 1e-12
 
     on_plane = np.abs(nodes[:, 2] - z) <= atol
-    if not np.any(on_plane):
-        raise NotImplementedError(
-            f"z = {z} matches no node plane (within atol = {atol:g}); the "
-            "general z = const interpolation path is a P2 deliverable"
-        )
 
-    # Degenerate path: the symmetry-plane triangulation restricted to this z.
+    # Degenerate path: the symmetry-plane triangulation restricted to this z
+    # (exact and cheap when z coincides with a node plane of a quasi-2D mesh).
     sym = mesh.boundary_faces.get("symmetry")
-    if sym is None:
-        raise NotImplementedError(
-            "mesh has no 'symmetry' boundary group; only the single-layer "
-            "quasi-2D degenerate path is implemented before P2"
-        )
-    tri_on_plane = sym[np.all(on_plane[sym], axis=1)]
-    if len(tri_on_plane) == 0:
-        raise NotImplementedError(
-            f"no symmetry-plane triangles at z = {z}; only the single-layer "
-            "quasi-2D degenerate path is implemented before P2"
-        )
+    if np.any(on_plane) and sym is not None:
+        tri_on_plane = sym[np.all(on_plane[sym], axis=1)]
+        if len(tri_on_plane) > 0:
+            plane_nodes = np.unique(tri_on_plane)
+            remap = np.full(len(nodes), -1, dtype=np.int64)
+            remap[plane_nodes] = np.arange(len(plane_nodes))
+            return SectionData(
+                points2d=nodes[plane_nodes, :2].copy(),
+                triangles=remap[tri_on_plane],
+                fields={name: np.asarray(f)[plane_nodes].copy()
+                        for name, f in point_fields.items()},
+                z=z,
+            )
 
-    plane_nodes = np.unique(tri_on_plane)
-    remap = np.full(len(nodes), -1, dtype=np.int64)
-    remap[plane_nodes] = np.arange(len(plane_nodes))
+    # General path (P2): marching tetrahedra with linear interpolation.
+    return _section_cut_marching(mesh, point_fields, z)
 
-    return SectionData(
-        points2d=nodes[plane_nodes, :2].copy(),
-        triangles=remap[tri_on_plane],
-        fields={name: np.asarray(f)[plane_nodes].copy()
-                for name, f in point_fields.items()},
-        z=z,
-    )
+
+def _section_cut_marching(mesh, point_fields: Dict[str, np.ndarray],
+                          z: float) -> SectionData:
+    """z = const cut through the volume mesh by marching tetrahedra.
+
+    Each tet crossed by the plane contributes one triangle (3 crossed
+    edges) or two (4 crossed edges, split quad); cut-point coordinates and
+    fields interpolate linearly along the crossed edges -- exact for the
+    P1 solution. Vertices lying numerically on the plane are nudged to one
+    side (standard epsilon trick) so the case table stays two-sided.
+    """
+    nodes = mesh.nodes
+    elements = np.asarray(mesh.elements, dtype=np.int64)
+    s = nodes[:, 2] - z
+    extent = float(np.ptp(nodes[:, 2]))
+    eps = 1e-12 * (extent if extent > 0 else 1.0)
+    s = np.where(np.abs(s) < eps, eps, s)
+
+    s_el = s[elements]
+    pos = s_el > 0
+    n_pos = pos.sum(axis=1)
+    cut = (n_pos > 0) & (n_pos < 4)
+    if not np.any(cut):
+        raise ValueError(f"plane z = {z} does not intersect the mesh")
+
+    # Tet edges as local index pairs; a cut edge has opposite signs.
+    edges = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+    names = list(point_fields)
+    field_mat = np.column_stack([np.asarray(point_fields[n], dtype=np.float64)
+                                 for n in names]) if names else None
+
+    pts, tris, vals = [], [], []
+    for e in np.where(cut)[0]:
+        tet = elements[e]
+        se = s_el[e]
+        cut_pts = []
+        for a, b in edges:
+            if (se[a] > 0) != (se[b] > 0):
+                t = se[a] / (se[a] - se[b])
+                p = nodes[tet[a], :2] * (1 - t) + nodes[tet[b], :2] * t
+                f = (field_mat[tet[a]] * (1 - t) + field_mat[tet[b]] * t
+                     if field_mat is not None else None)
+                cut_pts.append((p, f))
+        base = len(pts)
+        if len(cut_pts) == 3:
+            local_tris = [(0, 1, 2)]
+        elif len(cut_pts) == 4:
+            # Order the quad by angle around its centroid, then fan-split.
+            P = np.array([c[0] for c in cut_pts])
+            ang = np.arctan2(*(P - P.mean(axis=0)).T[::-1])
+            order = np.argsort(ang)
+            cut_pts = [cut_pts[i] for i in order]
+            local_tris = [(0, 1, 2), (0, 2, 3)]
+        else:  # pragma: no cover - excluded by the epsilon nudge
+            continue
+        pts.extend(c[0] for c in cut_pts)
+        vals.extend(c[1] for c in cut_pts)
+        tris.extend((base + i, base + j, base + k) for i, j, k in local_tris)
+
+    points2d = np.asarray(pts, dtype=np.float64)
+    fields = {}
+    if names:
+        V = np.asarray(vals, dtype=np.float64)
+        fields = {n: V[:, k].copy() for k, n in enumerate(names)}
+    return SectionData(points2d=points2d,
+                       triangles=np.asarray(tris, dtype=np.int64),
+                       fields=fields, z=z)
+
+
+def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
+                  upper_hint=(0.0, 1.0, 0.0), wall_tag: str = "wall",
+                  chord: float = 1.0, x_le: float = 0.0) -> Dict[str, np.ndarray]:
+    """Sectional wall Cp(x/c) at z = const, split into upper/lower curves.
+
+    Stays triangle-wise: each wall triangle crossed by the plane
+    contributes one point at its intersection-segment midpoint, carrying
+    the triangle's own constant Cp (from the in-plane tangential gradient,
+    which IS the wall velocity under the natural BC). No nodal averaging,
+    so the sharp-TE crease needs no special-casing. Sides split by
+    `upper_hint` (default +y); points sorted by x/c.
+
+    Returns:
+        dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
+    """
+    from pyfp3d.physics.isentropic import pressure_coefficient_incompressible
+    from pyfp3d.post.surface import triangle_tangential_gradients
+
+    wall = np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64)
+    grad_tri, _, _ = triangle_tangential_gradients(mesh.nodes, wall, phi)
+    q2 = np.sum(grad_tri * grad_tri, axis=1) / u_inf**2
+    hint = np.asarray(upper_hint, dtype=np.float64)
+    hint /= np.linalg.norm(hint)
+
+    sz = mesh.nodes[:, 2] - z
+    extent = float(np.ptp(mesh.nodes[:, 2]))
+    eps = 1e-12 * (extent if extent > 0 else 1.0)
+    sz = np.where(np.abs(sz) < eps, eps, sz)
+
+    xs, cps, sides = [], [], []
+    for k, tri in enumerate(wall):
+        se = sz[tri]
+        if np.all(se > 0) or np.all(se < 0):
+            continue
+        seg = []
+        for a, b in ((0, 1), (0, 2), (1, 2)):
+            if (se[a] > 0) != (se[b] > 0):
+                t = se[a] / (se[a] - se[b])
+                seg.append(mesh.nodes[tri[a]] * (1 - t) + mesh.nodes[tri[b]] * t)
+        if len(seg) != 2:
+            continue
+        mid = 0.5 * (seg[0] + seg[1])
+        xs.append((mid[0] - x_le) / chord)
+        cps.append(pressure_coefficient_incompressible(float(q2[k])))
+        sides.append(float(np.dot(mid, hint)) > 0.0)
+
+    xs = np.asarray(xs)
+    cps = np.asarray(cps)
+    sides = np.asarray(sides, dtype=bool)
+    iu = np.argsort(xs[sides])
+    il = np.argsort(xs[~sides])
+    return {
+        "x_upper": xs[sides][iu], "cp_upper": cps[sides][iu],
+        "x_lower": xs[~sides][il], "cp_lower": cps[~sides][il],
+    }
 
 
 def plot_section_field(section: SectionData, field_name: str, output_path,

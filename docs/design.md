@@ -151,13 +151,29 @@ right-hand-side contribution proportional to Γ). Keep the elimination map
 precomputed; Γ enters only the RHS, so Γ updates do not require matrix
 re-assembly in Picard iterations.
 
+**The duplication must include the trailing-edge nodes.** In the continuum
+[φ](TE) = Γ — that is the Kutta condition itself — so the cut (and the
+node doubling) extends onto the wall. Keeping the TE node single-valued
+tapers the jump to zero across the first wake cell, which is equivalent to
+a point vortex of strength Γ parked at the TE: wall suction ~ (Γ/2πr)²
+integrates to a spurious force ~ Γ²/h that *diverges* under refinement
+(measured in P2: −0.27 out of an expected cl ≈ 0.6 on the coarse NACA0012
+mesh, from six TE-adjacent triangles; with the TE doubled the same case
+gives cl = 0.6012 vs Kutta–Joukowski 0.6).
+
 **Kutta condition.** Pressure equality at the TE upper/lower ⇒ in potential
 form, per spanwise station j:
 
     Γ_j^{new} = φ_{TE,j}^{upper} − φ_{TE,j}^{lower}                     (4.4)
 
 evaluated one node off the TE (or extrapolated to the TE), updated in the
-outer nonlinear loop with under-relaxation ω_Γ ≈ 0.7–1.0. Γ(s) between TE
+outer nonlinear loop with under-relaxation ω_Γ ≈ 0.7–1.0. On the linear
+(Laplace) driver the map Γ → Γ_target is affine with measured slope
+b ≈ 0.93 (the smooth-flow jump one node off the TE is nearly Γ itself), so
+plain relaxation converges slowly; the P2 driver applies a per-station
+secant (Aitken) step from the second update on and converges in 2–3
+updates. The under-relaxed form remains the fallback and the baseline for
+the nonlinear (P3+) outer loop. Γ(s) between TE
 stations: piecewise linear in the spanwise parameter; wake lines inherit the Γ
 of the TE station they emanate from — the wake mesh preprocessor must build
 this station→wake-line map. Convergence monitor: ‖ΔΓ‖∞ alongside the residual
