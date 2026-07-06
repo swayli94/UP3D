@@ -14,7 +14,7 @@ mesh which is the actual M0 deliverable (tests/test_m0_naca0012.py).
 
 Accuracy expectations are calibrated, not aspirational: the wall is a
 flat-faceted approximation of the true circle, i.e. the same curved-wall
-variational crime already root-caused on the G1.2 sphere (see
+variational crime already root-caused on the G1.6 sphere (see
 PROJECT_STRUCTURE.md "Known gaps"), so wall Cp converges at ~O(h):
 measured max |Cp err| ~ 0.091 (coarse) -> 0.045 (medium) with quadratic
 surface recovery. Thresholds below assert those measured levels with

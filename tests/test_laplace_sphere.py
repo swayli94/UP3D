@@ -1,5 +1,5 @@
 """
-Gate G1.2: Incompressible sphere Cp vs 1 - 9/4 sin^2(theta).
+Gate G1.6 (formerly G1.2): Incompressible sphere Cp vs 1 - 9/4 sin^2(theta).
 
 Setup: uniform flow past a unit sphere (cases/meshes/sphere_shell), Dirichlet
 BC from the exact potential phi = x(1 + a^3/(2r^3)) at the far field, natural
@@ -92,7 +92,7 @@ def run_sphere_case(mesh_path):
 
 
 class TestSphereCp:
-    """Gate G1.2: incompressible sphere Cp, max error < 2% on medium mesh."""
+    """Gate G1.6: incompressible sphere Cp, max error < 2% on medium mesh."""
 
     @pytest.mark.xfail(
         strict=True,
@@ -128,7 +128,7 @@ class TestSphereCp:
 
 
 class TestSphereCpArtifacts:
-    """Generate visual artifacts for G1.2."""
+    """Generate visual artifacts for G1.6."""
 
     def test_export_sphere_cp_meridian(self, gate_artifacts_dir, mesh_dir):
         import matplotlib
@@ -148,7 +148,7 @@ class TestSphereCpArtifacts:
                 label="numeric (medium mesh)")
         ax.set_xlabel("theta (deg from +x stagnation point)")
         ax.set_ylabel("Cp")
-        ax.set_title("G1.2: incompressible sphere surface Cp")
+        ax.set_title("G1.6: incompressible sphere surface Cp")
         ax.legend()
         ax.grid(True, alpha=0.3)
 

@@ -14,9 +14,10 @@ workstation-scale (minutes for 1–3 M nodes).
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
-  **"Known gaps"**: read it before touching the G1.2 sphere-Cp problem — it is
-  already root-caused (curved-wall/flat-facet variational crime, needs isoparametric
-  wall elements); do not re-propose h-refinement, recovery tweaks, or Nitsche.
+  **"Known gaps"**: read it before touching the G1.6 sphere-Cp problem (formerly
+  G1.2; P1 gates renumbered 2026-07-06, mapping in roadmap.md) — it is already
+  root-caused (curved-wall/flat-facet variational crime; tiered fix routes in
+  design.md §5.1); do not re-propose h-refinement, recovery tweaks, or Nitsche.
 - `cases/reference_data/` — ground truth, never edit.
 
 ## Hard rules and current phase

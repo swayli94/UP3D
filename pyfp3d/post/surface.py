@@ -226,7 +226,7 @@ def wall_tangential_gradient_quadratic(
     operator's own bias by roughly 20x on an exact-input test (e.g. medium
     mesh: ~2.8% down to ~0.17% max Cp error with no FEM solve at all, phi
     sampled directly from the analytic solution) -- but only trims a few
-    percent off the *total* gate-G1.2 pipeline error (e.g. ~12.0% down to
+    percent off the *total* gate-G1.6 pipeline error (e.g. ~12.0% down to
     ~11.6% on the medium mesh), because the recovery step was never the
     dominant error source: the dominant source is the volume PDE solve's own
     accuracy next to the curved-but-flat-faceted wall (a geometric/

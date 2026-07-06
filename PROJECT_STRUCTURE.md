@@ -41,15 +41,15 @@ pyfp3d/                    # Main package
     └── surface.py        # [P1] nodal_gradient_recovery() (volume-weighted, for interior fields)
                             #      and wall_tangential_gradient() (surface-only, for wall Cp --
                             #      the accurate one; see "Known gaps" for why it still isn't
-                            #      accurate *enough* to close G1.2)
+                            #      accurate *enough* to close G1.6)
 
 cases/                     # Test cases and reference data
 ├── meshes/               # Mesh families (coarse/medium/fine)
-│   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.2 (coarse/medium generated)
+│   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.6 (coarse/medium generated)
 │   ├── cylinder_2.5d/    # ✓ [M0] Single-layer extruded cylinder-flow test case
 │   │                       #   (generate_cylinder.py; coarse 6.9k / medium 17.3k tets
 │   │                       #   committed; analytic Cp = 1 - 4 sin^2(theta) validation);
-│   │                       #   G1.2 fix-route testbed (design.md §5.1.1, roadmap G1.2-a0)
+│   │                       #   sphere-Cp (G1.6) fix-route testbed (design.md §5.1.1, gate G1.3)
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
@@ -72,8 +72,8 @@ tests/                     # Unit and gate tests
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
 ├── test_laplace_mms.py              # ✓ [P1] Gate G1.1 -- PASSES
-├── test_laplace_cg_iterations.py    # ✓ [P1] Gate G1.3 -- PASSES
-├── test_laplace_sphere.py           # ✓ [P1] Gate G1.2 -- strict xfail, see "Known gaps"
+├── test_laplace_cg_iterations.py    # ✓ [P1] Gate G1.2 (formerly G1.3) -- PASSES
+├── test_laplace_sphere.py           # ✓ [P1] Gate G1.6 (formerly G1.2) -- strict xfail, see "Known gaps"
 ├── test_laplace_picard.py           # ✓ [P1] Regression test for solve_laplace residual_norm fix
 ├── test_m0_extrude.py               # ✓ [M0] Prism-split unit tests (pure numpy, no Gmsh)
 ├── test_m0_cylinder.py              # ✓ [M0] Cylinder-flow validation (analytic Cp, spanwise)
@@ -166,7 +166,7 @@ the implementation, a dead `nodal_gradient_recovery_spr` cross-reference in `pos
 replaced with the real wall-recovery functions, and stale `docs/PROJECT_STRUCTURE.md` paths (this
 file lives at the repo root).
 
-### ✓ P1 gates G1.1 and G1.3 closed; G1.2 open (see below)
+### ✓ P1 gates G1.1 and G1.2 closed; G1.3–G1.6 open (P1 renumbered 2026-07-06, see roadmap.md; below)
 - **pyfp3d/kernels/residual.py** — Laplace residual (6.1) + SPD stiffness matrix (6.2) assembly
 - **pyfp3d/solve/linear.py** — Dirichlet elimination (principal-submatrix reduction) + CG+PyAMG
 - **pyfp3d/solve/picard.py** — `solve_laplace()` driver (P1's Picard loop degenerates to one solve)
@@ -175,17 +175,17 @@ file lives at the repo root).
   `wall_tangential_gradient_quadratic()` (surface-only quadratic patch recovery; a real but modest
   improvement, see below)
 - **tests/mesh_utils.py**, **cases/meshes/sphere_shell/** — structured-cube (MMS) and sphere-shell
-  (G1.2) mesh generators; sphere-shell coarse/medium `.msh` + inspection PNGs are committed
+  (G1.6) mesh generators; sphere-shell coarse/medium `.msh` + inspection PNGs are committed
 - **tests/test_laplace_mms.py** — Gate G1.1 (MMS convergence) ✓ — L2 slope ≈ 1.94–1.96 with a
   sin·cos manufactured solution and a proper 4-point quadrature-consistent load vector. (A
   harmonic-polynomial exact solution was tried first and rejected: this codebase's structured
   Kuhn-triangulated cube reproduces harmonic quadratics to machine precision at *every* h, giving
   zero convergence-order signal — the same reason central finite differences are exact for
   quadratics.)
-- **tests/test_laplace_cg_iterations.py** — Gate G1.3 (CG+AMG mesh-independence) ✓ — iterations
+- **tests/test_laplace_cg_iterations.py** — Gate G1.2 (formerly G1.3; CG+AMG mesh-independence) ✓ — iterations
   8→11→14 across an 8×/level node-count increase (n=8,16,32 cube), comfortably under a 2× cap.
 
-**G1.2 (incompressible sphere Cp) is still open** — `tests/test_laplace_sphere.py::test_sphere_cp_medium_mesh`
+**G1.6 (formerly G1.2; incompressible sphere Cp) is still open** — `tests/test_laplace_sphere.py::test_sphere_cp_medium_mesh`
 is a `strict=True` xfail against the real <2% criterion, not a loosened threshold:
 - The original `nodal_gradient_recovery` (volume-weighted average of the one-sided tets touching
   each wall node) gave ~26% max / 9% mean Cp error on the medium mesh — systematically low,
@@ -247,7 +247,7 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
     quadratic field (vs. linear recovery's exactness only for locally linear fields) and cuts the
     recovery-only oracle error by roughly 20x, but — consistent with recovery not being the
     dominant error source — only trims medium-mesh total error from ~12.0% to ~11.6%. Adopted as
-    the default for the G1.2 test since it's a strict, low-risk improvement, but it does not (and
+    the default for the G1.6 test since it's a strict, low-risk improvement, but it does not (and
     was never going to) close the gate alone. See `tests/test_post_surface.py` for regression
     coverage locking in both facts (recovery-only accuracy, and the fact that it's still not
     enough).
@@ -255,15 +255,15 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
   verify **Option A** first — the true-normal weak-flux correction (lagged/SBM-style: correct the
   natural-BC *data* via closest-point projection onto the true surface; RHS-only, stiffness matrix
   unchanged, AMG hierarchy fully reused). An oracle experiment (exact analytic potential + exact
-  normals in the correction RHS, roadmap G1.2-a) measures the accuracy ceiling of this
-  first-order normal correction, then the roadmap G1.2-c decision point picks the route:
+  normals in the correction RHS, gate G1.4) measures the accuracy ceiling of this
+  first-order normal correction, then the DP1 decision point picks the route:
   Option B (Gap-SBM gap terms) if the ceiling lands at 2–5%, or curved/isoparametric wall
   elements — now demoted to the option of last resort, taken up as its own scoped effort only if
-  both A and B fall short — with G1.2 redefined per Option C's geometry-consistent-reference
+  both A and B fall short — with G1.6 redefined per Option C's geometry-consistent-reference
   yardstick in that case. Still do **not** propose further h-refinement or recovery-scheme
   tweaks; both remain ruled out with evidence. `cases/meshes/cylinder_2.5d/` is confirmed to
   share the same root cause with quantified error (max |Cp err| 0.091 coarse → 0.045 medium,
-  ~O(h)) and is the designated fix-route testbed — see design.md §5.1.1 / roadmap G1.2-a0; the
+  ~O(h)) and is the designated fix-route testbed — see design.md §5.1.1 / gate G1.3; the
   gate criterion itself stays on the sphere.
 
 ### ✓ M0 mesh-side items delivered (2026-07-06)
@@ -289,7 +289,7 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
   no wake (non-lifting), analytic solution phi = x(1 + a²/r²), Cp = 1 − 4 sin²θ. The simplest
   end-to-end check of pipeline + P1 solver: measured max |Cp err| 9.1% (coarse, 6.9k tets) →
   4.5% (medium, 17.3k tets) with quadratic surface recovery — same curved-wall/flat-facet
-  variational crime as G1.2, converging ~O(h), fully expected on this geometry.
+  variational crime as the G1.6 sphere, converging ~O(h), fully expected on this geometry.
 - **tests/test_m0_extrude.py / test_m0_cylinder.py / test_m0_naca0012.py** — 21 tests covering
   the M0 gate items: reader ingestion, tags, quad-split consistency, wake-sheet topology (one
   connected planar interior sheet TE→farfield, both z-planes, nodes not duplicated), symmetry
@@ -310,11 +310,12 @@ under refinement for solved fields.
 ### ⏳ Next
 - **P2 (wake cut, circulation, Kutta) on the M0 mesh** — `mesh/wake_cut.py` + its topology
   asserts are also the last items blocking M0 closure (together with the G2.5(b) re-spec above).
-- **G1.2-a oracle experiment** (roadmap G1.2 fix plan; design.md §5.1) — the concrete next step
-  toward closing G1.2 is now the oracle ceiling measurement for Option A (true-normal weak-flux
-  correction), defined in the docs but not yet started in code; the roadmap G1.2-c decision point
-  then picks between Option A rollout, Gap-SBM (Option B), or a curved-element effort with the
-  gate redefined per Option C. Not further h-refinement or more post-processing tweaks (both
+- **G1.3 cylinder oracle pre-study, then G1.4 sphere oracle experiment** (roadmap P1 gates;
+  design.md §5.1/§5.1.1) — the concrete next step toward closing G1.6 is the oracle ceiling
+  measurement for Option A (true-normal weak-flux correction), run first on the cylinder
+  testbed (G1.3), then on the sphere (G1.4); the DP1 decision point
+  then picks between Option A rollout (G1.5), Gap-SBM (Option B), or a curved-element effort with
+  the gate redefined per Option C. Not further h-refinement or more post-processing tweaks (both
   ruled out as sufficient, with evidence).
 
 ## Quick Start
@@ -367,10 +368,11 @@ Critical speed q*² = 0.923077 where M = 1.0:
 
 ## Next Steps (P1 Completion)
 
-P0 (mesh I/O, metrics, coloring, VTK writer, gates G0.1–G0.4) is done. G1.1 and G1.3 are done. To
-close P1, only G1.2 remains:
+P0 (mesh I/O, metrics, coloring, VTK writer, gates G0.1–G0.4) is done. G1.1 and G1.2 (formerly
+G1.3) are done. To close P1, gates G1.3–G1.6 remain (renumbered 2026-07-06, see roadmap.md):
 
-1. **Run the G1.2-a oracle experiment, then follow the roadmap G1.2-c decision point** (see
+1. **Run the G1.3 cylinder oracle pre-study and the G1.4 sphere oracle experiment, then follow
+   the DP1 decision point** (see
    "Known gaps" above for the full root-cause investigation, and design.md §5.1 for the tiered
    fix routes) — mesh refinement and surface-recovery improvements (both tried; see below) are
    ruled out as sufficient, with evidence. The confirmed cause is a geometric/variational-crime
@@ -401,10 +403,12 @@ the G2.5 acceptance link wait on P2 (`mesh/wake_cut.py` topology asserts), and G
 criterion (b) needs re-spec — the solved-field spanwise gradient is O(h) by construction for
 3-tet prism splits, not machine-zero (evidence in roadmap.md G2.5 note and the M0 section
 above). P0 gates G0.1–G0.4 green; the full coarse regression suite now runs against real case
-meshes (cylinder + NACA0012), leaving P0 closure a bookkeeping decision. P1: G1.1 (MMS) and
-G1.3 (CG+AMG mesh-independence) closed; G1.2 (sphere Cp) open with a `strict=True` xfail
+meshes (cylinder + NACA0012), leaving P0 closure a bookkeeping decision. P1 (gates renumbered
+in workflow order 2026-07-06, old → new: G1.3 → G1.2, G1.2-a0 → G1.3, G1.2-a → G1.4,
+G1.2-c → DP1, G1.2-b → G1.5, G1.2 → G1.6): G1.1 (MMS) and G1.2 (CG+AMG mesh-independence)
+closed; G1.6 (sphere Cp) open with a `strict=True` xfail
 tracking the real 2% criterion — root-caused to the curved-wall/flat-facet variational crime;
 fix routes researched and tiered (see design.md §5.1 and "Known gaps"), next action is the
-G1.2-a oracle experiment. The M0 cylinder case shows the same
+G1.3 cylinder oracle pre-study, then the G1.4 sphere oracle experiment. The M0 cylinder case shows the same
 ~O(h) wall-Cp behavior on its curved wall (9.1% → 4.5% max), consistent with that root cause.
 79 tests total (78 passed, 1 xfailed), full suite ~13 s.

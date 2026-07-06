@@ -1,7 +1,7 @@
 """
 P1 capability demonstration: headless PNG/CSV artifacts showing what the
 solver can do today (P0+P1: Laplace on unstructured tets, CG+AMG, surface
-recovery) and where the known gaps are (G1.2 curved-wall accuracy, no wake/
+recovery) and where the known gaps are (G1.6 curved-wall accuracy, no wake/
 compressibility yet).
 
 Not a gate test -- gates live in tests/. This script exists so a human can
@@ -243,10 +243,10 @@ def demo_mms():
 
 
 # ---------------------------------------------------------------------------
-# 3. G1.3 CG+AMG mesh independence
+# 3. G1.2 CG+AMG mesh independence
 # ---------------------------------------------------------------------------
 def demo_cg_amg():
-    print("[3/6] G1.3 CG+AMG mesh independence")
+    print("[3/6] G1.2 CG+AMG mesh independence")
     from tests.test_laplace_mms import phi_exact_fn
 
     series = [(8, S1_BLUE), (16, S2_AQUA), (32, S3_YELLOW)]
@@ -287,7 +287,7 @@ def demo_cg_amg():
     ax2.set_xlabel("number of nodes")
     ax2.set_ylabel("CG iterations to 1e-10")
     ax2.set_title("Iteration count nearly flat over 64x more nodes")
-    fig.suptitle("G1.3 capability: AMG-preconditioned CG is mesh-independent",
+    fig.suptitle("G1.2 capability: AMG-preconditioned CG is mesh-independent",
                  fontsize=13, fontweight="semibold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     _finish(fig, "03_g13_cg_amg.png")
@@ -295,10 +295,10 @@ def demo_cg_amg():
 
 
 # ---------------------------------------------------------------------------
-# 4. G1.2 sphere Cp: current accuracy vs the analytic solution
+# 4. G1.6 sphere Cp: current accuracy vs the analytic solution
 # ---------------------------------------------------------------------------
 def demo_sphere_cp():
-    print("[4/6] G1.2 sphere Cp (medium gmsh mesh)")
+    print("[4/6] G1.6 sphere Cp (medium gmsh mesh)")
     mesh, wall_faces, wall_nodes, phi_exact, result = solve_gmsh_sphere(MESH_DIR / "medium.msh")
     nodes = mesh.nodes
 
@@ -328,7 +328,7 @@ def demo_sphere_cp():
     ax2.set_xlabel("theta (deg)")
     ax2.set_ylabel("|Cp error|")
     ax2.set_title(f"Gap: max {err.max()*100:.1f}%, mean {err.mean()*100:.2f}% (target < 2%)")
-    fig.suptitle("G1.2 open gate: incompressible sphere Cp on the medium mesh",
+    fig.suptitle("G1.6 open gate: incompressible sphere Cp on the medium mesh",
                  fontsize=13, fontweight="semibold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     _finish(fig, "04_g12_sphere_cp.png")
@@ -394,10 +394,10 @@ def demo_flowfield(mesh, result):
 
 
 # ---------------------------------------------------------------------------
-# 6. G1.2 error anatomy: family convergence + oracle decomposition
+# 6. G1.6 error anatomy: family convergence + oracle decomposition
 # ---------------------------------------------------------------------------
 def demo_error_anatomy(gmsh_results, fast=False):
-    print("[6/6] G1.2 error anatomy (this is the slow section)")
+    print("[6/6] G1.6 error anatomy (this is the slow section)")
     subdivs = (1, 2, 3) if fast else (1, 2, 3, 4)
     n_layers = {1: 12, 2: 20, 3: 31, 4: 49}
 
@@ -497,7 +497,7 @@ def demo_error_anatomy(gmsh_results, fast=False):
     ax2.legend(loc="lower right")
     ax2.grid(axis="y", visible=False)
 
-    fig.suptitle("G1.2 root cause, visualized: flat-facet wall (variational crime) "
+    fig.suptitle("G1.6 root cause, visualized: flat-facet wall (variational crime) "
                  "limits accuracy -- needs isoparametric wall elements",
                  fontsize=12.5, fontweight="semibold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.94))

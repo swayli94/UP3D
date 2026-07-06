@@ -182,9 +182,9 @@ One subtlety: with all-Neumann walls and Dirichlet far field the system is
 well-posed; if a pure-Neumann variant is ever used (e.g. channel flows), pin
 one node.
 
-### 5.1 Boundary-flux correction for the wall geometric error (G1.2 candidate fix routes)
+### 5.1 Boundary-flux correction for the wall geometric error (G1.6 candidate fix routes; gates G1.3–G1.5 + DP1)
 
-Context (G1.2, incompressible sphere): the medium-mesh Cp error is ~11.6%
+Context (gate G1.6, formerly G1.2, incompressible sphere): the medium-mesh Cp error is ~11.6%
 against a <2% target, root-caused (see PROJECT_STRUCTURE.md "Known gaps") to a
 geometric/variational inconsistency, not to the surface gradient recovery. After
 integration by parts, the P1 Galerkin wall term ⟨v, ∇φ·ñ⟩ is dropped as a
@@ -257,11 +257,11 @@ Implementation notes (binding for the eventual implementation):
   `_wall_vertex_normals` is a precondition for this correction and must not be
   removed.
 
-#### 5.1.1 Cylinder pre-study (G1.2-a0)
+#### 5.1.1 Cylinder pre-study (gate G1.3, formerly G1.2-a0)
 
 `cases/meshes/cylinder_2.5d/` is the **designated rapid testbed** for the
-Option A/B route, to be exercised before the sphere (roadmap G1.2-a0 precedes
-G1.2-a). Rationale: it exhibits the **same** curved-wall variational crime,
+Option A/B route, to be exercised before the sphere (gate G1.3 precedes
+G1.4). Rationale: it exhibits the **same** curved-wall variational crime,
 already quantified — max |Cp err| 0.091 (coarse) → 0.045 (medium), ~O(h)
 (`tests/test_m0_cylinder.py`); every geometric ingredient Option A needs is
 available in closed form; the meshes are cheap (6.9k / 17.3k tets); and the
@@ -279,9 +279,9 @@ itself is unchanged.
 Caveats (all three are binding; none may be dropped when citing this pre-study):
 
 1. **Necessary, not sufficient.** The cylinder has single curvature, the sphere
-   double curvature. **The G1.2 gate closes only on the sphere.** Cylinder
+   double curvature. **The G1.6 gate closes only on the sphere.** Cylinder
    results serve solely as prerequisite evidence for entering the sphere
-   experiment G1.2-a.
+   experiment G1.4.
 2. **Spanwise-noise floor.** The quasi-2D mesh carries the O(h) spanwise noise
    inherent to the 3-tet prism split (max |w|/U∞ ≈ 2.9e-2 on coarse), which
    pollutes in-plane gradient recovery at the same O(h). The cylinder
@@ -321,7 +321,7 @@ Theoretical expectations and ceiling (recorded to manage expectations):
   dominant error term.
 - Expectation: Cp recovers close to first-order convergence, with a good chance
   the medium-mesh error drops below 2%; the exact ceiling is measured by the
-  oracle experiment (roadmap G1.2-a).
+  oracle experiment (gate G1.4).
 
 **Option B (escalation if Option A falls short): Gap-SBM gap correction.**
 
@@ -341,7 +341,7 @@ extra terms are small to begin with — which is precisely the rationale for
 
 **Option C (pragmatic fallback): redefine the gate rather than the scheme.**
 
-If curved elements ultimately still require their own effort, redefine the G1.2
+If curved elements ultimately still require their own effort, redefine the G1.6
 acceptance criterion as "Cp error / convergence order relative to a
 **geometry-consistent reference solution** (a high-accuracy reference on the
 same polyhedral domain, e.g. BEM or an ultra-fine mesh)", stripping the

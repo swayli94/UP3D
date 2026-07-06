@@ -1,5 +1,5 @@
 """
-Gmsh generator for the spherical-shell validation case (gate G1.2: an
+Gmsh generator for the spherical-shell validation case (gate G1.6: an
 incompressible sphere, Cp vs 1 - 9/4 sin^2(theta)).
 
 Two concentric spheres (r=1 "wall", r=r_out "farfield") are cut with the

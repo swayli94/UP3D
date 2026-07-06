@@ -1,7 +1,7 @@
 """
 Unit/regression tests for pyfp3d.post.surface wall gradient recovery.
 
-`wall_tangential_gradient_quadratic` was added while investigating the G1.2
+`wall_tangential_gradient_quadratic` was added while investigating the G1.6
 accuracy saturation (see PROJECT_STRUCTURE.md "Known gaps"): it is a
 genuine, well-conditioned improvement over the linear `wall_tangential_gradient`
 (exact for a locally quadratic field, vs. only exact for a locally linear one),
@@ -110,7 +110,7 @@ def test_inconsistent_wall_winding_raises():
 
 
 def test_quadratic_recovery_sphere_medium_mesh_regression(mesh_dir):
-    """Locks in the ~20x recovery-only improvement measured on the G1.2
+    """Locks in the ~20x recovery-only improvement measured on the G1.6
     sphere case during the accuracy-saturation investigation (see
     PROJECT_STRUCTURE.md): feeding the *exact* analytic potential
     (no FEM solve at all) through both recovery schemes, quadratic recovery's

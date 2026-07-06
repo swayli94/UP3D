@@ -1,5 +1,5 @@
 """
-Gate G1.3: AMG-preconditioned CG iteration count is roughly mesh-independent.
+Gate G1.2 (formerly G1.3): AMG-preconditioned CG iteration count is roughly mesh-independent.
 
 Runs the same smooth (non-polynomial) MMS-style problem from
 test_laplace_mms.py on 3 structured-cube levels and checks that the CG+AMG
@@ -38,7 +38,7 @@ def run_cg_case(n: int) -> dict:
 
 
 class TestCGMeshIndependence:
-    """Gate G1.3: CG+AMG iteration count roughly mesh-independent."""
+    """Gate G1.2: CG+AMG iteration count roughly mesh-independent."""
 
     def test_iteration_count_bounded_growth(self):
         levels = [run_cg_case(n) for n in LEVELS]
@@ -65,7 +65,7 @@ class TestCGMeshIndependence:
 
 
 class TestCGIterationArtifacts:
-    """Generate visual artifacts for G1.3."""
+    """Generate visual artifacts for G1.2."""
 
     def test_export_cg_convergence_overlay(self, gate_artifacts_dir):
         import matplotlib
@@ -105,7 +105,7 @@ class TestCGIterationArtifacts:
 
         ax.set_xlabel("CG iteration")
         ax.set_ylabel("relative residual")
-        ax.set_title("G1.3: CG+AMG convergence history (mesh-independence)")
+        ax.set_title("G1.2: CG+AMG convergence history (mesh-independence)")
         ax.legend()
         ax.grid(True, which="both", alpha=0.3)
 
