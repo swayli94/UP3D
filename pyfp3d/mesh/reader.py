@@ -160,12 +160,16 @@ def read_mesh(filepath: Path | str, verbose: bool = False) -> Mesh:
         if "tetra" in physical_tags:
             element_tags = np.asarray(physical_tags["tetra"], dtype=np.int32)
     
-    # Build tag name map if available
+    # Build tag name map, but only when the file actually names 3D regions --
+    # meshio meshes always *have* a field_data attribute (default {}), and
+    # unconditionally rebuilding here used to overwrite the default ["bulk"]
+    # with [""] for meshes that carry no named volume groups.
     if hasattr(mesh_obj, 'field_data'):
         tag_map = mesh_obj.field_data  # Dict mapping tag name -> (tag_id, dimension)
-        tag_names = [""] * (max(element_tags) + 1)
-        for name, (tag_id, dim) in tag_map.items():
-            if dim == 3:  # Volume region
+        volume_entries = [(name, tag_id) for name, (tag_id, dim) in tag_map.items() if dim == 3]
+        if volume_entries:
+            tag_names = [""] * (max(element_tags) + 1)
+            for name, tag_id in volume_entries:
                 if tag_id < len(tag_names):
                     tag_names[tag_id] = name
     

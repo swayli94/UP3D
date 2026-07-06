@@ -4,9 +4,12 @@ Element graph coloring for parallel assembly via @prange.
 Greedy graph coloring algorithm: ensure no two same-color elements share a node,
 allowing safe parallel updates in Numba @prange loops.
 
-Reference: design.md §3 (Architecture), standard graph coloring for FEM assembly
+Reference: design.md §7 (Numba kernel architecture, rule 2: colored assembly),
+standard graph coloring for FEM assembly.
 
-All functions are @njit-compatible.
+Note: this module is pure-Python preprocessing (dict/set/list based) that runs
+once at startup; it produces the color partition that the @njit assembly
+kernels consume. It is intentionally NOT numba-jitted itself.
 """
 
 import numba

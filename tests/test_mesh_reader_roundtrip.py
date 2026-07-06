@@ -56,6 +56,33 @@ class TestMeshReaderRoundTrip:
                 _sorted_triangle_set(mesh2.boundary_faces[name]),
             ), f"boundary group '{name}' did not round-trip"
 
+    def test_untagged_volume_keeps_default_bulk_name(self, tmp_path):
+        """A mesh whose file names no 3D physical region must keep the
+        default ["bulk"] volume tag name. read_mesh used to rebuild
+        tag_names from field_data unconditionally (meshio meshes always
+        *have* a field_data attribute, usually just {} or surface-only),
+        clobbering the default with [""]."""
+        from pyfp3d.mesh.reader import Mesh
+
+        mesh = Mesh()
+        mesh.nodes = np.array(
+            [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float64
+        )
+        mesh.elements = np.array([[0, 1, 2, 3]], dtype=np.int32)
+        mesh.boundary_faces = {"wall": np.array([[0, 1, 2]], dtype=np.int32)}
+        mesh.element_tags = np.zeros(1, dtype=np.int32)
+        # mesh.tag_names left at its empty default: no named volume group
+
+        out_path = tmp_path / "untagged_volume.msh"
+        write_mesh(mesh, out_path)
+        mesh2 = read_mesh(out_path)
+
+        assert mesh2.tag_names == ["bulk"], (
+            f"expected default ['bulk'] for a mesh with no named 3D regions, "
+            f"got {mesh2.tag_names}"
+        )
+        assert set(mesh2.boundary_faces) == {"wall"}
+
     def test_msh_extension_resolves_to_gmsh_not_ansys(self, sphere_coarse_path, tmp_path):
         """".msh" is ambiguous in meshio (matches both "ansys" and "gmsh");
         write_mesh must not silently fall back to a writer that can't

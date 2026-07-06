@@ -12,19 +12,19 @@ pyfp3d/                    # Main package
 │   ├── reader.py         # [P0] meshio → SoA arrays + boundary tags
 │   ├── metrics.py        # [P0] volumes, gradients, face adjacency
 │   ├── coloring.py       # [P0] element graph coloring
-│   └── wake_cut.py       # [P2] node duplication from wake surface
+│   └── wake_cut.py       # [P2] node duplication from wake surface (PLANNED, file not created yet)
 ├── physics/              # Physics constants and constitutive relations
 │   ├── __init__.py
 │   └── isentropic.py     # ✓ [P0] ρ(q²), M(q²), a(q²), Cp, etc. (complete)
 ├── kernels/              # Element-wise assembly kernels (Numba-jitted)
 │   ├── __init__.py
 │   ├── residual.py       # [P1] Laplace residual + stiffness assembly (done) → [P3] isentropic → [P6] Newton
-│   └── upwind.py         # [P4] Artificial compressibility
+│   └── upwind.py         # [P4] Artificial compressibility (PLANNED, file not created yet)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done)
 │   ├── picard.py         # [P1] Laplace driver (single linear solve, no outer loop) (done)
-│   └── newton.py         # [P6] Newton method
+│   └── newton.py         # [P6] Newton method (PLANNED, file not created yet)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -40,14 +40,17 @@ cases/                     # Test cases and reference data
 │   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.2 (coarse/medium generated)
 │   ├── naca0012_2.5d/    # [M0] Extruded NACA0012 + wake surface -- not started
 │   └── onera_m6/         # [M1] Swept wing -- not started
-├── reference_data/       # Ground truth (DO NOT EDIT)
-│   ├── sphere_incomp_cp.csv
-│   ├── naca0012_cl.csv
+├── reference_data/       # Ground truth (DO NOT EDIT) -- currently EMPTY; the files below are
+│   ├── sphere_incomp_cp.csv   #   planned digitized references. The P1 sphere gate compares
+│   ├── naca0012_cl.csv        #   against the analytic Cp formula in-test, which needs no file.
 │   └── ...
 └── test_*.py             # [Deprecated] Integration tests (use tests/ now)
 
 tests/                     # Unit and gate tests
-├── conftest.py           # ✓ Pytest fixtures: artifacts_dir, mesh_dir, etc.
+├── conftest.py           # ✓ Pytest fixtures: artifacts_dir (persistent, PYFP3D_ARTIFACTS_DIR
+│                           #   overridable), mesh_dir, etc.
+├── test_conftest_artifacts.py       # ✓ Regression test: gate artifacts persist in artifacts/
+├── test_metrics_degenerate.py       # ✓ Regression test: degenerate-tet guard in metrics.py
 ├── mesh_utils.py         # ✓ [P1] Dependency-free structured-cube + sphere-shell mesh generators
 ├── __init__.py
 ├── test_v0_freestream.py # ✓ [P0/P1] Primary regression test (incl. cut-free residual check)
@@ -108,6 +111,43 @@ exercised these code paths) have been fixed, each now with a regression test:
   (far-field) rows whose natural-BC flux imbalance is O(1) and never shrinks — swamping the actual
   free-dof residual (which was already converging to ~1e-10). Now restricted to free dofs and
   correctly nets out `body_source_rhs` when present. (`test_laplace_picard.py`)
+
+A second manual audit (2026-07-06) fixed four more latent issues, again each locked in by a
+regression test:
+- `tests/conftest.py::artifacts_dir` handed out a `tempfile.TemporaryDirectory`, so every gate
+  PNG/CSV was deleted at teardown and the repo `artifacts/` directory stayed permanently empty —
+  violating the CLAUDE.md/roadmap rule that every visual gate leaves inspectable headless
+  artifacts. Now defaults to the persistent (gitignored) `artifacts/`, overridable via
+  `PYFP3D_ARTIFACTS_DIR`. (`test_conftest_artifacts.py`)
+- `mesh/metrics.py::element_gradients` silently returned zero gradients for |det J| < 1e-20 — an
+  absolute threshold that both let coplanar tets corrupt assembly without any error and zeroed
+  perfectly well-shaped tiny elements (edge ~1e-7 ⇒ det ~1e-21). Now raises `ValueError` with a
+  scale-relative threshold (|det J| < 1e-12 × product of edge norms). (`test_metrics_degenerate.py`)
+- `post/surface.py::_wall_vertex_normals` silently averaged cancelling normals when wall-triangle
+  winding is inconsistent (or a crease is razor-sharp), producing garbage tangent planes
+  downstream. Now raises with a diagnostic when |Σ area·n̂| / Σ area < 0.05 at any vertex.
+  (`test_post_surface.py::test_inconsistent_wall_winding_raises`)
+- `mesh/reader.py::read_mesh` rebuilt `tag_names` from `field_data` unconditionally (meshio meshes
+  always *have* that attribute), clobbering the default `["bulk"]` with `[""]` for meshes carrying
+  no named 3D groups. Now rebuilds only when a dim-3 entry exists.
+  (`test_mesh_reader_roundtrip.py::test_untagged_volume_keeps_default_bulk_name`)
+
+Numba pitfall hit while landing the degenerate-tet guard (captured here for the end-of-P1 skill
+sedimentation checkpoint): `@njit(cache=True)` disk-cache invalidation tracks only the cached
+function's *own* source, not its jitted callees — after editing `metrics.py::element_gradients`,
+the stale cached `kernels/residual.py::assemble_residual` (with the old callee behavior baked in)
+could still be loaded depending on compile order, making a test pass or fail depending on which
+test file ran first. Symptom: behavior differs between `pytest tests/test_x.py` and the full
+suite. Fix during development: delete `pyfp3d/**/__pycache__/*.nb[ic]` after editing any function
+that other cached kernels call, then re-run.
+
+Doc-only fixes in the same pass: design.md §5 far-field formula typo (`z sinα cosβ`, was garbled
+"cosα-corrected"), design.md §10 V1 / roadmap G1.1 manufactured-solution wording (sin·sin·sin, not
+sin·cos), `coloring.py` docstring (pure-Python preprocessing, not "@njit-compatible"; architecture
+is design.md §7, not §3), `isentropic.py::validate_physics_bounds` docstring bounds aligned with
+the implementation, a dead `nodal_gradient_recovery_spr` cross-reference in `post/surface.py`
+replaced with the real wall-recovery functions, and stale `docs/PROJECT_STRUCTURE.md` paths (this
+file lives at the repo root).
 
 ### ✓ P1 gates G1.1 and G1.3 closed; G1.2 open (see below)
 - **pyfp3d/kernels/residual.py** — Laplace residual (6.1) + SPD stiffness matrix (6.2) assembly
@@ -277,15 +317,17 @@ close P1, only G1.2 remains:
 
 ## References
 
-- **Design & Theory:** [docs/design.md](../docs/design.md)
-- **Roadmap & Gates:** [docs/roadmap.md](../docs/roadmap.md)
-- **Agent Rules:** [docs/agent-rules.md](../docs/agent-rules.md)
-- **These Instructions:** [.copilot-instructions.md](../.copilot-instructions.md)
+- **Design & Theory:** [docs/design.md](docs/design.md)
+- **Roadmap & Gates:** [docs/roadmap.md](docs/roadmap.md)
+- **Agent Rules:** [docs/agent-rules.md](docs/agent-rules.md)
+- **Claude Code Instructions:** [CLAUDE.md](CLAUDE.md)
 
 ---
 
 **Last updated:** 2026-07-06  
-**Status:** P0 closed (G0.1–G0.4 green). P1: G1.1 (MMS) and G1.3 (CG+AMG mesh-independence) closed;
+**Status:** P0 gates G0.1–G0.4 green, but the phase itself is still open (closure per roadmap.md
+ledger needs the M0 mesh family and a full coarse-regression run on real case meshes). P1: G1.1
+(MMS) and G1.3 (CG+AMG mesh-independence) closed;
 G1.2 (sphere Cp) open with a `strict=True` xfail tracking the real 2% criterion. The saturation
 cause is now root-caused (not just hypothesized) — a geometric/variational-crime inconsistency
 from the natural BC being enforced on the flat polyhedral wall approximation rather than the true
@@ -293,4 +335,4 @@ curved sphere; recovery-scheme quality and bulk-mesh refinement were both tested
 the dominant cause. A quadratic surface-patch recovery (`wall_tangential_gradient_quadratic`) was
 implemented as a genuine but modest improvement (~12.0%→~11.6% max error on medium); closing the
 gate for real needs curved/isoparametric wall elements — see "Known gaps" and "Next Steps" above.
-45 tests total (44 passed, 1 xfailed), full suite ~10s.
+52 tests total (51 passed, 1 xfailed), full suite ~10 s.

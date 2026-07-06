@@ -2,7 +2,7 @@
 Unit/regression tests for pyfp3d.post.surface wall gradient recovery.
 
 `wall_tangential_gradient_quadratic` was added while investigating the G1.2
-accuracy saturation (see docs/PROJECT_STRUCTURE.md "Known gaps"): it is a
+accuracy saturation (see PROJECT_STRUCTURE.md "Known gaps"): it is a
 genuine, well-conditioned improvement over the linear `wall_tangential_gradient`
 (exact for a locally quadratic field, vs. only exact for a locally linear one),
 but investigation showed the recovery step is a minor contributor to the
@@ -86,10 +86,33 @@ def test_quadratic_recovery_matches_linear_on_linear_field():
     assert np.max(np.abs(grad_quad[touched] - grad_exact[touched])) < 1e-8
 
 
+def test_inconsistent_wall_winding_raises():
+    """Mixed triangle winding makes area-weighted vertex normals cancel; the
+    tangent planes built from them are then garbage. This used to proceed
+    silently -- now `_wall_vertex_normals` raises. The consistent-winding
+    twin of the same patch must keep working (and still recover a linear
+    field exactly through the 2-parameter fallback for tiny patches)."""
+    import pytest
+
+    nodes = np.array(
+        [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]], dtype=np.float64
+    )
+    phi = 2.0 * nodes[:, 0] - 3.0 * nodes[:, 1]
+
+    faces_consistent = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.int64)  # both +z
+    grad = wall_tangential_gradient_quadratic(nodes, faces_consistent, phi)
+    touched = np.unique(faces_consistent)
+    assert np.allclose(grad[touched], [2.0, -3.0, 0.0], atol=1e-9)
+
+    faces_mixed = np.array([[0, 1, 2], [1, 2, 3]], dtype=np.int64)  # second is -z
+    with pytest.raises(ValueError, match="winding"):
+        wall_tangential_gradient_quadratic(nodes, faces_mixed, phi)
+
+
 def test_quadratic_recovery_sphere_medium_mesh_regression(mesh_dir):
     """Locks in the ~20x recovery-only improvement measured on the G1.2
     sphere case during the accuracy-saturation investigation (see
-    docs/PROJECT_STRUCTURE.md): feeding the *exact* analytic potential
+    PROJECT_STRUCTURE.md): feeding the *exact* analytic potential
     (no FEM solve at all) through both recovery schemes, quadratic recovery's
     own bias should be a small fraction of the linear scheme's."""
     from pyfp3d.mesh.reader import read_mesh

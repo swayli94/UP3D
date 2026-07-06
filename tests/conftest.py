@@ -6,19 +6,27 @@ mesh sets, and artifact storage.
 """
 
 import pytest
-import tempfile
 import os
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).parent.parent
 
 
 @pytest.fixture
 def artifacts_dir():
-    """Temporary directory for test artifacts (PNG, CSV, VTU files).
-    
-    In CI, these should be captured and stored for gate validation.
+    """Persistent root for gate artifacts (PNG, CSV, VTU files).
+
+    Defaults to <repo>/artifacts (gitignored) so the headless evidence each
+    visual gate produces survives the test run and can be inspected -- the
+    CLAUDE.md/roadmap workflow requires every visual gate to leave PNG+CSV
+    artifacts behind. (This used to be a tempfile.TemporaryDirectory, which
+    deleted every artifact at teardown and left artifacts/ permanently
+    empty.) Set PYFP3D_ARTIFACTS_DIR to redirect, e.g. to a CI upload dir.
     """
-    with tempfile.TemporaryDirectory(prefix="pyfp3d_artifacts_") as tmpdir:
-        yield Path(tmpdir)
+    env = os.environ.get("PYFP3D_ARTIFACTS_DIR")
+    base = Path(env) if env else REPO_ROOT / "artifacts"
+    base.mkdir(parents=True, exist_ok=True)
+    return base
 
 
 @pytest.fixture

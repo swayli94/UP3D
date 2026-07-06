@@ -174,7 +174,7 @@ in loading for attached flow).
 | Boundary | Condition | Implementation |
 |---|---|---|
 | Solid wall (wing, body) | ρ ∂φ/∂n = 0 | Natural (do-nothing) in the Galerkin weak form — zero surface integral. No penalty, no ghost cells. |
-| Far field | φ → φ∞ + φ_vortex | Dirichlet on outer nodes: φ∞ = x cosα cosβ + y sinβ + z sinα cosα-corrected uniform flow, plus a compressible horseshoe-vortex correction with total circulation ΣΓ_j Δs_j (Prandtl–Glauert-scaled). At R ≳ 25–50 chords the correction is small but including it lets the domain shrink to ~15 chords. |
+| Far field | φ → φ∞ + φ_vortex | Dirichlet on outer nodes: φ∞ = x cosα cosβ + y sinβ + z sinα cosβ (uniform flow at incidence α, sideslip β), plus a compressible horseshoe-vortex correction with total circulation ΣΓ_j Δs_j (Prandtl–Glauert-scaled). At R ≳ 25–50 chords the correction is small but including it lets the domain shrink to ~15 chords. |
 | Wake | (4.1)–(4.2) | Constraint elimination, §4. |
 | Symmetry plane (half-model) | ∂φ/∂n = 0 | Natural, free. |
 
@@ -345,7 +345,7 @@ Each item is a pytest in `cases/`; keep them runnable on coarse meshes in CI.
 | # | Case | Checks | Gate |
 |---|---|---|---|
 | V0 | Freestream preservation, arbitrary tet mesh + wake cut | ‖R(φ=x)‖∞ | < 1e−12 |
-| V1 | Laplace MMS (ν=0, ρ=1), manufactured φ = sin·cos products | L2 error vs h | slope ≥ 1.9 |
+| V1 | Laplace MMS (ν=0, ρ=1), manufactured trigonometric φ (implemented: sin πx · sin πy · sin πz) | L2 error vs h | slope ≥ 1.9 |
 | V2 | Incompressible sphere | Cp vs 1 − (9/4)sin²θ | max err < 2% (medium mesh) |
 | V3 | Subcritical extruded NACA0012, M 0.5, α 2° (span-periodic or large AR + symmetry) | Cp vs 2D FP/panel reference; cl | Δcl < 2% |
 | V4 | Transonic NACA0012 M 0.80 α 1.25° (extruded) | shock x/c vs published FP (Holst AGARD FP workshop results — note FP ≠ Euler shock position) | shock Δx/c < 0.03 |

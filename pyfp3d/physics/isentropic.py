@@ -191,9 +191,10 @@ def validate_physics_bounds(rho, q, M, Cp, M_inf, gamma=GAMMA):
 
     Constraints:
       - ρ ∈ (0, ρ₀] (density must be positive)
-      - q ∈ [0, √2] (speed ≤ ~1.4 times freestream in worst case)
+      - q ∈ [0, 2] (speed ≤ ~2 times freestream in worst case)
       - M ∈ [0, 5] (Mach number reasonable range)
-      - Cp ∈ [−5, 5] (pressure coefficient bounded)
+      - Cp ∈ [−5, 10] (loose sanity bounds; stagnation Cp is at most a
+        few, large-negative Cp means unphysical expansion)
 
     Args:
         rho: Array of density values

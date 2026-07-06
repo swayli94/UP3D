@@ -47,9 +47,11 @@ def nodal_gradient_recovery(nodes: np.ndarray, elements: np.ndarray, phi: np.nda
     effectively samples the gradient somewhere in the tets' interior rather
     than at the node itself, and any nonuniformity across the patch (e.g.
     the tangential-velocity falloff away from a curved wall) is smoothed
-    into an underestimate right at the boundary. `nodal_gradient_recovery_spr`
-    corrects that bias for surface quantities like Cp; keep this function for
-    interior-field use where the plain average is markedly cheaper.
+    into an underestimate right at the boundary. For wall quantities like Cp
+    use `wall_tangential_gradient` / `wall_tangential_gradient_quadratic`,
+    which avoid that bias by working in the wall's own 2-manifold; keep this
+    function for interior-field use where the plain average is markedly
+    cheaper.
 
     Args:
         nodes: (n_nodes, 3) nodal coordinates
@@ -149,7 +151,19 @@ def wall_tangential_gradient(nodes: np.ndarray, wall_faces: np.ndarray, phi: np.
 
 
 def _wall_vertex_normals(nodes: np.ndarray, wall_faces: np.ndarray) -> np.ndarray:
-    """Area-weighted vertex-normal field over the wall's own triangulation."""
+    """Area-weighted vertex-normal field over the wall's own triangulation.
+
+    Raises:
+        ValueError: if any vertex's incident triangle normals nearly cancel
+            (|sum of area-weighted normals| / sum of areas < 0.05). The
+            averaged normal is then meaningless, and every tangent plane
+            built from it downstream would be garbage. Two known causes:
+            inconsistent triangle winding in the wall surface (a mesh/tagging
+            defect -- fix the mesh), or a genuinely sharp crease such as a
+            thin trailing edge (wedge angle below ~6 deg), where a vertex
+            normal is ill-defined and the recovery scheme needs an explicit
+            crease treatment instead of silent averaging.
+    """
     p0, p1, p2 = nodes[wall_faces[:, 0]], nodes[wall_faces[:, 1]], nodes[wall_faces[:, 2]]
     area_vec = np.cross(p1 - p0, p2 - p0)
     twice_area = np.linalg.norm(area_vec, axis=1)
@@ -158,13 +172,25 @@ def _wall_vertex_normals(nodes: np.ndarray, wall_faces: np.ndarray) -> np.ndarra
 
     n_nodes = len(nodes)
     normal_sum = np.zeros((n_nodes, 3), dtype=np.float64)
+    weight_sum = np.zeros(n_nodes, dtype=np.float64)
     for i in range(3):
         np.add.at(normal_sum, wall_faces[:, i], area[:, None] * tri_normal)
+        np.add.at(weight_sum, wall_faces[:, i], area)
 
     norms = np.linalg.norm(normal_sum, axis=1)
+    touched = weight_sum > 0
+    consistency = norms[touched] / weight_sum[touched]
+    if np.any(consistency < 0.05):
+        raise ValueError(
+            "wall vertex normals nearly cancel at "
+            f"{int(np.sum(consistency < 0.05))} node(s) "
+            "(inconsistent wall-triangle winding, or a sharp crease like a "
+            "thin trailing edge) -- see _wall_vertex_normals docstring"
+        )
+
     vertex_normal = np.full((n_nodes, 3), np.nan, dtype=np.float64)
-    touched = norms > 0
-    vertex_normal[touched] = normal_sum[touched] / norms[touched, None]
+    touched_n = norms > 0
+    vertex_normal[touched_n] = normal_sum[touched_n] / norms[touched_n, None]
     return vertex_normal
 
 
@@ -196,7 +222,7 @@ def wall_tangential_gradient_quadratic(
     This is exact (zero recovery bias) for any quadratic tangential field,
     vs. `wall_tangential_gradient`'s per-triangle *linear* fit + area-
     weighted average, which is only exact for a locally linear field. Empirically
-    (see docs/PROJECT_STRUCTURE.md "Known gaps"), this cuts the recovery
+    (see PROJECT_STRUCTURE.md "Known gaps"), this cuts the recovery
     operator's own bias by roughly 20x on an exact-input test (e.g. medium
     mesh: ~2.8% down to ~0.17% max Cp error with no FEM solve at all, phi
     sampled directly from the analytic solution) -- but only trims a few

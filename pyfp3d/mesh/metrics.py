@@ -130,24 +130,39 @@ def linear_basis_gradient(J_inv: np.ndarray, basis_node: int) -> np.ndarray:
 def element_gradients(nodes: np.ndarray, elements: np.ndarray, tet_index: int) -> np.ndarray:
     """
     Compute basis function gradients for all nodes of a single tet.
-    
+
     Args:
         nodes: (n_nodes, 3) nodal coordinates
         elements: (n_tets, 4) element connectivity
         tet_index: Which element to compute
-        
+
     Returns:
         grads: (4, 3) gradient for each of 4 basis functions
+
+    Raises:
+        ValueError: if the tet is degenerate (near-zero volume for its size).
+            Degeneracy is judged *relative to the element's own edge lengths*
+            (|det J| scales like edge^3), not by an absolute epsilon -- an
+            absolute cutoff both misses degenerate elements of large meshes
+            and misfires on perfectly well-shaped but tiny elements. Raising
+            (rather than the old behavior of silently returning zero
+            gradients) turns a mesh defect into a loud failure instead of a
+            silently corrupted assembly.
     """
     tet = elements[tet_index]
     vol, J = tet_volume_and_jacobian(nodes, tet)
-    
-    # Compute inverse Jacobian
+
+    s1 = np.sqrt(J[0, 0] ** 2 + J[1, 0] ** 2 + J[2, 0] ** 2)
+    s2 = np.sqrt(J[0, 1] ** 2 + J[1, 1] ** 2 + J[2, 1] ** 2)
+    s3 = np.sqrt(J[0, 2] ** 2 + J[1, 2] ** 2 + J[2, 2] ** 2)
+    scale = s1 * s2 * s3
     det = np.linalg.det(J)
-    if abs(det) < 1e-20:
-        # Degenerate element; return zero gradients
-        return np.zeros((4, 3), dtype=np.float64)
-    
+    if scale == 0.0 or abs(det) < 1e-12 * scale:
+        raise ValueError(
+            "element_gradients: degenerate tetrahedron "
+            "(|det J| < 1e-12 x edge-length^3 scale) -- fix the mesh"
+        )
+
     J_inv = np.linalg.inv(J)
     
     # Compute gradients for all 4 basis functions
