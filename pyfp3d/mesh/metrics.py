@@ -16,6 +16,12 @@ import numba
 import numpy as np
 from typing import Tuple, Dict, List
 
+# Module-level type constants: numba's typed.Dict.empty() needs key_type/
+# value_type resolved as compile-time global constants inside @njit code, not
+# as inline constructor calls.
+_FACE_KEY_TYPE = numba.types.UniTuple(numba.int32, 3)
+_FACE_VALUE_TYPE = numba.int64
+
 
 @numba.njit(cache=True)
 def tet_volume_and_jacobian(nodes: np.ndarray, tet: np.ndarray) -> Tuple[float, np.ndarray]:
@@ -156,60 +162,73 @@ def element_gradients(nodes: np.ndarray, elements: np.ndarray, tet_index: int) -
 def build_face_adjacency(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Build element-to-element adjacency via faces.
-    
+
     Each tet has 4 faces. Two tets sharing a face are neighbors.
-    
+
     Returns:
         face_neighbors: (n_tets, 4) array where face_neighbors[e, f] is the
                        neighbor tet across face f of element e (or -1 if boundary)
         face_orientations: (n_tets, 4) orientation flag for each shared face
-        
+
     Note: This is a simplified version; full implementation would handle
           periodic boundary conditions and mesh boundaries.
     """
     n_tets = len(elements)
-    
+
     # For each tet, define its 4 faces as sorted node triples
     # Face 0: nodes (1, 2, 3) opposite node 0
     # Face 1: nodes (0, 2, 3) opposite node 1
     # Face 2: nodes (0, 1, 3) opposite node 2
     # Face 3: nodes (0, 1, 2) opposite node 3
-    
+
     face_defs = np.array(
         [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]], dtype=np.int32
     )
-    
-    # Build a map from sorted face to (element, local_face_index)
-    face_to_tet: Dict = {}  # Key: (n0, n1, n2), Value: (tet_idx, face_idx, global_n0, ...)
-    
+
+    face_neighbors = np.full((n_tets, 4), -1, dtype=np.int32)
+    face_orientations = np.zeros((n_tets, 4), dtype=np.int32)
+
+    # Map sorted-node-triple -> the packed (element, local_face) index of the
+    # *first* tet seen owning that face, i.e. element * 4 + local_face. A
+    # manifold tet mesh has at most two tets per face, so there is never a
+    # need to store more than one pending occurrence per key -- this avoids
+    # dict values that are growable lists, which numba's typed Dict cannot
+    # hold in nopython mode (reflected lists are not a valid value type).
+    first_owner = numba.typed.Dict.empty(
+        key_type=_FACE_KEY_TYPE,
+        value_type=_FACE_VALUE_TYPE,
+    )
+
     for e in range(n_tets):
         tet = elements[e]
         for f in range(4):
-            # Get global node indices of this face
             local_nodes = face_defs[f]
-            global_nodes = np.array([tet[local_nodes[0]], tet[local_nodes[1]], tet[local_nodes[2]]])
-            
-            # Sort for consistent key
-            sorted_nodes = np.sort(global_nodes)
-            key = (sorted_nodes[0], sorted_nodes[1], sorted_nodes[2])
-            
-            if key not in face_to_tet:
-                face_to_tet[key] = []
-            face_to_tet[key].append((e, f))
-    
-    # Build neighbor arrays
-    face_neighbors = np.full((n_tets, 4), -1, dtype=np.int32)
-    face_orientations = np.zeros((n_tets, 4), dtype=np.int32)
-    
-    for key, tet_face_list in face_to_tet.items():
-        if len(tet_face_list) == 2:
-            (e1, f1), (e2, f2) = tet_face_list
-            face_neighbors[e1, f1] = e2
-            face_neighbors[e2, f2] = e1
-            # Orientations can be computed from relative face orderings
-            face_orientations[e1, f1] = 1
-            face_orientations[e2, f2] = -1
-    
+            n0 = tet[local_nodes[0]]
+            n1 = tet[local_nodes[1]]
+            n2 = tet[local_nodes[2]]
+
+            # Sort the three node ids for a consistent key.
+            a, b, c = n0, n1, n2
+            if a > b:
+                a, b = b, a
+            if b > c:
+                b, c = c, b
+            if a > b:
+                a, b = b, a
+            key = (a, b, c)
+
+            if key in first_owner:
+                packed = first_owner[key]
+                e1 = packed // 4
+                f1 = packed % 4
+                face_neighbors[e1, f1] = e
+                face_neighbors[e, f] = e1
+                face_orientations[e1, f1] = 1
+                face_orientations[e, f] = -1
+                del first_owner[key]
+            else:
+                first_owner[key] = e * 4 + f
+
     return face_neighbors, face_orientations
 
 

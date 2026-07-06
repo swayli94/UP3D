@@ -212,9 +212,9 @@ Eisenstat–Walker inexact-solve schedule, profiling report.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
-| M0 | ☐ | | Not started: `cases/meshes/` empty, no Gmsh script yet. |
-| P0 | ☐ (in progress) | | `mesh/reader.py`, `metrics.py`, `coloring.py`, `physics/isentropic.py`, `post/vtk_out.py` implemented; G0.1–G0.4 unit tests pass (25/25 in `tests/`). Not yet closed: no M0 mesh family to validate against on real geometry, and the full coarse regression suite per §0 hasn't been run against real case meshes. |
-| P1 | ☐ | | |
+| M0 | ☐ | | Not started: no extruded-NACA0012 Gmsh script yet. (`cases/meshes/sphere_shell/` exists but is a P1/G1.2 validation case, not the M0 deliverable.) |
+| P0 | ☐ (in progress) | | `mesh/reader.py`, `metrics.py`, `coloring.py`, `physics/isentropic.py`, `post/vtk_out.py` implemented; G0.1–G0.4 unit tests pass (26/26 in `tests/`). Three latent bugs found by manual audit and fixed: `metrics.py::build_face_adjacency` crashed under `@njit` (reflected-list dict values), `reader.py::write_mesh` dropped all named boundary tags (`.msh` writer ambiguity + only handled a legacy `"all_triangles"` block), `solve/picard.py::solve_laplace` reported a `residual_norm` dominated by Dirichlet-row flux imbalance instead of the free-dof residual. None were caught by the test suite because nothing exercised those paths. Not yet closed: no M0 mesh family to validate against on real geometry, and the full coarse regression suite per §0 hasn't been run against real case meshes. |
+| P1 | ☐ (in progress) | | `kernels/residual.py` (Laplace residual (6.1) + SPD stiffness (6.2)), `solve/linear.py` (Dirichlet elimination + CG+PyAMG), `solve/picard.py` (`solve_laplace` driver), `post/surface.py` (volume-weighted nodal gradient recovery), `tests/mesh_utils.py` (structured-cube + sphere-shell generators), and `cases/meshes/sphere_shell/{coarse,medium}.msh` are implemented/committed. No `tests/test_laplace_*.py` yet — G1.1–G1.3 are unimplemented as gates. Manually running the G1.2 setup (uniform flow past the sphere-shell mesh) shows φ converges (~1% error) but surface Cp from `nodal_gradient_recovery` misses the 2% gate badly (~26% max / 9% mean error on medium mesh, roughly halving coarse→medium) — a boundary-recovery accuracy gap to fix before writing G1.2, not a logic bug. |
 | P2 | ☐ | | |
 | M1 | ☐ | | |
 | P3 | ☐ | | |

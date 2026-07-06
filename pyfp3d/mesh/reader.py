@@ -190,23 +190,52 @@ def read_mesh(filepath: Path | str, verbose: bool = False) -> Mesh:
 def write_mesh(mesh: Mesh, filepath: Path | str, verbose: bool = False) -> None:
     """
     Write mesh to .msh (Gmsh) format via meshio.
-    
+
+    Every named group in `mesh.boundary_faces` (e.g. "wall", "farfield") is
+    written as its own triangle cell block with a distinct gmsh:physical tag
+    and a field_data entry, and volume element_tags/tag_names round-trip the
+    same way -- so read_mesh(write_mesh(mesh)) reproduces the original
+    boundary_faces keys, not just a single "all_triangles" catch-all.
+
     Args:
         mesh: Mesh object
         filepath: Output path
         verbose: Print info
     """
     filepath = Path(filepath)
-    
+
     # Build meshio mesh object
     cells = [("tetra", mesh.elements)]
-    if "all_triangles" in mesh.boundary_faces:
-        cells.append(("triangle", mesh.boundary_faces["all_triangles"]))
-    
-    mesh_obj = meshio.Mesh(mesh.nodes, cells)
-    
-    meshio.write(str(filepath), mesh_obj)
-    
+    physical_tags = [mesh.element_tags.astype(np.int32) if len(mesh.element_tags) > 0
+                      else np.zeros(len(mesh.elements), dtype=np.int32)]
+    field_data = {}
+    for tag_id, name in enumerate(mesh.tag_names):
+        if name:
+            field_data[name] = np.array([tag_id, 3], dtype=np.int32)
+
+    for surf_tag_id, (name, faces) in enumerate(mesh.boundary_faces.items(), start=1):
+        cells.append(("triangle", faces))
+        physical_tags.append(np.full(len(faces), surf_tag_id, dtype=np.int32))
+        field_data[name] = np.array([surf_tag_id, 2], dtype=np.int32)
+
+    geometrical_tags = [np.zeros(len(block[1]), dtype=np.int32) for block in cells]
+
+    mesh_obj = meshio.Mesh(
+        mesh.nodes,
+        cells,
+        cell_data={"gmsh:physical": physical_tags, "gmsh:geometrical": geometrical_tags},
+        field_data=field_data,
+    )
+
+    # ".msh" is ambiguous in meshio (matches both "ansys" and "gmsh"); without
+    # an explicit file_format, meshio silently picks "ansys" and drops all
+    # physical-tag/field_data information written above. The msh4-entity
+    # writer ("gmsh") additionally requires per-node gmsh:geometrical entity
+    # tags once more than one cell block is present; the legacy msh2 writer
+    # ("gmsh22") tags elements directly by physical id and needs no entity
+    # bookkeeping, which is all read_mesh() relies on.
+    meshio.write(str(filepath), mesh_obj, file_format="gmsh22")
+
     if verbose:
         print(f"Wrote mesh to {filepath}")
 

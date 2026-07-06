@@ -49,7 +49,14 @@ def solve_laplace(
     x_free, n_iter = solve_cg_amg(A_free, b_free, rtol=rtol, maxiter=maxiter)
     phi[free] = x_free
 
-    residual_norm = float(np.max(np.abs(assemble_residual(nodes, elements, phi))))
+    # Residual of the equilibrium equation b - A@phi == 0, restricted to the
+    # free dofs. Dirichlet (far-field) rows are excluded: assemble_residual()
+    # returns the raw operator A@phi with no boundary condition applied, so
+    # at a Dirichlet node it is the natural-BC flux imbalance -- an O(1)
+    # quantity that never vanishes and isn't part of the system actually
+    # being solved (that row is overridden by the prescribed value instead).
+    residual_full = b - assemble_residual(nodes, elements, phi)
+    residual_norm = float(np.max(np.abs(residual_full[free])))
 
     return {
         "phi": phi,
