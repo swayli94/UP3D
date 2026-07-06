@@ -262,11 +262,48 @@ per-element B_e/V_e once, remove hot-loop allocations, and wire
 2/4 (agent-rules hard rule #3), with the V0 freestream check and a
 bit-identical-assembly regression as the safety net.
 **Gates:**
-- [ ] G3.1 sphere M∞ = 0.3: Cp peak vs PG-corrected incompressible, < 2%
-- [ ] G3.2 NACA0012 M∞ = 0.5 α = 2°: cl vs 2D FP/panel reference, < 2%;
-      Picard converges < 30 iterations, monotone residual
-- [ ] G3.3 all P1/P2 gates still green with ρ machinery in the loop (ν ≡ 0
-      path must be bit-identical to Laplace when M∞ → 0)
+- [x] G3.1 sphere M∞ = 0.3: Cp peak vs PG-corrected incompressible, < 2%
+      — **closed 2026-07-07**, measured **0.32%** on medium (0.33% coarse):
+      Cp_peak −1.33591 vs PG-corrected −1.34020, both solves on the same
+      mesh + same quadratic recovery so the G1.6 flat-facet bias cancels;
+      non-lifting Picard 11 iterations, monotone to the CG floor
+      (`tests/test_p3_subsonic.py`, `artifacts/G3.1/`).
+- [x] G3.2 NACA0012 M∞ = 0.5 α = 2°: cl vs 2D FP/panel reference, < 2%;
+      Picard converges < 30 iterations, monotone residual — **closed
+      2026-07-07**. Reference spec note: a corrected-panel reference has an
+      inherent model band — PG 0.278774 vs Kármán–Tsien 0.291861 (±2.3%),
+      wider than the gate tolerance — so the reference value is the
+      PG/KT **midpoint 0.285318** with an additional inside-the-bracket
+      assert (`cases/reference_data/naca0012_m05/README.md`). Measured:
+      medium cl = 0.284372 → **−0.33%** from the midpoint and inside
+      [PG, KT]; **15 density iterations** (nested Picard, see below),
+      residual strictly monotone 5.9e-6 → 5.0e-11; max local M = 0.726
+      (subcritical, ν ≡ 0 regime) (`tests/test_p3_naca0012_m05.py`,
+      `artifacts/G3.2/`). Two solver-structure findings with evidence:
+      (1) Γ interleaved one-update-per-density-iteration (the literal §8
+      pseudocode) injects 10× residual spikes down the whole history —
+      the shipped loop NESTS the P2 secant Kutta iteration at frozen ρ
+      inside each density update, which restores a strictly monotone
+      residual and re-validates the secant's exact-affine assumption;
+      (2) a loose *relative* inner CG tolerance is not a usable inexact
+      scheme once warm starts are on (CG exits at x0 without computing the
+      density correction — measured false convergence); the opt-in
+      acceleration is a forcing-term `atol = η‖b − A x0‖` (η = 0.05 ≈ 2×
+      faster, bounded residual-tail noise; default η = 0 keeps the gate's
+      monotone criterion as written).
+- [x] G3.3 all P1/P2 gates still green with ρ machinery in the loop (ν ≡ 0
+      path must be bit-identical to Laplace when M∞ → 0) — **closed
+      2026-07-07**: full suite 117 passed + 2 xfailed (~96 s; the P1/P2
+      drivers now run the SAME colored assembly as the Picard loop, so the
+      guarantee is structural); at M∞ = 0 the assembled matrix bits AND
+      the full secant-Kutta solve (φ and Γ) equal `solve_laplace_lifting`
+      bitwise, and the non-lifting path equals `solve_laplace` bitwise
+      (`tests/test_p3_subsonic.py::TestG33BitIdenticalLaplaceLimit`).
+      Enabling fix: pyamg's spectral-radius estimate starts from an
+      unseeded `np.random` vector, making even two identical P2 solves
+      differ at 2e-11 — `solve/linear.py::build_amg_preconditioner` now
+      pins (and restores) the seed, so every solve in the code base is
+      bit-reproducible run-to-run.
 **Visual test examples:**
 - V3.1 sphere Cp contour at M∞=0.3 and line cut against PG-corrected baseline; check compressibility amplification pattern is symmetric.
 - V3.2 NACA0012 surface Mach and Cp plots at M∞=0.5; verify suction peak shift and physically smooth recovery to TE.
@@ -363,7 +400,7 @@ Eisenstat–Walker inexact-solve schedule, profiling report.
 | P1 | ☐ (in progress; G1.1, G1.2 closed; G1.3, G1.4 completed 2026-07-06 with negative results, DP1 decided "> 5%" branch, G1.5 void; open: G1.6 pending its Option C re-spec) | | `kernels/residual.py`, `solve/linear.py`, `solve/picard.py`, `post/surface.py`, `tests/mesh_utils.py`, `tests/test_post_surface.py`, `cases/meshes/sphere_shell/{coarse,medium}.msh` implemented/committed. G1.1 (`test_laplace_mms.py`) and G1.3 (now renumbered G1.2; `test_laplace_cg_iterations.py`) pass. G1.2 (now renumbered G1.6; `test_laplace_sphere.py`) is a `strict=True` xfail, now root-caused rather than just hypothesized: added `post/surface.py::wall_tangential_gradient_quadratic` (quadratic tangential patch recovery, well-conditioned via SVD-based `lstsq` + rank-deficiency fallback), which improved medium-mesh max error from ~12.0% to ~11.6% — a real but modest gain, because a controlled investigation (clean single-variable h_min sweep + an oracle exact-potential-in recovery test + a rejected Nitsche/penalty prototype) showed the recovery scheme was never the dominant error source. The dominant source is the volume PDE solve's own accuracy at the wall: the natural BC is satisfied on the flat polyhedral wall-facet approximation instead of the true curved sphere, a geometric/variational-crime inconsistency evidenced by sub-first-order, decreasing convergence order of the raw nodal potential itself (not just its gradient). Closing G1.2 needs curved/isoparametric wall boundary elements — a separately-scoped effort — not more h-refinement or post-processing. See PROJECT_STRUCTURE.md "Known gaps" for the full evidence trail. Second audit (2026-07-06): `post/surface.py::_wall_vertex_normals` now raises on inconsistent wall-triangle winding instead of silently averaging cancelling normals into garbage tangent planes (`test_post_surface.py::test_inconsistent_wall_winding_raises`). 52 tests total (51 passed, 1 xfailed), full suite runs in ~10 s. 2026-07-06: sphere-Cp fix-route research complete — three-tier Option A/B/C plan (lagged true-normal flux correction / Gap-SBM / gate redefinition) with oracle-first verification order defined; see design.md §5.1. Same day: P1 gates renumbered in workflow order (old → new: G1.3 → G1.2, G1.2-a0 → G1.3, G1.2-a → G1.4, G1.2-c → DP1, G1.2-b → G1.5, G1.2 → G1.6; see the renumbering note in the P1 section). Same day, after renumbering: G1.3 cylinder oracle pre-study and G1.4 sphere oracle ceiling both completed with **negative results** (delivered: `solve/wall_correction.py` assembly-verified correction infrastructure, `post/section_cut.py` degenerate single-layer interface, `tests/test_wall_correction_cylinder.py` 10 tests, the sphere-oracle demo — since 2026-07-07 absorbed into `cases/demo/p1_laplace/run_demo.py` — cylinder fine.msh 50.2k tets, `artifacts/G1.3/` + oracle results in `cases/demo/p1_laplace/results/`): boundary-data corrections have (near-)zero lever on body-fitted meshes — exact per-facet net flux is zero by the divergence theorem — so the Option A ceiling is ≈ 11.3% on the medium sphere vs the < 2% target; DP1 "> 5%" branch taken (Option C gate re-spec + separately-scoped curved elements); the cylinder case additionally shown to be recovery-dominated (~76%), not crime-dominated, and de-designated as the G1.6 pathology testbed. See the G1.3/G1.4/DP1 gate entries for the full evidence. |
 | P2 | ✓ | 2026-07-06 | Delivered: `mesh/wake_cut.py` (per-node flood-fill side classification — no planarity assumption, works for the M1 swept wake; ⁺-side slaves appended after original nodes so the reduced dof space is exactly the original node set; stations group TE nodes by (x,y), collapsing a quasi-2D extrusion to the single scalar Γ of the M0 spec; preprocess-time topology asserts), `constraints/wake.py` (master–slave elimination via sparse T, A_red = TᵀAT assembled once, Γ enters RHS-only through precomputed per-station vectors; folding the slave rows into masters enforces weak flux continuity (4.2)), `constraints/dirichlet.py` (far-field freestream + incompressible 2D vortex correction with the branch cut ON the wake sheet, so eliminated ⁺-side far-field wake nodes are automatically consistent), `solve/picard.py::solve_laplace_lifting` (Kutta outer loop, matrix+AMG hierarchy built once, secant-accelerated), `post/surface.py` (triangle-wise wall force integration, owner-tet-oriented normals, KJ sectional cl), `post/section_cut.py` (general marching-tets z=const path + sectional wall Cp(x/c) curves), Hess–Smith panel reference `cases/reference_data/naca0012_incompressible/` (two independent lift routes agree to 0.09%, lift slope 6.91/rad vs thickness-corrected 6.90). **One spec deviation with evidence: TE nodes ARE duplicated** — the originally specified single-valued TE produces a spurious TE suction ~Γ²/h that diverges under refinement (measured −0.27 of cl 0.6 on coarse; see the re-specced topology-assert block). Gates: G2.1 8.4e-13 (wake-master rows 6.9e-16); G2.2 [φ]−Γ < 1e-13; G2.3 medium cl −0.82% vs panel, Kutta 2 updates (secant; measured map slope b≈0.93 would need O(100) plain relaxed updates); G2.4 0.01%; G2.5 re-specced criterion (b) closed (p99 ratio 2.05 = 1st order, stripe-free heatmap). Suite: 100 passed + 2 xfailed (G1.6 strict xfail unchanged), ~38 s. Artifacts: `artifacts/G2.{1,2,3,4,5}/` PNG+CSV. |
 | M1 | ☐ | | |
-| P3 | ☐ | | |
+| P3 | ✓ | 2026-07-07 | Delivered: **assembly tech debt retired** — `mesh/metrics.py::precompute_element_geometry` (B_e/V_e once per mesh), `mesh/coloring.py` numba-jitted greedy coloring (same visit order ⇒ identical assignment to the old pure-Python loop, which was ~seconds per call on real meshes) + `color_partition_csr`, `kernels/gradient.py` (prange velocity sweep, zero-alloc), `kernels/jacobian.py` (symbolic CSR pattern + `elem_to_csr` scatter map + colored-prange matrix kernel + `PicardOperator` per-mesh workspace), `kernels/residual.py::assemble_residual_colored`; the public `assemble_stiffness_matrix` now delegates to the fast path (P1/P2 drivers run the same code as the Picard loop) with the old serial kernels retained as the regression reference — fast-vs-reference 5.7e-16 rel, bit-deterministic across calls/threads (within a color no two elements share a node, so accumulation order is fixed by the color sequence), hot reassembly ~160× faster on the medium NACA mesh (`tests/test_p3_assembly.py`, demo part 1). **Subsonic compressible solver**: `physics/isentropic.py::density_field/mach_squared_field` (array sweeps of the §2 scalars; ρ ≡ 1.0 *bitwise* at M∞ = 0 — the G3.3 anchor), `solve/picard.py::solve_subsonic` (non-lifting density Picard) and `solve_subsonic_lifting` (nested: outer density update, inner P2 secant Kutta at frozen ρ; AMG reuse every 4 outers; opt-in forcing-term inexact solves η‖b−Ax₀‖, default off — see the G3.2 gate entry for why interleaved Γ updates and relative loose tolerances were both rejected with measurements), PG-scaled vortex far field (`constraints/dirichlet.py`, β = √(1−M∞²) stretches only the atan2 argument so the wake-jump/branch-cut structure is untouched and β = 1 reduces bit-exactly), `constraints/wake.py::WakeConstraint.update_matrix` (T topological, rebuilt never; A_red + h_j per density iteration), compressible Cp in `post/surface.py::wall_force_coefficients` + `post/section_cut.py::wall_cp_curve` (`m_inf` param, isentropic (2.5)), `solve/linear.py::build_amg_preconditioner` (seeded AMG setup — repeatable solves; see G3.3). Reference data: `cases/reference_data/naca0012_m05/` (PG + Kármán–Tsien corrected panel cl/Cp with provenance + verification trail). Gates: G3.1 **0.32%** (< 2%); G3.2 **cl −0.33%** from the PG/KT midpoint and inside the bracket, **15 iterations** (< 30), strictly monotone residual; G3.3 matrix/φ/Γ **bitwise** at M∞ = 0 + full suite green. Suite: 117 passed + 2 xfailed, ~96 s (G3.2's medium-mesh nested solve is ~45 s of it). Demo: `cases/demo/p3_subsonic/` (14 checks PASS) + docs/demo_report.md §P3. Known non-P3 fix bundled: `tests/test_p2_wake_cut.py` topology sweep now skips surface-only mesh assets (the new `cessna_surface.msh` broke `read_mesh` in the hard-rule-7 sweep — pre-existing on main). |
 | P4 | ☐ | | |
 | P5 | ☐ | | |
 | P6 | ☐ | | |

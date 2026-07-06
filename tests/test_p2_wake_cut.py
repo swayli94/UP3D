@@ -176,7 +176,13 @@ def test_topology_asserts_all_wake_meshes(mesh_dir):
     have nothing to cut and are skipped by construction)."""
     ran = 0
     for msh in sorted(mesh_dir.glob("*/*.msh")):
-        mesh = read_mesh(msh)
+        try:
+            mesh = read_mesh(msh)
+        except ValueError:
+            # Surface-only assets (e.g. cessna/cessna_surface.msh) carry no
+            # tets and are not solver meshes; hard rule 7 covers volume
+            # meshes with a wake sheet.
+            continue
         if "wake" not in mesh.boundary_faces:
             continue
         mesh_cut, wc = cut_wake(mesh)  # runs assert_wake_topology internally

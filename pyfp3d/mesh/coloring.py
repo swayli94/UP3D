@@ -43,57 +43,106 @@ def build_element_connectivity(elements: np.ndarray) -> Dict:
     return node_to_elements
 
 
+def node_to_element_csr(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """CSR-style node -> incident elements map (offsets, element ids).
+
+    Vectorized numpy build; feeds the numba coloring kernel and any other
+    node-patch consumer that needs flat arrays instead of dict/list
+    adjacency (design.md Sec 7 rule 1: SoA only inside kernels).
+    """
+    n_tets = len(elements)
+    n_nodes = int(np.max(elements)) + 1
+    flat_nodes = np.asarray(elements, dtype=np.int64).reshape(-1)
+    flat_elems = np.repeat(np.arange(n_tets, dtype=np.int64), 4)
+
+    order = np.argsort(flat_nodes, kind="stable")
+    counts = np.bincount(flat_nodes, minlength=n_nodes)
+    offsets = np.zeros(n_nodes + 1, dtype=np.int64)
+    np.cumsum(counts, out=offsets[1:])
+    return offsets, flat_elems[order]
+
+
+@numba.njit(cache=True)
+def _greedy_coloring_kernel(
+    elements: np.ndarray, node_offsets: np.ndarray, node_elems: np.ndarray
+) -> np.ndarray:
+    """Same greedy algorithm as the original pure-Python loop (same element
+    visit order, smallest available color), so the assignment is identical
+    -- but O(1000x) faster on real meshes, which lets one-shot assembly
+    calls afford a fresh coloring. `mark[c] == e` flags color c as forbidden
+    for element e without clearing the workspace between elements."""
+    n_tets = len(elements)
+    colors = np.full(n_tets, -1, dtype=np.int32)
+    max_colors = 256
+    mark = np.full(max_colors, -1, dtype=np.int64)
+
+    for e in range(n_tets):
+        for i in range(4):
+            node = elements[e, i]
+            for k in range(node_offsets[node], node_offsets[node + 1]):
+                c = colors[node_elems[k]]
+                if c >= 0:
+                    mark[c] = e
+        c = 0
+        while c < max_colors and mark[c] == e:
+            c += 1
+        if c >= max_colors:
+            raise ValueError(
+                "greedy coloring exceeded 256 colors -- pathological mesh "
+                "connectivity (a node shared by >255 elements)"
+            )
+        colors[e] = c
+    return colors
+
+
 def greedy_coloring(elements: np.ndarray) -> Tuple[np.ndarray, int]:
     """
     Greedy graph coloring of element connectivity.
-    
+
     Ensures no two elements of the same color share a node.
-    
+
     Algorithm:
       1. For each element in order
       2. Find forbidden colors (colors of adjacent elements)
       3. Assign smallest available color
-    
+
     Args:
         elements: (n_tets, 4) element connectivity
-        
+
     Returns:
         (colors, n_colors): element colors and number of colors used
-        
+
     Note:
         Upper bound on chromatic number for tetrahedral mesh: typically 5-6 in 3D.
-        This greedy algorithm is not optimal but is deterministic.
+        This greedy algorithm is not optimal but is deterministic. Since P3
+        the greedy loop runs in a numba kernel with the same visit order
+        (identical assignment to the original pure-Python implementation).
     """
-    n_tets = len(elements)
-    colors = np.full(n_tets, -1, dtype=np.int32)
-    
-    # Build node-to-elements adjacency
-    node_to_elements = build_element_connectivity(elements)
-    
-    # Greedy coloring
-    for e in range(n_tets):
-        # Collect forbidden colors (colors of elements sharing a node with e)
-        forbidden = set()
-        
-        tet = elements[e]
-        for local_node in range(4):
-            global_node = tet[local_node]
-            
-            # All elements adjacent to this node
-            for neighbor_e in node_to_elements[global_node]:
-                if neighbor_e != e and colors[neighbor_e] >= 0:
-                    forbidden.add(colors[neighbor_e])
-        
-        # Assign smallest available color
-        color = 0
-        while color in forbidden:
-            color += 1
-        
-        colors[e] = color
-    
+    node_offsets, node_elems = node_to_element_csr(elements)
+    colors = _greedy_coloring_kernel(
+        np.asarray(elements), node_offsets, node_elems
+    )
     n_colors = int(np.max(colors) + 1)
-    
     return colors, n_colors
+
+
+def color_partition_csr(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray, int]:
+    """Colored element partition in flat CSR form for the assembly kernels.
+
+    Returns:
+        (color_offsets, color_elems, n_colors): elements of color c are
+        color_elems[color_offsets[c]:color_offsets[c+1]], in ascending
+        element order within each color (deterministic: with a valid
+        coloring no two same-color elements share a node, so per-node and
+        per-nnz scatter-add order is fixed by the color sequence alone,
+        independent of prange thread scheduling).
+    """
+    colors, n_colors = greedy_coloring(elements)
+    order = np.argsort(colors, kind="stable")
+    counts = np.bincount(colors, minlength=n_colors)
+    color_offsets = np.zeros(n_colors + 1, dtype=np.int64)
+    np.cumsum(counts, out=color_offsets[1:])
+    return color_offsets, order.astype(np.int64), n_colors
 
 
 def validate_coloring(elements: np.ndarray, colors: np.ndarray) -> bool:

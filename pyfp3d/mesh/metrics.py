@@ -174,6 +174,37 @@ def element_gradients(nodes: np.ndarray, elements: np.ndarray, tet_index: int) -
 
 
 @numba.njit(cache=True)
+def precompute_element_geometry(
+    nodes: np.ndarray, elements: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Precompute the per-element shape-gradient matrices B_e and volumes V_e
+    once per mesh (design.md Sec 6: "Precompute per element: volume V_e and
+    the 4x3 shape-gradient matrix B_e"; Sec 7 rule 4: no recomputation or
+    allocation inside hot kernels -- this retires the P1 tech debt of
+    recomputing each element's Jacobian per assembly call).
+
+    Args:
+        nodes: (n_nodes, 3) nodal coordinates
+        elements: (n_tets, 4) tetrahedral connectivity
+
+    Returns:
+        (B, V): B (n_tets, 4, 3) basis gradients, V (n_tets,) volumes
+
+    Raises:
+        ValueError: on a degenerate tet (propagated from element_gradients).
+    """
+    n_tets = len(elements)
+    B = np.empty((n_tets, 4, 3), dtype=np.float64)
+    V = np.empty(n_tets, dtype=np.float64)
+    for e in range(n_tets):
+        vol, _ = tet_volume_and_jacobian(nodes, elements[e])
+        V[e] = vol
+        B[e] = element_gradients(nodes, elements, e)
+    return B, V
+
+
+@numba.njit(cache=True)
 def build_face_adjacency(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Build element-to-element adjacency via faces.

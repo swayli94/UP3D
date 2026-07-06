@@ -1,0 +1,6 @@
+quantity,value
+rel_err_vs_reference,5.690e-16
+t_reference_ms,330.9
+t_colored_ms,2.1
+speedup,161.30
+n_colors,27

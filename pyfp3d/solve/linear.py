@@ -55,6 +55,29 @@ def apply_dirichlet(
     return A_free, b_free, free, phi_dirichlet
 
 
+def build_amg_preconditioner(A: sp.spmatrix):
+    """Smoothed-aggregation AMG preconditioner with a PINNED RNG seed.
+
+    pyamg's prolongation smoother estimates the spectral radius from an
+    UNSEEDED np.random starting vector, so two setups on a bit-identical
+    matrix produce (slightly) different hierarchies -- measured 2e-11 phi
+    scatter between repeated identical Laplace solves. Pinning the seed
+    (and restoring the caller's RNG state) makes every solve in the code
+    base bit-reproducible run-to-run, which the G3.3 "M_inf -> 0 is
+    bit-identical to Laplace" gate relies on.
+
+    Returns:
+        (ml, M): the pyamg hierarchy and its preconditioner LinearOperator
+    """
+    state = np.random.get_state()
+    np.random.seed(0)
+    try:
+        ml = pyamg.smoothed_aggregation_solver(A)
+    finally:
+        np.random.set_state(state)
+    return ml, ml.aspreconditioner()
+
+
 def solve_cg_amg(
     A: sp.spmatrix,
     b: np.ndarray,
@@ -76,8 +99,7 @@ def solve_cg_amg(
     Raises:
         RuntimeError if CG fails to converge within maxiter.
     """
-    ml = pyamg.smoothed_aggregation_solver(A)
-    M = ml.aspreconditioner()
+    _, M = build_amg_preconditioner(A)
 
     n_iter = [0]
 

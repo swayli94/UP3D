@@ -10,8 +10,10 @@ pyfp3d/                    # Main package
 ├── mesh/                 # Mesh I/O, topology, metrics, coloring
 │   ├── __init__.py
 │   ├── reader.py         # [P0] meshio → SoA arrays + boundary tags
-│   ├── metrics.py        # [P0] volumes, gradients, face adjacency
-│   ├── coloring.py       # [P0] element graph coloring
+│   ├── metrics.py        # [P0] volumes, gradients, face adjacency; ✓ [P3] adds
+│   │                       #   precompute_element_geometry (B_e/V_e once per mesh)
+│   ├── coloring.py       # [P0] element graph coloring; ✓ [P3] greedy loop numba-jitted
+│   │                       #   (same visit order => identical assignment) + color_partition_csr
 │   └── wake_cut.py       # ✓ [P2] wake-sheet node duplication (per-node flood-fill side
 │                           #   classification, no planarity assumption; TE nodes ARE
 │                           #   duplicated -- see docstring + roadmap P2 assert re-spec;
@@ -30,23 +32,42 @@ pyfp3d/                    # Main package
 │   ├── wake.py           # ✓ master–slave elimination (A_red = TᵀAT once; Γ RHS-only via
 │   │                       #   precomputed per-station vectors); kutta_targets() (per-station
 │   │                       #   mean of probe jumps)
-│   └── dirichlet.py      # ✓ far-field freestream + incompressible 2D vortex correction
-│                           #   (branch cut ON the wake sheet; eliminated ⁺-side far-field
-│                           #   wake nodes automatically consistent)
+│   └── dirichlet.py      # ✓ far-field freestream + 2D vortex correction (branch cut ON
+│                           #   the wake sheet; eliminated ⁺-side far-field wake nodes
+│                           #   automatically consistent); ✓ [P3] Prandtl-Glauert scaling
+│                           #   (beta stretches only the atan2 argument; beta=1 bit-exact)
 ├── physics/              # Physics constants and constitutive relations
 │   ├── __init__.py
 │   └── isentropic.py     # ✓ [P0] ρ(q²), M(q²), a(q²), Cp, etc.; [P2] adds
-│                           #   pressure_coefficient_incompressible (Bernoulli limit)
+│                           #   pressure_coefficient_incompressible (Bernoulli limit);
+│                           #   ✓ [P3] density_field/mach_squared_field array sweeps
+│                           #   (ρ ≡ 1.0 BITWISE at M∞=0 -- the G3.3 anchor)
 ├── kernels/              # Element-wise assembly kernels (Numba-jitted)
 │   ├── __init__.py
-│   ├── residual.py       # [P1] Laplace residual + stiffness assembly (done) → [P3] isentropic → [P6] Newton
+│   ├── gradient.py       # ✓ [P3] prange velocity sweep: grad(phi)_e + q²_e from B_e,
+│   │                       #   zero-alloc (outputs preallocated by PicardOperator)
+│   ├── jacobian.py       # ✓ [P3] Picard matrix (6.2): symbolic CSR pattern, elem_to_csr
+│   │                       #   scatter map, colored-prange data kernel, PicardOperator
+│   │                       #   per-mesh workspace (B_e/V_e/coloring/pattern/buffers once);
+│   │                       #   accumulation order fixed by color sequence => bit-deterministic
+│   │                       #   across calls/threads; [P6] exact Newton (6.3) lands here
+│   ├── residual.py       # [P1] serial reference kernels (KEPT, regression-tested against)
+│   │                       #   + ✓ [P3] assemble_residual_colored; assemble_stiffness_matrix
+│   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P6] Newton
 │   └── upwind.py         # [P4] Artificial compressibility (PLANNED, file not created yet)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
-│   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done)
+│   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
+│   │                       #   ✓ [P3] build_amg_preconditioner pins pyamg's spectral-radius
+│   │                       #   RNG seed -- ALL solves bit-reproducible run-to-run (G3.3)
 │   ├── picard.py         # [P1] Laplace driver (done); ✓ [P2] solve_laplace_lifting():
 │   │                       #   Kutta outer loop, matrix+AMG built once, Γ updates RHS-only,
-│   │                       #   secant (Aitken) acceleration -> 2 updates on the linear driver
+│   │                       #   secant (Aitken) acceleration -> 2 updates on the linear driver;
+│   │                       #   ✓ [P3] solve_subsonic (non-lifting density Picard) +
+│   │                       #   solve_subsonic_lifting (NESTED: outer ρ update, inner P2
+│   │                       #   secant Kutta at frozen ρ -- interleaved Γ steps rejected with
+│   │                       #   measurements; AMG reuse every 4 outers; opt-in forcing-term
+│   │                       #   inexact inner solves, default off; M∞=0 bitwise ≡ P2)
 │   ├── wall_correction.py # ✓ [P1/G1.3] true-normal weak-flux correction RHS (Option A);
 │   │                       #   assembly-verified; correction itself RULED OUT by the
 │   │                       #   G1.3/G1.4 oracles (design.md §5.1.2) -- kept as reusable
@@ -58,6 +79,7 @@ pyfp3d/                    # Main package
     │                       #      (export_error_heatmap, export_matplotlib_plot) live here, not
     │                       #      in a separate artifacts.py
     ├── surface.py        # [P1] nodal_gradient_recovery() (volume-weighted, for interior fields)
+    │                       #      ✓ [P3] m_inf param: exact isentropic Cp (2.5) in the force integral
     │                       #      and wall_tangential_gradient() (surface-only, for wall Cp --
     │                       #      the accurate one; see "Known gaps" for why it still isn't
     │                       #      accurate *enough* to close G1.6); ✓ [P2] adds triangle-wise
@@ -69,7 +91,8 @@ pyfp3d/                    # Main package
 
 cases/                     # Test cases and reference data
 ├── meshes/               # Mesh families (coarse/medium/fine)
-│   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.6 (coarse/medium generated)
+│   ├── sphere_shell/     # [P1] Gmsh sphere-shell case for gate G1.6 (coarse/medium generated);
+│   │                       #   [P3] reused for G3.1 (compressible-vs-PG same-mesh comparison)
 │   ├── cylinder_2.5d/    # ✓ [M0] Single-layer extruded cylinder-flow test case
 │   │                       #   (generate_cylinder.py; coarse 6.9k / medium 17.3k tets
 │   │                       #   committed; analytic Cp = 1 - 4 sin^2(theta) validation);
@@ -81,16 +104,21 @@ cases/                     # Test cases and reference data
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
 │   └── onera_m6/         # [M1] Swept wing -- not started
 ├── reference_data/       # Ground truth (DO NOT EDIT)
-│   └── naca0012_incompressible/  # ✓ [P2] Hess–Smith panel reference (generator script +
-│                                 #   cl_reference.csv / cp_alpha4.csv / convergence.csv +
-│                                 #   README provenance; two independent lift routes agree
-│                                 #   to 0.09%, panel-count converged)
+│   ├── naca0012_incompressible/  # ✓ [P2] Hess–Smith panel reference (generator script +
+│   │                             #   cl_reference.csv / cp_alpha4.csv / convergence.csv +
+│   │                             #   README provenance; two independent lift routes agree
+│   │                             #   to 0.09%, panel-count converged)
+│   └── naca0012_m05/     # ✓ [P3] the same panel solution under Prandtl-Glauert AND
+│                                 #   Karman-Tsien corrections (G3.2 reference = PG/KT
+│                                 #   midpoint + inside-bracket assert; README provenance)
 ├── demo/                 # ✓ Per-phase evidence demos (docs/demo_report.md; one
 │   ├── README.md         #   self-checking run_demo.py + committed results/ per phase)
 │   ├── _common.py        #   shared chart style + CheckList acceptance recorder
 │   ├── p0_infrastructure/  # G0.1-G0.4: volume/gradient exactness, coloring, VTK I/O
 │   ├── p1_laplace/         # V0/G1.1/G1.2 + G1.4 oracle (absorbed) + G1.6 open-gate XFAIL
 │   ├── p2_kutta_lifting/   # G2.1-G2.5: cut exactness, Kutta, cl vs panel, spanwise decay
+│   ├── p3_subsonic/        # G3.1-G3.3: assembly-debt evidence, sphere-vs-PG, cl bracket,
+│   │                       #   monotone nested Picard, M=0 bit-identity (14 checks)
 │   └── m0_meshgen/         # mesh gallery, hard-rule-7 topology matrix, cylinder convergence
 └── test_*.py             # [Deprecated] Integration tests (use tests/ now)
 

@@ -39,8 +39,22 @@ def vortex_phi_2d(
     gamma_total: float,
     center=(0.25, 0.0),
     lower_branch_mask: np.ndarray | None = None,
+    beta: float = 1.0,
 ) -> np.ndarray:
-    """2D point-vortex potential with the branch cut along +x from `center`.
+    """2D point-vortex potential with the branch cut along +x from `center`,
+    Prandtl-Glauert-scaled for subsonic compressible far fields (roadmap P3).
+
+    With beta = sqrt(1 - M_inf^2), the compressible lifting far field is the
+    incompressible vortex in the PG-stretched plane (x, beta*y):
+
+        phi_v = -(Gamma / 2 pi) theta_w,  theta_w = atan2(beta*dy, dx) in [0, 2pi)
+
+    which satisfies the linearized far-field equation
+    (1 - M_inf^2) phi_xx + phi_yy = 0 and keeps the SAME jump
+    phi(+) - phi(-) = +Gamma across the wake cut (beta scales dy, and the
+    cut lies at dy = 0, so the branch structure is untouched). beta = 1.0
+    multiplies dy by exactly 1.0, so the incompressible P2 behavior is
+    reproduced bit-identically (gate G3.3).
 
     Args:
         points: (n, 3) or (n, 2) evaluation points
@@ -50,13 +64,14 @@ def vortex_phi_2d(
             cut (y == y_v, x > x_v -- e.g. wake master nodes) and belong to
             the lower (-) side: they get theta_w = 2 pi instead of 0.
             Points off the cut never need it (theta_w is continuous there).
+        beta: Prandtl-Glauert factor sqrt(1 - M_inf^2); 1.0 = incompressible
 
     Returns:
         (n,) phi_v = -(Gamma/2 pi) theta_w
     """
     dx = points[:, 0] - center[0]
     dy = points[:, 1] - center[1]
-    theta = np.arctan2(dy, dx)            # (-pi, pi], cut on -x half-axis
+    theta = np.arctan2(beta * dy, dx)     # (-pi, pi], cut on -x half-axis
     theta_w = np.where(theta < 0.0, theta + 2.0 * np.pi, theta)  # [0, 2 pi)
     if lower_branch_mask is not None:
         on_cut = (dy == 0.0) & (dx > 0.0) & lower_branch_mask
@@ -72,6 +87,7 @@ def farfield_dirichlet(
     u_inf: float = 1.0,
     vortex_center=(0.25, 0.0),
     farfield_tag: str = "farfield",
+    beta: float = 1.0,
 ):
     """Dirichlet (nodes, values) on the cut mesh's far-field boundary.
 
@@ -87,6 +103,8 @@ def farfield_dirichlet(
         gamma_stations: (n_st,) circulation per spanwise station; the 2D
             vortex uses their mean (span-uniform for quasi-2D)
         vortex_center: (x_v, y_v) of the equivalent point vortex
+        beta: Prandtl-Glauert factor sqrt(1 - M_inf^2) for the compressible
+            vortex far field (P3); default 1.0 = incompressible (P2)
 
     Returns:
         (dirichlet_nodes, dirichlet_values)
@@ -103,7 +121,8 @@ def farfield_dirichlet(
     values = freestream_phi(pts, alpha_deg, u_inf)
     if gamma_total != 0.0:
         phi_v = vortex_phi_2d(
-            pts, gamma_total, vortex_center, lower_branch_mask=is_master_wake
+            pts, gamma_total, vortex_center, lower_branch_mask=is_master_wake,
+            beta=beta,
         )
         # Slaves sit at the same coordinates as their masters (on the cut,
         # theta_w = 0 side): arctan2(0, +) = 0 already gives the upper

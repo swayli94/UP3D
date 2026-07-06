@@ -166,14 +166,16 @@ def wall_force_coefficients(
     alpha_deg: float = 0.0,
     u_inf: float = 1.0,
     s_ref: float = 1.0,
+    m_inf: float = 0.0,
 ) -> dict:
     """Pressure-integrated force coefficients on the wall (design.md Sec 9).
 
     Per wall triangle: velocity = in-plane tangential gradient (exactly the
-    wall velocity under the natural BC), Cp from Bernoulli (incompressible,
-    P2), force  dC_F = -Cp n_out dA / S_ref  with n_out the body-outward
-    normal. Everything stays triangle-wise; no nodal averaging, so the
-    sharp TE needs no special-casing.
+    wall velocity under the natural BC), Cp from Bernoulli (m_inf = 0, P2)
+    or the exact isentropic law (2.5) (m_inf > 0, P3), force
+    dC_F = -Cp n_out dA / S_ref  with n_out the body-outward normal.
+    Everything stays triangle-wise; no nodal averaging, so the sharp TE
+    needs no special-casing.
 
     Args:
         nodes, elements: CUT-mesh arrays (used to orient normals)
@@ -182,17 +184,24 @@ def wall_force_coefficients(
         alpha_deg: incidence; lift is measured normal to the freestream
         u_inf: freestream speed
         s_ref: reference area (chord x span for the quasi-2D cases)
+        m_inf: freestream Mach; 0.0 selects the incompressible Cp
 
     Returns:
         dict: cl, cd_pressure, cf (3-vector), cp_tri (per-triangle Cp)
     """
-    from pyfp3d.physics.isentropic import pressure_coefficient_incompressible
+    from pyfp3d.physics.isentropic import (
+        pressure_coefficient,
+        pressure_coefficient_incompressible,
+    )
 
     grad_tri, area, _ = triangle_tangential_gradients(nodes, wall_faces, phi)
     n_out = wall_outward_normals(nodes, elements, wall_faces)
 
     q2 = np.sum(grad_tri * grad_tri, axis=1) / u_inf**2
-    cp_tri = np.array([pressure_coefficient_incompressible(q) for q in q2])
+    if m_inf > 0.0:
+        cp_tri = np.array([pressure_coefficient(q, m_inf) for q in q2])
+    else:
+        cp_tri = np.array([pressure_coefficient_incompressible(q) for q in q2])
 
     cf = -(cp_tri * area) @ n_out / s_ref
     a = np.deg2rad(alpha_deg)

@@ -1,0 +1,11 @@
+quantity,value
+cl_pressure,0.284372
+cl_gamma,0.284362
+cl_ref_pg,0.278774
+cl_ref_kt,0.291861
+cl_ref_mid,0.285318
+rel_err_mid_pct,-0.331
+n_picard,15
+n_solves_total,35
+mach2_max,0.5274
+t_solve_s,35.3

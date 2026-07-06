@@ -1,9 +1,16 @@
 """
-P1 driver: Laplace (rho == 1) is linear, so the Picard loop degenerates to a
-single assemble + solve -- no outer iteration, no relaxation.
+Picard drivers.
 
-Reference: docs/roadmap.md P1 ("Picard-degenerate driver, single linear
-solve"); design.md Sec 8 (full Picard loop lands in P3+).
+P1: Laplace (rho == 1) is linear, so the loop degenerates to a single
+assemble + solve. P2: lifting Laplace, matrix assembled once, Kutta outer
+loop with secant acceleration. P3: the density Picard loop of design.md
+Sec 8 (subsonic: nu == 0, rho_tilde == rho) -- `solve_subsonic`
+(non-lifting) and `solve_subsonic_lifting` (NESTED: outer density update,
+inner P2 secant Kutta at frozen rho; see its docstring for why nesting
+replaced the interleaved form).
+
+Reference: docs/roadmap.md P1-P3; design.md Sec 8 (Nonlinear solution
+strategy).
 """
 
 from typing import Dict, Optional
@@ -137,11 +144,11 @@ def solve_laplace_lifting(
     A_free = A_csr[free][:, free].tocsr()
     A_coupling = A_csr[free][:, dir_red].tocsr()
 
-    import pyamg
     import scipy.sparse.linalg as spla
 
-    ml = pyamg.smoothed_aggregation_solver(A_free)
-    M = ml.aspreconditioner()
+    from pyfp3d.solve.linear import build_amg_preconditioner
+
+    _, M = build_amg_preconditioner(A_free)
 
     def _solve_for(gamma: np.ndarray):
         nodes_d, vals_d = farfield_dirichlet(
@@ -225,4 +232,365 @@ def solve_laplace_lifting(
         "residual_norm": res,
         "n_cg_total": n_cg_total,
         "kutta_converged": converged,
+    }
+
+
+def solve_subsonic(
+    nodes: np.ndarray,
+    elements: np.ndarray,
+    dirichlet_nodes: np.ndarray,
+    dirichlet_values: np.ndarray,
+    m_inf: float,
+    gamma_air: float = 1.4,
+    u_inf: float = 1.0,
+    phi_init: Optional[np.ndarray] = None,
+    omega: float = 1.0,
+    n_picard_max: int = 40,
+    tol_rho: float = 1e-10,
+    rtol: float = 1e-12,
+    maxiter: int = 3000,
+) -> Dict[str, object]:
+    """
+    Non-lifting subsonic full-potential solve: relaxed-Picard density outer
+    loop (design.md Sec 8, nu == 0 so rho_tilde == rho and every Picard
+    matrix is SPD). Per iteration: element velocity sweep -> isentropic
+    density -> colored assembly of A(rho) -> CG+AMG solve -> relax.
+
+    Convergence is on the density lag ||rho(phi_new) - rho_matrix||_inf <
+    tol_rho -- the exact quantity Picard freezes -- with the nonlinear
+    residual ||R||_inf on free dofs recorded per iteration (gate G3.2
+    monotonicity evidence). At m_inf = 0 the density is exactly 1.0
+    everywhere (physics/isentropic.py::density_field), so iteration 1
+    reproduces the P1 Laplace solve bit-identically and the loop exits
+    after it (gate G3.3).
+
+    Args:
+        nodes, elements: mesh arrays
+        dirichlet_nodes, dirichlet_values: far-field Dirichlet data
+        m_inf: freestream Mach number
+        gamma_air: specific heat ratio
+        u_inf: freestream speed (q^2 is nondimensionalized by u_inf^2
+            before entering the density law)
+        phi_init: initial potential; None = freestream-like start with
+            rho == 1 on the first matrix (design.md Sec 8 initial guess)
+        omega: Picard under-relaxation (1.0 subsonic; omega == 1.0 replaces
+            phi exactly instead of computing phi + 1.0*(phi_new - phi))
+        n_picard_max: outer-iteration cap
+        tol_rho: density-lag convergence tolerance
+        rtol, maxiter: inner CG controls
+
+    Returns:
+        dict: phi, n_picard, converged, residual_history (per-iteration
+        nonlinear ||R||_inf on free dofs), drho_history, rho (element
+        densities), mach2_max, n_cg_total
+    """
+    import scipy.sparse.linalg as spla
+
+    from pyfp3d.kernels.jacobian import PicardOperator
+    from pyfp3d.physics.isentropic import density_field, mach_squared_field
+    from pyfp3d.solve.linear import build_amg_preconditioner
+
+    op = PicardOperator(nodes, elements)
+    n_nodes = op.n_nodes
+
+    is_dir = np.zeros(n_nodes, dtype=bool)
+    is_dir[dirichlet_nodes] = True
+    free = np.where(~is_dir)[0]
+    vals_d = np.asarray(dirichlet_values, dtype=np.float64)
+
+    if phi_init is not None:
+        phi = np.asarray(phi_init, dtype=np.float64).copy()
+        phi[dirichlet_nodes] = vals_d
+        _, q2 = op.velocities(phi)
+        rho = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
+    else:
+        phi = np.zeros(n_nodes, dtype=np.float64)
+        phi[dirichlet_nodes] = vals_d
+        rho = np.ones(op.n_tets, dtype=np.float64)
+
+    residual_history = []
+    drho_history = []
+    n_cg_total = 0
+    converged = False
+
+    for _ in range(n_picard_max):
+        A = op.assemble_matrix(rho)
+        A_csr = A.tocsr()
+        A_free = A_csr[free][:, free].tocsr()
+        b_free = -A_csr[free][:, dirichlet_nodes] @ vals_d
+
+        _, M = build_amg_preconditioner(A_free)
+        n_it = [0]
+        x, info = spla.cg(
+            A_free, b_free, M=M, rtol=rtol, maxiter=maxiter,
+            callback=lambda _x: n_it.__setitem__(0, n_it[0] + 1),
+        )
+        if info != 0:
+            raise RuntimeError(f"CG did not converge (info={info})")
+        n_cg_total += n_it[0]
+
+        phi_new = np.empty(n_nodes, dtype=np.float64)
+        phi_new[free] = x
+        phi_new[dirichlet_nodes] = vals_d
+        if omega == 1.0:
+            phi = phi_new
+        else:
+            phi = phi + omega * (phi_new - phi)
+
+        _, q2 = op.velocities(phi)
+        rho_new = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
+        R = op.assemble_residual(phi, rho_new)
+        residual_history.append(float(np.max(np.abs(R[free]))))
+        drho = float(np.max(np.abs(rho_new - rho)))
+        drho_history.append(drho)
+        rho = rho_new
+
+        if drho < tol_rho:
+            converged = True
+            break
+
+    _, q2 = op.velocities(phi)
+    mach2_max = float(np.max(mach_squared_field(q2 / u_inf**2, m_inf, gamma_air)))
+
+    return {
+        "phi": phi,
+        "n_picard": len(residual_history),
+        "converged": converged,
+        "residual_history": residual_history,
+        "drho_history": drho_history,
+        "rho": rho,
+        "mach2_max": mach2_max,
+        "n_cg_total": n_cg_total,
+    }
+
+
+def solve_subsonic_lifting(
+    mesh_cut,
+    wc,
+    m_inf: float,
+    alpha_deg: float = 0.0,
+    u_inf: float = 1.0,
+    gamma_air: float = 1.4,
+    vortex_center=(0.25, 0.0),
+    gamma_fixed: Optional[np.ndarray] = None,
+    omega: float = 1.0,
+    omega_gamma: float = 0.9,
+    tol_gamma: float = 1e-8,
+    tol_rho: float = 1e-10,
+    n_picard_max: int = 40,
+    rtol: float = 1e-10,
+    maxiter: int = 3000,
+    amg_rebuild_every: int = 4,
+    forcing: float = 0.0,
+) -> Dict[str, object]:
+    """
+    Lifting subsonic full-potential solve on a wake-cut mesh: NESTED
+    Picard (design.md Sec 8) with the Prandtl-Glauert-scaled vortex far
+    field (beta = sqrt(1 - M_inf^2), constraints/dirichlet.py).
+
+    Outer loop = density update: velocity sweep -> rho -> colored assembly
+    of A(rho) -> wake reduction A_red = T^T A T (T built once, matrix
+    updated in place). Inner loop = the P2 secant Kutta iteration at
+    FROZEN rho (where the map target(Gamma) is exactly affine, so the
+    secant reasoning of solve_laplace_lifting applies verbatim); matrix
+    and AMG hierarchy are per-outer, reused across the inner solves.
+    Nesting (rather than interleaving one Gamma step per density step) is
+    what makes the G3.2 "monotone residual" criterion meaningful: each
+    recorded residual sits at a Kutta-converged state, so the history
+    tracks the density-lag contraction alone -- interleaved Gamma jumps
+    were measured to inject 10x residual spikes all the way down.
+
+    Accelerations (design.md Sec 8 "in order of implementation value"):
+    the AMG hierarchy is rebuilt only every `amg_rebuild_every` outer
+    iterations (rho drifts little between rebuilds), and for m_inf > 0
+    each inner CG is warm-started from the previous solution. With
+    `forcing` = eta > 0 the inner solves also use an inexact-Picard
+    forcing term, atol = eta*||b - A x0|| (cut your own starting residual
+    by 1/eta; final accuracy still governed by rtol) -- measured ~2x
+    faster at eta = 0.05 on the medium NACA case, at the price of
+    bounded eta-noise wiggles in the residual tail. The default eta = 0
+    keeps the inner solves exact so the G3.2 "monotone residual"
+    criterion holds as written (measured strictly monotone to the 5e-11
+    floor on the medium mesh). NOTE a loose RELATIVE inner tolerance is
+    NOT a valid alternative: warm-started CG then exits at x0 without
+    ever computing the density correction (measured false convergence).
+    All accelerations are exact no-ops at m_inf = 0 (atol = 0, x0 = None,
+    matrix never changes so the reused hierarchy equals a rebuilt one),
+    preserving gate G3.3: at m_inf = 0, rho == 1.0 bitwise and beta ==
+    1.0 bitwise, so outer iteration 1 IS solve_laplace_lifting
+    bit-for-bit and the loop exits after it.
+
+    Converged when the density lag ||rho(phi_new) - rho_matrix||_inf <
+    tol_rho AND the inner Kutta loop met tol_gamma.
+
+    Returns:
+        dict: phi (cut-mesh), gamma, n_picard (outer iterations),
+        converged, kutta_converged, residual_history (per-outer nonlinear
+        ||T^T R||_inf on free reduced dofs), drho_history, gamma_history,
+        rho, mach2_max, n_cg_total, n_solves_total
+    """
+    import scipy.sparse.linalg as spla
+
+    from pyfp3d.constraints.dirichlet import farfield_dirichlet, freestream_phi
+    from pyfp3d.constraints.wake import WakeConstraint, kutta_targets
+    from pyfp3d.kernels.jacobian import PicardOperator
+    from pyfp3d.physics.isentropic import density_field, mach_squared_field
+    from pyfp3d.solve.linear import build_amg_preconditioner
+
+    if not 0.0 <= m_inf < 1.0:
+        raise ValueError(f"solve_subsonic_lifting needs 0 <= M_inf < 1, got {m_inf}")
+    beta = float(np.sqrt(1.0 - m_inf**2))
+
+    op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
+    con = WakeConstraint(op.assemble_matrix(), wc)
+    n_red = con.n_reduced
+    b_zero = np.zeros(op.n_nodes, dtype=np.float64)
+
+    # Dirichlet pattern is Gamma- and rho-independent: fix the split once.
+    dir_nodes, _ = farfield_dirichlet(
+        mesh_cut, wc, alpha_deg, np.zeros(wc.n_stations), u_inf, vortex_center,
+        beta=beta,
+    )
+    dir_red, _ = con.to_reduced_dirichlet(dir_nodes, np.zeros(len(dir_nodes)))
+    is_dir = np.zeros(n_red, dtype=bool)
+    is_dir[dir_red] = True
+    free = np.where(~is_dir)[0]
+
+    def _solve_for(gamma: np.ndarray, A_free, A_coupling, M, x0):
+        nodes_d, vals_d = farfield_dirichlet(
+            mesh_cut, wc, alpha_deg, gamma, u_inf, vortex_center, beta=beta,
+        )
+        _, vals_red = con.to_reduced_dirichlet(nodes_d, vals_d)
+        b_red = con.reduced_rhs(b_zero, gamma)
+        b_free = b_red[free] - A_coupling @ vals_red
+        # Inexact-Picard forcing term (design.md Sec 8 acceleration 2):
+        # each inner solve must cut ITS OWN starting residual by 1/eta;
+        # the final accuracy is still governed by rtol (scipy cg stops at
+        # max(rtol*||b||, atol)). Exact no-op at m_inf = 0 or eta = 0
+        # (atol = 0.0, x0 = None): bit-identical to the P2 call -- G3.3.
+        if m_inf > 0.0 and forcing > 0.0:
+            r0 = b_free - A_free @ x0 if x0 is not None else b_free
+            atol_k = forcing * float(np.linalg.norm(r0))
+        else:
+            atol_k = 0.0
+        n_it = [0]
+        x, info = spla.cg(
+            A_free, b_free, M=M, rtol=rtol, atol=atol_k, maxiter=maxiter,
+            x0=x0, callback=lambda _x: n_it.__setitem__(0, n_it[0] + 1),
+        )
+        if info != 0:
+            raise RuntimeError(f"CG did not converge (info={info})")
+        phi_red = np.empty(n_red, dtype=np.float64)
+        phi_red[free] = x
+        phi_red[dir_red] = vals_red
+        return phi_red, n_it[0]
+
+    if gamma_fixed is not None:
+        gamma = np.broadcast_to(
+            np.atleast_1d(np.asarray(gamma_fixed, dtype=np.float64)),
+            (wc.n_stations,),
+        ).copy()
+    else:
+        gamma = np.zeros(wc.n_stations, dtype=np.float64)
+
+    # Freestream start (design.md Sec 8): rho of the uniform field.
+    phi_cut = freestream_phi(mesh_cut.nodes, alpha_deg, u_inf)
+    _, q2 = op.velocities(phi_cut)
+    rho = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
+
+    residual_history = []
+    drho_history = []
+    gamma_history = [gamma.copy()]
+    n_cg_total = 0
+    n_solves_total = 0
+    phi_red = None
+    M = None
+    converged = False
+    kutta_converged = gamma_fixed is not None
+    max_kutta_updates = 30
+
+    for outer in range(n_picard_max):
+        A = op.assemble_matrix(rho)
+        con.update_matrix(A)
+        A_csr = con.A_reduced
+        A_free = A_csr[free][:, free].tocsr()
+        A_coupling = A_csr[free][:, dir_red].tocsr()
+        if M is None or outer % amg_rebuild_every == 0:
+            _, M = build_amg_preconditioner(A_free)
+        x0 = phi_red[free] if (m_inf > 0.0 and phi_red is not None) else None
+
+        # Inner Kutta loop at frozen rho: exactly the P2 secant iteration
+        # (the map target(Gamma) is affine when the matrix is fixed).
+        prev_gamma = prev_target = None
+        if gamma_fixed is not None:
+            phi_red_new, n_cg = _solve_for(gamma, A_free, A_coupling, M, x0)
+            n_cg_total += n_cg
+            n_solves_total += 1
+        else:
+            for _ in range(max_kutta_updates):
+                phi_red_new, n_cg = _solve_for(gamma, A_free, A_coupling, M, x0)
+                n_cg_total += n_cg
+                n_solves_total += 1
+                if m_inf > 0.0:
+                    x0 = phi_red_new[free]
+                target = kutta_targets(con.expand(phi_red_new, gamma), wc)
+                kutta_converged = (
+                    float(np.max(np.abs(target - gamma))) < tol_gamma
+                )
+                if kutta_converged:
+                    break
+                if prev_gamma is None:
+                    new_gamma = gamma + omega_gamma * (target - gamma)
+                else:
+                    dg = gamma - prev_gamma
+                    b = np.where(
+                        np.abs(dg) > 1e-14,
+                        (target - prev_target) / np.where(dg == 0, 1, dg),
+                        0.0,
+                    )
+                    denom = 1.0 - b
+                    relaxed = gamma + omega_gamma * (target - gamma)
+                    new_gamma = np.where(
+                        np.abs(denom) > 1e-3,
+                        (target - b * gamma) / np.where(denom == 0, 1, denom),
+                        relaxed,
+                    )
+                prev_gamma, prev_target = gamma, target
+                gamma = new_gamma
+                gamma_history.append(gamma.copy())
+
+        if omega == 1.0 or phi_red is None:
+            phi_red = phi_red_new
+        else:
+            phi_red = phi_red + omega * (phi_red_new - phi_red)
+        phi_cut = con.expand(phi_red, gamma)
+
+        _, q2 = op.velocities(phi_cut)
+        rho_new = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
+        R_red = con.T.T @ op.assemble_residual(phi_cut, rho_new)
+        residual_history.append(float(np.max(np.abs(R_red[free]))))
+        drho = float(np.max(np.abs(rho_new - rho)))
+        drho_history.append(drho)
+        rho = rho_new
+
+        if kutta_converged and drho < tol_rho:
+            converged = True
+            break
+
+    _, q2 = op.velocities(phi_cut)
+    mach2_max = float(np.max(mach_squared_field(q2 / u_inf**2, m_inf, gamma_air)))
+
+    return {
+        "phi": phi_cut,
+        "gamma": gamma,
+        "n_picard": len(residual_history),
+        "converged": converged,
+        "kutta_converged": kutta_converged,
+        "residual_history": residual_history,
+        "drho_history": drho_history,
+        "gamma_history": gamma_history,
+        "rho": rho,
+        "mach2_max": mach2_max,
+        "n_cg_total": n_cg_total,
+        "n_solves_total": n_solves_total,
     }

@@ -1,0 +1,15 @@
+gate,check,value,criterion,status,note
+P3-debt,fast vs reference assembly (rel),5.7e-16,< 1e-13,PASS,
+P3-debt,reassembly bit-deterministic,True,bitwise equal,PASS,
+P3-debt,hot reassembly speedup,161.3x,> 2x vs P1 serial kernel,PASS,331 ms -> 2 ms (medium mesh)
+G3.1,Cp peak vs PG-corrected,0.32%,< 2%,PASS,-1.3359 vs -1.3402
+G3.1,Picard converged,True,density lag < 1e-10 in 11 iters,PASS,
+G3.2,cl inside [PG; KT] bracket,0.28437 in [0.27877, 0.29186],PG <= cl <= KT,PASS,
+G3.2,cl vs bracket midpoint,-0.33%,< 2%,PASS,
+G3.2,Picard iterations,15,< 30,PASS,35 s medium mesh
+G3.2,monotone residual,True,non-increasing history,PASS,
+G3.2,subcritical,max M = 0.726,M < 1 everywhere (nu == 0 regime),PASS,
+G3.3,A(rho(M=0)) == A_Laplace,True,bitwise,PASS,
+G3.3,Kutta solve phi at M=0,True,bitwise == solve_laplace_lifting,PASS,
+G3.3,Kutta solve Gamma at M=0,True,bitwise == solve_laplace_lifting,PASS,
+G3.3,P1/P2 gates with rho machinery,full pytest suite,117 passed + 2 xfailed (run separately),PASS,pytest tests/ -- hard rule 2

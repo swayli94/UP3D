@@ -11,7 +11,8 @@ images always correspond to a reproducible run.
 **Reproduce.** `python cases/demo/<phase>/run_demo.py` (headless, matplotlib
 Agg). Exit code 0 = all checks pass; `results/checks.csv` holds the measured
 value, criterion, and PASS/FAIL/XFAIL status per check. Status of this report:
-generated 2026-07-07 from fresh runs; full pytest suite 100 passed + 2 xfailed.
+generated 2026-07-07 from fresh runs; full pytest suite 117 passed + 2 xfailed
+(~96 s since P3's medium-mesh compressible gate).
 
 **Honesty rule.** P1 is *not* fully closed: gate G1.6 (sphere Cp < 2%) is
 open, held as a strict xfail, and shown here as an XFAIL with its root cause —
@@ -24,6 +25,7 @@ not as gaps to hide.
 | P1 Laplace solver | `cases/demo/p1_laplace/` | 9 PASS + 1 XFAIL (G1.6) | closed gates reproduced; G1.6 open by design |
 | P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced |
 | M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced |
+| P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced |
 
 ---
 
@@ -177,6 +179,71 @@ the first wake cell — a point vortex parked at the TE whose spurious suction
 
 ---
 
+## P3 — subsonic compressible (G3.1–G3.3, closed)
+
+**Purpose.** Show that the density machinery (isentropic ρ(q²) in a nested
+Picard outer loop) adds *compressibility and nothing else*: it reproduces the
+classical corrections where they apply, degenerates bit-exactly to the
+validated Laplace solvers at M∞ → 0, and its assembly rewrite (the retired P1
+tech debt) is a pure performance change, not a numerics change.
+
+**Case setup.** (a) Sphere at M∞ = 0.3 (medium shell, 95k tets), freestream
+Dirichlet, compressible vs incompressible on the *same mesh with the same
+quadratic surface recovery* — the comparison G3.1 prescribes, which cancels
+the known G1.6 flat-facet wall bias. (b) NACA0012 at M∞ = 0.5, α = 2° on the
+M0 quasi-2D meshes, nested Picard (outer density update, inner secant Kutta
+at frozen ρ), PG-scaled vortex far field; reference =
+`cases/reference_data/naca0012_m05/` (the P2-verified panel solution under
+Prandtl–Glauert and Kármán–Tsien corrections). (c) M∞ = 0 bit-identity
+against `solve_laplace_lifting`.
+
+**Key figures.**
+
+![G3.1 sphere Cp + convergence](../cases/demo/p3_subsonic/results/g31_sphere_cp_and_convergence.png)
+![G3.2 Cp + Picard convergence](../cases/demo/p3_subsonic/results/g32_naca_cp_and_convergence.png)
+![G3.2 cl bracket](../cases/demo/p3_subsonic/results/g32_cl_bracket.png)
+
+**Measured results.**
+
+| Gate | Check | Measured | Criterion |
+|---|---|---|---|
+| P3-debt | colored fast path vs P1 serial reference kernels | 5.7e-16 rel | < 1e-13 |
+| P3-debt | reassembly determinism | bitwise equal | bitwise |
+| P3-debt | hot reassembly speedup (medium NACA, warm JIT) | ~160× | > 2× |
+| G3.1 | sphere Cp peak −1.33591 vs PG-corrected −1.34020 | 0.32% | < 2% |
+| G3.1 | non-lifting Picard (density lag < 1e-10) | 11 iters, monotone | converges |
+| G3.2 | cl = 0.28437 vs [PG 0.27877, KT 0.29186] | inside bracket | PG ≤ cl ≤ KT |
+| G3.2 | cl vs PG/KT midpoint 0.28532 | −0.33% | < 2% |
+| G3.2 | density (outer) iterations | 15 | < 30 |
+| G3.2 | residual history 5.9e-6 → 5.0e-11 | strictly monotone | monotone |
+| G3.2 | max local Mach | 0.726 | < 1 (ν ≡ 0 regime) |
+| G3.3 | A(ρ(M=0)), Kutta φ and Γ vs P2 driver | bitwise equal | bitwise |
+| G3.3 | P1/P2 gates with ρ machinery in the loop | 117 passed + 2 xfailed | all green |
+
+**Conclusion & analysis.** The compressibility machinery lands where the
+classical corrections say it must: the sphere's suction-peak amplification
+matches Prandtl–Glauert to 0.32% once the mesh's own (known, G1.6) wall bias
+is cancelled by same-mesh comparison, and the airfoil cl falls inside the
+[PG, KT] correction bracket, −0.33% from its midpoint — with the mesh-family
+trend pointing toward the KT side in the continuum limit, as expected for a
+12%-thick section. Convergence behaves like the theory: the density lag
+contracts geometrically (rate ≈ 0.3) and the residual decays strictly
+monotonically to the linear-solver floor. Two negative results are recorded
+as design constraints: interleaving one Γ update per density iteration (the
+literal design.md §8 pseudocode) injects 10× residual spikes down the whole
+history — nesting the P2 secant Kutta loop at frozen ρ (where the Kutta map
+is exactly affine) restores monotonicity; and a loose *relative* inner CG
+tolerance combined with warm starts false-converges (CG exits at x0 without
+computing the density correction), so the shipped inexact option is a
+forcing term `atol = η‖b − A x₀‖` (η = 0.05 ≈ 2× faster; default η = 0).
+The M∞ → 0 limit is bit-exact, not approximately-equal: ρ ≡ 1.0 bitwise from
+the density law, β = 1 reduces the PG vortex bit-exactly, the P1/P2 drivers
+share the rewritten assembly, and pyamg's unseeded spectral-radius RNG — the
+one source of run-to-run scatter, measured at 2e-11 between *identical*
+solves — is now pinned in `solve/linear.py::build_amg_preconditioner`.
+
+---
+
 ## M0 — quasi-2D meshing pipeline (closed; acceptance link = G2.5)
 
 **Purpose.** Show the mesh-side evidence for M0: the pipeline (vanilla-Gmsh
@@ -239,3 +306,8 @@ M0's deliverable is demonstrated end to end.
 - **Open item**: G1.6 remains open (11.6% vs 2%); its Option C acceptance
   re-spec is the open P1 task, with Option A conclusively ruled out by the
   oracle demos.
+- **P3 additions**: compressibility validated against the classical
+  correction band (sphere 0.32% vs PG; airfoil cl inside [PG, KT]);
+  M∞ → 0 is bit-identical to the P1/P2 Laplace drivers; assembly is
+  colored-`prange` with precomputed geometry (~160× hot reassembly) and
+  every solve is bit-reproducible run-to-run (seeded AMG setup).

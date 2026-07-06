@@ -150,7 +150,8 @@ def _section_cut_marching(mesh, point_fields: Dict[str, np.ndarray],
 
 def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
                   upper_hint=(0.0, 1.0, 0.0), wall_tag: str = "wall",
-                  chord: float = 1.0, x_le: float = 0.0) -> Dict[str, np.ndarray]:
+                  chord: float = 1.0, x_le: float = 0.0,
+                  m_inf: float = 0.0) -> Dict[str, np.ndarray]:
     """Sectional wall Cp(x/c) at z = const, split into upper/lower curves.
 
     Stays triangle-wise: each wall triangle crossed by the plane
@@ -158,12 +159,16 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
     the triangle's own constant Cp (from the in-plane tangential gradient,
     which IS the wall velocity under the natural BC). No nodal averaging,
     so the sharp-TE crease needs no special-casing. Sides split by
-    `upper_hint` (default +y); points sorted by x/c.
+    `upper_hint` (default +y); points sorted by x/c. m_inf > 0 selects the
+    exact isentropic Cp (2.5) instead of the incompressible one (P3).
 
     Returns:
         dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
     """
-    from pyfp3d.physics.isentropic import pressure_coefficient_incompressible
+    from pyfp3d.physics.isentropic import (
+        pressure_coefficient,
+        pressure_coefficient_incompressible,
+    )
     from pyfp3d.post.surface import triangle_tangential_gradients
 
     wall = np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64)
@@ -191,7 +196,10 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
             continue
         mid = 0.5 * (seg[0] + seg[1])
         xs.append((mid[0] - x_le) / chord)
-        cps.append(pressure_coefficient_incompressible(float(q2[k])))
+        if m_inf > 0.0:
+            cps.append(pressure_coefficient(float(q2[k]), m_inf))
+        else:
+            cps.append(pressure_coefficient_incompressible(float(q2[k])))
         sides.append(float(np.dot(mid, hint)) > 0.0)
 
     xs = np.asarray(xs)

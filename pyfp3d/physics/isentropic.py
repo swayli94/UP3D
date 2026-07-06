@@ -200,6 +200,52 @@ def upwind_factor(q_squared, M_inf, M_crit=M_CRIT_DEFAULT, C=UPWIND_CONST_DEFAUL
     return C * max(0.0, 1.0 - (M_crit ** 2) / max(M_sq, M_crit ** 2))
 
 
+@numba.njit(cache=True)
+def density_field(q_squared, M_inf, gamma=GAMMA):
+    r"""
+    Elementwise isentropic density over an array of q² values (the per-
+    element density sweep of the Picard loop, design.md §8). Same scalar
+    law as `density_isentropic`; kept here so physics stays in this module
+    (agent-rules hard rule #5).
+
+    Note the exact Laplace limit: at M∞ = 0 the base is exactly 1.0 and
+    1.0**exponent == 1.0, so ρ ≡ 1.0 bitwise — the G3.3 "M∞ → 0 is
+    bit-identical to Laplace" guarantee rests on this.
+
+    Args:
+        q_squared: (n,) nondimensional speed squared per element
+        M_inf: Freestream Mach number
+        gamma: Specific heat ratio
+
+    Returns:
+        (n,) density array
+    """
+    out = np.empty_like(q_squared)
+    for i in range(q_squared.shape[0]):
+        out[i] = density_isentropic(q_squared[i], M_inf, gamma)
+    return out
+
+
+@numba.njit(cache=True)
+def mach_squared_field(q_squared, M_inf, gamma=GAMMA):
+    r"""
+    Elementwise local M² over an array of q² values (supersonic-zone
+    monitor for the Picard loop; the ν switch consumes this in P4).
+
+    Args:
+        q_squared: (n,) nondimensional speed squared per element
+        M_inf: Freestream Mach number
+        gamma: Specific heat ratio
+
+    Returns:
+        (n,) local Mach-squared array
+    """
+    out = np.empty_like(q_squared)
+    for i in range(q_squared.shape[0]):
+        out[i] = mach_number_squared(q_squared[i], M_inf, gamma)
+    return out
+
+
 def validate_physics_bounds(rho, q, M, Cp, M_inf, gamma=GAMMA):
     """
     Validate that computed physics quantities stay within physical bounds.
