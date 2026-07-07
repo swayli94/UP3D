@@ -554,7 +554,9 @@ Fix plan, by leverage:
    (0 floored/limited) and V6 < 1%.
 Note: this now overlaps P6 (surface-Cp / flux consistency) and P7 (Newton)
 directly rather than the wake model. Reproduce the localization with
-`python cases/demo/p5_onera_m6/diagnose_medium.py`.
+`python cases/demo/p5_onera_m6/diagnose_medium.py`; the full A–E refutation
+record (method, per-test numbers, reproducibility caveats, next tests) is in
+`cases/demo/p5_onera_m6/INVESTIGATION_gamma_smoothing.md`.
 
 ### P6 — Consistent, differentiable artificial-density flux (remove the non-physical surface-Cp oscillation) ★ accuracy phase
 **Motivation.** The shipped P4 artificial density (`kernels/upwind.py`)

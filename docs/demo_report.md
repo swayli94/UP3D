@@ -781,7 +781,8 @@ destabilises the solve (M_max 5.20→10.7), and as a **fixed-Γ** test
 (bypassing the secant) flattening |dΓ/dz| 7× (1.82→0.26, smoother than the
 physical coarse 0.66) still leaves **M_max ~5.3 and 14 wing M>2 cells**. So
 the correlation was not causal; the smoother was reverted (unused).
-**Spanwise-Γ smoothing is a dead route.**
+**Spanwise-Γ smoothing is a dead route.** Full A–E record (method, per-test
+numbers, caveats, next tests): `cases/demo/p5_onera_m6/INVESTIGATION_gamma_smoothing.md`.
 
 **Open item (revised priority):** (1) the dominant 18-cell wing-TE cluster
 needs a **TE-element-level fix** — curved/isoparametric or locally-refined TE
