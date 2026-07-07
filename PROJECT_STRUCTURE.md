@@ -585,22 +585,19 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 
 ---
 
-**Last updated:** 2026-07-06  
-**Status:** P2 closed 2026-07-06 (wake cut / circulation / Kutta on the M0 mesh: gates
-G2.1–G2.5 green — medium-mesh cl −0.82% vs the Hess–Smith panel reference, Γ-vs-pressure lift
-cross-check 0.01%, Kutta converged in 2 secant updates; one evidence-backed spec deviation:
-TE nodes ARE duplicated, see the P2 section above), and M0 closed with it (topology asserts
-sweep the whole mesh family; G2.5 criterion (b) re-specced to p99-of-|w| ≥ 1st-order decay,
-measured ratio 2.05). **Next: P3 (subsonic compressible).** P0 gates G0.1–G0.4 green; the full coarse regression suite now runs against real case
-meshes (cylinder + NACA0012); P0 closed 2026-07-06 (G0.1–G0.4 ticked in the roadmap). P1 (gates renumbered
-in workflow order 2026-07-06, old → new: G1.3 → G1.2, G1.2-a0 → G1.3, G1.2-a → G1.4,
-G1.2-c → DP1, G1.2-b → G1.5, G1.2 → G1.6): G1.1 (MMS) and G1.2 (CG+AMG mesh-independence)
-closed; G1.3 (cylinder oracle) and G1.4 (sphere oracle ceiling) completed 2026-07-06 with
-negative results — boundary-data corrections have (near-)zero lever on body-fitted meshes
-(exact per-facet flux is zero by the divergence theorem), Option A ceiling ≈ 11.3% — so DP1
-took the "> 5%" branch and G1.5 is void; G1.6 (sphere Cp) stays open with a `strict=True`
-xfail tracking the real 2% criterion, its Option C re-spec (geometry-consistent reference) is
-the open P1 item, and the curved/isoparametric-element effort is separately scoped. The M0
-cylinder case was re-framed by G1.3: its ~O(h) wall-Cp error (9.1% → 4.5% → 2.2% max) is
-~76% surface-recovery on the quasi-2D sliver strip, not the sphere pathology.
-89 tests total (87 passed, 2 xfailed), full suite ~18 s.
+**Last updated:** 2026-07-07  
+**Status:** closed phases — P0, P2 + M0 (2026-07-06), P3 + M1 (2026-07-07); details and
+measured gate numbers in docs/roadmap.md's ledger and docs/demo_report.md. **P4 is delivered
+but OPEN**: G4.2 (bitwise subcritical no-op) and G4.3 (coarse robustness sweep) are green,
+but the G4.1 medium-mesh gate DIVERGED on its first actual run (2026-07-07: M_max 30.1,
+423 limited + 271 floored cells, spurious shock 0.802 — it had been declared closed against
+an unfilled placeholder; audit trail in the roadmap P4 ledger row, evidence in
+`artifacts/G4.1/summary_medium.csv`). Working hypothesis: the coarse-calibrated fixed
+Δτ = 2e-3 pseudo-transient damping (diag(m/Δτ) ~ h³) weakens under refinement; candidate
+routes mesh-scaled Δτ / finer Mach continuation / P6 Newton — none tried yet. P1 remains
+partial: G1.1/G1.2 closed, G1.3/G1.4 negative oracles, G1.6 (sphere Cp) open as a
+`strict=True` xfail awaiting its Option C re-spec (see "Known gaps" above). **Next: re-close
+P4 (G4.1 medium) and/or P6 Newton; P5 solver validation should wait for a
+refinement-stable transonic solve.** Default suite: 136 passed + 2 skipped (heavy transonic
+gates behind `PYFP3D_TRANSONIC_GATES=1`) + 2 xfailed, ~5 min; the 13 M1 tests skip unless
+the gitignored M6 meshes are regenerated (~30 s).

@@ -14,7 +14,7 @@ workstation-scale (minutes for 1–3 M nodes).
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
-  phases (P0, P1-partial, P2, P3, P4, M0, M1): one self-checking demo per phase under
+  phases (P0, P1-partial, P2, P3, P4-partial, M0, M1): one self-checking demo per phase under
   `cases/demo/<phase>/` with committed figures + measured gate numbers. When a
   phase closes, add its demo + report section here.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and

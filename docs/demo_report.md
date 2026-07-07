@@ -1,7 +1,7 @@
 # Phase demo report — evidence for completed phases
 
 **Scope.** One self-contained demo case per completed roadmap phase (Track P:
-P0, P1-partial, P2, P3, P4; Track M: M0, M1), designed as *evidence that the phase's
+P0, P1-partial, P2, P3, P4-partial; Track M: M0, M1), designed as *evidence that the phase's
 functionality works, is numerically stable, and physically sensible* — not
 merely that tests pass. Each demo is a standalone script with built-in
 acceptance checks against the roadmap gate criteria; its figures and CSVs are
@@ -17,7 +17,9 @@ generated 2026-07-07 from fresh runs; full pytest suite 117 passed + 2 xfailed
 **Honesty rule.** P1 is *not* fully closed: gate G1.6 (sphere Cp < 2%) is
 open, held as a strict xfail, and shown here as an XFAIL with its root cause —
 the demos document the negative results (G1.3/G1.4 oracles, DP1) as evidence,
-not as gaps to hide.
+not as gaps to hide. Likewise P4 is *not* closed: the G4.1 medium-mesh gate
+diverged on its first actual run (2026-07-07) — the coarse evidence and the
+failure are both documented in §P4.
 
 | Phase | Demo | Checks | Verdict |
 |---|---|---|---|
@@ -26,7 +28,7 @@ not as gaps to hide.
 | P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced |
 | M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced |
 | P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced |
-| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced |
+| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | **OPEN** — coarse evidence reproduced; G4.1 medium gate DIVERGED when first run (see §P4) |
 | M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced |
 
 ---
@@ -246,7 +248,7 @@ solves — is now pinned in `solve/linear.py::build_amg_preconditioner`.
 
 ---
 
-## P4 — transonic artificial density (G4.1–G4.3, closed)
+## P4 — transonic artificial density (G4.2/G4.3 closed; G4.1 OPEN — medium gate diverged)
 
 **Purpose.** Show that the artificial-density upwinding produces sharp,
 monotone, correctly-placed shocks; that it is an *exact* no-op below
@@ -269,8 +271,9 @@ README says so rather than inventing one).
 ![upwind reach evidence](../cases/demo/p4_transonic/results/p4_upwind_reach.png)
 ![G4.1 Cp and shock](../cases/demo/p4_transonic/results/g41_cp_shock.png)
 
-**Measured results (coarse evidence run; medium gate + sweep in
-artifacts/G4.1, G4.3).**
+**Measured results (coarse evidence run; the G4.3 coarse sweep is in
+artifacts/G4.3; the G4.1 medium run is in artifacts/G4.1 and FAILED —
+see the addendum below).**
 
 | Gate | Check | Measured | Criterion |
 |---|---|---|---|
@@ -310,10 +313,30 @@ density loop entirely: nested exact-Kutta runs away (Γ 0.115 → 4.99) and
 damped interleaving limit-cycles, because the transonic target map's
 slope crosses 1 where relaxed fixed-point updates provably diverge — the
 outer secant on density-converged evaluations converges in ~4–8 warm-
-started evaluations. The result lands where the references say it
+started evaluations. The coarse result lands where the references say it
 should: upper shock 0.599 (Euler anchor 0.60–0.63 band), weak lower
 shock 0.362 (~0.35), monotone with no expansion shock, and the
 subcritical bit-identity G4.2 guarantees P3 behavior is untouched.
+
+**Addendum (2026-07-07, audit): the G4.1 MEDIUM gate FAILED on its first
+actual run — P4 is NOT closed.** The phase had been declared closed with
+the medium result left as an unfilled placeholder; running the gate
+(`PYFP3D_TRANSONIC_GATES=1`, 2h43m wall) produced a diverged solve:
+M_max 30.1 (vs the physical 1.36 on coarse), 423 q²-limited + 271
+density-floored cells, Kutta |F| 2.5e-3 vs tol 2e-4, a spurious "shock"
+at x/c 0.802, and sign-inconsistent cl (pressure −0.171 vs KJ +0.212).
+Both supercritical continuation levels exhausted their 12 Γ evaluations
+without secant convergence (n_picard_total 19331; each frozen-Γ eval
+burns its full 800-iteration budget by design — the tol_rho early-exit
+is unreachable at transonic). Evidence:
+`artifacts/G4.1/summary_medium.csv`, `medium_gate_pytest.log`,
+`v4_1_cp_shock_medium.png`. Interpretation: the coarse-calibrated
+`TRANSONIC_DEFAULTS` (fixed Δτ = 2e-3, dm = 0.05) do not transfer to the
+medium mesh — the pseudo-transient damping diag(m_lumped/Δτ) scales as
+h³ while the operator stiffness does not, so the stabilizer weakens
+under refinement (hypothesis, not yet verified). Candidate routes:
+mesh-scaled Δτ, finer Mach continuation steps, or P6 Newton. The gate is
+re-opened in roadmap.md; the coarse evidence above and G4.2/G4.3 stand.
 
 ---
 
