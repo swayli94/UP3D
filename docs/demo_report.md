@@ -761,22 +761,35 @@ z/b 0.80–0.81) and only **8 at the far-field sphere** (x ≈ 10, z/b ≳ 1.0).
 The single M_max = 5.204 cell *is* far-field, so it alone sets M_max — but the
 **dominant M ≈ 2.7–3.1 spikes are the outboard-TE cluster**, on well-shaped
 elements (shape quality q ≈ 0.65, aspect ratio ≤ 3.1; mesh median q 0.76 —
-not slivers). The cluster sits at the **steepest spanwise circulation
-roll-off** (medium |dΓ/dz| peaks at z/b = 0.80, 1.82 vs coarse 0.66; the
-per-station Kutta Γ dips 0.076 → 0.043 → 0.048 across z/b 0.7/0.8/0.9): the
-~8% per-station Kutta spanwise noise, carried through the wake-cut
-master–slave Γ-jump, injects a large velocity gradient into the TE-adjacent
-P1 tets there. The **same outboard band (z/b ≈ 0.7–0.9) is already coarse's
+not slivers). The **same outboard band (z/b ≈ 0.7–0.9) is already coarse's
 hottest** (M ≤ 1.47, physical) and **sharpens under refinement** (1.47 →
-5.20) rather than converging — a trailing-edge / Kutta discretisation
-singularity, not a global wing-flow under-convergence (well-shaped cells +
-refinement-sharpening + single-station localisation rule that out; the
+5.20) rather than converging — a **trailing-edge discretisation singularity
+at fine resolution** (the P1 element-constant gradient at the sharp
+zero-thickness TE grows as the TE tet shrinks; the same P1-singularity family
+as the G1.6 LE-Cp gate), not a global wing-flow under-convergence (well-shaped
+cells + refinement-sharpening + single-station localisation rule that out; the
 secondary far-field cells match the design.md §5 2D-vortex concern).
-**Open item (revised priority):** (1) regularise / smooth the per-station
-spanwise Γ at the outboard roll-off — the dominant 18-cell cluster; (2) taper
-the 2D-vortex far-field correction toward the tip — removes the single M_max
-cell. A heavier iteration budget alone will not heal a refinement-sharpening
-TE singularity. G5.1/G5.2 remain unchecked.
+
+**A spanwise-Γ-noise hypothesis was tested and REFUTED (2026-07-08, A–E).**
+The cluster co-locates with the steepest spanwise Γ roll-off (medium |dΓ/dz|
+peaks at z/b = 0.80, 1.82 vs coarse 0.66; the per-station Kutta Γ dips
+0.076 → 0.043 → 0.048), a +0.63 TE-Mach↔|dΓ/dz| correlation, so a
+Gaussian-kernel spanwise-Γ smoother was implemented and tried. It heals an
+*injected* single-station kink on coarse (M 1.47→8.4→1.40) — but that is a
+tautology, and on the **medium** target it FAILS: inside the continuation it
+destabilises the solve (M_max 5.20→10.7), and as a **fixed-Γ** test
+(bypassing the secant) flattening |dΓ/dz| 7× (1.82→0.26, smoother than the
+physical coarse 0.66) still leaves **M_max ~5.3 and 14 wing M>2 cells**. So
+the correlation was not causal; the smoother was reverted (unused).
+**Spanwise-Γ smoothing is a dead route.**
+
+**Open item (revised priority):** (1) the dominant 18-cell wing-TE cluster
+needs a **TE-element-level fix** — curved/isoparametric or locally-refined TE
+elements, the P6 consistent/differentiable flux, or P7 Newton for the
+sharp-feature tail; (2) taper the 2D-vortex far-field correction toward the
+tip — removes the single far-field M_max=5.20 cell. A heavier iteration budget
+alone will not heal a refinement-sharpening TE singularity. G5.1/G5.2 remain
+unchecked.
 
 The medium section Cp at η = 0.44/0.65/0.90 still looks physical and in fact
 sharper than coarse (shocks resolve to ~1 cell, LE suction closer to the
