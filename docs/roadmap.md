@@ -361,7 +361,10 @@ adjacency, ν switch per design.md (3.2), ρ̃), Mach continuation in
 - [x] G4.3 robustness sweep: M∞ ∈ {0.74…0.82} × α ∈ {0°, 1.25°} all converge
       with one parameter set (C, M_c, ω fixed) — **closed 2026-07-07**: all
       10 cases with `TRANSONIC_DEFAULTS` (C = 1.5, M_c = 0.95, Δτ = 2e-3,
-      ω_seed = 0.9), zero limited/floored cells, smooth trends and no
+      ω_seed = 0.9, budgets n_picard_eval = 800 × ≤ 12 Γ evals — budgets are
+      load-bearing: the frozen-Γ evals never meet tol_rho early-exit at
+      transonic, so each runs its full n_picard_eval; cost is exactly
+      levels × evals × budget), zero limited/floored cells, smooth trends and no
       outlier: α = 0 gives cl ≈ −7e-4 (symmetry check) with the shock
       marching 0.244 → 0.528 over M 0.74 → 0.82; α = 1.25° gives shock
       0.345 → 0.698, cl 0.245 → 0.389, M_max 1.19 → 1.40

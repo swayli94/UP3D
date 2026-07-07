@@ -165,8 +165,12 @@ tests/                     # Unit and gate tests
 │                                     #   G2.1 + G2.2, assert-fires-on-broken-cut, hard-rule-7
 │                                     #   sweep over every wake-tagged mesh in cases/meshes/
 ├── test_p2_kutta_naca0012.py        # ✓ [P2] Gates G2.3/G2.4/G2.5 + V2.1–V2.5 artifacts
-├── test_subsonic_*.py    # [P3] Gates G3.1–G3.3
-└── test_transonic_*.py   # [P4] Gates G4.1–G4.3
+├── test_p3_assembly.py              # ✓ [P3] Colored-assembly rewrite: fast-vs-reference bit checks
+├── test_p3_subsonic.py              # ✓ [P3] Gates G3.1 + G3.3 (incl. bit-identical Laplace limit)
+├── test_p3_naca0012_m05.py          # ✓ [P3] Gate G3.2 (medium-mesh nested Picard, ~45 s)
+├── test_p4_upwind.py                # ✓ [P4] Gate G4.2 (bitwise subcritical no-op) + upwind units
+└── test_p4_transonic.py             # ✓ [P4] Gates G4.1/G4.3 (coarse smoke always-on; medium gate
+                                      #   + sweep behind PYFP3D_TRANSONIC_GATES=1)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap

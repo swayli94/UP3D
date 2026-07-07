@@ -38,13 +38,19 @@ from typing import Dict, Optional
 
 import numpy as np
 
-#: One parameter set for the whole G4.3 robustness sweep.
+#: One parameter set for the whole G4.3 robustness sweep. The iteration
+#: budgets are part of the set: at transonic the frozen-Gamma evals never
+#: meet their tol_rho early-exit (the pseudo-time density lag is a bounded
+#: tail, see module docstring), so every eval runs its FULL n_picard_eval
+#: and total cost is exactly levels x n_evals x n_picard_eval (measured
+#: coarse G4.1: 9664 = 64 seed + 12 x 800).
 TRANSONIC_DEFAULTS = dict(
     upwind_c=1.5,
     m_crit=0.95,
     pseudo_dt=2e-3,
     n_picard_seed=400,
-    n_picard_eval=600,
+    n_picard_eval=800,
+    max_gamma_evals=12,
     tol_gamma=2e-4,
     omega_seed=0.9,
     forcing_seed=0.05,
@@ -73,7 +79,7 @@ def solve_transonic_lifting(
     tol_gamma: float = TRANSONIC_DEFAULTS["tol_gamma"],
     n_picard_seed: int = TRANSONIC_DEFAULTS["n_picard_seed"],
     n_picard_eval: int = TRANSONIC_DEFAULTS["n_picard_eval"],
-    max_gamma_evals: int = 6,
+    max_gamma_evals: int = TRANSONIC_DEFAULTS["max_gamma_evals"],
     u_inf: float = 1.0,
     verbose: bool = False,
 ) -> Dict[str, object]:

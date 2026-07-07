@@ -37,7 +37,9 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (~95 s since P3; the G3.2 medium-mesh nested Picard solve is ~45 s of it)
+3. Full suite: `pytest tests/` (~4.5 min since P4; the always-on coarse transonic
+   smoke is ~170 s of it, the G3.2 medium-mesh nested Picard solve ~45 s. The heavy
+   transonic gates only run under `PYFP3D_TRANSONIC_GATES=1` and show as 2 skipped.)
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.
