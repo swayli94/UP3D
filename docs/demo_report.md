@@ -1,7 +1,7 @@
 # Phase demo report — evidence for completed phases
 
 **Scope.** One self-contained demo case per completed roadmap phase (Track P:
-P0, P1-partial, P2, P3, P4-partial; Track M: M0, M1), designed as *evidence that the phase's
+P0, P1-partial, P2, P3, P4; Track M: M0, M1), designed as *evidence that the phase's
 functionality works, is numerically stable, and physically sensible* — not
 merely that tests pass. Each demo is a standalone script with built-in
 acceptance checks against the roadmap gate criteria; its figures and CSVs are
@@ -11,15 +11,17 @@ images always correspond to a reproducible run.
 **Reproduce.** `python cases/demo/<phase>/run_demo.py` (headless, matplotlib
 Agg). Exit code 0 = all checks pass; `results/checks.csv` holds the measured
 value, criterion, and PASS/FAIL/XFAIL status per check. Status of this report:
-generated 2026-07-07 from fresh runs; full pytest suite 117 passed + 2 xfailed
-(~96 s since P3's medium-mesh compressible gate).
+updated 2026-07-07 (P4 re-closed same day, see §P4 addenda) from fresh runs;
+full pytest suite 136 passed + 2 skipped + 2 xfailed (~5 min; the always-on
+coarse transonic smoke is ~170 s of it).
 
 **Honesty rule.** P1 is *not* fully closed: gate G1.6 (sphere Cp < 2%) is
 open, held as a strict xfail, and shown here as an XFAIL with its root cause —
 the demos document the negative results (G1.3/G1.4 oracles, DP1) as evidence,
-not as gaps to hide. Likewise P4 is *not* closed: the G4.1 medium-mesh gate
-diverged on its first actual run (2026-07-07) — the coarse evidence and the
-failure are both documented in §P4.
+not as gaps to hide. P4 was briefly re-opened the same day it was first
+declared closed (its medium-mesh gate had never actually been run) — the
+divergence, root cause, and fix are all documented in §P4's addenda rather
+than silently corrected away.
 
 | Phase | Demo | Checks | Verdict |
 |---|---|---|---|
@@ -28,7 +30,7 @@ failure are both documented in §P4.
 | P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced |
 | M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced |
 | P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced |
-| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | **OPEN** — coarse evidence reproduced; G4.1 medium gate DIVERGED when first run (see §P4) |
+| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced (re-closed 2026-07-07 — see Addendum 3) |
 | M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced |
 
 ---
@@ -248,7 +250,7 @@ solves — is now pinned in `solve/linear.py::build_amg_preconditioner`.
 
 ---
 
-## P4 — transonic artificial density (G4.2/G4.3 closed; G4.1 OPEN — medium gate diverged)
+## P4 — transonic artificial density (closed 2026-07-07: G4.1/G4.2/G4.3 all green)
 
 **Purpose.** Show that the artificial-density upwinding produces sharp,
 monotone, correctly-placed shocks; that it is an *exact* no-op below
@@ -271,9 +273,10 @@ README says so rather than inventing one).
 ![upwind reach evidence](../cases/demo/p4_transonic/results/p4_upwind_reach.png)
 ![G4.1 Cp and shock](../cases/demo/p4_transonic/results/g41_cp_shock.png)
 
-**Measured results (coarse evidence run; the G4.3 coarse sweep is in
-artifacts/G4.3; the G4.1 medium run is in artifacts/G4.1 and FAILED —
-see the addendum below).**
+**Measured results (coarse evidence run, re-measured 2026-07-07 under the
+`damping_theta` fix — see Addendum 3; the G4.3 coarse sweep is in
+artifacts/G4.3, also re-measured; the G4.1 medium run is in
+artifacts/G4.1 and now PASSES).**
 
 | Gate | Check | Measured | Criterion |
 |---|---|---|---|
@@ -281,12 +284,16 @@ see the addendum below).**
 | G4.2 | φ/Γ vs the P3 code path (upwind_c = 0) | bitwise identical | bit-identical |
 | scheme | single-hop upstream reach (M0.70 pocket) | median 0.37 extents | documented root cause |
 | scheme | multi-hop walk reach | median 1.00 extents | ~1 streamwise cell |
-| G4.1 | upper shock x/c | 0.599 | 0.62 ± 0.03 (ref band) |
-| G4.1 | shock monotone / expansion shock | monotone, none | required |
-| G4.1 | shock sharpness | 1 deduped station (2–3 raw cells) | 2–3 cells |
-| G4.1 | lower weak shock x/c | 0.362 | ~0.35 (reported) |
-| G4.1 | M_max | 1.363 | physical, no limited cells |
-| G4.1 | Γ closure | secant \|F\| = 9.3e-5 in 8 evals | < 2e-4 |
+| G4.1 coarse | upper shock x/c | 0.604 | 0.62 ± 0.03 (ref band) |
+| G4.1 coarse | shock monotone / expansion shock | monotone, none | required |
+| G4.1 coarse | shock sharpness | 1 deduped station (2–3 raw cells) | 2–3 cells |
+| G4.1 coarse | lower weak shock x/c | 0.358 | ~0.35 (reported) |
+| G4.1 coarse | M_max | 1.373 | physical, no limited cells |
+| G4.1 coarse | Γ closure | secant \|F\| = 1.50e-4 in 9 evals | < 2e-4 |
+| G4.1 medium | upper shock x/c | 0.633 | 0.62 ± 0.03 (ref band) |
+| G4.1 medium | cl_pressure / cl_KJ | 0.349 / 0.354 (sign-consistent) | physical, consistent |
+| G4.1 medium | M_max | 1.366 | physical, no limited cells |
+| G4.1 medium | Γ closure | secant \|F\| = 1.23e-4, 16m39s wall | < 2e-4 (was: diverged, 2h43m) |
 
 **Conclusion & analysis.** The shipped scheme is the design.md §3
 artificial density plus four evidence-forced hardenings, each of which
@@ -312,14 +319,19 @@ with Newton (P6) as the designed cure. Γ closure had to move OUTSIDE the
 density loop entirely: nested exact-Kutta runs away (Γ 0.115 → 4.99) and
 damped interleaving limit-cycles, because the transonic target map's
 slope crosses 1 where relaxed fixed-point updates provably diverge — the
-outer secant on density-converged evaluations converges in ~4–8 warm-
+outer secant on density-converged evaluations converges in ~4–9 warm-
 started evaluations. The coarse result lands where the references say it
-should: upper shock 0.599 (Euler anchor 0.60–0.63 band), weak lower
-shock 0.362 (~0.35), monotone with no expansion shock, and the
-subcritical bit-identity G4.2 guarantees P3 behavior is untouched.
+should: upper shock 0.604 (Euler anchor 0.60–0.63 band), weak lower
+shock 0.358 (~0.35), monotone with no expansion shock, and the
+subcritical bit-identity G4.2 guarantees P3 behavior is untouched. (These
+are the post-fix numbers, re-measured under the `damping_theta` default —
+see Addendum 3; they are consistent with the original 0.599/0.362 to
+within the run-to-run Γ-secant noise documented in Addendum 2.)
 
 **Addendum (2026-07-07, audit): the G4.1 MEDIUM gate FAILED on its first
-actual run — P4 is NOT closed.** The phase had been declared closed with
+actual run — P4 is NOT closed.** *[Superseded the same day by Addendum 3
+below, which lands the fix and re-closes P4; retained verbatim as the
+honest failure trail, not as current status.]* The phase had been declared closed with
 the medium result left as an unfilled placeholder; running the gate
 (`PYFP3D_TRANSONIC_GATES=1`, 2h43m wall) produced a diverged solve:
 M_max 30.1 (vs the physical 1.36 on coarse), 423 q²-limited + 271
@@ -393,6 +405,57 @@ identified P5 blocker: `WakeConstraint.update_matrix`'s per-station
 single-station 2.5D meshes but adds ~166 extra matvecs per density
 iteration on the ONERA M6 medium mesh (166 stations, M1 delivery); it
 must be batched into one `A @ G` sparse product before P5 solves start.
+
+**Addendum 3 (2026-07-07, same day as Addendum 2: fix landed, medium gate
+closed, P4 re-closed).** The recommended fix from Addendum 2 was
+implemented as-is and closed the gate on the first attempt, with none of
+the secondary mitigations (eval-path forcing, wider AMG rebuild interval,
+adaptive |F|-drift exit) needed. `solve/picard.py::solve_subsonic_lifting`
+gained `damping_theta`: D = θ·diag(A_free), rebuilt every outer iteration
+from that iteration's own (upwinded) operator, mutually exclusive with the
+retired global `pseudo_dt` (both given raises `ValueError`).
+`solve/continuation.py::TRANSONIC_DEFAULTS` now defaults to
+`damping_theta = 0.2` in place of `pseudo_dt = 2e-3`. Calibration order
+followed the Addendum 2 recommendation: G4.2 bitwise no-op re-verified
+first (both new params default `None`, so any caller that doesn't pass
+them — including the G4.2 test — is untouched), then the G4.1 coarse
+gate re-measured (shock 0.599 → 0.604, within the Γ-secant noise; the
+converged Γ/cl shifted a touch more, 0.170 → 0.182 / cl_p 0.334 → 0.357,
+since the two stabilizers reach slightly different points on the same
+bounded engineering-convergence tail — the shock position and all gated
+criteria are unaffected, and cl is reported-not-gated for G4.1), then a
+reduced-budget stability probe on the medium mesh (`max_gamma_evals=4,
+n_picard_eval=150`, 77 s wall) to catch a repeat divergence cheaply before
+committing to the full budget: it came back stable and, unexpectedly,
+needed only 1 Γ eval per supercritical level (vs 12 exhausted before) —
+suggesting the Kutta-mismatch drift Addendum 2 flagged as a likely second
+blocker was largely a symptom of the poorly-conditioned global damping,
+not an independent problem. The full medium gate then passed outright:
+`artifacts/G4.1/summary_medium.csv`, **16m39s wall** (vs the divergent
+attempt's 2h43m) — upper shock x/c 0.633 (band 0.62 ± 0.03), Kutta
+|F| = 1.23e-4 < tol 2e-4, M_max 1.366, zero limited/floored cells,
+cl_pressure/cl_KJ sign-consistent at 0.349/0.354 (the divergent run had
+−0.171/+0.212), n_picard_total 12931 (vs 19331 — fewer Γ evals needed,
+not merely faster ones: per-iteration wall time also fell from ~0.51 s to
+~0.18 s, consistent with the Addendum 2 profiling that blamed the old
+global damping's poor conditioning for elevated CG iteration counts on
+medium). The G4.3 ten-case sweep was re-run under the new default and
+stays green — all converged, zero limited cells, smooth trends — with one
+difference recorded as evidence rather than a regression: the
+M0.82/α = 1.25° corner's cl moved 0.389 → 0.458 and its Kutta |F| (1.92e-4)
+sits closest to the 2e-4 tolerance of the ten cases; G4.3 gates on
+convergence and physicality, not an exact cl, so this does not fail it,
+but a future θ-sensitivity study should know this corner is the closest
+to the boundary. The separately-identified P5 blocker was fixed in the
+same session: `constraints/wake.py::WakeConstraint.update_matrix` now
+builds one sparse indicator matrix `G` (one column per station) and
+computes all stations' `h_j` vectors as a single `T^T @ (A @ G)` product;
+verified bit-identical to the old per-station loop on the real ONERA M6
+coarse mesh (83 stations). The full default suite (136 passed + 2 skipped
++ 2 xfailed, ~5 min) and the coarse transonic smoke were both re-run
+green after both changes landed. Net effect: P4 is closed, and P5 starts
+without either the transonic stability gap or the wake per-station cost
+that this diagnosis session identified as its two open risks.
 
 ---
 

@@ -320,33 +320,33 @@ bit-identical-assembly regression as the safety net.
 adjacency, ν switch per design.md (3.2), ρ̃), Mach continuation in
 `solve/continuation.py`, shock monitors (max local M, shock x/c extraction).
 **Gates:**
-- [ ] G4.1 = V4: NACA0012 M∞ = 0.80 α = 1.25° (extruded): monotone shock over
+- [x] G4.1 = V4: NACA0012 M∞ = 0.80 α = 1.25° (extruded): monotone shock over
       2–3 cells, no expansion shock, shock Δx/c < 0.03 vs published FP results
-      — **OPEN: the medium-mesh gate run FAILED (first actually run
-      2026-07-07 15:38; it had been ticked with an unfilled placeholder —
-      audit finding)**. Reference spec note (provenance in
-      `cases/reference_data/naca0012_m080/README.md`): an open digitized
-      *FP* table for this case was not retrievable, so the reference is the
-      **Euler anchor 0.60–0.63c + documented conservative-FP aft-shift
-      band, gated as x/c = 0.62 ± 0.03**; the weak lower shock (~0.35c) is
-      reported, not gated. Coarse evidence green (0.599 / 0.362, cl 0.334,
-      M_max 1.363, monotone jump, ≤ 3 stations, no expansion shock,
-      Γ-secant |F| = 9.3e-5 < tol 2e-4, zero limited/floored cells).
-      **Medium measured (artifacts/G4.1/summary_medium.csv +
-      medium_gate_pytest.log, 2h43m wall): DIVERGED — M_max 30.1, 423
-      limited + 271 floored cells, Kutta |F| 2.5e-3 vs tol 2e-4, spurious
-      shock x/c 0.802, cl_pressure −0.171 vs cl_KJ +0.212; both
-      supercritical continuation levels exhausted all 12 Γ evals without
-      secant convergence (n_picard_total 19331 — every frozen-Γ eval burns
-      its full 800 budget by design, see G4.3 note). The coarse-calibrated
-      `TRANSONIC_DEFAULTS` (fixed Δτ = 2e-3, dm = 0.05) do NOT transfer to
-      the medium mesh; the pseudo-transient damping diag(m_lumped/Δτ)
-      scales as h³ while the operator stiffness does not, so the effective
-      damping weakens under refinement — **VERIFIED, see the 2026-07-07
-      diagnosis follow-up below**).** (`tests/test_p4_transonic.py`, `artifacts/G4.1/`;
-      the medium gate + G4.3 sweep run under `PYFP3D_TRANSONIC_GATES=1` —
-      several-minutes-to-hours of Picard, excluded from the default suite;
-      P6 owns making them fast.)
+      — **CLOSED 2026-07-07** (re-closed the same day it was found open by
+      audit: divergence → root cause verified → local-damping fix landed →
+      medium gate re-measured green; full trail in the "diagnosis
+      follow-up" and "fix landed" notes below). Reference spec note
+      (provenance in `cases/reference_data/naca0012_m080/README.md`): an
+      open digitized *FP* table for this case was not retrievable, so the
+      reference is the **Euler anchor 0.60–0.63c + documented
+      conservative-FP aft-shift band, gated as x/c = 0.62 ± 0.03**; the weak
+      lower shock (~0.35c) is reported, not gated. Coarse evidence green,
+      re-measured under the fix (`cases/demo/p4_transonic/`, `damping_theta`
+      now the default): upper/lower shock 0.604 / 0.358, cl_pressure 0.357,
+      M_max 1.373, monotone jump, ≤ 3 stations, no expansion shock,
+      Γ-secant |F| = 1.50e-4 < tol 2e-4, zero limited/floored cells.
+      **Medium measured (artifacts/G4.1/summary_medium.csv, fix landed):
+      PASS in 16m39s wall** (vs the divergent attempt's 2h43m) — upper
+      shock x/c **0.633** (in the 0.62 ± 0.03 band), lower 0.364,
+      cl_pressure 0.349 / cl_KJ 0.354 (sign-consistent, unlike the divergent
+      run's −0.171 / +0.212), M_max 1.366, Kutta |F| = 1.23e-4 < tol 2e-4,
+      zero limited/floored cells, n_picard_total 12931 (vs 19331 divergent —
+      fewer Γ evals needed, not merely faster ones: better conditioning cut
+      CG from ~22 to a few iterations/outer). (`tests/test_p4_transonic.py`,
+      `artifacts/G4.1/`; the medium gate + G4.3 sweep still run only under
+      `PYFP3D_TRANSONIC_GATES=1`, excluded from the default suite — now
+      minutes rather than hours of Picard, but P6 Newton remains the target
+      for the O(seconds) speed the roadmap ultimately wants.)
       **Scheme-hardening evidence trail** (each item forced by a measured
       failure; details in demo_report §P4): (1) multi-hop upstream walk —
       single-hop reach on prism-split meshes is only ~0.37 of the
@@ -401,17 +401,42 @@ adjacency, ν switch per design.md (3.2), ρ̃), Mach continuation in
       rebuilds AMG every 4 iterations; medium profiling shows CG at 64% of
       eval wall-time (22 CG-iterations/outer vs 3 on coarse — itself a
       symptom of the weak damping's poor conditioning), AMG rebuild at 27%
-      of coarse eval wall-time. Recommended next steps, in order: switch to
-      local θ·diag(A_free) damping (calibrate θ on coarse first — G4.2
-      bit-identity and the G4.1 coarse shock position must survive), enable
-      eval-path forcing + widen `amg_rebuild_every`, add an adaptive
-      |F|-drift exit. Separately, before P5: `constraints/wake.py::
-      WakeConstraint.update_matrix`'s per-station `h_j` loop (currently one
-      sparse matvec per station, inert at the 2.5D single-station meshes
-      but O(166) extra matvecs added to *every* density iteration on the
-      ONERA M6 medium mesh's 166 stations) must be batched into a single
-      `A @ G` sparse product. No equation-level bug was found in
+      of coarse eval wall-time. No equation-level bug was found in
       picard.py/upwind.py/wake.py during this session.
+
+      **Fix landed and verified (2026-07-07, same day as the diagnosis
+      above):** `solve/picard.py::solve_subsonic_lifting` gained a
+      `damping_theta` parameter — D = θ·diag(A_free) recomputed fresh every
+      outer iteration from that iteration's own (upwinded) operator,
+      mutually exclusive with the retired `pseudo_dt` global form (passing
+      both raises). `solve/continuation.py::TRANSONIC_DEFAULTS` now
+      defaults to `damping_theta = 0.2` instead of `pseudo_dt = 2e-3`. G4.2
+      bit-identity is untouched (both new params default `None`, no-op for
+      any caller that doesn't pass them). Calibrated on coarse first per
+      the plan above: G4.1 coarse shock position holds (0.604 vs the prior
+      0.599) and G4.2 stays bitwise. The medium gate then **passed outright
+      on the first attempt with the new default and NO other changes**
+      (no forcing, no wider `amg_rebuild_every`, no adaptive |F|-drift exit
+      needed) — see the G4.1 gate entry above for the numbers. A
+      reduced-budget stability probe run first (`max_gamma_evals=4,
+      n_picard_eval=150`, 77 s) had already shown the mismatch drift
+      predicted above did not materialize at this θ: only 1 Γ eval was
+      needed at both M0.75 and M0.80, vs 12 exhausted before. The G4.3
+      10-case sweep was re-run under the new default and stays green (all
+      converged, zero limited cells); one measured difference worth
+      recording as evidence rather than a regression: the M0.82/α=1.25°
+      corner's cl moved 0.389 → 0.458 and its Kutta |F| sits at 1.92e-4,
+      close to the 2e-4 tolerance — the sweep gates on convergence and
+      physicality, not an exact cl, so this does not fail it, but it is the
+      one corner closest to the tolerance boundary under the new damping.
+      Separately, the P5 blocker identified in this same diagnosis --
+      `constraints/wake.py::WakeConstraint.update_matrix`'s per-station
+      `h_j` loop -- is also closed: batched into a single `T^T @ (A @ G)`
+      sparse product (G = one indicator column per station) instead of one
+      sparse matvec per station, verified bit-identical to the old loop on
+      the real ONERA M6 coarse mesh (83 stations). Full default suite
+      unaffected by either change: 136 passed + 2 skipped + 2 xfailed,
+      ~5 min.
 - [x] G4.2 subcritical no-op: with M∞ = 0.5, ν ≡ 0 everywhere and results
       bit-identical to P3 — **closed 2026-07-07**: max ν = 0.0 exactly (the
       switch is `max(0, ·)` and subcritical states never enter it), and the
@@ -439,7 +464,7 @@ adjacency, ν switch per design.md (3.2), ρ̃), Mach continuation in
 **Effort:** 3–5 sessions. **Risk:** medium — expect Picard stall tuning
 (design.md §12.4 mitigation ladder: raise C → lower ω → continuation).
 
-### P5 — 3D validation: ONERA M6 (needs mesh M1)
+### P5 — 3D validation: ONERA M6 (mesh M1 ready; P4 stability + wake-batching blockers closed)
 **Gates:**
 - [ ] G5.1 = V5: M∞ = 0.84 α = 3.06°: λ-shock topology; section Cp at
       η = 0.44/0.65/0.90 within FP-literature scatter; CL reported with mesh
@@ -512,6 +537,6 @@ Eisenstat–Walker inexact-solve schedule, profiling report.
 | P2 | ✓ | 2026-07-06 | Delivered: `mesh/wake_cut.py` (per-node flood-fill side classification — no planarity assumption, works for the M1 swept wake; ⁺-side slaves appended after original nodes so the reduced dof space is exactly the original node set; stations group TE nodes by (x,y), collapsing a quasi-2D extrusion to the single scalar Γ of the M0 spec; preprocess-time topology asserts), `constraints/wake.py` (master–slave elimination via sparse T, A_red = TᵀAT assembled once, Γ enters RHS-only through precomputed per-station vectors; folding the slave rows into masters enforces weak flux continuity (4.2)), `constraints/dirichlet.py` (far-field freestream + incompressible 2D vortex correction with the branch cut ON the wake sheet, so eliminated ⁺-side far-field wake nodes are automatically consistent), `solve/picard.py::solve_laplace_lifting` (Kutta outer loop, matrix+AMG hierarchy built once, secant-accelerated), `post/surface.py` (triangle-wise wall force integration, owner-tet-oriented normals, KJ sectional cl), `post/section_cut.py` (general marching-tets z=const path + sectional wall Cp(x/c) curves), Hess–Smith panel reference `cases/reference_data/naca0012_incompressible/` (two independent lift routes agree to 0.09%, lift slope 6.91/rad vs thickness-corrected 6.90). **One spec deviation with evidence: TE nodes ARE duplicated** — the originally specified single-valued TE produces a spurious TE suction ~Γ²/h that diverges under refinement (measured −0.27 of cl 0.6 on coarse; see the re-specced topology-assert block). Gates: G2.1 8.4e-13 (wake-master rows 6.9e-16); G2.2 [φ]−Γ < 1e-13; G2.3 medium cl −0.82% vs panel, Kutta 2 updates (secant; measured map slope b≈0.93 would need O(100) plain relaxed updates); G2.4 0.01%; G2.5 re-specced criterion (b) closed (p99 ratio 2.05 = 1st order, stripe-free heatmap). Suite: 100 passed + 2 xfailed (G1.6 strict xfail unchanged), ~38 s. Artifacts: `artifacts/G2.{1,2,3,4,5}/` PNG+CSV. |
 | M1 | ✓ | 2026-07-07 | Delivered: `pyfp3d/meshgen/wing3d.py` (ONERA M6 half wing per NASA GRC foilmod — sharp zero-thickness TE, i.e. the "(rounded-off) TE" of the M1 spec; OCC **two-section ruled loft = exact straight-taper planform** so the wing TE edge is exactly the straight segment the wake sheet reuses via the same `x_te()` endpoints; spherical far field R = 15 MAC; solver axis convention chord x / lift y / span z fixed by wake_cut's `upper_hint`/station grouping — the pre-M1 prototype had span y/thickness z and was replaced; chord-plane wake sheet from TE to sphere, root-overhang + downstream-overhang trimmed by `occ.fragment`; **finding: fragment alone does NOT make the tet mesh conform to a sheet ending inside the domain — it stitches the shared TE edge and boundary trims, but `gmsh.model.mesh.embed` must follow**; geometric tag classification wall/farfield/symmetry/wake; Distance+Threshold fields wall/wake/LE+TE-edges, M0 background-field policy), `cases/meshes/onera_m6/generate_onera_m6.py` (one h_wall parameter, 2× ladder 0.030/0.015/0.0075 m → 55.5k/350.7k/2513k tets in 7/23/264 s; **runtime-driven sizing per the P4 lesson** — coarse is the P5 dev mesh, medium the gate mesh; **no .msh committed** (large; `cases/meshes/onera_m6/*.msh` gitignored, coarse+medium regenerate in ~30 s — the M1 tests skip when absent, and the hard-rule-7 sweep ingests whatever exists locally, fine alone adding ~94 s); per-level `*_stats.csv` + wake-tip wireframe + tip cut-plane PNGs committed as evidence, programmatic wake-tip-closure chain check), `mesh/wake_cut.py` M1 extensions (sheet interior **FREE edges**: tip-edge nodes single-valued ⇒ Γ(tip)=0 discretely, tip TE corner excluded from Kutta stations; topology assert #4 re-specced to `slaves == sheet nodes − free nodes` — reduces to the P2 assert on quasi-2D sheets where the free set is empty; **Kutta probe off-plane fallback** when the strict same-z pass finds no candidate — the swept unstructured TE has no same-plane wall neighbors; both paths exactly inert on all 2.5D meshes, P2/M0 batteries unchanged), `mesh/metrics.py::compute_min_dihedral_angles`. Gate: same asserts — cut_wake green coarse (83 per-node TE stations, 106 free nodes, 2 s) + medium (166/208, 12 s), G2.1-analogue freestream on the CUT coarse mesh **4.3e-14**; quality report within bounds — min dihedral 7.5°/11.0°/3.5°, max aspect 9.3/6.9/6.5 (bounds ≥ 2°, ≤ 60, enforced at generation time and in tests); family parameterized by refinement level ✓. Tests: `tests/test_m1_onera_m6.py` (13) + the rule-7 sweep now ingests the M6 family automatically. Demo: `cases/demo/m1_wing_mesh/` (13 checks PASS, ~29 s) + demo_report §M1. Known handoff to P5: Γ semantics beyond the tip need nothing (sheet ends AT the tip); free-edge Γ-taper force ~Γ_tip²/h to be measured with G5.2's Γ(η) decay. |
 | P3 | ✓ | 2026-07-07 | Delivered: **assembly tech debt retired** — `mesh/metrics.py::precompute_element_geometry` (B_e/V_e once per mesh), `mesh/coloring.py` numba-jitted greedy coloring (same visit order ⇒ identical assignment to the old pure-Python loop, which was ~seconds per call on real meshes) + `color_partition_csr`, `kernels/gradient.py` (prange velocity sweep, zero-alloc), `kernels/jacobian.py` (symbolic CSR pattern + `elem_to_csr` scatter map + colored-prange matrix kernel + `PicardOperator` per-mesh workspace), `kernels/residual.py::assemble_residual_colored`; the public `assemble_stiffness_matrix` now delegates to the fast path (P1/P2 drivers run the same code as the Picard loop) with the old serial kernels retained as the regression reference — fast-vs-reference 5.7e-16 rel, bit-deterministic across calls/threads (within a color no two elements share a node, so accumulation order is fixed by the color sequence), hot reassembly ~160× faster on the medium NACA mesh (`tests/test_p3_assembly.py`, demo part 1). **Subsonic compressible solver**: `physics/isentropic.py::density_field/mach_squared_field` (array sweeps of the §2 scalars; ρ ≡ 1.0 *bitwise* at M∞ = 0 — the G3.3 anchor), `solve/picard.py::solve_subsonic` (non-lifting density Picard) and `solve_subsonic_lifting` (nested: outer density update, inner P2 secant Kutta at frozen ρ; AMG reuse every 4 outers; opt-in forcing-term inexact solves η‖b−Ax₀‖, default off — see the G3.2 gate entry for why interleaved Γ updates and relative loose tolerances were both rejected with measurements), PG-scaled vortex far field (`constraints/dirichlet.py`, β = √(1−M∞²) stretches only the atan2 argument so the wake-jump/branch-cut structure is untouched and β = 1 reduces bit-exactly), `constraints/wake.py::WakeConstraint.update_matrix` (T topological, rebuilt never; A_red + h_j per density iteration), compressible Cp in `post/surface.py::wall_force_coefficients` + `post/section_cut.py::wall_cp_curve` (`m_inf` param, isentropic (2.5)), `solve/linear.py::build_amg_preconditioner` (seeded AMG setup — repeatable solves; see G3.3). Reference data: `cases/reference_data/naca0012_m05/` (PG + Kármán–Tsien corrected panel cl/Cp with provenance + verification trail). Gates: G3.1 **0.32%** (< 2%); G3.2 **cl −0.33%** from the PG/KT midpoint and inside the bracket, **15 iterations** (< 30), strictly monotone residual; G3.3 matrix/φ/Γ **bitwise** at M∞ = 0 + full suite green. Suite: 117 passed + 2 xfailed, ~96 s (G3.2's medium-mesh nested solve is ~45 s of it). Demo: `cases/demo/p3_subsonic/` (14 checks PASS) + docs/demo_report.md §P3. Known non-P3 fix bundled: `tests/test_p2_wake_cut.py` topology sweep now skips surface-only mesh assets (the new `cessna_surface.msh` broke `read_mesh` in the hard-rule-7 sweep — pre-existing on main). |
-| P4 | ☐ (delivered, NOT closed: G4.2 ✓, G4.3 ✓ (coarse sweep), G4.1 coarse evidence ✓ but **medium gate FAILED 2026-07-07** — phase open per hard rule 2) | | Delivery record lives in the G4.1–G4.3 gate entries and demo_report §P4 (coarse evidence + scheme-hardening trail all reproduced, `cases/demo/p4_transonic/` 10 PASS). Audit trail: the phase had been declared closed on 2026-07-07 with G4.1 ticked and `MEDIUM_G41_PLACEHOLDER` left unfilled — the medium gate had never been run. First actual run (same day, 2h43m wall): **diverged** — M_max 30.1, 423 limited + 271 floored cells, Kutta \|F\| 2.5e-3, spurious shock 0.802, cl_p/cl_KJ sign-inconsistent; both supercritical levels exhausted 12 Γ evals × full 800-iteration budgets (19331 total). Root-cause **VERIFIED 2026-07-07** (diagnosis follow-up, see the G4.1 gate entry above): the damping ratio weakens ~4× coarse→medium at fixed Δτ, AND the required damping also grows with shock strength — the "finer dm" route is ruled out (still diverges at M0.80 even with a finer continuation step). Recommended fix: **local** pseudo-time damping θ·diag(A_free) (θ≈0.2), measured stable at M0.80 from a converged M0.75 state, mesh/shock-independent by construction (unlike the shipped mass-lumped global diag(m/Δτ)); two other candidates (global Δτ=2e-4, upwind_c→2.0) also measured stable but less preferred. Open item to re-close: land the local-damping fix (+ eval-path forcing + adaptive Γ-eval exit, since |F| still drifts under a fixed iteration budget even once stable), re-validate G4.2 bit-identity and the G4.1 coarse shock position, then rerun `PYFP3D_TRANSONIC_GATES=1 tests/test_p4_transonic.py::test_g41_transonic_medium_gate`. Also this audit: `TRANSONIC_DEFAULTS` budgets aligned to the values every caller actually uses (n_picard_eval 600→800, max_gamma_evals 6→12, behavior-neutral), suite/test-name/doc drift fixed (CLAUDE.md timing, PROJECT_STRUCTURE test list). |
-| P5 | ☐ | | |
+| P4 | ✓ | 2026-07-07 | **Closed same day it was found open by audit** (opened AM, re-closed PM): the medium G4.1 gate had diverged on its first actual run (M_max 30.1, Kutta \|F\| 2.5e-3, spurious shock 0.802, cl_p/cl_KJ sign-inconsistent, 19331 total Picard iterations across 12 exhausted Γ evals × 2 levels). Root-cause verified same day (diagnosis follow-up in the G4.1 gate entry): the shipped global mass-lumped pseudo-time damping diag(m_lumped/Δτ) weakens ~4× coarse→medium at fixed Δτ, and the damping needed also grows with shock strength (finer Mach-continuation steps alone ruled out). Fix landed same day: `solve/picard.py::solve_subsonic_lifting`'s new `damping_theta` param (D = θ·diag(A_free), θ=0.2, recomputed every outer iteration from that iteration's own operator — mesh/shock-independent by construction), wired as `solve/continuation.py::TRANSONIC_DEFAULTS`'s new default, mutually exclusive with the retired `pseudo_dt`. Medium gate now **PASSES in 16m39s** (vs 2h43m divergent): upper shock x/c 0.633 (band 0.62±0.03), Kutta \|F\| 1.23e-4 < 2e-4 tol, M_max 1.366, zero limited/floored cells, cl_pressure/cl_KJ sign-consistent (0.349/0.354), n_picard_total 12931. G4.2 bit-identity and the G4.1 coarse shock position (0.604 vs prior 0.599) both re-verified first, per plan; the G4.3 10-case sweep re-run and stays green (one recorded, non-gating difference: the M0.82/α=1.25° corner's cl moved 0.389→0.458 under the new damping). Full default suite unaffected: 136 passed + 2 skipped + 2 xfailed, ~5 min. Same session, the P5 blocker flagged during the diagnosis is also closed: `constraints/wake.py::WakeConstraint.update_matrix`'s per-station `h_j` loop is now one batched `T^T @ (A @ G)` sparse product instead of one matvec per station, verified bit-identical on the real ONERA M6 coarse mesh (83 stations) — removes ~166 extra matvecs/density-iteration on the M6 medium mesh. Transonic convergence semantics unchanged (engineering-converged, not 1e-10; P6 Newton remains the designed cure for the residual tail). Demo `cases/demo/p4_transonic/` re-run, 10 PASS with the new default; demo_report.md §P4 updated with two new addenda. |
+| P5 | ☐ | | Both blockers identified during the P4 G4.1 diagnosis are closed before P5 starts: the transonic stability gap (local `damping_theta` fix, see the P4 row) and the wake per-station cost (`WakeConstraint.update_matrix` batching, see the P4 row). M1 mesh family is ready and cut_wake-ingested. |
 | P6 | ☐ | | |

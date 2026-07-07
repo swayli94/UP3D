@@ -14,14 +14,23 @@ roadmap G4.1 entry for the measurement trail):
    transonic conditions (nested: Gamma runaway 0.115 -> 4.99; damped
    interleaved: limit cycle -- and any relaxed fixed-point update
    provably diverges once |d target/d Gamma| >= 1). The density
-   iteration at FIXED Gamma plus the pseudo-transient term
-   A + diag(m_lumped/dtau) is stable and physical (measured M_max 1.36
-   at M0.80 where the undamped iteration blows through the M_cap
-   limiter); the residual settles to a slowly-decaying, bounded
-   shock-cell tail (see solve_subsonic_lifting docstring), with cl
-   drifting < 1e-3 over the last hundreds of iterations -- the
-   engineering-converged regime the P4 gates measure in. Newton (P6)
-   is the designed cure for the tail.
+   iteration at FIXED Gamma plus a pseudo-transient term A + D is
+   stable and physical (measured M_max 1.36 at M0.80 where the
+   undamped iteration blows through the M_cap limiter); the residual
+   settles to a slowly-decaying, bounded shock-cell tail (see
+   solve_subsonic_lifting docstring), with cl drifting < 1e-3 over the
+   last hundreds of iterations -- the engineering-converged regime the
+   P4 gates measure in. Newton (P6) is the designed cure for the tail.
+   D defaults to the LOCAL `damping_theta * diag(A_free)` form
+   (solve/picard.py docstring): the original GLOBAL
+   diag(m_lumped/dtau) form (`pseudo_dt`) was calibrated on the coarse
+   mesh but its damping ratio vs the operator weakens ~4x under
+   refinement to medium and the medium G4.1 gate DIVERGED on it
+   (roadmap G4.1, 2026-07-07) -- the local form is mesh- and
+   shock-strength-independent by construction and is the one measured
+   stable stepping M0.75 -> M0.80 (theta = 0.2). The two are mutually
+   exclusive (solve_subsonic_lifting raises if both given); pass
+   `pseudo_dt` explicitly to fall back to the retired global form.
 
 3. GAMMA AS AN OUTER SCALAR ROOT-FIND (per station): impose Kutta
    OUTSIDE the density iteration -- secant on
@@ -47,7 +56,7 @@ import numpy as np
 TRANSONIC_DEFAULTS = dict(
     upwind_c=1.5,
     m_crit=0.95,
-    pseudo_dt=2e-3,
+    damping_theta=0.2,
     n_picard_seed=400,
     n_picard_eval=800,
     max_gamma_evals=12,
@@ -75,7 +84,8 @@ def solve_transonic_lifting(
     dm: float = 0.05,
     upwind_c: float = TRANSONIC_DEFAULTS["upwind_c"],
     m_crit: float = TRANSONIC_DEFAULTS["m_crit"],
-    pseudo_dt: float = TRANSONIC_DEFAULTS["pseudo_dt"],
+    damping_theta: Optional[float] = TRANSONIC_DEFAULTS["damping_theta"],
+    pseudo_dt: Optional[float] = None,
     tol_gamma: float = TRANSONIC_DEFAULTS["tol_gamma"],
     n_picard_seed: int = TRANSONIC_DEFAULTS["n_picard_seed"],
     n_picard_eval: int = TRANSONIC_DEFAULTS["n_picard_eval"],
@@ -88,6 +98,13 @@ def solve_transonic_lifting(
     level seeds (phi, Gamma) with the P3 nested solve, every later level
     closes the Kutta condition by a per-station secant around
     frozen-Gamma pseudo-time density solves (module docstring).
+
+    `damping_theta`/`pseudo_dt` select the pseudo-transient stabilizer
+    for every supercritical density solve (see solve_subsonic_lifting
+    docstring for the two forms); mutually exclusive (passing both
+    raises), `damping_theta` is the default (local, mesh/shock-
+    independent) -- fall back to the retired global mass-lumped form
+    with `damping_theta=None, pseudo_dt=2e-3` (its coarse calibration).
 
     Returns:
         dict: the final level's solve_subsonic_lifting result, plus
@@ -120,7 +137,8 @@ def solve_transonic_lifting(
         return solve_subsonic_lifting(
             mesh_cut, wc, m_inf=m, alpha_deg=alpha_deg, u_inf=u_inf,
             omega=1.0, upwind_c=upwind_c, m_crit=m_crit,
-            pseudo_dt=pseudo_dt, pseudo_dt_max_ratio=1.0,
+            damping_theta=damping_theta, pseudo_dt=pseudo_dt,
+            pseudo_dt_max_ratio=1.0,
             tol_rho=1e-8, n_picard_max=n_picard_eval, forcing=0.0,
             phi_init=phi_seed, gamma_fixed=g,
         )

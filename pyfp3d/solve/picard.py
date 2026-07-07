@@ -392,6 +392,7 @@ def solve_subsonic_lifting(
     pseudo_dt: Optional[float] = None,
     pseudo_dt_growth: float = 1.1,
     pseudo_dt_max_ratio: float = 100.0,
+    damping_theta: Optional[float] = None,
     tol_residual: Optional[float] = None,
 ) -> Dict[str, object]:
     """
@@ -454,6 +455,24 @@ def solve_subsonic_lifting(
     ladder (design.md Sec 12.4): raise upwind_c -> lower omega (and
     omega_gamma) -> Mach continuation.
 
+    Pseudo-transient stabilization (design.md Sec 8 acceleration 4): two
+    mutually exclusive forms, both an implicit A' = A + D, b' = b + D phi_k
+    pseudo-time term -- consistent at steady state because the added term
+    is D(phi_k - phi_new), which vanishes once phi stops changing, not
+    because D itself is required to vanish. `pseudo_dt` is the
+    ORIGINAL global mass-lumped form D = diag(m_lumped/dtau) -- stable at
+    the coarse mesh G4.1 calibration but its damping ratio vs the operator
+    scales as h^3 vs h^2, so it weakens under refinement (measured ~4x
+    coarse->medium at fixed dtau) and does not transfer to the medium
+    gate (roadmap G4.1 diagnosis, 2026-07-07). `damping_theta` is the
+    RECOMMENDED replacement, D = theta * diag(A_free) recomputed from
+    THAT outer iteration's own (upwinded) operator -- mesh- and
+    shock-strength-independent by construction, since it scales with the
+    same operator stiffness the Picard update is solving against rather
+    than a fixed global time step. Measured stable at theta = 0.2
+    stepping M0.75 -> M0.80 from a converged state (500 iterations,
+    zero limited/floored cells). Passing both raises ValueError.
+
     Converged when the density lag ||rho_tilde(phi_new) -
     rho_tilde_matrix||_inf < tol_rho AND the inner Kutta loop met
     tol_gamma.
@@ -480,6 +499,11 @@ def solve_subsonic_lifting(
 
     if not 0.0 <= m_inf < 1.0:
         raise ValueError(f"solve_subsonic_lifting needs 0 <= M_inf < 1, got {m_inf}")
+    if pseudo_dt is not None and damping_theta is not None:
+        raise ValueError(
+            "pseudo_dt (global mass-lumped damping) and damping_theta (local "
+            "diag(A_free) damping) are mutually exclusive stabilizers -- pick one"
+        )
     beta = float(np.sqrt(1.0 - m_inf**2))
 
     op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
@@ -503,10 +527,17 @@ def solve_subsonic_lifting(
 
     # Pseudo-transient term (design.md Sec 8 acceleration 4, pulled into
     # the P4 Picard loop as the transonic stabilizer of last resort):
-    # A' = A + diag(m_lumped/dtau), b' = b + diag(...) phi_k -- an implicit
-    # pseudo-time step that bounds the per-iteration update and breaks the
-    # shock-position limit cycle; consistent at steady state (the added
-    # term vanishes when phi stops changing). None = off (P3 bit-path).
+    # A' = A + D, b' = b + D phi_k -- an implicit pseudo-time step that
+    # bounds the per-iteration update and breaks the shock-position limit
+    # cycle; consistent at steady state (the added term vanishes when phi
+    # stops changing). D is GLOBAL mass-lumped diag(m_lumped/dtau) under
+    # `pseudo_dt` (precomputed once here, SER-ramped below -- roadmap
+    # G4.1: its damping ratio scales as h^3 vs the operator's h^2, so it
+    # weakens under refinement and does not transfer coarse->medium), or
+    # LOCAL theta*diag(A_free) under `damping_theta` (recomputed fresh
+    # every outer iteration inside the loop below, from that outer's own
+    # operator -- mesh/shock-independent by construction). Both None = off
+    # (P3 bit-path).
     d_tau_free = None
     m_red_free = None
     dt_cur = pseudo_dt
@@ -591,6 +622,12 @@ def solve_subsonic_lifting(
         A_csr = con.A_reduced
         A_free = A_csr[free][:, free].tocsr()
         A_coupling = A_csr[free][:, dir_red].tocsr()
+        if damping_theta is not None:
+            # LOCAL form: rebuilt every outer from THIS outer's own
+            # (upwinded) operator diagonal, so the damping tracks local
+            # stiffness -- including shock strength -- instead of a fixed
+            # global time step (roadmap G4.1 diagnosis follow-up).
+            d_tau_free = damping_theta * A_free.diagonal()
         if d_tau_free is not None:
             import scipy.sparse as _sp
             A_free = (A_free + _sp.diags(d_tau_free)).tocsr()

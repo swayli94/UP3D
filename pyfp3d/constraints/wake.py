@@ -60,17 +60,25 @@ class WakeConstraint:
         """Recompute A_reduced = T^T A T and the per-station RHS vectors
         h_j = T^T A g_j for a NEW A on the same cut mesh. T is purely
         topological (mesh-only), so the P3 Picard loop calls this once per
-        density update instead of rebuilding the whole constraint."""
+        density update instead of rebuilding the whole constraint.
+
+        All stations are batched into one sparse product T^T A G, with
+        G's columns the per-station indicator vectors g_j -- a single
+        `A @ G` sparse-sparse matmul instead of one sparse matvec per
+        station. Inert cost-wise on single-station 2.5D meshes; on the
+        ONERA M6 family (166 stations, M1 delivery) this replaces 166
+        matvecs per density iteration with one matmul."""
         self.A_reduced = (self.T.T @ (A @ self.T)).tocsr()
 
         n_cut = self.T.shape[0]
         wc = self.wc
         A_csr = A.tocsr()
-        self._h = np.empty((wc.n_stations, self.n_reduced), dtype=np.float64)
-        for j in range(wc.n_stations):
-            g_j = np.zeros(n_cut, dtype=np.float64)
-            g_j[wc.slave_nodes[wc.node_station == j]] = 1.0
-            self._h[j] = self.T.T @ (A_csr @ g_j)
+        G = sp.coo_matrix(
+            (np.ones(len(wc.slave_nodes), dtype=np.float64),
+             (wc.slave_nodes, wc.node_station)),
+            shape=(n_cut, wc.n_stations),
+        ).tocsr()
+        self._h = (self.T.T @ (A_csr @ G)).T.toarray()
 
     def reduced_rhs(self, b: np.ndarray, gamma: np.ndarray) -> np.ndarray:
         """T^T b - sum_j Gamma_j h_j  (Gamma is RHS-only by construction)."""

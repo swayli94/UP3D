@@ -3,9 +3,9 @@ G4.2,nu_max at M=0.5,0.0,== 0.0,PASS,
 G4.2,phi/Gamma vs P3 path,True,bitwise identical,PASS,
 P4-scheme,single-hop median reach,0.37 extents,documented deficiency (< 0.5),PASS,
 P4-scheme,multi-hop median reach,1.00 extents,>= 0.8 (design intent ~1 cell),PASS,
-G4.1,converged (physical + Kutta),True,Gamma secant |F| < 2e-4; no limited cells,PASS,239 s coarse
-G4.1,upper shock x/c,0.599,0.62 +/- 0.03 (ref band),PASS,
+G4.1,converged (physical + Kutta),True,Gamma secant |F| < 2e-4; no limited cells,PASS,174 s coarse
+G4.1,upper shock x/c,0.604,0.62 +/- 0.03 (ref band),PASS,
 G4.1,monotone shock; no expansion shock,monotone=True, exp=False,monotone and no expansion shock,PASS,
 G4.1,shock sharpness,1 station(s),<= 3 (2-3 cells),PASS,
-G4.1,lower weak shock x/c,0.362,~0.35 (reported; not gated),PASS,
-G4.1,M_max,1.363,physical (~1.3-1.5); below limiter cap,PASS,
+G4.1,lower weak shock x/c,0.358,~0.35 (reported; not gated),PASS,
+G4.1,M_max,1.373,physical (~1.3-1.5); below limiter cap,PASS,
