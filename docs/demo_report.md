@@ -338,6 +338,62 @@ under refinement (hypothesis, not yet verified). Candidate routes:
 mesh-scaled Δτ, finer Mach continuation steps, or P6 Newton. The gate is
 re-opened in roadmap.md; the coarse evidence above and G4.2/G4.3 stand.
 
+**Addendum 2 (2026-07-07, diagnosis follow-up — informal ad-hoc scripts,
+not a committed gate artifact): root cause verified, one route ruled
+out, three working fixes measured.** The pseudo-transient damping ratio
+(m_lumped/Δτ)/diag(K) at the shipped Δτ = 2e-3 was measured directly
+rather than only inferred from scaling arguments: wall-node median 0.035
+on coarse falls to 0.0092 on medium (~4× weaker) — confirming the
+addendum-1 hypothesis. A standalone frozen-Γ density driver, built to
+isolate the density solve from the Γ secant entirely, reproduces the
+M0.75 blow-up in 50 iterations (M_max → 47), so the divergence lives in
+the pseudo-time-stabilized density iteration itself, not in the outer
+Kutta root-find. Rescaling Δτ by h² (5e-4 on medium) restores M0.75
+stability (M_max 1.22, zero limited/floored cells) — **but the same
+state still diverges stepping to M0.80**: the damping needed also grows
+with shock strength, so no single Δτ-vs-mesh-size rescaling suffices on
+its own. A finer Mach-continuation sub-step (intermediate M0.775, still
+at Δτ = 5e-4) **also diverges at M0.80 — the "finer dm" candidate route
+is ruled out**; this is not a per-step transient-overshoot problem.
+Three candidates were measured to stabilize the M0.80 step from a
+converged M0.75 state (500 iterations each, zero limited/floored cells
+throughout): global Δτ = 2e-4 (M_max 1.37); **local damping
+θ·diag(A_free)** at θ = 0.2 (M_max 1.37, the recommended fix — mesh- and
+shock-strength-independent by construction, unlike the mass-lumped
+global form that caused the original failure); upwind_c raised 1.5→2.0
+at Δτ = 5e-4 (M_max 1.34, more dissipative, would need a shock-position
+re-validation against G4.3). None of the three alone closes the gate as
+specced: Kutta mismatch |F| still drifts to 4e-4–9e-4 under a fixed
+500–800-iteration budget, mirroring a drift already visible on
+coarse — |F| rises monotonically from 2.9e-4 at iteration 100 to 8.9e-4
+at iteration 800 of a *single* eval, i.e. the eval's own Kutta target
+moves inside the fixed budget rather than converging to it and
+stalling. This also explains why coarse itself is slower than the
+design.md §8 O(100–300)-iteration expectation: the eval path solves
+every inner CG to rtol = 1e-10 (`forcing = 0`, bypassing the
+P3-validated η ≈ 0.05 forcing-term acceleration already shipped
+elsewhere) and rebuilds the AMG hierarchy every 4 iterations; medium
+profiling attributes 64% of eval wall-time to CG (22 CG-iterations per
+outer step vs 3 on coarse — itself a symptom of the weak damping's poor
+conditioning) and 27% of coarse eval wall-time to AMG rebuilds. No
+equation-level bug was found in `picard.py`/`upwind.py`/`wake.py` during
+this session; one piece of negative evidence supports that: an
+independent from-scratch reimplementation of the frozen-Γ inner loop
+diverged immediately until it included the same per-iteration
+`h_j = TᵀA(ρ̃)g_j` recompute that `WakeConstraint.update_matrix` already
+performs, confirming that recompute is load-bearing rather than
+removable overhead. Recommended before the next medium-gate attempt:
+switch to local θ·diag(A_free) damping (validate θ on coarse first —
+G4.2 bit-identity and the G4.1 coarse shock position must survive),
+enable eval-path forcing plus a wider AMG rebuild interval, and add an
+adaptive per-eval exit on |F| drift (or re-match tol_gamma to the
+measured drift floor) instead of the fixed-iteration budget. Separately
+identified P5 blocker: `WakeConstraint.update_matrix`'s per-station
+`h_j` loop is one sparse matvec per wake station — inert on the
+single-station 2.5D meshes but adds ~166 extra matvecs per density
+iteration on the ONERA M6 medium mesh (166 stations, M1 delivery); it
+must be batched into one `A @ G` sparse product before P5 solves start.
+
 ---
 
 ## M0 — quasi-2D meshing pipeline (closed; acceptance link = G2.5)
