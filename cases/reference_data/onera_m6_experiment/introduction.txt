@@ -1,0 +1,30 @@
+
+https://www.grc.nasa.gov/www/wind/valid/m6wing/m6wing.html
+
+
+Table 1. ONERA M6 wing geometry.
+--------------------------------------
+Root Chord, c0              0.8059 meters
+Span, b						1.1963 meters
+Mean Aerodynamic Chord, c	0.64607 meters
+Aspect Ratio				3.8
+Taper Ratio					0.562
+Leading-edge Sweep			30.0 degrees
+1/4 Chord Sweep				26.7 degrees
+Trailing-edge Sweep			15.8 degrees
+
+without twist
+one baseline section airfoil
+
+
+Table 2. Freestream conditions.
+--------------------------------------
+Mach	Reynolds Number		Pressure (psia)		Temperature (R)		Angle-of-Attack (deg)	Angle-of-Sideslip (deg)
+0.8395	11.72E+06			45.82899	       	460.0	      		3.06					0.0
+
+
+References
+1. Schmitt, V. and F. Charpin, "Pressure Distributions on the ONERA-M6-Wing at Transonic Mach Numbers," Experimental Data Base for Computer Program Assessment. Report of the Fluid Dynamics Panel Working Group 04, AGARD AR 138, May 1979.
+2. Mani, M., J.A. Ladd, A.B. Cain, and R.H. Bush, "An Assessment of One- and Two-Equation Turbulence Models for Internal and External Flows", AIAA 97-2010, June 1997.
+
+

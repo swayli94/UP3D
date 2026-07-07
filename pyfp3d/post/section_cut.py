@@ -148,22 +148,20 @@ def _section_cut_marching(mesh, point_fields: Dict[str, np.ndarray],
                        fields=fields, z=z)
 
 
-def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
-                  upper_hint=(0.0, 1.0, 0.0), wall_tag: str = "wall",
-                  chord: float = 1.0, x_le: float = 0.0,
-                  m_inf: float = 0.0) -> Dict[str, np.ndarray]:
-    """Sectional wall Cp(x/c) at z = const, split into upper/lower curves.
+def _wall_section_points(mesh, phi, z: float, u_inf: float,
+                         upper_hint, wall_tag: str, m_inf: float):
+    """Triangle-wise plane cut of the wall at z = const (design.md Sec 9).
 
-    Stays triangle-wise: each wall triangle crossed by the plane
-    contributes one point at its intersection-segment midpoint, carrying
-    the triangle's own constant Cp (from the in-plane tangential gradient,
-    which IS the wall velocity under the natural BC). No nodal averaging,
-    so the sharp-TE crease needs no special-casing. Sides split by
-    `upper_hint` (default +y); points sorted by x/c. m_inf > 0 selects the
-    exact isentropic Cp (2.5) instead of the incompressible one (P3).
+    Each wall triangle crossed by the plane contributes one point at its
+    intersection-segment midpoint, carrying the triangle's own constant Cp
+    (the in-plane tangential gradient IS the wall velocity under the natural
+    BC). No nodal averaging, so the sharp-TE crease needs no special-casing.
+    A vertex exactly on the plane is nudged to the +side so every crossed
+    triangle yields exactly two crossing points. Fully general in z: no wall
+    node need lie on the plane.
 
-    Returns:
-        dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
+    Returns absolute-x midpoints (no chord normalization), the per-point Cp,
+    and a boolean upper-side mask (dot(mid, upper_hint) > 0).
     """
     from pyfp3d.physics.isentropic import (
         pressure_coefficient,
@@ -195,21 +193,99 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
         if len(seg) != 2:
             continue
         mid = 0.5 * (seg[0] + seg[1])
-        xs.append((mid[0] - x_le) / chord)
+        xs.append(mid[0])
         if m_inf > 0.0:
             cps.append(pressure_coefficient(float(q2[k]), m_inf))
         else:
             cps.append(pressure_coefficient_incompressible(float(q2[k])))
         sides.append(float(np.dot(mid, hint)) > 0.0)
 
-    xs = np.asarray(xs)
-    cps = np.asarray(cps)
-    sides = np.asarray(sides, dtype=bool)
+    return (np.asarray(xs), np.asarray(cps),
+            np.asarray(sides, dtype=bool))
+
+
+def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
+                  upper_hint=(0.0, 1.0, 0.0), wall_tag: str = "wall",
+                  chord: float = 1.0, x_le: float = 0.0,
+                  m_inf: float = 0.0) -> Dict[str, np.ndarray]:
+    """Sectional wall Cp(x/c) at z = const, split into upper/lower curves.
+
+    Triangle-wise plane cut (see `_wall_section_points`): fully general in z,
+    no nodal averaging. Sides split by `upper_hint` (default +y); points
+    sorted by x/c. m_inf > 0 selects the exact isentropic Cp (2.5) instead of
+    the incompressible one (P3). `chord`/`x_le` are caller-supplied; for a 3D
+    swept wing where they vary with span use `section_cp_curve`, which derives
+    them from the cut itself.
+
+    Returns:
+        dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
+    """
+    xs, cps, sides = _wall_section_points(
+        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf)
+    xs = (xs - x_le) / chord
     iu = np.argsort(xs[sides])
     il = np.argsort(xs[~sides])
     return {
         "x_upper": xs[sides][iu], "cp_upper": cps[sides][iu],
         "x_lower": xs[~sides][il], "cp_lower": cps[~sides][il],
+    }
+
+
+def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
+                     z: Optional[float] = None, b_semi: Optional[float] = None,
+                     u_inf: float = 1.0, m_inf: float = 0.0,
+                     wall_tag: str = "wall", upper_hint=(0.0, 1.0, 0.0),
+                     min_points_per_side: int = 5) -> Dict[str, np.ndarray]:
+    """Sectional wall Cp(x/c) at a spanwise station of a 3D wing (roadmap P5).
+
+    Thin wrapper over the general `wall_cp_curve` cut that (a) resolves the
+    cut plane from a normalized span fraction `eta` (z = eta * b_semi) or an
+    absolute `z`, and (b) auto-derives the local chord and leading-edge x from
+    the cut loop's own x-extent -- the right normalizer for plotting the
+    mesh's Cp against literature x/c on a swept, tapered wing without wiring in
+    the analytic planform. Output keys match `wall_cp_curve` and feed
+    `shock_report()` directly.
+
+    Args:
+        eta: span fraction in [0, 1) (exactly one of eta/z required).
+        z: absolute spanwise coordinate (alternative to eta).
+        b_semi: semi-span; required when eta is given.
+        min_points_per_side: guard -- raise if either surface has fewer
+            crossing points (plane missed the wing or hit the flat tip cap).
+
+    Returns:
+        dict: x_upper, cp_upper, x_lower, cp_lower, and diagnostics
+            chord, x_le, z, eta.
+
+    Raises:
+        ValueError: neither/both of eta/z given, eta without b_semi, or the
+            cut is too sparse on a side.
+    """
+    if (eta is None) == (z is None):
+        raise ValueError("pass exactly one of eta or z")
+    if eta is not None:
+        if b_semi is None:
+            raise ValueError("b_semi is required when eta is given")
+        z = float(eta) * float(b_semi)
+
+    xs, cps, sides = _wall_section_points(
+        mesh, phi, float(z), u_inf, upper_hint, wall_tag, m_inf)
+    n_up, n_lo = int(sides.sum()), int((~sides).sum())
+    if n_up < min_points_per_side or n_lo < min_points_per_side:
+        raise ValueError(
+            f"section at z={z:.4f} too sparse (upper={n_up}, lower={n_lo}); "
+            "the plane likely missed the wing or hit the flat tip cap")
+
+    x_le = float(xs.min())
+    chord = float(xs.max() - xs.min())
+    xn = (xs - x_le) / chord
+    iu = np.argsort(xn[sides])
+    il = np.argsort(xn[~sides])
+    return {
+        "x_upper": xn[sides][iu], "cp_upper": cps[sides][iu],
+        "x_lower": xn[~sides][il], "cp_lower": cps[~sides][il],
+        "chord": chord, "x_le": x_le, "z": float(z),
+        "eta": (float(z) / float(b_semi)) if b_semi else None,
     }
 
 

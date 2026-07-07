@@ -694,6 +694,84 @@ constraint): coarse is the P5 development mesh, medium the gate mesh.
 
 ---
 
+## P5 — 3D validation: ONERA M6 (in progress 2026-07-08 — coarse validated; medium gate OPEN)
+
+**Purpose.** First 3D transonic validation on the ONERA M6 half wing
+(M∞ = 0.84, α = 3.06°). Show that the swept-wake / symmetry / far-field
+pipeline **computes and the tip does not diverge**, exercise the new 3D
+post-processing (sectional Cp at η = 0.44/0.65/0.90 — plus an inboard η = 0.20
+panel for context — spanwise Γ(η), the 3D
+Kutta–Joukowski consistency check, planform Cp map), and compare against the
+user-committed **viscous** AGARD experiment as a qualitative overlay. This
+section records the **coarse-mesh** evidence (all self-checks green) and the
+**medium-mesh finding that keeps the gate open**.
+
+**Case setup.** `cases/meshes/onera_m6/{coarse,medium}.msh`. New code:
+`post/surface.py::planform_area` + `cl_kj_3d`, `post/section_cut.py::
+section_cp_curve` (arbitrary-η wall-plane cut; `wall_cp_curve` refactored
+bit-identical). Enabling fix: `solve/continuation.py` forwards `rtol`; the
+inner CG was over-solved to 1e-10 vs the outer tol_rho≈1e-6 need, so
+**`rtol=1e-7` is ~5.5× faster with M_max identical to 5 digits** (default
+1e-10 keeps the P4 path bit-identical). Bounded recipe `seed40 / eval300 /
+gamma10 / rtol1e-7`; all runs cap `NUMBA_NUM_THREADS=16`. Reference:
+`reference_data/onera_m6_experiment/` (AGARD AR-138 Test 2308, viscous —
+qualitative overlay, **not** a point-wise gate for the inviscid FP solver).
+
+**Key figures (coarse, 55.5k tets).**
+
+![sectional Cp vs AGARD experiment](../cases/demo/p5_onera_m6/results/g51_sections_coarse.png)
+![spanwise circulation and loading](../cases/demo/p5_onera_m6/results/g52_spanwise_coarse.png)
+![upper-surface Cp planform map](../cases/demo/p5_onera_m6/results/g51_surface_cp_coarse.png)
+
+**Measured results.**
+
+| Check | Coarse (55.5k) | Medium (350.7k) | Criterion |
+|---|---|---|---|
+| physical + tip stable (M_max, floored/limited) | **1.470, 0/0 PASS** | **5.204, 8/4 FAIL** | M_max < cap, zero floored/limited |
+| tip-band max Mach (inboard/outboard/**tip**) | 1.396 / 1.470 / **1.321** | — | tip not the hottest ⇒ no tip divergence |
+| upper shock x/c η=0.44/0.65/0.90 | 0.595 / 0.569 / 0.424 | 0.594 / 0.526 / 0.360 | present, monotone, forward-migrating |
+| Γ root → tip | 0.100 → 0.021 | 0.100 → 0.0155 | smooth band-mean decay, Γ_tip → 0 |
+| V6 consistency \|CL_p−CL_KJ\|/CL_KJ | 2.43% | 1.73% | < 1% (medium gate) |
+| CL (pressure) | 0.248 | 0.251 | reported |
+| demo self-checks | **8/8 PASS** | 2 FAIL (physical, V6) | — |
+
+**Conclusion & analysis.** The user's first question is answered
+affirmatively on the coarse mesh: the 3D wing **computes and the tip does
+not diverge** — the tip band carries the *lowest* max Mach of the three
+spanwise bands (1.321), Γ decays smoothly to a small tip value, and there
+are zero floored/limited cells. The λ-shock signature is present: an
+upper-surface shock at every station migrating forward toward the tip.
+Against the viscous AGARD data the inviscid FP tracks the lower surface
+well and places the upper shock aft (the documented FP-vs-experiment
+tendency); the ≈2-cell P4 surface-Cp sawtooth is visible in the upper curve
+(the P6 target). Two quantities sit at the coarse discretisation floor,
+not a convergence failure: V6 consistency 2.4% (did not improve with more Γ
+evals) and ~8% per-station Kutta noise on the otherwise-smooth Γ(η).
+
+**Why the medium gate is still OPEN.** The same bounded recipe on the
+350.7k mesh returns an **unphysical** state: M_max 5.204 with 8 floored / 4
+limited cells and V6 1.73%. A cached-solution diagnostic localises this
+precisely — only **26 of 350 718 cells (0.007%) exceed M = 2, and they lie
+in the wake-sheet / far-field region downstream near the tip** (x ≈ 10,
+adjacent to the R = 15 MAC far-field sphere, z/b ≳ 1.0) plus a few
+outboard-TE cells; the wing surface itself is clean and its section-Cp
+shocks are physical. This matches the design.md §5 concern that the 3D
+far-field uses a **2D vortex correction** near the swept tip/wake, rather
+than a global wing-flow under-convergence (the M0.75 continuation overshoot
+that healed to M_max 2.0 on coarse does not heal on the finer wake/far-field
+cells). **Open item:** investigate the far-field / wake treatment near the
+tip before re-running the medium gate — a heavier iteration budget alone may
+not heal a boundary artifact. G5.1/G5.2 remain unchecked.
+
+The medium section Cp confirms the split — the **wing surface is physical and
+in fact sharper than coarse** (shocks resolve to ~1 cell, LE suction closer to
+the experimental peak); the failure is entirely in the off-body wake/far-field
+cells, which do not enter these wall sections.
+
+![medium sectional Cp — wing surface physical despite the open gate](../cases/demo/p5_onera_m6/results/g51_sections_medium.png)
+
+---
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from

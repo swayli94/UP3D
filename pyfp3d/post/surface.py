@@ -220,8 +220,92 @@ def sectional_cl_from_gamma(
 ) -> np.ndarray:
     """Kutta-Joukowski sectional lift, cl_j = 2 Gamma_j / (U_inf c)
     (design.md Sec 9) -- the cross-check against pressure integration
-    that gate G2.4 holds to < 1%."""
+    that gate G2.4 holds to < 1%. `chord` may be a scalar or a per-station
+    array (broadcasts), so cl(eta) follows the taper on a 3D wing."""
     return 2.0 * np.atleast_1d(np.asarray(gamma, dtype=np.float64)) / (u_inf * chord)
+
+
+def planform_area(
+    nodes: np.ndarray,
+    wall_faces: np.ndarray,
+    thickness_axis: int = 1,
+) -> float:
+    """Half-wing reference area: the wall projected onto the chord-span plane.
+
+    Both the upper and lower surfaces project onto the same planform, so the
+    projected areas add; summing the absolute thickness-axis (lift-axis)
+    component of every wall-face area vector and halving recovers the single
+    planform once. The flat tip cap (normal ~ +span) has a near-zero
+    thickness component and drops out automatically; the symmetry plane
+    carries no wall faces, so this is exactly the half-model planform.
+
+    Pairs with `wall_force_coefficients(s_ref=...)` and `cl_kj_3d(s_ref=...)`:
+    the half-planform paired with the half-model pressure/circulation lift
+    yields the true wing CL (no factor-of-2 correction). On the ONERA M6 half
+    wing (chord x / lift y / span z) it reproduces the analytic
+    0.5*(C_ROOT+C_TIP)*B_SEMI (design.md Sec 9).
+
+    Args:
+        nodes: (n_nodes, 3) coordinates.
+        wall_faces: (n, 3) wall triangles.
+        thickness_axis: coordinate the wing is thin in (lift axis; y=1 here).
+
+    Returns:
+        Half-wing planform area.
+    """
+    p = nodes[np.asarray(wall_faces, dtype=np.int64)]
+    area_vec = 0.5 * np.cross(p[:, 1] - p[:, 0], p[:, 2] - p[:, 0])
+    return 0.5 * float(np.sum(np.abs(area_vec[:, thickness_axis])))
+
+
+def cl_kj_3d(
+    gamma_stations: np.ndarray,
+    station_z: np.ndarray,
+    s_ref: float,
+    b_semi: float,
+    u_inf: float = 1.0,
+) -> float:
+    """3D Kutta-Joukowski lift coefficient from the spanwise circulation.
+
+    Lift per unit span is rho_inf U_inf Gamma(z), so the half-wing lift is
+    L = rho_inf U_inf integral_0^{b/2} Gamma(z) dz and, nondimensionally
+    (rho_inf = 1, lengths in mesh units),
+
+        CL_KJ = 2 * integral_0^{b/2} Gamma(z) dz / (U_inf * S_ref).
+
+    This is the 3D analog of the 2.5D `cl = 2 Gamma` consistency check
+    (design.md Sec 9): for an untapered wing (Gamma const, S = c*b/2) it
+    collapses to 2 Gamma / c, the 2D section value.
+
+    The integral is closed at both ends: the root (z=0, symmetry plane) has
+    zero spanwise slope by even symmetry, and the tip carries Gamma = 0
+    discretely (the tip TE corner is a single-valued free node excluded from
+    the stations, see mesh/wake_cut.py). `station_z`/`gamma_stations` are the
+    solver's per-station arrays (index-aligned); they are sorted here, so no
+    pre-sorting is assumed.
+
+    Args:
+        gamma_stations: (n_st,) circulation per wake station.
+        station_z: (n_st,) spanwise coordinate of each station.
+        s_ref: half-wing reference area (use `planform_area`).
+        b_semi: semi-span (tip z); the integral is closed to here with Gamma=0.
+        u_inf: freestream speed.
+
+    Returns:
+        CL_KJ, comparable to `wall_force_coefficients(...)["cl"]`.
+    """
+    z = np.asarray(station_z, dtype=np.float64)
+    g = np.asarray(gamma_stations, dtype=np.float64)
+    order = np.argsort(z)
+    z, g = z[order], g[order]
+    tol = 1e-9 * b_semi
+    if z[0] > tol:  # root not sampled: even symmetry -> flat extension to z=0
+        z = np.concatenate(([0.0], z))
+        g = np.concatenate(([g[0]], g))
+    if z[-1] < b_semi - tol:  # close to the tip where Gamma is pinned to 0
+        z = np.concatenate((z, [b_semi]))
+        g = np.concatenate((g, [0.0]))
+    return 2.0 * float(np.trapezoid(g, z)) / (u_inf * s_ref)
 
 
 def wall_tangential_gradient(nodes: np.ndarray, wall_faces: np.ndarray, phi: np.ndarray) -> np.ndarray:

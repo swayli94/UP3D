@@ -90,6 +90,8 @@ def solve_transonic_lifting(
     n_picard_seed: int = TRANSONIC_DEFAULTS["n_picard_seed"],
     n_picard_eval: int = TRANSONIC_DEFAULTS["n_picard_eval"],
     max_gamma_evals: int = TRANSONIC_DEFAULTS["max_gamma_evals"],
+    rtol: float = 1e-10,
+    maxiter: int = 3000,
     u_inf: float = 1.0,
     verbose: bool = False,
 ) -> Dict[str, object]:
@@ -105,6 +107,13 @@ def solve_transonic_lifting(
     raises), `damping_theta` is the default (local, mesh/shock-
     independent) -- fall back to the retired global mass-lumped form
     with `damping_theta=None, pseudo_dt=2e-3` (its coarse calibration).
+
+    `rtol`/`maxiter` are the inner CG tolerance/cap forwarded to every
+    density solve. The default 1e-10 is bit-identical to the pre-P5 path
+    (2.5D gates). On the 3D M6 mesh 1e-10 is ~5x more inner CG work than
+    the outer density fixed point (tol_rho 1e-6/1e-8) needs, so P5 runs
+    with a looser `rtol=1e-7` (measured M_max identical to 5 digits, ~5.5x
+    faster per iter) -- speeding the solver proper is P7's job.
 
     Returns:
         dict: the final level's solve_subsonic_lifting result, plus
@@ -123,7 +132,7 @@ def solve_transonic_lifting(
         mesh_cut, wc, m_inf=levels[0], alpha_deg=alpha_deg, u_inf=u_inf,
         omega=TRANSONIC_DEFAULTS["omega_seed"], upwind_c=upwind_c,
         m_crit=m_crit, tol_rho=1e-6, n_picard_max=n_picard_seed,
-        forcing=TRANSONIC_DEFAULTS["forcing_seed"],
+        forcing=TRANSONIC_DEFAULTS["forcing_seed"], rtol=rtol, maxiter=maxiter,
     )
     phi, gamma = r["phi"], r["gamma"].copy()
     n_picard_total += r["n_picard"]
@@ -140,7 +149,7 @@ def solve_transonic_lifting(
             damping_theta=damping_theta, pseudo_dt=pseudo_dt,
             pseudo_dt_max_ratio=1.0,
             tol_rho=1e-8, n_picard_max=n_picard_eval, forcing=0.0,
-            phi_init=phi_seed, gamma_fixed=g,
+            phi_init=phi_seed, gamma_fixed=g, rtol=rtol, maxiter=maxiter,
         )
 
     for m in levels[1:]:
