@@ -620,9 +620,19 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   ρ̃; relaxation + Mach continuation. Gate: V4.
 - **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
   Track M1). Gates: V5; V6 consistency in 3D.
-- **P6 — Performance & robustness.** Newton (6.3), pseudo-transient, AMG
+- **P6 — Consistent, differentiable artificial-density flux.** Replace the
+  P4 discrete integer-walk upstream selection u(e) + `max(ν_e, ν_u)` switch
+  (non-differentiable, C⁰-rough → the non-physical ≈2-cell surface-Cp
+  sawtooth in the supersonic pocket) with a directionally-consistent,
+  C¹ upwind density (streamline-aligned/rotated difference), keeping the
+  ν ≡ 0 subcritical no-op and the (M²−1)/M² dissipation floor. Gate:
+  Cp-smoothness metric on coarse ≤ current medium baseline, P4 shock
+  ladder preserved. Prerequisite for the P7 exact Newton Jacobian (needs a
+  differentiable flux) and gates P5's section-Cp acceptance — see
+  roadmap.md P6.
+- **P7 — Performance & robustness.** Newton (6.3), pseudo-transient, AMG
   reuse, profiling (target: ONERA M6 medium mesh < 5 min single node).
-- **P7 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
+- **P8 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
   alternative; VII coupling hook (transpiration BC ∂φ/∂n = d(u_e δ*)/ds —
   reuses the IBL work from pyTSFoil); adjoint via the Newton Jacobian
   transpose (nearly free once (6.3) exists — high value for the MDO thread).

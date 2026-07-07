@@ -61,15 +61,20 @@ pyfp3d/                    # Main package
 │   │                       #   scatter map, colored-prange data kernel, PicardOperator
 │   │                       #   per-mesh workspace (B_e/V_e/coloring/pattern/buffers once);
 │   │                       #   accumulation order fixed by color sequence => bit-deterministic
-│   │                       #   across calls/threads; [P6] exact Newton (6.3) lands here
+│   │                       #   across calls/threads; [P7] exact Newton (6.3) lands here
 │   ├── residual.py       # [P1] serial reference kernels (KEPT, regression-tested against)
 │   │                       #   + ✓ [P3] assemble_residual_colored; assemble_stiffness_matrix
-│   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P6] Newton
+│   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P7] Newton
 │   └── upwind.py         # ✓ [P4] artificial density (3.1)-(3.2): MULTI-HOP upstream walk
 │                           #   (single-hop reaches only ~1/3 extent on prism-split meshes --
 │                           #   measured dissipation starvation), shock-point operator
 │                           #   nu = max(nu_e, nu_up), rho_tilde floor, UpwindOperator workspace;
-│                           #   exact bitwise no-op below M_crit (G4.2)
+│                           #   exact bitwise no-op below M_crit (G4.2);
+│                           #   [P6] the discrete integer-walk u(e) + max(nu) switch is
+│                           #   C0-rough => non-physical surface-Cp sawtooth in the
+│                           #   supersonic pocket; P6 replaces it with a C1 directionally-
+│                           #   consistent upwind density (also the prerequisite for the
+│                           #   P7 exact Newton Jacobian)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -94,7 +99,7 @@ pyfp3d/                    # Main package
 │   │                       #   SECANT on F(Γ) = kutta_target(density-converged φ at fixed Γ) − Γ
 │   │                       #   around frozen-Γ pseudo-time solves (nested/interleaved Kutta both
 │   │                       #   fail at transonic -- measured; see module docstring)
-│   └── newton.py         # [P6] Newton method (PLANNED, file not created yet)
+│   └── newton.py         # [P7] Newton method (PLANNED, file not created yet)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers

@@ -1,14 +1,22 @@
 """
 P4 gates G4.1 (transonic shock quality vs reference) and G4.3
-(robustness sweep), with the V4.1/V4.3 headless artifacts.
+(robustness sweep). This module is the numeric GATE: it solves and
+asserts (converged, shock position/monotonicity, no limited cells) and
+logs a numeric summary CSV to the ephemeral artifacts/ dir.
+
+The COMMITTED figures + CSVs that demo_report embeds (the coarse/medium
+surface-Cp refinement pair and the V4.3 sweep dashboard) and the code
+that generates them live in the demo instead --
+cases/demo/p4_transonic/run_demo.py, heavy mode (PYFP3D_TRANSONIC_GATES=1)
+-- because artifacts/ is gitignored. This test therefore no longer draws
+figures; it verifies the numbers behind them.
 
 Runtime policy: the always-on part of this module is a COARSE-mesh
 transonic smoke check (~2.5 min, guards the whole P4 machinery in the
 regression suite). The medium-mesh G4.1 gate run and the G4.3 sweep are
 gated behind PYFP3D_TRANSONIC_GATES=1 (each is several minutes to tens
-of minutes of Picard iterations -- run explicitly for gate closure;
-their evidence lands in artifacts/G4.1 / artifacts/G4.3 and
-docs/demo_report.md). P6 owns making these fast (Newton).
+of minutes of Picard iterations -- run explicitly for gate closure).
+P7 owns making these fast (Newton).
 
 Reference: cases/reference_data/naca0012_m080/ (Euler anchor + documented
 conservative-FP shift band; provenance in its README.md).
@@ -19,7 +27,7 @@ pseudo-time-stabilized density iteration settles into an
 engineering-converged regime -- physical M_max, no limited/floored
 cells, Kutta mismatch below the evaluation-noise-matched tol_gamma --
 rather than the subsonic 1e-10 residual; the sharp-shock residual tail
-is a known, bounded limitation until P6's Newton.
+is a known, bounded limitation until P7's Newton.
 """
 
 import csv
@@ -27,10 +35,6 @@ import os
 
 import numpy as np
 import pytest
-
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
@@ -76,11 +80,13 @@ def _transonic_case(mesh_path, **kw):
             "shock": rep, "forces": forces}
 
 
-def _write_g41_artifacts(case, level, reference_mesh_dir, artifacts_dir):
-    r, rep, curve = case["result"], case["shock"], case["curve"]
+def _write_g41_summary(case, level, artifacts_dir):
+    """Numeric gate log to the ephemeral artifacts/ dir (the committed
+    figure + this same summary are produced by the demo, see module
+    docstring)."""
+    r, rep = case["result"], case["shock"]
     gate_dir = artifacts_dir / "G4.1"
     gate_dir.mkdir(parents=True, exist_ok=True)
-
     with open(gate_dir / f"summary_{level}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["quantity", "value"])
@@ -96,27 +102,6 @@ def _write_g41_artifacts(case, level, reference_mesh_dir, artifacts_dir):
         w.writerow(["n_picard_total", r["n_picard_total"]])
         w.writerow(["n_limited", r["n_limited"]])
         w.writerow(["n_floored", r["n_floored"]])
-
-    # V4.1: Cp with Cp* line and shock markers.
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(curve["x_upper"], curve["cp_upper"], ".-", ms=3, lw=0.7,
-            color="tab:red", label="upper")
-    ax.plot(curve["x_lower"], curve["cp_lower"], ".-", ms=3, lw=0.7,
-            color="tab:blue", label="lower")
-    ax.axhline(rep["cp_critical"], color="k", lw=0.8, ls=":",
-               label="Cp* (sonic)")
-    for side, color in (("upper", "tab:red"), ("lower", "tab:blue")):
-        if rep[side]["has_shock"]:
-            ax.axvline(rep[side]["x_shock"], color=color, lw=0.8, ls="--")
-    ax.invert_yaxis()
-    ax.set_xlabel("x/c")
-    ax.set_ylabel("Cp")
-    ax.set_title(f"V4.1 NACA0012 M={M_INF} alpha={ALPHA} ({level}): "
-                 f"upper shock x/c={rep['upper']['x_shock']:.3f}")
-    ax.legend()
-    fig.savefig(gate_dir / f"v4_1_cp_shock_{level}.png", dpi=150,
-                bbox_inches="tight")
-    plt.close(fig)
 
 
 def _assert_g41(case, reference_mesh_dir):
@@ -149,7 +134,7 @@ def test_g41_transonic_coarse_smoke(reference_mesh_dir, artifacts_dir):
     from .conftest import REPO_ROOT
     case = _transonic_case(
         REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
-    _write_g41_artifacts(case, "coarse", reference_mesh_dir, artifacts_dir)
+    _write_g41_summary(case, "coarse", artifacts_dir)
     _assert_g41(case, reference_mesh_dir)
 
 
@@ -159,7 +144,7 @@ def test_g41_transonic_medium_gate(reference_mesh_dir, artifacts_dir):
     from .conftest import REPO_ROOT
     case = _transonic_case(
         REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "medium.msh")
-    _write_g41_artifacts(case, "medium", reference_mesh_dir, artifacts_dir)
+    _write_g41_summary(case, "medium", artifacts_dir)
     _assert_g41(case, reference_mesh_dir)
 
 
@@ -200,21 +185,7 @@ def test_g43_robustness_sweep(artifacts_dir):
     gate_dir.mkdir(parents=True, exist_ok=True)
     with open(gate_dir / "summary.csv", "w", newline="") as f:
         csv.writer(f).writerows(rows)
-
-    # V4.3 dashboard: shock x/c and cl trends vs Mach per alpha.
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.6))
-    for alpha, mk in ((0.0, "o"), (1.25, "s")):
-        ms = [0.74, 0.76, 0.78, 0.80, 0.82]
-        xs = [results[(alpha, m)][1]["upper"]["x_shock"] for m in ms]
-        cls = [results[(alpha, m)][2]["cl"] for m in ms]
-        ax1.plot(ms, xs, mk + "-", label=f"alpha={alpha}")
-        ax2.plot(ms, cls, mk + "-", label=f"alpha={alpha}")
-    ax1.set_xlabel("M_inf"); ax1.set_ylabel("upper shock x/c"); ax1.legend()
-    ax2.set_xlabel("M_inf"); ax2.set_ylabel("cl"); ax2.legend()
-    ax1.set_title("V4.3 shock migration"); ax2.set_title("V4.3 lift trend")
-    fig.savefig(gate_dir / "v4_3_sweep_dashboard.png", dpi=150,
-                bbox_inches="tight")
-    plt.close(fig)
+    # The committed V4.3 dashboard is produced by the demo (see docstring).
 
     for (alpha, m), (r, rep, _f) in results.items():
         assert r["converged"], f"alpha={alpha} M={m} did not converge"

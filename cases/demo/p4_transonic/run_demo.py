@@ -16,16 +16,36 @@ What this shows, per docs/roadmap.md P4 and docs/demo_report.md:
      x/c ~ 0.60 within the reference band (Euler anchor + documented
      conservative-FP shift, cases/reference_data/naca0012_m080/), weak
      lower shock ~ 0.36, no expansion shock, physical M_max ~ 1.36,
-     no limited/floored cells. (The medium-mesh gate run and the G4.3
-     sweep run under PYFP3D_TRANSONIC_GATES=1 in pytest; their artifacts
-     land in artifacts/G4.1, G4.3.)
+     no limited/floored cells.
+  4. G4.1 mesh-refinement comparison (coarse vs medium) and the G4.3
+     10-case robustness sweep -- the heavy evidence behind demo_report
+     Sec P4 "supplementary analysis" (the coarse/medium surface-Cp
+     sawtooth study + the shock-migration/lift-trend dashboard). These
+     two solves are ~16 min and ~22 min, so they are OPT-IN behind
+     PYFP3D_TRANSONIC_GATES=1 (same switch as the pytest gate); the
+     committed figures/CSVs in results/ are the reference baseline and
+     are what demo_report embeds, so a default run does not need them.
+
+*** COST CAUTION (read before regenerating) ***
+  Part 4 + part 5 together are ~40 min of Picard iterations. The figures
+  and CSVs they produce are ALREADY COMMITTED in results/ and are what
+  demo_report embeds. Do NOT re-run heavy mode casually -- only when the
+  solver/mesh/reference actually changed in a way that would move these
+  numbers, and you intend to commit the refreshed baseline. For a routine
+  edit, the committed baseline is authoritative; verify the cheap coarse
+  path (default run, ~4 min) instead. The pytest gate
+  (tests/test_p4_transonic.py) is the correctness check; this heavy mode
+  only refreshes the committed evidence PNGs.
 
 Standalone + self-checking:  python cases/demo/p4_transonic/run_demo.py
+  default (coarse only, ~4 min):  parts 1-3
+  full evidence (~40 min):        PYFP3D_TRANSONIC_GATES=1 python ...
 Outputs: cases/demo/p4_transonic/results/{*.png, *.csv, checks.csv}
-Exit code 0 iff every acceptance check passes. Runtime ~4 min.
+Exit code 0 iff every acceptance check passes.
 """
 
 import csv
+import os
 import sys
 import time
 from pathlib import Path
@@ -53,6 +73,70 @@ from pyfp3d.solve.picard import solve_subsonic_lifting  # noqa: E402
 
 OUT = Path(__file__).parent / "results"
 M_INF, ALPHA = 0.80, 1.25
+
+
+# ---------------------------------------------------------------------------
+# Figure/CSV generators for the heavy G4.1 (coarse vs medium) + G4.3 evidence.
+# These moved here from the P4 gate test (tests/test_p4_transonic.py) so the
+# committed artifacts and the code that makes them live together in the demo
+# (artifacts/ is gitignored, so demo_report cannot embed from there).
+# ---------------------------------------------------------------------------
+def _plot_cp_shock(curve, rep, level: str, out_name: str):
+    """Matched-style Cp(x/c) + shock-marker figure for the coarse/medium
+    refinement comparison (deliberately the same plain style at both levels
+    so the sawtooth amplitude is visually comparable across meshes)."""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(curve["x_upper"], curve["cp_upper"], ".-", ms=3, lw=0.7,
+            color=S4_ROSE, label="upper")
+    ax.plot(curve["x_lower"], curve["cp_lower"], ".-", ms=3, lw=0.7,
+            color=S1_BLUE, label="lower")
+    ax.axhline(rep["cp_critical"], color=INK_2, lw=0.8, ls=":",
+               label="Cp* (sonic)")
+    for side, color in (("upper", S4_ROSE), ("lower", S1_BLUE)):
+        if rep[side]["has_shock"]:
+            ax.axvline(rep[side]["x_shock"], color=color, lw=0.8, ls="--")
+    ax.invert_yaxis()
+    ax.set_xlabel("x/c")
+    ax.set_ylabel("Cp")
+    ax.set_title(f"V4.1 NACA0012 M={M_INF} alpha={ALPHA} ({level}): "
+                 f"upper shock x/c={rep['upper']['x_shock']:.3f}")
+    ax.legend()
+    finish(fig, OUT, out_name)
+
+
+def _g41_summary_rows(rep, r, forces):
+    rows = []
+    for side in ("upper", "lower"):
+        for k, v in rep[side].items():
+            rows.append((f"{side}_{k}", v))
+    rows += [
+        ("cp_critical", rep["cp_critical"]),
+        ("cl_pressure", forces["cl"]),
+        ("cl_kj", 2.0 * float(r["gamma"][0])),
+        ("gamma", float(r["gamma"][0])),
+        ("mach_max", float(np.sqrt(r["mach2_max"]))),
+        ("kutta_mismatch", r["kutta_mismatch"]),
+        ("n_picard_total", r["n_picard_total"]),
+        ("n_limited", r["n_limited"]),
+        ("n_floored", r["n_floored"]),
+    ]
+    return rows
+
+
+def _solve_case(mesh_path, m_inf, alpha):
+    mesh = read_mesh(mesh_path)
+    mc, wc = cut_wake(mesh)
+    r = solve_transonic_lifting(mc, wc, m_inf=m_inf, alpha_deg=alpha,
+                                max_gamma_evals=12, n_picard_eval=800,
+                                verbose=True)
+    dz = float(np.ptp(mc.nodes[:, 2]))
+    curve = wall_cp_curve(mc, r["phi"], z=0.5 * dz, m_inf=m_inf)
+    rep = shock_report(curve, m_inf)
+    forces = wall_force_coefficients(
+        mc.nodes, mc.elements, mc.boundary_faces["wall"], r["phi"],
+        alpha_deg=alpha, s_ref=dz, m_inf=m_inf,
+    )
+    return {"r": r, "curve": curve, "rep": rep, "forces": forces}
 
 
 def part1_noop(cl: CheckList, mc, wc):
@@ -187,6 +271,88 @@ def part3_transonic(cl: CheckList, mc, wc):
                ("kutta_mismatch", f"{r['kutta_mismatch']:.2e}"),
                ("n_picard_total", r["n_picard_total"]),
                ("t_solve_s", f"{t_solve:.0f}")])
+    return {"r": r, "curve": curve, "rep": rep, "forces": forces}
+
+
+def part4_refinement(cl: CheckList, coarse_case):
+    """[heavy] G4.1 coarse-vs-medium refinement pair (demo_report Sec P4
+    supplementary): re-emit the matched coarse figure from the part-3 solve
+    (no re-solve), then run the full medium gate (~16 min) and emit its
+    matched figure so the surface-Cp sawtooth is comparable across meshes."""
+    print("\n[4/5] G4.1 mesh-refinement comparison (coarse vs medium) [heavy]")
+    _plot_cp_shock(coarse_case["curve"], coarse_case["rep"], "coarse",
+                   "g41_cp_shock_coarse.png")
+    write_csv(OUT, "g41_summary_coarse.csv", "quantity,value",
+              _g41_summary_rows(coarse_case["rep"], coarse_case["r"],
+                                coarse_case["forces"]))
+
+    t0 = time.perf_counter()
+    med = _solve_case(MESH_DIR / "naca0012_2.5d" / "medium.msh", M_INF, ALPHA)
+    t_solve = time.perf_counter() - t0
+    r, curve, rep, forces = (med["r"], med["curve"], med["rep"], med["forces"])
+    _plot_cp_shock(curve, rep, "medium", "g41_cp_shock_medium.png")
+    write_csv(OUT, "g41_summary_medium.csv", "quantity,value",
+              _g41_summary_rows(rep, r, forces))
+
+    ref = {}
+    with open(REFERENCE_DIR / "naca0012_m080" / "shock_reference.csv") as f:
+        for row in csv.DictReader(f):
+            ref[row["quantity"]] = (float(row["value"]), float(row["tolerance"]))
+    x_ref, tol = ref["upper_shock_x_c"]
+    up = rep["upper"]
+    cl.add("G4.1 medium", "converged (physical + Kutta)", r["converged"],
+           "Kutta |F| < 2e-4, no limited cells", bool(r["converged"]),
+           note=f"{t_solve:.0f} s medium")
+    cl.add("G4.1 medium", "upper shock x/c", f"{up['x_shock']:.3f}",
+           f"{x_ref} +/- {tol} (ref band)", abs(up["x_shock"] - x_ref) <= tol)
+    cl.add("G4.1 medium", "M_max", f"{np.sqrt(r['mach2_max']):.3f}",
+           "physical, below limiter cap", r["mach2_max"] < 9.0)
+    cl.add("G4.1 medium", "no limited/floored cells",
+           f"{r['n_limited']}/{r['n_floored']}", "0/0",
+           r["n_limited"] == 0 and r["n_floored"] == 0)
+
+
+def part5_sweep(cl: CheckList, mc, wc):
+    """[heavy] G4.3 10-case robustness sweep + V4.3 dashboard (~22 min)."""
+    print("\n[5/5] G4.3 robustness sweep (10 cases) [heavy]")
+    dz = float(np.ptp(mc.nodes[:, 2]))
+    ms = [0.74, 0.76, 0.78, 0.80, 0.82]
+    header = ("alpha_deg,m_inf,converged,kutta_mismatch,mach_max,"
+              "x_shock_upper,cl,n_limited")
+    rows, results = [], {}
+    for alpha in (0.0, 1.25):
+        for m in ms:
+            r = solve_transonic_lifting(mc, wc, m_inf=m, alpha_deg=alpha,
+                                        max_gamma_evals=12, n_picard_eval=800)
+            curve = wall_cp_curve(mc, r["phi"], z=0.5 * dz, m_inf=m)
+            rep = shock_report(curve, m)
+            forces = wall_force_coefficients(
+                mc.nodes, mc.elements, mc.boundary_faces["wall"], r["phi"],
+                alpha_deg=alpha, s_ref=dz, m_inf=m,
+            )
+            results[(alpha, m)] = (r, rep, forces)
+            rows.append((alpha, m, r["converged"],
+                         f"{r['kutta_mismatch']:.2e}",
+                         f"{np.sqrt(r['mach2_max']):.3f}",
+                         f"{rep['upper']['x_shock']:.4f}",
+                         f"{forces['cl']:.5f}", r["n_limited"]))
+    write_csv(OUT, "g43_summary.csv", header, rows)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.6))
+    for alpha, mk, color in ((0.0, "o", S1_BLUE), (1.25, "s", S3_YELLOW)):
+        xs = [results[(alpha, m)][1]["upper"]["x_shock"] for m in ms]
+        cls = [results[(alpha, m)][2]["cl"] for m in ms]
+        ax1.plot(ms, xs, mk + "-", color=color, label=f"alpha={alpha}")
+        ax2.plot(ms, cls, mk + "-", color=color, label=f"alpha={alpha}")
+    ax1.set_xlabel("M_inf"); ax1.set_ylabel("upper shock x/c"); ax1.legend()
+    ax2.set_xlabel("M_inf"); ax2.set_ylabel("cl"); ax2.legend()
+    ax1.set_title("V4.3 shock migration"); ax2.set_title("V4.3 lift trend")
+    finish(fig, OUT, "g43_sweep_dashboard.png")
+
+    n_conv = sum(r["converged"] for (r, _, _) in results.values())
+    n_bad = sum(r["n_limited"] + r["n_floored"] for (r, _, _) in results.values())
+    cl.add("G4.3", "all cases converged", f"{n_conv}/10", "10/10", n_conv == 10)
+    cl.add("G4.3", "zero limited/floored across sweep", n_bad, "0", n_bad == 0)
 
 
 def main():
@@ -197,7 +363,19 @@ def main():
     t0 = time.time()
     part1_noop(cl, mc, wc)
     part2_reach(cl, mc, wc)
-    part3_transonic(cl, mc, wc)
+    coarse_case = part3_transonic(cl, mc, wc)
+    # Heavy mode = ~40 min. The results/ baseline is already committed; only
+    # regenerate when a real solver/mesh/reference change moves the numbers
+    # and you will commit the refresh (see the COST CAUTION in the docstring).
+    if os.environ.get("PYFP3D_TRANSONIC_GATES", "0") == "1":
+        part4_refinement(cl, coarse_case)
+        part5_sweep(cl, mc, wc)
+    else:
+        print("\n[4-5/5] medium G4.1 + G4.3 sweep skipped (~40 min); set "
+              "PYFP3D_TRANSONIC_GATES=1 to regenerate. The committed\n"
+              "        results/g41_cp_shock_{coarse,medium}.png, "
+              "g43_sweep_dashboard.png and their *_summary CSVs\n"
+              "        are the reference baseline embedded by demo_report.")
     print(f"\ntotal runtime {time.time() - t0:.0f} s")
     return cl.report(OUT)
 

@@ -8,7 +8,7 @@ workstation-scale (minutes for 1–3 M nodes).
 ## Document map (read the relevant one before coding)
 
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker**: phase order (Track P:
-  P0–P7 solver, Track M: M0–M2 meshing), gate checklists, progress ledger.
+  P0–P8 solver, Track M: M0–M2 meshing), gate checklists, progress ledger.
   "What phase are we in" and "what gate is open" live here, nowhere else.
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
@@ -46,7 +46,17 @@ workstation-scale (minutes for 1–3 M nodes).
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.
+6. **Cost caution — do not recompute expensive artifacts casually.** Some
+   evidence is committed precisely because regenerating it is slow: the P4 heavy
+   demo figures (`cases/demo/p4_transonic/run_demo.py` under
+   `PYFP3D_TRANSONIC_GATES=1`) are ~40 min of Picard; the medium G4.1 gate is
+   ~17 min; the ONERA M6 medium/fine `.msh` are minutes to regenerate. Treat the
+   committed baseline as authoritative and only rerun the heavy part when a real
+   solver/mesh/reference change would move those numbers AND you will commit the
+   refresh. For routine edits, verify on the cheap coarse path. Prefer reading a
+   committed CSV/PNG over recomputing it.
 
 Gate IDs are `G<phase>.<n>` per roadmap.md Track P numbering (P2 = wake/Kutta,
-P3 = subsonic compressible, P4 = transonic, P5 = ONERA M6, P6 = Newton/performance);
+P3 = subsonic compressible, P4 = transonic, P5 = ONERA M6, P6 = consistent/
+differentiable artificial-density flux, P7 = Newton/performance);
 design.md §11 mirrors the same order.
