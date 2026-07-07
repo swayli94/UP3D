@@ -748,25 +748,43 @@ tendency); the ≈2-cell P4 surface-Cp sawtooth is visible in the upper curve
 not a convergence failure: V6 consistency 2.4% (did not improve with more Γ
 evals) and ~8% per-station Kutta noise on the otherwise-smooth Γ(η).
 
-**Why the medium gate is still OPEN.** The same bounded recipe on the
-350.7k mesh returns an **unphysical** state: M_max 5.204 with 8 floored / 4
-limited cells and V6 1.73%. A cached-solution diagnostic localises this
-precisely — only **26 of 350 718 cells (0.007%) exceed M = 2, and they lie
-in the wake-sheet / far-field region downstream near the tip** (x ≈ 10,
-adjacent to the R = 15 MAC far-field sphere, z/b ≳ 1.0) plus a few
-outboard-TE cells; the wing surface itself is clean and its section-Cp
-shocks are physical. This matches the design.md §5 concern that the 3D
-far-field uses a **2D vortex correction** near the swept tip/wake, rather
-than a global wing-flow under-convergence (the M0.75 continuation overshoot
-that healed to M_max 2.0 on coarse does not heal on the finer wake/far-field
-cells). **Open item:** investigate the far-field / wake treatment near the
-tip before re-running the medium gate — a heavier iteration budget alone may
-not heal a boundary artifact. G5.1/G5.2 remain unchecked.
+**Why the medium gate is still OPEN (re-diagnosed 2026-07-08 — corrects the
+earlier "far-field only" reading).** The same bounded recipe on the 350.7k
+mesh returns an **unphysical** state: M_max 5.204 with 8 floored / 4 limited
+cells and V6 1.73%. A cell-by-cell re-analysis of the cached solution
+(reproduce: `python cases/demo/p5_onera_m6/diagnose_medium.py` — reads the
+committed npz + mesh, no solve) localises this precisely — **26 of 350 718
+cells (0.007%) exceed M = 2, and the split is the opposite of what was first
+recorded**: **18 sit ON the wing
+at the outboard trailing edge** (distance-to-nearest-wall ≈ 0, x/c 1.00–1.11,
+z/b 0.80–0.81) and only **8 at the far-field sphere** (x ≈ 10, z/b ≳ 1.0).
+The single M_max = 5.204 cell *is* far-field, so it alone sets M_max — but the
+**dominant M ≈ 2.7–3.1 spikes are the outboard-TE cluster**, on well-shaped
+elements (shape quality q ≈ 0.65, aspect ratio ≤ 3.1; mesh median q 0.76 —
+not slivers). The cluster sits at the **steepest spanwise circulation
+roll-off** (medium |dΓ/dz| peaks at z/b = 0.80, 1.82 vs coarse 0.66; the
+per-station Kutta Γ dips 0.076 → 0.043 → 0.048 across z/b 0.7/0.8/0.9): the
+~8% per-station Kutta spanwise noise, carried through the wake-cut
+master–slave Γ-jump, injects a large velocity gradient into the TE-adjacent
+P1 tets there. The **same outboard band (z/b ≈ 0.7–0.9) is already coarse's
+hottest** (M ≤ 1.47, physical) and **sharpens under refinement** (1.47 →
+5.20) rather than converging — a trailing-edge / Kutta discretisation
+singularity, not a global wing-flow under-convergence (well-shaped cells +
+refinement-sharpening + single-station localisation rule that out; the
+secondary far-field cells match the design.md §5 2D-vortex concern).
+**Open item (revised priority):** (1) regularise / smooth the per-station
+spanwise Γ at the outboard roll-off — the dominant 18-cell cluster; (2) taper
+the 2D-vortex far-field correction toward the tip — removes the single M_max
+cell. A heavier iteration budget alone will not heal a refinement-sharpening
+TE singularity. G5.1/G5.2 remain unchecked.
 
-The medium section Cp confirms the split — the **wing surface is physical and
-in fact sharper than coarse** (shocks resolve to ~1 cell, LE suction closer to
-the experimental peak); the failure is entirely in the off-body wake/far-field
-cells, which do not enter these wall sections.
+The medium section Cp at η = 0.44/0.65/0.90 still looks physical and in fact
+sharper than coarse (shocks resolve to ~1 cell, LE suction closer to the
+experimental peak) — but this is **because those three sections do not sample
+the defect**: the outboard-TE spikes live at x/c ≈ 1.0–1.1 (at/behind the TE,
+outside the plotted chord range) and are concentrated at the single station
+z/b ≈ 0.80. So the clean section curves are *not* evidence that the wing
+surface is defect-free; they simply miss the localised outboard-TE band.
 
 ![medium sectional Cp — wing surface physical despite the open gate](../cases/demo/p5_onera_m6/results/g51_sections_medium.png)
 
