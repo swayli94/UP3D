@@ -14,7 +14,7 @@ workstation-scale (minutes for 1–3 M nodes).
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
-  phases (P0, P1-partial, P2, P3, M0): one self-checking demo per phase under
+  phases (P0, P1-partial, P2, P3, P4, M0, M1): one self-checking demo per phase under
   `cases/demo/<phase>/` with committed figures + measured gate numbers. When a
   phase closes, add its demo + report section here.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
@@ -37,9 +37,12 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (~4.5 min since P4; the always-on coarse transonic
-   smoke is ~170 s of it, the G3.2 medium-mesh nested Picard solve ~45 s. The heavy
-   transonic gates only run under `PYFP3D_TRANSONIC_GATES=1` and show as 2 skipped.)
+3. Full suite: `pytest tests/` (136 passed + 2 skipped + 2 xfailed since M1, ~5 min;
+   the always-on coarse transonic smoke is ~170 s of it, the G3.2 medium-mesh
+   nested Picard solve ~45 s, the rule-7 sweep's M6 coarse+medium cut_wake
+   ingest ~15 s. The M6 .msh files are gitignored — the 13 M1 tests skip until
+   you run `cases/meshes/onera_m6/generate_onera_m6.py` (~30 s). The heavy
+   transonic gates only run under `PYFP3D_TRANSONIC_GATES=1`, shown as 2 skipped.)
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.

@@ -399,6 +399,83 @@ def compute_aspect_ratios(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray
     return aspect_ratios
 
 
+@numba.njit(cache=True)
+def compute_min_dihedral_angles(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
+    """
+    Compute the minimum dihedral angle (degrees) of each tet.
+
+    The dihedral angle along an edge is the interior angle between the two
+    faces sharing that edge; for outward face normals N_a, N_b it is
+    pi - angle(N_a, N_b). A regular tet has ~70.53 deg on all six edges;
+    slivers approach 0 (or 180) deg. The M1 element-quality gate reports
+    min over the mesh (roadmap Track M).
+
+    Args:
+        nodes: (n_nodes, 3) nodal coordinates
+        elements: (n_tets, 4) element connectivity
+
+    Returns:
+        min_dihedral: (n_tets,) minimum dihedral angle per element [deg]
+    """
+    n_tets = len(elements)
+    min_dihedral = np.zeros(n_tets, dtype=np.float64)
+
+    # Face f is opposite vertex f (nodes of face f = the other three).
+    face_nodes = np.array(
+        [[1, 2, 3], [0, 3, 2], [0, 1, 3], [0, 2, 1]], dtype=np.int32
+    )
+    # The 6 edges as the pair of faces sharing them: edge (i, j) is shared
+    # by the two faces NOT opposite i or j.
+    edge_faces = np.array(
+        [[2, 3], [1, 3], [1, 2], [0, 3], [0, 2], [0, 1]], dtype=np.int32
+    )
+
+    normals = np.empty((4, 3), dtype=np.float64)
+    for e in range(n_tets):
+        tet = elements[e]
+        # Outward (or consistently inward) face normals; consistency is all
+        # that matters since the formula uses both normals of an edge.
+        for f in range(4):
+            p0 = nodes[tet[face_nodes[f, 0]]]
+            p1 = nodes[tet[face_nodes[f, 1]]]
+            p2 = nodes[tet[face_nodes[f, 2]]]
+            ux, uy, uz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+            vx, vy, vz = p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]
+            nx = uy * vz - uz * vy
+            ny = uz * vx - ux * vz
+            nz = ux * vy - uy * vx
+            # Orient away from the opposite vertex (outward).
+            q = nodes[tet[f]]
+            sx, sy, sz = q[0] - p0[0], q[1] - p0[1], q[2] - p0[2]
+            if nx * sx + ny * sy + nz * sz > 0.0:
+                nx, ny, nz = -nx, -ny, -nz
+            norm = np.sqrt(nx * nx + ny * ny + nz * nz)
+            if norm < 1e-300:
+                norm = 1.0  # degenerate face; angle will come out ~0 anyway
+            normals[f, 0] = nx / norm
+            normals[f, 1] = ny / norm
+            normals[f, 2] = nz / norm
+
+        worst = 180.0
+        for k in range(6):
+            a = edge_faces[k, 0]
+            b = edge_faces[k, 1]
+            c = (normals[a, 0] * normals[b, 0]
+                 + normals[a, 1] * normals[b, 1]
+                 + normals[a, 2] * normals[b, 2])
+            if c > 1.0:
+                c = 1.0
+            elif c < -1.0:
+                c = -1.0
+            # Interior dihedral = pi - angle between outward normals.
+            ang = 180.0 - np.degrees(np.arccos(c))
+            if ang < worst:
+                worst = ang
+        min_dihedral[e] = worst
+
+    return min_dihedral
+
+
 if __name__ == "__main__":
     # Self-test: unit cube volume
     print("=== Mesh Metrics Self-Test ===\n")

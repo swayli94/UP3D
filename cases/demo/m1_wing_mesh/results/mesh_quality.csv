@@ -1,0 +1,4 @@
+level,n_tets,min_dihedral_deg,max_aspect,source
+coarse,55531,7.47,9.34,recomputed
+medium,350718,10.96,6.94,recomputed
+fine,2513255,3.53,6.49,committed fine_stats.csv

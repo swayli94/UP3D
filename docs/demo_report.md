@@ -1,7 +1,7 @@
 # Phase demo report — evidence for completed phases
 
 **Scope.** One self-contained demo case per completed roadmap phase (Track P:
-P0, P1-partial, P2; Track M: M0), designed as *evidence that the phase's
+P0, P1-partial, P2, P3, P4; Track M: M0, M1), designed as *evidence that the phase's
 functionality works, is numerically stable, and physically sensible* — not
 merely that tests pass. Each demo is a standalone script with built-in
 acceptance checks against the roadmap gate criteria; its figures and CSVs are
@@ -27,6 +27,7 @@ not as gaps to hide.
 | M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced |
 | P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced |
 | P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced |
+| M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced |
 
 ---
 
@@ -361,6 +362,65 @@ every level and its wall-Cp error falls monotonically at the expected O(h)
 recovery limit root-caused at G1.6, i.e. a documented solver-side limit, not
 a meshing defect. Combined with G2.3–G2.5 running on these meshes (P2 demo),
 M0's deliverable is demonstrated end to end.
+
+---
+
+## M1 — swept/tapered wing meshing, ONERA M6 (closed; consumed by P5)
+
+**Purpose.** Show the mesh-side evidence for M1: a scripted, refinable
+ONERA M6 half-wing tet mesh whose chord-plane wake sheet — swept from the
+sharp (foilmod zero-thickness) TE, ending exactly at the tip, reaching the
+spherical far field at 15 MAC — is ingested by the P2 solver preprocessor
+with the topology asserts green. The new mesh-side machinery is
+`pyfp3d/meshgen/wing3d.py` (OCC ruled loft + `occ.fragment` +
+`mesh.embed`); the new solver-side machinery is wake_cut.py's handling of
+a swept TE (per-node stations, off-plane Kutta-probe fallback) and of the
+sheet's interior FREE edge at the tip (single-valued nodes ⇒ Γ(tip) = 0
+discretely).
+
+**Case setup.** The `cases/meshes/onera_m6` family (coarse 55.5k /
+medium 350.7k tets; fine 2.513M validated at generation time). The .msh
+files are large and gitignored — regenerate coarse+medium with
+`generate_onera_m6.py` (~30 s) before running this demo; the committed
+per-level stats CSVs and inspection PNGs are the persistent evidence.
+Solver axis convention: chord x, lift y, span z.
+
+**Key figures.**
+
+![wing + wake gallery](../cases/demo/m1_wing_mesh/results/wing_wake_gallery.png)
+![tip cut planes](../cases/demo/m1_wing_mesh/results/tip_cut_planes.png)
+![mesh quality](../cases/demo/m1_wing_mesh/results/mesh_quality.png)
+
+**Measured results.**
+
+| Check | Measured | Criterion |
+|---|---|---|
+| tags + P2 topology asserts through cut_wake, coarse & medium | pass | M1 gate "same asserts" |
+| per-node TE stations on the swept TE | 83 (coarse) / 166 (medium) | == n_TE_nodes |
+| tip free-edge nodes single-valued, at z = b | 106 / 208, none duplicated | wake-tip semantics |
+| wake-tip closure: tip edge one open chain from the exact tip TE corner | pass (both levels) | no cracks / self-intersections |
+| Kutta probe pairs found on the unstructured TE | 83 / 166, y>0 upper, y<0 lower | design.md (4.4) fallback |
+| min dihedral coarse/medium/fine | 7.5° / 11.0° / 3.5° | ≥ 2° |
+| max aspect ratio coarse/medium/fine | 9.3 / 6.9 / 6.5 | ≤ 60 |
+| refinement ladder (one h_wall parameter, 2×) | 55.5k → 350.7k → 2513k tets | monotone ~2³/level |
+| freestream residual on the CUT coarse mesh | 4.3e-14 | < 1e-10 (G2.1 analogue) |
+
+**Conclusion & analysis.** The M1 gate items are all measured green: the
+solver preprocessor ingests the family unchanged (same read_mesh/cut_wake
+call as the 2.5D cases), the quality report is comfortably inside bounds
+on all three levels, and the family is one script with one parameter. Two
+findings worth recording: (1) for a sheet that ends *inside* the domain,
+`occ.fragment` alone does not make the tet mesh conform — it stitches the
+shared TE edge and the boundary trims, but `gmsh.model.mesh.embed` must
+still be called on the trimmed sheet face; (2) the sheet's tip edge is an
+interior free edge whose node stars are NOT split by the sheet, so the
+duplication map must exclude them — which is also the physically correct
+discrete statement Γ(tip) = 0 (the trailing jump vanishes at the tip).
+Both are documented in the wake_cut.py module docstring; the free-edge
+path is exactly inert on the quasi-2D meshes (their sheets have no free
+edges), which the unchanged P2/M0 test battery confirms. Mesh sizes are
+runtime-driven per the P4 lesson (solver wall time is the binding
+constraint): coarse is the P5 development mesh, medium the gate mesh.
 
 ---
 

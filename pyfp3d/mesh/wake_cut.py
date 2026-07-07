@@ -30,6 +30,17 @@ loop):
     master + Gamma, which matches the vortex far-field correction's
     branch-cut jump across the wake (constraints/dirichlet.py places the
     cut on the wake sheet).
+  - Sheet FREE edges (sheet boundary edges in the domain INTERIOR -- the
+    M1 wing-tip edge, running from the tip TE corner downstream) are NOT
+    duplicated: their element stars are not separated by the sheet, and
+    physically the jump must vanish there (Gamma -> 0 at the tip; a
+    trailing vortex line of the residual discrete Gamma_tip is the
+    expected tip-vortex singularity, unlike the TE case where tapering a
+    FINITE Gamma was measured to diverge). The tip TE corner node itself
+    is a free-edge node: it stays single-valued and is excluded from the
+    TE/Kutta stations, pinning Gamma(tip) = 0 discretely. Quasi-2D M0
+    sheets have no free edges (both sheet sides lie on symmetry planes),
+    so this path is exactly inert there.
 
 Side classification is a per-node flood fill over the node's incident
 elements (adjacency through non-wake faces only), seeded geometrically per
@@ -79,6 +90,9 @@ class WakeCut:
         n_nodes_orig: node count before duplication
         master_nodes: (n_dup,) original ("-"-side) ids of duplicated nodes
         slave_nodes: (n_dup,) the new "+"-side ids (n_nodes_orig + k)
+        free_nodes: (n_free,) sheet nodes on interior free edges (M1 tip
+                  edge), kept single-valued (module docstring); empty on
+                  quasi-2D sheets
         te_nodes: (n_te,) wall-and-wake nodes; duplicated like the rest of
                   the sheet (the jump reaches the wall -- module docstring)
         station_z: (n_st,) spanwise station coordinates (mean z of the
@@ -104,6 +118,7 @@ class WakeCut:
         self.n_nodes_orig = 0
         self.master_nodes = np.empty(0, dtype=np.int64)
         self.slave_nodes = np.empty(0, dtype=np.int64)
+        self.free_nodes = np.empty(0, dtype=np.int64)
         self.te_nodes = np.empty(0, dtype=np.int64)
         self.station_z = np.empty(0, dtype=np.float64)
         self.node_station = np.empty(0, dtype=np.int64)
@@ -120,6 +135,46 @@ class WakeCut:
     def gamma_at_nodes(self, gamma_stations: np.ndarray) -> np.ndarray:
         """(n_dup,) jump value per duplicated node from per-station Gamma."""
         return np.asarray(gamma_stations, dtype=np.float64)[self.node_station]
+
+
+def _edge_key_view(edges: np.ndarray) -> np.ndarray:
+    """Sorted node pairs as a structured view usable for membership tests."""
+    a = np.ascontiguousarray(np.sort(np.asarray(edges, dtype=np.int64), axis=1))
+    return a.view([("", a.dtype)] * 2).ravel()
+
+
+def _sheet_free_edge_nodes(mesh: Mesh, wake_faces: np.ndarray,
+                           wake_tag: str) -> np.ndarray:
+    """Nodes on the sheet's INTERIOR free edges (module docstring).
+
+    A sheet boundary edge (used by exactly one wake face) whose edge is
+    also an edge of some boundary triangle (wall / symmetry / far field)
+    gets its node stars cut by that boundary; one that lies in the domain
+    interior (M1 tip edge) does not, and its nodes must stay single-valued.
+    """
+    edges = np.concatenate([wake_faces[:, [0, 1]], wake_faces[:, [1, 2]],
+                            wake_faces[:, [2, 0]]])
+    keys = _edge_key_view(edges)
+    uniq, counts = np.unique(keys, return_counts=True)
+    sheet_boundary = uniq[counts == 1]
+    if len(sheet_boundary) == 0:
+        return np.empty(0, dtype=np.int64)
+
+    bnd_edges = []
+    for tag, tris in mesh.boundary_faces.items():
+        if tag == wake_tag:
+            continue
+        t = np.asarray(tris, dtype=np.int64)
+        bnd_edges.append(np.concatenate([t[:, [0, 1]], t[:, [1, 2]],
+                                         t[:, [2, 0]]]))
+    bnd_keys = (np.unique(_edge_key_view(np.concatenate(bnd_edges)))
+                if bnd_edges else np.empty(0, dtype=keys.dtype))
+
+    free = sheet_boundary[~np.isin(sheet_boundary, bnd_keys)]
+    if len(free) == 0:
+        return np.empty(0, dtype=np.int64)
+    free_pairs = free.view(np.int64).reshape(-1, 2)
+    return np.unique(free_pairs)
 
 
 def _split_node_star(offsets, sorted_elems, elements64, node, wake_keys_set):
@@ -240,12 +295,18 @@ def cut_wake(
 
     # Node sets. TE nodes (wall-and-wake) are duplicated ALONG WITH the
     # interior sheet nodes -- the jump reaches the wall (module docstring).
+    # Free-edge nodes (M1 tip edge) are excluded from duplication AND from
+    # the TE/Kutta stations: they stay single-valued, pinning the jump to
+    # zero where the sheet ends inside the domain.
     wake_nodes = np.unique(wake_faces)
     wall_nodes = np.unique(np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64))
     is_wall = np.zeros(n_nodes, dtype=bool)
     is_wall[wall_nodes] = True
-    te_nodes = wake_nodes[is_wall[wake_nodes]]
-    dup_nodes = wake_nodes
+    free_nodes = _sheet_free_edge_nodes(mesh, wake_faces, wake_tag)
+    is_free = np.zeros(n_nodes, dtype=bool)
+    is_free[free_nodes] = True
+    te_nodes = wake_nodes[is_wall[wake_nodes] & ~is_free[wake_nodes]]
+    dup_nodes = wake_nodes[~is_free[wake_nodes]]
     if len(te_nodes) == 0:
         raise AssertionError("wake sheet does not touch the wall (no TE nodes)")
 
@@ -365,6 +426,7 @@ def cut_wake(
     wc.n_nodes_orig = n_nodes
     wc.master_nodes = dup_nodes
     wc.slave_nodes = slave_nodes
+    wc.free_nodes = free_nodes
     wc.te_nodes = te_nodes
     wc.station_z = station_z
     wc.node_station = node_station
@@ -383,8 +445,14 @@ def _kutta_probe_nodes(mesh, wc, wall_nodes, wake_nodes, hint, z_tol):
     """Per TE node: the wall node one edge off the TE on each side.
 
     "One node off the TE" (design.md (4.4)): among the TE node's wall-edge
-    neighbors on the same z-plane, excluding wake/TE nodes, take the
-    nearest node on the +hint side (upper) and on the -hint side (lower).
+    neighbors, excluding wake/TE nodes, take the nearest node on the +hint
+    side (upper) and on the -hint side (lower). On layered quasi-2D meshes
+    candidates are first restricted to the TE node's own z-plane (the
+    station's section plane); on an unstructured swept TE (M1) no wall
+    neighbor shares the plane exactly, so a node whose strict pass comes
+    up empty falls back to the unrestricted nearest +/- side neighbor --
+    the probe is then off-plane by O(h), the same order as the "one node
+    off the TE" approximation itself.
     """
     nodes = mesh.nodes
     wall_faces = np.asarray(mesh.boundary_faces["wall"], dtype=np.int64)
@@ -404,22 +472,29 @@ def _kutta_probe_nodes(mesh, wc, wall_nodes, wake_nodes, hint, z_tol):
     n_te = len(wc.te_nodes)
     upper = np.full(n_te, -1, dtype=np.int64)
     lower = np.full(n_te, -1, dtype=np.int64)
-    dist_u = np.full(n_te, np.inf)
-    dist_l = np.full(n_te, np.inf)
 
-    for k, t in enumerate(wc.te_nodes):
-        for nb in neighbors[int(t)]:
+    def _pick(t: int, same_plane: bool):
+        up, lo = -1, -1
+        d_up, d_lo = np.inf, np.inf
+        for nb in neighbors[t]:
             if is_wake[nb] or nb in te_set:
                 continue
-            if abs(nodes[nb, 2] - nodes[int(t), 2]) > 10 * z_tol + 1e-12:
+            if same_plane and abs(nodes[nb, 2] - nodes[t, 2]) > 10 * z_tol + 1e-12:
                 continue
-            offset = nodes[nb] - nodes[int(t)]
+            offset = nodes[nb] - nodes[t]
             side = float(np.dot(offset, hint))
             dist = float(np.linalg.norm(offset))
-            if side > 0 and dist < dist_u[k]:
-                upper[k], dist_u[k] = nb, dist
-            elif side < 0 and dist < dist_l[k]:
-                lower[k], dist_l[k] = nb, dist
+            if side > 0 and dist < d_up:
+                up, d_up = nb, dist
+            elif side < 0 and dist < d_lo:
+                lo, d_lo = nb, dist
+        return up, lo
+
+    for k, t in enumerate(wc.te_nodes):
+        up, lo = _pick(int(t), same_plane=True)
+        if up < 0 or lo < 0:
+            up, lo = _pick(int(t), same_plane=False)
+        upper[k], lower[k] = up, lo
 
     if np.any(upper < 0) or np.any(lower < 0):
         missing = [int(wc.te_nodes[k]) for k in range(n_te)
@@ -442,7 +517,9 @@ def assert_wake_topology(mesh_cut: Mesh, wc: WakeCut) -> None:
        shown to produce a divergent spurious TE force; module docstring
        and roadmap P2 evidence note);
     3. no orphan duplicated nodes (every slave referenced by some tet);
-    4. duplicated-node count equals wake-sheet-node count;
+    4. duplicated-node count equals wake-sheet-node count minus the
+       single-valued free-edge nodes (M1 tip edge; zero on quasi-2D
+       sheets, so this is the original P2 assert there);
     5. wake-boundary edges handled: no element references BOTH a master and
        its own slave, and boundary faces reference the side-consistent copy
        (their owning tet references the same copy).
@@ -481,11 +558,12 @@ def assert_wake_topology(mesh_cut: Mesh, wc: WakeCut) -> None:
         "referenced by no element (orphans)"
     )
 
-    # 4. count equality: slaves == wake-sheet nodes (TE included).
+    # 4. count equality: slaves == wake-sheet nodes (TE included) minus
+    # the single-valued free-edge nodes.
     n_wake_nodes = len(np.unique(wc.wake_faces_minus))
-    assert len(wc.slave_nodes) == n_wake_nodes, (
+    assert len(wc.slave_nodes) == n_wake_nodes - len(wc.free_nodes), (
         f"duplicated {len(wc.slave_nodes)} nodes but sheet has "
-        f"{n_wake_nodes} nodes"
+        f"{n_wake_nodes} nodes and {len(wc.free_nodes)} free-edge nodes"
     )
 
     # 5a. no element straddles the cut.

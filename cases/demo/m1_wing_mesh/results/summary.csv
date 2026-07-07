@@ -1,0 +1,15 @@
+metric,value
+M1 coarse: tags wall/farfield/symmetry/wake,['farfield', 'symmetry', 'wake', 'wall'] [PASS]
+M1 coarse: P2 topology asserts through cut_wake,pass [PASS]
+M1 coarse: per-node TE stations (swept TE),83 [PASS]
+M1 coarse: tip free edge single-valued,106 [PASS]
+M1 coarse: Kutta probes found both sides,83 pairs [PASS]
+M1 medium: tags wall/farfield/symmetry/wake,['farfield', 'symmetry', 'wake', 'wall'] [PASS]
+M1 medium: P2 topology asserts through cut_wake,pass [PASS]
+M1 medium: per-node TE stations (swept TE),166 [PASS]
+M1 medium: tip free edge single-valued,208 [PASS]
+M1 medium: Kutta probes found both sides,166 pairs [PASS]
+M1 quality within bounds on all 3 levels,worst min-dihedral 3.53 deg [PASS]
+M1 refinement ladder monotone (one h parameter),55531/350718/2513255 [PASS]
+M1 freestream residual on cut mesh (interior rows),4.3e-14 [PASS]
+runtime_seconds,28.9

@@ -20,14 +20,24 @@ pyfp3d/                    # Main package
 │                           #   duplicated -- see docstring + roadmap P2 assert re-spec;
 │                           #   (x,y)-grouped spanwise stations -> quasi-2D collapses to
 │                           #   one scalar Γ; Kutta probe nodes; preprocess topology asserts)
-├── meshgen/              # ✓ [M0] Quasi-2D mesh generation (roadmap Track M)
+│                           #   ✓ [M1] 3D swept-wake support: sheet interior FREE edges
+│                           #   (tip edge) stay single-valued => Γ(tip)=0 discretely, tip
+│                           #   TE corner excluded from Kutta stations; off-plane Kutta
+│                           #   probe fallback; both paths exactly inert on quasi-2D meshes
+├── meshgen/              # ✓ [M0/M1] Mesh generation (roadmap Track M)
 │   ├── __init__.py
 │   ├── extrude.py        # ✓ single-layer extrusion; globally consistent
 │   │                       #   prism→3-tet split (min-global-index diagonal rule);
 │   │                       #   assert_quad_split_consistency (M0 preprocessor assert)
-│   └── planar.py         # ✓ vanilla-Gmsh 2D builders: cylinder annulus, NACA0012
-│                           #   with wake line embedded via gmsh.model.mesh.embed
-│                           #   (gmsh imported lazily; solver tests don't need it)
+│   ├── planar.py         # ✓ vanilla-Gmsh 2D builders: cylinder annulus, NACA0012
+│   │                       #   with wake line embedded via gmsh.model.mesh.embed
+│   │                       #   (gmsh imported lazily; solver tests don't need it)
+│   └── wing3d.py         # ✓ [M1] ONERA M6 half wing: OCC two-section ruled loft (exact
+│                           #   straight taper, sharp foilmod TE), spherical far field
+│                           #   15 MAC, chord-plane wake sheet swept from the TE --
+│                           #   occ.fragment stitches the shared TE edge, then
+│                           #   gmsh.model.mesh.embed makes the volume conform (fragment
+│                           #   alone does NOT); axis convention chord x / lift y / span z
 ├── constraints/          # ✓ [P2] Constraint machinery
 │   ├── __init__.py
 │   ├── wake.py           # ✓ master–slave elimination (A_red = TᵀAT once; Γ RHS-only via
@@ -116,7 +126,12 @@ cases/                     # Test cases and reference data
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
-│   └── onera_m6/         # [M1] Swept wing -- not started
+│   └── onera_m6/         # ✓ [M1] ONERA M6 swept/tapered half wing + embedded wake sheet
+│                           #   (generate_onera_m6.py, one parameter h_wall, 2x ladder:
+│                           #   coarse 55.5k / medium 350.7k / fine 2513k tets; .msh files
+│                           #   gitignored (large) -- regenerate coarse+medium ~30 s; the
+│                           #   stats CSVs + inspection PNGs are the committed evidence;
+│                           #   M1 tests skip when the meshes are absent)
 ├── reference_data/       # Ground truth (DO NOT EDIT)
 │   ├── naca0012_incompressible/  # ✓ [P2] Hess–Smith panel reference (generator script +
 │   │                             #   cl_reference.csv / cp_alpha4.csv / convergence.csv +
@@ -138,7 +153,9 @@ cases/                     # Test cases and reference data
 │   │                       #   monotone nested Picard, M=0 bit-identity (14 checks)
 │   ├── p4_transonic/       # G4.1-G4.3: subcritical bitwise no-op, upwind-reach evidence,
 │   │                       #   coarse M0.80 shock quality vs reference band (10 checks)
-│   └── m0_meshgen/         # mesh gallery, hard-rule-7 topology matrix, cylinder convergence
+│   ├── m0_meshgen/         # mesh gallery, hard-rule-7 topology matrix, cylinder convergence
+│   └── m1_wing_mesh/       # M6 wing+wake gallery, tip cut planes, ingestion/station/free-edge
+│                           #   semantics, quality ladder, freestream-on-cut-mesh (13 checks)
 └── test_*.py             # [Deprecated] Integration tests (use tests/ now)
 
 tests/                     # Unit and gate tests
@@ -165,6 +182,9 @@ tests/                     # Unit and gate tests
 │                                     #   G2.1 + G2.2, assert-fires-on-broken-cut, hard-rule-7
 │                                     #   sweep over every wake-tagged mesh in cases/meshes/
 ├── test_p2_kutta_naca0012.py        # ✓ [P2] Gates G2.3/G2.4/G2.5 + V2.1–V2.5 artifacts
+├── test_m1_onera_m6.py              # ✓ [M1] M6 family: tags/geometry/wake-tip closure/quality,
+│                                     #   swept-TE station + free-edge cut semantics, G2.1-style
+│                                     #   freestream preservation on the cut coarse mesh
 ├── test_p3_assembly.py              # ✓ [P3] Colored-assembly rewrite: fast-vs-reference bit checks
 ├── test_p3_subsonic.py              # ✓ [P3] Gates G3.1 + G3.3 (incl. bit-identical Laplace limit)
 ├── test_p3_naca0012_m05.py          # ✓ [P3] Gate G3.2 (medium-mesh nested Picard, ~45 s)

@@ -58,4 +58,7 @@ artifacts/
 .env.*
 
 # Mesh files
-m6_wing_unstructured.msh
+cases/meshes/onera_m6/*.msh
+
+# Large generated meshes (regenerate: python cases/meshes/onera_m6/generate_onera_m6.py)
+cases/meshes/onera_m6/*.msh
