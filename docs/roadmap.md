@@ -566,94 +566,37 @@ bounded P6/curved-element accuracy item).
 consistent/differentiable flux (surface-Cp sawtooth + sharp-edge P1 wall
 gradient); re-measure after G6.1.
 
-### P6 — Consistent, differentiable artificial-density flux (remove the non-physical surface-Cp oscillation) ★ accuracy phase
-**Motivation.** The shipped P4 artificial density (`kernels/upwind.py`)
-produces a bounded but clearly **non-physical sawtooth** in the surface
-Cp across the whole supersonic run — a ≈2-cell odd–even oscillation (see
-demo_report §P4 "supplementary analysis" and the committed
-`cases/demo/p4_transonic/results/g41_cp_shock_coarse.png`). The root cause is *structural,
-not a convergence artifact*: ρ̃_e = ρ_e − ν_e (ρ_e − ρ_{u(e)}) picks its
-upstream element **u(e) by a discrete, integer-valued directional walk**
-through face neighbours (`upwind.py::upstream_elements`) and blends with
-**ν = max(ν_e, ν_u)** — both are *discontinuous* functions of the local
-velocity direction and mesh geometry, so adjacent supersonic elements
-select geometrically different upstream cells and ρ̃ carries a mesh-scale
-(≈2h) perturbation that the piecewise-constant per-triangle wall-Cp
-extractor shows undamped. It is confined to ν > 0 zones (P1/P2/P3 stay
-smooth because ν ≡ 0 — the G4.2 no-op) and it is **O(h)**: it shrinks
-under refinement but never vanishes.
+### P6 — Surface-pressure recovery (remove the Cp sawtooth) ★ accuracy phase
 
-**Why this is its own gate, and why refinement is not the fix.** Mesh
-refinement only reduces the amplitude *linearly* while multiplying 3D
-cell count ~8×/level — prohibitive on a wing, and the P4/P5 wall time
-already dominates — and it does nothing about the underlying
-non-differentiability. Removing a **non-physical** oscillation from the
-surface pressure is a first-class accuracy requirement: it corrupts Cp,
-sectional loads, and any pressure-based objective for the adjoint/MDO
-thread (now P8 backlog). So it is gated in its own right rather than
-absorbed into refinement or deferred.
+> **Track-P renumber (2026-07-08).** The old P6 "differentiable
+> artificial-density flux (remove the sawtooth)" conflated three now-separate
+> deliverables. Split by the N1 finding into: **P6** (this — the sawtooth,
+> which is a *recovery* artifact), **P7** (the differentiable flux, a Newton
+> prerequisite), **P8** (fully-coupled Newton + performance, was P7), **P9**
+> (curved wall elements, new), **P10** (backlog, was P8). Gate-ID mapping:
+> old G6.x → new **G6.x (recovery)** + **G7.x (flux)**; old G7.x (Newton) →
+> **G8.x**; new **G9.x** (curved). Docs/history before 2026-07-08 use the old
+> IDs.
 
-**Sequencing note.** Logically a P4 follow-on (it fixes a P4-introduced
-artifact). Two interactions a planner should weigh: (i) it *gates P5's*
-"section Cp within FP-literature scatter" acceptance — the sawtooth would
-otherwise ride on top of the ONERA M6 section Cp; (ii) it shares its core
-requirement with P7 — an **exact Newton Jacobian (G7.1) needs a
-differentiable flux**, which the current integer-walk + `max` switch is
-not, so this phase is effectively a P7 prerequisite and is deliberately
-numbered ahead of it. It also gates P5's section-Cp acceptance, so it may
-be pulled ahead of P5 or co-developed with P7.
+**Motivation.** The shipped transonic solve shows a bounded ≈2-cell
+**sawtooth** in the supersonic-run surface Cp (see demo_report §P4 and
+`cases/demo/p4_transonic/results/g41_cp_shock_coarse.png`). **N1 root cause
+(2026-07-08, ★ below):** it is a **per-triangle wall-gradient RECOVERY
+artifact** on the sliver prism-split wall triangulation — the piecewise-constant
+P1 gradient of a *smooth* φ oscillates cell-to-cell — **not** the
+artificial-density flux (a smoother flux does not reduce it; smoothing the
+recovery drops the metric ~330×). Removing a non-physical oscillation from the
+reported surface pressure and loads is a first-class accuracy requirement (it
+corrupts Cp, sectional loads, and any pressure-based objective), so it gets its
+own phase; the fix is a post-processing recovery, cheap and refinement-free.
 
-**Deliverables (design pass first — extends design.md §3 artificial
-density; draft the new subsection before coding).** A
-**directionally-consistent, C¹ (differentiable) upwind-density operator**
-that preserves the exact subcritical no-op. Candidate routes to evaluate
-against the smoothness gate:
-- **Continuous streamwise-projected bias** — replace the nearest-face
-  hop u(e) by an upwind density difference taken along the *continuous*
-  velocity direction (rotated / streamline-aligned difference, à la
-  Jameson–Caughey full-potential schemes) so the stencil weight varies
-  smoothly with ∇φ instead of switching cells.
-- **Patch- or edge-based artificial dissipation** — a consistent
-  symmetric artificial-viscosity flux assembled edge/patch-wise so the
-  dissipation is C⁰-continuous across faces rather than per-element
-  selected.
-- **Smooth ν blend** — replace `max(ν_e, ν_u)` by a differentiable
-  shock-point blend.
-- (Companion, not sufficient alone) **curved / isoparametric wall
-  elements** — removes the flat-facet wall geometric contribution shared
-  with G1.6/DP1; scoped separately, tracked here only for its
-  Cp-smoothness contribution.
-Must preserve: the exact ν ≡ 0 subcritical no-op (G4.2 bit-identity), the
-positivity guards, and the (M²−1)/M² dissipation floor that P4's
-multi-hop walk was introduced to satisfy (design.md §12.4 / P4 hardening
-trail).
+**Deliverable (landed 2026-07-08, `30ab85e`).** A normal-gated wall-gradient
+recovery smoothing (`post/surface.py::smooth_wall_tangential_gradients`) applied
+in post-processing to the Cp curve **and** the force integral (`smooth_passes`
+on `wall_cp_curve` / `section_cp_curve` / `wall_force_coefficients`); the metric
+is `post/section_cut.py::cp_oscillation_metric` (shock-robust, sign-alternating).
+Design: design.md §9.1. The differentiable *flux* work moved to P7.
 
-**Design-pass decision (2026-07-08, design.md §3.1–3.2 — grounded in an
-audit of `kernels/upwind.py` + the López dissertation Appendix B, verified
-against the PDF).** The phase has **two independent defects** that must be
-separated:
-- **Defect A (accuracy):** the surface-Cp sawtooth is a *selection-flip*
-  artifact — adjacent supersonic cells pick geometrically different integer
-  upstream cells `u(e)`, so ρ̃ carries a ≈2h checkerboard. It is a spatial-
-  consistency defect (present in Picard, O(h), never vanishes under
-  refinement), NOT a convergence artifact.
-- **Defect B (differentiability):** the integer `u(e)`, the `max(0,μ,μ_up)`
-  switch, and the two hard clamps are non-smooth in φ — this is what blocks the
-  P7 exact Jacobian. **Key PDF finding: Defect B does NOT require a
-  differentiable *selection*.** López freezes `u(e)` per Newton step and
-  differentiates only through ρ_up/μ/ρ (Eq. B.3–B.8); his own switching
-  function is only C⁰ yet converges quadratically. And the two clamps are
-  **inactive at the converged P5 state** (0 floored / 0 limited), so their
-  non-smoothness never enters the converged Jacobian.
-- **Selected route:** the **streamline-projected weighted upwind density**
-  (design.md §3.2, Eq. 3.4): replace the single integer neighbour by a smooth
-  inflow-weighted blend ρ_up(e) = Σ_f w_f ρ_{nb(f)}/Σ_f w_f,
-  w_f = max(0, −V_e·n̂_f)^p. This kills Defect A (weights slide smoothly in
-  space — no flip) **and** Defect B (C¹ in ∇φ at fixed neighbour set) in one
-  operator, and reduces bit-for-bit to ρ̃≡ρ subcritically. Smooth the inner
-  `max` with `max_ε`. The smooth density clamp (note-4 "N0") is **optional
-  robustness**, deferred unless a Newton transient stalls on the clamp — López
-  ran a hard clamp to quadratic convergence.
 **★ ROOT-CAUSE CORRECTION (N1, 2026-07-08): the sawtooth is a wall-Cp
 gradient-RECOVERY artifact, not the artificial-density flux.** Decisive
 evidence (design.md §3.1/§9.1): nodal/edge-neighbour smoothing of the *same*
@@ -662,8 +605,8 @@ flux (the streamline kernel) does not reduce it at all. So G6.1 is fixed in
 **post-processing recovery** (`smooth_wall_tangential_gradients`, normal-gated,
 preserves the sharp TE — `smooth_passes` on `wall_cp_curve` / `section_cp_curve`
 / `wall_force_coefficients`), and the differentiable **flux** (streamline
-kernel) is reclassified as the **P7 Newton prerequisite** (it does not address
-the sawtooth). Metric now shock-robust (sign-alternating: counts only
+kernel) is reclassified to **P7** (the P8 Newton prerequisite; it does not
+address the sawtooth). Metric now shock-robust (sign-alternating: counts only
 slope-reversal points, so the monotone shock is excluded).
 
 **Gates (repointed 2026-07-08):**
@@ -682,30 +625,66 @@ slope-reversal points, so the monotone shock is excluded).
       cd_pressure shifts (~15 % coarse) — the explicitly-untrusted FP quantity,
       not gated (design.md §9). P4/P5 gate numbers (shock/M_max/cl_KJ) are
       untouched; only the reported cl_p/cd_p change and are re-recorded.
-- [ ] G6.3 no regression: `smooth_passes = 0` bit-identical to the current
-      per-triangle path; full default suite green. Also the flux path: G4.2
-      subcritical no-op still bit-identical (the kernel is opt-in, walk is
-      default).
+- [ ] G6.3 V6 re-measured under smoothing: recompute the V6 consistency
+      (cl_p vs cl_KJ) with `smooth_passes>0` on the M6 gates and quantify how
+      much of the deferred V6 floor was the sawtooth vs the sharp-TE/LE P1 wall
+      gradient. The residual (sharp-edge) floor → **P9** (curved elements); V6<1%
+      stays deferred there.
+- [ ] G6.4 no regression: `smooth_passes = 0` bit-identical to the current
+      per-triangle path; full default suite green (157 passed).
+**Demo:** `cases/demo/p6_surface_recovery/` (5/5 PASS) — re-runs the P4
+(NACA M0.80) + P5 (M6, gated) cases showing raw→smoothed Cp, physics
+preservation, and the kernel negative result. See demo_report §P6.
 **Visual test examples:**
-- V6.1 overlay coarse-mesh surface Cp before/after the new flux on one
-  figure, with the medium-mesh Cp as the smoothness reference; the
-  "after" curve loses the sawtooth without smearing the shock.
-- V6.2 plot the G6.1 oscillation metric vs mesh level for old and new
-  operators; old scales O(h), new is already flat/low on coarse.
-- V6.3 element-wise map of ρ̃ (or ν) in the supersonic pocket, old vs
-  new; old shows the checkerboard stencil-selection pattern, new is
-  smooth.
-**Effort:** 3–5 sessions (design pass + operator swap + calibration).
-**Risk:** medium — the new flux must not weaken the (M²−1)/M² dissipation
-the walk was added to guarantee; re-validate the full P4 shock ladder
-(G4.1 coarse+medium, G4.3 sweep) after the swap.
+- V6.1 coarse wall Cp raw per-triangle vs recovery-smoothed on one figure;
+  the smoothed curve loses the sawtooth, shock crisp, TE preserved.
+- V6.2 one-panel finding: walk-flux-raw + kernel-flux-raw (both serrated) vs
+  walk-flux-smoothed (clean) — a smoother flux does not help; the recovery does.
+- V6.3 (gated) ONERA M6 section Cp at η=0.65 raw vs smoothed.
+**Effort:** done (recovery + demo + tests). **Risk:** low (post-processing,
+`smooth_passes=0` default keeps everything bit-identical).
 
-### P7 — Performance & robustness: fully-coupled Newton
+### P7 — Differentiable artificial-density flux (Newton prerequisite)
+**Motivation.** The P4 flux (`kernels/upwind.py`) picks its upstream element by
+a discrete integer walk `u(e)` and a `max(0,μ_e,μ_u)` switch — **non-smooth in
+φ**, so the exact Newton Jacobian (P8, design.md §6.3) is not well-defined on it.
+This phase delivers a **C¹ (in ∇φ) differentiable upwind-density flux** as the
+Newton prerequisite. It does **not** address the sawtooth (that is a recovery
+artifact, P6) — the flux change alone was measured *not* to reduce it.
+
+**Design pass + N1 (2026-07-08, design.md §3.2).** The naive near-neighbour
+blend (Eq. 3.4) is transiently unstable on sliver tets (a fast probe blows it
+up from a good field for every p/gain — averaging the near ring destroys the
+upwind character). The **shipped opt-in operator** is a **multi-ring
+streamline-Gaussian kernel** (Eq. 3.4′: depth-3 BFS neighbourhood, Gaussian
+centred one streamwise extent upstream) — genuine reach, C^∞ in ∇φ, ~10× faster
+per density iteration than the walk, converges to the walk's own physical state.
+Built and unit-tested (`UpwindOperator(weighted=True, mode="kernel")`,
+`tests/test_p6_weighted_flux.py`); params threaded through `solve/picard.py` +
+`solve/continuation.py`; walk stays the shipped default.
+
+**Gates:**
+- [ ] G7.1 subcritical no-op: kernel bit-identical to the P3 path at M∞→0 /
+      ν≡0 (the G4.2 analogue with `mode="kernel"`).
+- [ ] G7.2 shock ladder preserved: with `upwind_c` recalibrated (≈2.0–2.5, vs
+      the walk's 1.5 — the kernel's effective dissipation differs), the kernel
+      reproduces the walk's transonic solutions — G4.1 coarse+medium shock in
+      the 0.62±0.03 band, G4.3 10-case sweep converges, 0 floored/limited.
+- [ ] G7.3 differentiability: finite-difference-verify ∂ρ̃/∂φ at fixed
+      neighbourhood (rel err < 1e-6) in subsonic/accelerating/decelerating
+      regimes — the property the P8 Jacobian relies on.
+**Demo:** `cases/demo/p7_diff_flux/` (future) — kernel vs walk shock ladder,
+FD differentiability, per-iteration speed.
+**Effort:** 1–2 sessions (kernel is built; calibrate `upwind_c` + validate).
+**Risk:** low-medium — must not weaken the (M²−1)/M² dissipation floor; the
+calibration is a re-validation of the G4.1/G4.3 ladder.
+
+### P8 — Performance & robustness: fully-coupled Newton
 **Deliverables:** exact Newton Jacobian (design.md §6.3 / López Eq. 3.24 +
 Appendix B) with widened sparsity, **fully-coupled Newton with Γ as an
 unknown** (design.md §8.1), Mach continuation + load stepping, GMRES + AMG
 path, AMG setup reuse, Eisenstat–Walker inexact-solve schedule, profiling
-report. Consumes the P6 differentiable flux: the exact Jacobian is only
+report. Consumes the **P7** differentiable flux: the exact Jacobian is only
 well-defined once the integer-walk u(e) + `max` switch is replaced by the C¹
 upwind density.
 
@@ -737,36 +716,53 @@ internal note where it conflicts).**
 - **Expected cost (López §4.7):** subsonic 5–10 Newton iters total; transonic
   4–9 per load step; ONERA M6 ≈ 12 × 5–9 ≈ 60–110 total (vs ~10⁴ Picard today).
   CL reference for M6 is 0.288 (KRATOS = Tranair, Table 4.15) — UP3D's current
-  0.245 is a separate sharp-TE/P1 accuracy gap tracked via V6/P6, not a Newton
-  target.
+  0.245 is a separate sharp-TE/P1 accuracy gap tracked via V6 → P9 (curved
+  elements), not a Newton target.
 
-**Sub-phase order** (Newton needs P6 first; N0 optional):
+**Sub-phase order** (Newton needs the P7 flux first; N0 optional):
 - **N0 (optional)** smooth density clamp — only if a Newton transient stalls on
   the clamp (design.md §3.2); skip by default (converged states are clamp-free).
-- **N1** = P6 differentiable flux (the streamline-projected weighted density).
+- **N1** = the P7 differentiable flux (delivered — the streamline-Gaussian kernel).
 - **N2** Newton Jacobian assembly (Term 1 reuse + Term 2 local + Term 3 upstream)
   with finite-difference verification and the G4.2 subcritical bit-identity.
 - **N3** GMRES + AMG (aggregation on the symmetric part) in `solve/linear.py`.
 - **N4** fully-coupled Newton driver `solve/newton.py` (Γ Jacobian incl. the
   far-field column) + subsonic verification (cl matches P3 < 0.5 %).
-- **N5** transonic + load stepping → **G7.1** quadratic convergence on G4.1.
-- **N6** ONERA M6 + performance → **G7.2/G7.3**.
+- **N5** transonic + load stepping → **G8.1** quadratic convergence on G4.1.
+- **N6** ONERA M6 + performance → **G8.2/G8.3**.
 
 **Gates:**
-- [ ] G7.1 Newton terminal quadratic convergence on G4.1 case (‖R_{k+1}‖/‖R_k‖²
+- [ ] G8.1 Newton terminal quadratic convergence on G4.1 case (‖R_{k+1}‖/‖R_k‖²
       → const, cf. López Table 4.9 10⁻²→10⁻⁵→10⁻⁹→10⁻¹²); Term-2/Term-3 Jacobian
       finite-difference-verified (rel err < 1e-6) incl. the supersonic pocket;
       G4.2 subcritical no-op still bit-identical to the P3 path.
-- [ ] G7.2 ONERA M6 medium mesh < 5 min single node, end to end
-- [ ] G7.3 full regression suite runtime < 10 min (CI budget)
+- [ ] G8.2 ONERA M6 medium mesh < 5 min single node, end to end
+- [ ] G8.3 full regression suite runtime < 10 min (CI budget)
+**Demo:** `cases/demo/p8_newton/` (future) — Newton convergence order + runtime
+breakdown.
 **Visual test examples:**
-- V7.1 Newton convergence plot of ||R|| and estimated convergence order p_k; confirm terminal quadratic regime (p_k near 2).
-- V7.2 runtime breakdown chart (assembly/linear solve/postprocess) for ONERA M6 medium mesh; verify bottleneck location matches profiling report.
-- V7.3 regression dashboard trend over commits (runtime + key errors); confirm speedup does not degrade physical metrics.
+- V8.1 Newton convergence plot of ||R|| and estimated convergence order p_k; confirm terminal quadratic regime (p_k near 2).
+- V8.2 runtime breakdown chart (assembly/linear solve/postprocess) for ONERA M6 medium mesh; verify bottleneck location matches profiling report.
+- V8.3 regression dashboard trend over commits (runtime + key errors); confirm speedup does not degrade physical metrics.
 **Effort:** 3–5 sessions. **Risk:** medium.
 
-### P8 — Backlog (post-v1.0, ordered by value to the MDO thread)
-1. Discrete adjoint = transpose of the P7 Jacobian + Kutta/wake constraint
+### P9 — Curved / isoparametric wall elements ★ accuracy phase
+**Motivation.** The shared accuracy route for two open items that a flat-facet
+P1 wall cannot close: (i) **G1.6** incompressible sphere-Cp < 2% (root-caused to
+the natural BC enforced on the flat polyhedral wall instead of the true curved
+surface — design.md §5.1/§5.1.2, DP1 "> 5%" branch; boundary-data corrections
+ruled out with evidence), and (ii) the **residual V6 < 1%** floor left after P6
+removes the sawtooth — the remaining CL_p-below-CL_KJ gap is the sharp-TE/LE P1
+wall-gradient error (design.md §9.1; M6 CL 0.245 vs the Tranair/KRATOS 0.288).
+**Deliverables:** curved/isoparametric wall boundary elements (or the
+geometry-consistent Option-C re-spec of G1.6, design.md §5.1 Option C), scoped
+so the wall integral/gradient sees the true surface. **Gates:** G9.1 G1.6
+sphere-Cp < 2% (medium); G9.2 V6 < 1% on the M6 medium gate. **Demo:**
+`cases/demo/p9_curved_walls/` (future). **Effort:** large (own effort per DP1).
+**Risk:** medium-high — isoparametric assembly is a real extension.
+
+### P10 — Backlog (post-v1.0, ordered by value to the MDO thread)
+1. Discrete adjoint = transpose of the P8 Newton Jacobian + Kutta/wake constraint
    adjoint terms → gradients for shape optimization.
 2. VII hook: transpiration BC ∂φ/∂n = d(u_e δ*)/ds on wall faces (reuses the
    pyTSFoil IBL line of work).
@@ -812,6 +808,8 @@ internal note where it conflicts).**
 | P3 | ✓ | 2026-07-07 | Delivered: **assembly tech debt retired** — `mesh/metrics.py::precompute_element_geometry` (B_e/V_e once per mesh), `mesh/coloring.py` numba-jitted greedy coloring (same visit order ⇒ identical assignment to the old pure-Python loop, which was ~seconds per call on real meshes) + `color_partition_csr`, `kernels/gradient.py` (prange velocity sweep, zero-alloc), `kernels/jacobian.py` (symbolic CSR pattern + `elem_to_csr` scatter map + colored-prange matrix kernel + `PicardOperator` per-mesh workspace), `kernels/residual.py::assemble_residual_colored`; the public `assemble_stiffness_matrix` now delegates to the fast path (P1/P2 drivers run the same code as the Picard loop) with the old serial kernels retained as the regression reference — fast-vs-reference 5.7e-16 rel, bit-deterministic across calls/threads (within a color no two elements share a node, so accumulation order is fixed by the color sequence), hot reassembly ~160× faster on the medium NACA mesh (`tests/test_p3_assembly.py`, demo part 1). **Subsonic compressible solver**: `physics/isentropic.py::density_field/mach_squared_field` (array sweeps of the §2 scalars; ρ ≡ 1.0 *bitwise* at M∞ = 0 — the G3.3 anchor), `solve/picard.py::solve_subsonic` (non-lifting density Picard) and `solve_subsonic_lifting` (nested: outer density update, inner P2 secant Kutta at frozen ρ; AMG reuse every 4 outers; opt-in forcing-term inexact solves η‖b−Ax₀‖, default off — see the G3.2 gate entry for why interleaved Γ updates and relative loose tolerances were both rejected with measurements), PG-scaled vortex far field (`constraints/dirichlet.py`, β = √(1−M∞²) stretches only the atan2 argument so the wake-jump/branch-cut structure is untouched and β = 1 reduces bit-exactly), `constraints/wake.py::WakeConstraint.update_matrix` (T topological, rebuilt never; A_red + h_j per density iteration), compressible Cp in `post/surface.py::wall_force_coefficients` + `post/section_cut.py::wall_cp_curve` (`m_inf` param, isentropic (2.5)), `solve/linear.py::build_amg_preconditioner` (seeded AMG setup — repeatable solves; see G3.3). Reference data: `cases/reference_data/naca0012_m05/` (PG + Kármán–Tsien corrected panel cl/Cp with provenance + verification trail). Gates: G3.1 **0.32%** (< 2%); G3.2 **cl −0.33%** from the PG/KT midpoint and inside the bracket, **15 iterations** (< 30), strictly monotone residual; G3.3 matrix/φ/Γ **bitwise** at M∞ = 0 + full suite green. Suite: 117 passed + 2 xfailed, ~96 s (G3.2's medium-mesh nested solve is ~45 s of it). Demo: `cases/demo/p3_subsonic/` (14 checks PASS) + docs/demo_report.md §P3. Known non-P3 fix bundled: `tests/test_p2_wake_cut.py` topology sweep now skips surface-only mesh assets (the new `cessna_surface.msh` broke `read_mesh` in the hard-rule-7 sweep — pre-existing on main). |
 | P4 | ✓ | 2026-07-07 | **Closed same day it was found open by audit** (opened AM, re-closed PM): the medium G4.1 gate had diverged on its first actual run (M_max 30.1, Kutta \|F\| 2.5e-3, spurious shock 0.802, cl_p/cl_KJ sign-inconsistent, 19331 total Picard iterations across 12 exhausted Γ evals × 2 levels). Root-cause verified same day (diagnosis follow-up in the G4.1 gate entry): the shipped global mass-lumped pseudo-time damping diag(m_lumped/Δτ) weakens ~4× coarse→medium at fixed Δτ, and the damping needed also grows with shock strength (finer Mach-continuation steps alone ruled out). Fix landed same day: `solve/picard.py::solve_subsonic_lifting`'s new `damping_theta` param (D = θ·diag(A_free), θ=0.2, recomputed every outer iteration from that iteration's own operator — mesh/shock-independent by construction), wired as `solve/continuation.py::TRANSONIC_DEFAULTS`'s new default, mutually exclusive with the retired `pseudo_dt`. Medium gate now **PASSES in 16m39s** (vs 2h43m divergent): upper shock x/c 0.633 (band 0.62±0.03), Kutta \|F\| 1.23e-4 < 2e-4 tol, M_max 1.366, zero limited/floored cells, cl_pressure/cl_KJ sign-consistent (0.349/0.354), n_picard_total 12931. G4.2 bit-identity and the G4.1 coarse shock position (0.604 vs prior 0.599) both re-verified first, per plan; the G4.3 10-case sweep re-run and stays green (one recorded, non-gating difference: the M0.82/α=1.25° corner's cl moved 0.389→0.458 under the new damping). Full default suite unaffected: 136 passed + 2 skipped + 2 xfailed, ~5 min. Same session, the P5 blocker flagged during the diagnosis is also closed: `constraints/wake.py::WakeConstraint.update_matrix`'s per-station `h_j` loop is now one batched `T^T @ (A @ G)` sparse product instead of one matvec per station, verified bit-identical on the real ONERA M6 coarse mesh (83 stations) — removes ~166 extra matvecs/density-iteration on the M6 medium mesh. Transonic convergence semantics unchanged (engineering-converged, not 1e-10; P7 Newton remains the designed cure for the residual tail). Demo `cases/demo/p4_transonic/` re-run, 10 PASS with the new default; demo_report.md §P4 updated with two new addenda. |
 | P5 | ✓ | 2026-07-08 | **Closed the same day the medium `physical` failure was RE-diagnosed a second time — the earlier "TE discretization singularity, NOT a wake/Kutta change" conclusion was OVERTURNED by four targeted experiments (T1–T4, `cases/demo/p5_onera_m6/INVESTIGATION_kutta_closure.md`).** Infrastructure (unchanged from the in-progress entry): `post/surface.py::planform_area` + `cl_kj_3d` (CL_KJ=2∫Γdz/(U·S)); `post/section_cut.py::section_cp_curve` (`wall_cp_curve` refactor bit-identical); `solve/continuation.py` forwards `rtol`/`maxiter` (**rtol=1e-7 ~5.5× faster, M_max identical to 5 digits**; default 1e-10 keeps P4 bit-identical); viscous AGARD `reference_data/onera_m6_experiment/` as qualitative overlay; all runs cap `NUMBA_NUM_THREADS=16`. **Second re-diagnosis (T1–T4):** T1 straddle census — 0 tets contain both master+slave wake nodes (cut topology clean). T2 — under-relaxing the eval density at the SAME cached Γ improves drho 4× but the 18-cell outboard-TE M>2 cluster stays bit-identical (not under-convergence). T3 (decisive) — the per-station Kutta mismatch was a SINGLE-station anomaly (st133, z/b=0.801, left 32% under-circulated, |F|/Γ=37% vs ≤5% at all 165 other stations); setting only that station's Γ to its own Kutta target collapses the cluster 18→0 cells (band M_max 3.10→1.16), so the amplitude was a **Kutta-closure failure**, not the TE discretization (a 1/h singularity cannot depend on Γ). Root cause: the per-station secant does not converge at the top Mach level on the 3D mesh (pushing to 16 evals diverges, M_max≈29 — the 10-eval budget was early-stopping regularization); the Γ deficit drives a real TE overspeed that the ρ̃-floor/limiter freeze into a spurious M≈3 state. The far-field 8-cell cluster (incl. the pre-fix M_max=5.20 cell) is the independent span-uniform-2D-vortex branch-ray artifact beyond the tip. **Fix (recipe-level, defaults off, all non-3D paths bit-identical):** `farfield_spanwise_gamma=True` (Γ(z)-tapered vortex far field, 0 at/beyond the sheet tip — `constraints/dirichlet.py`) + `n_kutta_polish=4` (fixed-Γ Kutta-closure polish after the continuation: apply the measured target, re-solve with `omega_rho_polish=0.5`, repeat; secant-free and contractive, |F| halves per step). **Gate numbers (from-scratch, demo 16/16 PASS):** COARSE M_max 1.398, 0 floored/limited, shocks x/c 0.596/0.570/0.425 (η 0.44/0.65/0.90), Γ 0.097→0.0206, V6 2.40%, CL 0.2419, |F| 5.3e-4. MEDIUM M_max 1.995 (bounded tip-TE-corner P1 overshoot — the only surviving singularity trace), **0 floored/limited**, shocks 0.594/0.526/0.345 (~1 cell), Γ 0.097→0.0151 (st133 dip healed), V6 1.82%, CL 0.2453 (coarse→medium 0.2419→0.2453), |F| 5.8e-4 (28× tighter than pre-fix). **G5.2 V6 re-spec (user-approved 2026-07-08):** V6 is a systematic O(h) CL_p-below-CL_KJ discretization floor (sharp-TE/LE P1 wall gradient + P4 Cp sawtooth — both P6 targets; removing the M>2 clusters left V6 unchanged), so it is REPORTED against a 3% floor bound and **<1% is deferred to post-P6 (re-measure after G6.1)**. Known-robustness item (recorded, not fixed): swept-TE Kutta probe assignment shares probe nodes between adjacent stations (st133/134 share their upper probe; 35 upper/41 lower of 166 stations — `diagnose_medium.py` audit) — the latent reason st133 specifically stalled. Dead routes stay dead: spanwise-Γ smoothing (A–E) and TE-element treatments for this gate. Tests: `tests/test_p5_onera_m6.py` 4 fast + 2 gated (updated to the polish recipe + re-specced V6 bound); demo `cases/demo/p5_onera_m6/` (16 checks) + refreshed committed PNG/CSV evidence (the solution npz caches are LOCAL/gitignored like the .msh, now storing residual/drho histories; the demo re-solves absent caches). Full default suite green: **140 passed + 4 skipped + 2 xfailed**. |
-| P6 | ☐ (N1 2026-07-08: G6.1 root-caused + recovery fix landed; kernel reclassified to P7) | | **★ N1 root-cause correction (2026-07-08): the surface-Cp sawtooth is a per-triangle wall-gradient RECOVERY artifact, NOT the artificial-density flux.** Decisive evidence: on the *same* coarse NACA0012 M0.80 walk solution, nodal/edge-neighbour smoothing of the wall gradient drops the G6.1 sawtooth metric **330×** (0.0758→0.00023, 39→1 reversals) with shock 0.604→0.607 and cl_p −0.3 % and |Cp|_max unchanged; whereas the smoother streamline-kernel **flux** does not reduce the metric at all (equal-or-worse at every reach/C, even with the shock-robust metric and the solution matched). This **overturns** the earlier ρ̃-selection-flip attribution (demo_report §P4). **G6.1 fix (landed):** `post/surface.py::smooth_wall_tangential_gradients` — a few Jacobi passes averaging each wall triangle's gradient with its edge neighbours, **gated by outward-normal alignment so it never averages across the sharp TE**; threaded as `smooth_passes` through `wall_cp_curve` / `section_cp_curve` / `wall_force_coefficients` (default 0 = bit-identical). Linear in the gradient (differentiable). Metric re-specced shock-robust (sign-alternating second difference — counts only slope-reversal points, so the monotone shock is not counted). Tests: `tests/test_p6_recovery.py` (4), `tests/test_p6_cp_metric.py` (7). Demo `cases/demo/p6_diff_flux/` re-runs the P4 (NACA M0.80) + P5 (M6, gated) cases showing raw-vs-smoothed Cp + the kernel negative result. **The kernel (differentiable flux) is reclassified as the P7 Newton prerequisite** (opt-in `mode="kernel"`, `upwind_c`≈2.0–2.5, ~10× faster/iter, stable, C^∞ in ∇φ) — it does not fix the sawtooth. **P4/P5 impact:** solutions unchanged (shock/M_max/cl_KJ identical, post-processing only); only reported cl_p (−0.3 % coarse) / cd_p (~15 % coarse, untrusted FP quantity) change under smoothing, re-recorded in the P6 demo. **Earlier N1 progress (2026-07-08):** delivered the G6.1 metric (`post/section_cut.py::cp_oscillation_metric` + `tests/test_p6_cp_metric.py`, 6 tests) and a differentiable upwind-density operator (`kernels/upwind.py`, `tests/test_p6_weighted_flux.py`, 6 tests + G4.2 no-op green). **Key implementation finding (design.md §3.2):** the literal Eq. 3.4 near-neighbour blend is **transiently unstable** on the prism-split sliver tets (a fast frozen-Γ probe from the walk's converged coarse field blows up to M_max 20–40 for every p/gain; diagnostic: not dissipation magnitude — the near ring reaches only ~0.3·extent and averaging destroys the upwind character; face-normal weighting also gives anti-dissipative negative-reach cells → use centroid-displacement weighting). The **working operator is a multi-ring streamline-Gaussian kernel** (Eq. 3.4′: depth-3 BFS neighbourhood, Gaussian weight centred on the point ~1 streamwise extent upstream) — genuine reach + smooth, C^∞ in ∇φ, no per-iteration walk so ~10× faster/iteration; probed stable, converging to the walk's own M_max 1.37 / 0 floored-limited state. **Calibration still open:** at reach 1.0/σ 0.35 the kernel converges to a *different* solution (coarse shock 0.604→0.641, cl_KJ 0.364→0.414 +14%) and the raw G6.1 metric doesn't drop — the metric must exclude the shock foot (isolate the sawtooth) and the kernel dissipation must be matched (reach/C) to reproduce the walk's shock/cl before the smoothness gain is measured. **Shipped default stays the P4 walk** (`upwind_weighted=False`, all committed P4/P5 gates bit-identical); the kernel is opt-in (`mode="kernel"`); params threaded through `solve/picard.py` + `solve/continuation.py`; demo metric-instrumented. **Design-pass background (2026-07-08):** **New phase (added 2026-07-07; numbered ahead of Newton by dependency order).** Remove the non-physical ≈2-cell surface-Cp sawtooth introduced by the P4 artificial density: replace the discrete integer-walk upstream selection u(e) + `max(ν_e, ν_u)` switch with a directionally-consistent, C¹ upwind-density operator that keeps the G4.2 subcritical no-op and the (M²−1)/M² dissipation floor. Root-cause analysis + coarse/medium evidence in demo_report §P4 "supplementary analysis". **Design pass (2026-07-08, design.md §3.1–3.2; audit of `kernels/upwind.py` + López dissertation Appendix B verified against the PDF):** the phase has **two independent defects** — (A) the sawtooth is a *selection-flip* spatial-consistency artifact (adjacent supersonic cells pick different integer u(e); O(h), present in Picard); (B) non-differentiability blocks the P7 Jacobian. Key finding: (B) does NOT need a differentiable *selection* — López freezes u(e) per Newton step and differentiates only through ρ_up/μ/ρ (Appendix B), and his own `max(0,μ,μ_up)` is C⁰ yet converges quadratically; the two hard clamps are inactive at the converged P5 state (0 floored/limited) so their non-smoothness never enters the converged Jacobian. **Selected route:** the streamline-projected weighted upwind density (design.md Eq. 3.4, `ρ_up=Σ_f w_f ρ_{nb(f)}/Σ_f w_f`, `w_f=max(0,−V_e·n̂_f)^p`) — kills (A) via a smooth spatial blend and (B) via C¹-in-∇φ at fixed neighbour set, in one operator; smooth the inner `max` with `max_ε`; the smooth density clamp (note-4 "N0") is **optional** (deferred unless a Newton transient stalls on it). Gates G6.1 (Cp-smoothness metric on coarse ≤ current medium baseline — refinement is explicitly *not* the accepted fix), G6.2 (P4 shock ladder preserved), G6.3 (no regression). Gates P5's section-Cp acceptance AND the deferred P5 V6<1% target (G5.2 re-spec 2026-07-08), and is a prerequisite for the P7 exact Newton Jacobian G7.1. |
-| P7 | ☐ (design pass done 2026-07-08) | | Performance & robustness → **fully-coupled Newton** (was P6; renumbered 2026-07-07 so the differentiable-flux phase precedes it — the exact Jacobian is only well-defined on a C¹ flux). **Design pass (2026-07-08, design.md §8.1; López dissertation Ch.3–4 + Appendix B verified against the PDF, supersedes the earlier internal note where it conflicts):** (1) **full Jacobian "strategy A"** — keep the switching-function derivative ∂μ/∂φ (Eq. B.3/B.6) and the nonzero upstream coupling (B.4), stencil one element-layer wider → strict quadratic (Tables 4.5/4.6/4.9); dropping Term 3 → only superlinear. (2) **fully-coupled (φ_red, Γ)** solve, not the Γ-secant (the secant–density coupling was the P5 medium instability); the Γ-Jacobian blocks are nearly in-code — `∂R_red/∂Γ_j=TᵀJ g_j` (≈`wake.py::self._h`), `F_j=kutta_targets_j−Γ_j` with sparse ±1/n_j `∂F/∂φ`, **plus the easy-to-miss far-field column** −A_coupling·∂vals_red/∂Γ_j (Γ enters the vortex Dirichlet data too). (3) **load-stepping — two PDF corrections to the earlier note:** within a case M_crit/μ_c are held **fixed** and only M∞ ramps (Tables 4.7/4.8, no per-step M_crit sweep); ONERA M6 (Table 4.13) holds M_crit constant 0.95, μ_c at 2.0 during the M∞ ramp, then decreases μ_c 2.0→1.6 at fixed M∞. (4) **also refuted:** the note's premise that "López used a blunt TE" — Eq. 4.2 *sharpens* the NACA0012 TE and he still converged quadratically, so a sharp 2D TE is not itself a Newton obstacle. Expected ≈60–110 Newton iters on M6 (vs ~10⁴ Picard); CL ref 0.288 (KRATOS=Tranair, Table 4.15). Sub-phases N0(optional)/N1 differentiable flux/N2 Jacobian/N3 GMRES+AMG/N4 coupled driver/N5 transonic+load-stepping/N6 M6+perf. **N1 delivered early (2026-07-08, during P6):** the differentiable **streamline-Gaussian kernel** flux (`kernels/upwind.py`, `UpwindOperator(weighted=True, mode="kernel")`, opt-in; stable, C^∞ in ∇φ, ~10× faster/iter than the walk, converges to the walk's physical state) — reclassified here from P6 after N1 proved it does not fix the sawtooth (that is a recovery artifact, P6/§9.1). Needs `upwind_c`≈2.0–2.5 (vs walk 1.5) to match effective dissipation; params threaded through `solve/picard.py`+`solve/continuation.py`; tests `test_p6_weighted_flux.py`. Gates G7.1 (terminal quadratic on G4.1 + FD-verified Jacobian), G7.2 (M6 medium < 5 min), G7.3 (suite < 10 min). |
-| P8 | ☐ | | Backlog (was P7; renumbered 2026-07-07 when the differentiable-flux and Newton phases took P6/P7): discrete adjoint (transpose of the P7 Jacobian), VII transpiration BC, mixed prism/tet + (C, M_c, ω) BO calibration. |
+| P6 | ✓ | 2026-07-08 | **Surface-pressure recovery (sawtooth removal). ★ N1 root-cause correction (2026-07-08): the surface-Cp sawtooth is a per-triangle wall-gradient RECOVERY artifact, NOT the artificial-density flux.** Decisive evidence: on the *same* coarse NACA0012 M0.80 walk solution, nodal/edge-neighbour smoothing of the wall gradient drops the G6.1 sawtooth metric **330×** (0.0758→0.00023, 39→1 reversals) with shock 0.604→0.607 and cl_p −0.3 % and |Cp|_max unchanged; whereas the smoother streamline-kernel **flux** does not reduce the metric at all (equal-or-worse at every reach/C, even with the shock-robust metric and the solution matched). This **overturns** the earlier ρ̃-selection-flip attribution (demo_report §P4). **G6.1 fix (landed):** `post/surface.py::smooth_wall_tangential_gradients` — a few Jacobi passes averaging each wall triangle's gradient with its edge neighbours, **gated by outward-normal alignment so it never averages across the sharp TE**; threaded as `smooth_passes` through `wall_cp_curve` / `section_cp_curve` / `wall_force_coefficients` (default 0 = bit-identical). Linear in the gradient (differentiable). Metric re-specced shock-robust (sign-alternating second difference — counts only slope-reversal points, so the monotone shock is not counted). Tests: `tests/test_p6_recovery.py` (4), `tests/test_p6_cp_metric.py` (7). Demo `cases/demo/p6_surface_recovery/` re-runs the P4 (NACA M0.80) + P5 (M6, gated) cases showing raw-vs-smoothed Cp + the kernel negative result. **The kernel (differentiable flux) is reclassified as the P7 Newton prerequisite** (opt-in `mode="kernel"`, `upwind_c`≈2.0–2.5, ~10× faster/iter, stable, C^∞ in ∇φ) — it does not fix the sawtooth. **P4/P5 impact:** solutions unchanged (shock/M_max/cl_KJ identical, post-processing only); only reported cl_p (−0.3 % coarse) / cd_p (~15 % coarse, untrusted FP quantity) change under smoothing, re-recorded in the P6 demo. **Earlier N1 progress (2026-07-08):** delivered the G6.1 metric (`post/section_cut.py::cp_oscillation_metric` + `tests/test_p6_cp_metric.py`, 6 tests) and a differentiable upwind-density operator (`kernels/upwind.py`, `tests/test_p6_weighted_flux.py`, 6 tests + G4.2 no-op green). **Key implementation finding (design.md §3.2):** the literal Eq. 3.4 near-neighbour blend is **transiently unstable** on the prism-split sliver tets (a fast frozen-Γ probe from the walk's converged coarse field blows up to M_max 20–40 for every p/gain; diagnostic: not dissipation magnitude — the near ring reaches only ~0.3·extent and averaging destroys the upwind character; face-normal weighting also gives anti-dissipative negative-reach cells → use centroid-displacement weighting). The **working operator is a multi-ring streamline-Gaussian kernel** (Eq. 3.4′: depth-3 BFS neighbourhood, Gaussian weight centred on the point ~1 streamwise extent upstream) — genuine reach + smooth, C^∞ in ∇φ, no per-iteration walk so ~10× faster/iteration; probed stable, converging to the walk's own M_max 1.37 / 0 floored-limited state. **Calibration still open:** at reach 1.0/σ 0.35 the kernel converges to a *different* solution (coarse shock 0.604→0.641, cl_KJ 0.364→0.414 +14%) and the raw G6.1 metric doesn't drop — the metric must exclude the shock foot (isolate the sawtooth) and the kernel dissipation must be matched (reach/C) to reproduce the walk's shock/cl before the smoothness gain is measured. **Shipped default stays the P4 walk** (`upwind_weighted=False`, all committed P4/P5 gates bit-identical); the kernel is opt-in (`mode="kernel"`); params threaded through `solve/picard.py` + `solve/continuation.py`; demo metric-instrumented. **Design-pass background (2026-07-08):** **New phase (added 2026-07-07; numbered ahead of Newton by dependency order).** Remove the non-physical ≈2-cell surface-Cp sawtooth introduced by the P4 artificial density: replace the discrete integer-walk upstream selection u(e) + `max(ν_e, ν_u)` switch with a directionally-consistent, C¹ upwind-density operator that keeps the G4.2 subcritical no-op and the (M²−1)/M² dissipation floor. Root-cause analysis + coarse/medium evidence in demo_report §P4 "supplementary analysis". **Design pass (2026-07-08, design.md §3.1–3.2; audit of `kernels/upwind.py` + López dissertation Appendix B verified against the PDF):** the phase has **two independent defects** — (A) the sawtooth is a *selection-flip* spatial-consistency artifact (adjacent supersonic cells pick different integer u(e); O(h), present in Picard); (B) non-differentiability blocks the P7 Jacobian. Key finding: (B) does NOT need a differentiable *selection* — López freezes u(e) per Newton step and differentiates only through ρ_up/μ/ρ (Appendix B), and his own `max(0,μ,μ_up)` is C⁰ yet converges quadratically; the two hard clamps are inactive at the converged P5 state (0 floored/limited) so their non-smoothness never enters the converged Jacobian. **Selected route:** the streamline-projected weighted upwind density (design.md Eq. 3.4, `ρ_up=Σ_f w_f ρ_{nb(f)}/Σ_f w_f`, `w_f=max(0,−V_e·n̂_f)^p`) — kills (A) via a smooth spatial blend and (B) via C¹-in-∇φ at fixed neighbour set, in one operator; smooth the inner `max` with `max_ε`; the smooth density clamp (note-4 "N0") is **optional** (deferred unless a Newton transient stalls on it). (This dense history predates the 2026-07-08 Track-P renumber; the flux role it describes is now **P7**, the Newton role **P8**.) Closed gates: G6.1 sawtooth metric 0.0758→0.00023 (330×) under recovery smoothing, G6.2 physics preserved (post-processing; shock 0.607, cl_p −0.3%, TE ok), G6.4 no-regression (`smooth_passes=0` bit-identical, suite 157 passed). Open G6.3: re-measure V6 under smoothing (residual floor → P9). Demo `cases/demo/p6_surface_recovery/` (renamed from p6_diff_flux). |
+| P7 | ☐ (flux delivered opt-in; calibrate + validate) | | **Differentiable artificial-density flux — the P8 Newton prerequisite** (split out of the old P6 on 2026-07-08). The multi-ring **streamline-Gaussian kernel** is built (`kernels/upwind.py`, `UpwindOperator(weighted=True, mode="kernel")`): stable, C^∞ in ∇φ, ~10× faster/iter than the walk, converges to the walk's physical state; opt-in (walk stays default), params threaded through `solve/picard.py`+`solve/continuation.py`; `tests/test_p6_weighted_flux.py` (6). N1 established the *near-neighbour* blend (Eq. 3.4) is transiently unstable → the multi-ring kernel (Eq. 3.4′, design.md §3.2) is the shipped operator. Remaining: G7.2 calibrate `upwind_c`≈2.0–2.5 to reproduce the walk's shock ladder (G4.1/G4.3), G7.3 FD-verify differentiability, G7.1 subcritical no-op. Does NOT fix the sawtooth (that is P6). Demo `cases/demo/p7_diff_flux/` (future). |
+| P8 | ☐ (design pass done 2026-07-08) | | Performance & robustness → **fully-coupled Newton** (was P6; renumbered 2026-07-07 so the differentiable-flux phase precedes it — the exact Jacobian is only well-defined on a C¹ flux). **Design pass (2026-07-08, design.md §8.1; López dissertation Ch.3–4 + Appendix B verified against the PDF, supersedes the earlier internal note where it conflicts):** (1) **full Jacobian "strategy A"** — keep the switching-function derivative ∂μ/∂φ (Eq. B.3/B.6) and the nonzero upstream coupling (B.4), stencil one element-layer wider → strict quadratic (Tables 4.5/4.6/4.9); dropping Term 3 → only superlinear. (2) **fully-coupled (φ_red, Γ)** solve, not the Γ-secant (the secant–density coupling was the P5 medium instability); the Γ-Jacobian blocks are nearly in-code — `∂R_red/∂Γ_j=TᵀJ g_j` (≈`wake.py::self._h`), `F_j=kutta_targets_j−Γ_j` with sparse ±1/n_j `∂F/∂φ`, **plus the easy-to-miss far-field column** −A_coupling·∂vals_red/∂Γ_j (Γ enters the vortex Dirichlet data too). (3) **load-stepping — two PDF corrections to the earlier note:** within a case M_crit/μ_c are held **fixed** and only M∞ ramps (Tables 4.7/4.8, no per-step M_crit sweep); ONERA M6 (Table 4.13) holds M_crit constant 0.95, μ_c at 2.0 during the M∞ ramp, then decreases μ_c 2.0→1.6 at fixed M∞. (4) **also refuted:** the note's premise that "López used a blunt TE" — Eq. 4.2 *sharpens* the NACA0012 TE and he still converged quadratically, so a sharp 2D TE is not itself a Newton obstacle. Expected ≈60–110 Newton iters on M6 (vs ~10⁴ Picard); CL ref 0.288 (KRATOS=Tranair, Table 4.15). Sub-phases N0(optional)/N1 differentiable flux/N2 Jacobian/N3 GMRES+AMG/N4 coupled driver/N5 transonic+load-stepping/N6 M6+perf. **N1 delivered early (2026-07-08, during P6):** the differentiable **streamline-Gaussian kernel** flux (`kernels/upwind.py`, `UpwindOperator(weighted=True, mode="kernel")`, opt-in; stable, C^∞ in ∇φ, ~10× faster/iter than the walk, converges to the walk's physical state) — reclassified here from P6 after N1 proved it does not fix the sawtooth (that is a recovery artifact, P6/§9.1). Needs `upwind_c`≈2.0–2.5 (vs walk 1.5) to match effective dissipation; params threaded through `solve/picard.py`+`solve/continuation.py`; tests `test_p6_weighted_flux.py`. (Renumbered old-P7 → **P8** on 2026-07-08 when the flux became its own P7.) Gates G8.1 (terminal quadratic on G4.1 + FD-verified Jacobian), G8.2 (M6 medium < 5 min), G8.3 (suite < 10 min). |
+| P9 | ☐ | | **Curved / isoparametric wall elements** (new 2026-07-08): the shared accuracy route for **G9.1** G1.6 sphere-Cp < 2% (design.md §5.1 Option C / DP1 "> 5%" branch) and **G9.2** the residual V6 < 1% floor left after P6 removes the sawtooth (the sharp-TE/LE P1 wall gradient; M6 CL 0.245 vs Tranair/KRATOS 0.288). Large own effort per DP1. |
+| P10 | ☐ | | Backlog (was P8): discrete adjoint (transpose of the P8 Newton Jacobian), VII transpiration BC, mixed prism/tet + (C, M_c, ω) BO calibration. |

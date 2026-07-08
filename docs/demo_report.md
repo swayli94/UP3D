@@ -32,6 +32,12 @@ than silently corrected away.
 | P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced |
 | P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced (re-closed 2026-07-07 — see Addendum 3) |
 | M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced |
+| P5 3D validation (ONERA M6) | `cases/demo/p5_onera_m6/` | 16 PASS | closed 2026-07-08 (V6 < 1% deferred to P9) |
+| P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 5 PASS | closed 2026-07-08 (sawtooth = recovery artifact) |
+
+> Track-P renumber (2026-07-08): P6 = surface recovery (this); P7 = differentiable
+> flux (Newton prereq); P8 = fully-coupled Newton; P9 = curved wall elements;
+> P10 = backlog. See roadmap.md.
 
 ---
 
@@ -477,7 +483,7 @@ mesh, drawn by the *same* extractor, are smooth?**
 > upstream-walk selection). **That attribution is wrong.** The sawtooth is a
 > per-triangle wall-gradient **recovery** artifact on the sliver wall
 > triangulation, not the flux. Decisive evidence (design.md §3.1/§9.1;
-> `cases/demo/p6_diff_flux/`): nodal/edge-neighbour smoothing of the *same*
+> `cases/demo/p6_surface_recovery/`): nodal/edge-neighbour smoothing of the *same*
 > walk solution's wall gradient drops the sawtooth metric ~330× (0.0758 →
 > 0.00023), while a *smoother artificial-density flux* (the P6 streamline
 > kernel) does not reduce it at all. G6.1 fixes it in post-processing
@@ -805,6 +811,56 @@ targets; removing the M>2 clusters left V6 unchanged, proving it independent
 of the wake/far-field defects. It is therefore reported against a 3% floor
 bound here, and the original < 1% acceptance moves to a post-P6 re-measure
 (roadmap P5/P6).
+
+---
+
+## P6 — surface-pressure recovery (G6.1–G6.4, closed 2026-07-08)
+
+**Purpose.** Remove the non-physical ≈2-cell **sawtooth** in the supersonic-run
+surface Cp. The N1 investigation root-caused it — decisively — to a *per-triangle
+wall-gradient recovery artifact* on the sliver prism-split wall triangulation,
+**not** the artificial-density flux: on the same solution, nodal/edge-neighbour
+smoothing of the wall gradient drops the metric ~330×, whereas a smoother flux
+(the P7 streamline kernel) does not reduce it at all. The fix is a normal-gated
+recovery smoothing in post-processing (`smooth_wall_tangential_gradients`,
+`smooth_passes`; design.md §9.1), applied to the Cp curve and the force integral,
+gated so it never averages across the sharp TE.
+
+**Case setup.** The P4 (NACA0012 M∞ 0.80, α 1.25°) and P5 (ONERA M6 M∞ 0.84,
+α 3.06°) cases are re-run through the walk solver; the recovery is a
+post-processing change, so the solve (φ, Γ, shock, M_max, cl_KJ) is unchanged —
+only the reported Cp/forces move. `smooth_passes = 1`.
+
+**Key figures.**
+
+![G6.1 wall Cp raw per-triangle vs recovery-smoothed (coarse NACA0012 M0.80)](../cases/demo/p6_surface_recovery/results/g61_cp_raw_vs_smoothed_coarse.png)
+![G6.1 the finding in one panel: a smoother FLUX (kernel) does not remove the sawtooth; smoothing the RECOVERY does](../cases/demo/p6_surface_recovery/results/g61_flux_vs_recovery_coarse.png)
+![G6.1 ONERA M6 coarse section Cp at eta=0.65, raw vs smoothed](../cases/demo/p6_surface_recovery/results/g61_m6_section_cp_coarse.png)
+
+**Measured results (coarse NACA0012 M0.80, walk solution).**
+
+| quantity | raw per-triangle | recovery-smoothed |
+|---|---|---|
+| sawtooth metric (upper) | 0.0758 | **0.00023** (330×) |
+| slope reversals (upper) | 39 | 1 |
+| upper shock x/c | 0.604 | 0.607 |
+| cl_pressure | 0.3572 | 0.3562 (−0.3%) |
+| cd_pressure | 0.01758 | 0.02014 (~15%; near-field FP drag, untrusted — §9) |
+| cl_KJ / M_max (solution) | unchanged | unchanged |
+
+**Conclusion & analysis.** The sawtooth is eliminated on the coarse mesh with no
+refinement and no solver change — a recovery, not a flux, problem. The shock and
+cl_KJ are untouched; cl_p shifts −0.3% and the (explicitly-untrusted) near-field
+cd_p shifts ~15%. The one-panel figure is the evidence that the flux is not the
+cause: the walk flux and the smoother streamline-kernel flux serrate identically
+(raw recovery), while smoothing the same walk solution's recovery is clean. This
+**overturns** the P4-supplementary attribution (see the correction banner in the
+P4 section). On ONERA M6 coarse (η=0.65) the same smoothing drops the section-Cp
+metric 0.145 → 0.046 (3D confirmation, gated part). The residual V6 floor after
+smoothing is the sharp-TE/LE P1 wall gradient → tracked to **P9** (curved wall
+elements). Demo: `cases/demo/p6_surface_recovery/` (6/6 PASS incl. the gated M6
+part); the differentiable flux itself is **P7** (Newton prerequisite), not a
+sawtooth fix.
 
 ---
 

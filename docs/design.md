@@ -173,9 +173,9 @@ at a converged physical solution (P5 medium: **0 floored / 0 limited**), so thei
 non-smoothness never enters the converged Jacobian — smoothing them (§3.2) is a
 transient-robustness option, not a correctness requirement.
 
-### 3.2 A differentiable upwind density (the P7 Newton prerequisite)
+### 3.2 A differentiable upwind density (P7 — the P8 Newton prerequisite)
 
-> Scope note: this operator is the **differentiable flux for the P7 Newton
+> Scope note: this operator is **P7's differentiable flux for the P8 Newton
 > Jacobian**, not the G6.1 sawtooth fix (§3.1 — that is a post-processing
 > recovery, §9). It is implemented and validated but stays **opt-in**
 > (`UpwindOperator(weighted=True, mode="kernel")`); the shipped default is the
@@ -221,7 +221,7 @@ so no smooth `max_ε` is used (max_ε(0,0)=ε≠0 would break the no-op).
 **It does not reduce the surface-Cp sawtooth** (that is a recovery artifact,
 §3.1/§9): calibrated to reproduce the walk's coarse shock/cl (reach 1.0, C≈2.5:
 shock 0.619 vs 0.604, cl_KJ 0.356 vs 0.364) it gives an *equal-or-worse* G6.1
-metric. Its value is purely as the P7 Newton differentiable flux; it needs
+metric. Its value is purely as P7's differentiable flux for P8 Newton; it needs
 `upwind_c` recalibration (≈2.0–2.5 vs the walk's 1.5) because the kernel's
 effective dissipation differs from the walk's. Until P7 uses it the shipped
 default stays the P4 walk.
@@ -847,22 +847,33 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   ρ̃; relaxation + Mach continuation. Gate: V4.
 - **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
   Track M1). Gates: V5; V6 consistency in 3D.
-- **P6 — Remove the non-physical surface-Cp sawtooth** (N1 finding: §3.1, §9.1).
+> Track-P renumber (2026-07-08): the old P6 "differentiable flux (remove the
+> sawtooth)" split, once the sawtooth was root-caused to *recovery* not *flux*,
+> into P6 (recovery) + P7 (flux) + P8 (Newton, was P7) + P9 (curved walls, new)
+> + P10 (backlog, was P8). Old gate IDs map G6.x → G6.x/G7.x, G7.x → G8.x.
+
+- **P6 — Surface-pressure recovery (remove the Cp sawtooth)** (§3.1, §9.1).
   The sawtooth is a per-triangle wall-gradient **recovery** artifact on the
   sliver wall triangulation, NOT the artificial-density flux (proven: nodal
   smoothing of the same solution drops the metric ~330×; a smoother flux does
-  not). G6.1 fix = normal-gated wall-gradient recovery smoothing in
-  post-processing (`smooth_passes`, §9.1), preserving the sharp TE; applied to
-  the Cp curve and the force integral. The *differentiable flux* (streamline
-  kernel, §3.2) is reclassified as the **P7 Newton prerequisite** — it does not
-  fix the sawtooth. See roadmap.md P6.
-- **P7 — Performance & robustness: fully-coupled Newton** (design pass: §3.2,
-  §6.3, §8.1). Consumes the §3.2 differentiable flux. Full Jacobian with the
-  nonzero upstream coupling (López Eq. B.4),
-  fully-coupled (φ, Γ) solve replacing the P5-fragile Γ-secant, Mach
+  not). Fix = normal-gated recovery smoothing in post-processing
+  (`smooth_passes`, §9.1), preserving the sharp TE, applied to the Cp curve and
+  the force integral. **Done** (2026-07-08). Gates G6.1–G6.4.
+- **P7 — Differentiable artificial-density flux** (§3.2). The streamline-Gaussian
+  kernel (Eq. 3.4′): C^∞ in ∇φ, genuine reach, ~10× faster/iter than the walk;
+  the **P8 Newton prerequisite** (the exact Jacobian §6.3 is only well-defined on
+  a differentiable flux). Built opt-in; remaining = calibrate `upwind_c` +
+  validate the shock ladder + FD-verify differentiability. It does *not* fix the
+  sawtooth (that is P6). Gates G7.1–G7.3.
+- **P8 — Performance & robustness: fully-coupled Newton** (§3.2, §6.3, §8.1).
+  Consumes the P7 flux. Full Jacobian with the nonzero upstream coupling (López
+  Eq. B.4), fully-coupled (φ, Γ) solve replacing the P5-fragile Γ-secant, Mach
   continuation + load stepping, GMRES + AMG, Eisenstat–Walker, AMG reuse,
-  profiling (target: ONERA M6 medium mesh < 5 min single node).
-- **P8 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
+  profiling (target: ONERA M6 medium mesh < 5 min single node). Gates G8.1–G8.3.
+- **P9 — Curved / isoparametric wall elements** (§5.1). The shared accuracy route
+  for G1.6 sphere-Cp < 2% (Option C / DP1 "> 5%" branch) and the residual
+  V6 < 1% floor after P6 (sharp-TE/LE P1 wall gradient). Gates G9.1–G9.2.
+- **P10 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
   alternative; VII coupling hook (transpiration BC ∂φ/∂n = d(u_e δ*)/ds —
   reuses the IBL work from pyTSFoil); adjoint via the Newton Jacobian
   transpose (nearly free once (6.3) exists — high value for the MDO thread).

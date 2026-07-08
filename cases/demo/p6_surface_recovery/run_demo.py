@@ -97,6 +97,24 @@ def part1_naca(cl: CheckList):
     ax.legend()
     finish(fig, OUT, "g61_cp_raw_vs_smoothed_coarse.png")
 
+    # V6.2 -- the finding in one panel: BOTH the walk flux and the (smoother)
+    # kernel flux serrate identically (raw recovery), while smoothing the SAME
+    # walk solution's wall gradient is clean. So the sawtooth is a recovery
+    # artifact, not the flux.
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(raw["x_upper"], raw["cp_upper"], ".-", ms=3, lw=0.7, color=BASELINE,
+            label=f"walk flux, raw recovery ({m_raw['metric']:.3f})")
+    ax.plot(ck["x_upper"], ck["cp_upper"], ".-", ms=3, lw=0.7, color=S4_ROSE,
+            label=f"kernel flux, raw recovery ({m_kernel['metric']:.3f})")
+    ax.plot(sm["x_upper"], sm["cp_upper"], "-", lw=1.6, color=S1_BLUE,
+            label=f"walk flux, smoothed recovery ({m_sm['metric']:.4f})")
+    ax.axhline(cp_star, color=INK_2, lw=0.8, ls=":", label="Cp* (sonic)")
+    ax.invert_yaxis(); ax.set_xlabel("x/c"); ax.set_ylabel("Cp")
+    ax.set_title("V6.2 sawtooth is a recovery artifact: a smoother FLUX (kernel) "
+                 "does not remove it; smoothing the RECOVERY does")
+    ax.legend()
+    finish(fig, OUT, "g61_flux_vs_recovery_coarse.png")
+
     clw_kj = 2.0 * float(r["gamma"][0])
     write_csv(OUT, "g61_naca_coarse.csv", "quantity,raw,smoothed",
               [("sawtooth_metric_upper", f"{m_raw['metric']:.4e}",
@@ -144,8 +162,9 @@ def part2_onera_m6(cl: CheckList):
     if not mesh_path.exists():
         print("  M6 coarse.msh missing; skipping (run generate_onera_m6.py)")
         return
+    from pyfp3d.meshgen.wing3d import B_SEMI  # wing semi-span (not far-field z)
     mc, wc = cut_wake(read_mesh(mesh_path))
-    b_semi = float(mc.nodes[:, 2].max())
+    b_semi = B_SEMI
     r = solve_transonic_lifting(mc, wc, m_inf=0.84, alpha_deg=3.06,
                                 n_picard_seed=40, n_picard_eval=300,
                                 max_gamma_evals=10, rtol=1e-7, n_kutta_polish=4,
@@ -181,7 +200,7 @@ def part2_onera_m6(cl: CheckList):
 
 def main():
     apply_style()
-    cl = CheckList("P6 differentiable-flux / sawtooth removal (G6.1-G6.2)")
+    cl = CheckList("P6 surface-pressure recovery / sawtooth removal (G6.1-G6.2)")
     part1_naca(cl)
     if os.environ.get("PYFP3D_TRANSONIC_GATES", "0") == "1":
         part2_onera_m6(cl)
