@@ -33,7 +33,7 @@ than silently corrected away.
 | P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced (re-closed 2026-07-07 — see Addendum 3) |
 | M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced |
 | P5 3D validation (ONERA M6) | `cases/demo/p5_onera_m6/` | 16 PASS | closed 2026-07-08 (V6 < 1% deferred to P9) |
-| P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 5 PASS | closed 2026-07-08 (sawtooth = recovery artifact) |
+| P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 6 PASS (incl. gated M6) | closed 2026-07-08 (sawtooth = recovery artifact) |
 
 > Track-P renumber (2026-07-08): P6 = surface recovery (this); P7 = differentiable
 > flux (Newton prereq); P8 = fully-coupled Newton; P9 = curved wall elements;
@@ -714,7 +714,7 @@ constraint): coarse is the P5 development mesh, medium the gate mesh.
 
 ---
 
-## P5 — 3D validation: ONERA M6 (closed 2026-07-08; V6 < 1% deferred to post-P6)
+## P5 — 3D validation: ONERA M6 (closed 2026-07-08; V6 < 1% deferred to P9 curved elements)
 
 **Purpose.** First 3D transonic validation on the ONERA M6 half wing
 (M∞ = 0.84, α = 3.06°): the swept-wake / symmetry / far-field pipeline

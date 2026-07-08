@@ -161,8 +161,8 @@ measurement, that they have **different root causes and different fixes**:
   a real, separate defect — but it belongs to P7, not G6.1.** The integer `u(e)`,
   the `max(0, μ_e, μ_{u(e)})` switch, and the two hard clamps are non-smooth in
   φ; the exact Newton Jacobian (§6.3) needs a differentiable flux. This is the
-  actual purpose of the §3.2 differentiable-flux operator, which is therefore a
-  **P7 prerequisite**, not a sawtooth fix.
+  actual purpose of the §3.2 differentiable-flux operator (the **P7** deliverable
+  and the **P8 Newton prerequisite**), not a sawtooth fix.
 
 The PDF-verified insight (López Appendix B, §6.3) sharpens what the P7 flux must
 provide: **it does not require a differentiable *selection*.** López freezes
@@ -223,8 +223,8 @@ so no smooth `max_ε` is used (max_ε(0,0)=ε≠0 would break the no-op).
 shock 0.619 vs 0.604, cl_KJ 0.356 vs 0.364) it gives an *equal-or-worse* G6.1
 metric. Its value is purely as P7's differentiable flux for P8 Newton; it needs
 `upwind_c` recalibration (≈2.0–2.5 vs the walk's 1.5) because the kernel's
-effective dissipation differs from the walk's. Until P7 uses it the shipped
-default stays the P4 walk.
+effective dissipation differs from the walk's. Until P8 Newton uses it the
+shipped default stays the P4 walk.
 
 **Optional — smooth density clamp (only if Newton stalls on clamp-touching
 transients).** Replace the hard M_cap clamp by
@@ -501,7 +501,9 @@ exactly the terms Gap-SBM's gap integrals model (Option B below), which is
 why B survives as optional pre-study material for the curved-element design
 pass; but with O(h²) gap thickness its payoff is expected second-order-small.
 The accuracy route is curved/isoparametric wall elements as a
-separately-scoped effort, and gate G1.6 is to be redefined per Option C.
+separately-scoped effort — **now the P9 phase** (G9.1 sphere-Cp < 2%; it also
+owns the residual V6 < 1% floor, G9.2), and gate G1.6 is to be redefined per
+Option C.
 
 **Option B (escalation if Option A falls short — per §5.1.2 now optional
 pre-study material only): Gap-SBM gap correction.**
@@ -561,8 +563,8 @@ physics enters through the residual/RHS lag. This is the classical, very robust
 scheme; its convergence rate degrades with shock strength, motivating the
 Newton option in §8.
 
-**Newton Jacobian (needs the P6 differentiable flux; the Newton solve itself is
-P7).** Differentiating (6.1) w.r.t. φ_k gives López's two-term form
+**Newton Jacobian (needs the P7 differentiable flux; the Newton solve itself is
+P8).** Differentiating (6.1) w.r.t. φ_k gives López's two-term form
 (dissertation Eq. 3.24, §13):
 
     ∂R_i/∂φ_k = Σ_e V_e [ ρ̃_e ∇N_i·∇N_k                     ← Term 1 (Picard, SPD)
@@ -654,7 +656,7 @@ pyfp3d/
 ├── solve/
 │   ├── linear.py        # CG/GMRES + AMG/ILU wrappers, tolerances
 │   ├── picard.py        # outer loop: ρ̃ update → Γ update → linear solve → relax
-│   ├── newton.py        # Phase 6: exact Jacobian, line search / pseudo-transient
+│   ├── newton.py        # Phase 8: exact Jacobian, line search / pseudo-transient
 │   └── continuation.py  # Mach/α ramping for hard cases
 ├── post/
 │   ├── surface.py       # nodal Cp, sectional cl, forces & moments
@@ -695,7 +697,7 @@ for ~1–3 M nodes on a workstation, which is the design target.
 4. Full Newton with (6.3) + pseudo-transient continuation (add V_e/Δτ mass
    term) — quadratic terminal convergence; only after Picard is bulletproof.
 
-### 8.1 Fully-coupled Newton with Γ as an unknown (P7)
+### 8.1 Fully-coupled Newton with Γ as an unknown (P8)
 
 The Picard/secant architecture nests three loops (Mach continuation → per-station
 Γ secant → density Picard). The P5 medium failure root-caused the fragility to

@@ -464,7 +464,7 @@ adjacency, ν switch per design.md (3.2), ρ̃), Mach continuation in
 **Effort:** 3–5 sessions. **Risk:** medium — expect Picard stall tuning
 (design.md §12.4 mitigation ladder: raise C → lower ω → continuation).
 
-### P5 — 3D validation: ONERA M6 (CLOSED 2026-07-08; V6 < 1% explicitly deferred to post-P6)
+### P5 — 3D validation: ONERA M6 (CLOSED 2026-07-08; V6 < 1% deferred to P9 curved elements — G6.3 confirmed it is the sharp-edge P1 floor, not the sawtooth)
 **Gates** (status 2026-07-08 — closed after the second re-diagnosis; demo
 16/16 PASS, `cases/demo/p5_onera_m6/`):
 - [x] G5.1 = V5: M∞ = 0.84 α = 3.06°: λ-shock topology; section Cp at
@@ -562,9 +562,12 @@ gate* (the T3 scan showed the gate-failing amplitude was never the TE
 discretization; the residual tip-corner M ≈ 2.0 overshoot remains a real but
 bounded P6/curved-element accuracy item).
 
-**Deferred**: V6 < 1% (see the G5.2 re-spec above) — blocked on the P6
-consistent/differentiable flux (surface-Cp sawtooth + sharp-edge P1 wall
-gradient); re-measure after G6.1.
+**Deferred**: V6 < 1% → **P9** (curved wall elements). Re-measured under the P6
+recovery smoothing (G6.3, 2026-07-08): the sawtooth is *not* the cause — V6
+*worsens* 2.40% → 3.35% with smoothing (the ±sawtooth cancels in the surface
+integral; smoothing smears the LE peak), so the entire V6 floor is the
+sharp-TE/LE P1 wall gradient, which only curved/isoparametric wall elements
+(P9) can remove.
 
 ### P6 — Surface-pressure recovery (remove the Cp sawtooth) ★ accuracy phase
 
@@ -638,7 +641,7 @@ slope-reversal points, so the monotone shock is excluded).
       (opt-in, default 0) but is *not* recommended for loads.
 - [x] G6.4 no regression: `smooth_passes = 0` bit-identical to the current
       per-triangle path; full default suite green (157 passed).
-**Demo:** `cases/demo/p6_surface_recovery/` (5/5 PASS) — re-runs the P4
+**Demo:** `cases/demo/p6_surface_recovery/` (6/6 PASS incl. the gated M6 part) — re-runs the P4
 (NACA M0.80) + P5 (M6, gated) cases showing raw→smoothed Cp, physics
 preservation, and the kernel negative result. See demo_report §P6.
 **Visual test examples:**
