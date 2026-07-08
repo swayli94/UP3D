@@ -855,7 +855,17 @@ Each item is a pytest in `cases/`; keep them runnable on coarse meshes in CI.
 | V3 | Subcritical extruded NACA0012, M 0.5, α 2° (span-periodic or large AR + symmetry) | Cp vs 2D FP/panel reference; cl | Δcl < 2% |
 | V4 | Transonic NACA0012 M 0.80 α 1.25° (extruded) | shock x/c vs published FP (Holst AGARD FP workshop results — note FP ≠ Euler shock position) | shock Δx/c < 0.03 |
 | V5 | ONERA M6, M 0.84, α 3.06° | λ-shock topology, section Cp at η = 0.44/0.65/0.90 vs FP references (FLO-class / TRANAIR); CL | qualitative λ + CL within FP-literature scatter |
-| V6 | Γ-consistency | sectional cl from Γ vs surface integration | < 1% |
+| V6 | Γ-consistency | **2.5D (G2.4):** sectional cl = 2Γ/(Uc) vs surface-pressure integration. **3D (G5.2):** total CL_p vs the *spanwise-integrated* Kutta–Joukowski CL_KJ = 2∫Γ(z)dz/(U·S). | < 1% |
+
+V6 caveat (2D vs 3D): the *sectional* identity cl(z) = 2Γ(z)/(U c) holds only
+in 2D / quasi-2D flow. On a finite 3D wing the local flow at a section is not
+2D (spanwise flow + induced downwash), so the pressure-integrated sectional cl
+does **not** equal 2Γ(z)/(U c) station-by-station — only the *span-integrated*
+total lift is exact: L = ρ∞U∞∫Γ(z)dz (far-field/Trefftz-plane Kutta–Joukowski).
+So V6 is checked per-section only for the extruded quasi-2D case (G2.4,
+`sectional_cl_from_gamma`); on ONERA M6 it is the integrated `cl_kj_3d`
+(`post/surface.py`) vs total CL_p. The M6 spanwise `2Γ/c` plot is a *loading
+distribution*, not a per-section consistency gate.
 
 Reference data caveat: validate against *full-potential* published results
 first (Holst's Progress in Aerospace Sciences 2000 review collects them), Euler
@@ -889,7 +899,8 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
 - **P4 — Transonic: artificial density.** Upwind element search, ν switch,
   ρ̃; relaxation + Mach continuation. Gate: V4.
 - **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
-  Track M1). Gates: V5; V6 consistency in 3D.
+  Track M1). Gates: V5; V6 consistency in 3D (the *span-integrated* CL_KJ =
+  2∫Γdz/(U·S) vs total CL_p — the per-section 2Γ/c identity is 2D-only, see §10).
 > Track-P renumber (2026-07-08): the old P6 "differentiable flux (remove the
 > sawtooth)" split, once the sawtooth was root-caused to *recovery* not *flux*,
 > into P6 (recovery) + P7 (flux) + P8 (Newton, was P7) + P9 (curved walls, new)

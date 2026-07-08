@@ -198,7 +198,12 @@ def fig_sections(level, sections, reports, exp):
 
 
 def fig_spanwise(level, wc, r):
-    """V5.3: spanwise Gamma(eta) and sectional cl(eta), smooth to the tip."""
+    """V5.3: spanwise Gamma(eta) and the 2Gamma/c loading distribution, smooth
+    to the tip. NB the right panel is a *loading distribution*, not a per-section
+    V6 consistency gate -- on a 3D wing cl(z) = 2Gamma/(U c) does not equal the
+    pressure-integrated sectional cl (downwash/spanwise flow); only the
+    span-integrated CL_KJ = 2 int Gamma dz / (U S) matches CL_p (design.md Sec
+    10, cl_kj_3d). See fig/checks for that gate."""
     order = np.argsort(wc.station_z)
     z = wc.station_z[order]
     eta = z / B_SEMI
@@ -210,8 +215,8 @@ def fig_spanwise(level, wc, r):
     ax1.set_xlabel("eta = z / b"); ax1.set_ylabel("Gamma")
     ax1.set_title(f"circulation, tip Gamma={g[-1]:.4f} -> 0")
     ax2.plot(eta, cl_span, "s-", ms=3, color=S3_YELLOW)
-    ax2.set_xlabel("eta = z / b"); ax2.set_ylabel("sectional cl = 2 Gamma / c")
-    ax2.set_title("sectional lift loading")
+    ax2.set_xlabel("eta = z / b"); ax2.set_ylabel("2 Gamma / c  (loading)")
+    ax2.set_title("spanwise loading (not a per-section V6 check)")
     fig.suptitle(f"V5.3 ONERA M6 ({level}) -- spanwise loading, smooth tip decay",
                  y=1.02)
     finish(fig, OUT, f"g52_spanwise_{level}.png")
