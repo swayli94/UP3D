@@ -68,3 +68,6 @@ cases/demo/p5_onera_m6/results/*.npz
 
 # Reference papers
 docs/references
+
+# Temporary files
+temp/
