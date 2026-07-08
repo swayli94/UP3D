@@ -116,6 +116,77 @@ def triangle_tangential_gradients(
     return grad_tri, 0.5 * twice_area, tri_normal
 
 
+def wall_triangle_adjacency(wall_faces: np.ndarray) -> np.ndarray:
+    """Edge-neighbour triangle of each wall triangle: (n_tris, 3) int, entry
+    (t, k) is the triangle sharing edge k of t (edges (0,1),(1,2),(2,0)), or -1
+    if that edge is a surface boundary. One-time geometric precompute for the
+    P6 wall-gradient smoothing. A sharp trailing edge shares its TE edge between
+    the upper and lower triangle -- still manifold (2 tris/edge), and the
+    smoothing's normal gate (below) is what stops averaging across that fold."""
+    from collections import defaultdict
+
+    wf = np.asarray(wall_faces, dtype=np.int64)
+    n = len(wf)
+    adj = np.full((n, 3), -1, dtype=np.int64)
+    emap = defaultdict(list)
+    tri_edges = ((0, 1), (1, 2), (2, 0))
+    for t in range(n):
+        for k, (a, b) in enumerate(tri_edges):
+            va, vb = wf[t, a], wf[t, b]
+            emap[(min(va, vb), max(va, vb))].append((t, k))
+    for occ in emap.values():
+        if len(occ) == 2:
+            (t0, k0), (t1, k1) = occ
+            adj[t0, k0] = t1
+            adj[t1, k1] = t0
+    return adj
+
+
+def smooth_wall_tangential_gradients(
+    grad_tri: np.ndarray, out_normal: np.ndarray, area: np.ndarray,
+    adj: np.ndarray, n_passes: int = 2, cos_thresh: float = 0.2,
+) -> np.ndarray:
+    """Area-weighted edge-neighbour smoothing of the per-triangle wall gradient,
+    gated so it never averages across a sharp crease (roadmap P6 / gate G6.1).
+
+    The per-triangle constant P1 gradient of a SMOOTH phi is O(1)-noisy on the
+    sliver prism-split wall triangulation -- adjacent triangles oscillate,
+    which the no-averaging wall-Cp extractor shows as a ~2-cell surface-Cp
+    SAWTOOTH (root-caused 2026-07-08: nodal averaging on the same field drops
+    the G6.1 metric ~330x, so the sawtooth is a RECOVERY artifact, not the
+    artificial-density flux). A few Jacobi passes averaging each triangle with
+    its edge neighbours removes it. The gate `out_normal[t] . out_normal[nb] >
+    cos_thresh` (outward-oriented normals) only averages neighbours on the same
+    smooth surface: across the sharp TE the two triangles' outward normals are
+    nearly anti-parallel (dot ~ -1 < cos_thresh) so the crease is preserved --
+    the exact reason `triangle_tangential_gradients` was kept per-triangle.
+
+    Linear in `grad_tri` (a fixed smoothing operator at fixed geometry), so it
+    is differentiable and reduces to identity where a triangle has no same-side
+    neighbour. `n_passes=0` returns the input unchanged (bit-identical).
+    """
+    if n_passes <= 0:
+        return grad_tri
+    g = np.asarray(grad_tri, dtype=np.float64)
+    n = len(g)
+    for _ in range(n_passes):
+        acc = g * area[:, None]
+        wsum = area.copy()
+        for k in range(3):
+            nb = adj[:, k]
+            valid = nb >= 0
+            aligned = np.zeros(n, dtype=bool)
+            aligned[valid] = (
+                np.sum(out_normal[valid] * out_normal[nb[valid]], axis=1)
+                > cos_thresh
+            )
+            m = valid & aligned
+            acc[m] += g[nb[m]] * area[nb[m], None]
+            wsum[m] += area[nb[m]]
+        g = acc / wsum[:, None]
+    return g
+
+
 def wall_outward_normals(
     nodes: np.ndarray, elements: np.ndarray, wall_faces: np.ndarray
 ) -> np.ndarray:
@@ -167,6 +238,7 @@ def wall_force_coefficients(
     u_inf: float = 1.0,
     s_ref: float = 1.0,
     m_inf: float = 0.0,
+    smooth_passes: int = 0,
 ) -> dict:
     """Pressure-integrated force coefficients on the wall (design.md Sec 9).
 
@@ -174,8 +246,12 @@ def wall_force_coefficients(
     wall velocity under the natural BC), Cp from Bernoulli (m_inf = 0, P2)
     or the exact isentropic law (2.5) (m_inf > 0, P3), force
     dC_F = -Cp n_out dA / S_ref  with n_out the body-outward normal.
-    Everything stays triangle-wise; no nodal averaging, so the sharp TE
-    needs no special-casing.
+
+    `smooth_passes` > 0 (roadmap P6 / gate G6.1) applies the normal-gated
+    edge-neighbour gradient smoothing (`smooth_wall_tangential_gradients`)
+    before Cp, removing the per-triangle sawtooth's residual contamination of
+    the integrated loads while preserving the sharp TE. `0` is bit-identical to
+    the original per-triangle integration.
 
     Args:
         nodes, elements: CUT-mesh arrays (used to orient normals)
@@ -196,6 +272,10 @@ def wall_force_coefficients(
 
     grad_tri, area, _ = triangle_tangential_gradients(nodes, wall_faces, phi)
     n_out = wall_outward_normals(nodes, elements, wall_faces)
+    if smooth_passes > 0:
+        adj = wall_triangle_adjacency(wall_faces)
+        grad_tri = smooth_wall_tangential_gradients(
+            grad_tri, n_out, area, adj, n_passes=smooth_passes)
 
     q2 = np.sum(grad_tri * grad_tri, axis=1) / u_inf**2
     if m_inf > 0.0:

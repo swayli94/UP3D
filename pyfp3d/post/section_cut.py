@@ -149,16 +149,23 @@ def _section_cut_marching(mesh, point_fields: Dict[str, np.ndarray],
 
 
 def _wall_section_points(mesh, phi, z: float, u_inf: float,
-                         upper_hint, wall_tag: str, m_inf: float):
+                         upper_hint, wall_tag: str, m_inf: float,
+                         smooth_passes: int = 0):
     """Triangle-wise plane cut of the wall at z = const (design.md Sec 9).
 
     Each wall triangle crossed by the plane contributes one point at its
     intersection-segment midpoint, carrying the triangle's own constant Cp
     (the in-plane tangential gradient IS the wall velocity under the natural
-    BC). No nodal averaging, so the sharp-TE crease needs no special-casing.
-    A vertex exactly on the plane is nudged to the +side so every crossed
+    BC). A vertex exactly on the plane is nudged to the +side so every crossed
     triangle yields exactly two crossing points. Fully general in z: no wall
     node need lie on the plane.
+
+    `smooth_passes` > 0 (roadmap P6 / gate G6.1) replaces the raw per-triangle
+    gradient by the normal-gated edge-neighbour-smoothed one
+    (`smooth_wall_tangential_gradients`), which removes the non-physical
+    ~2-cell surface-Cp sawtooth (a per-triangle RECOVERY artifact on the sliver
+    wall triangulation) while preserving the sharp-TE crease. `0` keeps the
+    original per-triangle field bit-identical.
 
     Returns absolute-x midpoints (no chord normalization), the per-point Cp,
     and a boolean upper-side mask (dot(mid, upper_hint) > 0).
@@ -167,10 +174,18 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
         pressure_coefficient,
         pressure_coefficient_incompressible,
     )
-    from pyfp3d.post.surface import triangle_tangential_gradients
+    from pyfp3d.post.surface import (
+        smooth_wall_tangential_gradients, triangle_tangential_gradients,
+        wall_outward_normals, wall_triangle_adjacency,
+    )
 
     wall = np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64)
-    grad_tri, _, _ = triangle_tangential_gradients(mesh.nodes, wall, phi)
+    grad_tri, area, _ = triangle_tangential_gradients(mesh.nodes, wall, phi)
+    if smooth_passes > 0:
+        onrm = wall_outward_normals(mesh.nodes, mesh.elements, wall)
+        adj = wall_triangle_adjacency(wall)
+        grad_tri = smooth_wall_tangential_gradients(
+            grad_tri, onrm, area, adj, n_passes=smooth_passes)
     q2 = np.sum(grad_tri * grad_tri, axis=1) / u_inf**2
     hint = np.asarray(upper_hint, dtype=np.float64)
     hint /= np.linalg.norm(hint)
@@ -207,7 +222,7 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
 def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
                   upper_hint=(0.0, 1.0, 0.0), wall_tag: str = "wall",
                   chord: float = 1.0, x_le: float = 0.0,
-                  m_inf: float = 0.0) -> Dict[str, np.ndarray]:
+                  m_inf: float = 0.0, smooth_passes: int = 0) -> Dict[str, np.ndarray]:
     """Sectional wall Cp(x/c) at z = const, split into upper/lower curves.
 
     Triangle-wise plane cut (see `_wall_section_points`): fully general in z,
@@ -221,7 +236,7 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
         dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
     """
     xs, cps, sides = _wall_section_points(
-        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf)
+        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes)
     xs = (xs - x_le) / chord
     iu = np.argsort(xs[sides])
     il = np.argsort(xs[~sides])
@@ -240,21 +255,25 @@ def cp_oscillation_metric(x: np.ndarray, cp: np.ndarray, cp_star: float,
     non-physical ~2-cell (odd-even) sawtooth on the wall Cp (demo_report §P4
     supplementary). This measures that serration so P6 can gate it.
 
-    On the ordered supersonic run of one wall-Cp side -- the points with
-    ``cp < cp_star`` (local M > 1), sorted by x -- take the discrete second
-    difference (the odd-even / highest-frequency component)
+    The metric must isolate the ~2-cell SAWTOOTH from the shock's genuine
+    (monotone) steep rise -- a plain second-difference RMS counts the shock
+    foot too and is confounded when the operator moves the shock. Key
+    discriminator: the sawtooth OSCILLATES (the wall-Cp slope reverses sign
+    every cell), whereas a shock (or any monotone acceleration) does not. So on
+    the ordered supersonic run (``cp < cp_star``, sorted by x) restrict the
+    second difference to the interior points where the slope reverses:
 
-        d2_i = cp[i-1] - 2 cp[i] + cp[i+1]        (interior run points)
+        d1_i = cp[i+1] - cp[i]
+        reversal_i  <=>  d1_{i-1} * d1_i < 0          (local min/max = wiggle)
+        d2_i = cp[i-1] - 2 cp[i] + cp[i+1]
+        metric = sqrt( sum_{reversal} d2_i^2 / n_super ) / (max cp - min cp)
 
-    and normalize its RMS by the run's own Cp range:
-
-        metric = rms(d2) / (max cp - min cp) over the run.
-
-    A smooth curve gives d2 ~ O(h^2 * cp'') -> the metric shrinks with h; the
-    ~2h sawtooth gives d2 ~ O(amplitude) -> the metric stays O(1)-ish and is
-    the quantity P6 must drive down without refinement. Index-based (not
-    x-spacing-weighted) on purpose: the target is the per-point odd-even
-    content, which is exactly what a spacing-blind second difference isolates.
+    A monotone stretch (smooth acceleration OR a one-directional shock jump)
+    contributes no reversals -> ~0; a 2-cell serration makes nearly every
+    interior point a reversal -> O(1). Normalizing the energy by the full run
+    length (not the reversal count) keeps a lone shock kink from being
+    amplified. Self-contained: needs no external shock position. `rms_second_diff`
+    (the un-gated RMS) is still reported for continuity with the raw metric.
 
     Args:
         x, cp: one wall-Cp side (e.g. ``curve["x_upper"]``/``curve["cp_upper"]``
@@ -265,8 +284,9 @@ def cp_oscillation_metric(x: np.ndarray, cp: np.ndarray, cp_star: float,
         min_points: minimum run length to report a metric.
 
     Returns:
-        dict with ``metric`` (np.nan if the run has < ``min_points`` points),
-        ``n_super`` (run length), ``rms_second_diff``, ``cp_range``.
+        dict with ``metric`` (sawtooth energy; np.nan if the run has
+        < ``min_points`` points), ``n_super`` (run length), ``n_reversals``,
+        ``rms_second_diff`` (un-gated RMS), ``cp_range``.
     """
     x = np.asarray(x, dtype=np.float64)
     cp = np.asarray(cp, dtype=np.float64)
@@ -276,15 +296,19 @@ def cp_oscillation_metric(x: np.ndarray, cp: np.ndarray, cp_star: float,
     n_super = int(cs.size)
     nan = float("nan")
     if n_super < min_points:
-        return {"metric": nan, "n_super": n_super,
+        return {"metric": nan, "n_super": n_super, "n_reversals": 0,
                 "rms_second_diff": nan, "cp_range": nan}
     order = np.argsort(xs, kind="stable")
     cs = cs[order]
-    d2 = cs[:-2] - 2.0 * cs[1:-1] + cs[2:]
-    rms = float(np.sqrt(np.mean(d2 * d2)))
     cp_range = float(cs.max() - cs.min())
-    metric = rms / cp_range if cp_range > 0.0 else nan
-    return {"metric": metric, "n_super": n_super,
+    d1 = np.diff(cs)                                  # len n-1
+    d2 = cs[:-2] - 2.0 * cs[1:-1] + cs[2:]            # len n-2, interior points
+    reversal = d1[:-1] * d1[1:] < 0.0                 # slope sign flips -> wiggle
+    n_rev = int(np.count_nonzero(reversal))
+    rms = float(np.sqrt(np.mean(d2 * d2)))            # un-gated (reported)
+    saw_energy = float(np.sqrt(np.sum(d2[reversal] ** 2) / n_super))
+    metric = saw_energy / cp_range if cp_range > 0.0 else nan
+    return {"metric": metric, "n_super": n_super, "n_reversals": n_rev,
             "rms_second_diff": rms, "cp_range": cp_range}
 
 
@@ -292,7 +316,8 @@ def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
                      z: Optional[float] = None, b_semi: Optional[float] = None,
                      u_inf: float = 1.0, m_inf: float = 0.0,
                      wall_tag: str = "wall", upper_hint=(0.0, 1.0, 0.0),
-                     min_points_per_side: int = 5) -> Dict[str, np.ndarray]:
+                     min_points_per_side: int = 5,
+                     smooth_passes: int = 0) -> Dict[str, np.ndarray]:
     """Sectional wall Cp(x/c) at a spanwise station of a 3D wing (roadmap P5).
 
     Thin wrapper over the general `wall_cp_curve` cut that (a) resolves the
@@ -326,7 +351,7 @@ def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
         z = float(eta) * float(b_semi)
 
     xs, cps, sides = _wall_section_points(
-        mesh, phi, float(z), u_inf, upper_hint, wall_tag, m_inf)
+        mesh, phi, float(z), u_inf, upper_hint, wall_tag, m_inf, smooth_passes)
     n_up, n_lo = int(sides.sum()), int((~sides).sum())
     if n_up < min_points_per_side or n_lo < min_points_per_side:
         raise ValueError(

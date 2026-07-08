@@ -28,10 +28,20 @@ def test_smooth_curve_metric_near_zero():
     x, cp = _smooth_pocket(60)
     m = cp_oscillation_metric(x, cp, CP_STAR)
     assert m["n_super"] > 50
-    # Smooth parabola: only O(h^2 cp'') curvature, no odd-even content. A pure
-    # parabola has constant nonzero cp'', so d2 = cp''*h^2 per point is a real
-    # (small, refinement-shrinking) floor -- ~2.5e-3 here, ~100x below the
-    # sawtooth of test_sawtooth_dominates_smooth.
+    # Monotone-derivative parabola: the slope reverses only once (at the
+    # vertex), so the sign-gated sawtooth energy is ~0 -- the metric now
+    # correctly ignores smooth curvature (unlike the raw second-difference RMS).
+    assert m["n_reversals"] <= 2
+    assert m["metric"] < 1e-3
+
+
+def test_monotone_shock_not_counted_as_sawtooth():
+    """A steep but MONOTONE compression (a shock-like ramp) must not register:
+    no slope reversals -> ~0, even though its second difference is large."""
+    x = np.linspace(0.05, 0.6, 40)
+    cp = -1.1 + 0.9 / (1.0 + np.exp(-(x - 0.45) / 0.01))  # smooth monotone rise
+    cp = np.minimum(cp, CP_STAR - 1e-6)                    # keep it supersonic
+    m = cp_oscillation_metric(x, cp, CP_STAR)
     assert m["metric"] < 5e-3
 
 
@@ -49,11 +59,13 @@ def test_sawtooth_dominates_smooth():
     assert 0.1 < serrated < 0.5
 
 
-def test_refinement_shrinks_smooth_metric():
-    m_coarse = cp_oscillation_metric(*_smooth_pocket(30), CP_STAR)["metric"]
-    m_fine = cp_oscillation_metric(*_smooth_pocket(120), CP_STAR)["metric"]
-    # Smooth second difference ~ h^2: 4x points -> ~16x smaller.
-    assert m_fine < 0.25 * m_coarse
+def test_smooth_metric_near_zero_at_any_resolution():
+    # A smooth curve has no sawtooth, so the sign-gated metric stays ~0 at both
+    # coarse and fine sampling (it does NOT grow with resolution -- the failure
+    # mode of a raw second-difference RMS on a strongly curved pocket).
+    for n in (30, 60, 120):
+        m = cp_oscillation_metric(*_smooth_pocket(n), CP_STAR)
+        assert m["metric"] < 1e-3
 
 
 def test_unordered_input_is_sorted():

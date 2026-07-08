@@ -472,9 +472,23 @@ sight: **why is the transonic surface Cp visibly serrated (a ~2-cell
 sawtooth along the supersonic run) when the P1/P2/P3 curves on the *same*
 mesh, drawn by the *same* extractor, are smooth?**
 
-**The sawtooth is a real feature of the artificial-density flux, not a
-plotting or solver-convergence artifact.** The mechanism is structural,
-so it is worth pinning down precisely:
+> **⚠️ ATTRIBUTION CORRECTED (P6 N1, 2026-07-08).** The analysis below
+> attributes the sawtooth to the artificial-density flux (the integer
+> upstream-walk selection). **That attribution is wrong.** The sawtooth is a
+> per-triangle wall-gradient **recovery** artifact on the sliver wall
+> triangulation, not the flux. Decisive evidence (design.md §3.1/§9.1;
+> `cases/demo/p6_diff_flux/`): nodal/edge-neighbour smoothing of the *same*
+> walk solution's wall gradient drops the sawtooth metric ~330× (0.0758 →
+> 0.00023), while a *smoother artificial-density flux* (the P6 streamline
+> kernel) does not reduce it at all. G6.1 fixes it in post-processing
+> (`smooth_wall_tangential_gradients`, `smooth_passes`), not by changing the
+> flux. The paragraphs below are kept as the original (superseded) reasoning;
+> read them with this correction in mind — in particular the "requires
+> changing the spatial operator" conclusion at the end is refuted.
+
+**[SUPERSEDED — see the correction banner above.]** The sawtooth was thought
+to be a real feature of the artificial-density flux. The original mechanism
+argument, kept for the record:
 
 - `wall_cp_curve` (`post/section_cut.py`) is deliberately triangle-wise:
   each wall triangle crossed by the section plane contributes *one* point

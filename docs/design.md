@@ -138,101 +138,93 @@ scalar** that weights both the residual (6.1) and the Picard matrix (6.2). Two
 hard clamps guard positivity: a q² speed limiter at M_cap = 3 (`limit_q2_field`,
 López's M²_max ~ O(3), §3.4) and a ρ̃ floor at 0.05 (`rho_tilde_sweep`).
 
-The P6 phase must recognize that this operator has **two independent defects**
-that the roadmap language previously ran together — separating them is the key
-design decision:
+This operator sits at the centre of **two separate issues** the roadmap
+originally ran together — and an N1 investigation (2026-07-08) established, with
+measurement, that they have **different root causes and different fixes**:
 
-- **Defect A — the surface-Cp sawtooth (accuracy / smoothness).** Adjacent
-  supersonic elements pick *geometrically different* upstream cells, so `u(e)`
-  **flips** cell-to-cell; ρ̃ inherits a mesh-scale (≈2h) checkerboard that the
-  wall-Cp extractor shows undamped. This is a **spatial-consistency** defect: it
-  is caused by the *selection flipping between neighbours across space*, is O(h)
-  (shrinks but never vanishes under refinement), and is present in Picard just as
-  much as it would be in Newton (demo_report §P4 supplementary; coarse pocket
-  serrated, medium near-smooth).
-- **Defect B — non-differentiability in φ (blocks the exact Newton Jacobian).**
-  The integer `u(e)`, the `max(0, μ_e, μ_{u(e)})` switch, and the two hard clamps
-  are all non-smooth in φ.
+- **The surface-Cp sawtooth (accuracy — gate G6.1) is a wall-Cp gradient
+  RECOVERY artifact, NOT the flux.** The ≈2-cell serration in the supersonic-run
+  wall Cp is produced by the *per-triangle constant P1 gradient recovery*
+  (`triangle_tangential_gradients`, no averaging) on the sliver prism-split wall
+  triangulation: adjacent sliver triangles give oscillating gradients even for a
+  *smooth* φ. Decisive evidence (both on the coarse NACA0012 M0.80 solution):
+  (i) recomputing the wall Cp of the **same** walk solution with a normal-gated
+  edge-neighbour-smoothed gradient drops the G6.1 sawtooth metric **~330×**
+  (0.0758 → 0.00023, 39 → 1 slope reversals) with the shock at 0.604→0.607 and
+  cl_p within 0.3 % — the φ field was already smooth; (ii) a **smoother
+  artificial-density flux** (the streamline kernel of §3.2) does **not** reduce
+  the metric at all (equal-or-worse at every calibration). So G6.1 is fixed in
+  post-processing (§9 `smooth_passes`), not by changing the flux. *This
+  overturns the earlier attribution (a ρ̃ selection-flip) recorded in
+  demo_report §P4 — that attribution is refuted.*
+- **The flux's non-differentiability in φ (blocks the exact Newton Jacobian) is
+  a real, separate defect — but it belongs to P7, not G6.1.** The integer `u(e)`,
+  the `max(0, μ_e, μ_{u(e)})` switch, and the two hard clamps are non-smooth in
+  φ; the exact Newton Jacobian (§6.3) needs a differentiable flux. This is the
+  actual purpose of the §3.2 differentiable-flux operator, which is therefore a
+  **P7 prerequisite**, not a sawtooth fix.
 
-The critical, PDF-verified insight (López Appendix B, §6.3 below) is that
-**Defect B does not require a differentiable *selection*.** López freezes `u(e)`
-within each Newton step and differentiates only *through* ρ_{u(e)}, μ, and ρ
-(Eqs. B.3–B.8); his own switching function `μ_c·max(0,μ,μ_up)` is only C⁰, yet he
-attains strict quadratic convergence because the non-smooth locus is
-measure-zero. So the Newton prerequisite is weaker than "C¹ everywhere": it is a
-**well-defined element Jacobian at frozen selection**. Likewise, the two clamps
-are inactive at a converged physical solution (the P5 medium fix converges with
-**0 floored / 0 limited cells**), so their non-smoothness does not enter the
-converged Jacobian — smoothing them (see below) is a robustness option for
-clamp-touching *transients*, not a correctness requirement.
+The PDF-verified insight (López Appendix B, §6.3) sharpens what the P7 flux must
+provide: **it does not require a differentiable *selection*.** López freezes
+`u(e)` within each Newton step and differentiates only *through* ρ_{u(e)}, μ, ρ
+(Eqs. B.3–B.8); his own `μ_c·max(0,μ,μ_up)` is only C⁰ yet converges
+quadratically (measure-zero non-smooth locus). And the two clamps are inactive
+at a converged physical solution (P5 medium: **0 floored / 0 limited**), so their
+non-smoothness never enters the converged Jacobian — smoothing them (§3.2) is a
+transient-robustness option, not a correctness requirement.
 
-### 3.2 P6 target — a directionally-consistent, differentiable upwind density
+### 3.2 A differentiable upwind density (the P7 Newton prerequisite)
 
-The recommended operator addresses Defect A **and** Defect B at once by
-replacing the single integer neighbour with a **smooth, streamline-projected
-weighting** over the face neighbours:
+> Scope note: this operator is the **differentiable flux for the P7 Newton
+> Jacobian**, not the G6.1 sawtooth fix (§3.1 — that is a post-processing
+> recovery, §9). It is implemented and validated but stays **opt-in**
+> (`UpwindOperator(weighted=True, mode="kernel")`); the shipped default is the
+> P4 walk. It does not change (and is not needed to change) the surface Cp.
+
+The naive form — replacing the single integer neighbour with a **smooth
+face-neighbour weighting**
 
     ρ_up(e) = Σ_f w_f(e) · ρ_{nb(f)} / Σ_f w_f(e),
     w_f(e) = max(0, −V_e · n̂_f)^p         (n̂_f = outward unit face normal)     (3.4)
 
-so the upstream density is a smooth blend biased toward the inflow faces. This
-is (i) **C¹ in V_e = ∇φ** — hence differentiable for Newton with no frozen-cell
-bookkeeping — and (ii) **spatially continuous** — the weights slide smoothly as
-the velocity direction rotates, so there is no cell-to-cell flip and the sawtooth
-is removed rather than merely refined away. The exponent p tunes sharpness
-(p → ∞ recovers the nearest-inflow-face limit; a finite p ≈ 2–4 is the smooth
-regime to calibrate against gate G6.1). Retain μ_s exactly, replacing only the
-inner `max` by a smooth `max_ε(a,b) = (a+b)/2 + √((a−b)²/4 + ε²)` (ε ~ 1e-8) so
-the shock-point operator is C¹ too. The subcritical no-op (μ ≡ 0 ⇒ ρ̃ ≡ ρ,
-bit-for-bit — gate G4.2) is preserved because every term above vanishes when
-μ = 0.
+is C¹ in V_e = ∇φ but **transiently unstable** on the sliver tets: an N1 probe
+(a fast frozen-Γ Picard from the walk's converged coarse field) blows it up
+(M_max 20–40 in ~60 iterations) from a *good* field for every p and reach-gain.
+The cause is **not** dissipation magnitude (at the converged field it gives 1.3×
+the walk's) — the *near* ring reaches only ≈0.3·extent, and averaging over it
+samples a too-local, too-central region that destroys the upwind character
+stabilising the hyperbolic zone. (Two dead ends ruled out en route:
+face-normal inflow weighting `max(0,−V·n̂_f)` produces *negative*-reach
+anti-dissipative cells on slivers — use centroid-displacement alignment
+`max(0,−V̂·d̂_{e,nb})`; and a reach multiplier `G·(ρ_e−ρ_up)` cannot rescue it,
+since `G·0 = 0` when the near blend can't reach upstream.)
 
-Must be preserved by any P6 candidate: the exact ν ≡ 0 subcritical no-op
-(G4.2 bit-identity), the positivity guards, and enough effective dissipation to
-clear the (M²−1)/M² threshold in the supersonic pocket that the P4 multi-hop
-walk was introduced to satisfy (§12.4 / roadmap P4 hardening trail).
-
-**Implementation evidence (2026-07-08, N1 — the near-neighbour form (3.4) is
-NOT enough; the shipped operator samples with genuine reach).** Building (3.4)
-literally and probing it (a fast frozen-Γ Picard from the walk's converged
-coarse field) showed the single-face-ring blend is **transiently unstable**: it
-blows up (M_max 20–40 in ~60 iterations) from a *good* field for every exponent
-p and reach-gain tried, and a diagnostic confirmed the cause is **not**
-dissipation magnitude (at the converged field it already gives 1.3× the walk's
-dissipation) — it is that averaging over the *near* ring (reach ≈ 0.3·extent on
-the prism-split sliver tets) samples a too-local, too-central region and
-destroys the upwind character that stabilises the hyperbolic zone. Two false
-starts were ruled out: face-normal inflow weighting `max(0,−V·n̂_f)` gives
-*negative* reach (anti-dissipative cells) on slivers — use centroid-displacement
-alignment `max(0,−V̂·d̂_{e,nb})`; and a reach-compensation multiplier `G·(ρ_e−ρ_up)`
-cannot rescue it (`G·0 = 0` when the near blend can't reach upstream). The
-working operator is a **multi-ring streamline-Gaussian kernel**: over a
-precomputed depth-3 BFS neighbourhood, weight each cell c by a Gaussian centred
-on the point one streamwise extent upstream,
+The **shipped opt-in operator** is therefore a **multi-ring streamline-Gaussian
+kernel** with genuine reach: over a precomputed depth-3 BFS neighbourhood,
+weight each cell c by a Gaussian centred one streamwise extent upstream,
 
     up_c = −V̂·(c_c − c_e),  perp²_c = |c_c − c_e|² − up_c²
     w_c  = exp(−½[(up_c − reach·ext)²/σ_s² + perp²_c/σ_p²]),   up_c > 0
     ρ_up = Σ_c w_c ρ[c] / Σ_c w_c                                       (3.4′)
 
 This keeps the walk's stabilising **reach** (samples genuinely-upstream cells,
-not the near ring) while the smooth kernel removes the flip; it is C^∞ in
-V̂ = ∇φ/|∇φ| at fixed neighbourhood (Newton-ready), needs no reach multiplier,
-and — since there is no per-iteration walk to recompute — runs ~10× faster per
-density iteration than the walk. Probed stable: with reach ≈ 0.8–1.2·extent and
-σ_s, σ_p ≈ 0.25–0.4·extent it converges to the walk's *own* physical state
-(M_max 1.37, 0 floored/limited) where the near blend diverged; reach ≈ 0.6 is
-too short and diverges. The shock-point operator stays a **hard** max(ν_e, ν_up)
-on the (now smooth) blended upstream Mach — exactly 0 subcritically, so the
-smooth `max_ε` above is dropped (it would break the no-op: max_ε(0,0) = ε ≠ 0).
-**Open (N1 calibration, in progress):** at reach 1.0/σ 0.35 the kernel converges
-to a *different* solution than the walk (coarse shock 0.604→0.641, cl_KJ
-0.364→0.414, +14%) and the raw G6.1 metric does not drop — partly because that
-metric's second difference also counts the (now aft, sharper) shock foot, so it
-must exclude the shock transition to isolate the sawtooth, and the kernel's
-effective dissipation must be calibrated (reach/C) to reproduce the walk's
-shock/cl before the smoothness gain is measured fairly. Until G6.1/G6.2 close
-the shipped default stays the P4 walk; the kernel is opt-in
-(`UpwindOperator(..., weighted=True, mode="kernel")`).
+not the near ring), is C^∞ in V̂ = ∇φ/|∇φ| at fixed neighbourhood (Newton-ready),
+and — no per-iteration walk to recompute — runs ~10× faster per density
+iteration than the walk. Probed stable: reach ≈ 0.8–1.2·extent, σ_s,σ_p ≈
+0.25–0.4·extent converge to the walk's *own* physical state (M_max 1.37,
+0 floored/limited) where the near blend diverged; reach ≈ 0.6 is too short.
+Preserved: the exact ν ≡ 0 subcritical no-op (G4.2), the positivity guards, and
+the (M²−1)/M² dissipation floor. The shock-point operator stays a **hard**
+max(ν_e, ν_up) on the smoothly-blended upstream Mach — exactly 0 subcritically,
+so no smooth `max_ε` is used (max_ε(0,0)=ε≠0 would break the no-op).
+
+**It does not reduce the surface-Cp sawtooth** (that is a recovery artifact,
+§3.1/§9): calibrated to reproduce the walk's coarse shock/cl (reach 1.0, C≈2.5:
+shock 0.619 vs 0.604, cl_KJ 0.356 vs 0.364) it gives an *equal-or-worse* G6.1
+metric. Its value is purely as the P7 Newton differentiable flux; it needs
+`upwind_c` recalibration (≈2.0–2.5 vs the walk's 1.5) because the kernel's
+effective dissipation differs from the walk's. Until P7 uses it the shipped
+default stays the P4 walk.
 
 **Optional — smooth density clamp (only if Newton stalls on clamp-touching
 transients).** Replace the hard M_cap clamp by
@@ -782,6 +774,30 @@ coupling-instability risk.
   (excellent bug detector for wake/Kutta code).
 - VTK output every k iterations for shock-position monitoring.
 
+### 9.1 Wall-Cp gradient recovery — the G6.1 sawtooth fix (P6)
+
+The wall velocity is the in-plane tangential gradient of φ (natural BC, §5). The
+default recovery is **per-triangle constant** (`triangle_tangential_gradients` /
+`wall_cp_curve` / `wall_force_coefficients`, no averaging) — chosen so the sharp
+TE crease is not polluted by mixing the two sides' tangent planes. Its cost on
+the prism-split sliver wall triangulation is the ≈2-cell **surface-Cp sawtooth**:
+adjacent sliver triangles give oscillating constant gradients even for a smooth
+φ. This was misattributed to the artificial-density flux; it is a **recovery
+artifact** (N1, 2026-07-08 — §3.1: nodal averaging of the *same* solution drops
+the G6.1 metric ~330×; a smoother flux does not reduce it).
+
+**Fix (gate G6.1): `smooth_wall_tangential_gradients` (`post/surface.py`),
+threaded as `smooth_passes` through the Cp curve and the force integral.** A few
+Jacobi passes average each wall triangle's gradient with its edge neighbours,
+**gated by outward-normal alignment** (`n̂_out·n̂_out(nb) > cos_thresh`) so it never
+averages across the sharp TE (the two TE triangles' outward normals are nearly
+anti-parallel). Measured on the coarse NACA0012 M0.80 walk solution, one pass:
+G6.1 metric 0.0758 → 0.00023 (330×, reversals 39 → 1), shock 0.604 → 0.607,
+cl_p within 0.3 %, |Cp|_max unchanged (TE preserved) — and it is a fixed linear
+operator in the gradient (differentiable). `smooth_passes = 0` is the
+bit-identical default; the near-field cd_pressure shifts (~15 % on coarse) but is
+the explicitly-untrusted FP quantity (use Trefftz for drag).
+
 ---
 
 ## 10. Verification & validation ladder
@@ -831,17 +847,18 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   ρ̃; relaxation + Mach continuation. Gate: V4.
 - **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
   Track M1). Gates: V5; V6 consistency in 3D.
-- **P6 — Consistent, differentiable artificial-density flux** (design pass:
-  §3.1–3.2). Replace the P4 integer-walk upstream selection u(e) +
-  `max(ν_e, ν_u)` switch by the **streamline-projected weighted upwind
-  density** (Eq. 3.4), which cures both the surface-Cp *sawtooth* (a
-  selection-flip spatial artifact) and the *non-differentiability* that blocks
-  the P7 Jacobian, keeping the ν ≡ 0 subcritical no-op and the (M²−1)/M²
-  dissipation floor. Gate: Cp-smoothness metric on coarse ≤ current medium
-  baseline, P4 shock ladder preserved. Prerequisite for the P7 exact Newton
-  Jacobian and gates P5's section-Cp acceptance — see roadmap.md P6.
-- **P7 — Performance & robustness: fully-coupled Newton** (design pass: §6.3,
-  §8.1). Full Jacobian with the nonzero upstream coupling (López Eq. B.4),
+- **P6 — Remove the non-physical surface-Cp sawtooth** (N1 finding: §3.1, §9.1).
+  The sawtooth is a per-triangle wall-gradient **recovery** artifact on the
+  sliver wall triangulation, NOT the artificial-density flux (proven: nodal
+  smoothing of the same solution drops the metric ~330×; a smoother flux does
+  not). G6.1 fix = normal-gated wall-gradient recovery smoothing in
+  post-processing (`smooth_passes`, §9.1), preserving the sharp TE; applied to
+  the Cp curve and the force integral. The *differentiable flux* (streamline
+  kernel, §3.2) is reclassified as the **P7 Newton prerequisite** — it does not
+  fix the sawtooth. See roadmap.md P6.
+- **P7 — Performance & robustness: fully-coupled Newton** (design pass: §3.2,
+  §6.3, §8.1). Consumes the §3.2 differentiable flux. Full Jacobian with the
+  nonzero upstream coupling (López Eq. B.4),
   fully-coupled (φ, Γ) solve replacing the P5-fragile Γ-secant, Mach
   continuation + load stepping, GMRES + AMG, Eisenstat–Walker, AMG reuse,
   profiling (target: ONERA M6 medium mesh < 5 min single node).

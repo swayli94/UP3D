@@ -1,0 +1,6 @@
+gate,check,value,criterion,status,note
+G6.1,sawtooth metric raw->smoothed,0.076 -> 0.0002,smoothed << raw (>=10x),PASS,
+G6.1,reversal count raw->smoothed,39 -> 1,few reversals left,PASS,
+G6.2,smoothed shock x/c in band,0.607,0.62 +/- 0.03,PASS,
+G6.2,smoothed cl_p vs raw cl_p,0.3562 vs 0.3572,within 3%,PASS,
+finding,kernel flux vs walk raw sawtooth,0.088 vs 0.076,kernel does NOT reduce it (recorded),PASS,sawtooth is a recovery artifact; not a flux artifact
