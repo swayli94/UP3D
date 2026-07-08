@@ -1,5 +1,15 @@
 # P5 medium gate — spanwise-Γ-smoothing investigation (A–E)
 
+> **Scope note (added 2026-07-08, second re-diagnosis).** This file's verdict
+> stands *for what it tested* — spanwise-Γ **smoothing** is a dead route. But
+> its "corrected root cause" section (a TE discretization singularity, NOT a
+> wake/Kutta change) was **later overturned**: the real cause is a
+> single-station **Kutta-closure** failure — see
+> [INVESTIGATION_kutta_closure.md](INVESTIGATION_kutta_closure.md) (T1–T4).
+> Smoothing failed because it moves Γ *away* from the self-consistent value;
+> the fix drives the one stuck station *toward* its own Kutta target. Both can
+> be true: smoothing is dead AND the cause is the Kutta condition.
+
 **Date:** 2026-07-08 **Verdict:** ❌ **DEAD ROUTE — do not re-attempt.**
 Spanwise-Γ smoothing does **not** fix the medium-gate trailing-edge M>2 spike.
 

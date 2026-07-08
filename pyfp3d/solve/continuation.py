@@ -93,6 +93,10 @@ def solve_transonic_lifting(
     rtol: float = 1e-10,
     maxiter: int = 3000,
     u_inf: float = 1.0,
+    farfield_spanwise_gamma: bool = False,
+    omega_rho: float = 1.0,
+    n_kutta_polish: int = 0,
+    omega_rho_polish: float = 0.5,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -115,6 +119,35 @@ def solve_transonic_lifting(
     with a looser `rtol=1e-7` (measured M_max identical to 5 digits, ~5.5x
     faster per iter) -- speeding the solver proper is P7's job.
 
+    `farfield_spanwise_gamma` selects the 3D spanwise-tapered vortex far
+    field (Gamma(z) per station, 0 at/beyond the sheet tip) instead of the
+    span-uniform mean -- see solve_subsonic_lifting/farfield_dirichlet.
+    Default False keeps the 2.5D paths bit-identical; P5 3D runs enable it.
+
+    `omega_rho` under-relaxes the density update inside every frozen-Gamma
+    eval density solve of the CONTINUATION secant loop (forwarded to
+    solve_subsonic_lifting). Default 1.0 is bit-identical to the P4 path.
+    NOTE omega_rho<1 inside the active-secant continuation is NOT the P5
+    fix -- measured to destabilise the top-Mach secant (M_max blew to ~29);
+    the continuation stays at 1.0 and the closure is fixed by the polish
+    phase below instead.
+
+    `n_kutta_polish` (P5, default 0 = pre-P5 behaviour) appends a
+    fixed-Gamma Kutta-closure polish AFTER the Mach continuation. The
+    per-station secant regularises by early stopping: on the 3D medium mesh
+    it does not converge Gamma at the top Mach level (the steepest-Gamma
+    station diverges if the secant is pushed -- measured M_max 29 at
+    max_gamma_evals=16), and stopping early leaves that one station ~32%
+    under-circulated, driving a spurious outboard-TE M>2 cluster (roadmap P5
+    re-diagnosis 2026-07-08, T1-T4; INVESTIGATION_kutta_closure.md). The
+    polish replaces the secant with a damped fixed-point iteration at the
+    final Mach level -- apply the measured Kutta target, let the
+    under-relaxed (`omega_rho_polish`, default 0.5) density catch up, repeat.
+    Secant-free, so no overshoot; contractive toward the self-consistent
+    Gamma. Measured on the P5 medium: 3-4 steps take M_max 5.2->2.0, 0
+    floored/limited. Exact no-op on single-station (2.5D) meshes only if
+    n_kutta_polish stays 0; leave it 0 for every non-3D path.
+
     Returns:
         dict: the final level's solve_subsonic_lifting result, plus
         gamma (root), kutta_mismatch, n_gamma_evals, mach_levels,
@@ -133,6 +166,7 @@ def solve_transonic_lifting(
         omega=TRANSONIC_DEFAULTS["omega_seed"], upwind_c=upwind_c,
         m_crit=m_crit, tol_rho=1e-6, n_picard_max=n_picard_seed,
         forcing=TRANSONIC_DEFAULTS["forcing_seed"], rtol=rtol, maxiter=maxiter,
+        farfield_spanwise_gamma=farfield_spanwise_gamma,
     )
     phi, gamma = r["phi"], r["gamma"].copy()
     n_picard_total += r["n_picard"]
@@ -142,7 +176,7 @@ def solve_transonic_lifting(
         print(f"  M={levels[0]:.3f} seed: n={r['n_picard']} "
               f"gamma={gamma[0]:.5f} Mmax={np.sqrt(r['mach2_max']):.3f}")
 
-    def _density_solve(m, g, phi_seed):
+    def _density_solve(m, g, phi_seed, omr=omega_rho):
         return solve_subsonic_lifting(
             mesh_cut, wc, m_inf=m, alpha_deg=alpha_deg, u_inf=u_inf,
             omega=1.0, upwind_c=upwind_c, m_crit=m_crit,
@@ -150,6 +184,8 @@ def solve_transonic_lifting(
             pseudo_dt_max_ratio=1.0,
             tol_rho=1e-8, n_picard_max=n_picard_eval, forcing=0.0,
             phi_init=phi_seed, gamma_fixed=g, rtol=rtol, maxiter=maxiter,
+            farfield_spanwise_gamma=farfield_spanwise_gamma,
+            omega_rho=omr,
         )
 
     for m in levels[1:]:
@@ -188,6 +224,21 @@ def solve_transonic_lifting(
             print(f"  M={m:.3f}: {n_evals} gamma evals, |F|={mismatch:.2e}, "
                   f"gamma={gamma[0]:.5f}, Mmax={np.sqrt(r['mach2_max']):.3f}, "
                   f"res={r['residual_history'][-1]:.1e}")
+
+    # Fixed-Gamma Kutta-closure polish (see docstring `n_kutta_polish`):
+    # a secant-free, damped fixed-point closure at the final Mach level that
+    # drives the station(s) the continuation left under-converged to their
+    # self-consistent Gamma. No-op when n_kutta_polish == 0.
+    for i in range(n_kutta_polish):
+        gamma = kutta_targets(r["phi"], wc)
+        r = _density_solve(levels[-1], gamma, r["phi"], omr=omega_rho_polish)
+        n_picard_total += r["n_picard"]
+        mismatch = float(np.max(np.abs(kutta_targets(r["phi"], wc) - gamma)))
+        n_evals_last = i + 1
+        if verbose:
+            print(f"  polish {i + 1}/{n_kutta_polish}: |F|={mismatch:.2e}, "
+                  f"gamma={gamma[0]:.5f}, Mmax={np.sqrt(r['mach2_max']):.3f}, "
+                  f"floored/limited={r['n_floored']}/{r['n_limited']}")
 
     physical = (
         r["mach2_max"] < 9.0  # below the m_cap=3 limiter ceiling

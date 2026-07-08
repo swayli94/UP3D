@@ -394,6 +394,7 @@ def solve_subsonic_lifting(
     pseudo_dt_max_ratio: float = 100.0,
     damping_theta: Optional[float] = None,
     tol_residual: Optional[float] = None,
+    farfield_spanwise_gamma: bool = False,
 ) -> Dict[str, object]:
     """
     Lifting subsonic full-potential solve on a wake-cut mesh: NESTED
@@ -473,6 +474,13 @@ def solve_subsonic_lifting(
     stepping M0.75 -> M0.80 from a converged state (500 iterations,
     zero limited/floored cells). Passing both raises ValueError.
 
+    `farfield_spanwise_gamma` selects the 3D spanwise-tapered vortex
+    far field (constraints/dirichlet.py::farfield_dirichlet) -- Gamma(z)
+    interpolated per station and tapered to 0 at/beyond the sheet tip
+    instead of the span-uniform mean. Default False keeps every
+    quasi-2D/P2-P4 path bit-identical; it is also an exact no-op on
+    single-station meshes.
+
     Converged when the density lag ||rho_tilde(phi_new) -
     rho_tilde_matrix||_inf < tol_rho AND the inner Kutta loop met
     tol_gamma.
@@ -518,7 +526,7 @@ def solve_subsonic_lifting(
     # Dirichlet pattern is Gamma- and rho-independent: fix the split once.
     dir_nodes, _ = farfield_dirichlet(
         mesh_cut, wc, alpha_deg, np.zeros(wc.n_stations), u_inf, vortex_center,
-        beta=beta,
+        beta=beta, spanwise_gamma=farfield_spanwise_gamma,
     )
     dir_red, _ = con.to_reduced_dirichlet(dir_nodes, np.zeros(len(dir_nodes)))
     is_dir = np.zeros(n_red, dtype=bool)
@@ -551,6 +559,7 @@ def solve_subsonic_lifting(
     def _solve_for(gamma: np.ndarray, A_free, A_coupling, M, x0):
         nodes_d, vals_d = farfield_dirichlet(
             mesh_cut, wc, alpha_deg, gamma, u_inf, vortex_center, beta=beta,
+            spanwise_gamma=farfield_spanwise_gamma,
         )
         _, vals_red = con.to_reduced_dirichlet(nodes_d, vals_d)
         b_red = con.reduced_rhs(b_zero, gamma)

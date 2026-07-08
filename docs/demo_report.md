@@ -694,113 +694,103 @@ constraint): coarse is the P5 development mesh, medium the gate mesh.
 
 ---
 
-## P5 — 3D validation: ONERA M6 (in progress 2026-07-08 — coarse validated; medium gate OPEN)
+## P5 — 3D validation: ONERA M6 (closed 2026-07-08; V6 < 1% deferred to post-P6)
 
 **Purpose.** First 3D transonic validation on the ONERA M6 half wing
-(M∞ = 0.84, α = 3.06°). Show that the swept-wake / symmetry / far-field
-pipeline **computes and the tip does not diverge**, exercise the new 3D
-post-processing (sectional Cp at η = 0.44/0.65/0.90 — plus an inboard η = 0.20
-panel for context — spanwise Γ(η), the 3D
-Kutta–Joukowski consistency check, planform Cp map), and compare against the
-user-committed **viscous** AGARD experiment as a qualitative overlay. This
-section records the **coarse-mesh** evidence (all self-checks green) and the
-**medium-mesh finding that keeps the gate open**.
+(M∞ = 0.84, α = 3.06°): the swept-wake / symmetry / far-field pipeline
+computes, the tip does not diverge, the λ-shock signature is present, and the
+3D post-processing (sectional Cp at η = 0.44/0.65/0.90 plus an inboard
+η = 0.20 panel, spanwise Γ(η), the 3D Kutta–Joukowski consistency check,
+planform Cp map) is exercised against the user-committed **viscous** AGARD
+experiment as a qualitative overlay. This section records the closed-out
+evidence **and the two-investigation diagnosis history that closing the
+medium gate required** — the first root-cause attribution was wrong, and the
+record of how it was overturned is part of the evidence.
 
 **Case setup.** `cases/meshes/onera_m6/{coarse,medium}.msh`. New code:
 `post/surface.py::planform_area` + `cl_kj_3d`, `post/section_cut.py::
-section_cp_curve` (arbitrary-η wall-plane cut; `wall_cp_curve` refactored
-bit-identical). Enabling fix: `solve/continuation.py` forwards `rtol`; the
-inner CG was over-solved to 1e-10 vs the outer tol_rho≈1e-6 need, so
-**`rtol=1e-7` is ~5.5× faster with M_max identical to 5 digits** (default
-1e-10 keeps the P4 path bit-identical). Bounded recipe `seed40 / eval300 /
-gamma10 / rtol1e-7`; all runs cap `NUMBA_NUM_THREADS=16`. Reference:
+section_cp_curve` (`wall_cp_curve` refactor verified bit-identical);
+`solve/continuation.py` forwards `rtol` (**rtol=1e-7 ~5.5× faster, M_max
+identical to 5 digits**; default 1e-10 keeps the P4 path bit-identical).
+Final calibrated recipe: `seed40 / eval300 / gamma10 / rtol1e-7` **+ the two
+3D closure ingredients landed 2026-07-08** — `farfield_spanwise_gamma=True`
+(Γ(z)-tapered vortex far field, 0 at/beyond the sheet tip) and
+`n_kutta_polish=4` (fixed-Γ Kutta-closure polish, `omega_rho_polish=0.5`).
+All runs cap `NUMBA_NUM_THREADS=16`. Reference:
 `reference_data/onera_m6_experiment/` (AGARD AR-138 Test 2308, viscous —
 qualitative overlay, **not** a point-wise gate for the inviscid FP solver).
 
-**Key figures (coarse, 55.5k tets).**
+**Key figures (post-fix).**
 
 ![sectional Cp vs AGARD experiment](../cases/demo/p5_onera_m6/results/g51_sections_coarse.png)
 ![spanwise circulation and loading](../cases/demo/p5_onera_m6/results/g52_spanwise_coarse.png)
 ![upper-surface Cp planform map](../cases/demo/p5_onera_m6/results/g51_surface_cp_coarse.png)
+![medium sectional Cp](../cases/demo/p5_onera_m6/results/g51_sections_medium.png)
 
-**Measured results.**
+**Measured results (post-fix; demo 16/16 PASS).**
 
 | Check | Coarse (55.5k) | Medium (350.7k) | Criterion |
 |---|---|---|---|
-| physical + tip stable (M_max, floored/limited) | **1.470, 0/0 PASS** | **5.204, 8/4 FAIL** | M_max < cap, zero floored/limited |
-| tip-band max Mach (inboard/outboard/**tip**) | 1.396 / 1.470 / **1.321** | — | tip not the hottest ⇒ no tip divergence |
-| upper shock x/c η=0.44/0.65/0.90 | 0.595 / 0.569 / 0.424 | 0.594 / 0.526 / 0.360 | present, monotone, forward-migrating |
-| Γ root → tip | 0.100 → 0.021 | 0.100 → 0.0155 | smooth band-mean decay, Γ_tip → 0 |
-| V6 consistency \|CL_p−CL_KJ\|/CL_KJ | 2.43% | 1.73% | < 1% (medium gate) |
-| CL (pressure) | 0.248 | 0.251 | reported |
-| demo self-checks | **8/8 PASS** | 2 FAIL (physical, V6) | — |
+| physical + tip stable (M_max, floored/limited) | **1.398, 0/0 PASS** | **1.995, 0/0 PASS** | M_max < cap, zero floored/limited |
+| upper shock x/c η=0.44/0.65/0.90 | 0.596 / 0.570 / 0.425 | 0.594 / 0.526 / 0.345 (~1 cell) | present, monotone, forward-migrating |
+| Γ root → tip | 0.097 → 0.0206 | 0.097 → 0.0151 | smooth band-mean decay, Γ_tip → 0 |
+| V6 consistency \|CL_p−CL_KJ\|/CL_KJ | 2.40% | 1.82% | **< 3% floor bound (re-spec; < 1% post-P6)** |
+| CL (pressure) | 0.2419 | 0.2453 | reported, coarse→medium convergence |
+| Kutta \|F\|_max | 5.3e-4 | 5.8e-4 | reported (28× tighter than pre-fix 1.6e-2) |
+| demo self-checks | **8/8 PASS** | **8/8 PASS** | — |
 
-**Conclusion & analysis.** The user's first question is answered
-affirmatively on the coarse mesh: the 3D wing **computes and the tip does
-not diverge** — the tip band carries the *lowest* max Mach of the three
-spanwise bands (1.321), Γ decays smoothly to a small tip value, and there
-are zero floored/limited cells. The λ-shock signature is present: an
-upper-surface shock at every station migrating forward toward the tip.
-Against the viscous AGARD data the inviscid FP tracks the lower surface
-well and places the upper shock aft (the documented FP-vs-experiment
-tendency); the ≈2-cell P4 surface-Cp sawtooth is visible in the upper curve
-(the P6 target). Two quantities sit at the coarse discretisation floor,
-not a convergence failure: V6 consistency 2.4% (did not improve with more Γ
-evals) and ~8% per-station Kutta noise on the otherwise-smooth Γ(η).
+**Diagnosis history — why the gate stayed open for two investigations.**
+The pre-fix medium solve failed `physical`: M_max 5.204, 8 floored / 4
+limited; 26/350 718 cells M > 2, split **18 on the wing at the outboard TE**
+(z/b 0.80–0.81) + **8 at the far-field sphere** beyond the tip
+(`diagnose_medium.py` reproduces every audit below from the cache).
 
-**Why the medium gate is still OPEN (re-diagnosed 2026-07-08 — corrects the
-earlier "far-field only" reading).** The same bounded recipe on the 350.7k
-mesh returns an **unphysical** state: M_max 5.204 with 8 floored / 4 limited
-cells and V6 1.73%. A cell-by-cell re-analysis of the cached solution
-(reproduce: `python cases/demo/p5_onera_m6/diagnose_medium.py` — reads the
-committed npz + mesh, no solve) localises this precisely — **26 of 350 718
-cells (0.007%) exceed M = 2, and the split is the opposite of what was first
-recorded**: **18 sit ON the wing
-at the outboard trailing edge** (distance-to-nearest-wall ≈ 0, x/c 1.00–1.11,
-z/b 0.80–0.81) and only **8 at the far-field sphere** (x ≈ 10, z/b ≳ 1.0).
-The single M_max = 5.204 cell *is* far-field, so it alone sets M_max — but the
-**dominant M ≈ 2.7–3.1 spikes are the outboard-TE cluster**, on well-shaped
-elements (shape quality q ≈ 0.65, aspect ratio ≤ 3.1; mesh median q 0.76 —
-not slivers). The **same outboard band (z/b ≈ 0.7–0.9) is already coarse's
-hottest** (M ≤ 1.47, physical) and **sharpens under refinement** (1.47 →
-5.20) rather than converging — a **trailing-edge discretisation singularity
-at fine resolution** (the P1 element-constant gradient at the sharp
-zero-thickness TE grows as the TE tet shrinks; the same P1-singularity family
-as the G1.6 LE-Cp gate), not a global wing-flow under-convergence (well-shaped
-cells + refinement-sharpening + single-station localisation rule that out; the
-secondary far-field cells match the design.md §5 2D-vortex concern).
+*Investigation 1 (A–E, `INVESTIGATION_gamma_smoothing.md`):* the cluster
+co-locates with the steepest spanwise-Γ roll-off, so a spanwise-Γ-noise
+hypothesis was tested via a Gaussian smoother — and **refuted** (flattening
+\|dΓ/dz\| 7× at fixed Γ left the spike; in-continuation smoothing made it
+worse). The investigation then attributed the cluster to a sharp-TE P1
+discretization singularity (G1.6 family) on the strength of refinement-
+sharpening (coarse 1.47 → medium 5.20) + well-shaped cells, and concluded
+"NOT a wake/Kutta change". **That attribution was wrong.**
 
-**A spanwise-Γ-noise hypothesis was tested and REFUTED (2026-07-08, A–E).**
-The cluster co-locates with the steepest spanwise Γ roll-off (medium |dΓ/dz|
-peaks at z/b = 0.80, 1.82 vs coarse 0.66; the per-station Kutta Γ dips
-0.076 → 0.043 → 0.048), a +0.63 TE-Mach↔|dΓ/dz| correlation, so a
-Gaussian-kernel spanwise-Γ smoother was implemented and tried. It heals an
-*injected* single-station kink on coarse (M 1.47→8.4→1.40) — but that is a
-tautology, and on the **medium** target it FAILS: inside the continuation it
-destabilises the solve (M_max 5.20→10.7), and as a **fixed-Γ** test
-(bypassing the secant) flattening |dΓ/dz| 7× (1.82→0.26, smoother than the
-physical coarse 0.66) still leaves **M_max ~5.3 and 14 wing M>2 cells**. So
-the correlation was not causal; the smoother was reverted (unused).
-**Spanwise-Γ smoothing is a dead route.** Full A–E record (method, per-test
-numbers, caveats, next tests): `cases/demo/p5_onera_m6/INVESTIGATION_gamma_smoothing.md`.
+*Investigation 2 (T1–T4, `INVESTIGATION_kutta_closure.md`) — the actual root
+cause:* the per-station Kutta audit showed the mismatch was a **single-station
+anomaly**: st133 (z/b = 0.801) was left **32% under-circulated** (Γ 0.0431 vs
+its own target 0.0592; \|F\|/Γ = 37% there vs ≤ 5% at all 165 other stations).
+T1: no tet contains both master+slave wake nodes (0/350 718 — jump-in-cell
+ruled out). T2: better density convergence at the same Γ leaves the defect
+bit-identical (under-convergence ruled out). T3 (decisive): setting ONLY
+st133's Γ to its own Kutta target collapses the cluster 18 → 0 cells (band
+M_max 3.10 → 1.16) on the same mesh — **a 1/h singularity cannot depend on
+Γ**; the refinement-sharpening was the finer mesh resolving a sharper
+overspeed around the same Γ *error*. Root cause: the continuation's
+per-station secant does not converge at the top Mach level on the 3D mesh
+(pushing to 16 evals diverges, M_max ≈ 29 — the 10-eval budget was
+early-stopping regularization); the ρ̃-floor + limiter then froze the
+under-circulated station's TE overspeed into a spurious M ≈ 3 state. The
+8 far-field cells were the independent span-uniform-2D-vortex branch-ray
+artifact beyond the tip (no wake cut exists there to carry the prescribed
+jump). A latent probe-assignment degeneracy (adjacent stations share Kutta
+probe nodes on the swept unstructured TE; st133/134 share their upper probe)
+is why st133 specifically stalled — recorded as a known-robustness item.
 
-**Open item (revised priority):** (1) the dominant 18-cell wing-TE cluster
-needs a **TE-element-level fix** — curved/isoparametric or locally-refined TE
-elements, the P6 consistent/differentiable flux, or P7 Newton for the
-sharp-feature tail; (2) taper the 2D-vortex far-field correction toward the
-tip — removes the single far-field M_max=5.20 cell. A heavier iteration budget
-alone will not heal a refinement-sharpening TE singularity. G5.1/G5.2 remain
-unchecked.
+**Fix + verification.** `farfield_spanwise_gamma=True` removes the far-field
+cluster at the boundary-data level; `n_kutta_polish=4` closes the stuck
+station by a secant-free damped fixed-point iteration (\|F\| halves per step
+to 5.8e-4; omega_rho < 1 *inside* the secant is NOT the fix — measured to
+diverge). Both default off; the full default suite is bit-identical
+(140 + 4 + 2). From-scratch medium: M_max 1.995 — the mild bounded
+tip-TE-corner P1 overshoot, the only surviving trace of the singularity
+family — with **0 floored / 0 limited**.
 
-The medium section Cp at η = 0.44/0.65/0.90 still looks physical and in fact
-sharper than coarse (shocks resolve to ~1 cell, LE suction closer to the
-experimental peak) — but this is **because those three sections do not sample
-the defect**: the outboard-TE spikes live at x/c ≈ 1.0–1.1 (at/behind the TE,
-outside the plotted chord range) and are concentrated at the single station
-z/b ≈ 0.80. So the clean section curves are *not* evidence that the wing
-surface is defect-free; they simply miss the localised outboard-TE band.
-
-![medium sectional Cp — wing surface physical despite the open gate](../cases/demo/p5_onera_m6/results/g51_sections_medium.png)
+**G5.2 V6 re-spec (user-approved).** V6 is a systematic O(h)
+CL_p-below-CL_KJ offset (coarse 2.40% → medium 1.82%, sign-constant) from the
+sharp-TE/LE P1 wall gradient and the P4 surface-Cp sawtooth — both **P6**
+targets; removing the M>2 clusters left V6 unchanged, proving it independent
+of the wake/far-field defects. It is therefore reported against a 3% floor
+bound here, and the original < 1% acceptance moves to a post-P6 re-measure
+(roadmap P5/P6).
 
 ---
 

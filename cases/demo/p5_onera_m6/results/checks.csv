@@ -1,17 +1,17 @@
 gate,check,value,criterion,status,note
-coarse,physical + tip stable,Mmax=1.470 floored/limited=0/0,Mmax<cap; zero floored/limited,PASS,221s; Kutta |F|=8.2e-03
-coarse G5.1,eta=0.44 upper shock present/monotone,x/c=0.595 n_cells=5,has_shock; monotone; no expansion,PASS,
-coarse G5.1,eta=0.65 upper shock present/monotone,x/c=0.569 n_cells=5,has_shock; monotone; no expansion,PASS,
-coarse G5.1,eta=0.9 upper shock present/monotone,x/c=0.424 n_cells=6,has_shock; monotone; no expansion,PASS,
-coarse G5.1,shock migrates forward to tip,x(0.65)=0.569 -> x(0.90)=0.424,x(0.90) <= x(0.65),PASS,
-coarse G5.2,V6 3D consistency,2.4305%,|CL_p-CL_KJ|/CL_KJ < 3% (coarse floor),PASS,CL_p=0.2481 CL_KJ=0.2542
-coarse G5.2,Gamma smooth decay to tip,root->tip 0.100->0.0210,band-mean monotone + 0<tip<0.5*max,PASS,
-coarse,CL (reported; not gated),0.2481,reported with mesh convergence,PASS,CD_p=0.0170
-medium,physical + tip stable,Mmax=5.204 floored/limited=8/4,Mmax<cap; zero floored/limited,FAIL,2014s; Kutta |F|=1.6e-02
+coarse,physical + tip stable,Mmax=1.398 floored/limited=0/0,Mmax<cap; zero floored/limited,PASS,215s; Kutta |F|=5.3e-04
+coarse G5.1,eta=0.44 upper shock present/monotone,x/c=0.596 n_cells=5,has_shock; monotone; no expansion,PASS,
+coarse G5.1,eta=0.65 upper shock present/monotone,x/c=0.570 n_cells=5,has_shock; monotone; no expansion,PASS,
+coarse G5.1,eta=0.9 upper shock present/monotone,x/c=0.425 n_cells=18,has_shock; monotone; no expansion,PASS,
+coarse G5.1,shock migrates forward to tip,x(0.65)=0.570 -> x(0.90)=0.425,x(0.90) <= x(0.65),PASS,
+coarse G5.2,V6 3D consistency (reported; floor),2.3960%,|CL_p-CL_KJ|/CL_KJ < 3% (discretization floor; <1% is a post-P6 target),PASS,CL_p=0.2419 CL_KJ=0.2479 (P6/fine-mesh-limited; not a wake/far-field defect)
+coarse G5.2,Gamma smooth decay to tip,root->tip 0.097->0.0206,band-mean monotone + 0<tip<0.5*max,PASS,
+coarse,CL (reported; not gated),0.2419,reported with mesh convergence,PASS,CD_p=0.0171
+medium,physical + tip stable,Mmax=1.995 floored/limited=0/0,Mmax<cap; zero floored/limited,PASS,4539s; Kutta |F|=5.8e-04
 medium G5.1,eta=0.44 upper shock present/monotone,x/c=0.594 n_cells=1,has_shock; monotone; no expansion,PASS,
 medium G5.1,eta=0.65 upper shock present/monotone,x/c=0.526 n_cells=1,has_shock; monotone; no expansion,PASS,
-medium G5.1,eta=0.9 upper shock present/monotone,x/c=0.360 n_cells=1,has_shock; monotone; no expansion,PASS,
-medium G5.1,shock migrates forward to tip,x(0.65)=0.526 -> x(0.90)=0.360,x(0.90) <= x(0.65),PASS,
-medium G5.2,V6 3D consistency,1.7269%,|CL_p-CL_KJ|/CL_KJ < 1% (medium gate),FAIL,CL_p=0.2515 CL_KJ=0.2559
-medium G5.2,Gamma smooth decay to tip,root->tip 0.100->0.0155,band-mean monotone + 0<tip<0.5*max,PASS,
-medium,CL (reported; not gated),0.2515,reported with mesh convergence,PASS,CD_p=0.0115
+medium G5.1,eta=0.9 upper shock present/monotone,x/c=0.345 n_cells=1,has_shock; monotone; no expansion,PASS,
+medium G5.1,shock migrates forward to tip,x(0.65)=0.526 -> x(0.90)=0.345,x(0.90) <= x(0.65),PASS,
+medium G5.2,V6 3D consistency (reported; floor),1.8175%,|CL_p-CL_KJ|/CL_KJ < 3% (discretization floor; <1% is a post-P6 target),PASS,CL_p=0.2453 CL_KJ=0.2499 (P6/fine-mesh-limited; not a wake/far-field defect)
+medium G5.2,Gamma smooth decay to tip,root->tip 0.097->0.0151,band-mean monotone + 0<tip<0.5*max,PASS,
+medium,CL (reported; not gated),0.2453,reported with mesh convergence,PASS,CD_p=0.0115

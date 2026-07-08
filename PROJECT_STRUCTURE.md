@@ -46,7 +46,10 @@ pyfp3d/                    # Main package
 │   └── dirichlet.py      # ✓ far-field freestream + 2D vortex correction (branch cut ON
 │                           #   the wake sheet; eliminated ⁺-side far-field wake nodes
 │                           #   automatically consistent); ✓ [P3] Prandtl-Glauert scaling
-│                           #   (beta stretches only the atan2 argument; beta=1 bit-exact)
+│                           #   (beta stretches only the atan2 argument; beta=1 bit-exact);
+│                           #   ✓ [P5] spanwise_gamma=True: Γ(z)-tapered vortex (per-station
+│                           #   interpolant, 0 at/beyond the sheet tip — removes the spurious
+│                           #   branch-ray jump beyond the tip; default False bit-identical)
 ├── physics/              # Physics constants and constitutive relations
 │   ├── __init__.py
 │   └── isentropic.py     # ✓ [P0] ρ(q²), M(q²), a(q²), Cp, etc.; [P2] adds
@@ -98,7 +101,12 @@ pyfp3d/                    # Main package
 │   ├── continuation.py   # ✓ [P4] Mach continuation + transonic Γ closure: outer per-station
 │   │                       #   SECANT on F(Γ) = kutta_target(density-converged φ at fixed Γ) − Γ
 │   │                       #   around frozen-Γ pseudo-time solves (nested/interleaved Kutta both
-│   │                       #   fail at transonic -- measured; see module docstring)
+│   │                       #   fail at transonic -- measured; see module docstring);
+│   │                       #   ✓ [P5] n_kutta_polish: fixed-Γ Kutta-closure polish after the
+│   │                       #   continuation (secant-free damped fixed point, omega_rho_polish)
+│   │                       #   -- the 3D secant leaves the stiffest station under-circulated
+│   │                       #   and DIVERGES if pushed (INVESTIGATION_kutta_closure.md);
+│   │                       #   default 0 = P4 path bit-identical
 │   └── newton.py         # [P7] Newton method (PLANNED, file not created yet)
 └── post/                 # Post-processing
     ├── __init__.py

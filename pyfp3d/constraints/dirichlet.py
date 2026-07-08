@@ -58,7 +58,11 @@ def vortex_phi_2d(
 
     Args:
         points: (n, 3) or (n, 2) evaluation points
-        gamma_total: total circulation (span-averaged Gamma for quasi-2D)
+        gamma_total: total circulation (span-averaged Gamma for quasi-2D),
+            or an (n,) per-point strength Gamma(z_i) for the 3D spanwise
+            taper (phi_v is linear in Gamma, so the same branch-cut
+            expression broadcasts elementwise; see farfield_dirichlet's
+            `spanwise_gamma`)
         center: vortex location (x_v, y_v), default quarter chord
         lower_branch_mask: boolean mask of points that sit EXACTLY ON the
             cut (y == y_v, x > x_v -- e.g. wake master nodes) and belong to
@@ -88,6 +92,7 @@ def farfield_dirichlet(
     vortex_center=(0.25, 0.0),
     farfield_tag: str = "farfield",
     beta: float = 1.0,
+    spanwise_gamma: bool = False,
 ):
     """Dirichlet (nodes, values) on the cut mesh's far-field boundary.
 
@@ -105,6 +110,19 @@ def farfield_dirichlet(
         vortex_center: (x_v, y_v) of the equivalent point vortex
         beta: Prandtl-Glauert factor sqrt(1 - M_inf^2) for the compressible
             vortex far field (P3); default 1.0 = incompressible (P2)
+        spanwise_gamma: False (default, quasi-2D/P2-P4 path, BIT-IDENTICAL
+            to the historical behavior): span-uniform vortex of strength
+            mean(gamma_stations). True (3D wings, first-order approximation
+            of the design.md Sec 5 horseshoe correction): per-node strength
+            Gamma(z_i) linearly interpolated over the station Gammas and
+            tapered to exactly 0 at and beyond the sheet tip. This (a)
+            matches the boundary-data jump to the per-station master-slave
+            constraint jump where the sheet meets the sphere, and (b)
+            removes the spurious near-jump the span-uniform vortex
+            prescribes across the UNcut branch ray beyond the tip (z > b
+            has no wake cut to carry a potential jump -- measured on the
+            P5 medium mesh as an M~5 cell cluster hugging y=0+ at
+            z/b 1.0-1.15 on the far-field sphere).
 
     Returns:
         (dirichlet_nodes, dirichlet_values)
@@ -113,13 +131,33 @@ def farfield_dirichlet(
         np.asarray(mesh_cut.boundary_faces[farfield_tag], dtype=np.int64)
     )
     pts = mesh_cut.nodes[ff_nodes]
-    gamma_total = float(np.mean(np.atleast_1d(gamma_stations)))
+    gamma_stations = np.atleast_1d(np.asarray(gamma_stations, dtype=np.float64))
+    gamma_total = float(np.mean(gamma_stations))
 
     is_master_wake = np.isin(ff_nodes, wc.master_nodes)
     is_slave_wake = np.isin(ff_nodes, wc.slave_nodes)
 
     values = freestream_phi(pts, alpha_deg, u_inf)
-    if gamma_total != 0.0:
+    if spanwise_gamma and wc.n_stations > 1:
+        if np.any(gamma_stations != 0.0):
+            order = np.argsort(wc.station_z)
+            zp = wc.station_z[order]
+            gp = gamma_stations[order]
+            # Anchor Gamma = 0 at the sheet tip (the sheet ends AT the
+            # tip; its free-edge nodes are single-valued, so the discrete
+            # jump there is 0) and hold 0 beyond it.
+            z_tip = float(mesh_cut.nodes[wc.master_nodes][:, 2].max())
+            if z_tip > zp[-1]:
+                zp = np.append(zp, z_tip)
+                gp = np.append(gp, 0.0)
+            gamma_z = np.interp(pts[:, 2], zp, gp, right=0.0)
+            phi_v = vortex_phi_2d(
+                pts, gamma_z, vortex_center,
+                lower_branch_mask=is_master_wake, beta=beta,
+            )
+            del is_slave_wake
+            values = values + phi_v
+    elif gamma_total != 0.0:
         phi_v = vortex_phi_2d(
             pts, gamma_total, vortex_center, lower_branch_mask=is_master_wake,
             beta=beta,
