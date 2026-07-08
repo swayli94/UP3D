@@ -121,6 +121,89 @@ Properties to preserve (write asserts/tests for these):
   any mesh, including across the wake cut. This is the first regression test
   after every kernel change.
 
+### 3.1 The shipped P4 operator, and its two distinct defects (P6 design pass)
+
+The P4 implementation (`kernels/upwind.py`) is the *element-upwind* realization
+of López's FE artificial compressibility (dissertation Eq. 3.19–3.27, §13):
+
+    ρ̃_e = ρ_e − μ_s (ρ_e − ρ_{u(e)}),   μ_s = C · max(0, μ_e, μ_{u(e)})     (3.3)
+    μ = 1 − M_c²/M²          (López 3.21; UP3D guards the denominator as
+                              max(M², M_c²) so μ ≡ 0 subcritically, bit-for-bit)
+
+with `C = upwind_c` (López's μ_c), `M_c = m_crit`. The upstream element `u(e)`
+is chosen by a **discrete multi-hop directional walk** through face neighbours
+(`upstream_elements`, up to 4 hops, most-anti-streamwise neighbour each hop,
+target reach 0.8·element streamwise extent). ρ̃_e is a **frozen per-element
+scalar** that weights both the residual (6.1) and the Picard matrix (6.2). Two
+hard clamps guard positivity: a q² speed limiter at M_cap = 3 (`limit_q2_field`,
+López's M²_max ~ O(3), §3.4) and a ρ̃ floor at 0.05 (`rho_tilde_sweep`).
+
+The P6 phase must recognize that this operator has **two independent defects**
+that the roadmap language previously ran together — separating them is the key
+design decision:
+
+- **Defect A — the surface-Cp sawtooth (accuracy / smoothness).** Adjacent
+  supersonic elements pick *geometrically different* upstream cells, so `u(e)`
+  **flips** cell-to-cell; ρ̃ inherits a mesh-scale (≈2h) checkerboard that the
+  wall-Cp extractor shows undamped. This is a **spatial-consistency** defect: it
+  is caused by the *selection flipping between neighbours across space*, is O(h)
+  (shrinks but never vanishes under refinement), and is present in Picard just as
+  much as it would be in Newton (demo_report §P4 supplementary; coarse pocket
+  serrated, medium near-smooth).
+- **Defect B — non-differentiability in φ (blocks the exact Newton Jacobian).**
+  The integer `u(e)`, the `max(0, μ_e, μ_{u(e)})` switch, and the two hard clamps
+  are all non-smooth in φ.
+
+The critical, PDF-verified insight (López Appendix B, §6.3 below) is that
+**Defect B does not require a differentiable *selection*.** López freezes `u(e)`
+within each Newton step and differentiates only *through* ρ_{u(e)}, μ, and ρ
+(Eqs. B.3–B.8); his own switching function `μ_c·max(0,μ,μ_up)` is only C⁰, yet he
+attains strict quadratic convergence because the non-smooth locus is
+measure-zero. So the Newton prerequisite is weaker than "C¹ everywhere": it is a
+**well-defined element Jacobian at frozen selection**. Likewise, the two clamps
+are inactive at a converged physical solution (the P5 medium fix converges with
+**0 floored / 0 limited cells**), so their non-smoothness does not enter the
+converged Jacobian — smoothing them (see below) is a robustness option for
+clamp-touching *transients*, not a correctness requirement.
+
+### 3.2 P6 target — a directionally-consistent, differentiable upwind density
+
+The recommended operator addresses Defect A **and** Defect B at once by
+replacing the single integer neighbour with a **smooth, streamline-projected
+weighting** over the face neighbours:
+
+    ρ_up(e) = Σ_f w_f(e) · ρ_{nb(f)} / Σ_f w_f(e),
+    w_f(e) = max(0, −V_e · n̂_f)^p         (n̂_f = outward unit face normal)     (3.4)
+
+so the upstream density is a smooth blend biased toward the inflow faces. This
+is (i) **C¹ in V_e = ∇φ** — hence differentiable for Newton with no frozen-cell
+bookkeeping — and (ii) **spatially continuous** — the weights slide smoothly as
+the velocity direction rotates, so there is no cell-to-cell flip and the sawtooth
+is removed rather than merely refined away. The exponent p tunes sharpness
+(p → ∞ recovers the nearest-inflow-face limit; a finite p ≈ 2–4 is the smooth
+regime to calibrate against gate G6.1). Retain μ_s exactly, replacing only the
+inner `max` by a smooth `max_ε(a,b) = (a+b)/2 + √((a−b)²/4 + ε²)` (ε ~ 1e-8) so
+the shock-point operator is C¹ too. The subcritical no-op (μ ≡ 0 ⇒ ρ̃ ≡ ρ,
+bit-for-bit — gate G4.2) is preserved because every term above vanishes when
+μ = 0.
+
+Must be preserved by any P6 candidate: the exact ν ≡ 0 subcritical no-op
+(G4.2 bit-identity), the positivity guards, and enough effective dissipation to
+clear the (M²−1)/M² threshold in the supersonic pocket that the P4 multi-hop
+walk was introduced to satisfy (§12.4 / roadmap P4 hardening trail). The
+multi-hop walk supplied "reach" (streamwise extent of the difference); the
+weighted form (3.4) supplies it through the neighbour blend, so re-verify the
+effective-dissipation floor on the G4.1/G4.3 ladder after the swap.
+
+**Optional — smooth density clamp (only if Newton stalls on clamp-touching
+transients).** Replace the hard M_cap clamp by
+σ = ½(1 + tanh((M² − M²_max)/ε)), ρ_clamped = (1−σ)ρ(M²) + σ ρ(M²_max), which is
+C¹ across the cap. López used a **hard** clamp and still converged quadratically
+(the clamp is active only at isolated wingtip-TE geometric singularities —
+dissertation Fig. 3.5, §3.4 "only local parts of the boundary are affected"), and
+UP3D's converged states do not touch it, so this is scoped as a fallback, not a
+prerequisite.
+
 ---
 
 ## 4. Circulation, wake model, Kutta condition in 3D
@@ -447,15 +530,41 @@ physics enters through the residual/RHS lag. This is the classical, very robust
 scheme; its convergence rate degrades with shock strength, motivating the
 Newton option in §8.
 
-**Newton Jacobian (Phase 6+):** differentiate (6.1) w.r.t. φ_k:
+**Newton Jacobian (needs the P6 differentiable flux; the Newton solve itself is
+P7).** Differentiating (6.1) w.r.t. φ_k gives López's two-term form
+(dissertation Eq. 3.24, §13):
 
-    ∂R_i/∂φ_k = Σ_e V_e [ ρ̃_e ∇N_i·∇N_k
-                + (∂ρ̃_e/∂q²_e) · 2(∇φ_e·∇N_k)(∇φ_e·∇N_i) ]              (6.3)
+    ∂R_i/∂φ_k = Σ_e V_e [ ρ̃_e ∇N_i·∇N_k                     ← Term 1 (Picard, SPD)
+                + (∂ρ̃_e/∂φ_k) (∇φ_e·∇N_i) ]                  ← Term 2 (density)   (6.3)
 
-plus the upwind chain ∂ρ̃_e/∂ρ_{u(e)} coupling e's test functions to u(e)'s
-DOFs (widens the stencil by one layer of elements; the sparsity map must be
-built from the element + upwind-neighbor graph). The exact Jacobian is
-nonsymmetric and indefinite in supersonic zones — GMRES + ILU, not CG.
+Term 1 is exactly the frozen-density Picard matrix (6.2) — the existing colored
+assembler produces it verbatim. Term 2 carries the density sensitivity; expanded
+through the isentropic law and the switching function (López Appendix B, verified
+against the PDF) it splits by flow regime, and in the supersonic accelerating
+case reads
+
+    ∂ρ̃_e/∂φ_k     = (∂ρ_e/∂φ_k)(1 − μ) − (ρ_e − ρ_up)(∂μ/∂φ_k)          (B.3)
+    ∂ρ̃_e/∂φ_k^up  = +μ (∂ρ_up/∂φ_k^up)                                   (B.4)
+
+with ∂ρ/∂φ = (∂ρ/∂u²)(∂u²/∂φ), ∂ρ/∂u² = −(ρ∞/2a∞²)[…]^{(2−γ)/(γ−1)} (B.8),
+∂μ/∂φ = (−M_c²/M⁴)(∂M²/∂u²)(∂u²/∂φ) (B.9–B.12). **(B.4) is nonzero**: the
+current element's residual depends on the *upstream* element's DOFs, so the
+Newton stencil is **one element-layer wider** than Picard — the sparsity map and
+element coloring must be rebuilt from the element + upstream-neighbour graph.
+
+Two facts from the PDF that shape the implementation:
+
+- López keeps the switching-function derivative ∂μ/∂φ (B.3, B.6) — this is a
+  *full* Jacobian ("strategy A"); dropping it (Term-1-plus-local-density-only)
+  degrades quadratic to superlinear.
+- The derivation treats the **upstream selection u(e) as frozen** while
+  differentiating ρ_up; the selection is re-evaluated each Newton step but not
+  differentiated. This is exactly why P6 need only make the flux differentiable
+  at fixed selection (§3.1), not differentiate the selection itself.
+
+The exact Jacobian (Term 1 + Term 2 + upstream coupling) is **nonsymmetric** and
+indefinite in supersonic zones — GMRES + AMG (aggregation on the symmetric part)
+or GMRES + ILU, not CG (§8).
 
 Order of accuracy: 2nd in subsonic regions, 1st locally at captured shocks —
 standard and acceptable.
@@ -555,6 +664,69 @@ for ~1–3 M nodes on a workstation, which is the design target.
 4. Full Newton with (6.3) + pseudo-transient continuation (add V_e/Δτ mass
    term) — quadratic terminal convergence; only after Picard is bulletproof.
 
+### 8.1 Fully-coupled Newton with Γ as an unknown (P7)
+
+The Picard/secant architecture nests three loops (Mach continuation → per-station
+Γ secant → density Picard). The P5 medium failure root-caused the fragility to
+**secant–density coupling**: the secant reads its Kutta mismatch off a not-yet-
+converged density field, so a bad slope estimate over-shoots Γ, which forces more
+density work, which pollutes the next mismatch — a positive feedback that
+diverges when pushed (the P5 fix regularized it by early-stopping + a fixed-Γ
+polish, not by curing it). López avoids this class of failure entirely by solving
+one Newton system in which **Γ is an unknown alongside φ**, so φ and Γ converge
+together and there is no secant reading a lagged residual.
+
+UP3D's master–slave reduction makes this cheap because the Γ-Jacobian blocks are
+almost already in the code. With φ_full = T·φ_red + g(Γ) (the wake jump) and the
+far-field Dirichlet data also carrying Γ through the vortex correction, the
+coupled step is
+
+    ⎡ TᵀJ T        ∂R_red/∂Γ ⎤ ⎡ δφ_red ⎤     ⎡ −Tᵀ R      ⎤
+    ⎢                        ⎥ ⎢        ⎥  =  ⎢            ⎥
+    ⎣ ∂F/∂φ_red    −I        ⎦ ⎣ δΓ     ⎦     ⎣ −F         ⎦
+
+where
+- `TᵀJ T` is the reduced full Jacobian (6.3), Term 1 reusing `assemble_matrix`;
+- `F_j(φ_red) = kutta_targets_j(φ_red) − Γ_j` is the Kutta closure residual
+  (`wake.py::kutta_targets`, reusable verbatim), with ∂F_j/∂φ_red the sparse
+  averaging matrix (±1/n_j on this station's upper/lower TE probe nodes);
+- **∂R_red/∂Γ_j = TᵀJ g_j** (g_j = station-j slave indicator). At the Picard
+  level TᵀA g_j = h_j, which `wake.py` **already materializes** as `self._h`; the
+  exact Newton column uses the full J and can be lagged to A as a documented
+  approximation.
+- **The far-field column.** Γ enters φ_full a *second* way: the far-field vortex
+  Dirichlet values are linear in Γ (`dirichlet.py`, `farfield_spanwise_gamma`
+  taper or the span-uniform mean). So ∂R_red/∂Γ_j gets an extra
+  −A_coupling·(∂vals_red/∂Γ_j) term. **This term is easy to miss** — it is not in
+  the Picard code path (where it is folded silently into the RHS) — and must be
+  added to the Newton column.
+
+Globalization (López-verified, dissertation §4.4/§4.8): plain Newton from the
+freestream diverges transonically, so wrap it in **Mach continuation + load
+stepping**. Two corrections to the earlier internal schedule proposal, verified
+against the PDF (Tables 4.7/4.8/4.13):
+
+- Within a single case López holds M_crit and μ_c **fixed** and ramps only M∞;
+  the harder the case, the *lower* M_crit and *higher* μ_c chosen for the whole
+  ramp (Case 1: M_crit 0.99, μ_c 1.0; Case 4 at α=2°/M∞0.75: M_crit 0.90,
+  μ_c 1.1). There is **no** per-step M_crit=0.99→0.90 sweep.
+- ONERA M6 (Table 4.13): 12 steps, M_crit held **constant at 0.95**, μ_c held at
+  2.0 while M∞ ramps 0.50→0.84 (steps 1–8), then M∞ fixed and μ_c **decreased**
+  2.0→1.6 (steps 9–12) to sharpen the shock after the field is established. So
+  μ_c scheduling is a *post-target dissipation reduction*, not a during-ramp
+  increase.
+
+Add an Eisenstat–Walker forcing schedule for the inner GMRES (loose early, tight
+near convergence — the existing `forcing` param is a one-parameter stand-in), and
+reuse the AMG hierarchy across a few Newton steps. Expected cost from López's
+data: subsonic 5–10 Newton iterations total; transonic 4–9 per load step; ONERA
+M6 ≈ 12 steps × 5–9 ≈ 60–110 total Newton iterations (Tables 4.5/4.6/4.9,
+§4.7) — versus the ~10⁴ Picard iterations today.
+
+An N-Γ split (keep the Γ secant outer loop, Newton only the density inner solve)
+is retained **only as a fallback**: it preserves the secant and therefore the P5
+coupling-instability risk.
+
 ---
 
 ## 9. Post-processing and forces
@@ -620,18 +792,20 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   ρ̃; relaxation + Mach continuation. Gate: V4.
 - **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
   Track M1). Gates: V5; V6 consistency in 3D.
-- **P6 — Consistent, differentiable artificial-density flux.** Replace the
-  P4 discrete integer-walk upstream selection u(e) + `max(ν_e, ν_u)` switch
-  (non-differentiable, C⁰-rough → the non-physical ≈2-cell surface-Cp
-  sawtooth in the supersonic pocket) with a directionally-consistent,
-  C¹ upwind density (streamline-aligned/rotated difference), keeping the
-  ν ≡ 0 subcritical no-op and the (M²−1)/M² dissipation floor. Gate:
-  Cp-smoothness metric on coarse ≤ current medium baseline, P4 shock
-  ladder preserved. Prerequisite for the P7 exact Newton Jacobian (needs a
-  differentiable flux) and gates P5's section-Cp acceptance — see
-  roadmap.md P6.
-- **P7 — Performance & robustness.** Newton (6.3), pseudo-transient, AMG
-  reuse, profiling (target: ONERA M6 medium mesh < 5 min single node).
+- **P6 — Consistent, differentiable artificial-density flux** (design pass:
+  §3.1–3.2). Replace the P4 integer-walk upstream selection u(e) +
+  `max(ν_e, ν_u)` switch by the **streamline-projected weighted upwind
+  density** (Eq. 3.4), which cures both the surface-Cp *sawtooth* (a
+  selection-flip spatial artifact) and the *non-differentiability* that blocks
+  the P7 Jacobian, keeping the ν ≡ 0 subcritical no-op and the (M²−1)/M²
+  dissipation floor. Gate: Cp-smoothness metric on coarse ≤ current medium
+  baseline, P4 shock ladder preserved. Prerequisite for the P7 exact Newton
+  Jacobian and gates P5's section-Cp acceptance — see roadmap.md P6.
+- **P7 — Performance & robustness: fully-coupled Newton** (design pass: §6.3,
+  §8.1). Full Jacobian with the nonzero upstream coupling (López Eq. B.4),
+  fully-coupled (φ, Γ) solve replacing the P5-fragile Γ-secant, Mach
+  continuation + load stepping, GMRES + AMG, Eisenstat–Walker, AMG reuse,
+  profiling (target: ONERA M6 medium mesh < 5 min single node).
 - **P8 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
   alternative; VII coupling hook (transpiration BC ∂φ/∂n = d(u_e δ*)/ds —
   reuses the IBL work from pyTSFoil); adjoint via the Newton Jacobian
@@ -703,3 +877,29 @@ Boundary-flux correction for curved walls on flat-facet meshes (§5.1):
   *Math. Comp.* 26 (1972) 869–879.
 - Burman, E., Hansbo, P., Larson, M.G., "A cut finite element method with
   boundary value correction," *Math. Comp.* 87 (2018) 633–657.
+
+FE full-potential, embedded wake, and fully-coupled Newton (§3.1–3.2, §6.3, §8.1):
+
+- López Canalejo, I., *A Finite-Element Transonic Potential Flow Solver with an
+  Embedded Wake Approach for Aircraft Conceptual Design*, PhD dissertation,
+  Technische Universität München, 2021 (`docs/references/Dissertation_Inigo_Lopez.pdf`)
+  — the closest prior art for the FE artificial-density flux and a full-Jacobian
+  Newton solver. §3.3 artificial compressibility (Eq. 3.19–3.27, switching
+  function μ_s = μ_c·max(0,μ,μ_up)); §3.4 limit velocity / M²_max ~ O(3) clamp;
+  §3.5 embedded wake (2D/3D conditions, TE and small-cut treatment); Ch.4
+  Newton convergence (Tables 4.5/4.6/4.9, strict quadratic) and load-stepping
+  schedules (Tables 4.7/4.8 NACA0012, 4.13 ONERA M6); ONERA M6 loads Table 4.15
+  (CL 0.288 KRATOS = Tranair); Appendix B Eq. (B.1)–(B.17) full sensitivity
+  derivation incl. the nonzero upstream coupling (B.4/B.6) and switching-function
+  derivatives (B.3/B.6). NACA0012 validation used a **sharp** TE (Eq. 4.2 modifies
+  the last thickness coefficient to close the otherwise-blunt profile) with full
+  quadratic Newton convergence — i.e. a sharp 2D TE is not itself a Newton
+  obstacle; only the 3D wingtip-TE geometric singularity needs the density clamp.
+- López Canalejo, I., Núñez, M., Baiges, J., Rossi, R., "An embedded approach for
+  the solution of the full potential equation with finite elements," *CMAME* 388
+  (2022) 114244 — the journal condensation of the dissertation Ch.3–4.
+- Cai, X.-C., Keyes, D.E., Young, D.P., "Parallel Newton–Krylov–Schwarz
+  algorithms for the transonic full potential equation," *SIAM J. Sci. Comput.*
+  19 (1998) 246–265 — inexact Newton + GMRES for the FPE.
+- Eisenstat, S.C., Walker, H.F., "Choosing the forcing terms in an inexact Newton
+  method," *SIAM J. Sci. Comput.* 17 (1996) 16–32.

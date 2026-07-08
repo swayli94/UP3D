@@ -65,3 +65,6 @@ cases/meshes/onera_m6/*.msh
 
 # P5 demo solution caches (regenerable; figures+CSVs are the committed evidence)
 cases/demo/p5_onera_m6/results/*.npz
+
+# Reference papers
+docs/references
