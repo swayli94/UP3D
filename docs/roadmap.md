@@ -610,7 +610,7 @@ address the sawtooth). Metric now shock-robust (sign-alternating: counts only
 slope-reversal points, so the monotone shock is excluded).
 
 **Gates (repointed 2026-07-08):**
-- [ ] G6.1 surface-Cp smoothness: the sign-alternating sawtooth metric
+- [x] G6.1 surface-Cp smoothness: the sign-alternating sawtooth metric
       (`post/section_cut.py::cp_oscillation_metric`) on the **G4.1 coarse**
       supersonic-run wall Cp drops far below the raw per-triangle baseline under
       the recovery smoothing. Measured (coarse NACA0012 M0.80 walk solution,
@@ -618,19 +618,25 @@ slope-reversal points, so the monotone shock is excluded).
       "coarse ≤ medium baseline" spec is obsolete: the fix is a recovery, not a
       flux, so it works at every mesh level; the acceptance is smoothed ≪ raw
       with the TE preserved.)*
-- [ ] G6.2 physics preserved: the smoothing is post-processing — the solve
+- [x] G6.2 physics preserved: the smoothing is post-processing — the solve
       (φ, Γ, shock, M_max, cl_KJ) is **unchanged**; the smoothed shock stays in
       the 0.62 ± 0.03 band (0.607 coarse), smoothed cl_p within a few % of the
       raw (−0.3 % coarse), |Cp|_max unchanged (TE not polluted). Near-field
       cd_pressure shifts (~15 % coarse) — the explicitly-untrusted FP quantity,
       not gated (design.md §9). P4/P5 gate numbers (shock/M_max/cl_KJ) are
       untouched; only the reported cl_p/cd_p change and are re-recorded.
-- [ ] G6.3 V6 re-measured under smoothing: recompute the V6 consistency
-      (cl_p vs cl_KJ) with `smooth_passes>0` on the M6 gates and quantify how
-      much of the deferred V6 floor was the sawtooth vs the sharp-TE/LE P1 wall
-      gradient. The residual (sharp-edge) floor → **P9** (curved elements); V6<1%
-      stays deferred there.
-- [ ] G6.4 no regression: `smooth_passes = 0` bit-identical to the current
+- [x] G6.3 V6 re-measured under smoothing (M6 coarse, 2026-07-08): the sawtooth
+      is **not** what inflates V6. `smooth_passes` 0→1→2 gives V6 = |CL_p−CL_KJ|/
+      CL_KJ = **2.40% → 3.35% → 3.88%** (CL_p 0.2419→0.2396→0.2383, CL_KJ
+      0.2479) — smoothing moves CL_p slightly *further below* CL_KJ because it
+      smears the LE suction peak; the ±sawtooth largely cancels in the integral.
+      So the whole V6 floor is the sharp-TE/LE P1 wall gradient → **P9** (curved
+      elements); V6<1% stays deferred there. **Consequence:** `smooth_passes>0`
+      is for the reported **Cp curve** (removes the sawtooth); for the **force
+      integral** keep `smooth_passes=0` (raw CL_p is closer to the trustworthy
+      CL_KJ). The `smooth_passes` param on `wall_force_coefficients` stays
+      (opt-in, default 0) but is *not* recommended for loads.
+- [x] G6.4 no regression: `smooth_passes = 0` bit-identical to the current
       per-triangle path; full default suite green (157 passed).
 **Demo:** `cases/demo/p6_surface_recovery/` (5/5 PASS) — re-runs the P4
 (NACA M0.80) + P5 (M6, gated) cases showing raw→smoothed Cp, physics

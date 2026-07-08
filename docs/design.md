@@ -798,6 +798,16 @@ operator in the gradient (differentiable). `smooth_passes = 0` is the
 bit-identical default; the near-field cd_pressure shifts (~15 % on coarse) but is
 the explicitly-untrusted FP quantity (use Trefftz for drag).
 
+**Use it for the Cp curve, not the loads (G6.3, measured 2026-07-08).** On
+ONERA M6 coarse the V6 consistency |CL_p − CL_KJ|/CL_KJ *worsens* with smoothing
+(2.40 % → 3.35 % → 3.88 % for `smooth_passes` 0/1/2): the ±sawtooth largely
+cancels in the surface integral, and the averaging instead smears the true LE
+suction peak, moving CL_p ~1 % further below the trustworthy CL_KJ. So the whole
+V6 floor is the sharp-TE/LE P1 wall gradient (→ P9 curved elements), not the
+sawtooth. Recommendation: `smooth_passes > 0` for the reported Cp curve;
+`smooth_passes = 0` for `wall_force_coefficients` (the param stays, opt-in, but
+raw loads are more accurate).
+
 ---
 
 ## 10. Verification & validation ladder

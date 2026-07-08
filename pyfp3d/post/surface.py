@@ -247,11 +247,14 @@ def wall_force_coefficients(
     or the exact isentropic law (2.5) (m_inf > 0, P3), force
     dC_F = -Cp n_out dA / S_ref  with n_out the body-outward normal.
 
-    `smooth_passes` > 0 (roadmap P6 / gate G6.1) applies the normal-gated
-    edge-neighbour gradient smoothing (`smooth_wall_tangential_gradients`)
-    before Cp, removing the per-triangle sawtooth's residual contamination of
-    the integrated loads while preserving the sharp TE. `0` is bit-identical to
-    the original per-triangle integration.
+    `smooth_passes` > 0 applies the normal-gated edge-neighbour gradient
+    smoothing (`smooth_wall_tangential_gradients`) before Cp; `0` is
+    bit-identical to the original per-triangle integration. NOTE (G6.3, measured
+    2026-07-08): smoothing is for the reported *Cp curve*, NOT the loads — on
+    ONERA M6 coarse it moves CL_p ~1% further below the trustworthy CL_KJ
+    (V6 2.40%→3.35%) because the ±sawtooth cancels in the integral and the
+    averaging instead smears the LE suction peak. Keep `smooth_passes=0` for
+    forces; the param stays opt-in for experiments only.
 
     Args:
         nodes, elements: CUT-mesh arrays (used to orient normals)

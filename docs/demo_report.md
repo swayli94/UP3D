@@ -856,9 +856,13 @@ cause: the walk flux and the smoother streamline-kernel flux serrate identically
 (raw recovery), while smoothing the same walk solution's recovery is clean. This
 **overturns** the P4-supplementary attribution (see the correction banner in the
 P4 section). On ONERA M6 coarse (η=0.65) the same smoothing drops the section-Cp
-metric 0.145 → 0.046 (3D confirmation, gated part). The residual V6 floor after
-smoothing is the sharp-TE/LE P1 wall gradient → tracked to **P9** (curved wall
-elements). Demo: `cases/demo/p6_surface_recovery/` (6/6 PASS incl. the gated M6
+metric 0.145 → 0.046 (3D confirmation, gated part). **G6.3 nuance (measured):**
+smoothing helps the *Cp curve* but not the *loads* — the M6 V6 consistency
+|CL_p−CL_KJ|/CL_KJ *worsens* 2.40% → 3.35% under smoothing (the ±sawtooth cancels
+in the integral; averaging smears the LE peak, moving CL_p ~1% further below the
+trustworthy CL_KJ). So the whole V6 floor is the sharp-TE/LE P1 wall gradient →
+tracked to **P9** (curved wall elements), and `smooth_passes` is recommended for
+the Cp curve only, `= 0` for `wall_force_coefficients`. Demo: `cases/demo/p6_surface_recovery/` (6/6 PASS incl. the gated M6
 part); the differentiable flux itself is **P7** (Newton prerequisite), not a
 sawtooth fix.
 
