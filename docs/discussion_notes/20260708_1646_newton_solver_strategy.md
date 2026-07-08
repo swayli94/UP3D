@@ -20,6 +20,22 @@
 
 ---
 
+> **⚠️ 后续修正与定案（2026-07-08，roadmap/design P7·P8 复核后）。** 读者以
+> `docs/roadmap.md` P7/P8 + `design.md` §3.1/§6.3 为准：
+> 1. **本文 §6.3/§7.3/§11.1 "保持 integer-walk + 光滑 max" 的建议最终被采纳**（曾一度
+>    被 kernel 整体替换方案取代，现已回退到本文原意）。**P7 定案**：Newton 前置 =
+>    **冻结选择下 walk 的 ∂ρ̃/∂φ**（walk 在 frozen u(e) 下已可微：等熵 ρ + 分支 ∂ν/∂φ，
+>    B.3–B.6；López 的 C⁰ `max` 亦二次收敛），稀疏 ~+1 上游单元/行，最接近 López 单跳；
+>    `max_ε` 仅作可选抖动鲁棒性（且只对内层 max，外层 max(0,·) 必须硬以保住亚临界
+>    no-op）。multi-ring streamline-Gaussian kernel **降级为可选** Picard 提速路径。
+> 2. **"Stencil 宽一层 / ~30% 内存"（§4.1 表、§12 风险表）对 UP3D 不成立。** 那是
+>    López 单跳上游的结论；UP3D 因 sliver prism-split tet 需要**多跳** reach（单跳仅
+>    ~0.37 流向长度）。frozen walk（默认）：Term 3 只加 ~+1 上游单元/行，但图距 ≤4
+>    （着色/CSR 出现长程边）；kernel（可选）：Term 3 耦合到**整个 depth-3 邻域**→
+>    Jacobian 明显更稠密，仅当 N2 实测 nnz/GMRES/AMG 划算才作 P8 通量。
+> 3. （次要）implementation_audit §4.1/§4.2 "UP3D 缺 max(μ, μ_up)" 不准确——P4 walk
+>    已有激波点 ν=max(ν_e, ν_up)，kernel 设计亦保留（design.md §3.2）。
+
 ## 1. 为什么需要修订
 
 ### 1.1 旧文档的三个核心错误

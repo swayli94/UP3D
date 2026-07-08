@@ -160,9 +160,11 @@ measurement, that they have **different root causes and different fixes**:
 - **The flux's non-differentiability in φ (blocks the exact Newton Jacobian) is
   a real, separate defect — but it belongs to P7, not G6.1.** The integer `u(e)`,
   the `max(0, μ_e, μ_{u(e)})` switch, and the two hard clamps are non-smooth in
-  φ; the exact Newton Jacobian (§6.3) needs a differentiable flux. This is the
-  actual purpose of the §3.2 differentiable-flux operator (the **P7** deliverable
-  and the **P8 Newton prerequisite**), not a sawtooth fix.
+  φ; the exact Newton Jacobian (§6.3) needs ∂ρ̃/∂φ well-defined **at frozen
+  selection** — which the shipped **walk** already provides (next paragraph).
+  Deriving + FD-verifying that ∂ρ̃/∂φ, not a sawtooth fix, is the **P7**
+  deliverable and the **P8 Newton prerequisite**; the §3.2 kernel is an *optional*
+  smoother alternative, not the requirement.
 
 The PDF-verified insight (López Appendix B, §6.3) sharpens what the P7 flux must
 provide: **it does not require a differentiable *selection*.** López freezes
@@ -175,11 +177,14 @@ transient-robustness option, not a correctness requirement.
 
 ### 3.2 A differentiable upwind density (P7 — the P8 Newton prerequisite)
 
-> Scope note: this operator is **P7's differentiable flux for the P8 Newton
-> Jacobian**, not the G6.1 sawtooth fix (§3.1 — that is a post-processing
-> recovery, §9). It is implemented and validated but stays **opt-in**
-> (`UpwindOperator(weighted=True, mode="kernel")`); the shipped default is the
-> P4 walk. It does not change (and is not needed to change) the surface Cp.
+> Scope note (re-scoped 2026-07-08): this kernel is an **optional** smoother /
+> ~10×-faster Picard flux, **not** the mandated P7 Newton prerequisite. The P7
+> prerequisite is the *frozen-selection* differentiability of the shipped **walk**
+> (§3.1, §6.3) — its ∂ρ̃/∂φ at fixed u(e) is well-defined as-is and sparse
+> (~+1 element/row). This kernel is a P8 Newton-flux **candidate** only if its
+> denser Jacobian (§6.3) measures net-favourable. It is not the G6.1 sawtooth fix
+> (§9) and stays opt-in (`UpwindOperator(weighted=True, mode="kernel")`); shipped
+> default = the P4 walk.
 
 The naive form — replacing the single integer neighbour with a **smooth
 face-neighbour weighting**
@@ -221,10 +226,11 @@ so no smooth `max_ε` is used (max_ε(0,0)=ε≠0 would break the no-op).
 **It does not reduce the surface-Cp sawtooth** (that is a recovery artifact,
 §3.1/§9): calibrated to reproduce the walk's coarse shock/cl (reach 1.0, C≈2.5:
 shock 0.619 vs 0.604, cl_KJ 0.356 vs 0.364) it gives an *equal-or-worse* G6.1
-metric. Its value is purely as P7's differentiable flux for P8 Newton; it needs
-`upwind_c` recalibration (≈2.0–2.5 vs the walk's 1.5) because the kernel's
-effective dissipation differs from the walk's. Until P8 Newton uses it the
-shipped default stays the P4 walk.
+metric. Its value is as an **optional** Picard-speed / smoother flux; the default
+P7/P8 Newton flux is the sparse frozen **walk** (§6.3). If ever promoted to the
+Newton flux it needs `upwind_c` recalibration (≈2.0–2.5 vs the walk's 1.5)
+because the kernel's effective dissipation differs from the walk's. Shipped
+default = the P4 walk.
 
 **Optional — smooth density clamp (only if Newton stalls on clamp-touching
 transients).** Replace the hard M_cap clamp by
@@ -582,8 +588,33 @@ case reads
 with ∂ρ/∂φ = (∂ρ/∂u²)(∂u²/∂φ), ∂ρ/∂u² = −(ρ∞/2a∞²)[…]^{(2−γ)/(γ−1)} (B.8),
 ∂μ/∂φ = (−M_c²/M⁴)(∂M²/∂u²)(∂u²/∂φ) (B.9–B.12). **(B.4) is nonzero**: the
 current element's residual depends on the *upstream* element's DOFs, so the
-Newton stencil is **one element-layer wider** than Picard — the sparsity map and
-element coloring must be rebuilt from the element + upstream-neighbour graph.
+Newton stencil is **wider than Picard** — the sparsity map and element coloring
+must be rebuilt from the element + upstream graph.
+
+**Stencil width is NOT "one element-layer" in UP3D (correction 2026-07-08).**
+López's *single-hop* upstream gives a one-layer-wider stencil; UP3D reaches
+farther because the sliver prism-split tets need multi-hop reach (§3: a single
+hop reaches only ~0.37 of the streamwise extent). The **default Newton flux is
+the frozen walk** — differentiate the shipped upwind density at fixed selection,
+NOT a replacement flux:
+- **Frozen walk (default)** (`mode="walk"`, u(e) a single element ≤4 hops away):
+  Term 3 couples e to exactly *one* upstream element — nnz increase is modest
+  (~+1 element/row, closest to López) — but at graph-distance ≤4, so the
+  coloring/CSR graph gains long-range e→u(e) edges (higher chromatic number).
+  Differentiable at frozen selection as-is (isentropic ρ + branch-wise ∂ν/∂φ,
+  B.3–B.6); `max_ε` optional only to damp active-set churn far from the solution
+  (López's C⁰ `max` already reaches quadratic near it, where the selection and
+  active set stop changing). This is the P7 deliverable.
+- **Streamline-Gaussian kernel (optional)** (`mode="kernel"`): ρ_up is a weighted
+  sum over the *whole depth-3 BFS neighbourhood*, so Term 3 couples e to *every*
+  cell in that neighbourhood — a materially **denser** Jacobian (row nnz
+  ~O(neighbourhood size), not +1); the weight dependence w_f(∇φ_e) adds only
+  self-coupling. Smoother and frozen-selection-free, but a denser system — a
+  Picard-speed path, promoted to the Newton flux only if it measures favourable.
+
+Retire the old "~30 % memory / one layer" estimate; take a **measured**
+nnz/GMRES-iteration/AMG-setup figure in N2/N3 before committing the wider
+coloring/CSR rebuild.
 
 Two facts from the PDF that shape the implementation:
 
@@ -871,12 +902,13 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   not). Fix = normal-gated recovery smoothing in post-processing
   (`smooth_passes`, §9.1), preserving the sharp TE, applied to the Cp curve and
   the force integral. **Done** (2026-07-08). Gates G6.1–G6.4.
-- **P7 — Differentiable artificial-density flux** (§3.2). The streamline-Gaussian
-  kernel (Eq. 3.4′): C^∞ in ∇φ, genuine reach, ~10× faster/iter than the walk;
-  the **P8 Newton prerequisite** (the exact Jacobian §6.3 is only well-defined on
-  a differentiable flux). Built opt-in; remaining = calibrate `upwind_c` +
-  validate the shock ladder + FD-verify differentiability. It does *not* fix the
-  sawtooth (that is P6). Gates G7.1–G7.3.
+- **P7 — Differentiable artificial-density flux at frozen selection** (§3.1/§6.3;
+  re-scoped 2026-07-08). The **P8 Newton prerequisite** = the shipped **walk**
+  flux's ∂ρ̃/∂φ made differentiable at frozen u(e) (sparse, ~+1 element/row,
+  closest to López); deliverable = derive + FD-verify it (`max_ε` optional). The
+  streamline-Gaussian kernel (Eq. 3.4′, §3.2) is an **optional** ~10×-faster
+  Picard flux with a denser Newton Jacobian, a P8 flux candidate only if measured
+  net-favourable. Neither fixes the sawtooth (that is P6). Gates G7.1–G7.3.
 - **P8 — Performance & robustness: fully-coupled Newton** (§3.2, §6.3, §8.1).
   Consumes the P7 flux. Full Jacobian with the nonzero upstream coupling (López
   Eq. B.4), fully-coupled (φ, Γ) solve replacing the P5-fragile Γ-secant, Mach
