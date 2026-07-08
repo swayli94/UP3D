@@ -190,10 +190,49 @@ bit-for-bit — gate G4.2) is preserved because every term above vanishes when
 Must be preserved by any P6 candidate: the exact ν ≡ 0 subcritical no-op
 (G4.2 bit-identity), the positivity guards, and enough effective dissipation to
 clear the (M²−1)/M² threshold in the supersonic pocket that the P4 multi-hop
-walk was introduced to satisfy (§12.4 / roadmap P4 hardening trail). The
-multi-hop walk supplied "reach" (streamwise extent of the difference); the
-weighted form (3.4) supplies it through the neighbour blend, so re-verify the
-effective-dissipation floor on the G4.1/G4.3 ladder after the swap.
+walk was introduced to satisfy (§12.4 / roadmap P4 hardening trail).
+
+**Implementation evidence (2026-07-08, N1 — the near-neighbour form (3.4) is
+NOT enough; the shipped operator samples with genuine reach).** Building (3.4)
+literally and probing it (a fast frozen-Γ Picard from the walk's converged
+coarse field) showed the single-face-ring blend is **transiently unstable**: it
+blows up (M_max 20–40 in ~60 iterations) from a *good* field for every exponent
+p and reach-gain tried, and a diagnostic confirmed the cause is **not**
+dissipation magnitude (at the converged field it already gives 1.3× the walk's
+dissipation) — it is that averaging over the *near* ring (reach ≈ 0.3·extent on
+the prism-split sliver tets) samples a too-local, too-central region and
+destroys the upwind character that stabilises the hyperbolic zone. Two false
+starts were ruled out: face-normal inflow weighting `max(0,−V·n̂_f)` gives
+*negative* reach (anti-dissipative cells) on slivers — use centroid-displacement
+alignment `max(0,−V̂·d̂_{e,nb})`; and a reach-compensation multiplier `G·(ρ_e−ρ_up)`
+cannot rescue it (`G·0 = 0` when the near blend can't reach upstream). The
+working operator is a **multi-ring streamline-Gaussian kernel**: over a
+precomputed depth-3 BFS neighbourhood, weight each cell c by a Gaussian centred
+on the point one streamwise extent upstream,
+
+    up_c = −V̂·(c_c − c_e),  perp²_c = |c_c − c_e|² − up_c²
+    w_c  = exp(−½[(up_c − reach·ext)²/σ_s² + perp²_c/σ_p²]),   up_c > 0
+    ρ_up = Σ_c w_c ρ[c] / Σ_c w_c                                       (3.4′)
+
+This keeps the walk's stabilising **reach** (samples genuinely-upstream cells,
+not the near ring) while the smooth kernel removes the flip; it is C^∞ in
+V̂ = ∇φ/|∇φ| at fixed neighbourhood (Newton-ready), needs no reach multiplier,
+and — since there is no per-iteration walk to recompute — runs ~10× faster per
+density iteration than the walk. Probed stable: with reach ≈ 0.8–1.2·extent and
+σ_s, σ_p ≈ 0.25–0.4·extent it converges to the walk's *own* physical state
+(M_max 1.37, 0 floored/limited) where the near blend diverged; reach ≈ 0.6 is
+too short and diverges. The shock-point operator stays a **hard** max(ν_e, ν_up)
+on the (now smooth) blended upstream Mach — exactly 0 subcritically, so the
+smooth `max_ε` above is dropped (it would break the no-op: max_ε(0,0) = ε ≠ 0).
+**Open (N1 calibration, in progress):** at reach 1.0/σ 0.35 the kernel converges
+to a *different* solution than the walk (coarse shock 0.604→0.641, cl_KJ
+0.364→0.414, +14%) and the raw G6.1 metric does not drop — partly because that
+metric's second difference also counts the (now aft, sharper) shock foot, so it
+must exclude the shock transition to isolate the sawtooth, and the kernel's
+effective dissipation must be calibrated (reach/C) to reproduce the walk's
+shock/cl before the smoothness gain is measured fairly. Until G6.1/G6.2 close
+the shipped default stays the P4 walk; the kernel is opt-in
+(`UpwindOperator(..., weighted=True, mode="kernel")`).
 
 **Optional — smooth density clamp (only if Newton stalls on clamp-touching
 transients).** Replace the hard M_cap clamp by

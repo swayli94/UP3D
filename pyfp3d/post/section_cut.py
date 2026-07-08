@@ -231,6 +231,63 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
     }
 
 
+def cp_oscillation_metric(x: np.ndarray, cp: np.ndarray, cp_star: float,
+                          *, min_points: int = 5) -> Dict[str, float]:
+    """Surface-Cp smoothness metric on the supersonic run (gate G6.1, roadmap P6).
+
+    The P4 artificial density selects its upstream element by a discrete
+    integer walk that FLIPS between adjacent supersonic cells, imprinting a
+    non-physical ~2-cell (odd-even) sawtooth on the wall Cp (demo_report §P4
+    supplementary). This measures that serration so P6 can gate it.
+
+    On the ordered supersonic run of one wall-Cp side -- the points with
+    ``cp < cp_star`` (local M > 1), sorted by x -- take the discrete second
+    difference (the odd-even / highest-frequency component)
+
+        d2_i = cp[i-1] - 2 cp[i] + cp[i+1]        (interior run points)
+
+    and normalize its RMS by the run's own Cp range:
+
+        metric = rms(d2) / (max cp - min cp) over the run.
+
+    A smooth curve gives d2 ~ O(h^2 * cp'') -> the metric shrinks with h; the
+    ~2h sawtooth gives d2 ~ O(amplitude) -> the metric stays O(1)-ish and is
+    the quantity P6 must drive down without refinement. Index-based (not
+    x-spacing-weighted) on purpose: the target is the per-point odd-even
+    content, which is exactly what a spacing-blind second difference isolates.
+
+    Args:
+        x, cp: one wall-Cp side (e.g. ``curve["x_upper"]``/``curve["cp_upper"]``
+            from `wall_cp_curve`), any order -- re-sorted here by x.
+        cp_star: sonic Cp = pressure_coefficient(critical_speed_squared(M_inf),
+            M_inf) (physics/isentropic.py; kept out of this module per hard
+            rule 5). The supersonic run is ``cp < cp_star``.
+        min_points: minimum run length to report a metric.
+
+    Returns:
+        dict with ``metric`` (np.nan if the run has < ``min_points`` points),
+        ``n_super`` (run length), ``rms_second_diff``, ``cp_range``.
+    """
+    x = np.asarray(x, dtype=np.float64)
+    cp = np.asarray(cp, dtype=np.float64)
+    run = cp < cp_star
+    xs = x[run]
+    cs = cp[run]
+    n_super = int(cs.size)
+    nan = float("nan")
+    if n_super < min_points:
+        return {"metric": nan, "n_super": n_super,
+                "rms_second_diff": nan, "cp_range": nan}
+    order = np.argsort(xs, kind="stable")
+    cs = cs[order]
+    d2 = cs[:-2] - 2.0 * cs[1:-1] + cs[2:]
+    rms = float(np.sqrt(np.mean(d2 * d2)))
+    cp_range = float(cs.max() - cs.min())
+    metric = rms / cp_range if cp_range > 0.0 else nan
+    return {"metric": metric, "n_super": n_super,
+            "rms_second_diff": rms, "cp_range": cp_range}
+
+
 def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
                      z: Optional[float] = None, b_semi: Optional[float] = None,
                      u_inf: float = 1.0, m_inf: float = 0.0,

@@ -384,6 +384,14 @@ def solve_subsonic_lifting(
     forcing: float = 0.0,
     upwind_c: float = 1.5,
     m_crit: float = 0.95,
+    upwind_weighted: bool = False,
+    upwind_mode: str = "kernel",
+    upwind_p_weight: float = 3.0,
+    upwind_reach_frac: float = 1.0,
+    upwind_reach_gain_max: float = 4.0,
+    upwind_nbr_depth: int = 3,
+    upwind_sigma_s_frac: float = 0.35,
+    upwind_sigma_p_frac: float = 0.35,
     phi_init: Optional[np.ndarray] = None,
     gamma_init: Optional[np.ndarray] = None,
     kutta_per_outer: Optional[int] = None,
@@ -518,7 +526,14 @@ def solve_subsonic_lifting(
     use_upwind = upwind_c > 0.0 and m_inf > 0.0
     if use_upwind:
         from pyfp3d.kernels.upwind import UpwindOperator
-        upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements)
+        upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
+                             weighted=upwind_weighted, mode=upwind_mode,
+                             p_weight=upwind_p_weight,
+                             reach_frac=upwind_reach_frac,
+                             reach_gain_max=upwind_reach_gain_max,
+                             nbr_depth=upwind_nbr_depth,
+                             sigma_s_frac=upwind_sigma_s_frac,
+                             sigma_p_frac=upwind_sigma_p_frac)
     con = WakeConstraint(op.assemble_matrix(), wc)
     n_red = con.n_reduced
     b_zero = np.zeros(op.n_nodes, dtype=np.float64)

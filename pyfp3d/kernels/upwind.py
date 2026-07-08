@@ -121,6 +121,334 @@ def upstream_elements(
 
 
 @_njit(cache=True, fastmath=True, parallel=True)
+def compute_face_normals(
+    nodes: np.ndarray,
+    elements: np.ndarray,
+    out: np.ndarray,
+) -> None:
+    """Outward unit normal of each tet face, indexed to match
+    `build_face_adjacency` (face f is opposite local node f; face nodes are
+    metrics.face_defs[f]). `out` is (n_tets, 4, 3), preallocated. Precomputed
+    once per mesh (geometry only); the P6 weighted upwind (3.4) uses these to
+    weight face neighbours by inflow alignment max(0, -V.n_hat)."""
+    n_tets = len(elements)
+    # face_defs[f] = the 3 face-node local indices for face f (opposite node f)
+    fd = np.array([[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]], dtype=np.int64)
+    for e in prange(n_tets):
+        for f in range(4):
+            a = elements[e, fd[f, 0]]
+            b = elements[e, fd[f, 1]]
+            c = elements[e, fd[f, 2]]
+            apex = elements[e, f]
+            e1x = nodes[b, 0] - nodes[a, 0]
+            e1y = nodes[b, 1] - nodes[a, 1]
+            e1z = nodes[b, 2] - nodes[a, 2]
+            e2x = nodes[c, 0] - nodes[a, 0]
+            e2y = nodes[c, 1] - nodes[a, 1]
+            e2z = nodes[c, 2] - nodes[a, 2]
+            nx = e1y * e2z - e1z * e2y
+            ny = e1z * e2x - e1x * e2z
+            nz = e1x * e2y - e1y * e2x
+            nn = np.sqrt(nx * nx + ny * ny + nz * nz)
+            if nn > 0.0:
+                nx /= nn
+                ny /= nn
+                nz /= nn
+            # Orient outward: face centroid minus apex points out of the tet.
+            ox = (nodes[a, 0] + nodes[b, 0] + nodes[c, 0]) / 3.0 - nodes[apex, 0]
+            oy = (nodes[a, 1] + nodes[b, 1] + nodes[c, 1]) / 3.0 - nodes[apex, 1]
+            oz = (nodes[a, 2] + nodes[b, 2] + nodes[c, 2]) / 3.0 - nodes[apex, 2]
+            if nx * ox + ny * oy + nz * oz < 0.0:
+                nx = -nx
+                ny = -ny
+                nz = -nz
+            out[e, f, 0] = nx
+            out[e, f, 1] = ny
+            out[e, f, 2] = nz
+
+
+@_njit(cache=True, fastmath=True, parallel=True)
+def rho_tilde_weighted_sweep(
+    q2: np.ndarray,
+    rho: np.ndarray,
+    grad: np.ndarray,
+    nodes: np.ndarray,
+    elements: np.ndarray,
+    centroids: np.ndarray,
+    face_neighbors: np.ndarray,
+    m_inf: float,
+    m_crit: float,
+    C: float,
+    gamma: float,
+    rho_floor: float,
+    p_weight: float,
+    reach_frac: float,
+    reach_gain_max: float,
+    nu_out: np.ndarray,
+    rho_tilde_out: np.ndarray,
+) -> None:
+    """P6 differentiable artificial density (design.md §3.2, Eq. 3.4).
+
+    Replaces the P4 integer walk `u(e)` + per-element `rho[u]` by a *smooth*
+    upstream-weighted blend over the face neighbours, so rho_tilde varies
+    continuously in space (no cell-to-cell selection flip -> no sawtooth) and
+    is differentiable in phi at fixed neighbour set (Newton-ready, P7).
+
+    Weighting is by the neighbour's CENTROID DISPLACEMENT along the reversed
+    streamline, NOT the face normal: on prism-split sliver tets a face can
+    face upstream (`-V.n_hat > 0`) while its neighbour centroid is not actually
+    upstream, giving a net-DOWNSTREAM blend (`reach < 0`) that makes the term
+    anti-dissipative and blows the transonic solve up (measured). Using the
+    centroid displacement mirrors the validated walk's criterion and keeps
+    `reach >= 0` by construction:
+
+        a_f    = -V_hat . (c_nb - c_e) / |c_nb - c_e|   (cos to reversed flow)
+        w_f    = max(0, a_f)^p                          (upstream neighbours)
+        rho_up = sum_f w_f rho[nb_f] / sum_f w_f
+        m2_up  = sum_f w_f M^2[nb_f] / sum_f w_f
+        reach  = sum_f w_f (-V_hat . (c_nb - c_e)) / sum_f w_f   (>= 0)
+
+    Reach compensation restores the multi-hop walk's effective dissipation
+    without a discrete walk (the walk existed only to reach ~one streamwise
+    extent on sliver tets, design.md §3 / P4 hardening trail):
+
+        G = clip(reach_frac * extent_e / max(reach, eps), 1, reach_gain_max)
+        rho_tilde = rho_e - max(nu_e, nu_up) * G * (rho_e - rho_up)
+
+    extent_e is the element's streamwise span projected on V_hat. The
+    shock-point operator stays a HARD max(nu_e, nu_up): it is exactly 0 when
+    both are subcritical (bit-exact no-op, gate G4.2) and matches Lopez's
+    mu_s = mu_c max(0, mu, mu_up); the sawtooth came from the flipping rho_up,
+    not from this max, so smoothing it is unnecessary (and would break the
+    no-op, since max_eps(0,0) = eps != 0).
+    """
+    n = len(q2)
+    mc2 = m_crit * m_crit
+    for e in prange(n):
+        gx = grad[e, 0]
+        gy = grad[e, 1]
+        gz = grad[e, 2]
+        gmag = np.sqrt(gx * gx + gy * gy + gz * gz)
+        m2 = mach_number_squared(q2[e], m_inf, gamma)
+        nu_e = C * max(0.0, 1.0 - mc2 / max(m2, mc2))
+        # Stagnation / no gradient: no streamwise direction, upwind term
+        # vanishes. Also the subcritical fast path is handled after nu_up.
+        if gmag <= 0.0:
+            nu_out[e] = nu_e
+            rho_tilde_out[e] = rho[e]
+            continue
+        vhx = gx / gmag
+        vhy = gy / gmag
+        vhz = gz / gmag
+
+        w_sum = 0.0
+        rho_up_acc = 0.0
+        m2_up_acc = 0.0
+        reach_acc = 0.0
+        for f in range(4):
+            nb = face_neighbors[e, f]
+            if nb < 0:
+                continue
+            dcx = centroids[nb, 0] - centroids[e, 0]
+            dcy = centroids[nb, 1] - centroids[e, 1]
+            dcz = centroids[nb, 2] - centroids[e, 2]
+            dlen = np.sqrt(dcx * dcx + dcy * dcy + dcz * dcz)
+            if dlen <= 0.0:
+                continue
+            # Streamwise upstream distance and its cosine (both use the same
+            # reversed-flow projection; only genuinely upstream neighbours,
+            # a_f > 0, contribute -> reach >= 0).
+            up_dist = -(vhx * dcx + vhy * dcy + vhz * dcz)
+            a = up_dist / dlen
+            if a <= 0.0:
+                continue
+            w = a ** p_weight
+            w_sum += w
+            rho_up_acc += w * rho[nb]
+            m2_up_acc += w * mach_number_squared(q2[nb], m_inf, gamma)
+            reach_acc += w * up_dist
+
+        if w_sum <= 0.0:
+            # No upstream neighbour (wall corner / all boundary): no upwind term.
+            nu_out[e] = nu_e
+            rho_tilde_out[e] = rho[e]
+            continue
+
+        rho_up = rho_up_acc / w_sum
+        m2_up = m2_up_acc / w_sum
+        reach = reach_acc / w_sum
+        nu_u = C * max(0.0, 1.0 - mc2 / max(m2_up, mc2))
+        nu = nu_e if nu_e > nu_u else nu_u
+        nu_out[e] = nu
+        if nu <= 0.0:
+            rho_tilde_out[e] = rho[e]
+            continue
+
+        # Streamwise extent of e projected on V_hat, for reach compensation.
+        pmin = 1e300
+        pmax = -1e300
+        for k in range(4):
+            nd = elements[e, k]
+            pr = (nodes[nd, 0] * vhx + nodes[nd, 1] * vhy + nodes[nd, 2] * vhz)
+            if pr < pmin:
+                pmin = pr
+            if pr > pmax:
+                pmax = pr
+        reach_target = reach_frac * (pmax - pmin)
+        g = reach_target / max(reach, 1e-30)
+        if g < 1.0:
+            g = 1.0
+        elif g > reach_gain_max:
+            g = reach_gain_max
+
+        rt = rho[e] - nu * g * (rho[e] - rho_up)
+        rho_tilde_out[e] = rt if rt > rho_floor else rho_floor
+
+
+def build_upstream_neighborhoods(face_neighbors: np.ndarray, depth: int = 3):
+    """BFS face-neighbour neighbourhood of each element out to `depth` hops,
+    as a CSR (offsets, indices) pair (excludes e itself). One-time geometric
+    precompute for the streamline-kernel upstream sample: on sliver prism-split
+    tets the genuinely-upstream cell (~0.8 streamwise extent away) is several
+    hops off, so a single face ring cannot reach it -- the multi-hop walk
+    existed for exactly this reason (design.md §3 / P4 hardening trail)."""
+    n = len(face_neighbors)
+    offsets = np.zeros(n + 1, dtype=np.int64)
+    idx_lists = []
+    for e in range(n):
+        seen = {e}
+        frontier = [e]
+        for _ in range(depth):
+            nxt = []
+            for c in frontier:
+                for f in range(4):
+                    nb = int(face_neighbors[c, f])
+                    if nb >= 0 and nb not in seen:
+                        seen.add(nb)
+                        nxt.append(nb)
+            frontier = nxt
+        seen.discard(e)
+        lst = sorted(seen)
+        idx_lists.append(lst)
+        offsets[e + 1] = offsets[e] + len(lst)
+    indices = (np.concatenate([np.array(l, dtype=np.int64) for l in idx_lists])
+               if idx_lists else np.empty(0, dtype=np.int64))
+    return offsets, indices
+
+
+@_njit(cache=True, fastmath=True, parallel=True)
+def rho_tilde_kernel_sweep(
+    q2: np.ndarray,
+    rho: np.ndarray,
+    grad: np.ndarray,
+    nodes: np.ndarray,
+    elements: np.ndarray,
+    centroids: np.ndarray,
+    nb_off: np.ndarray,
+    nb_idx: np.ndarray,
+    m_inf: float,
+    m_crit: float,
+    C: float,
+    gamma: float,
+    rho_floor: float,
+    reach_frac: float,
+    sigma_s_frac: float,
+    sigma_p_frac: float,
+    nu_out: np.ndarray,
+    rho_tilde_out: np.ndarray,
+) -> None:
+    """P6 differentiable artificial density (design.md §3.2): streamline-kernel
+    upstream sample.
+
+    rho_up is a Gaussian-kernel average of rho over the multi-ring neighbourhood
+    (`nb_off`/`nb_idx`), centred on the point one streamwise extent upstream:
+
+        target = reach_frac * extent_e            (streamwise reach ~ the walk)
+        up_c   = -V_hat . (c_c - c_e)              (upstream distance of cand. c)
+        perp2  = |c_c - c_e|^2 - up_c^2            (off-streamline distance^2)
+        w_c    = exp(-0.5[(up_c-target)^2/sig_s^2 + perp2/sig_p^2]),  up_c > 0
+        rho_up = sum_c w_c rho[c] / sum_c w_c
+
+    This samples GENUINELY upstream cells (not the near ring), so it keeps the
+    walk's stabilising reach, while the smooth kernel removes the walk's
+    cell-to-cell selection flip (the sawtooth) and is C-inf in V_hat=grad/|grad|
+    (Newton-ready at fixed neighbourhood, P7). No reach-amplification factor is
+    needed -- the reach is in the sampling, not a multiplier (the near-ring blend
+    + amplification was measured to diverge; a genuine-reach sample does not).
+
+    Shock-point operator: HARD max(nu_e, nu_up) with nu_up from the same kernel
+    blend of neighbour M^2 -- exactly 0 subcritically (bit no-op, gate G4.2).
+    """
+    n = len(q2)
+    mc2 = m_crit * m_crit
+    for e in prange(n):
+        gx = grad[e, 0]
+        gy = grad[e, 1]
+        gz = grad[e, 2]
+        gmag = np.sqrt(gx * gx + gy * gy + gz * gz)
+        m2 = mach_number_squared(q2[e], m_inf, gamma)
+        nu_e = C * max(0.0, 1.0 - mc2 / max(m2, mc2))
+        if gmag <= 0.0:
+            nu_out[e] = nu_e
+            rho_tilde_out[e] = rho[e]
+            continue
+        vhx = gx / gmag
+        vhy = gy / gmag
+        vhz = gz / gmag
+
+        # Streamwise extent of e projected on V_hat -> kernel length scales.
+        pmin = 1e300
+        pmax = -1e300
+        for k in range(4):
+            nd = elements[e, k]
+            pr = nodes[nd, 0] * vhx + nodes[nd, 1] * vhy + nodes[nd, 2] * vhz
+            if pr < pmin:
+                pmin = pr
+            if pr > pmax:
+                pmax = pr
+        extent = pmax - pmin
+        target = reach_frac * extent
+        inv2ss = 1.0 / (2.0 * (sigma_s_frac * extent) ** 2 + 1e-300)
+        inv2sp = 1.0 / (2.0 * (sigma_p_frac * extent) ** 2 + 1e-300)
+
+        w_sum = 0.0
+        rho_up_acc = 0.0
+        m2_up_acc = 0.0
+        for j in range(nb_off[e], nb_off[e + 1]):
+            c = nb_idx[j]
+            dcx = centroids[c, 0] - centroids[e, 0]
+            dcy = centroids[c, 1] - centroids[e, 1]
+            dcz = centroids[c, 2] - centroids[e, 2]
+            up = -(vhx * dcx + vhy * dcy + vhz * dcz)
+            if up <= 0.0:
+                continue
+            d2 = dcx * dcx + dcy * dcy + dcz * dcz
+            perp2 = d2 - up * up
+            if perp2 < 0.0:
+                perp2 = 0.0
+            w = np.exp(-((up - target) * (up - target) * inv2ss + perp2 * inv2sp))
+            w_sum += w
+            rho_up_acc += w * rho[c]
+            m2_up_acc += w * mach_number_squared(q2[c], m_inf, gamma)
+
+        if w_sum <= 0.0:
+            nu_out[e] = nu_e
+            rho_tilde_out[e] = rho[e]
+            continue
+
+        rho_up = rho_up_acc / w_sum
+        m2_up = m2_up_acc / w_sum
+        nu_u = C * max(0.0, 1.0 - mc2 / max(m2_up, mc2))
+        nu = nu_e if nu_e > nu_u else nu_u
+        nu_out[e] = nu
+        if nu <= 0.0:
+            rho_tilde_out[e] = rho[e]
+            continue
+        rt = rho[e] - nu * (rho[e] - rho_up)
+        rho_tilde_out[e] = rt if rt > rho_floor else rho_floor
+
+
+@_njit(cache=True, fastmath=True, parallel=True)
 def rho_tilde_sweep(
     q2: np.ndarray,
     rho: np.ndarray,
@@ -178,12 +506,33 @@ class UpwindOperator:
         # monitors: upw.nu (per element), upw.nu_max, upw.n_supersonic
     """
 
-    def __init__(self, nodes: np.ndarray, elements: np.ndarray):
+    def __init__(self, nodes: np.ndarray, elements: np.ndarray,
+                 weighted: bool = False, mode: str = "kernel",
+                 p_weight: float = 3.0, reach_frac: float = 1.0,
+                 reach_gain_max: float = 4.0, nbr_depth: int = 3,
+                 sigma_s_frac: float = 0.35, sigma_p_frac: float = 0.35):
         self.face_neighbors, _ = build_face_adjacency(np.ascontiguousarray(elements))
         self.centroids = nodes[elements].mean(axis=1)
         self._nodes = np.ascontiguousarray(nodes, dtype=np.float64)
         self._elements = np.ascontiguousarray(elements)
         n_tets = len(elements)
+        # P6 differentiable flux. weighted=False restores the P4 integer walk.
+        # mode selects the weighted operator: "kernel" (streamline-Gaussian
+        # sample over a multi-ring neighbourhood -- the shipped P6 path, real
+        # reach + smooth) or "blend" (single-ring centroid blend -- kept for
+        # the record; measured transiently unstable on sliver tets).
+        self.weighted = weighted
+        self.mode = mode
+        self.p_weight = p_weight
+        self.reach_frac = reach_frac
+        self.reach_gain_max = reach_gain_max
+        self.sigma_s_frac = sigma_s_frac
+        self.sigma_p_frac = sigma_p_frac
+        self._nb_off = None
+        self._nb_idx = None
+        if weighted and mode == "kernel":
+            self._nb_off, self._nb_idx = build_upstream_neighborhoods(
+                self.face_neighbors, depth=nbr_depth)
         self._upstream = np.empty(n_tets, dtype=np.int64)
         self.nu = np.empty(n_tets, dtype=np.float64)
         self._rho_tilde = np.empty(n_tets, dtype=np.float64)
@@ -204,12 +553,26 @@ class UpwindOperator:
     ) -> np.ndarray:
         """Upwinded element densities (view into the workspace buffer --
         consume before the next call). Also refreshes the nu/floor
-        monitors (nu_max, n_supersonic, n_floored)."""
-        upstream_elements(self.face_neighbors, self.centroids,
-                          self._nodes, self._elements, grad,
-                          self._upstream)
-        rho_tilde_sweep(q2, rho, self._upstream, m_inf, m_crit, C, gamma,
-                        rho_floor, self.nu, self._rho_tilde)
+        monitors (nu_max, n_supersonic, n_floored). Uses the P6 streamline
+        kernel by default; `weighted=False` restores the P4 walk."""
+        if self.weighted and self.mode == "kernel":
+            rho_tilde_kernel_sweep(
+                q2, rho, grad, self._nodes, self._elements, self.centroids,
+                self._nb_off, self._nb_idx, m_inf, m_crit, C, gamma, rho_floor,
+                self.reach_frac, self.sigma_s_frac, self.sigma_p_frac,
+                self.nu, self._rho_tilde)
+        elif self.weighted:
+            rho_tilde_weighted_sweep(
+                q2, rho, grad, self._nodes, self._elements, self.centroids,
+                self.face_neighbors, m_inf, m_crit, C, gamma, rho_floor,
+                self.p_weight, self.reach_frac, self.reach_gain_max,
+                self.nu, self._rho_tilde)
+        else:
+            upstream_elements(self.face_neighbors, self.centroids,
+                              self._nodes, self._elements, grad,
+                              self._upstream)
+            rho_tilde_sweep(q2, rho, self._upstream, m_inf, m_crit, C, gamma,
+                            rho_floor, self.nu, self._rho_tilde)
         self.nu_max = float(self.nu.max())
         self.n_supersonic = int(np.count_nonzero(self.nu > 0.0))
         self.n_floored = int(np.count_nonzero(self._rho_tilde == rho_floor))

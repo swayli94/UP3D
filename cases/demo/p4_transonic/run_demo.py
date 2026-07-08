@@ -65,7 +65,10 @@ from pyfp3d.kernels.upwind import UpwindOperator, upstream_elements  # noqa: E40
 from pyfp3d.mesh.reader import read_mesh  # noqa: E402
 from pyfp3d.mesh.wake_cut import cut_wake  # noqa: E402
 from pyfp3d.physics.isentropic import mach_squared_field  # noqa: E402
-from pyfp3d.post.section_cut import wall_cp_curve  # noqa: E402
+from pyfp3d.post.section_cut import (  # noqa: E402
+    cp_oscillation_metric,
+    wall_cp_curve,
+)
 from pyfp3d.post.shock import shock_report  # noqa: E402
 from pyfp3d.post.surface import wall_force_coefficients  # noqa: E402
 from pyfp3d.solve.continuation import solve_transonic_lifting  # noqa: E402
@@ -104,11 +107,17 @@ def _plot_cp_shock(curve, rep, level: str, out_name: str):
     finish(fig, OUT, out_name)
 
 
-def _g41_summary_rows(rep, r, forces):
+def _g41_summary_rows(rep, r, forces, curve):
     rows = []
     for side in ("upper", "lower"):
         for k, v in rep[side].items():
             rows.append((f"{side}_{k}", v))
+    # G6.1 baseline (roadmap P6): surface-Cp sawtooth metric on the supersonic
+    # run. Upper is the dominant supersonic pocket and the primary gate target;
+    # lower is reported (often a marginal pocket with a tiny Cp range).
+    cp_star = rep["cp_critical"]
+    osc_u = cp_oscillation_metric(curve["x_upper"], curve["cp_upper"], cp_star)
+    osc_l = cp_oscillation_metric(curve["x_lower"], curve["cp_lower"], cp_star)
     rows += [
         ("cp_critical", rep["cp_critical"]),
         ("cl_pressure", forces["cl"]),
@@ -119,6 +128,10 @@ def _g41_summary_rows(rep, r, forces):
         ("n_picard_total", r["n_picard_total"]),
         ("n_limited", r["n_limited"]),
         ("n_floored", r["n_floored"]),
+        ("g61_cp_osc_upper", osc_u["metric"]),
+        ("g61_n_super_upper", osc_u["n_super"]),
+        ("g61_cp_osc_lower", osc_l["metric"]),
+        ("g61_n_super_lower", osc_l["n_super"]),
     ]
     return rows
 
@@ -284,7 +297,7 @@ def part4_refinement(cl: CheckList, coarse_case):
                    "g41_cp_shock_coarse.png")
     write_csv(OUT, "g41_summary_coarse.csv", "quantity,value",
               _g41_summary_rows(coarse_case["rep"], coarse_case["r"],
-                                coarse_case["forces"]))
+                                coarse_case["forces"], coarse_case["curve"]))
 
     t0 = time.perf_counter()
     med = _solve_case(MESH_DIR / "naca0012_2.5d" / "medium.msh", M_INF, ALPHA)
@@ -292,7 +305,7 @@ def part4_refinement(cl: CheckList, coarse_case):
     r, curve, rep, forces = (med["r"], med["curve"], med["rep"], med["forces"])
     _plot_cp_shock(curve, rep, "medium", "g41_cp_shock_medium.png")
     write_csv(OUT, "g41_summary_medium.csv", "quantity,value",
-              _g41_summary_rows(rep, r, forces))
+              _g41_summary_rows(rep, r, forces, curve))
 
     ref = {}
     with open(REFERENCE_DIR / "naca0012_m080" / "shock_reference.csv") as f:
