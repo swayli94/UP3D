@@ -1,0 +1,16 @@
+quantity,value
+m_inf,0.84
+alpha_deg,3.06
+wall_end_to_end_s,250.8
+converged,True
+residual_final,6.989e-15
+kutta_F,2.082e-16
+cl_p,0.2646
+cl_kj,0.2692
+mach_max,2.1288
+shock_eta44,0.5963
+shock_eta65,0.5408
+shock_eta90,0.3617
+newton_residual_at_p5_state,7.558e-06
+levels,4
+p5_picard_solve_s,4539

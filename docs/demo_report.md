@@ -937,7 +937,7 @@ and any future FD check must use generic/noise-broken fields. Demo:
 
 ---
 
-## P8 — fully-coupled Newton (G8.1 closed 2026-07-11; G8.2/G8.3 = N6, open)
+## P8 — fully-coupled Newton (closed 2026-07-11: G8.1 + G8.2 + G8.3)
 
 **Purpose.** Replace the Picard/secant iteration with a fully-coupled
 (φ_red, Γ) Newton on the exact Jacobian (design.md §6.3 at frozen selection,
@@ -1000,12 +1000,56 @@ the assignment is self-consistent or its intrinsic discontinuity floor
 | assignment-discontinuity floor (honesty) | 1.3e-7 | < 1e-5, reported |
 | medium gate run end-to-end | ~100 s | Picard G4.1 medium: 16m39s, non-solution |
 
-**Conclusion.** G8.1 closed: terminal quadratic convergence demonstrated on
-both gate cases, the Jacobian FD clause holds on the converged Newton pocket
-(rel ~1e-10, gated test), and G4.2 subcritical bit-identity is suite-locked.
-Open for N6: ONERA M6 end-to-end < 5 min (G8.2) and the CI budget (G8.3);
-the M6 Newton run will also measure the P5 Picard results' convergence
-quality (same caveat class as the P4 erratum, different flow).
+**N6 addendum (2026-07-11) — ONERA M6 + performance, G8.2/G8.3 closed.**
+The M6 medium (63k nodes / 351k tets) Newton run at M0.84/α3.06 is
+**249.2 s end to end** (mesh+cut 7.3 s, solve 239.8 s, forces + 3 section
+shocks 2.1 s) against the 300 s gate — vs 4539 s for the P5 Picard recipe;
+the coarse mesh takes 42 s. Both meshes have a reachable isolated Newton
+solution at the full M0.84 (the FP-fold contingency planned for this run
+never triggered): every continuation level converges with zero dm-halving,
+the frozen phases end terminal-quadratic (medium final level
+2.6e-7 → 2.1e-10 → 7.0e-15), 0 limited/floored, coupled Kutta |F| ~2e-16.
+
+Two ingredients close the runtime gate: the **lagged-LU direct mode**
+(`direct_refactor_every` — on a true-3D mesh the LU fill makes each splu
+~18.6 s at 63k dofs, ~100× the thin 2.5D cost, and the every-step-direct
+N5 recipe spent 1606 s, 97% in splu; the lagged mode refactors once per
+level and drives the steps between with GMRES on the fresh coupled operator
+preconditioned by the stale LU at rtol 1e-8, falling back to refactor +
+exact Woodbury if GMRES fails — same solution, 6.4× faster) and the P5
+**dm=0.05 Mach schedule** (the M6 family is far from the NACA-medium fold).
+
+![V8.1c M6 medium convergence + V8.2 runtime breakdown](../cases/demo/p8_newton/results/v82_m6_medium.png)
+
+**P5-caveat measurement** (the recorded follow-up to the P4 erratum): the
+committed P5 Picard states are not discrete solutions either, but the
+failure is milder in degree — Newton residual 8.6e-6 coarse / 7.6e-6 medium
+(Kutta |F| ~5.5e-4) vs the P4 stall's 2.2e-4. The Newton true solutions:
+
+| quantity | P5 Picard (committed) | Newton true solution |
+|---|---|---|
+| cl_p coarse | 0.2419 | **0.2560 (+5.8%)** |
+| cl_p medium | 0.2453 | **0.2646 (+7.9%)** |
+| cl_KJ medium | 0.2499 | 0.2692 |
+| shocks η44/65/90 (medium) | 0.594/0.526/0.345 | 0.596/0.541/0.362 |
+| M_max (medium) | 1.995 | 2.13 |
+| Kutta \|F\| | 5.8e-4 (secant+polish) | ~2e-16 (coupled unknown) |
+
+The under-convergence lives in the circulation/lift, not the shock
+positions. cl_KJ 0.2692 narrows the inviscid-vs-Tranair/KRATOS (0.288) gap
+assigned to P9 from 0.043 to 0.019. The P5 gates stand as Picard-quality
+gates (roadmap P5 ledger note).
+
+**G8.3**: the default regression suite is **301.66 s (5m02s)** at
+NUMBA_NUM_THREADS=16 — 182 passed + 8 skipped + 2 xfailed; every heavy
+transonic/M6 gate sits behind PYFP3D_TRANSONIC_GATES=1.
+
+**Conclusion.** P8 closed: G8.1 terminal quadratic convergence on both gate
+cases with the FD-verified Jacobian (rel ~1e-10 on the converged pocket),
+G8.2 M6 medium end to end in 249.2 s < 5 min, G8.3 CI budget 5m02s < 10 min.
+The production path for a 3D transonic case is now: Picard warm levels +
+coupled Newton finish, ~18× faster than the Picard recipe and converging to
+the actual discrete solution.
 
 ---
 

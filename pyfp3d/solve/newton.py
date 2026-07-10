@@ -306,6 +306,8 @@ def solve_newton_lifting(
     ew_eta_max: float = 1e-2,
     amg_rebuild_every: int = 2,
     precond: str = "amg",
+    direct_refactor_every: int = 1,
+    direct_reuse_rtol: float = 1e-8,
     gmres_restart: int = 60,
     gmres_maxiter: int = 10,
     line_search: bool = True,
@@ -342,6 +344,20 @@ def solve_newton_lifting(
     refused while any element is speed-limited or density-floored (a
     clamped state is not a converged flow -- mirrors the P5 gate
     semantics).
+
+    `direct_refactor_every` (the N6 3D-cost fix): with precond="direct",
+    refactor the LU only every k-th Newton step and drive the steps in
+    between with GMRES on the FRESH coupled operator preconditioned by
+    the stale LU, converged to `direct_reuse_rtol` (tight -- orders below
+    the eta that stalls the shock-position soft mode, affordable only
+    because the stale LU is a near-exact preconditioner). A reuse step
+    whose GMRES fails falls back to refactor + exact Woodbury in the same
+    iteration, so robustness never degrades below the every-step-direct
+    path. Default 1 = factor every step, bit-identical to the N5 G8.1
+    behavior. Motivation: on true-3D meshes the LU fill makes each
+    factorization ~100x more expensive than on the thin 2.5D family
+    (measured 18.6 s vs ~0.2 s at the same ~6e4 dofs -- the M6 medium
+    all-levels run was 1606 s with 97% in splu).
 
     `freeze_tol` (the N5 churn fix): once ||R||_inf drops below it (with
     0 limited/floored), the upwind SELECTION AND BRANCH are frozen
@@ -418,6 +434,8 @@ def solve_newton_lifting(
     converged = False
     M_pre = None
     eta_prev = None
+    lu_direct = None
+    lu_age = 0                     # Newton steps driven by lu_direct
 
     t0 = time.perf_counter()
     R_free, F, state = ws.eval_residual(phi_free, gamma, upwind_c, m_crit,
@@ -580,15 +598,37 @@ def solve_newton_lifting(
             # quadratic rate. Cost: one splu + (1 + n_st) back-solves per
             # step -- seconds at 6e4 dofs, the Lopez-scale 2D/medium-3D
             # regime. GMRES+AMG remains the large-mesh path.
-            t0 = time.perf_counter()
-            lu = spla.splu(J_ff.tocsc())
-            timings["amg_setup"] += time.perf_counter() - t0
-            t0 = time.perf_counter()
-            z = lu.solve(rhs)
-            JB = lu.solve(B.toarray())
-            S = np.eye(ws.n_st) + K @ JB
-            dphi = z - JB @ np.linalg.solve(S, K @ z)
-            timings["gmres"] += time.perf_counter() - t0
+            dphi = None
+            if lu_direct is not None and lu_age < direct_refactor_every:
+                # lagged-LU reuse step (N6): fresh coupled operator,
+                # stale-LU preconditioner, tight rtol; fall back to a
+                # refactor + exact step if GMRES does not converge
+                A_op = spla.LinearOperator(
+                    (ws.n_free, ws.n_free),
+                    matvec=lambda x: J_ff @ x + B @ (K @ x),
+                )
+                M_lag = spla.LinearOperator(
+                    (ws.n_free, ws.n_free), matvec=lu_direct.solve)
+                t0 = time.perf_counter()
+                dphi, n_it, gmres_info = solve_gmres(
+                    A_op, rhs, M=M_lag, rtol=direct_reuse_rtol,
+                    restart=gmres_restart, maxiter=2, on_fail="return")
+                timings["gmres"] += time.perf_counter() - t0
+                n_gmres_total += n_it
+                if gmres_info != 0:
+                    dphi = None            # stale LU exhausted: refactor
+            if dphi is None:
+                t0 = time.perf_counter()
+                lu_direct = spla.splu(J_ff.tocsc())
+                lu_age = 0
+                timings["amg_setup"] += time.perf_counter() - t0
+                t0 = time.perf_counter()
+                z = lu_direct.solve(rhs)
+                JB = lu_direct.solve(B.toarray())
+                S = np.eye(ws.n_st) + K @ JB
+                dphi = z - JB @ np.linalg.solve(S, K @ z)
+                timings["gmres"] += time.perf_counter() - t0
+            lu_age += 1
             eta_history.append(0.0)
         else:
             t0 = time.perf_counter()

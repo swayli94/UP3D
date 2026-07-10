@@ -7,10 +7,19 @@ G8.1,coarse Kutta closure |F|,8.3e-17,< 1e-12 (machine),PASS,
 G8.1,coarse shock x/c (regression lock),0.6581,0.658 +/- 0.012,PASS,TRUE discrete solution; P4 Picard stall state was 0.604 (Newton residual there: 2.2e-4)
 G8.1,coarse cl (regression lock),0.4590,0.459 +/- 0.010,PASS,
 G8.1,coarse clean pocket,lim 0 flr 0,0 / 0,PASS,
-G8.1,medium M0.7875 converged,True,True,PASS,98 s end-to-end (Picard G4.1 medium was 16m39s and not a solution)
+G8.1,medium M0.7875 converged,True,True,PASS,79 s end-to-end (Picard G4.1 medium was 16m39s and not a solution)
 G8.1,medium terminal residual,7.8e-11,< 1e-9,PASS,
 G8.1,medium terminal quadratic drops,1.7e-03, 1.0e-03,both < 3e-2,PASS,
 G8.1,medium shock x/c (regression lock),0.6738,0.674 +/- 0.012,PASS,
 G8.1,medium cl (regression lock),0.5234,0.523 +/- 0.010,PASS,
 G8.1,medium clean pocket,lim 0 flr 0,0 / 0,PASS,
 G8.1,assignment-discontinuity floor (reported),1.3e-07,< 1e-5 (intrinsic C0-flux floor; honesty metric),PASS,6 stale assignments at accept
+G8.2,M6 medium end to end,251 s,< 300 s single node,PASS,P5 Picard medium solve was 4539 s
+G8.2,M6 medium converged,True,True,PASS,levels 4; final |R| 7.0e-15
+G8.2,M6 terminal quadratic drops,8.1e-04, 3.3e-05,both < 3e-2,PASS,
+G8.2,M6 Kutta closure |F|,2.1e-16,< 1e-12 (machine; P5 secant+polish was 5.8e-4),PASS,
+G8.2,M6 clean pocket,lim 0 flr 0,0 / 0,PASS,
+G8.2,M6 cl_p (regression lock),0.2646,0.2646 +/- 0.005,PASS,cl_KJ 0.2692; P5 Picard cl_p 0.2453 (caveat; below)
+G8.2,M6 shock x/c eta 0.44/0.65/0.90 (regression lock),0.596/0.541/0.362,0.596/0.541/0.362 +/- 0.02,PASS,
+G8.2,M6 M_max (regression lock),2.129,2.134 +/- 0.05,PASS,
+G8.2,P5-caveat: Newton residual at P5 Picard state,|R| 7.6e-06, |F| 5.8e-04,reported (P4-erratum-in-kind measurement),PASS,Newton true solution: cl_p 0.2646 vs P5 0.2453; M_max 2.129 vs 1.995

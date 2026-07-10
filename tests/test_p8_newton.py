@@ -32,6 +32,8 @@ Newton residual 2.2e-4 -- see the roadmap P4 erratum).
 """
 
 import os
+import time
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -384,3 +386,77 @@ def test_newton_incompressible_single_step(coarse_mesh):
     r_p2 = solve_laplace_lifting(mc, wc, alpha_deg=ALPHA)
     assert np.max(np.abs(np.asarray(r["gamma"])
                          - np.asarray(r_p2["gamma"]))) < 1e-7
+
+
+# --------------------------------------------------------------------------
+# N6 / G8.2: ONERA M6 medium -- true-3D performance + convergence quality.
+# --------------------------------------------------------------------------
+
+#: the N6 M6 recipe: the N5 chain + the lagged-LU direct steps (the true-3D
+#: LU fill makes per-step refactoring ~100x the 2.5D cost -- measured 18.6 s
+#: vs ~0.2 s at the same ~6e4 dofs; reuse cuts the all-levels M6 medium run
+#: from 1606 s to the G8.2 budget) and the P5 dm=0.05 Mach schedule (the M6
+#: solution family is far from the NACA-medium fold; no fine steps needed).
+NEWTON_M6_RECIPE = dict(
+    dm=0.05, dm_min=0.01, freeze_tol=1e-6,
+    newton_kw=dict(freeze_refresh_max=8, precond="direct",
+                   direct_refactor_every=1000, n_newton_max=60,
+                   farfield_spanwise_gamma=True),
+)
+
+
+def _m6_case(level, m_inf=0.84, alpha=3.06):
+    from pyfp3d.meshgen.wing3d import B_SEMI
+    from pyfp3d.post.section_cut import section_cp_curve
+    from pyfp3d.post.shock import shock_report as _sr
+    from pyfp3d.post.surface import cl_kj_3d, planform_area
+    from pyfp3d.solve.newton import solve_newton_transonic
+
+    mesh_dir = Path(__file__).parent.parent / "cases" / "meshes" / "onera_m6"
+    p = mesh_dir / f"{level}.msh"
+    if not p.exists():
+        pytest.skip(f"onera_m6/{level}.msh not generated; run "
+                    "cases/meshes/onera_m6/generate_onera_m6.py")
+    t0 = time.perf_counter()
+    mc, wc = cut_wake(read_mesh(p))
+    r = solve_newton_transonic(mc, wc, m_inf=m_inf, alpha_deg=alpha,
+                               **NEWTON_M6_RECIPE)
+    s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
+    forces = wall_force_coefficients(
+        mc.nodes, mc.elements, mc.boundary_faces["wall"], r["phi"],
+        alpha_deg=alpha, s_ref=s_ref, m_inf=m_inf)
+    shocks = {}
+    for eta in (0.44, 0.65, 0.90):
+        c = section_cp_curve(mc, r["phi"], eta=eta, b_semi=B_SEMI,
+                             m_inf=m_inf)
+        shocks[eta] = _sr(c, m_inf)["upper"]["x_shock"]
+    wall = time.perf_counter() - t0
+    return r, forces, shocks, wall
+
+
+@run_gates
+def test_g82_m6_medium_newton_end_to_end():
+    """G8.2: ONERA M6 medium (63k nodes / 351k tets), M0.84/alpha3.06 --
+    Newton end to end (mesh read -> cut -> continuation -> forces+shocks)
+    < 5 min single node (P5 Picard: 4539 s). Physics bands are regression
+    locks around the measured Newton solution (2026-07-11; the P5 Picard
+    numbers cl_p 0.2453 / M_max 1.995 carry the P4-erratum-in-kind caveat:
+    Newton residual at that state is 7.6e-6 with Kutta |F| 5.8e-4, and the
+    true discrete solution sits ~+7.9% in cl_p with the same shocks).
+
+    Timing protocol (the CLAUDE.md 16-thread cap, quantified here): run
+    with NUMBA_NUM_THREADS=16 AND OMP_NUM_THREADS=16 AND
+    OPENBLAS_NUM_THREADS=16 on the 16C/32T box -- without the BLAS/OMP
+    caps the same run measures ~333 s (oversubscription costs ~33%,
+    measured A/B 2026-07-11); with them 252 s."""
+    r, forces, shocks, wall = _m6_case("medium")
+    assert r["converged"]
+    _assert_terminal_quadratic(r)
+    assert r["n_limited"] == 0 and r["n_floored"] == 0
+    assert r["F_history"][-1] < 1e-12                   # coupled Kutta
+    assert wall < 300.0, f"G8.2 budget: {wall:.0f} s >= 300 s"
+    assert abs(forces["cl"] - 0.2646) < 0.005            # regression lock
+    assert abs(float(np.sqrt(r["mach2_max"])) - 2.134) < 0.05
+    assert abs(shocks[0.44] - 0.596) < 0.02
+    assert abs(shocks[0.65] - 0.541) < 0.02
+    assert abs(shocks[0.90] - 0.362) < 0.02

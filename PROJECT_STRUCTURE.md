@@ -149,7 +149,13 @@ pyfp3d/                    # Main package
 │                           #   acceptance, honest residual_unfrozen floor), freeze-revert /
 │                           #   level-fail-fast / best-of-tried line-search safety nets;
 │                           #   solve_newton_transonic = upward Mach continuation with dm
-│                           #   halving (recipe: tests/test_p8_newton NEWTON_TRANSONIC_RECIPE)
+│                           #   halving (recipe: tests/test_p8_newton NEWTON_TRANSONIC_RECIPE);
+│                           #   ✓ [P8/N6, G8.2] lagged-LU direct mode: direct_refactor_every
+│                           #   (default 1 = bit-identical) + direct_reuse_rtol — stale-LU-
+│                           #   preconditioned GMRES on the fresh coupled operator, refactor
+│                           #   fallback on GMRES failure (true-3D splu fill is ~100× the 2.5D
+│                           #   cost; M6 medium 1606 s → 249 s; M6 recipe:
+│                           #   tests/test_p8_newton NEWTON_M6_RECIPE, dm 0.05 + spanwise Γ)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -268,7 +274,10 @@ tests/                     # Unit and gate tests
                                       #   P3 Picard, terminal order p_k ~ 2, m_inf=0 single-step;
                                       #   + gated G8.1 terminal-quadratic runs (coarse M0.80,
                                       #   medium M0.7875 — re-specced case set, regression-lock
-                                      #   physics bands; NEWTON_TRANSONIC_RECIPE lives here)
+                                      #   physics bands; NEWTON_TRANSONIC_RECIPE lives here);
+                                      #   ✓ [P8/N6] gated G8.2 M6 medium end-to-end < 300 s
+                                      #   (NEWTON_M6_RECIPE lives here too; skips without the
+                                      #   gitignored onera_m6/*.msh)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap

@@ -2,10 +2,10 @@ quantity,value
 m_inf,0.7875
 converged,True
 residual_final,7.849e-11
-residual_unfrozen,1.2564234206620026e-07
+residual_unfrozen,1.2564234206537287e-07
 n_assignment_stale,6
 shock_x_c,0.6738
 cl_p,0.5234
 mach_max,1.4044
-wall_s,98.2
+wall_s,78.8
 levels,11
