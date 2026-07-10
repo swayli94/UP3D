@@ -303,6 +303,19 @@ Wake geometry: planar, aligned with freestream (or the chord plane) — standard
 FP practice; force-free wake relaxation is out of scope (error is second order
 in loading for attached flow).
 
+**Designed alternative — Track B level-set wake (2026-07-07; not started).** A
+level-set + multivalued-element (CutFEM-style) wake representation with a
+penalty Kutta condition (Γ emerges from the solution — no Γ DOF, no secant)
+would replace the conforming sheet + master–slave elimination above, so meshes
+need no pre-embedded wake surface (α sweeps without remeshing; multi-wake for
+wing–body). Design record: `discussion_notes/20260707_1505_levelset_wake_design.md`
+(DN1); phase plan B1–B5 in roadmap.md Track B. Curved/free wake (B6) is
+**shelved** (2026-07-10, DN2 §4.5.6): the straight-wake loading error is
+O(θ²) ≈ 0.1%, geometry updates force per-step cut-set/DOF rebuilds that conflict
+with Newton, and under VII the wake instead carries a mass-transpiration
+relaxation (§5 note). The conforming path in this section stays the shipped
+default throughout P7–P10.
+
 ---
 
 ## 5. Boundary conditions
@@ -317,6 +330,13 @@ in loading for attached flow).
 One subtlety: with all-Neumann walls and Dirichlet far field the system is
 well-posed; if a pure-Neumann variant is ever used (e.g. channel flows), pin
 one node.
+
+**Designed extension — Track V transpiration BC (not started).** The VII
+coupling (Drela IBL3, roadmap.md Track V) replaces the homogeneous wall
+condition by a blowing source ρ ∂φ/∂n = d(ρ_e u_e δ*)/ds on wall facets and adds
+the analogous δ*_wake mass source on the wake sheet — RHS-only at the Picard
+level, no mesh motion, δ* = 0 bit-identical to the inviscid path (design: DN2
+§3.2/§7–8, DN6 §8–9).
 
 ### 5.1 Boundary-flux correction for the wall geometric error (G1.6 candidate fix routes; gates G1.3–G1.5 + DP1)
 
@@ -932,6 +952,18 @@ Each phase is a self-contained PR-sized unit with its gate from §10.
   alternative; VII coupling hook (transpiration BC ∂φ/∂n = d(u_e δ*)/ds —
   reuses the IBL work from pyTSFoil); adjoint via the Newton Jacobian
   transpose (nearly free once (6.3) exists — high value for the MDO thread).
+
+Two further tracks are **designed but not started** (2026-07-07..10; roadmap.md
+holds the authoritative phase tables and sequencing guards):
+
+- **Track B — level-set embedded wake** (B1–B5; B6 curved/free wake shelved):
+  replaces the §4 conforming wake with a level-set + multivalued-FE + penalty
+  Kutta path; coexists with the shipped path, blocks nothing in P7–P10 (§4 note;
+  DN1).
+- **Track V — viscous–inviscid coupling** (V1 loose → V3 tight Newton; V4 wake
+  IBL rides on V1): Drela IBL3 6-equation surface FE + the §5 transpiration BC;
+  V1 needs only P6, V3 consumes P8. Phase IDs V1–V4 are *phases*, distinct from
+  the §10 validation-case IDs V0–V6 (DN2/DN6).
 
 ---
 

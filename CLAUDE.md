@@ -8,15 +8,25 @@ workstation-scale (minutes for 1–3 M nodes).
 ## Document map (read the relevant one before coding)
 
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker**: phase order (Track P:
-  P0–P8 solver, Track M: M0–M2 meshing), gate checklists, progress ledger.
+  P0–P10 solver, Track M: M0–M2 meshing, plus the designed-not-started Track B
+  level-set wake and Track V viscous coupling), gate checklists, progress ledger.
   "What phase are we in" and "what gate is open" live here, nowhere else.
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
-  phases (P0, P1-partial, P2, P3, P4, P5, M0, M1): one self-checking demo per phase under
-  `cases/demo/<phase>/` with committed figures + measured gate numbers. When a
+  phases (P0, P1-partial, P2, P3, P4, P5, P6, M0, M1): one self-checking demo per phase
+  under `cases/demo/<phase>/` with committed figures + measured gate numbers. When a
   phase closes, add its demo + report section here.
+- [docs/discussion_notes/](docs/discussion_notes/) — **discussion & reference
+  material only, NEVER a coding spec.** Design notes for future tracks (DN1
+  level-set wake, DN2/DN6 VII coupling, DN4/DN5 Newton) +
+  [PLAN.md](docs/discussion_notes/PLAN.md), the cross-track integration view
+  (Chinese). When writing code, plan against **roadmap.md gates + design.md
+  numerics only**; a discussion-note idea becomes actionable only after it is
+  merged into roadmap.md/design.md (as Track B/V were on 2026-07-10). If a note
+  contradicts roadmap/design, roadmap/design win. Sync PLAN.md when a gate
+  closes.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
   **"Known gaps"**: read it before touching the G1.6 sphere-Cp problem (formerly
   G1.2; P1 gates renumbered 2026-07-06, mapping in roadmap.md) — it is already
@@ -37,7 +47,7 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (140 passed + 4 skipped + 2 xfailed since P5, ~5 min;
+3. Full suite: `pytest tests/` (157 passed + 4 skipped + 2 xfailed since P6, ~5 min;
    the always-on coarse transonic smoke is ~170 s of it, the G3.2 medium-mesh
    nested Picard solve ~45 s, the rule-7 sweep's M6 coarse+medium cut_wake
    ingest ~15 s. The M6 .msh files are gitignored — the 13 M1 tests skip until
@@ -61,6 +71,9 @@ workstation-scale (minutes for 1–3 M nodes).
    committed CSV/PNG over recomputing it.
 
 Gate IDs are `G<phase>.<n>` per roadmap.md Track P numbering (P2 = wake/Kutta,
-P3 = subsonic compressible, P4 = transonic, P5 = ONERA M6, P6 = consistent/
-differentiable artificial-density flux, P7 = Newton/performance);
+P3 = subsonic compressible, P4 = transonic, P5 = ONERA M6, P6 = surface-Cp
+recovery, P7 = differentiable flux at frozen selection, P8 = fully-coupled
+Newton/performance, P9 = curved wall elements, P10 = backlog; Track-P renumber
+2026-07-08 — docs before that date use the old IDs). Track V gates are
+`GV<phase>.<n>` (phases V1–V4, distinct from validation-case IDs V0–V6);
 design.md §11 mirrors the same order.
