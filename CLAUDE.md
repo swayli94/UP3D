@@ -15,9 +15,9 @@ workstation-scale (minutes for 1–3 M nodes).
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
-  phases (P0, P1-partial, P2, P3, P4, P5, P6, M0, M1): one self-checking demo per phase
-  under `cases/demo/<phase>/` with committed figures + measured gate numbers. When a
-  phase closes, add its demo + report section here.
+  phases (P0, P1-partial, P2, P3, P4, P5, P6, P7, M0, M1): one self-checking demo per
+  phase under `cases/demo/<phase>/` with committed figures + measured gate numbers.
+  When a phase closes, add its demo + report section here.
 - [docs/discussion_notes/](docs/discussion_notes/) — **discussion & reference
   material only, NEVER a coding spec.** Design notes for future tracks (DN1
   level-set wake, DN2/DN6 VII coupling, DN4/DN5 Newton) +
@@ -47,7 +47,7 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (157 passed + 4 skipped + 2 xfailed since P6, ~5 min;
+3. Full suite: `pytest tests/` (165 passed + 4 skipped + 2 xfailed since P7, ~5 min;
    the always-on coarse transonic smoke is ~170 s of it, the G3.2 medium-mesh
    nested Picard solve ~45 s, the rule-7 sweep's M6 coarse+medium cut_wake
    ingest ~15 s. The M6 .msh files are gitignored — the 13 M1 tests skip until

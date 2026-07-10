@@ -20,9 +20,10 @@ default); runtimes below are the default (light) path.
 | `m1_wing_mesh/` | M1 swept-wing mesh (ONERA M6) | `python cases/demo/m1_wing_mesh/run_demo.py` | ~30 s |
 | `p5_onera_m6/` | P5 3D validation (ONERA M6, G5.1–G5.2) | `python cases/demo/p5_onera_m6/run_demo.py` | heavy |
 | `p6_surface_recovery/` | P6 surface-Cp recovery / sawtooth removal (G6.1–G6.4) | `python cases/demo/p6_surface_recovery/run_demo.py` | ~6 min (+heavy M6) |
+| `p7_diff_flux/` | P7 frozen-selection ∂ρ̃/∂φ of the walk flux (G7.3) | `python cases/demo/p7_diff_flux/run_demo.py` | ~10 s (+heavy converged-field check) |
 
-Future phases (P7 differentiable flux, P8 Newton, P9 curved wall elements) will
-add `p7_diff_flux/`, `p8_newton/`, `p9_curved_walls/` when they run.
+Future phases (P8 Newton, P9 curved wall elements) will add `p8_newton/`,
+`p9_curved_walls/` when they run.
 
 `_common.py` holds the shared chart style and the `CheckList` acceptance
 recorder. `results/` contents (PNG + `summary.csv` + `checks.csv`) are

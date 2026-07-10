@@ -181,6 +181,32 @@ def density_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
 
 
 @numba.njit(cache=True)
+def mach_squared_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
+    r"""
+    Derivative dM²/d(q²) evaluated at q².
+
+    From (2.3): M² = q² M∞² / D with D = 1 + (γ−1)/2 · M∞² (1 − q²), so
+    (quotient rule, dD/dq² = −(γ−1)/2 · M∞²):
+
+        dM²/d(q²) = M∞² · [1 + (γ−1)/2 · M∞²] / D²
+
+    Strictly positive for any physical state — M² is monotone in q².
+    Used by the P7 frozen-selection flux sensitivity ∂ρ̃/∂φ (the ∂ν/∂q²
+    chain on the active switch branch, design.md §6.3 / López B.9–B.12).
+
+    Args:
+        q_squared: Nondimensional speed squared
+        M_inf: Freestream Mach number
+        gamma: Specific heat ratio
+
+    Returns:
+        dM²/d(q²)
+    """
+    D = 1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2 * (1.0 - q_squared)
+    return M_inf ** 2 * (1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2) / (D * D)
+
+
+@numba.njit(cache=True)
 def upwind_factor(q_squared, M_inf, M_crit=M_CRIT_DEFAULT, C=UPWIND_CONST_DEFAULT, gamma=GAMMA):
     r"""
     Artificial compressibility upwinding factor ν.

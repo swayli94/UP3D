@@ -606,7 +606,13 @@ case reads
     ∂ρ̃_e/∂φ_k^up  = +μ (∂ρ_up/∂φ_k^up)                                   (B.4)
 
 with ∂ρ/∂φ = (∂ρ/∂u²)(∂u²/∂φ), ∂ρ/∂u² = −(ρ∞/2a∞²)[…]^{(2−γ)/(γ−1)} (B.8),
-∂μ/∂φ = (−M_c²/M⁴)(∂M²/∂u²)(∂u²/∂φ) (B.9–B.12). **(B.4) is nonzero**: the
+∂μ/∂φ = (**+**M_c²/M⁴)(∂M²/∂u²)(∂u²/∂φ) (B.9–B.12; **sign corrected 2026-07-10
+by the P7 G7.3 FD gate** — for μ = 1 − M_c²/M², dμ/dM² = +M_c²/M⁴, and with
+dM²/du² > 0 the chain is positive (μ grows with speed, as it must); the earlier
+"−" here was a transcription typo. The shipped derivative
+(`kernels/upwind.py::rho_tilde_sensitivities_sweep`, P7) uses the + sign and
+matches a central difference of the shipped flux at frozen selection to
+~4e-10 in every regime, `tests/test_p7_diff_flux.py`). **(B.4) is nonzero**: the
 current element's residual depends on the *upstream* element's DOFs, so the
 Newton stencil is **wider than Picard** — the sparsity map and element coloring
 must be rebuilt from the element + upstream graph.

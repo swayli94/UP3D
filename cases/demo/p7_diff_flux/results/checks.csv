@@ -1,0 +1,8 @@
+gate,check,value,criterion,status,note
+G7.3,FD rel err (constructed field),3.47e-09,< 1e-6,PASS,6 kink-adjacent elements excluded (C0 locus)
+G7.3,regime populated: subsonic,4089,> 0,PASS,
+G7.3,regime populated: accelerating,5999,> 0,PASS,
+G7.3,regime populated: shock-point,6291,> 0,PASS,
+G7.3,kink-adjacent excluded fraction,0.04%,< 2% (measure-zero locus),PASS,
+G7.3,FD rel err (converged G4.1 field),5.70e-09,< 1e-6,PASS,2 kink-adjacent elements excluded (C0 locus)
+G7.3,supersonic pocket populated (converged),2166,> 0,PASS,

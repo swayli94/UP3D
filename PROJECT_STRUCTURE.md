@@ -55,7 +55,9 @@ pyfp3d/                    # Main package
 │   └── isentropic.py     # ✓ [P0] ρ(q²), M(q²), a(q²), Cp, etc.; [P2] adds
 │                           #   pressure_coefficient_incompressible (Bernoulli limit);
 │                           #   ✓ [P3] density_field/mach_squared_field array sweeps
-│                           #   (ρ ≡ 1.0 BITWISE at M∞=0 -- the G3.3 anchor)
+│                           #   (ρ ≡ 1.0 BITWISE at M∞=0 -- the G3.3 anchor);
+│                           #   ✓ [P7] mach_squared_derivative_wrt_q_sq (dM²/dq², the
+│                           #   ∂ν/∂q² chain factor of the frozen-walk sensitivity)
 ├── kernels/              # Element-wise assembly kernels (Numba-jitted)
 │   ├── __init__.py
 │   ├── gradient.py       # ✓ [P3] prange velocity sweep: grad(phi)_e + q²_e from B_e,
@@ -64,20 +66,23 @@ pyfp3d/                    # Main package
 │   │                       #   scatter map, colored-prange data kernel, PicardOperator
 │   │                       #   per-mesh workspace (B_e/V_e/coloring/pattern/buffers once);
 │   │                       #   accumulation order fixed by color sequence => bit-deterministic
-│   │                       #   across calls/threads; [P7] exact Newton (6.3) lands here
+│   │                       #   across calls/threads; [P8] exact Newton (6.3) lands here
 │   ├── residual.py       # [P1] serial reference kernels (KEPT, regression-tested against)
 │   │                       #   + ✓ [P3] assemble_residual_colored; assemble_stiffness_matrix
-│   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P7] Newton
+│   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P8] Newton
 │   └── upwind.py         # ✓ [P4] artificial density (3.1)-(3.2): MULTI-HOP upstream walk
 │                           #   (single-hop reaches only ~1/3 extent on prism-split meshes --
 │                           #   measured dissipation starvation), shock-point operator
 │                           #   nu = max(nu_e, nu_up), rho_tilde floor, UpwindOperator workspace;
 │                           #   exact bitwise no-op below M_crit (G4.2);
-│                           #   [P6] the discrete integer-walk u(e) + max(nu) switch is
-│                           #   C0-rough => non-physical surface-Cp sawtooth in the
-│                           #   supersonic pocket; P6 replaces it with a C1 directionally-
-│                           #   consistent upwind density (also the prerequisite for the
-│                           #   P7 exact Newton Jacobian)
+│                           #   ✓ [P6] opt-in streamline-Gaussian kernel flux (weighted=True,
+│                           #   mode="kernel"; a Picard-speed path — NOT the sawtooth fix,
+│                           #   which is the P6 recovery smoothing in post/surface.py);
+│                           #   ✓ [P7] rho_tilde_sensitivities_sweep + UpwindOperator.
+│                           #   rho_tilde_sensitivities: exact branch-wise (s_e, s_u) =
+│                           #   ∂ρ̃/∂q² of the WALK flux at FROZEN u(e) (López B.3–B.6;
+│                           #   floor branch → 0), FD-verified to ~4e-10 — the P8 Newton
+│                           #   Term-2/Term-3 physics factor (forward path byte-identical)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -107,7 +112,7 @@ pyfp3d/                    # Main package
 │   │                       #   -- the 3D secant leaves the stiffest station under-circulated
 │   │                       #   and DIVERGES if pushed (INVESTIGATION_kutta_closure.md);
 │   │                       #   default 0 = P4 path bit-identical
-│   └── newton.py         # [P7] Newton method (PLANNED, file not created yet)
+│   └── newton.py         # [P8] Newton method (PLANNED, file not created yet)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -202,8 +207,17 @@ tests/                     # Unit and gate tests
 ├── test_p3_subsonic.py              # ✓ [P3] Gates G3.1 + G3.3 (incl. bit-identical Laplace limit)
 ├── test_p3_naca0012_m05.py          # ✓ [P3] Gate G3.2 (medium-mesh nested Picard, ~45 s)
 ├── test_p4_upwind.py                # ✓ [P4] Gate G4.2 (bitwise subcritical no-op) + upwind units
-└── test_p4_transonic.py             # ✓ [P4] Gates G4.1/G4.3 (coarse smoke always-on; medium gate
-                                      #   + sweep behind PYFP3D_TRANSONIC_GATES=1)
+├── test_p4_transonic.py             # ✓ [P4] Gates G4.1/G4.3 (coarse smoke always-on; medium gate
+│                                     #   + sweep behind PYFP3D_TRANSONIC_GATES=1)
+├── test_p5_onera_m6.py              # ✓ [P5] 4 fast + 2 gated (G5.1/G5.2 behind
+│                                     #   PYFP3D_TRANSONIC_GATES=1; polish recipe + 3% V6 bound)
+├── test_p6_cp_metric.py             # ✓ [P6] shock-robust sign-alternating sawtooth metric
+├── test_p6_recovery.py              # ✓ [P6] G6.1 recovery smoothing + G6.4 bit-identity
+├── test_p6_weighted_flux.py         # ✓ [P6] opt-in kernel-flux invariants (no-op, determinism,
+│                                     #   weighted=False restores the walk bitwise)
+└── test_p7_diff_flux.py             # ✓ [P7] Gate G7.3: frozen-selection ∂ρ̃/∂φ of the walk flux
+                                      #   FD-verified (JVP vs shipped rho_tilde_sweep at frozen u;
+                                      #   all regimes + floor branch; kink-locus guard documented)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap

@@ -1,0 +1,9 @@
+quantity,value
+max_rel_err,3.465e-09
+eps,5e-07
+n_kink_excluded,6
+n_elements,16386
+n_self-upstream,7
+n_subsonic,4089
+n_accelerating,5999
+n_shock-point,6291

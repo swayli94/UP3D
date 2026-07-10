@@ -44,7 +44,12 @@ import numba
 import numpy as np
 
 from pyfp3d.mesh.metrics import build_face_adjacency
-from pyfp3d.physics.isentropic import GAMMA, mach_number_squared
+from pyfp3d.physics.isentropic import (
+    GAMMA,
+    density_derivative_wrt_q_sq,
+    mach_number_squared,
+    mach_squared_derivative_wrt_q_sq,
+)
 
 if os.environ.get("PYFP3D_NOJIT", "0") == "1":
     prange = range
@@ -495,6 +500,93 @@ def rho_tilde_sweep(
         rho_tilde_out[e] = rt if rt > rho_floor else rho_floor
 
 
+@_njit(cache=True, fastmath=True, parallel=True)
+def rho_tilde_sensitivities_sweep(
+    q2: np.ndarray,
+    rho: np.ndarray,
+    upstream: np.ndarray,
+    m_inf: float,
+    m_crit: float,
+    C: float,
+    gamma: float,
+    rho_floor: float,
+    se_out: np.ndarray,
+    su_out: np.ndarray,
+) -> None:
+    """P7: exact per-element sensitivities of the walk flux at FROZEN
+    upstream selection (design.md §6.3 / López B.3–B.6),
+
+        s_e = ∂rho_tilde_e/∂q²_e ,   s_u = ∂rho_tilde_e/∂q²_u(e) ,
+
+    so that the Newton Term-2/Term-3 chain is
+    ∂rho_tilde_e/∂φ_k = s_e·(2 ∇φ_e·∇N_k|_e) + s_u·(2 ∇φ_u·∇N_k|_u) —
+    the geometric factor lives with the caller (P8 assembly / FD tests).
+
+    Branch structure of rho_tilde_sweep, differentiated branch-wise with
+    u(e) frozen (López differentiates through ρ_up/ν/ρ only, never the
+    selection; the C⁰ kinks at ν_e = ν_u and at the switch threshold are
+    measure-zero and freeze near the solution):
+
+      floored (rt <= rho_floor, flat clamp)        : s_e = s_u = 0
+      u == e (upwind term identically 0)           : s_e = ρ'_e, s_u = 0
+      subsonic (ν_e = ν_u = 0)                     : s_e = ρ'_e, s_u = 0
+      accelerating (ν = ν_e >= ν_u, ν_e > 0)       : s_e = ρ'_e(1−ν) − (ρ_e−ρ_u)·ν'_e
+                                                     s_u = ν·ρ'_u
+      shock-point (ν = ν_u > ν_e)                  : s_e = ρ'_e(1−ν)
+                                                     s_u = ν·ρ'_u − (ρ_e−ρ_u)·ν'_u
+
+    with ρ' = dρ/dq² and, on the ACTIVE switch branch only (M² > M_c²),
+    ν' = C·(M_c²/M⁴)·(dM²/dq²) > 0 (else 0 — the max(0,·) outer clamp).
+    Must mirror rho_tilde_sweep's guarded ν form exactly so the FD check
+    against the shipped flux is meaningful."""
+    n = len(q2)
+    mc2 = m_crit * m_crit
+    for e in prange(n):
+        u = upstream[e]
+        rho_e = rho[e]
+        drho_e = density_derivative_wrt_q_sq(q2[e], m_inf, gamma)
+        if u == e:
+            # rho_tilde == rho_e (upwind term identically 0), but the
+            # floor still applies to rho_e itself in rho_tilde_sweep.
+            if rho_e <= rho_floor:
+                se_out[e] = 0.0
+                su_out[e] = 0.0
+            else:
+                se_out[e] = drho_e
+                su_out[e] = 0.0
+            continue
+        m2 = mach_number_squared(q2[e], m_inf, gamma)
+        m2u = mach_number_squared(q2[u], m_inf, gamma)
+        nu_e = C * max(0.0, 1.0 - mc2 / max(m2, mc2))
+        nu_u = C * max(0.0, 1.0 - mc2 / max(m2u, mc2))
+        nu = max(nu_e, nu_u)
+        rho_u = rho[u]
+        rt = rho_e - nu * (rho_e - rho_u)
+        if rt <= rho_floor:
+            se_out[e] = 0.0
+            su_out[e] = 0.0
+            continue
+        if nu == 0.0:
+            se_out[e] = drho_e
+            su_out[e] = 0.0
+            continue
+        drho_u = density_derivative_wrt_q_sq(q2[u], m_inf, gamma)
+        djump = rho_e - rho_u
+        if nu_e >= nu_u:
+            # accelerating: nu tracks the element's own switch
+            dnu_e = C * (mc2 / (m2 * m2)) * mach_squared_derivative_wrt_q_sq(
+                q2[e], m_inf, gamma) if m2 > mc2 else 0.0
+            se_out[e] = drho_e * (1.0 - nu) - djump * dnu_e
+            su_out[e] = nu * drho_u
+        else:
+            # shock-point: nu tracks the upstream switch (nu_u > nu_e >= 0
+            # implies M²_u > M_c², so the upstream branch is active)
+            dnu_u = C * (mc2 / (m2u * m2u)) * mach_squared_derivative_wrt_q_sq(
+                q2[u], m_inf, gamma)
+            se_out[e] = drho_e * (1.0 - nu)
+            su_out[e] = nu * drho_u - djump * dnu_u
+
+
 class UpwindOperator:
     """Per-mesh upwinding workspace: face adjacency + outward face normals
     precomputed once, upstream/nu/rho_tilde buffers preallocated; the
@@ -536,6 +628,9 @@ class UpwindOperator:
         self._upstream = np.empty(n_tets, dtype=np.int64)
         self.nu = np.empty(n_tets, dtype=np.float64)
         self._rho_tilde = np.empty(n_tets, dtype=np.float64)
+        # P7 frozen-selection sensitivity buffers (rho_tilde_sensitivities)
+        self._se = np.empty(n_tets, dtype=np.float64)
+        self._su = np.empty(n_tets, dtype=np.float64)
         self.nu_max = 0.0
         self.n_supersonic = 0
         self.n_floored = 0
@@ -577,3 +672,40 @@ class UpwindOperator:
         self.n_supersonic = int(np.count_nonzero(self.nu > 0.0))
         self.n_floored = int(np.count_nonzero(self._rho_tilde == rho_floor))
         return self._rho_tilde
+
+    def rho_tilde_sensitivities(
+        self,
+        grad: np.ndarray,
+        q2: np.ndarray,
+        rho: np.ndarray,
+        m_inf: float,
+        C: float,
+        m_crit: float,
+        gamma: float = GAMMA,
+        rho_floor: float = 0.05,
+    ):
+        """P7 (gate G7.3): exact ∂rho_tilde/∂q² sensitivities of the WALK
+        flux at frozen upstream selection — the P8 Newton Term-2/Term-3
+        physics factor (design.md §6.3). Freezes u(e) with the same
+        upstream walk as `rho_tilde` on the same grad, then sweeps the
+        branch-wise derivative (see rho_tilde_sensitivities_sweep).
+
+        Returns (s_e, s_u, upstream): views into workspace buffers —
+        consume before the next call. s_e = ∂rho_tilde_e/∂q²_e,
+        s_u = ∂rho_tilde_e/∂q²_{u(e)} (0 whenever u(e) == e).
+
+        Walk mode only: the kernel-mode (weighted) flux has a dense
+        neighbourhood dependence — its Jacobian is a P8 measurement item,
+        not a P7 deliverable (design.md §3.2)."""
+        if self.weighted:
+            raise NotImplementedError(
+                "rho_tilde_sensitivities is defined for the walk flux "
+                "(weighted=False); kernel-mode sensitivities are a P8 "
+                "candidate, not implemented.")
+        upstream_elements(self.face_neighbors, self.centroids,
+                          self._nodes, self._elements, grad,
+                          self._upstream)
+        rho_tilde_sensitivities_sweep(q2, rho, self._upstream, m_inf,
+                                      m_crit, C, gamma, rho_floor,
+                                      self._se, self._su)
+        return self._se, self._su, self._upstream

@@ -868,6 +868,63 @@ sawtooth fix.
 
 ---
 
+## P7 — frozen-selection differentiable walk flux (G7.3, closed 2026-07-10)
+
+**Purpose.** Deliver the P8 fully-coupled-Newton prerequisite: the exact
+sensitivity `∂ρ̃/∂φ` of the shipped P4 **walk** artificial density at **frozen
+upstream selection** u(e) (design.md §3.1/§6.3, López Appendix B.3–B.6). Scope
+decision (with the user): the forward flux is byte-untouched — no `max_ε`, no
+flux replacement — so G7.1/G7.2 hold by construction (locked by V0/G4.2 re-runs
++ a forward-path regression guard) and the phase is exactly the derivative +
+its finite-difference verification.
+
+**What was built.** `physics/isentropic.py::mach_squared_derivative_wrt_q_sq`
+(dM²/dq² = M∞²[1+(γ−1)/2·M∞²]/D², strictly positive) and
+`kernels/upwind.py::rho_tilde_sensitivities_sweep` +
+`UpwindOperator.rho_tilde_sensitivities` (walk mode only): branch-wise
+`(s_e, s_u) = (∂ρ̃_e/∂q²_e, ∂ρ̃_e/∂q²_{u(e)})` — subsonic `(ρ'_e, 0)`;
+accelerating ν=ν_e `(ρ'_e(1−ν) − (ρ_e−ρ_u)ν'_e, ν·ρ'_u)` (B.3+B.4);
+shock-point ν=ν_u `(ρ'_e(1−ν), ν·ρ'_u − (ρ_e−ρ_u)ν'_u)`; floored /
+self-upstream flat branches → 0, exactly mirroring `rho_tilde_sweep`'s clamp.
+The DOF chain `∂q²/∂φ_k = 2∇φ·∇N_k` stays with the caller — P8's Term-2/Term-3
+assembly consumes `(s_e, s_u)` as the physics factor.
+
+**Verification method.** Directional (JVP) central difference against the
+*shipped* `rho_tilde_sweep` with u(e) held frozen — the forward flux is reused
+verbatim, so the check verifies exactly the derivative P8 relies on.
+
+**Key figures.**
+
+![V7.1 analytic vs FD scatter + per-regime rel-err histogram (constructed multi-regime field)](../cases/demo/p7_diff_flux/results/v71_fd_scatter_constructed.png)
+![V7.3 frozen-selection regimes over the real supersonic pocket (converged G4.1 coarse field)](../cases/demo/p7_diff_flux/results/v73_regime_map_converged.png)
+![V7.4 FD accuracy on the converged G4.1 field](../cases/demo/p7_diff_flux/results/v74_fd_scatter_converged.png)
+
+**Measured results (gate < 1e-6).**
+
+| field | max rel err | regimes exercised |
+|---|---|---|
+| structured cube, 4 fields (`tests/test_p7_diff_flux.py`) | **3–5e-10** | subsonic / accelerating / shock-point / self-upstream / floored |
+| constructed multi-regime, NACA coarse 16.4k elements | **3.5e-9** | 4.1k subsonic / 6.0k accelerating / 6.3k shock-point |
+| **converged G4.1 M0.80 field** (the P8 target state) | **5.7e-9** | pocket = 1189 accelerating + 977 shock-point, M_max 1.3729 |
+
+**Conclusion & analysis.** The derivative is exact to FD-noise level in every
+frozen-selection branch, including on the real converged transonic field — the
+P8 Newton Term-2/Term-3 physics factor is in place, sparse (~+1 upstream
+element/row), with the forward P4/P5/P6 paths bit-identical (suite 165 passed +
+4 skipped + 2 xfailed). Two findings worth their record: (1) **sign
+arbitration** — the FD gate settled the design.md §6.3 chain to
+`dμ/dM² = +M_c²/M⁴` (the doc's "−" was a transcription typo, fixed); (2) the
+**C⁰ kink locus is real but measure-zero in practice** — an FD probe straddling
+the max(ν_e,ν_u) tie or the switch threshold reads a branch *average* (~1e-5
+apparent error, not a bug); on generic fields only 0.04 % of elements (2/16.4k
+on the converged field) sit inside the ε-neighbourhood, but symmetry-degenerate
+(separable) fields on structured/prism-split meshes park whole element slabs
+exactly on the tie — the measured trap is documented in the test docstrings,
+and any future FD check must use generic/noise-broken fields. Demo:
+`cases/demo/p7_diff_flux/` (7/7 PASS incl. the gated converged-field part).
+
+---
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from
