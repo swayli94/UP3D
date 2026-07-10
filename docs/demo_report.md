@@ -258,6 +258,18 @@ solves — is now pinned in `solve/linear.py::build_amg_preconditioner`.
 
 ## P4 — transonic artificial density (closed 2026-07-07: G4.1/G4.2/G4.3 all green)
 
+> **★ ERRATUM (2026-07-11, P8/N5 finding — user-approved: record, do not
+> re-open).** The "converged" states this section reports are Picard STALL
+> states, not solutions of the discrete equations: the P8 exact-Newton
+> residual at the committed coarse M0.80 state is **2.2e-4**, and Newton
+> walks from it to the true discrete solution (coarse: shock 0.658,
+> cl 0.459, M_max 1.408; on medium the family steepens into the FP
+> non-uniqueness fold with no reachable solution at M0.80). The gates below
+> stand as **Picard-quality/robustness gates** (the machinery is the
+> production warm-start engine); Newton-era physical acceptance lives in
+> the G8.1 regression locks. Full evidence: roadmap P4 ledger erratum +
+> demo_report §P8.
+
 **Purpose.** Show that the artificial-density upwinding produces sharp,
 monotone, correctly-placed shocks; that it is an *exact* no-op below
 critical Mach; and record the scheme-hardening evidence trail that P4's
@@ -922,6 +934,78 @@ on the converged field) sit inside the ε-neighbourhood, but symmetry-degenerate
 exactly on the tie — the measured trap is documented in the test docstrings,
 and any future FD check must use generic/noise-broken fields. Demo:
 `cases/demo/p7_diff_flux/` (7/7 PASS incl. the gated converged-field part).
+
+---
+
+## P8 — fully-coupled Newton (G8.1 closed 2026-07-11; G8.2/G8.3 = N6, open)
+
+**Purpose.** Replace the Picard/secant iteration with a fully-coupled
+(φ_red, Γ) Newton on the exact Jacobian (design.md §6.3 at frozen selection,
+§8.1 coupled system): quadratic convergence to the actual discrete solution,
+Kutta closed as an unknown (no secant–density coupling — the P5 instability
+class), and the speed to retire the ~10⁴-iteration Picard budgets.
+
+**What was built.** N2: `kernels/jacobian.py::assemble_newton_jacobian` —
+Terms 1+2 fused on the shared Picard CSR pattern, Term 3 (upstream coupling,
+graph-distance ≤ 4) as active-set COO rebuilt per step; JVP FD-verified to
+~1e-10. N3/N4: `solve/linear.py::solve_gmres` + `solve/newton.py` — one shared
+`eval_residual` path, exact δΓ elimination with the far-field vortex column
+FD-guarded, GMRES+AMG and **direct (splu + Woodbury)** linear paths. N5: the
+transonic robustness chain — **direct exact steps** (the shock-position soft
+mode stiffens under refinement; η-accurate Krylov steps stall: measured
+frozen-system residual flat at 3.7e-6 with GMRES converging to η),
+**stall-adaptive freeze** of the upwind assignment with **active-set refresh**
+(the 2.5D prism-split mesh parks ~10³ elements in the max(ν_e,ν_u) near-tie
+band — the P7 kink trap in Newton form; live Newton limit-cycles there,
+measured branch flips 300–800/step), two-cycle acceptance with the honest
+`residual_unfrozen` floor, and freeze-revert / level-fail-fast /
+best-of-tried-line-search safety nets.
+
+**★ Baseline findings (user-arbitrated 2026-07-11; roadmap P4 erratum).**
+(1) The P4 Picard "engineering-converged" states are **not discrete
+solutions**: the coupled Newton residual at the committed coarse M0.80/α1.25
+state is **2.2e-4**, and Newton started from it walks in 6 quadratic steps to
+the true solution — **shock 0.658, cl 0.459, M_max 1.408** (dissipation-scan
+robust, continuation-path independent to the last bit). (2) On the medium
+mesh the solution family steepens into the **FP non-uniqueness fold**:
+Newton-converged M0.775 → shock 0.570/cl 0.396 (residual 1.8e-13), M0.7875 →
+shock 0.674/cl 0.523 (7.9e-11); **no reachable isolated solution at M0.80**
+(M_max ≈ 1.45, beyond the isentropic validity envelope — conservative FP
+over-lifts strong-shock cases vs Euler, Holst PAS 2000). G8.1 was therefore
+re-specced to coarse M0.80 + medium M0.7875 with regression-lock physics
+bands; `cases/reference_data/naca0012_m080/` untouched (hard rule 6).
+
+**Key figures.**
+
+![V8.1a coupled-Newton convergence, coarse (subsonic + M0.80 final level)](../cases/demo/p8_newton/results/v81a_convergence_coarse.png)
+![V8.1b medium M0.7875 convergence + V8.2-lite runtime breakdown](../cases/demo/p8_newton/results/v81b_convergence_medium.png)
+
+The sawtooth in both convergence plots is the freeze-refresh cycle working as
+designed: each frozen phase collapses quadratically to ~3e-13, the live
+re-evaluation jumps to the current assignment-staleness level, and the refresh
+contracts it (measured stale counts 693 → 81 → 2 → 0 at M0.70 medium) until
+the assignment is self-consistent or its intrinsic discontinuity floor
+(~1.3e-7 on medium, reported honestly) is reached.
+
+**Measured results (demo 15/15 PASS, `cases/demo/p8_newton/`).**
+
+| check | value | criterion |
+|---|---|---|
+| subsonic cl Newton vs P3 Picard | 1.4e-7 | < 0.5 % |
+| coarse M0.80 terminal residual / quadratic drops | 3.0e-13; 1.3e-3, 1.8e-3 | < 1e-9; both < 3e-2 |
+| coarse shock / cl (regression lock) | 0.6581 / 0.4590 | 0.658 ± 0.012 / 0.459 ± 0.010 |
+| coupled Kutta closure \|F\| | 8.3e-17 | machine (secant era: ~1e-4) |
+| medium M0.7875 terminal residual / drops | 7.8e-11; 1.7e-3, 1.0e-3 | < 1e-9; both < 3e-2 |
+| medium shock / cl (regression lock) | 0.6738 / 0.5234 | 0.674 ± 0.012 / 0.523 ± 0.010 |
+| assignment-discontinuity floor (honesty) | 1.3e-7 | < 1e-5, reported |
+| medium gate run end-to-end | ~100 s | Picard G4.1 medium: 16m39s, non-solution |
+
+**Conclusion.** G8.1 closed: terminal quadratic convergence demonstrated on
+both gate cases, the Jacobian FD clause holds on the converged Newton pocket
+(rel ~1e-10, gated test), and G4.2 subcritical bit-identity is suite-locked.
+Open for N6: ONERA M6 end-to-end < 5 min (G8.2) and the CI budget (G8.3);
+the M6 Newton run will also measure the P5 Picard results' convergence
+quality (same caveat class as the P4 erratum, different flow).
 
 ---
 

@@ -185,10 +185,17 @@ class NewtonWorkspace:
 
     def eval_residual(self, phi_free: np.ndarray, gamma: np.ndarray,
                       upwind_c: float, m_crit: float, m_cap: float,
-                      rho_floor: float):
+                      rho_floor: float, frozen=None):
         """The single state-reconstruction + residual path (module
         docstring). Returns (R_free, F, state) with state caching
-        everything the Jacobian assembly at this point needs."""
+        everything the Jacobian assembly at this point needs.
+
+        `frozen` = (upstream, branch) from
+        UpwindOperator.freeze_upwind_state switches the flux to the
+        frozen-assignment sweep (the N5 Newton finish phase: within a
+        fixed assignment the residual is smooth, so Newton converges
+        quadratically where the live walk/branch churn limit-cycles on
+        tie-degenerate meshes)."""
         gamma = np.asarray(gamma, dtype=np.float64)
         phi_red = np.empty(self.n_red, dtype=np.float64)
         phi_red[self.free] = phi_free
@@ -202,7 +209,14 @@ class NewtonWorkspace:
         lim = q2l == q2n
         n_limited = int(np.count_nonzero(~lim))
         rho = density_field(q2l, self.m_inf, self.gamma_air)
-        if self.m_inf > 0.0:
+        if self.m_inf > 0.0 and frozen is not None:
+            rho_t = self.upw.rho_tilde_frozen(
+                q2l, rho, frozen[0], frozen[1], self.m_inf, upwind_c,
+                m_crit, self.gamma_air, rho_floor).copy()
+            n_floored = self.upw.n_floored
+            nu_max = self.upw.nu_max
+            n_nu_active = self.upw.n_supersonic
+        elif self.m_inf > 0.0:
             rho_t = self.upw.rho_tilde(
                 grad, q2l, rho, self.m_inf, upwind_c, m_crit,
                 self.gamma_air, rho_floor).copy()
@@ -227,10 +241,16 @@ class NewtonWorkspace:
         return R_free, F, state
 
     def assemble_coupled(self, state, upwind_c: float, m_crit: float,
-                         rho_floor: float):
+                         rho_floor: float, frozen=None):
         """Exact Jacobian blocks at the state returned by eval_residual:
-        (J_ff, B) with B = J_red[free, dir] @ V_red + H_J[free, :]."""
-        if self.m_inf > 0.0:
+        (J_ff, B) with B = J_red[free, dir] @ V_red + H_J[free, :].
+        Pass the SAME `frozen` given to eval_residual (consistency)."""
+        if self.m_inf > 0.0 and frozen is not None:
+            upstream = frozen[0]
+            s_e, s_u = self.upw.rho_tilde_frozen_sensitivities(
+                state["q2l"], state["rho"], frozen[0], frozen[1],
+                self.m_inf, upwind_c, m_crit, self.gamma_air, rho_floor)
+        elif self.m_inf > 0.0:
             s_e, s_u, upstream = self.upw.rho_tilde_sensitivities(
                 state["grad"], state["q2l"], state["rho"], self.m_inf,
                 upwind_c, m_crit, self.gamma_air, rho_floor)
@@ -287,10 +307,12 @@ def solve_newton_lifting(
     amg_rebuild_every: int = 2,
     precond: str = "amg",
     gmres_restart: int = 60,
-    gmres_maxiter: int = 50,
+    gmres_maxiter: int = 10,
     line_search: bool = True,
     ptc_dtau: Optional[float] = None,
     rtol_seed: float = 1e-7,
+    freeze_tol: Optional[float] = None,
+    freeze_refresh_max: int = 2,
     workspace: Optional[NewtonWorkspace] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
@@ -320,6 +342,22 @@ def solve_newton_lifting(
     refused while any element is speed-limited or density-floored (a
     clamped state is not a converged flow -- mirrors the P5 gate
     semantics).
+
+    `freeze_tol` (the N5 churn fix): once ||R||_inf drops below it (with
+    0 limited/floored), the upwind SELECTION AND BRANCH are frozen
+    (UpwindOperator.freeze_upwind_state) and Newton finishes on the
+    now-smooth frozen system. Rationale: on tie-degenerate meshes (the
+    2.5D prism-split family) ~1e3 elements sit in the near-tie band of
+    max(nu_e, nu_u) and the live sweep's branch/selection churn
+    limit-cycles the residual at ~1e-8 (measured on the medium G4.1
+    ramp); within a fixed assignment the residual is smooth and the
+    terminal quadratic rate is restored. This is Lopez's frozen-selection
+    architecture made persistent. On reaching tol the LIVE residual is
+    re-evaluated and reported as `residual_unfrozen` with
+    `n_assignment_stale` flip counts; if it misses tol the freeze is
+    refreshed from the fresh state (up to `freeze_refresh_max` times --
+    active-set iteration) and the best result reported. None = off
+    (bit-identical to the pre-freeze driver).
 
     Returns the Picard-compatible result keys (phi on the cut mesh, gamma,
     converged, residual_history, mach2_max, nu_max, n_nu_active,
@@ -376,6 +414,7 @@ def solve_newton_lifting(
     eta_history = []
     newton_orders = []
     n_gmres_total = 0
+    n_gmres_stalled = 0
     converged = False
     M_pre = None
     eta_prev = None
@@ -385,6 +424,17 @@ def solve_newton_lifting(
                                         m_cap, rho_floor)
     timings["residual"] += time.perf_counter() - t0
     merit = float(R_free @ R_free + F @ F)
+
+    frozen = None
+    n_freeze_refresh = 0
+    residual_unfrozen = None
+    n_assignment_stale = 0
+    assignment_cycle = False
+    prev_live_residual = None
+    freeze_point = None            # (phi_free, gamma, r_norm) at freeze
+    freeze_cooldown = 0
+    n_freeze_reverts = 0
+    r_level_best = np.inf
 
     for it in range(n_newton_max):
         r_norm = float(np.max(np.abs(R_free)))
@@ -399,74 +449,216 @@ def solve_newton_lifting(
                     float(np.log(r2 / r1) / np.log(r1 / r0)))
         if verbose:
             print(f"  newton {it:2d}: |R|={r_norm:.3e} |F|={f_norm:.3e} "
-                  f"lim={state['n_limited']} flr={state['n_floored']}")
+                  f"lim={state['n_limited']} flr={state['n_floored']}"
+                  + (" [frozen]" if frozen is not None else ""))
+        r_level_best = min(r_level_best, r_norm)
+
+        # frozen-phase safety net: the frozen sweep is floor-free by
+        # design, so a bad assignment can send its Newton path into
+        # clamp land (measured: refresh with 928 stale assignments at
+        # M0.775 medium -> M_max 3.0, 3800 limited). Revert to the
+        # freeze point, unfreeze, and let live Newton (+ level fail-fast
+        # below) take over after a cooldown.
+        if frozen is not None and freeze_point is not None:
+            frozen_diverged = (
+                r_norm > 10.0 * freeze_point[2]
+                or state["n_limited"] > 0 or state["n_floored"] > 0)
+            if frozen_diverged:
+                phi_free = freeze_point[0].copy()
+                gamma = freeze_point[1].copy()
+                frozen = None
+                freeze_point = None
+                freeze_cooldown = 5
+                n_freeze_reverts += 1
+                if verbose:
+                    print("  [freeze reverted: frozen path diverged]")
+                t0 = time.perf_counter()
+                R_free, F, state = ws.eval_residual(
+                    phi_free, gamma, upwind_c, m_crit, m_cap, rho_floor)
+                timings["residual"] += time.perf_counter() - t0
+                merit = float(R_free @ R_free + F @ F)
+                continue
+        if freeze_cooldown > 0:
+            freeze_cooldown -= 1
+
+        # level fail-fast: a warm start this bad will not recover within
+        # the budget -- fail early so the continuation halves the Mach
+        # step instead of reporting a wandered state
+        if r_norm > 100.0 * r_level_best and r_norm > 1e-3:
+            if verbose:
+                print("  [level fail-fast: residual 100x above best]")
+            break
+        # Freeze trigger: either the residual is already small
+        # (< freeze_tol), or the LIVE Newton has stalled -- no 4x progress
+        # over the last 6 steps below the settledness cap. The stall
+        # trigger adapts to the level's churn floor (measured 1e-6 at
+        # M0.70 but 1.4e-5 at M0.80 on the medium mesh -- no absolute
+        # threshold fits all levels), while the cap keeps a far-from-
+        # solution transient from locking in a garbage assignment
+        # (measured: freezing at 1e-4 mid-churn sent M0.75 to 1.2e-2).
+        # plateau, not growth: freezing a diverging transient locks a
+        # garbage assignment (measured M0.80 medium -> M_max 3.0 blowup)
+        live_stalled = (
+            len(residual_history) >= 7
+            and r_norm < 1e-3
+            and r_norm > 0.25 * min(residual_history[-7:-1])
+            and r_norm < 2.0 * min(residual_history[-7:-1]))
+        if (frozen is None and freeze_tol is not None
+                and freeze_cooldown == 0
+                and m_inf > 0.0 and (r_norm < freeze_tol or live_stalled)
+                and state["n_limited"] == 0 and state["n_floored"] == 0):
+            frozen = ws.upw.freeze_upwind_state(
+                state["grad"], state["q2l"], state["rho"], m_inf,
+                upwind_c, m_crit, ws.gamma_air, rho_floor)
+            freeze_point = (phi_free.copy(), gamma.copy(), r_norm)
+            # the frozen flux equals the live flux AT the freeze state, so
+            # (R_free, F, state) stay valid for this iteration
         if (r_norm < tol_residual and f_norm < tol_gamma
                 and state["n_limited"] == 0 and state["n_floored"] == 0):
-            converged = True
-            break
+            if frozen is None:
+                converged = True
+                break
+            # honesty check: the frozen system converged -- how far is the
+            # LIVE (re-selected, re-branched) residual?
+            R_live, F_live, state_live = ws.eval_residual(
+                phi_free, gamma, upwind_c, m_crit, m_cap, rho_floor)
+            residual_unfrozen = float(np.max(np.abs(R_live)))
+            up_new, br_new = ws.upw.freeze_upwind_state(
+                state_live["grad"], state_live["q2l"], state_live["rho"],
+                m_inf, upwind_c, m_crit, ws.gamma_air, rho_floor)
+            n_assignment_stale = int(
+                np.count_nonzero(up_new != frozen[0])
+                + np.count_nonzero((br_new != frozen[1])
+                                   & (up_new == frozen[0])))
+            if verbose:
+                print(f"  frozen system converged; live |R|="
+                      f"{residual_unfrozen:.3e}, stale assignments="
+                      f"{n_assignment_stale}")
+            if residual_unfrozen < tol_residual:
+                converged = True
+                break
+            if (prev_live_residual is not None
+                    and residual_unfrozen > 0.5 * prev_live_residual):
+                # active-set two-cycle: the remaining stale elements flip
+                # assignment at each other's converged state, so the live
+                # residual has hit the discretization's intrinsic
+                # assignment-discontinuity floor -- accept the frozen
+                # solution and report the floor honestly
+                assignment_cycle = True
+                converged = True
+                break
+            if n_freeze_refresh >= freeze_refresh_max:
+                converged = True
+                break
+            # refresh the freeze from the fresh state and keep going
+            prev_live_residual = residual_unfrozen
+            n_freeze_refresh += 1
+            frozen = (up_new, br_new)
+            freeze_point = (phi_free.copy(), gamma.copy(),
+                            residual_unfrozen)
+            R_free, F, state = R_live, F_live, state_live
+            merit = float(R_free @ R_free + F @ F)
+            continue
 
         t0 = time.perf_counter()
-        J_ff, B = ws.assemble_coupled(state, upwind_c, m_crit, rho_floor)
+        J_ff, B = ws.assemble_coupled(state, upwind_c, m_crit, rho_floor,
+                                      frozen=frozen)
         if ptc_dtau is not None:
             J_ff = (J_ff + sp.diags(ws.m_lumped_free / ptc_dtau)).tocsr()
         timings["jacobian"] += time.perf_counter() - t0
 
-        t0 = time.perf_counter()
-        if precond == "amg":
-            if M_pre is None or it % amg_rebuild_every == 0:
-                A_pic = ws.op.assemble_matrix(state["rho_t"])
-                A_red = (ws.con.T.T @ (A_pic @ ws.con.T)).tocsr()
-                A_ff = A_red[ws.free][:, ws.free].tocsr()
-                if ptc_dtau is not None:
-                    A_ff = (A_ff
-                            + sp.diags(ws.m_lumped_free / ptc_dtau)).tocsr()
-                _, M_pre = build_amg_preconditioner(A_ff)
-        elif precond == "ilu":
-            M_pre = build_ilu_preconditioner(J_ff)
-        else:
-            raise ValueError(f"unknown precond {precond!r}")
-        timings["amg_setup"] += time.perf_counter() - t0
-
         K = ws.K
-        A_op = spla.LinearOperator(
-            (ws.n_free, ws.n_free),
-            matvec=lambda x: J_ff @ x + B @ (K @ x),
-        )
         rhs = -R_free - B @ F
-        eta = _ew_forcing(r_norm, residual_history[-2] if it > 0 else None,
-                          eta_prev, ew_eta0, ew_gamma, ew_eta_max)
-        eta_prev = eta
-        eta_history.append(eta)
-        t0 = time.perf_counter()
-        dphi, n_it = solve_gmres(A_op, rhs, M=M_pre, rtol=eta,
-                                 restart=gmres_restart,
-                                 maxiter=gmres_maxiter)
-        timings["gmres"] += time.perf_counter() - t0
-        n_gmres_total += n_it
+        if precond == "direct":
+            # exact Newton step: sparse LU of J_ff + Woodbury for the
+            # rank-n_st coupling B K. The transonic Jacobian carries a
+            # near-singular shock-position mode that grows under mesh
+            # refinement -- an eta-accurate Krylov step leaves an O(1)
+            # error in that mode and Newton stalls (measured on the
+            # medium G4.1 ramp: frozen-system residual flat at 3.7e-6
+            # with GMRES converging to eta); the exact step restores the
+            # quadratic rate. Cost: one splu + (1 + n_st) back-solves per
+            # step -- seconds at 6e4 dofs, the Lopez-scale 2D/medium-3D
+            # regime. GMRES+AMG remains the large-mesh path.
+            t0 = time.perf_counter()
+            lu = spla.splu(J_ff.tocsc())
+            timings["amg_setup"] += time.perf_counter() - t0
+            t0 = time.perf_counter()
+            z = lu.solve(rhs)
+            JB = lu.solve(B.toarray())
+            S = np.eye(ws.n_st) + K @ JB
+            dphi = z - JB @ np.linalg.solve(S, K @ z)
+            timings["gmres"] += time.perf_counter() - t0
+            eta_history.append(0.0)
+        else:
+            t0 = time.perf_counter()
+            if precond == "amg":
+                if M_pre is None or it % amg_rebuild_every == 0:
+                    A_pic = ws.op.assemble_matrix(state["rho_t"])
+                    A_red = (ws.con.T.T @ (A_pic @ ws.con.T)).tocsr()
+                    A_ff = A_red[ws.free][:, ws.free].tocsr()
+                    if ptc_dtau is not None:
+                        A_ff = (A_ff + sp.diags(
+                            ws.m_lumped_free / ptc_dtau)).tocsr()
+                    _, M_pre = build_amg_preconditioner(A_ff)
+            elif precond == "ilu":
+                M_pre = build_ilu_preconditioner(J_ff)
+            else:
+                raise ValueError(f"unknown precond {precond!r}")
+            timings["amg_setup"] += time.perf_counter() - t0
+
+            A_op = spla.LinearOperator(
+                (ws.n_free, ws.n_free),
+                matvec=lambda x: J_ff @ x + B @ (K @ x),
+            )
+            eta = _ew_forcing(r_norm,
+                              residual_history[-2] if it > 0 else None,
+                              eta_prev, ew_eta0, ew_gamma, ew_eta_max)
+            eta_prev = eta
+            eta_history.append(eta)
+            t0 = time.perf_counter()
+            dphi, n_it, gmres_info = solve_gmres(
+                A_op, rhs, M=M_pre, rtol=eta, restart=gmres_restart,
+                maxiter=gmres_maxiter, on_fail="return")
+            timings["gmres"] += time.perf_counter() - t0
+            n_gmres_total += n_it
+            if gmres_info != 0:
+                # take the best iterate as an INEXACT Newton step (still
+                # a useful direction; the line search guards it) instead
+                # of burning stagnating Krylov cycles
+                n_gmres_stalled += 1
         dgamma = K @ dphi + F
 
         # safety-only backtracking: accept the full step unless the merit
         # blows up or goes non-finite (Lopez runs plain Newton; the load
-        # stepping is the real globalization).
+        # stepping is the real globalization). If NO tried step improves,
+        # take the LEAST-BAD one -- unconditionally accepting the
+        # smallest lam allowed sustained residual growth (measured on the
+        # medium ramp's churn phases).
         lam = 1.0
+        best = None
         accepted = False
         for _ in range(5):
             t0 = time.perf_counter()
             R_try, F_try, state_try = ws.eval_residual(
                 phi_free + lam * dphi, gamma + lam * dgamma,
-                upwind_c, m_crit, m_cap, rho_floor)
+                upwind_c, m_crit, m_cap, rho_floor, frozen=frozen)
             timings["residual"] += time.perf_counter() - t0
             merit_try = float(R_try @ R_try + F_try @ F_try)
             if np.isfinite(merit_try) and (not line_search
-                                           or merit_try <= merit
-                                           or lam <= 0.0625):
+                                           or merit_try <= merit):
                 accepted = True
                 break
+            if np.isfinite(merit_try) and (best is None
+                                           or merit_try < best[0]):
+                best = (merit_try, lam, R_try, F_try, state_try)
             lam *= 0.5
-        if not accepted:                     # pragma: no cover - safety net
-            raise RuntimeError(
-                f"Newton line search failed at iteration {it} "
-                f"(merit {merit:.3e} -> {merit_try:.3e})")
+        if not accepted:
+            if best is None:                 # pragma: no cover - safety net
+                raise RuntimeError(
+                    f"Newton line search failed at iteration {it} "
+                    f"(merit {merit:.3e} -> {merit_try:.3e})")
+            merit_try, lam, R_try, F_try, state_try = best
         phi_free = phi_free + lam * dphi
         gamma = gamma + lam * dgamma
         R_free, F, state = R_try, F_try, state_try
@@ -484,6 +676,13 @@ def solve_newton_lifting(
         "newton_orders": newton_orders,
         "eta_history": eta_history,
         "n_gmres_total": n_gmres_total,
+        "n_gmres_stalled": n_gmres_stalled,
+        "froze": frozen is not None,
+        "n_freeze_refresh": n_freeze_refresh,
+        "residual_unfrozen": residual_unfrozen,
+        "n_assignment_stale": n_assignment_stale,
+        "assignment_cycle": assignment_cycle,
+        "n_freeze_reverts": n_freeze_reverts,
         "mach2_max": mach2_max,
         "nu_max": state["nu_max"],
         "n_nu_active": state["n_nu_active"],
@@ -507,6 +706,7 @@ def solve_newton_transonic(
     upwind_c: float = 1.5,
     m_crit: float = 0.95,
     upwind_c_post=None,
+    freeze_tol: Optional[float] = 1e-6,
     newton_kw: Optional[dict] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
@@ -539,6 +739,7 @@ def solve_newton_transonic(
     kw = dict(newton_kw or {})
     kw.setdefault("upwind_c", upwind_c)
     kw.setdefault("m_crit", m_crit)
+    kw.setdefault("freeze_tol", freeze_tol)
 
     ws = None
     result = None

@@ -93,6 +93,13 @@ pyfp3d/                    # Main package
 │                           #   rho_tilde_sensitivities: exact branch-wise (s_e, s_u) =
 │                           #   ∂ρ̃/∂q² of the WALK flux at FROZEN u(e) (López B.3–B.6;
 │                           #   floor branch → 0), FD-verified to ~4e-10 — the P8 Newton
+│                           #   prerequisite; ✓ [P8/N5] classify_upwind_branches +
+│                           #   rho_tilde_frozen_sweep/_sensitivities_sweep +
+│                           #   freeze_upwind_state/rho_tilde_frozen: the flux at a FROZEN
+│                           #   (u(e), branch) assignment — bitwise = live sweep at the
+│                           #   freeze state, smooth within the assignment (no max-tie kink),
+│                           #   floor-free on branches 0–2 (driver reverts on divergence) —
+│                           #   the Newton finish phase on tie-degenerate prism meshes
 │                           #   Term-2/Term-3 physics factor (forward path byte-identical)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
@@ -134,8 +141,15 @@ pyfp3d/                    # Main package
 │                           #   −R − B·F with B = J_red[free,dir]@V_red + H_J[free,:] (the
 │                           #   easy-to-miss far-field vortex column INCLUDED, FD-guarded),
 │                           #   GMRES + Term-1-AMG + Eisenstat–Walker, safety-only line search,
-│                           #   optional consistent ptc_dtau; solve_newton_transonic = upward
-│                           #   Mach-continuation SKELETON (interfaces final, tuning = N5)
+│                           #   optional consistent ptc_dtau;
+│                           #   ✓ [P8/N5, G8.1] transonic robustness chain: precond="direct"
+│                           #   exact steps (splu+Woodbury; the refining shock-position soft
+│                           #   mode stalls η-accurate Krylov steps), stall-adaptive FREEZE of
+│                           #   the upwind assignment + active-set refresh (two-cycle
+│                           #   acceptance, honest residual_unfrozen floor), freeze-revert /
+│                           #   level-fail-fast / best-of-tried line-search safety nets;
+│                           #   solve_newton_transonic = upward Mach continuation with dm
+│                           #   halving (recipe: tests/test_p8_newton NEWTON_TRANSONIC_RECIPE)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -244,13 +258,17 @@ tests/                     # Unit and gate tests
 ├── test_p8_jacobian.py              # ✓ [P8/N2] assembled Newton Jacobian JVP vs frozen-selection
 │                                     #   residual FD (all regimes, rel ~1e-10 vs 1e-6 tol; kink
 │                                     #   rows lifted from the P7 element guard); pattern-sharing,
-│                                     #   limiter-mask gating, forward-path bit-guard; + gated
-│                                     #   converged-G4.1-pocket FD (PYFP3D_TRANSONIC_GATES=1, N5)
-└── test_p8_newton.py                # ✓ [P8/N3+N4] coupled Newton subsonic milestone: Γ-column
-                                      #   FD (far-field-column trap detector), exact Kutta row,
-                                      #   far-field Γ-linearity, GMRES-vs-direct, supersonic
-                                      #   nonsymmetry, cl/Γ match vs P3 Picard, terminal order
-                                      #   p_k ~ 2, m_inf=0 single-step Laplace limit
+│                                     #   limiter-mask gating, forward-path bit-guard; frozen-
+│                                     #   assignment machinery (bitwise-at-freeze-state + frozen
+│                                     #   JVP); + gated converged-pocket FD on the NEWTON coarse
+│                                     #   M0.80 field (PYFP3D_TRANSONIC_GATES=1 — G8.1 FD clause)
+└── test_p8_newton.py                # ✓ [P8/N3–N5] coupled Newton: Γ-column FD (far-field-column
+                                      #   trap detector), exact Kutta row, far-field Γ-linearity,
+                                      #   GMRES-vs-direct, supersonic nonsymmetry, cl/Γ match vs
+                                      #   P3 Picard, terminal order p_k ~ 2, m_inf=0 single-step;
+                                      #   + gated G8.1 terminal-quadratic runs (coarse M0.80,
+                                      #   medium M0.7875 — re-specced case set, regression-lock
+                                      #   physics bands; NEWTON_TRANSONIC_RECIPE lives here)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap

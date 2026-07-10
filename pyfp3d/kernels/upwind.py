@@ -501,6 +501,149 @@ def rho_tilde_sweep(
 
 
 @_njit(cache=True, fastmath=True, parallel=True)
+def classify_upwind_branches(
+    q2: np.ndarray,
+    rho: np.ndarray,
+    upstream: np.ndarray,
+    m_inf: float,
+    m_crit: float,
+    C: float,
+    gamma: float,
+    rho_floor: float,
+    branch_out: np.ndarray,
+) -> None:
+    """P8/N5: record which piecewise branch of rho_tilde_sweep each
+    element is on (int8): 0 = no upwind term (subsonic nu == 0, or
+    self-upstream u == e), 1 = accelerating (nu = nu_e), 2 = shock-point
+    (nu = nu_u), 3 = floored. Mirrors rho_tilde_sweep's decision order
+    exactly, so a frozen sweep with this classification reproduces the
+    live sweep bitwise at the state it was taken from."""
+    n = len(q2)
+    mc2 = m_crit * m_crit
+    for e in prange(n):
+        u = upstream[e]
+        if u == e:
+            branch_out[e] = 3 if rho[e] <= rho_floor else 0
+            continue
+        m2 = mach_number_squared(q2[e], m_inf, gamma)
+        m2u = mach_number_squared(q2[u], m_inf, gamma)
+        nu_e = C * max(0.0, 1.0 - mc2 / max(m2, mc2))
+        nu_u = C * max(0.0, 1.0 - mc2 / max(m2u, mc2))
+        nu = max(nu_e, nu_u)
+        rt = rho[e] - nu * (rho[e] - rho[u])
+        if rt <= rho_floor:
+            branch_out[e] = 3
+        elif nu == 0.0:
+            branch_out[e] = 0
+        elif nu_e >= nu_u:
+            branch_out[e] = 1
+        else:
+            branch_out[e] = 2
+
+
+@_njit(cache=True, fastmath=True, parallel=True)
+def rho_tilde_frozen_sweep(
+    q2: np.ndarray,
+    rho: np.ndarray,
+    upstream: np.ndarray,
+    branch: np.ndarray,
+    m_inf: float,
+    m_crit: float,
+    C: float,
+    gamma: float,
+    rho_floor: float,
+    nu_out: np.ndarray,
+    rho_tilde_out: np.ndarray,
+) -> None:
+    """The walk flux with the SELECTION AND BRANCH frozen (P8/N5 Newton
+    finish phase, design.md Sec 8.1): u(e) and the piecewise branch come
+    from `classify_upwind_branches` at a reference state instead of being
+    re-decided from the current q2. Within a fixed assignment the flux is
+    a smooth composition (the only remaining kinks are the sonic-threshold
+    clamps inside nu, a far smaller set than the max(nu_e, nu_u) tie), so
+    Newton converges quadratically where the live sweep limit-cycles on
+    tie-degenerate meshes (the 2.5D prism-split family parks ~1e3 elements
+    in the near-tie band -- the P7 kink-trap in its Newton form).
+
+    At a state whose live classification equals `branch`, this reproduces
+    rho_tilde_sweep BITWISE (same formulas, branch forced to what max
+    would pick). The floor is NOT re-applied on branches 0-2 (the floor
+    state is part of the freeze; the caller only freezes settled states
+    with n_floored == 0)."""
+    n = len(q2)
+    mc2 = m_crit * m_crit
+    for e in prange(n):
+        b = branch[e]
+        if b == 3:
+            nu_out[e] = 0.0
+            rho_tilde_out[e] = rho_floor
+            continue
+        if b == 0:
+            nu_out[e] = 0.0
+            rho_tilde_out[e] = rho[e]
+            continue
+        u = upstream[e]
+        if b == 1:
+            m2 = mach_number_squared(q2[e], m_inf, gamma)
+            nu = C * max(0.0, 1.0 - mc2 / max(m2, mc2))
+        else:
+            m2u = mach_number_squared(q2[u], m_inf, gamma)
+            nu = C * max(0.0, 1.0 - mc2 / max(m2u, mc2))
+        nu_out[e] = nu
+        rho_tilde_out[e] = rho[e] - nu * (rho[e] - rho[u])
+
+
+@_njit(cache=True, fastmath=True, parallel=True)
+def rho_tilde_frozen_sensitivities_sweep(
+    q2: np.ndarray,
+    rho: np.ndarray,
+    upstream: np.ndarray,
+    branch: np.ndarray,
+    m_inf: float,
+    m_crit: float,
+    C: float,
+    gamma: float,
+    rho_floor: float,
+    se_out: np.ndarray,
+    su_out: np.ndarray,
+) -> None:
+    """Exact (s_e, s_u) of rho_tilde_frozen_sweep -- the same branch-wise
+    formulas as rho_tilde_sensitivities_sweep with the branch forced by
+    the freeze (and the sonic-threshold guard kept on nu', since the
+    clamped nu formula is still evaluated live)."""
+    n = len(q2)
+    mc2 = m_crit * m_crit
+    for e in prange(n):
+        b = branch[e]
+        if b == 3:
+            se_out[e] = 0.0
+            su_out[e] = 0.0
+            continue
+        drho_e = density_derivative_wrt_q_sq(q2[e], m_inf, gamma)
+        if b == 0:
+            se_out[e] = drho_e
+            su_out[e] = 0.0
+            continue
+        u = upstream[e]
+        drho_u = density_derivative_wrt_q_sq(q2[u], m_inf, gamma)
+        djump = rho[e] - rho[u]
+        if b == 1:
+            m2 = mach_number_squared(q2[e], m_inf, gamma)
+            nu = C * max(0.0, 1.0 - mc2 / max(m2, mc2))
+            dnu_e = C * (mc2 / (m2 * m2)) * mach_squared_derivative_wrt_q_sq(
+                q2[e], m_inf, gamma) if m2 > mc2 else 0.0
+            se_out[e] = drho_e * (1.0 - nu) - djump * dnu_e
+            su_out[e] = nu * drho_u
+        else:
+            m2u = mach_number_squared(q2[u], m_inf, gamma)
+            nu = C * max(0.0, 1.0 - mc2 / max(m2u, mc2))
+            dnu_u = C * (mc2 / (m2u * m2u)) * mach_squared_derivative_wrt_q_sq(
+                q2[u], m_inf, gamma) if m2u > mc2 else 0.0
+            se_out[e] = drho_e * (1.0 - nu)
+            su_out[e] = nu * drho_u - djump * dnu_u
+
+
+@_njit(cache=True, fastmath=True, parallel=True)
 def rho_tilde_sensitivities_sweep(
     q2: np.ndarray,
     rho: np.ndarray,
@@ -631,6 +774,8 @@ class UpwindOperator:
         # P7 frozen-selection sensitivity buffers (rho_tilde_sensitivities)
         self._se = np.empty(n_tets, dtype=np.float64)
         self._su = np.empty(n_tets, dtype=np.float64)
+        # P8/N5 frozen-branch buffer (classify_upwind_branches)
+        self._branch = np.empty(n_tets, dtype=np.int8)
         self.nu_max = 0.0
         self.n_supersonic = 0
         self.n_floored = 0
@@ -672,6 +817,70 @@ class UpwindOperator:
         self.n_supersonic = int(np.count_nonzero(self.nu > 0.0))
         self.n_floored = int(np.count_nonzero(self._rho_tilde == rho_floor))
         return self._rho_tilde
+
+    def freeze_upwind_state(
+        self,
+        grad: np.ndarray,
+        q2: np.ndarray,
+        rho: np.ndarray,
+        m_inf: float,
+        C: float,
+        m_crit: float,
+        gamma: float = GAMMA,
+        rho_floor: float = 0.05,
+    ):
+        """P8/N5: capture (upstream, branch) at the current state for the
+        frozen-assignment Newton finish (walk mode only). Returns COPIES
+        (the freeze must survive subsequent live sweeps)."""
+        if self.weighted:
+            raise NotImplementedError(
+                "freeze_upwind_state is defined for the walk flux only")
+        upstream_elements(self.face_neighbors, self.centroids,
+                          self._nodes, self._elements, grad,
+                          self._upstream)
+        classify_upwind_branches(q2, rho, self._upstream, m_inf, m_crit, C,
+                                 gamma, rho_floor, self._branch)
+        return self._upstream.copy(), self._branch.copy()
+
+    def rho_tilde_frozen(
+        self,
+        q2: np.ndarray,
+        rho: np.ndarray,
+        upstream: np.ndarray,
+        branch: np.ndarray,
+        m_inf: float,
+        C: float,
+        m_crit: float,
+        gamma: float = GAMMA,
+        rho_floor: float = 0.05,
+    ) -> np.ndarray:
+        """The walk flux at a FROZEN (upstream, branch) assignment (view
+        into the workspace buffer). No walk is run; monitors refreshed."""
+        rho_tilde_frozen_sweep(q2, rho, upstream, branch, m_inf, m_crit, C,
+                               gamma, rho_floor, self.nu, self._rho_tilde)
+        self.nu_max = float(self.nu.max())
+        self.n_supersonic = int(np.count_nonzero(self.nu > 0.0))
+        self.n_floored = int(np.count_nonzero(branch == 3))
+        return self._rho_tilde
+
+    def rho_tilde_frozen_sensitivities(
+        self,
+        q2: np.ndarray,
+        rho: np.ndarray,
+        upstream: np.ndarray,
+        branch: np.ndarray,
+        m_inf: float,
+        C: float,
+        m_crit: float,
+        gamma: float = GAMMA,
+        rho_floor: float = 0.05,
+    ):
+        """(s_e, s_u) of rho_tilde_frozen at the same frozen assignment
+        (views into the workspace buffers)."""
+        rho_tilde_frozen_sensitivities_sweep(
+            q2, rho, upstream, branch, m_inf, m_crit, C, gamma, rho_floor,
+            self._se, self._su)
+        return self._se, self._su
 
     def rho_tilde_sensitivities(
         self,

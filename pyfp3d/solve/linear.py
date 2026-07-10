@@ -105,7 +105,8 @@ def solve_gmres(
     x0: np.ndarray = None,
     restart: int = 60,
     maxiter: int = 50,
-) -> Tuple[np.ndarray, int]:
+    on_fail: str = "retry",
+) -> Tuple[np.ndarray, int, int]:
     """
     Solve A x = b with restarted, preconditioned GMRES (the P8 Newton
     linear solve; design.md Sec 8.1). A may be any scipy sparse matrix or
@@ -124,13 +125,19 @@ def solve_gmres(
         x0: initial guess
         restart: Krylov subspace size between restarts
         maxiter: maximum number of restart cycles
+        on_fail: "retry" (default) -- one automatic retry at doubled
+            restart, then raise RuntimeError; "return" -- hand back the
+            best iterate immediately (an INEXACT Newton step is still a
+            descent-quality step; the P8 driver prefers taking it over
+            burning thousands of stagnating Krylov iterations -- measured
+            2.4 h on the first medium G4.1 run, dominated by retries)
 
     Returns:
-        (x, n_inner_iterations)
+        (x, n_inner_iterations, info) -- info 0 = converged (scipy
+        convention); nonzero only reachable with on_fail="return".
 
     Raises:
-        RuntimeError if GMRES fails to converge (after one automatic retry
-        with a doubled restart length).
+        RuntimeError if GMRES fails to converge under on_fail="retry".
     """
     n_iter = [0]
 
@@ -141,7 +148,7 @@ def solve_gmres(
         A, b, x0=x0, rtol=rtol, atol=atol, restart=restart, maxiter=maxiter,
         M=M, callback=_count, callback_type="pr_norm",
     )
-    if info != 0:
+    if info != 0 and on_fail == "retry":
         n_first = n_iter[0]
         n_iter[0] = 0
         x, info = spla.gmres(
@@ -156,7 +163,7 @@ def solve_gmres(
                 f"(restart {restart} then {2 * restart}, rtol={rtol:g})"
             )
         n_iter[0] += n_first
-    return x, n_iter[0]
+    return x, n_iter[0], info
 
 
 def solve_cg_amg(

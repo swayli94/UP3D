@@ -18,9 +18,20 @@ Covers, on the NACA0012 coarse 2.5D case at M0.5 / alpha 2:
     (|dcl/cl| < 5e-3, ||dGamma||_inf < 1e-6), converges in a handful of
     steps to ||R||_inf < 1e-10, with terminal-quadratic order.
 
-Transonic Newton (load stepping, G8.1) is the N5 work package -- not
-tested here beyond the Jacobian-level gated check in test_p8_jacobian.
+Gated (PYFP3D_TRANSONIC_GATES=1): the G8.1 terminal-quadratic runs on the
+RE-SPECCED case set (user-approved 2026-07-11): coarse M0.80/alpha 1.25
+and medium M0.7875/alpha 1.25. The original "G4.1 case" (M0.80 medium)
+sits at the edge of the FP non-uniqueness fold on the medium mesh --
+measured dcl/dM ~ 10 between M0.775 (cl 0.396) and M0.7875 (cl 0.523),
+no reachable isolated solution at M0.80 -- so it is recorded as a
+model-validity finding (design.md Sec 12 risks 2/3), not a solver target.
+The physics bands asserted here are REGRESSION LOCKS around the measured
+Newton solutions (the Euler-anchored G4.1 band does not bind conservative
+FP at this shock strength; the P4 Picard states are stall artifacts with
+Newton residual 2.2e-4 -- see the roadmap P4 erratum).
 """
+
+import os
 
 import numpy as np
 import pytest
@@ -38,6 +49,22 @@ UPWIND_C = 1.5
 M_CRIT = 0.95
 M_CAP = 3.0
 RHO_FLOOR = 0.05
+
+run_gates = pytest.mark.skipif(
+    os.environ.get("PYFP3D_TRANSONIC_GATES", "0") != "1",
+    reason="transonic Newton gate runs take minutes; "
+           "set PYFP3D_TRANSONIC_GATES=1 for the gate-closure run",
+)
+
+#: the N5 transonic Newton recipe (measured on the 2.5D family):
+#: direct exact steps (the shock-position soft mode leaves Krylov-eta
+#: steps stalled), stall-adaptive freeze with active-set refresh, fine
+#: Mach steps near the top of the ramp.
+NEWTON_TRANSONIC_RECIPE = dict(
+    dm=0.025, dm_min=0.003, freeze_tol=1e-6,
+    newton_kw=dict(freeze_refresh_max=8, precond="direct",
+                   n_newton_max=60),
+)
 
 
 def _case_args():
@@ -184,7 +211,7 @@ def test_gmres_amg_solves_newton_jacobian(newton_case):
     rng = np.random.default_rng(11)
     b = rng.standard_normal(ws.n_free)
     x_ref = spla.spsolve(J_ff.tocsc(), b)
-    x, n_it = solve_gmres(J_ff, b, M=M_pre, rtol=1e-12)
+    x, n_it, _ = solve_gmres(J_ff, b, M=M_pre, rtol=1e-12)
     rel = np.max(np.abs(x - x_ref)) / np.max(np.abs(x_ref))
     assert rel < 1e-8, f"GMRES vs direct rel err {rel:.3e} ({n_it} iters)"
 
@@ -261,6 +288,84 @@ def test_newton_subsonic_terminal_order(coarse_mesh):
     assert len(orders) >= 1
     assert max(orders) > 1.8, f"observed orders {orders}"
     assert orders[-1] > 1.5, f"terminal order {orders[-1]:.2f}"
+
+
+# ------------------------------------------------- gated: G8.1 transonic
+
+
+def _assert_terminal_quadratic(r):
+    """G8.1 protocol: the final level must end below 1e-9 AND contain a
+    consecutive PAIR of >= 1.5-digit residual collapses (only a quadratic
+    tail does that at these levels; cf. Lopez Table 4.9). The pair is
+    searched over the level history rather than read off the last two
+    entries because the freeze-refresh honesty re-evaluations interleave
+    live-residual jumps with the (quadratic) frozen phases -- a final
+    frozen phase can legitimately converge in ONE step after a refresh."""
+    h = r["residual_history"]
+    assert h[-1] < 1e-9, f"final residual {h[-1]:.3e}"
+    drops = [h[i + 1] / h[i] for i in range(len(h) - 1)]
+    pairs = [(drops[i], drops[i + 1]) for i in range(len(drops) - 1)]
+    assert any(a < 3e-2 and b < 3e-2 for a, b in pairs), (
+        f"no consecutive quadratic-like drop pair in {drops}")
+
+
+def _transonic_case(mesh_file, m_inf):
+    from .conftest import REPO_ROOT
+    from pyfp3d.post.section_cut import wall_cp_curve
+    from pyfp3d.post.shock import shock_report
+    from pyfp3d.solve.newton import solve_newton_transonic
+
+    mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
+                     / mesh_file)
+    mc, wc = cut_wake(mesh)
+    r = solve_newton_transonic(mc, wc, m_inf=m_inf, alpha_deg=1.25,
+                               **NEWTON_TRANSONIC_RECIPE)
+    dz = float(np.ptp(mc.nodes[:, 2]))
+    rep = shock_report(wall_cp_curve(mc, r["phi"], z=0.5 * dz, m_inf=m_inf),
+                       m_inf)
+    forces = wall_force_coefficients(
+        mc.nodes, mc.elements, mc.boundary_faces["wall"], r["phi"],
+        alpha_deg=1.25, s_ref=dz, m_inf=m_inf)
+    return r, rep, forces
+
+
+@run_gates
+def test_g81_terminal_quadratic_coarse_m080():
+    """G8.1 (re-specced): coarse M0.80/alpha1.25 -- terminal quadratic
+    convergence to the TRUE discrete solution (regression lock: shock
+    0.658, cl 0.459, M_max 1.408 -- the Newton answer, dissipation-scan
+    robust and continuation-path independent; NOT the P4 Picard stall
+    state 0.604/0.334, whose Newton residual is 2.2e-4)."""
+    r, rep, forces = _transonic_case("coarse.msh", 0.80)
+    assert r["converged"]
+    _assert_terminal_quadratic(r)
+    assert r["n_limited"] == 0 and r["n_floored"] == 0
+    assert r["F_history"][-1] < 1e-12                   # coupled Kutta
+    assert rep["upper"]["has_shock"] and rep["upper"]["monotone"]
+    assert abs(rep["upper"]["x_shock"] - 0.658) < 0.012
+    assert abs(forces["cl"] - 0.459) < 0.01
+    assert abs(float(np.sqrt(r["mach2_max"])) - 1.408) < 0.02
+
+
+@run_gates
+def test_g81_terminal_quadratic_medium_m07875():
+    """G8.1 (re-specced): medium M0.7875/alpha1.25 -- the strongest
+    medium-mesh condition with a reachable isolated solution (M0.80 sits
+    at the fold, recorded finding). Regression lock around the measured
+    Newton solution: shock 0.674, cl 0.523, M_max 1.404; the frozen
+    finish reaches ~8e-11 with the live assignment-discontinuity floor
+    reported (~1.3e-7 -- the C0 walk flux's intrinsic floor on this
+    tie-degenerate prism mesh)."""
+    r, rep, forces = _transonic_case("medium.msh", 0.7875)
+    assert r["converged"]
+    _assert_terminal_quadratic(r)
+    assert r["n_limited"] == 0 and r["n_floored"] == 0
+    assert rep["upper"]["has_shock"] and rep["upper"]["monotone"]
+    assert abs(rep["upper"]["x_shock"] - 0.674) < 0.012
+    assert abs(forces["cl"] - 0.523) < 0.01
+    assert abs(float(np.sqrt(r["mach2_max"])) - 1.404) < 0.02
+    if r["residual_unfrozen"] is not None:
+        assert r["residual_unfrozen"] < 1e-5
 
 
 def test_newton_incompressible_single_step(coarse_mesh):

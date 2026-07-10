@@ -271,6 +271,90 @@ def test_limiter_mask_gates_the_chain():
     assert np.array_equal(s_e, s_e_ref) and np.array_equal(s_u, s_u_ref)
 
 
+# ------------------------------------------- frozen-assignment machinery
+
+
+def test_frozen_sweep_matches_live_at_freeze_state():
+    """rho_tilde_frozen at the state the assignment was taken from equals
+    the live walk flux BITWISE (the freeze forces the branch max() would
+    pick anyway) -- the property that lets the N5 driver freeze without
+    perturbing the accepted iterate."""
+    from pyfp3d.kernels.upwind import UpwindOperator
+
+    nodes, elements = _cube()
+    op = PicardOperator(nodes, elements)
+    upw = UpwindOperator(nodes, elements, weighted=False)
+    x = nodes[:, 0]
+    phi = (1.25 * x + 0.12 * np.sin(2.0 * np.pi * x)
+           + _degeneracy_breaker(len(nodes)))
+    grad, q2 = op.velocities(phi)
+    grad, q2 = grad.copy(), q2.copy()
+    rho = density_field(q2, 0.8)
+    live = upw.rho_tilde(grad, q2, rho, 0.8, UPWIND_C, M_CRIT).copy()
+    up, br = upw.freeze_upwind_state(grad, q2, rho, 0.8, UPWIND_C, M_CRIT)
+    frozen = upw.rho_tilde_frozen(q2, rho, up, br, 0.8, UPWIND_C,
+                                  M_CRIT).copy()
+    assert np.array_equal(live, frozen)
+    assert set(np.unique(br)).issubset({0, 1, 2, 3})
+    assert (br == 1).sum() > 0 and (br == 2).sum() > 0   # regimes present
+
+
+def test_frozen_jacobian_jvp():
+    """Full-Jacobian JVP against FD of the FROZEN flux residual: with the
+    assignment frozen there is no max-tie kink at all (only the sonic
+    threshold nu' guard), so the check needs no tie exclusion -- exactly
+    why the N5 finish phase converges quadratically."""
+    from pyfp3d.kernels.upwind import UpwindOperator, rho_tilde_frozen_sweep
+
+    nodes, elements = _cube()
+    op = PicardOperator(nodes, elements)
+    upw = UpwindOperator(nodes, elements, weighted=False)
+    x = nodes[:, 0]
+    phi = (1.25 * x + 0.12 * np.sin(2.0 * np.pi * x)
+           + _degeneracy_breaker(len(nodes)))
+    grad, q2 = op.velocities(phi)
+    grad, q2 = grad.copy(), q2.copy()
+    rho = density_field(q2, 0.8)
+    rho_t = upw.rho_tilde(grad, q2, rho, 0.8, UPWIND_C, M_CRIT).copy()
+    up, br = upw.freeze_upwind_state(grad, q2, rho, 0.8, UPWIND_C, M_CRIT)
+    s_e, s_u = upw.rho_tilde_frozen_sensitivities(q2, rho, up, br, 0.8,
+                                                  UPWIND_C, M_CRIT)
+    J = op.assemble_newton_jacobian(phi, rho_t, s_e.copy(), s_u.copy(), up)
+
+    def _frozen_res(p):
+        _, q2p = op.velocities(p)
+        q2p = q2p.copy()
+        rhop = density_field(q2p, 0.8)
+        nu = np.empty_like(q2p)
+        rt = np.empty_like(q2p)
+        rho_tilde_frozen_sweep(q2p, rhop, up, br, 0.8, M_CRIT, UPWIND_C,
+                               GAMMA, RHO_FLOOR, nu, rt)
+        return op.assemble_residual(p, rt).copy()
+
+    # only the sonic-threshold guard (nu' -> 0 at M^2 = M_c^2) remains a
+    # kink; exclude rows of elements whose active-side M^2 straddles it
+    m2 = mach_number_squared(q2, 0.8, GAMMA)
+    mc2 = M_CRIT ** 2
+    m2_src = np.where(br == 2, m2[up], m2)
+    bad = (br != 0) & (br != 3) & (np.abs(m2_src - mc2) < 3e-5)
+    row_bad = np.zeros(op.n_nodes, dtype=bool)
+    if bad.any():
+        row_bad[np.asarray(elements)[bad].ravel()] = True
+    valid = ~row_bad
+
+    rng = np.random.default_rng(1)
+    eps = 1e-6
+    for _ in range(3):
+        delta = rng.standard_normal(op.n_nodes)
+        delta /= np.abs(delta).max()
+        jvp = J @ delta
+        fd = (_frozen_res(phi + eps * delta)
+              - _frozen_res(phi - eps * delta)) / (2.0 * eps)
+        scale = np.abs(fd[valid]).max()
+        rel = np.abs(jvp[valid] - fd[valid]).max() / scale
+        assert rel < REL_TOL, f"frozen JVP rel err {rel:.3e}"
+
+
 # ------------------------------------------------------------- guardrails
 
 
@@ -310,18 +394,23 @@ def test_forward_paths_untouched_by_newton_assembly():
 
 @run_gates
 def test_jacobian_fd_converged_pocket(mesh_dir):
-    """G8.1 FD clause on the REAL converged G4.1 coarse field (M0.80,
-    alpha 1.25: supersonic pocket with both accelerating and shock-point
-    branches): assembled-Jacobian JVP vs frozen-selection FD, rel < 1e-6.
-    Converged-field kink exclusion is tiny (P7 measured 2/16.4k)."""
+    """G8.1 FD clause on the REAL converged coarse M0.80/alpha1.25 field
+    (supersonic pocket with both accelerating and shock-point branches):
+    assembled-Jacobian JVP vs frozen-selection FD, rel < 1e-6. The field
+    is the NEWTON solution (residual < 1e-9 -- the actual discrete
+    solution; the Picard state is a stall artifact, see the roadmap P4
+    erratum). Converged-field kink exclusion is tiny."""
     from pyfp3d.mesh.reader import read_mesh
     from pyfp3d.mesh.wake_cut import cut_wake
-    from pyfp3d.solve.continuation import solve_transonic_lifting
+    from pyfp3d.solve.newton import solve_newton_transonic
 
     mesh = read_mesh(mesh_dir / "naca0012_2.5d" / "coarse.msh")
     mc, wc = cut_wake(mesh)
-    r = solve_transonic_lifting(mc, wc, m_inf=0.80, alpha_deg=1.25,
-                                max_gamma_evals=12, n_picard_eval=800)
+    r = solve_newton_transonic(
+        mc, wc, m_inf=0.80, alpha_deg=1.25, dm=0.025, dm_min=0.003,
+        freeze_tol=1e-6,
+        newton_kw=dict(freeze_refresh_max=8, precond="direct",
+                       n_newton_max=60))
     assert r["converged"]
     phi = np.asarray(r["phi"], dtype=np.float64)
 

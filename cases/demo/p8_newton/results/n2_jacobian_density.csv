@@ -1,0 +1,5 @@
+quantity,value
+newton_nnz,67406
+n_term3_active,2109
+coarse_wall_s,4.7
+n_gmres_stalled,0

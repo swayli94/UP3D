@@ -1,0 +1,16 @@
+gate,check,value,criterion,status,note
+G8.1,subsonic cl Newton vs P3 Picard,1.42e-07,< 0.5%,PASS,Newton 2 steps to 4.7e-13; |dGamma| 1.9e-08
+G8.1,coarse M0.80 converged,True,True,PASS,5 s end-to-end
+G8.1,coarse terminal residual,3.0e-13,< 1e-9,PASS,
+G8.1,coarse terminal quadratic drops,1.3e-03, 1.8e-03,both < 3e-2,PASS,
+G8.1,coarse Kutta closure |F|,8.3e-17,< 1e-12 (machine),PASS,
+G8.1,coarse shock x/c (regression lock),0.6581,0.658 +/- 0.012,PASS,TRUE discrete solution; P4 Picard stall state was 0.604 (Newton residual there: 2.2e-4)
+G8.1,coarse cl (regression lock),0.4590,0.459 +/- 0.010,PASS,
+G8.1,coarse clean pocket,lim 0 flr 0,0 / 0,PASS,
+G8.1,medium M0.7875 converged,True,True,PASS,98 s end-to-end (Picard G4.1 medium was 16m39s and not a solution)
+G8.1,medium terminal residual,7.8e-11,< 1e-9,PASS,
+G8.1,medium terminal quadratic drops,1.7e-03, 1.0e-03,both < 3e-2,PASS,
+G8.1,medium shock x/c (regression lock),0.6738,0.674 +/- 0.012,PASS,
+G8.1,medium cl (regression lock),0.5234,0.523 +/- 0.010,PASS,
+G8.1,medium clean pocket,lim 0 flr 0,0 / 0,PASS,
+G8.1,assignment-discontinuity floor (reported),1.3e-07,< 1e-5 (intrinsic C0-flux floor; honesty metric),PASS,6 stale assignments at accept
