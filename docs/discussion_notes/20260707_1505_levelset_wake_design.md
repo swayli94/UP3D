@@ -537,7 +537,10 @@ $$M = \begin{bmatrix} \mathrm{AMG}(A_{mm}) & 0 \\ -A_{em} \cdot \mathrm{AMG}(A_{
 **验证标准**：
 - 两段翼（如 NLR 7301）：各自 $c_l$ 合理
 - 翼身组合体：机身无升力，机翼升力不受影响
-### Phase B6（可选）：曲线尾流 / 自由尾迹
+### Phase B6（搁置）：曲线尾流 / 自由尾迹
+
+> **决策（2026-07-10）：搁置，不实施。** 详见 `20260707_2118_ibl_viscous_coupling_design.md` §4.5.6。原因：(1) 精度收益微小（$O(\theta_{\mathrm{wake}}^2) \sim O(0.1\%)$）；(2) 每次方向变化需重建 CutElementMap + enrichment DOF + 约束系统，工程代价不成比例；(3) 被切单元集离散跳变与 Newton 紧耦合结构性冲突；(4) López 2021 先例；(5) 优先级排序。保留方案 B `update_direction()` 的接口能力以备未来需要。
+
 **目标**：尾流面几何迭代对齐流场。
 **交付物**：
 - `wake/levelset.py` 增加 `update_from_velocity()` 方法
