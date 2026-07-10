@@ -1,0 +1,37 @@
+gate,check,value,criterion,status,note
+NACA-sub,coarse Newton steps to 1e-10,2 steps, |R| 4.7e-13,<= 8 steps,PASS,
+NACA-sub,coarse cl vs corrected panel,0.2776,+/-5% of midpoint 0.2853 (coarse band),PASS,cl_KJ 0.2781 (KJ-vs-pressure 0.2%)
+NACA-sub,coarse Kutta closure |F|,0.0e+00,< 1e-12 (machine),PASS,
+NACA-sub,medium Newton steps to 1e-10,2 steps, |R| 2.1e-13,<= 8 steps,PASS,
+NACA-sub,medium cl vs corrected panel,0.2844,in [0.2788; 0.2919] and +/-2% of 0.2853,PASS,cl_KJ 0.2844 (KJ-vs-pressure 0.0%)
+NACA-sub,medium Kutta closure |F|,0.0e+00,< 1e-12 (machine),PASS,
+NACA-tr,condition (fold contingency),M0.78/alpha1.0,alpha 1.25 unless the FP fold interferes,PASS,fold-steep family at alpha 1.25 -- both meshes rerun at 1.0 per the contingency rule (attempts reported below)
+NACA-tr,fold-zone grid sensitivity at alpha 1.25 (finding),shock 0.522 vs 0.602; cl 0.3399 vs 0.4339,reported: SAME condition; both TRUE solutions (terminal |R| < 1e-9; 0 lim/flr),PASS,the G8.1 fold finding in grid form: the family is so steep in M that O(h) differences act like an O(0.01) Mach shift
+NACA-tr,fold-zone grid sensitivity at alpha 1.0 (finding),shock 0.486 vs 0.555; cl 0.2626 vs 0.3238,reported: SAME condition; both TRUE solutions (terminal |R| < 1e-9; 0 lim/flr),PASS,the G8.1 fold finding in grid form: the family is so steep in M that O(h) differences act like an O(0.01) Mach shift
+NACA-tr,coarse converged,True,True,PASS,5 levels; 4 s end-to-end
+NACA-tr,coarse terminal residual,8.3e-11,< 1e-9,PASS,
+NACA-tr,coarse terminal quadratic drops,3.7e-02, 5.1e-04,both < 5e-2 (G8.1 gate cases: 3e-2),PASS,
+NACA-tr,coarse Kutta closure |F|,0.0e+00,< 1e-12 (machine),PASS,
+NACA-tr,coarse clean pocket,lim 0 flr 0,0 / 0,PASS,
+NACA-tr,medium converged,True,True,PASS,9 levels; 54 s end-to-end
+NACA-tr,medium terminal residual,2.0e-13,< 1e-9,PASS,
+NACA-tr,medium terminal quadratic drops,1.2e-03, 8.9e-04,both < 5e-2 (G8.1 gate cases: 3e-2),PASS,
+NACA-tr,medium Kutta closure |F|,0.0e+00,< 1e-12 (machine),PASS,
+NACA-tr,medium clean pocket,lim 0 flr 0,0 / 0,PASS,
+NACA-tr,coarse shock/cl (regression lock),0.486 / 0.2626,0.486 +/- 0.012 / 0.2626 +/- 0.010,PASS,lock = this demo's 2026-07-11 Newton baseline
+NACA-tr,medium shock/cl (regression lock),0.555 / 0.3238,0.555 +/- 0.012 / 0.3238 +/- 0.010,PASS,lock = this demo's 2026-07-11 Newton baseline
+M6,coarse converged,True,True,PASS,4 levels; 13 s end-to-end
+M6,coarse terminal residual,6.9e-12,< 1e-9,PASS,
+M6,coarse terminal quadratic drops,4.1e-03, 7.8e-05,both < 5e-2 (G8.1 gate cases: 3e-2),PASS,
+M6,coarse Kutta closure |F|,1.7e-16,< 1e-12 (machine),PASS,
+M6,coarse clean pocket,lim 0 flr 0,0 / 0,PASS,
+M6,coarse cl_p (regression lock),0.2560,0.256 +/- 0.005,PASS,cl_KJ 0.2621
+M6,medium converged,True,True,PASS,4 levels; 257 s end-to-end
+M6,medium terminal residual,7.0e-15,< 1e-9,PASS,
+M6,medium terminal quadratic drops,8.1e-04, 3.3e-05,both < 5e-2 (G8.1 gate cases: 3e-2),PASS,
+M6,medium Kutta closure |F|,2.1e-16,< 1e-12 (machine),PASS,
+M6,medium clean pocket,lim 0 flr 0,0 / 0,PASS,
+M6,medium cl_p (regression lock),0.2646,0.2646 +/- 0.005,PASS,cl_KJ 0.2692
+M6,medium shock x/c 0.44/0.65/0.90 (lock),0.596/0.541/0.362,0.596/0.541/0.362 +/- 0.02,PASS,
+M6,medium M_max (lock),2.129,2.134 +/- 0.05,PASS,
+M6,medium end to end (G8.2 budget),257 s,< 300 s single node,PASS,recorded P5 Picard solve: 4539 s

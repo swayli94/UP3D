@@ -34,6 +34,9 @@ than silently corrected away.
 | M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced |
 | P5 3D validation (ONERA M6) | `cases/demo/p5_onera_m6/` | 16 PASS | closed 2026-07-08 (V6 < 1% deferred to P9) |
 | P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 6 PASS (incl. gated M6) | closed 2026-07-08 (sawtooth = recovery artifact) |
+| P7 differentiable walk flux | `cases/demo/p7_diff_flux/` | 7 PASS (incl. gated converged-field) | closed 2026-07-10 (FD 3–5e-10) |
+| P8 fully-coupled Newton | `cases/demo/p8_newton/` | 15 PASS (parts 2–3 gated) | closed 2026-07-11 (G8.1 + G8.2 + G8.3) |
+| P8 capability assessment | `cases/demo/p8_capability/` | 36 PASS (full matrix gated) | **evaluation demo, not a gate** (2026-07-11) |
 
 > Track-P renumber (2026-07-08): P6 = surface recovery (this); P7 = differentiable
 > flux (Newton prereq); P8 = fully-coupled Newton; P9 = curved wall elements;
@@ -1050,6 +1053,137 @@ G8.2 M6 medium end to end in 249.2 s < 5 min, G8.3 CI budget 5m02s < 10 min.
 The production path for a 3D transonic case is now: Picard warm levels +
 coupled Newton finish, ~18× faster than the Picard recipe and converging to
 the actual discrete solution.
+
+---
+
+## P8 capability assessment — cross-case evaluation demo (2026-07-11, NOT a gate)
+
+**Purpose.** Post-P8 stock-taking requested by the user: run the production P8
+Newton solver over the geometry × mesh matrix and measure, in one reproducible
+place, (a) convergence behaviour (residual, Kutta closure, circulation → KJ
+lift, per Mach level — using the new `gamma_history`/`level_results` solver
+instrumentation added for this demo, additive keys only, suite bit-unchanged
+at 182+8+2), (b) section-Cp accuracy against the available references, and
+(c) end-to-end cost — as the evidence base for choosing the next track (P9
+curved walls vs Track V viscous vs Track B level-set wake). This demo asserts
+convergence quality and regression locks but does NOT close or claim any
+roadmap gate. Demo: `cases/demo/p8_capability/` (part 1 NACA coarse always;
+the full matrix under `PYFP3D_TRANSONIC_GATES=1`, ~23 min with the 16-thread
+cap `NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16`).
+
+**Case matrix and measured results (36/36 PASS, `results/checks.csv` +
+`results/summary.csv`).**
+
+| case | mesh (nodes/tets) | condition | levels / Newton steps | final ‖R‖∞ | Kutta ‖F‖ | cl_p (cl_KJ) | shock x/c | end-to-end |
+|---|---|---|---|---|---|---|---|---|
+| NACA sub | coarse 5.6k/16.4k | M0.50/α2.00 | 1 / 2 | 4.7e-13 | 0 | 0.2776 (0.2781) | — | 3.6 s |
+| NACA sub | medium 20.9k/61.8k | M0.50/α2.00 | 1 / 2 | 2.1e-13 | 0 | 0.2844 (0.2844) | — | 13.6 s |
+| NACA tr | coarse | M0.78/α1.00 | 5 / 29 | 8.3e-11 | 0 | 0.2626 (0.2658) | 0.486 | 4.1 s |
+| NACA tr | medium | M0.78/α1.00 | 9 / 252 | 2.0e-13 | 0 | 0.3238 (0.3257) | 0.555 | 54.1 s |
+| NACA tr (fold attempt) | coarse | M0.78/α1.25 | 5 / 35 | 2.2e-11 | 0 | 0.3399 (0.3445) | 0.522 | 4.4 s |
+| NACA tr (fold attempt) | medium | M0.78/α1.25 | 7 / 194 | 2.1e-11 | 0 | 0.4339 (0.4372) | 0.602 | 44.2 s |
+| ONERA M6 | coarse 11.0k/55.5k | M0.84/α3.06 | 4 / 35 | 6.9e-12 | 1.7e-16 | 0.2560 (0.2621) | 0.600/0.573/0.429 | 13.4 s |
+| ONERA M6 | medium 63.2k/350.7k | M0.84/α3.06 | 4 / 47 | 7.0e-15 | 2.1e-16 | 0.2646 (0.2692) | 0.596/0.541/0.362 | 256.5 s |
+
+All eight runs: 0 limited / 0 floored, Kutta closed to machine precision
+(secant era: ~1e-4), terminal super-linear collapse (assessment band 5e-2 on
+the best consecutive drop pair; the G8.1 gate cases keep their 3e-2 in the
+gated tests — the one 3.7e-2 pair, NACA coarse α1.0, is a warm start already
+at 6e-6 leaving only a 2-step tail: 1.64e-7 → 8.3e-11). Subsonic reference:
+corrected 2D panel bracket [PG 0.2788, KT 0.2919] — medium 0.2844 inside the
+bracket, −0.3% of the midpoint (P3 G3.2 semantics); coarse −2.7%. M6 medium
+reproduces every G8.2 regression lock (cl_p 0.2646, shocks 0.596/0.541/0.362,
+M_max 2.129, 257 s < 300 s).
+
+**★ Fold-zone grid-sensitivity finding (the user's contingency ladder
+exhausted).** The NACA transonic pair was specified SAME-condition
+M0.78/α1.25 on both meshes with an α→1.0 fallback if the FP fold interferes.
+Both meshes converge cleanly at BOTH alphas — but to points far apart on the
+fold-steep solution family: α1.25 coarse shock 0.522/cl 0.3399 vs medium
+0.602/0.4339 (Δcl 0.094); after the rule-mandated rerun, α1.0 STILL gives
+0.486/0.2626 vs 0.555/0.3238 (Δcl 0.061 > the 0.05 comparability band). This
+is the G8.1 fold finding in grid form: the measured family slope dcl/dM ≈
+6–10 in the M0.775–0.80 zone means O(h) discretization differences act like
+an O(0.01) M∞ shift — same-condition grid comparison is intrinsically
+ill-conditioned near the fold, and NONE of the four states is a solver
+failure (all are true discrete solutions, terminal-quadratic, 0 lim/flr).
+The demo therefore regression-locks each mesh's own Newton solution
+(±0.012 shock / ±0.010 cl, G8.1 semantics) instead of asserting a
+grid-convergence band, and reports both attempts (`summary.csv`; the α1.25
+pair is the dashed overlay in the Cp figure). Contrast: away from the fold
+the grid behaviour is benign — M6 M0.84 coarse→medium moves cl_p by only
+0.0086 and the η0.44 shock by 0.004. The medium α1.0 run also exercised the
+N5 robustness chain for real: 9 levels / 252 Newton steps with dm-halving
+retries visible in the convergence figure, still finishing at 2.0e-13.
+
+**Key figures.**
+
+![NACA convergence](../cases/demo/p8_capability/results/naca_convergence.png)
+
+![M6 convergence](../cases/demo/p8_capability/results/m6_convergence.png)
+
+![NACA Cp](../cases/demo/p8_capability/results/naca_cp_sections.png)
+
+![M6 Cp](../cases/demo/p8_capability/results/m6_cp_sections.png)
+
+![timing](../cases/demo/p8_capability/results/timing.png)
+
+Presentation notes: Cp curves are plotted with the P6 normal-gated recovery
+smoothing (1 pass); forces and shock/regression locks are measured on raw
+curves (G6.3/G8.2 protocol). The M6 lift-convergence panels make the V6 gap
+directly visible: cl_KJ (from Γ) settles ~2% above the pressure-integrated
+cl_p on both meshes. The M6 coarse tip section (η0.90) smears the double
+shock the medium mesh resolves — expected at 11k nodes.
+
+**Timing.** Newton end-to-end (mesh+cut / solve / post): NACA medium 54.1 s
+(1.0/52.6/0.5), M6 coarse 13.4 s (1.2/10.8/1.4), M6 medium 256.5 s
+(7.1/239.5/9.9) — vs the RECORDED Picard ledger baselines (not rerun, cost
+rule): NACA medium M0.80 G4.1 999 s to a state the P4 erratum showed is NOT
+a discrete solution, and M6 medium P5 solve 4539 s with Kutta |F| 5.8e-4 —
+~17.7× the Newton end-to-end that closes Kutta to 2e-16.
+
+**Honest capability boundaries (assessment).**
+
+1. **No non-lifting Newton path**: `solve_newton_lifting` structurally
+   requires the wake cut + Kutta/Γ block — a sphere cannot even build the
+   `(mesh_cut, wc)` pair (`cut_wake` raises without a wake group).
+   Non-lifting bodies run Picard (`solve_laplace`/`solve_subsonic`, P1/P3
+   demos) and carry the OPEN G1.6 flat-facet sphere-Cp gap (~11.6% vs the
+   2% gate, refinement-saturating ~3.6% at 7M tets; root-caused geometry
+   variational crime → P9). The sphere is deliberately absent from this
+   Newton demo (user arbitration 2026-07-11).
+2. **V6 lift floor (P9)**: M6 medium cl_KJ 0.2692 vs the Tranair/KRATOS
+   inviscid reference 0.288 — the remaining 0.019 is the sharp-TE/LE P1
+   wall O(h) floor (P5/P8 evidence), visible in this demo as the ~2%
+   cl_KJ-over-cl_p offset.
+3. **Fold-zone conditions are certification-hostile** (finding above):
+   single-mesh numbers near the FP fold are not mesh-converged engineering
+   data; report them with the family-slope context or move off the fold.
+4. **cd_p untrusted** (FP pressure drag on P1 walls, ~15% recovery
+   sensitivity — P6 record); not asserted anywhere in this demo.
+5. **Viscous effects absent**: the AGARD overlay is qualitative; VII
+   (Track V, designed) moves CL down toward experiment (~0.26–0.27) and
+   does NOT close the 0.288 inviscid gap (that is P9's).
+
+**Development outlook (evidence from this demo; the user arbitrates the
+order).**
+
+- **P9 curved walls** attacks the only two measured ACCURACY gaps — G1.6
+  (11.6% sphere Cp) and V6 (cl_KJ 0.019 below the inviscid references) —
+  both root-caused to the flat-facet P1 wall. Highest leverage on
+  reference-matching; medium-high risk (own effort, roadmap).
+- **Track V (VII/IBL)** adds the missing physics for absolute CL/CD against
+  experiment (the M6 Cp overlays in this demo show exactly the inviscid
+  offsets it would shrink); V1 is parallelizable with P9, V3 consumes the
+  P8 Newton machinery.
+- **Track B (level-set wake)** buys geometry flexibility (M2 wing-body);
+  no accuracy payoff on the current case set.
+- **P10 discrete adjoint** is cheap to open now: the exact P8 Jacobian +
+  `reduce_operator` machinery is the transpose seed; note the fold finding
+  also warns that fold-zone gradients will be ill-conditioned.
+- The `gamma_history`/`level_results` instrumentation added here is the
+  natural hook for all of these (convergence dashboards, VII coupling
+  monitors, adjoint checkpointing).
 
 ---
 

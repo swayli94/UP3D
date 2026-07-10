@@ -427,6 +427,7 @@ def solve_newton_lifting(
     # ---- Newton loop ---------------------------------------------------
     residual_history = []
     F_history = []
+    gamma_history = []
     eta_history = []
     newton_orders = []
     n_gmres_total = 0
@@ -459,6 +460,7 @@ def solve_newton_lifting(
         f_norm = float(np.max(np.abs(F))) if ws.n_st > 0 else 0.0
         residual_history.append(r_norm)
         F_history.append(f_norm)
+        gamma_history.append(gamma.copy())
         if len(residual_history) >= 3:
             r2, r1, r0 = (residual_history[-1], residual_history[-2],
                           residual_history[-3])
@@ -713,6 +715,7 @@ def solve_newton_lifting(
         "n_newton": len(residual_history) - (1 if converged else 0),
         "residual_history": residual_history,
         "F_history": F_history,
+        "gamma_history": gamma_history,
         "newton_orders": newton_orders,
         "eta_history": eta_history,
         "n_gmres_total": n_gmres_total,
@@ -768,7 +771,9 @@ def solve_newton_transonic(
     dm_min).
 
     Returns the final-level result dict plus level_history (per-level
-    (m, n_newton, |R|_final)).
+    (m, n_newton, |R|_final)) and level_results (per-level dicts with
+    the full residual/F/Gamma histories, wall_s and the level's timings
+    -- the returned top-level `timings` covers only the FINAL level).
     """
     from pyfp3d.solve.continuation import mach_schedule
 
@@ -785,6 +790,7 @@ def solve_newton_transonic(
     result = None
     last_good = None
     level_history = []
+    level_results = []
     levels = mach_schedule(m_inf, m_start, dm)
     i = 0
     while i < len(levels):
@@ -797,12 +803,24 @@ def solve_newton_transonic(
                           gamma_init=last_good["gamma"], n_picard_seed=0)
         if verbose:
             print(f"newton continuation level M = {m:.4f}")
+        t_lvl = time.perf_counter()
         result = solve_newton_lifting(mesh_cut, wc, m_inf=m,
                                       alpha_deg=alpha_deg, workspace=ws,
                                       verbose=verbose, **lvl_kw)
+        wall_lvl = time.perf_counter() - t_lvl
         ws = result["workspace"]
         level_history.append((m, result["n_newton"],
                               result["residual_history"][-1]))
+        level_results.append({
+            "m": m, "upwind_c": lvl_kw["upwind_c"],
+            "converged": result["converged"],
+            "n_newton": result["n_newton"],
+            "residual_history": result["residual_history"],
+            "F_history": result["F_history"],
+            "gamma_history": result["gamma_history"],
+            "wall_s": wall_lvl,
+            "timings": result["timings"],
+        })
         if not result["converged"]:
             m_prev = m_start if i == 0 else levels[i - 1]
             dm_new = 0.5 * (m - m_prev)
@@ -818,15 +836,28 @@ def solve_newton_transonic(
             lvl_kw = dict(kw)
             lvl_kw.update(upwind_c=c_post, phi_init=result["phi"],
                           gamma_init=result["gamma"], n_picard_seed=0)
+            t_lvl = time.perf_counter()
             result = solve_newton_lifting(mesh_cut, wc, m_inf=m_inf,
                                           alpha_deg=alpha_deg, workspace=ws,
                                           verbose=verbose, **lvl_kw)
+            wall_lvl = time.perf_counter() - t_lvl
             level_history.append((m_inf, result["n_newton"],
                                   result["residual_history"][-1]))
+            level_results.append({
+                "m": m_inf, "upwind_c": lvl_kw["upwind_c"],
+                "converged": result["converged"],
+                "n_newton": result["n_newton"],
+                "residual_history": result["residual_history"],
+                "F_history": result["F_history"],
+                "gamma_history": result["gamma_history"],
+                "wall_s": wall_lvl,
+                "timings": result["timings"],
+            })
             if not result["converged"]:
                 break
 
     result = dict(result)
     result["level_history"] = level_history
+    result["level_results"] = level_results
     result.pop("workspace", None)
     return result

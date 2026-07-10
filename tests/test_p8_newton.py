@@ -290,6 +290,10 @@ def test_newton_subsonic_terminal_order(coarse_mesh):
     assert len(orders) >= 1
     assert max(orders) > 1.8, f"observed orders {orders}"
     assert orders[-1] > 1.5, f"terminal order {orders[-1]:.2f}"
+    # per-step Gamma instrumentation (capability demo): 1:1 with the
+    # residual history, ends at the returned circulation
+    assert len(r["gamma_history"]) == len(h)
+    assert np.allclose(r["gamma_history"][-1], r["gamma"], atol=1e-12)
 
 
 # ------------------------------------------------- gated: G8.1 transonic
@@ -343,6 +347,13 @@ def test_g81_terminal_quadratic_coarse_m080():
     _assert_terminal_quadratic(r)
     assert r["n_limited"] == 0 and r["n_floored"] == 0
     assert r["F_history"][-1] < 1e-12                   # coupled Kutta
+    # per-level instrumentation (capability demo): ascending Mach ramp
+    # with one full history set per level
+    lvls = r["level_results"]
+    assert [lr["m"] for lr in lvls] == sorted(lr["m"] for lr in lvls)
+    assert all(len(lr["gamma_history"]) == len(lr["residual_history"])
+               for lr in lvls)
+    assert lvls[-1]["residual_history"][-1] == r["residual_history"][-1]
     assert rep["upper"]["has_shock"] and rep["upper"]["monotone"]
     assert abs(rep["upper"]["x_shock"] - 0.658) < 0.012
     assert abs(forces["cl"] - 0.459) < 0.01
