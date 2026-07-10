@@ -56,6 +56,31 @@ class WakeConstraint:
         self.n_reduced = n_red
         self.update_matrix(A)
 
+    def reduce_operator(self, A: sp.spmatrix) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
+        """Pure reduction of a cut-mesh operator: (T^T A T, T^T A G), with
+        G's columns the per-station slave-indicator vectors g_j.
+
+        The second factor H = T^T A G is d(reduced residual)/d(Gamma_j)
+        through the wake-jump map phi_full = T phi_red + g(Gamma): at the
+        Picard level its columns are the RHS vectors h_j (update_matrix
+        stores them as `_h`); at the Newton level, called on the full
+        Jacobian J of (6.3), it is the exact wake-jump block of
+        dR_red/dGamma (design.md Sec 8.1 -- the far-field vortex column is
+        NOT included here; the caller adds J_red[:, dir] @ dvals/dGamma).
+        Does not mutate the constraint's Picard-side state."""
+        A_reduced = (self.T.T @ (A @ self.T)).tocsr()
+
+        n_cut = self.T.shape[0]
+        wc = self.wc
+        A_csr = A.tocsr()
+        G = sp.coo_matrix(
+            (np.ones(len(wc.slave_nodes), dtype=np.float64),
+             (wc.slave_nodes, wc.node_station)),
+            shape=(n_cut, wc.n_stations),
+        ).tocsr()
+        H = self.T.T @ (A_csr @ G)
+        return A_reduced, H
+
     def update_matrix(self, A: sp.spmatrix) -> None:
         """Recompute A_reduced = T^T A T and the per-station RHS vectors
         h_j = T^T A g_j for a NEW A on the same cut mesh. T is purely
@@ -68,17 +93,8 @@ class WakeConstraint:
         station. Inert cost-wise on single-station 2.5D meshes; on the
         ONERA M6 family (166 stations, M1 delivery) this replaces 166
         matvecs per density iteration with one matmul."""
-        self.A_reduced = (self.T.T @ (A @ self.T)).tocsr()
-
-        n_cut = self.T.shape[0]
-        wc = self.wc
-        A_csr = A.tocsr()
-        G = sp.coo_matrix(
-            (np.ones(len(wc.slave_nodes), dtype=np.float64),
-             (wc.slave_nodes, wc.node_station)),
-            shape=(n_cut, wc.n_stations),
-        ).tocsr()
-        self._h = (self.T.T @ (A_csr @ G)).T.toarray()
+        self.A_reduced, H = self.reduce_operator(A)
+        self._h = H.T.toarray()
 
     def reduced_rhs(self, b: np.ndarray, gamma: np.ndarray) -> np.ndarray:
         """T^T b - sum_j Gamma_j h_j  (Gamma is RHS-only by construction)."""

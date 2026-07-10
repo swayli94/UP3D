@@ -42,7 +42,9 @@ pyfp3d/                    # Main package
 │   ├── __init__.py
 │   ├── wake.py           # ✓ master–slave elimination (A_red = TᵀAT once; Γ RHS-only via
 │   │                       #   precomputed per-station vectors); kutta_targets() (per-station
-│   │                       #   mean of probe jumps)
+│   │                       #   mean of probe jumps); ✓ [P8] reduce_operator(A) → (TᵀAT, TᵀAG)
+│   │                       #   pure/no-mutation (update_matrix delegates, bit-identical) —
+│   │                       #   on the Newton J its H column IS the exact wake-jump ∂R_red/∂Γ
 │   └── dirichlet.py      # ✓ far-field freestream + 2D vortex correction (branch cut ON
 │                           #   the wake sheet; eliminated ⁺-side far-field wake nodes
 │                           #   automatically consistent); ✓ [P3] Prandtl-Glauert scaling
@@ -66,7 +68,16 @@ pyfp3d/                    # Main package
 │   │                       #   scatter map, colored-prange data kernel, PicardOperator
 │   │                       #   per-mesh workspace (B_e/V_e/coloring/pattern/buffers once);
 │   │                       #   accumulation order fixed by color sequence => bit-deterministic
-│   │                       #   across calls/threads; [P8] exact Newton (6.3) lands here
+│   │                       #   across calls/threads; ✓ [P8/N2] assemble_newton_jacobian:
+│   │                       #   exact (6.3) at frozen selection — Terms 1+2 fused on the
+│   │                       #   SHARED Picard pattern (Term-2 footprint = Term-1; Term 2
+│   │                       #   added only when s_e≠0 so masked elements reduce to A bitwise
+│   │                       #   — a fused expression would FMA-contract differently), Term 3
+│   │                       #   (rows e → cols u(e), graph-dist ≤4) as ACTIVE-SET COO
+│   │                       #   (16 entries per s_u≠0 element, rebuilt per Newton step ⇒
+│   │                       #   selection churn can't corrupt a reused pattern); records
+│   │                       #   newton_nnz/n_term3_active (the N2 measurement); JVP
+│   │                       #   FD-verified ~1e-10 (test_p8_jacobian.py)
 │   ├── residual.py       # [P1] serial reference kernels (KEPT, regression-tested against)
 │   │                       #   + ✓ [P3] assemble_residual_colored; assemble_stiffness_matrix
 │   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P8] Newton
@@ -87,7 +98,11 @@ pyfp3d/                    # Main package
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
 │   │                       #   ✓ [P3] build_amg_preconditioner pins pyamg's spectral-radius
-│   │                       #   RNG seed -- ALL solves bit-reproducible run-to-run (G3.3)
+│   │                       #   RNG seed -- ALL solves bit-reproducible run-to-run (G3.3);
+│   │                       #   ✓ [P8/N3] solve_gmres (restarted, preconditioned, auto-retry
+│   │                       #   at 2× restart) + build_ilu_preconditioner — the Newton
+│   │                       #   Jacobian is NONSYMMETRIC in supersonic zones (Term 3), CG
+│   │                       #   does not apply; CG/AMG paths untouched
 │   ├── picard.py         # [P1] Laplace driver (done); ✓ [P2] solve_laplace_lifting():
 │   │                       #   Kutta outer loop, matrix+AMG built once, Γ updates RHS-only,
 │   │                       #   secant (Aitken) acceleration -> 2 updates on the linear driver;
@@ -112,7 +127,15 @@ pyfp3d/                    # Main package
 │   │                       #   -- the 3D secant leaves the stiffest station under-circulated
 │   │                       #   and DIVERGES if pushed (INVESTIGATION_kutta_closure.md);
 │   │                       #   default 0 = P4 path bit-identical
-│   └── newton.py         # [P8] Newton method (PLANNED, file not created yet)
+│   └── newton.py         # ✓ [P8/N4] fully-coupled (φ_red, Γ) Newton driver (design.md §8.1):
+│                           #   NewtonWorkspace (free/dir split, Kutta row K, affine far-field
+│                           #   basis vals0_red + V_red·Γ via unit-Γ probing), ONE shared
+│                           #   eval_residual path, exact δΓ elimination (J_ff + B·K) δφ =
+│                           #   −R − B·F with B = J_red[free,dir]@V_red + H_J[free,:] (the
+│                           #   easy-to-miss far-field vortex column INCLUDED, FD-guarded),
+│                           #   GMRES + Term-1-AMG + Eisenstat–Walker, safety-only line search,
+│                           #   optional consistent ptc_dtau; solve_newton_transonic = upward
+│                           #   Mach-continuation SKELETON (interfaces final, tuning = N5)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -215,9 +238,19 @@ tests/                     # Unit and gate tests
 ├── test_p6_recovery.py              # ✓ [P6] G6.1 recovery smoothing + G6.4 bit-identity
 ├── test_p6_weighted_flux.py         # ✓ [P6] opt-in kernel-flux invariants (no-op, determinism,
 │                                     #   weighted=False restores the walk bitwise)
-└── test_p7_diff_flux.py             # ✓ [P7] Gate G7.3: frozen-selection ∂ρ̃/∂φ of the walk flux
-                                      #   FD-verified (JVP vs shipped rho_tilde_sweep at frozen u;
-                                      #   all regimes + floor branch; kink-locus guard documented)
+├── test_p7_diff_flux.py             # ✓ [P7] Gate G7.3: frozen-selection ∂ρ̃/∂φ of the walk flux
+│                                     #   FD-verified (JVP vs shipped rho_tilde_sweep at frozen u;
+│                                     #   all regimes + floor branch; kink-locus guard documented)
+├── test_p8_jacobian.py              # ✓ [P8/N2] assembled Newton Jacobian JVP vs frozen-selection
+│                                     #   residual FD (all regimes, rel ~1e-10 vs 1e-6 tol; kink
+│                                     #   rows lifted from the P7 element guard); pattern-sharing,
+│                                     #   limiter-mask gating, forward-path bit-guard; + gated
+│                                     #   converged-G4.1-pocket FD (PYFP3D_TRANSONIC_GATES=1, N5)
+└── test_p8_newton.py                # ✓ [P8/N3+N4] coupled Newton subsonic milestone: Γ-column
+                                      #   FD (far-field-column trap detector), exact Kutta row,
+                                      #   far-field Γ-linearity, GMRES-vs-direct, supersonic
+                                      #   nonsymmetry, cl/Γ match vs P3 Picard, terminal order
+                                      #   p_k ~ 2, m_inf=0 single-step Laplace limit
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap
