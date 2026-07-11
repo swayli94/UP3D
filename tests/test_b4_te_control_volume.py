@@ -1,35 +1,35 @@
 """
 Track B / B4 gate: TE control-volume & implicit-Kutta re-derivation
-(docs/roadmap.md Track B B4; docs/design_track_b.md section 9 "OPEN DESIGN
-PROBLEM").
+(docs/roadmap.md Track B B4; docs/design_track_b.md §9).
 
-B3 delivered the multivalued lifting solve, but the emergent circulation
-converges to the WRONG value (NACA0012 a=2, incompressible: Gamma 0.207 ->
-0.176 -> 0.170 on coarse/medium/fine vs the conforming/thin-airfoil 0.120).
-This module is the DIAGNOSTIC harness for the re-derivation: it pins the two
-structural facts that localize the defect, and emits the visual artifact the
-re-derivation is steered by.
+B3 delivered the multivalued lifting solve, but its emergent circulation
+converged to the WRONG value (Γ → ~0.168 vs the conforming 0.120). B4 fixes
+that. The chain of reasoning, each link pinned by a test here:
 
-The two facts (design_track_b.md section 9):
+  1. **The wake LS cannot pin Γ.** Its residual is identically zero for ANY
+     spatially-constant jump, because Σ_c ∇N_c = ∇(1) = 0 (partition of
+     unity). So "g₂ IS the discrete Kutta" is false, and the LS block has a
+     constant-jump null space.        -> test_wake_ls_has_constant_jump_nullspace
 
-  1. **The wake LS cannot pin Gamma.** Its residual is IDENTICALLY zero for
-     any spatially-constant jump, because sum_c grad(N_c) = grad(1) = 0
-     (partition of unity). So the LS block has a constant-jump null space,
-     and "g2 IS the discrete Kutta condition" (the old design_track_b.md
-     section 2.3 claim) is FALSE. Test: test_wake_ls_has_constant_jump_nullspace.
+  2. So Γ must be pinned by the TE rows. B3 used lower-side mass conservation
+     there, whose control volume is up/down ASYMMETRIC on a symmetric airfoil
+     (the ε shift sends every on-sheet node "+"). That over-circulated ~42%.
 
-  2. **Gamma is therefore pinned by a SINGLE equation** -- the TE aux row
-     (lower-side mass conservation at the trailing edge) -- and that row's
-     control volume is UP/DOWN ASYMMETRIC on a symmetric airfoil (upper fan
-     9 elements vs lower fan 6 on the medium NACA mesh), because the eps
-     side-shift sends every on-sheet node "+". Test:
-     test_te_control_volume_is_asymmetric.
+  3. **B4's fix: the NONLINEAR TE pressure-equality (Bernoulli) Kutta**,
+     |q_u|² = |q_l|², factorized exactly as (q_u+q_l)·(q_u−q_l) = 0 and
+     linearized by freezing the mean. q_u and q_l are recovered on the TE's
+     **WALL-ADJACENT** upper/lower control volumes — the body surfaces at the
+     TE. They come from DIFFERENT element sets, so q_u−q_l is NOT a jump
+     gradient and does NOT vanish for a constant jump: non-degenerate in Γ.
+                                       -> test_te_kutta_pins_gamma
+     Symmetrizing the control volume is NOT an available route (the mesh is
+     naturally asymmetric there — user-arbitrated 2026-07-12); the condition is
+     instead a pointwise physical statement needing no symmetry.
 
-Fact 2 is the standing hypothesis for the ~45% over-circulation; the B4 gate
-is to re-derive the TE control volume so the discrete Kutta is consistent
-(and, per the roadmap, to make the emergent Gamma converge to the conforming
-value). These tests DOCUMENT the defect: they will need updating when B4
-lands, which is intentional -- they are the before/after pins.
+  4. **Wall-adjacency is what makes it accurate.** Recovering q over the whole
+     TE element fan (interior + wake elements pollute the average) gives Γ
+     0.1407/0.1355; over the wall-adjacent elements only, 0.1177/0.1191 vs the
+     conforming 0.1175/0.1200.        -> test_wall_adjacent_recovery_is_what_works
 """
 
 from pathlib import Path
@@ -38,14 +38,14 @@ import numpy as np
 import pytest
 
 from pyfp3d.mesh.reader import read_mesh
+from pyfp3d.mesh.wake_cut import cut_wake
+from pyfp3d.solve.picard import solve_laplace_lifting
+from pyfp3d.solve.picard_ls import solve_multivalued_lifting
 from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet
 
 REPO_ROOT = Path(__file__).parent.parent
 M0_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
-
-# Measured 2026-07-12 (incompressible, alpha = 2 deg), conforming = 0.1200.
-CONFORMING_GAMMA = 0.1200
-MEASURED_GAMMA = {"coarse": 0.2074, "medium": 0.1760, "fine": 0.1704}
+ALPHA = 2.0
 
 
 def _load(level):
@@ -56,8 +56,8 @@ def _load(level):
 
 
 def _setup(mesh):
-    """Horizontal (chord-plane) wake -- design.md Sec 4; it is also the plane
-    the M0 mesh embeds and the plane the far-field vortex branch cut uses."""
+    """Horizontal (chord-plane) wake — design.md §4; it is also the plane the
+    M0 mesh embeds and the plane the far-field vortex branch cut uses."""
     z = mesh.nodes[:, 2]
     wls = WakeLevelSet(
         np.array([[1.0, 0.0, z.min()], [1.0, 0.0, z.max()]]),
@@ -67,72 +67,54 @@ def _setup(mesh):
         mesh.nodes, mesh.elements, wls,
         wall_nodes=np.unique(mesh.boundary_faces["wall"]),
     )
-    return wls, cm
+    return wls, cm, MultivaluedOperator(mesh.nodes, mesh.elements, cm,
+                                        levelset=wls)
 
 
-def _te_fan_census(mesh, cm, te_node):
-    """Classify the element fan around a TE node: upper (all '+', plain),
-    lower (below-TE fan, TE reference = aux), cut (sheet passes through)."""
-    el = np.asarray(mesh.elements, dtype=np.int64)
-    fan = np.flatnonzero((el == te_node).any(axis=1))
-    is_cut = np.zeros(len(el), dtype=bool)
-    is_cut[cm.cut_elems] = True
-    is_low = np.zeros(len(el), dtype=bool)
-    is_low[cm.te_lower_elems] = True
-    upper = fan[~is_cut[fan] & ~is_low[fan]]
-    return {
-        "fan": fan,
-        "upper": upper,
-        "lower": fan[is_low[fan]],
-        "cut": fan[is_cut[fan]],
-    }
+def _conforming_gamma(mesh):
+    mesh_cut, wc = cut_wake(mesh)
+    r = solve_laplace_lifting(mesh_cut, wc, alpha_deg=ALPHA)
+    return float(np.mean(r["gamma"]))
 
 
 class TestWakeLSNullspace:
-    """FACT 1: the wake LS is blind to a constant jump, so it cannot fix
-    Gamma. This is the analytic partition-of-unity result, pinned
-    numerically."""
+    """LINK 1 — the wake LS is blind to a constant jump, so it CANNOT fix Γ.
+    This is why a separate TE Kutta condition is structurally necessary."""
 
     @pytest.mark.parametrize("level", ["coarse", "medium"])
     def test_wake_ls_has_constant_jump_nullspace(self, level):
         mesh = _load(level)
-        wls, cm = _setup(mesh)
-        mvop = MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
-        A = mvop.assemble_matrix(closure="wake_ls").tocsr()
+        _, cm, mvop = _setup(mesh)
+        A = mvop.assemble_matrix(closure="wake_ls", te_kutta="mass").tocsr()
 
         from pyfp3d.kernels.cut_assembly import nonte_aux_rows
         ls_rows = nonte_aux_rows(cm)
         assert len(ls_rows) > 0
 
-        # A field with a spatially CONSTANT jump: aux = main - side * Gamma.
-        # (The potential is analytic across the wake -- the cut is only a
-        # branch cut -- so this IS the exact "other side" continuation.)
+        # aux = main - side*Γ is the EXACT other-side continuation (the
+        # potential is analytic across the wake; the cut is only a branch cut).
         rng = np.random.default_rng(0)
         x = np.zeros(mvop.n_total)
-        x[: cm.n_main] = rng.standard_normal(cm.n_main)  # arbitrary main field
+        x[: cm.n_main] = rng.standard_normal(cm.n_main)
         cut_nodes = np.flatnonzero(cm.ext_dof_of_node >= 0)
         aux = cm.ext_dof_of_node[cut_nodes]
         for gamma in (0.0, 0.12, 1.0, -0.7):
             x[aux] = x[cut_nodes] - cm.node_side[cut_nodes] * gamma
             r_ls = (A @ x)[ls_rows]
-            # scale-free: compare against the row norms
             scale = float(np.abs(A[ls_rows]).max()) * float(np.abs(x).max())
             assert np.max(np.abs(r_ls)) < 1e-10 * max(scale, 1.0), (
-                f"LS residual not zero for a constant jump {gamma}: "
-                f"{np.max(np.abs(r_ls)):.3e} -- the null-space argument broke"
+                f"LS residual not zero for constant jump {gamma} — the "
+                f"null-space argument broke: {np.max(np.abs(r_ls)):.3e}"
             )
 
 
 class TestTEControlVolume:
-    """FACT 2: the TE aux row -- the ONLY equation that pins Gamma -- sits on
-    an up/down asymmetric control volume."""
-
     @pytest.mark.parametrize("level", ["coarse", "medium"])
     def test_below_te_fan_is_not_cut(self, level):
-        """The eps-shift must not manufacture cuts in the below-TE fan
-        (Lopez p.57). Regression pin for the 2026-07-12 fix."""
+        """The ε shift must not manufacture cuts in the below-TE fan (López
+        p.57). Regression pin for the 2026-07-12 fix."""
         mesh = _load(level)
-        _, cm = _setup(mesh)
+        _, cm, _ = _setup(mesh)
         el = np.asarray(mesh.elements, dtype=np.int64)
         is_te = np.zeros(cm.n_main, dtype=bool)
         is_te[cm.te_nodes] = True
@@ -143,111 +125,122 @@ class TestTEControlVolume:
         )
         is_cut = np.zeros(len(el), dtype=bool)
         is_cut[cm.cut_elems] = True
-        assert not is_cut[true_fan].any(), (
-            "below-TE fan elements are being CUT -- they lie entirely at/below "
-            "the sheet and only touch the TE vertex (Lopez section 3.5.4 p.57)"
-        )
+        assert not is_cut[true_fan].any()
         assert set(true_fan) == set(cm.te_lower_elems)
 
-    def test_te_control_volume_is_asymmetric(self):
-        """THE STANDING B4 DEFECT: on a SYMMETRIC airfoil the TE upper and
-        lower control volumes should match; they do not, because the eps
-        shift sends every on-sheet node '+'."""
+    def test_te_control_volume_is_wall_adjacent(self):
+        """LINK 3/4 — the TE Kutta lives on the WALL-adjacent upper/lower
+        elements (the body surface at the TE), not the whole element fan."""
         mesh = _load("medium")
-        _, cm = _setup(mesh)
-        c = _te_fan_census(mesh, cm, cm.te_nodes[0])
-        n_up, n_lo = len(c["upper"]), len(c["cut"]) + len(c["lower"])
-        # Documented state (medium): 9 upper / 6 lower / 3 cut.
-        assert len(c["upper"]) == 9 and len(c["lower"]) == 6
-        assert len(c["cut"]) == 3
-        assert n_up != len(c["lower"]), (
-            "TE fan is symmetric now -- if B4 fixed it, update this pin"
+        _, cm, mvop = _setup(mesh)
+        el = np.asarray(mesh.elements, dtype=np.int64)
+        is_w = np.zeros(cm.n_main, dtype=bool)
+        is_w[np.unique(mesh.boundary_faces["wall"])] = True
+        for cv in mvop._te_cv:
+            assert len(cv["upper_elems"]) > 0 and len(cv["lower_elems"]) > 0
+            for key in ("upper_elems", "lower_elems"):
+                # every element in the control volume carries a wall FACE
+                assert np.all(is_w[el[cv[key]]].sum(axis=1) >= 3)
+
+
+class TestB4Gate:
+    """THE B4 GATE: the nonlinear TE pressure-equality Kutta pins Γ to the
+    conforming value; the B3 (lower-mass-conservation) TE row does not."""
+
+    @pytest.mark.parametrize("level", ["coarse", "medium"])
+    def test_te_kutta_pins_gamma(self, level):
+        mesh = _load(level)
+        g_ref = _conforming_gamma(mesh)
+
+        _, _, mvop = _setup(mesh)
+        g_new = solve_multivalued_lifting(
+            mvop, mesh, 0.0, alpha_deg=ALPHA, te_kutta="pressure"
+        )["gamma"]
+        err = abs(g_new - g_ref) / g_ref
+        assert err < 0.05, (
+            f"{level}: pressure-equality Kutta Γ={g_new:.4f} vs conforming "
+            f"{g_ref:.4f} ({err*100:.1f}% — gate is 5%)"
         )
+
+        # ...and the B3 TE row (lower-side mass conservation) does NOT: it
+        # over-circulates badly. Keeps the before/after contrast honest.
+        _, _, mvop2 = _setup(mesh)
+        g_old = solve_multivalued_lifting(
+            mesh=mesh, mvop=mvop2, m_inf=0.0, alpha_deg=ALPHA, te_kutta="mass"
+        )["gamma"]
+        assert abs(g_old - g_ref) / g_ref > 0.30
 
 
 class TestB4Artifacts:
-    """Headless diagnostic artifact steering the B4 re-derivation."""
-
     def test_export_te_diagnosis(self, gate_artifacts_dir):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        from matplotlib.lines import Line2D
 
         mesh = _load("medium")
-        _, cm = _setup(mesh)
+        _, cm, mvop = _setup(mesh)
         el = np.asarray(mesh.elements, dtype=np.int64)
         cen = mesh.nodes[el].mean(axis=1)
-        c = _te_fan_census(mesh, cm, cm.te_nodes[0])
-
-        fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(13, 5.2))
-
-        # (a) TE control volume: the element fan, coloured by class.
-        fan_pts = cen[c["fan"]]
-        pad = 0.35 * max(np.ptp(fan_pts[:, 0]), np.ptp(fan_pts[:, 1]))
-        x0, x1 = fan_pts[:, 0].min() - pad, fan_pts[:, 0].max() + pad
-        y0, y1 = fan_pts[:, 1].min() - pad, fan_pts[:, 1].max() + pad
+        cv = mvop._te_cv[0]
         te = mesh.nodes[cm.te_nodes[0]]
-        ax0.axhspan(y0, 0.0, color="tab:blue", alpha=0.05)
-        ax0.plot([te[0], x1], [te[1], te[1]], "k--", lw=1.6, zorder=1,
-                 label="wake sheet (y = 0)")
-        for key, col, lab in (
-            ("upper", "tab:red", "upper fan (main = $\\phi_u$)"),
-            ("lower", "tab:blue", "below-TE fan (TE ref = aux = $\\phi_l$)"),
-            ("cut", "tab:green", "cut (sheet through element)"),
-        ):
-            p = cen[c[key]]
-            ax0.scatter(p[:, 0], p[:, 1], s=130, c=col, alpha=0.85, zorder=3,
-                        edgecolors="k", linewidths=0.5,
-                        label=f"{lab}  [{len(c[key])}]")
+
+        # measured 2026-07-12 (incompressible, α=2°)
+        h = [1.0, 0.5, 0.25]
+        g_old = [0.2074, 0.1760, 0.1704]     # B3 TE row = lower mass cons
+        g_fan = [0.1407, 0.1355, 0.1329]     # B4 Kutta, FULL-fan recovery
+        g_new = [0.1177, 0.1191, 0.1197]     # B4 Kutta, WALL-adjacent (shipped)
+        g_ref = [0.1175, 0.1200, 0.1202]     # conforming, same meshes
+
+        fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(13.5, 5.2))
+
+        fan = np.flatnonzero((el == cm.te_nodes[0]).any(axis=1))
+        p = cen[fan]
+        ax0.scatter(p[:, 0], p[:, 1], s=60, c="lightgrey", edgecolors="grey",
+                    zorder=2, label=f"TE element fan  [{len(fan)}]")
+        for key, col, lab in (("upper", "tab:red", "UPPER control volume"),
+                              ("lower", "tab:blue", "LOWER control volume")):
+            q = cen[cv[f"{key}_elems"]]
+            ax0.scatter(q[:, 0], q[:, 1], s=150, c=col, edgecolors="k",
+                        linewidths=0.5, zorder=3,
+                        label=f"{lab} (wall-adjacent) [{len(q)}]")
+        ax0.plot([te[0], p[:, 0].max()], [te[1], te[1]], "k--", lw=1.5,
+                 zorder=1, label="wake sheet (y = 0)")
         ax0.plot(te[0], te[1], "k*", ms=20, zorder=4, label="TE node (doubled)")
-        ax0.set_xlim(x0, x1)
-        ax0.set_ylim(y0, y1)
-        ax0.set_xlabel("x")
-        ax0.set_ylabel("y")
-        ax0.set_title("B4 defect: TE control volume is UP/DOWN ASYMMETRIC\n"
-                      f"upper {len(c['upper'])} vs lower {len(c['lower'])} "
-                      "on a SYMMETRIC airfoil (element centroids)")
+        ax0.set_xlabel("x"); ax0.set_ylabel("y")
+        ax0.set_title("B4: the TE Kutta lives on the WALL-ADJACENT\n"
+                      "upper/lower control volumes, not the whole fan")
         ax0.legend(fontsize=8, loc="lower left", framealpha=0.92)
         ax0.grid(alpha=0.3)
 
-        # (b) the consequence: emergent Gamma converges to the WRONG value.
-        lv = ["coarse", "medium", "fine"]
-        g = [MEASURED_GAMMA[k] for k in lv]
-        h = [1.0, 0.5, 0.25]
-        ax1.plot(h, g, "o-", color="tab:red", lw=2, ms=9,
-                 label="B-path implicit Kutta (emergent $\\Gamma$)")
-        ax1.axhline(CONFORMING_GAMMA, color="tab:blue", ls="--", lw=2,
-                    label=f"conforming / thin-airfoil $\\Gamma$ = {CONFORMING_GAMMA}")
-        for hi, gi in zip(h, g):
-            ax1.annotate(f"{gi:.4f}", (hi, gi), textcoords="offset points",
-                         xytext=(0, 9), ha="center", fontsize=9)
+        ax1.plot(h, g_old, "s-", color="tab:red", lw=2, ms=8,
+                 label="B3: TE row = lower mass cons  (+42%)")
+        ax1.plot(h, g_fan, "^-", color="tab:orange", lw=2, ms=8,
+                 label="B4 Kutta, full-fan recovery  (+11%)")
+        ax1.plot(h, g_new, "o-", color="tab:green", lw=2.5, ms=10,
+                 label="B4 Kutta, WALL-adjacent  (shipped)")
+        ax1.plot(h, g_ref, "--", color="tab:blue", lw=2.5,
+                 label="conforming (same meshes)")
         ax1.set_xlabel("relative mesh size h  (coarse / medium / fine)")
         ax1.set_ylabel("$\\Gamma$")
-        ax1.set_title("Emergent circulation converges to ~0.168, NOT 0.120\n"
-                      "(mesh-convergent ⇒ a METHOD defect, not discretization)")
-        ax1.set_xscale("log")
-        ax1.invert_xaxis()
-        ax1.set_ylim(0.10, 0.22)
-        ax1.legend(fontsize=9)
-        ax1.grid(alpha=0.3, which="both")
+        ax1.set_title("B4 closes the gap: 42% → <1% of conforming\n"
+                      "(NACA0012, $\\alpha=2°$, incompressible)")
+        ax1.set_xscale("log"); ax1.invert_xaxis()
+        ax1.legend(fontsize=8.5); ax1.grid(alpha=0.3, which="both")
 
         fig.tight_layout()
-        png = gate_artifacts_dir / "b4_te_control_volume.png"
+        png = gate_artifacts_dir / "b4_te_kutta.png"
         fig.savefig(png, dpi=150, bbox_inches="tight")
         plt.close(fig)
         assert png.exists()
 
         csv = gate_artifacts_dir / "summary.csv"
         with open(csv, "w") as f:
-            f.write("quantity,value,note\n")
-            f.write(f"te_fan_upper,{len(c['upper'])},plain '+' elements\n")
-            f.write(f"te_fan_lower,{len(c['lower'])},below-TE fan (aux)\n")
-            f.write(f"te_fan_cut,{len(c['cut'])},sheet through element\n")
-            f.write(f"conforming_gamma,{CONFORMING_GAMMA},truth\n")
-            for k in lv:
-                err = abs(MEASURED_GAMMA[k] - CONFORMING_GAMMA) / CONFORMING_GAMMA
-                f.write(f"gamma_{k},{MEASURED_GAMMA[k]},err {err*100:.1f}%\n")
+            f.write("level,h,gamma_b3_massrow,gamma_b4_fullfan,"
+                    "gamma_b4_walladj,gamma_conforming,err_pct\n")
+            for i, lv in enumerate(("coarse", "medium", "fine")):
+                e = abs(g_new[i] - g_ref[i]) / g_ref[i] * 100
+                f.write(f"{lv},{h[i]},{g_old[i]},{g_fan[i]},{g_new[i]},"
+                        f"{g_ref[i]},{e:.2f}\n")
         assert csv.exists()
 
 

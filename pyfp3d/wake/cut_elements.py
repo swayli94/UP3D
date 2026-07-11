@@ -112,6 +112,11 @@ class CutElementMap:
         n_nodes = len(nodes)
         self.n_main = n_nodes
 
+        # Kept for the B4 TE Kutta: its control volumes are the WALL-adjacent
+        # elements at the TE (the upper/lower body surface), not the whole fan.
+        self.wall_nodes = (None if wall_nodes is None
+                           else np.asarray(wall_nodes, dtype=np.int64))
+
         s_raw, d, q = levelset.evaluate(nodes)
         h_node = _node_min_edge_length(nodes, el)
         self.s_raw = s_raw

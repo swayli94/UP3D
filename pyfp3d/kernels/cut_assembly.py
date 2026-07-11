@@ -265,6 +265,77 @@ def wake_ls_coo(op, cm, wake_normal: np.ndarray, u_hat: np.ndarray):
     return rows, cols, data
 
 
+def te_kutta_coo(mvop, phi_ext):
+    """TE Kutta row: the NONLINEAR pressure-equality (Bernoulli) condition,
+    linearized about the current iterate. One row per TE node, placed on that
+    node's AUX dof (Track B, B4; design_track_b.md section 9.5 route (b)).
+
+    The physical Kutta condition at a trailing edge is equal pressure on the
+    two sides, i.e. equal speed:
+
+        |q_u|^2 - |q_l|^2 = 0      (isentropic p is a monotone function of q^2)
+
+    which factorizes EXACTLY as
+
+        (q_u + q_l) . (q_u - q_l) = 0
+
+    with q_u, q_l the recovered nodal velocities on the TE's UPPER and LOWER
+    control volumes (MultivaluedOperator.te_velocities). Freezing the mean
+    s = q_u + q_l at the previous iterate leaves a row that is LINEAR in phi:
+
+        s . (q_u - q_l) = 0,
+
+    so it drops straight into the Picard loop (re-linearized each outer
+    iteration, exactly like the density lag) and converges to the exact
+    nonlinear condition. At a freestream start s ~ 2 u_inf and the row reduces
+    to the classical linearized Kutta.
+
+    ★ Why this and not the wake LS: q_u and q_l come from DIFFERENT element
+    sets, so q_u - q_l is NOT the gradient of a jump field and does NOT vanish
+    for a constant jump. The wake LS contracts grad[phi] on a SINGLE cut
+    element, which IS identically zero for a constant jump (partition of unity,
+    measured 1.9e-16), so it cannot pin Gamma -- the B3 blocker
+    (design_track_b.md section 9.2). This row is non-degenerate in Gamma and is
+    what replaces the old TE aux row (lower-side mass conservation), whose
+    control volume was up/down asymmetric on a symmetric airfoil.
+
+    Note the mesh is NOT symmetric at the TE and the eps shift biases the
+    upper/lower split, so the condition is deliberately a POINTWISE PHYSICAL
+    statement (equal pressure) that needs no symmetry -- symmetrizing the
+    control volume is not an available route (user-arbitrated 2026-07-12).
+
+    Returns:
+        (rows, cols, data) into the extended matrix; rows are the TE aux dofs.
+        The RHS is zero.
+    """
+    cm = mvop.cm
+    op = mvop.op
+    qu, ql = mvop.te_velocities(phi_ext)
+    s = qu + ql                                          # (n_te, 3), frozen
+
+    rows, cols, data = [], [], []
+    for i, t in enumerate(cm.te_nodes):
+        cv = mvop._te_cv[i]
+        row = cm.ext_dof_of_node[t]
+        for key, sign in (("upper", 1.0), ("lower", -1.0)):
+            e = cv[f"{key}_elems"]
+            d = cv[f"{key}_dofs"]
+            if len(e) == 0:
+                continue
+            w = op.V[e] / op.V[e].sum()                  # volume weights
+            # d(s . q_side)/d(x[d[e,a]]) = w_e * (s . B[e,a,:])
+            coef = sign * w[:, None] * np.einsum("ead,d->ea", op.B[e], s[i])
+            rows.append(np.full(d.size, row, dtype=np.int64))
+            cols.append(d.reshape(-1))
+            data.append(coef.reshape(-1))
+
+    if not rows:
+        e = np.empty(0, dtype=np.int64)
+        return e, e, np.empty(0, dtype=np.float64)
+    return (np.concatenate(rows), np.concatenate(cols),
+            np.concatenate(data))
+
+
 def continuity_closure_coo(cm):
     """Aux-row COO triplets for the B2 continuity ("weld") closure:
     aux_k - main_j = 0 for every aux DOF k belonging to cut node j. This

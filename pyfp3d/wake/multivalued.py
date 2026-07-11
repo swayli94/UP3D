@@ -33,6 +33,7 @@ from pyfp3d.kernels.cut_assembly import (
     mass_conservation_coo,
     multivalued_redirection_coo,
     nonte_aux_rows,
+    te_kutta_coo,
     wake_ls_coo,
 )
 from pyfp3d.kernels.jacobian import PicardOperator
@@ -77,8 +78,108 @@ class MultivaluedOperator:
             centroids = nodes[el[cm.cut_elems]].mean(axis=1)
             n_hat = levelset.surface_normals(centroids)
             self._ls_coo = wake_ls_coo(self.op, cm, n_hat, levelset.direction)
+        self._te_cv = self._build_te_control_volumes()
 
-    def assemble_matrix(self, rho_tilde=None, closure: str = "continuity"):
+    # -- TE control volumes (B4) ---------------------------------------------
+
+    def _build_te_control_volumes(self):
+        """Per TE node, the two control volumes the B4 TE-Kutta velocities are
+        recovered on:
+
+          UPPER = the WALL-ADJACENT elements that reference the TE through its
+                  MAIN dof  (i.e. the UPPER body surface at the TE),
+          LOWER = the WALL-ADJACENT elements that reference it through its AUX
+                  dof        (i.e. the LOWER body surface at the TE).
+
+        Each entry carries the element id and the DOF vector of THAT copy, so a
+        per-side velocity can be recovered exactly as the copy's assembly sees
+        it.
+
+        ★ WALL-ADJACENT (an element with a wall FACE, >= 3 wall nodes) is the
+        whole point, and it is what makes the condition accurate: the Kutta
+        condition is a statement about the UPPER- and LOWER-SURFACE velocities
+        at the TE, not about a volume average over the whole element fan.
+        Measured on NACA0012 a=2 (incompressible, vs the conforming 0.1175 /
+        0.1200): recovering over the FULL fan gives Gamma 0.1407 / 0.1355
+        (~15% high, because interior and wake elements pollute the average),
+        while the wall-adjacent recovery gives **0.1177 / 0.1191** -- 0.2% /
+        0.8%.
+
+        The two volumes are NOT mirror images (the mesh is not symmetric at the
+        TE and the eps shift biases the split), which is exactly why the TE
+        condition must be a POINTWISE PHYSICAL statement (equal pressure)
+        rather than anything that assumes symmetry -- symmetrising the control
+        volume is not an available route (user-arbitrated 2026-07-12).
+        """
+        cm = self.cm
+        el = np.asarray(self.op.elements, dtype=np.int64)
+        n_tets = len(el)
+        cut_index = np.full(n_tets, -1, dtype=np.int64)
+        cut_index[cm.cut_elems] = np.arange(len(cm.cut_elems))
+        is_tel = np.zeros(n_tets, dtype=bool)
+        is_tel[cm.te_lower_elems] = True
+        is_te = np.zeros(cm.n_main, dtype=bool)
+        is_te[cm.te_nodes] = True
+        tel_dof = np.where(is_te[el], cm.ext_dof_of_node[el], el)  # aux at TE
+
+        # Wall-adjacent = the element carries a wall FACE (>= 3 wall nodes).
+        if cm.wall_nodes is None:
+            on_wall = np.ones(len(el), dtype=bool)   # degenerate (no body)
+        else:
+            is_w = np.zeros(cm.n_main, dtype=bool)
+            is_w[cm.wall_nodes] = True
+            on_wall = is_w[el].sum(axis=1) >= 3
+
+        cvs = []
+        for t in cm.te_nodes:
+            fan = np.flatnonzero((el == t).any(axis=1) & on_wall)
+            eu, du, elo, dlo = [], [], [], []
+            for e in fan:
+                k = cut_index[e]
+                if k >= 0:                       # cut: it has BOTH copies
+                    eu.append(e); du.append(cm.dofs_upper[k])
+                    elo.append(e); dlo.append(cm.dofs_lower[k])
+                elif is_tel[e]:                  # below-TE fan -> lower only
+                    elo.append(e); dlo.append(tel_dof[e])
+                else:                            # plain "+" fan -> upper only
+                    eu.append(e); du.append(el[e])
+            cvs.append({
+                "upper_elems": np.array(eu, dtype=np.int64),
+                "upper_dofs": np.array(du, dtype=np.int64).reshape(-1, 4),
+                "lower_elems": np.array(elo, dtype=np.int64),
+                "lower_dofs": np.array(dlo, dtype=np.int64).reshape(-1, 4),
+            })
+        return cvs
+
+    def te_velocities(self, phi_ext):
+        """(q_upper, q_lower), each (n_te, 3): the volume-weighted recovered
+        nodal velocity at every TE node, taken separately over the TE's UPPER
+        and LOWER control volumes.
+
+        ★ These are NOT two evaluations of one element's gradient -- they come
+        from DIFFERENT element sets (the flow over the upper surface vs the
+        lower surface at the TE). That is exactly why the pressure-equality
+        Kutta built on them is NON-degenerate in Gamma, whereas the wake LS
+        (which contracts grad[phi] on a SINGLE cut element) is identically zero
+        for a constant jump and cannot pin Gamma at all (design_track_b.md
+        section 9.2).
+        """
+        x = np.asarray(phi_ext, dtype=np.float64)
+        B, V = self.op.B, self.op.V
+        qu = np.zeros((len(self._te_cv), 3))
+        ql = np.zeros((len(self._te_cv), 3))
+        for i, cv in enumerate(self._te_cv):
+            for key, out in (("upper", qu), ("lower", ql)):
+                e = cv[f"{key}_elems"]
+                d = cv[f"{key}_dofs"]
+                if len(e) == 0:
+                    continue
+                grad = np.einsum("ead,ea->ed", B[e], x[d])   # (n, 3) per copy
+                out[i] = (V[e][:, None] * grad).sum(axis=0) / V[e].sum()
+        return qu, ql
+
+    def assemble_matrix(self, rho_tilde=None, closure: str = "continuity",
+                        te_kutta: str = "pressure", phi_ext=None):
         """Extended (n_total x n_total) multivalued matrix.
 
         Args:
@@ -121,10 +222,37 @@ class MultivaluedOperator:
             drop = np.zeros(self.n_total, dtype=bool)
             drop[self._nonte_rows] = True
             keep = ~drop[m_row]
+            m_row, m_col, m_data = m_row[keep], m_col[keep], m_data[keep]
             ls_row, ls_col, ls_data = self._ls_coo
-            rows = np.concatenate([m_row[keep], ls_row])
-            cols = np.concatenate([m_col[keep], ls_col])
-            data = np.concatenate([m_data[keep], ls_data])
+            extra = [(ls_row, ls_col, ls_data)]
+
+            if te_kutta == "pressure":
+                # B4: the TE aux row carries the NONLINEAR pressure-equality
+                # Kutta instead of lower-side mass conservation (which is what
+                # the wake LS cannot supply -- it is blind to a constant jump,
+                # design_track_b.md section 9). To keep mass conserved at the
+                # TE, the lower-side mass-conservation entries are re-routed
+                # onto the TE MAIN row, which then carries the TOTAL
+                # (upper + lower) balance over the whole TE fan. This also
+                # avoids arbitrarily choosing WHICH side loses its equation.
+                if phi_ext is None:
+                    raise ValueError(
+                        "te_kutta='pressure' needs phi_ext (the current "
+                        "iterate) to linearize |q_u|^2 = |q_l|^2"
+                    )
+                te_aux = self.cm.ext_dof_of_node[self.cm.te_nodes]
+                reroute = np.zeros(self.n_total, dtype=np.int64) - 1
+                reroute[te_aux] = self.cm.te_nodes
+                hit = reroute[m_row] >= 0
+                m_row = m_row.copy()
+                m_row[hit] = reroute[m_row[hit]]
+                extra.append(te_kutta_coo(self, phi_ext))
+            elif te_kutta != "mass":
+                raise NotImplementedError(f"te_kutta={te_kutta!r} unknown")
+
+            rows = np.concatenate([m_row] + [e[0] for e in extra])
+            cols = np.concatenate([m_col] + [e[1] for e in extra])
+            data = np.concatenate([m_data] + [e[2] for e in extra])
         else:
             raise NotImplementedError(f"closure={closure!r} unknown")
 

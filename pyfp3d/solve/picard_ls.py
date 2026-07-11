@@ -110,6 +110,7 @@ def solve_multivalued_lifting(
     tol_rho: float = 1e-6,
     n_outer_max: int = 80,
     gamma_init: float = 0.0,
+    te_kutta: str = "pressure",
 ) -> Dict[str, object]:
     """Subsonic lifting solve on a level-set cut mesh with IMPLICIT Kutta
     (Track B, B3; design_track_b.md D2). NO Gamma secant and no master-slave
@@ -148,6 +149,12 @@ def solve_multivalued_lifting(
 
     phi_ext = np.zeros(mvop.n_total, dtype=np.float64)
     phi_ext[: mvop.n_main] = freestream_phi(mesh.nodes, alpha_deg, u_inf)
+    # Seed the aux DOFs with a ZERO jump (aux = main). Leaving them at 0 would
+    # manufacture a huge fake jump, and the first TE-Kutta linearization reads
+    # the seed: with a zero jump q_u = q_l = u_inf, so s = q_u + q_l = 2 u_inf
+    # and the row starts as the classical linearized Kutta.
+    cut_nodes = np.flatnonzero(mvop.cm.ext_dof_of_node >= 0)
+    phi_ext[mvop.cm.ext_dof_of_node[cut_nodes]] = phi_ext[cut_nodes]
     gamma = float(gamma_init)
     gamma_history = [gamma]
     drho_history = []
@@ -159,6 +166,8 @@ def solve_multivalued_lifting(
         A = mvop.assemble_matrix(
             rho_tilde=(None if rho_up is None else (rho_up, rho_lo)),
             closure="wake_ls",
+            te_kutta=te_kutta,
+            phi_ext=phi_ext,          # re-linearizes the TE Kutta row (B4)
         )
         ff, vals = _farfield_main(mesh, alpha_deg, gamma, u_inf,
                                   vortex_center, beta)
