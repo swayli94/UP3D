@@ -1366,6 +1366,57 @@ isoparametric *wall* elements cannot remove the edge of a wake sheet.
   up in 13 levels, **5294 s (88 min)**, inside the 2 h budget. Path changes
   are safe by G8.2's continuation-path independence.
 
+## Track B — B3 + B4: the level-set embedded wake lifts (closed 2026-07-12)
+
+**Demo:** `cases/demo/b3_levelset_lifting/` — `python run_demo.py`, ~1 min,
+**8/8 PASS**. NACA0012 medium, incompressible, α = 0 and α = 4, on the **same
+mesh with the same level set**. The mesh topology knows nothing about the wake.
+
+| check | measured | criterion |
+| --- | --- | --- |
+| Γ at α = 0 | −3.9e−4 | \|Γ\| < 1e−3 (symmetric ⇒ no circulation) |
+| Γ at α = 4 | **0.2384** (conforming 0.2393, **0.4%**) | > 0.2 |
+| aux DOFs / main DOFs | **9.5%** (2982 cut tets of 61788) | < 15% — a thin strip |
+| TE Kutta control volumes | 2 upper / 2 lower, wall-adjacent | both non-empty |
+| jump drift TE → far field | **0.0%** | < 10% (no drain) |
+| cl_pressure vs conforming (α=4) | 0.4770 vs 0.4786 | within 3% |
+| cl_pressure vs cl_KJ = 2Γ | 0.4770 vs 0.4769 | within 5% (D11 mapping correct) |
+
+**Figures.**
+
+1. `flowfield_lift_vs_nolift.png` — speed (own-side) and the perturbation
+   potential drawn **per element**, i.e. exactly as the multivalued DOFs store
+   it: a crisp branch cut carrying [φ] = Γ at α = 4, and a flat field with **no
+   jump at all** at α = 0. Same mesh, same level set, both rows.
+2. `levelset_region.png` — **where** the level set acts: ONE layer of elements
+   (4.8% of the tets), the below-TE fan, and the B4 TE-Kutta wall-adjacent
+   control volumes. The mesh is never modified. (The cut layer sits just BELOW
+   the sheet — the ε side-shift sends on-sheet nodes "+", so the sheet
+   effectively lies at y = −ε. That bias is exactly what B4's TE condition had
+   to be made immune to.)
+3. `wake_jump.png` — **how the jump survives to the far field.** LEFT: the nodal
+   [φ] at every cut node vs downstream distance is **flat at Γ from the TE
+   (d = 0) out to the far field (d ≈ 15 c)** — the g₁ + g₂ wake LS convects it
+   unchanged, and the far-field aux DOFs are left FREE so it exits rather than
+   being drained. (Pinning them to the vortex's lower branch was measured to
+   decay the jump 0.0147 → 0.001, i.e. to drain the circulation.) RIGHT: the
+   **storage** — the MAIN dof holds the node's own-side value, the AUX dof the
+   other side, and the gap between them is exactly Γ, all the way out. One mesh,
+   one extra dof per cut node — NOT two meshes (López fig. 3.6's "two meshes" is
+   only a visualization).
+4. `wall_cp.png` — surface Cp at both incidences using the **D11 per-side DOF
+   mapping** (lower-surface TE triangles must read the TE's AUX value; using
+   `phi_main` alone gives cl_pressure = −3.35, junk). It overlays the conforming
+   solver on the same mesh at both α; at α = 0 upper and lower collapse.
+
+**What this evidences.** Lift emerges on a mesh that never had a wake embedded:
+Γ is a RESULT (no secant, no master–slave constraint), pinned by the B4 nonlinear
+TE pressure-equality Kutta and convected downstream by the wake LS. Roadmap
+Track B B3/B4; numerics + the B4 derivation in
+[design_track_b.md §9](design_track_b.md).
+
+---
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from
