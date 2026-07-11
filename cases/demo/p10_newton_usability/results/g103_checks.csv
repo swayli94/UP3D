@@ -1,0 +1,10 @@
+gate,check,value,criterion,status,note
+G10.3,m6_coarse/s1_picard5 outcome class,A (clamp_free=False, 6s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,m6_coarse/s2_picard40 outcome class,A (clamp_free=True, 11s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,m6_medium/s1_picard5 outcome class,A (clamp_free=False, 79s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,m6_medium/s2_picard40 outcome class,A (clamp_free=True, 132s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,naca_coarse/s1_picard5 outcome class,A (clamp_free=False, 4s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,naca_coarse/s2_picard40 outcome class,C (clamp_free=False, 43s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,naca_medium/s1_picard5 outcome class,C (clamp_free=False, 22s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,naca_medium/s2_picard40 outcome class,C (clamp_free=False, 209s),pre-registered A/B/C -- any class is a valid result,PASS,evidence gate: the class IS the result
+G10.3,promotion rule,both M6 class-A+clamp-free=False, gains=n/a,>= 20% on BOTH M6 cases; class A; clamp-free path,PASS,KEEP the Mach ramp (record the evidence)

@@ -1,0 +1,5 @@
+case,ramp_wall_s,noramp_best_wall_s,noramp_best_seeding,gain
+m6_coarse,8.0,5.9,s1_picard5,n/a
+m6_medium,141.4,79.0,s1_picard5,n/a
+naca_coarse,nan,4.0,s1_picard5,n/a
+naca_medium,nan,n/a,n/a,n/a

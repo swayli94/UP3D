@@ -448,6 +448,7 @@ def solve_newton_lifting(
     residual_history = []
     F_history = []
     gamma_history = []
+    clamp_history = []             # (n_limited, n_floored) per iteration
     eta_history = []
     newton_orders = []
     n_gmres_total = 0
@@ -482,6 +483,7 @@ def solve_newton_lifting(
         residual_history.append(r_norm)
         F_history.append(f_norm)
         gamma_history.append(gamma.copy())
+        clamp_history.append((state["n_limited"], state["n_floored"]))
         if len(residual_history) >= 3:
             r2, r1, r0 = (residual_history[-1], residual_history[-2],
                           residual_history[-3])
@@ -755,6 +757,7 @@ def solve_newton_lifting(
         "residual_history": residual_history,
         "F_history": F_history,
         "gamma_history": gamma_history,
+        "clamp_history": clamp_history,
         "newton_orders": newton_orders,
         "eta_history": eta_history,
         "n_gmres_total": n_gmres_total,

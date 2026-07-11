@@ -1,0 +1,9 @@
+case,seeding,class,clamp_free_path,converged,n_newton,residual_final,F_final,n_limited,n_floored,max_clamped,freeze_reverts,cl,m_max,shocks,wall_s
+m6_coarse,s1_picard5,A,False,True,11,6.932e-12,1.8e-16,0,0,11,0,0.2561,1.397,0.600;0.573;0.429,5.9
+m6_coarse,s2_picard40,A,True,True,11,6.932e-12,1.9e-16,0,0,0,0,0.2560,1.397,0.600;0.573;0.429,11.0
+m6_medium,s1_picard5,A,False,True,12,6.617e-15,1.8e-16,0,0,45,0,0.2646,2.129,0.596;0.541;0.362,79.0
+m6_medium,s2_picard40,A,True,True,12,6.905e-15,1.9e-16,0,0,0,0,0.2646,2.134,0.596;0.541;0.362,132.0
+naca_coarse,s1_picard5,A,False,True,27,5.461e-12,1.1e-16,0,0,28,1,0.4590,1.408,0.658,4.0
+naca_coarse,s2_picard40,C,False,False,18,4.633e-01,0.0e+00,1625,138,1763,0,1.6300,3.000,0.941,43.4
+naca_medium,s1_picard5,C,False,False,60,4.568e-06,1.4e-09,0,0,43,6,0.4492,1.451,0.613,22.1
+naca_medium,s2_picard40,C,False,False,37,1.164e-01,0.0e+00,9934,704,10638,0,0.1932,3.000,0.499,209.2

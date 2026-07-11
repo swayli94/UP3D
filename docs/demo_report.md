@@ -1236,6 +1236,33 @@ away from folds (M6 class) they are pure profit. This is the P8 N2–N4
 "warm-start only from CONVERGED levels" warning in its G10.2 form, and it
 is why the promotion is per-recipe.
 
+**G10.3 no-ramp direct-solve feasibility (closed 2026-07-11; verdict: KEEP
+the Mach ramp).** `run_g103_noramp.py` (9 PASS; `results/g103_noramp.csv`,
+`g103_summary.csv`, `g103_noramp_convergence.png`): single-level Newton at
+the target M∞, seedings s1 = Picard-5 / s2 = Picard-40, four cases.
+Measured answer to "what is the ramp actually buying":
+
+| case | s1 (Picard-5) | s2 (Picard-40) |
+|---|---|---|
+| M6 coarse M0.84 | **A** — same solution, 5.9 s vs ramp 8.0 s, but clamped transient (peak 11) | **A**, clamp-free, 11.0 s (−37% vs ramp) |
+| M6 medium M0.84 | **A** — same solution (cl 0.2646, ‖R‖ 6.6e-15), **79.0 s vs ramp 141.4 s (+44%)**, but clamped transient (peak 45; final 0/0) | **A**, clamp-free, 132.0 s (+6.6%) |
+| NACA coarse M0.80 | A — 4.0 s (clamped transient + 1 freeze revert; single-case exception) | **C** — the un-continued Picard-40 seed itself diverges (1625 lim/138 flr, M_max at the 3.0 cap) |
+| NACA medium M0.7875 (fold) | **C** — stalls at 4.6e-6, cl 0.449 ≠ lock 0.523 | **C** — seed diverges (9934 limited) |
+
+Findings: (1) **far from the fold, branch selection is not the binding
+constraint** — no-ramp converges to the identical solution under both
+seedings; the ramp's measurable value there is a clamp-free transient.
+(2) No seeding satisfies the pre-registered promotion rule (s1 fails the
+clamp-free clause despite +44%; s2 is clamp-free but under 20%), so
+**no recipe change** — the +44%-but-clamped observation is recorded for
+user arbitration if the clamp-free clause is ever to be relaxed.
+(3) **Deep Picard seeds are actively harmful without a ramp** (both s2
+fold-zone divergences) — consistent with the P4/P5 record that Picard
+itself needs continuation at supercritical M∞. (4) Fold-zone no-ramp
+fails on medium regardless of seeding — the ramp stays, everywhere, as
+shipped. Instrumentation added: `clamp_history` on `solve_newton_lifting`
+(additive key).
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from
