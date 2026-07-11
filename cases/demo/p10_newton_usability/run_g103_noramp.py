@@ -261,10 +261,17 @@ def main():
         ax.set_title(f"no-ramp cold start: {title}")
         ax.legend(frameon=False, fontsize=7)
     finish(fig, OUT, "g103_noramp_convergence.png")
+    # CheckList.report always writes checks.csv; that name belongs to the
+    # committed G10.2 A/B evidence in this shared results/ dir, so stash
+    # and restore it around the report and keep this gate's table under
+    # its own name (first run learned this the hard way -- the rename
+    # alone clobbered the A/B file, restored in commit 25b1bf4)
+    ab_checks = (OUT / "checks.csv").read_bytes() \
+        if (OUT / "checks.csv").exists() else None
     code = cl.report(OUT)
-    # keep the committed G10.2 A/B checks.csv intact -- this script's
-    # check table lives under its own gate-scoped name
     (OUT / "checks.csv").rename(OUT / "g103_checks.csv")
+    if ab_checks is not None:
+        (OUT / "checks.csv").write_bytes(ab_checks)
     return code
 
 
