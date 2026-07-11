@@ -16,7 +16,7 @@ n_wall_faces,5152
 n_farfield_faces,372
 n_symmetry_faces,1284
 h_wall,0.03
-gen_seconds,2.3
+gen_seconds,1.6
 corridor_n_elements,5120
 corridor_median_edge,0.06702252995152302
 corridor_p90_edge,0.17626762308899108
