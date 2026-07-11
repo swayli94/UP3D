@@ -1142,19 +1142,36 @@ to P10/G10.1 the same day.)
 ## Track B — Level-set embedded wake (designed 2026-07-07; NOT started)
 
 Deliverable: `wake/` — a level-set wake representation + multivalued (CutFEM-style)
-elements + penalty Kutta, replacing the conforming embedded wake sheet +
-master–slave Γ elimination. Payoff: meshes need no pre-embedded wake surface
-(α sweeps without remeshing; blunt-TE anchoring; multi-wake / wake–fuselage
-intersections for M2). Design record: DN1
+elements + implicit Kutta (TE duplication + wake least-squares condition; penalty
+Kutta demoted to an optional diagnostic — design_track_b.md D2), replacing the
+conforming embedded wake sheet + master–slave Γ elimination.
+**Purpose (user-arbitrated 2026-07-11): mesh/geometry workflow capability** —
+no pre-embedded wake surface, α sweeps without remeshing, blunt-TE anchoring,
+multi-wake / wake–fuselage intersections for M2, structural elimination of the
+st133-class Kutta-probe failures. NOT solver speed: the original
+kill-the-Γ-secant efficiency motivation is obsolete post-P8 Newton
+(design_track_b.md §1); efficiency criteria below are non-regression guards only.
+Design record: DN1
 (`discussion_notes/20260707_1505_levelset_wake_design.md`); status snapshot in
 `discussion_notes/PLAN.md`. Design complete; **no implementation exists yet**.
+**Numerics reference (2026-07-11):** [design_track_b.md](design_track_b.md) —
+theory/implementation analysis cross-checked against the López dissertation;
+supersedes DN1 as the Track B numerics spec (key deltas: 3D wake BC uses the
+López g₁+g₂ two-component LS form, NOT the Núñez full-vector form; Kutta is
+implicit via TE duplication + the wake LS condition, penalty demoted to
+optional; on-wake nodes need the ε side-shift DN1 missed). Gate re-specs were
+**user-arbitrated 2026-07-11 and merged into the table below** (B3 re-spec;
+B3.5 far-field A/B NEW; B4 re-anchored post-P4-erratum, medium at M0.7875;
+B4.5 M6 3D gate NEW); design_track_b.md §7 is the arbitration record.
 
-| ID | Deliverable | Gate (acceptance sketch, DN1 §8) |
+| ID | Deliverable | Gate (acceptance; re-specced 2026-07-11 per design_track_b.md §7) |
 |----|-------------|----------------------------------|
 | B1 | Level-set wake + cut-element identification (`wake/levelset.py`, `wake/cut_elements.py`) | cut-element census, slave-DOF count, and ± side classification all consistent on the existing NACA 2.5D mesh **without** an embedded sheet |
 | B2 | Multivalued FE assembly (`wake/multivalued.py`, `kernels/cut_assembly.py`; PicardOperator + Dirichlet elimination extended) | V0 freestream < 1e−12 on the cut mesh; V1 MMS slope ≥ 1.9; Laplace α = 0 gives cl ≈ 0 |
-| B3 | Penalty Kutta + lifting solve (no Γ outer loop; Γ emerges from the solution) | V3 M0.5 α2°: cl inside [PG, KT]; extracted Γ within 1% of the secant path's; Picard count ≤ current |
-| B4 | Transonic + Mach continuation on the level-set path (inherits `damping_theta`) | V4 M0.80 α1.25°: shock ≈ 0.60, cl within 2% of P4; total Picard count reduced (nested Γ evals eliminated) |
+| B3 | Lifting solve with **implicit Kutta** (TE duplication + wake-LS condition per design_track_b.md D2; penalty Kutta kept as optional diagnostic; no Γ outer loop, Γ emerges; far field = option a, Dirichlet + Γ(z)-taper vortex refreshed from the extracted jump) | V3 M0.5 α2°: cl inside [PG, KT]; **per-station Γ(z) within 1% of the conforming path's on the SAME mesh** (strict A/B — the D1 wake-BC check, not just total TE circulation); Picard count ≤ conforming Picard path (non-regression guard only) |
+| B3.5 | **Far-field A/B (NEW 2026-07-11, user-arbitrated)**: option a (spherical Dirichlet + extracted-Γ(z) taper vortex) vs option b (López-style Neumann outlet, no vortex correction; domain size re-calibrated first per the dissertation §4.1.4 method) — design_track_b.md §5.4/D7 | subsonic NACA + M6 coarse: a-vs-b cl and Γ(z) agreement within the B3 gate bands after option-b re-calibration; the measured winner becomes the default for B4+ |
+| B4 | Transonic + Mach continuation on the level-set path (inherits `damping_theta`) | **Re-anchored 2026-07-11 (P4-erratum aware)**: NACA coarse M0.80 α1.25° inside the G8.1 Newton-lock bands (shock 0.658 / cl_p 0.459) as a Picard-quality comparison; **medium runs M0.7875** (the G8.1 re-specced case — M0.80 medium has no reachable isolated solution); same-mesh same-recipe Picard-vs-Picard A/B within 2%; fold discipline applies (per-mesh locks, no cross-mesh convergence claims) |
+| B4.5 | **M6 3D gate (NEW 2026-07-11, user-arbitrated)**: the 3D-only machinery — TE-polyline ruled level set (D9), g₂ spanwise-free wake BC (D1), tip Γ→0 — is untestable on the 2.5D meshes of B1–B4 | M6 coarse vs the P5/P8 baseline: Γ(z) distribution, cl_KJ, and shock positions within A/B bands |
 | B5 | Multi-wake validation (multi-element / wing-body) | two-element cl's plausible; fuselage carries no lift |
 | B6 | Curved wake / free wake — **SHELVED 2026-07-10** (DN2 §4.5.6: loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent). `update_direction()` interface capability retained. | — |
 
@@ -1163,13 +1180,14 @@ Working rules (DN1 §9–§10):
 - **No big-bang rewrite.** `solve/picard_ls.py` lives alongside
   `solve_subsonic_lifting`; the suite runs both paths parameterized; the default
   flips per-phase only after that phase's gate.
-- **Sequencing guard vs P8 (recorded 2026-07-10).** The P8 fully-coupled Newton
-  is designed on the *conforming* wake (the Γ-Jacobian blocks come from
-  `wake.py::self._h`; design.md §8.1), while B3's penalty Kutta removes the Γ DOF
-  entirely. Land P8 on the conforming path first; a level-set Newton is a
-  post-B4 re-derivation, not a parallel design. B3's penalty Kutta is an
-  **optional interface** for P8, not a dependency — Track B blocks nothing in
-  P7–P10.
+- **Sequencing guard vs P8 (recorded 2026-07-10; wording updated 2026-07-11).**
+  The P8 fully-coupled Newton is designed on the *conforming* wake (the
+  Γ-Jacobian blocks come from `wake.py::self._h`; design.md §8.1), while B3's
+  implicit Kutta removes the Γ DOF entirely. Land P8 on the conforming path
+  first (done — P8 closed 2026-07-11); a level-set Newton is a post-B4
+  re-derivation, not a parallel design (design_track_b.md §5.5: the wake-LS
+  Jacobian blocks are constant in φ, no Γ elimination/Woodbury needed) —
+  Track B blocks nothing in P7–P10.
 
 ---
 
@@ -1254,5 +1272,5 @@ Scope guards (DN2 §9, DN6 §13–14):
 | P10 | ◐ (G10.2 ✓ 2026-07-11; G10.1 open) | | **Newton generality & continuation efficiency (NEW 2026-07-11, user-proposed).** **G10.2 CLOSED 2026-07-11 — SPLIT A/B verdict** (demo `cases/demo/p10_newton_usability/`, run under the 16-thread timing protocol): `solve_newton_transonic(intermediate_tol=…)` opt-in, default None bit-identical (suite-locked; `solve_newton_lifting` grew `tol_residual_loose`/`tol_residual_rel`/`accept_on_stall` + `accept_reason` reporting; level_results record per-level accept_reason). Shipped rule = the pre-registered candidate + two A/B-measured hardenings: (1) loose acceptance requires ≥ 1 Newton step at the level (round-1 finding: warm-started levels ENTER below any absolute threshold — zero-step acceptance degenerates the ramp into a level skip); (2) dm-halving retry levels run STRICT (the halving cascade is the robustness fallback). **(a) M6 medium: all G8.2 locks intact, final level converges identically (12 steps, |R| 7.8e-15, cl/M_max/shocks equal to 4 digits), solve 239.5→140.3 s (+41.4%, intermediate levels 35→6 Newton steps: 1–3 loose steps each ending ~1e-5) ⇒ `intermediate_tol=1e-5` PROMOTED into `NEWTON_M6_RECIPE`** (gated G8.2 test now runs the adaptive path, ~145 s). **(b) NACA medium M0.7875: NEGATIVE result recorded — the P8 "warm-start only from CONVERGED levels" trap measured in G10.2 form:** near the fold (dcl/dM ~6–10) the loose ramp's 1–4-step levels never track Γ/shock, the final level and even STRICT halving-retry levels stall at the ~5e-6 live-churn floor for 60 steps each (round 2: cl 0.369 vs lock 0.523, unconverged) ⇒ `NEWTON_TRANSONIC_RECIPE` unchanged (strict); **loose intermediates are contraindicated in fold zones.** Suite +2 (`tests/test_p10_continuation.py`): default-path accept_reason lock + subsonic-ramp adaptive path (Γ matches strict to 1e-6, steps not worse). Baseline 184+8+2. **G10.3 CLOSED 2026-07-11 — verdict KEEP the ramp** (no-ramp single-level Newton at target M∞, 2 seedings × 4 cases, `run_g103_noramp.py`): far from the fold both seedings reach the SAME solution (class A — branch selection not binding there), but Picard-5 transits clamped states (peak 45 lim+flr, final 0/0, locks pass) at +44% (141.4→79.0 s) failing the pre-registered clamp-free clause, and clamp-free Picard-40 gains only +6.6% medium / −37% coarse failing ≥20%; fold-zone medium is class C under BOTH seedings (s1 stalls cl 0.449≠0.523; s2's un-continued Picard seed diverges, 9934 limited — deep seeds are HARMFUL without a ramp, the P4/P5 record); NACA coarse s1 class-A in 4 s recorded as a single-case exception. The +44%-but-clamped observation is recorded for user arbitration of the clamp-free clause; `clamp_history` added (additive). Remaining: And G10.1 non-lifting Newton entry (`wc=None` workspace, raw mesh; sphere M0.3 matches solve_subsonic to \|Δφ\|∞ < 1e-8, m_inf=0 one-step ≡ Laplace; NOT an accuracy gate — G1.6 untouched), no ordering constraint. Framing correction recorded: the coupled Newton has NO Kutta outer loop (Γ updates every step, ‖F‖ machine-zero) — the capability-demo two-level structure is the Mach ramp, so the user's "loose-then-tight" idea applies to continuation levels. |
 | P11 | ☐ | | **Curved / isoparametric wall elements (renumbered from P9 via P10 on 2026-07-11; opening CONDITIONAL on G9.3):** the shared accuracy route for **G11.1** G1.6 sphere-Cp < 2% (design.md §5.1 Option C / DP1 "> 5%" branch) and **G11.2** the residual V6 < 1% floor left after P6 removes the sawtooth (attributed to the sharp-TE/LE P1 wall gradient — P9 tests this; M6 cl_KJ 0.2692 vs Tranair/KRATOS 0.288). Large own effort per DP1. |
 | P12 | ☐ | | Backlog (renumbered from P10 via P11 on 2026-07-11; originally P8): discrete adjoint (transpose of the P8 Newton Jacobian), VII transpiration BC (now expanded into Track V), mixed prism/tet + (C, M_c, ω) BO calibration. (Non-lifting Newton promoted to P10/G10.1 on 2026-07-11.) |
-| Track B | ☐ (design complete 2026-07-07; B6 shelved 2026-07-10) | | **Level-set embedded wake, B1–B5 — no implementation yet.** Level-set wake + multivalued FE + penalty Kutta replacing the conforming sheet + Γ-secant; coexistence strategy = parallel `solve/picard_ls.py` path, per-phase default flip. B6 (curved/free wake) shelved with 5 recorded reasons (DN1 §8/DN2 §4.5.6). Sequencing guard: P8 Newton lands on the conforming wake first; level-set Newton is a post-B4 re-derivation. Blocks nothing in P7–P10; M2 (wing-body) wants B. Design: DN1 + PLAN.md. |
+| Track B | ☐ (design complete 2026-07-07; B6 shelved 2026-07-10; numerics spec + gate re-arbitration 2026-07-11) | | **Level-set embedded wake, B1–B5 (incl. B3.5/B4.5) — no implementation yet.** Level-set wake + multivalued FE + **implicit Kutta** (TE duplication + wake-LS; penalty demoted to optional diagnostic) replacing the conforming sheet + Γ-secant; coexistence strategy = parallel `solve/picard_ls.py` path, per-phase default flip. **2026-07-11: [design_track_b.md](design_track_b.md) supersedes DN1 as the numerics spec** (López-dissertation cross-check; key deltas: 3D wake BC = g₁+g₂ two-component LS — the Núñez full-vector form kills trailing vorticity in 3D; on-wake-node ε side-shift; full-element cut integration; per-side upwind states; nonsymmetric system → GMRES). **Purpose user-arbitrated: mesh/geometry workflow capability, not solver speed** (efficiency motivation obsolete post-P8 Newton). Gates re-specced same day (user-arbitrated): B3 implicit-Kutta + per-station Γ(z) A/B; B3.5 far-field a/b comparison NEW; B4 re-anchored (coarse M0.80 G8.1 lock bands, medium M0.7875); B4.5 M6 3D gate NEW. B6 (curved/free wake) shelved with 5 recorded reasons (DN1 §8/DN2 §4.5.6). Sequencing guard: P8 Newton landed on the conforming wake (closed); level-set Newton is a post-B4 re-derivation (simpler: constant wake-LS Jacobian blocks, no Γ elimination). Blocks nothing in P7–P10; M2 (wing-body) wants B. Design: design_track_b.md (+ DN1/PLAN.md as history). |
 | Track V | ☐ (design complete 2026-07-09/10) | | **Viscous–inviscid coupling (Drela IBL3 + transpiration BC), V1–V4 — no implementation yet.** V1 loose coupling depends only on P6 (closed) and is parallelizable with P7/P8 but is a Track-P-sized effort; V3 tight-coupled Newton consumes P8; V4 (wake IBL) is a continuation of V1, not independent; V2 (quasi-simultaneous) optional. Validity: attached/mildly-shocked. VII moves CL *down* toward experiment (~0.26–0.27 on M6) — the inviscid-vs-0.288 gap belongs to the curved-walls phase (P11 after the 2026-07-11 renumbers; P9 is discriminating how much of it is resolution), not Track V. Design: DN2 + DN6 + PLAN.md. |

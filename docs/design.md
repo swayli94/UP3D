@@ -304,12 +304,17 @@ FP practice; force-free wake relaxation is out of scope (error is second order
 in loading for attached flow).
 
 **Designed alternative — Track B level-set wake (2026-07-07; not started).** A
-level-set + multivalued-element (CutFEM-style) wake representation with a
-penalty Kutta condition (Γ emerges from the solution — no Γ DOF, no secant)
-would replace the conforming sheet + master–slave elimination above, so meshes
-need no pre-embedded wake surface (α sweeps without remeshing; multi-wake for
-wing–body). Design record: `discussion_notes/20260707_1505_levelset_wake_design.md`
-(DN1); phase plan B1–B5 in roadmap.md Track B. Curved/free wake (B6) is
+level-set + multivalued-element (CutFEM-style) wake representation with an
+implicitly enforced Kutta condition (Γ emerges from the solution — no Γ DOF,
+no secant) would replace the conforming sheet + master–slave elimination above,
+so meshes need no pre-embedded wake surface (α sweeps without remeshing;
+multi-wake for wing–body). Numerics reference:
+[design_track_b.md](design_track_b.md) (2026-07-11 López-dissertation
+cross-check; supersedes DN1
+`discussion_notes/20260707_1505_levelset_wake_design.md` as the Track B design
+spec — notably the original penalty Kutta is demoted to an optional diagnostic
+in favor of TE duplication + the wake least-squares condition); phase plan
+B1–B5 in roadmap.md Track B. Curved/free wake (B6) is
 **shelved** (2026-07-10, DN2 §4.5.6): the straight-wake loading error is
 O(θ²) ≈ 0.1%, geometry updates force per-step cut-set/DOF rebuilds that conflict
 with Newton, and under VII the wake instead carries a mass-transpiration
