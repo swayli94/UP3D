@@ -7,3 +7,5 @@ jump-convected,|[phi](far) - [phi](near)| / [phi],0.0%,< 10% (no drain: the far-
 jump-is-gamma,[phi] near the TE vs the reported Gamma,0.0%,< 10%,PASS,
 cp-vs-conforming,cl_pressure alpha=4 (level set vs conforming),0.4770 vs 0.4786,within 3%,PASS,
 D11,cl_pressure vs cl_KJ = 2*Gamma (alpha=4),0.4770 vs 0.4769,within 5% (per-side wall mapping is correct),PASS,
+wake-free,M3 mesh has NO `wake` tag,False,False (topology knows nothing about the wake),PASS,
+dual-mesh,wake-free Gamma vs embedded Gamma,0.2339 vs 0.2384 (1.9%),within 5% (generic cuts reproduce the embedded result),PASS,

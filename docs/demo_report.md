@@ -1381,6 +1381,8 @@ mesh with the same level set**. The mesh topology knows nothing about the wake.
 | jump drift TE → far field | **0.0%** | < 10% (no drain) |
 | cl_pressure vs conforming (α=4) | 0.4770 vs 0.4786 | within 3% |
 | cl_pressure vs cl_KJ = 2Γ | 0.4770 vs 0.4769 | within 5% (D11 mapping correct) |
+| M3 wake-free mesh has a `wake` tag | False | topology knows nothing about the wake |
+| wake-free Γ vs embedded Γ (α=4) | **0.2339 vs 0.2384** (1.9%) | within 5% (generic cuts reproduce it) |
 
 **Figures.**
 
@@ -1408,6 +1410,13 @@ mesh with the same level set**. The mesh topology knows nothing about the wake.
    mapping** (lower-surface TE triangles must read the TE's AUX value; using
    `phi_main` alone gives cl_pressure = −3.35, junk). It overlays the conforming
    solver on the same mesh at both α; at α = 0 upper and lower collapse.
+5. `dual_mesh_embedded_vs_free.png` — the **dual-mesh rule** made visible: the
+   same level-set path on the wake-**embedded** M0 mesh (which HAS a `wake` tag,
+   its wake nodes lying exactly on the sheet) and on the wake-**free** M3 mesh
+   (**no `wake` tag anywhere**, the level set making generic cuts through generic
+   elements — the actual Track B workflow target). Γ agrees to **1.9%** (0.2339
+   vs 0.2384). This is the payoff: lift on a mesh that never had a wake
+   embedded, and no conforming counterpart exists there at all.
 
 **What this evidences.** Lift emerges on a mesh that never had a wake embedded:
 Γ is a RESULT (no secant, no master–slave constraint), pinned by the B4 nonlinear

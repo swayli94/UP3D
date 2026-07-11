@@ -28,9 +28,20 @@ makes every part of that visible and self-checks it.
      mapping (lower-surface TE triangles must read the TE's AUX value), cross
      checked against the conforming solver on the same mesh.
 
+  5. dual_mesh_embedded_vs_free.png -- the SAME level-set path on the
+     wake-EMBEDDED M0 mesh (which HAS a `wake` tag, wake nodes lying exactly on
+     the sheet) and on the wake-FREE M3 mesh (NO `wake` tag anywhere, generic
+     cuts through generic elements -- the actual Track B workflow target). Same
+     lift to ~2%. This is the payoff: no pre-embedded wake surface is needed.
+
 Standalone + self-checking:  python cases/demo/b3_levelset_lifting/run_demo.py
 Outputs: cases/demo/b3_levelset_lifting/results/{*.png, summary.csv, checks.csv}
 Exit code 0 iff every acceptance check passes. Runtime ~2 min.
+
+Dual-mesh (roadmap Track B working rule): the detailed figures 1-4 run on the
+wake-embedded M0 family (which also permits the strict same-mesh A/B against the
+conforming solver); figure 5 adds the wake-free M3 family, where no conforming
+counterpart exists at all.
 """
 
 import sys
@@ -63,7 +74,8 @@ from pyfp3d.solve.picard_ls import solve_multivalued_lifting  # noqa: E402
 from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet  # noqa: E402
 
 OUT = Path(__file__).resolve().parent / "results"
-NACA_DIR = MESH_DIR / "naca0012_2.5d"
+NACA_DIR = MESH_DIR / "naca0012_2.5d"                 # wake-EMBEDDED ("C-grid")
+NACA_FREE_DIR = MESH_DIR / "naca0012_wakefree_2.5d"   # wake-FREE ("O-grid")
 LEVEL = "medium"
 ALPHAS = (0.0, 4.0)
 
@@ -145,7 +157,7 @@ def _explode(sec, wls):
 
 
 def demo_flowfield(mesh, cases, checks):
-    print("[1/4] flow field: lift vs no lift (same mesh, same level set)")
+    print("[1/5] flow field: lift vs no lift (same mesh, same level set)")
     fig, axes = plt.subplots(2, 2, figsize=(13.6, 9.4))
     # ONE colour scale for both rows, so "no lift" reads as a genuinely flat
     # field instead of an auto-scaled picture of round-off.
@@ -243,7 +255,7 @@ def _tri_class(mesh, cm, mvop, sec):
 
 
 def demo_levelset_region(mesh, cases, checks):
-    print("[2/4] where the level set acts (mesh + enriched elements)")
+    print("[2/5] where the level set acts (mesh + enriched elements)")
     c = cases[4.0]
     cm, mvop = c["cm"], c["mvop"]
     sec = _section(mesh, cm, mvop, c["res"]["phi_ext"], 4.0)
@@ -339,7 +351,7 @@ def demo_levelset_region(mesh, cases, checks):
 # 3. how the jump survives to the far field + how it is STORED
 # ---------------------------------------------------------------------------
 def demo_wake_jump(mesh, cases, checks):
-    print("[3/4] the wake jump: convected TE -> far field, and how it is stored")
+    print("[3/5] the wake jump: convected TE -> far field, and how it is stored")
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0))
 
     ax = axes[0]
@@ -434,7 +446,7 @@ def _cp_b(mesh, cm, mvop, phi_ext):
 
 
 def demo_wall_cp(mesh, cases, checks):
-    print("[4/4] wall Cp (D11 per-side mapping) vs the conforming path")
+    print("[4/5] wall Cp (D11 per-side mapping) vs the conforming path")
     mesh_cut, wc = cut_wake(mesh)
 
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0), sharey=True)
@@ -504,6 +516,86 @@ def demo_wall_cp(mesh, cases, checks):
 
 
 # ---------------------------------------------------------------------------
+# 5. dual-mesh: the SAME level set on a wake-EMBEDDED and a wake-FREE mesh
+# ---------------------------------------------------------------------------
+def demo_dual_mesh(mesh_m0, cases_m0, checks):
+    print("[5/5] dual-mesh: embedded (M0) vs wake-free (M3), the workflow form")
+    path = NACA_FREE_DIR / "coarse.msh"     # committed; medium is gitignored
+    if not path.exists():
+        print(f"    (skip: {path} not present)")
+        return
+    mesh_m3 = read_mesh(path)
+    assert "wake" not in mesh_m3.boundary_faces, "M3 must have NO wake tag"
+
+    # solve the wake-free mesh at alpha = 4 with the SAME level-set path
+    wls3, cm3, mvop3 = build(mesh_m3)
+    r3 = solve_multivalued_lifting(mvop3, mesh_m3, 0.0, alpha_deg=4.0)
+    print(f"    M3 wake-free: Gamma = {r3['gamma']:+.5f}")
+
+    panels = [
+        ("M0  wake-EMBEDDED  (the mesh HAS a `wake` tag;\n"
+         "wake nodes lie exactly ON the sheet)", mesh_m0,
+         cases_m0[4.0]["cm"], cases_m0[4.0]["mvop"],
+         cases_m0[4.0]["res"], "wake" in mesh_m0.boundary_faces),
+        ("M3  wake-FREE  (NO `wake` tag anywhere;\n"
+         "the level set makes GENERIC cuts)", mesh_m3, cm3, mvop3, r3, False),
+    ]
+
+    fig, axes = plt.subplots(1, 2, figsize=(13.6, 5.6))
+    for ax, (ttl, mesh, cm, mvop, res, embedded) in zip(axes, panels):
+        sec = _section(mesh, cm, mvop, res["phi_ext"], 4.0)
+        kind = _tri_class(mesh, cm, mvop, sec)
+        verts = sec.points2d[sec.triangles]
+        ax.add_collection(PolyCollection(verts, facecolors="none",
+                                         edgecolors=BASELINE, linewidths=0.4,
+                                         zorder=1))
+        for k, col in ((1, S2_AQUA), (2, S3_YELLOW)):
+            m = kind == k
+            if m.any():
+                ax.add_collection(PolyCollection(
+                    verts[m], facecolors=col, edgecolors=INK_2,
+                    linewidths=0.3, alpha=0.85, zorder=2))
+        # the wake nodes: on M0 they lie ON the sheet, on M3 they are wherever
+        # the generic cut falls.
+        cut_nodes = sec.fields["id"].astype(np.int64)[
+            np.unique(sec.triangles)]
+        onsheet = cut_nodes[cm.ext_dof_of_node[cut_nodes] >= 0]
+        p = mesh.nodes[onsheet]
+        ax.plot(p[:, 0], p[:, 1], ".", ms=3, color=CRITICAL, zorder=4,
+                label="cut-element nodes (carry an aux DOF)")
+        ax.plot([1.0, 1.25], [0.0, 0.0], color=INK, lw=1.4, ls="--", zorder=3)
+        ax.plot(1.0, 0.0, "k*", ms=13, zorder=5)
+        ax.set_xlim(0.95, 1.12)
+        ax.set_ylim(-0.05, 0.05)
+        ax.set_aspect("equal")
+        g = float(res["gamma"])
+        ax.set_title(f"{ttl}\nGamma = {g:+.4f}", fontsize=10)
+        ax.set_xlabel("x/c")
+        ax.legend(fontsize=8, loc="lower left")
+    axes[0].set_ylabel("y/c")
+
+    g0 = cases_m0[4.0]["res"]["gamma"]
+    fig.suptitle("Same level-set path, two mesh kinds -- the wake-free mesh is "
+                 "the Track B workflow target\n"
+                 f"embedded Gamma {g0:.4f}  vs  wake-free Gamma {r3['gamma']:.4f}"
+                 f"  ({abs(r3['gamma']-g0)/g0*100:.1f}% apart -- "
+                 "no `wake` tag, generic cuts, same lift)",
+                 fontsize=12.2, fontweight="semibold", color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
+    finish(fig, OUT, "dual_mesh_embedded_vs_free.png")
+
+    checks.add("wake-free", "M3 mesh has NO `wake` tag",
+               "wake" in mesh_m3.boundary_faces,
+               "False (topology knows nothing about the wake)",
+               "wake" not in mesh_m3.boundary_faces)
+    rel = abs(r3["gamma"] - g0) / abs(g0)
+    checks.add("dual-mesh", "wake-free Gamma vs embedded Gamma",
+               f"{r3['gamma']:.4f} vs {g0:.4f} ({rel*100:.1f}%)",
+               "within 5% (generic cuts reproduce the embedded result)",
+               bool(rel < 0.05))
+
+
+# ---------------------------------------------------------------------------
 def main():
     apply_style()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -513,7 +605,7 @@ def main():
     if not path.exists():
         print(f"missing mesh: {path}")
         return 1
-    print(f"[0/4] {LEVEL} NACA0012 mesh -- the topology knows nothing "
+    print(f"[0/5] {LEVEL} NACA0012 mesh -- the topology knows nothing "
           f"about the wake")
     mesh = read_mesh(path)
     cases = solve_all(mesh)
@@ -522,6 +614,7 @@ def main():
     demo_levelset_region(mesh, cases, checks)
     demo_wake_jump(mesh, cases, checks)
     demo_wall_cp(mesh, cases, checks)
+    demo_dual_mesh(mesh, cases, checks)
 
     return checks.report(OUT)
 
