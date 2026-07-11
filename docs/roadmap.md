@@ -1104,7 +1104,7 @@ spends most of its 252 steps in intermediate-level churn.
 G10.2 (✓) → **G10.3 → then P9** — both G10.2 and a positive G10.3 cut the
 G9.1 fine-mesh (~450k-dof) run cost; G10.1 has no ordering constraint and
 may land whenever convenient. **Demo:** `cases/demo/p10_newton_usability/`
-(G10.2 A/B committed; G10.3 script future). **Effort:** 2–3 sessions.
+(G10.2 A/B + G10.3 no-ramp study both committed). **Effort:** 2–3 sessions.
 **Risk:** low (G10.1) / medium (G10.2 — robustness interplay with the freeze
 machinery, measured; G10.3 — branch selection without continuation is the
 known FP hazard, hence the pre-registered class-(B) detector).

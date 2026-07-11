@@ -15,8 +15,9 @@ workstation-scale (minutes for 1–3 M nodes).
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
-  phases (P0, P1-partial, P2, P3, P4, P5, P6, P7, M0, M1): one self-checking demo per
-  phase under `cases/demo/<phase>/` with committed figures + measured gate numbers.
+  phases (P0, P1-partial, P2, P3, P4, P5, P6, P7, P8 + its capability assessment,
+  P10-partial G10.2/G10.3, M0, M1): one self-checking demo per phase under
+  `cases/demo/<phase>/` with committed figures + measured gate numbers.
   When a phase closes, add its demo + report section here.
 - [docs/discussion_notes/](docs/discussion_notes/) — **discussion & reference
   material only, NEVER a coding spec.** Design notes for future tracks (DN1
@@ -47,12 +48,14 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (165 passed + 4 skipped + 2 xfailed since P7, ~5 min;
-   the always-on coarse transonic smoke is ~170 s of it, the G3.2 medium-mesh
-   nested Picard solve ~45 s, the rule-7 sweep's M6 coarse+medium cut_wake
-   ingest ~15 s. The M6 .msh files are gitignored — the 13 M1 tests skip until
-   you run `cases/meshes/onera_m6/generate_onera_m6.py` (~30 s). The heavy
-   transonic gates only run under `PYFP3D_TRANSONIC_GATES=1`, shown as 4 skipped.)
+3. Full suite: `pytest tests/` (184 passed + 8 skipped + 2 xfailed since P10/G10.2,
+   ~5 min — G8.3 measured 301.66 s; the always-on coarse transonic smoke is ~170 s
+   of it, the G3.2 medium-mesh nested Picard solve ~45 s, the rule-7 sweep's M6
+   coarse+medium cut_wake ingest ~15 s. The M6 .msh files are gitignored — the 13
+   M1 tests skip until you run `cases/meshes/onera_m6/generate_onera_m6.py`
+   (~30 s). The heavy transonic/Newton gates (P4 medium + G4.3 sweep, P5, gated
+   P8 G8.1/G8.2 + FD pocket) only run under `PYFP3D_TRANSONIC_GATES=1`, shown as
+   8 skipped.)
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.

@@ -686,26 +686,16 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 
 ---
 
-**Last updated:** 2026-07-07  
-**Status:** closed phases — P0, P2 + M0 (2026-07-06), P3 + M1 + P4 (2026-07-07); details and
-measured gate numbers in docs/roadmap.md's ledger and docs/demo_report.md. **P4 was briefly
-re-opened and re-closed the same day**: the G4.1 medium-mesh gate had never actually been run
-(declared closed against an unfilled placeholder) and DIVERGED on its first real run (M_max
-30.1, 423 limited + 271 floored cells, spurious shock 0.802). Root cause verified same day:
-the coarse-calibrated fixed Δτ = 2e-3 global pseudo-transient damping (diag(m_lumped/Δτ) ~ h³)
-weakens under refinement. Fix landed same day — `solve/picard.py::solve_subsonic_lifting`'s
-new `damping_theta` param (D = θ·diag(A_free), θ = 0.2, rebuilt every outer iteration from
-that iteration's own operator, mesh/shock-independent by construction), now
-`solve/continuation.py::TRANSONIC_DEFAULTS`'s default in place of `pseudo_dt`. Medium gate
-now PASSES in 16m39s (was 2h43m divergent): shock x/c 0.633 vs 0.62 ± 0.03, Kutta
-|F| = 1.23e-4 < 2e-4 tol, zero limited/floored cells (`artifacts/G4.1/summary_medium.csv`;
-full trail in docs/roadmap.md's G4.1 entry and docs/demo_report.md §P4 Addendum 3). Also
-closed same session, the P5 blocker this diagnosis surfaced:
-`constraints/wake.py::WakeConstraint.update_matrix`'s per-station `h_j` loop (line ~469
-above) is now one batched `T^T @ (A @ G)` sparse product instead of one matvec per station.
-P1 remains partial: G1.1/G1.2 closed, G1.3/G1.4 negative oracles, G1.6 (sphere Cp) open as a
-`strict=True` xfail awaiting its Option C re-spec (see "Known gaps" above). **Next: P5
-(ONERA M6) — mesh ready, and neither the transonic stability gap nor the wake per-station
-cost carry over.** Default suite: 136 passed + 2 skipped (heavy transonic gates behind
-`PYFP3D_TRANSONIC_GATES=1`) + 2 xfailed, ~5 min; the 13 M1 tests skip unless the gitignored
-M6 meshes are regenerated (~30 s).
+**Last updated:** 2026-07-11  
+**Status:** closed phases — P0, P2 + M0 (2026-07-06), P3 + M1 + P4 (2026-07-07),
+P5 + P6 (2026-07-08), P7 (2026-07-10), P8 (2026-07-11); P10 partial (G10.2 + G10.3
+closed 2026-07-11, G10.1 open, no ordering constraint); **P9 (grid-convergence &
+accuracy-gap discrimination) is the running phase.** Details, measured gate numbers,
+and the two 2026-07-11 Track-P renumbers (curved walls → P11, backlog → P12) live in
+docs/roadmap.md's ledger and docs/agent-rules.md's "Current phase" line; evidence in
+docs/demo_report.md. P1 remains partial: G1.1/G1.2 closed, G1.3/G1.4 negative oracles,
+G1.6 (sphere Cp) open as a `strict=True` xfail awaiting its Option C re-spec (see
+"Known gaps" above) — now scheduled under P11 (curved walls), conditional on the
+P9/G9.3 verdict. Default suite: 184 passed + 8 skipped (heavy transonic/Newton gates
+behind `PYFP3D_TRANSONIC_GATES=1`) + 2 xfailed, ~5 min (G8.3 measured 301.66 s); the
+13 M1 tests skip unless the gitignored M6 meshes are regenerated (~30 s).
