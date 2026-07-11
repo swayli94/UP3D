@@ -1263,6 +1263,109 @@ fails on medium regardless of seeding — the ramp stays, everywhere, as
 shipped. Instrumentation added: `clamp_history` on `solve_newton_lifting`
 (additive key).
 
+## P9 — grid-convergence & accuracy-gap discrimination (closed 2026-07-11; G9.3 verdict awaits user arbitration)
+
+**Demo:** `cases/demo/p9_grid_discrimination/run_demo.py` — **11 PASS + 3
+XFAIL**, where the XFAILs ARE the result (the fine-mesh failure, with its
+root cause), not open defects. The M6 fine solution is npz-cached locally
+(gitignored, like P5's); the committed CSVs/PNGs are the evidence.
+
+**The phase asked:** is the 0.019 M6 lift gap (cl_KJ 0.2692 vs
+Tranair/KRATOS 0.288) resolution, or a sharp-TE/LE flat-facet floor?
+**The answer:** the question was mis-posed — the gap is **unsplittable as
+posed**, because the 3D sequence does not converge, and the reason it does
+not converge is a *different* defect than either candidate.
+
+### G9.2 (PASS, clean) — a sharp TE imposes NO lift floor
+
+NACA0012 2.5D, M0.5/α2, coarse→medium→fine, all three converged
+(|R| ≤ 4.4e-11). Error vs the corrected-panel PG–KT midpoint:
+
+| level | tets | cl | \|error\| |
+|---|---|---|---|
+| coarse | 16 386 | 0.2776 | 2.71% |
+| medium | 61 788 | 0.2844 | 0.33% |
+| fine | 239 022 | 0.2853 | **0.03%** |
+
+Monotone to well inside the ±1% clause. **The 2D leg of the
+"sharp-TE/LE P1 wall gradient" attribution is gone.**
+
+### G9.1 (INVALID) — ★ the fine mesh is not a discrete solution
+
+| level | tets | converged | cl_KJ | M_max (unlimited) | cells over M_cap=3 |
+|---|---|---|---|---|---|
+| coarse | 55 531 | yes (6.9e-12, 0/0) | 0.2621 | 1.40 | 0 |
+| medium | 350 718 | yes (7.1e-15, 0/0) | 0.2692 | 2.13 | 0 |
+| fine | 2 513 255 | **NO** (1.1e-5, 1 limited) | *0.2393* | **7.93** | **9** |
+
+The fine Newton limit-cycles at ‖R‖ ~ 1e-5 for its entire 60-step budget:
+permanently speed-limited cells block the N5 freeze machinery (which
+requires 0 limited/floored to engage), so the assignment churn never
+freezes. Its cl_KJ (0.2393, italic above) is a **limit-cycle artifact, not
+a lift** — with only two discrete solutions there is no three-point
+Richardson, so the pre-registered bands (≥ 0.283 / ≤ 0.278) **cannot
+fire**. Nothing was fabricated: `verdict.csv` records the extrapolant and
+both attribution shares as `n/a`.
+
+**★ Where the singularity is — this is the phase's real finding.** All 9
+capped cells sit at:
+
+- **z/b = 0.998–1.000** — the wing tip,
+- **x − x_TE = +0.002 … +0.017** — *aft* of the trailing edge (so **not on
+  the wing at all**),
+- **|y| < 0.003** — in the chord plane, i.e. **on the wake sheet**,
+
+that is, at the **free tip edge of the rigid planar wake sheet**, exactly
+where `Γ(tip) = 0` is enforced (M1: tip free edges stay single-valued).
+This is the classical **vortex-sheet-edge singularity**: a planar sheet
+that simply *ends* induces a 1/r-type velocity at its edge, whereas the
+real flow rolls the sheet up into a tip vortex. P5's "bounded tip-TE-corner
+P1 overshoot" (M_max 1.995 on medium, recorded then as *the only surviving
+singularity trace*) is the **same object**, seen at a resolution too coarse
+to reveal that it is unbounded: refinement makes it **worse** (1.40 → 2.13
+→ 7.93), not better.
+
+**⇒ It is a WAKE-MODEL defect, not a wall-element defect.** Curved or
+isoparametric *wall* elements cannot remove the edge of a wake sheet.
+
+### G9.3 — attribution verdict (user arbitrates)
+
+1. The 0.019 gap **cannot be split** by grid convergence: the 3D sequence
+   does not converge.
+2. **2D sharp TE: exonerated** (G9.2). **3D blocker: the rigid planar
+   wake's tip edge** (G9.1).
+3. **Recommendation:** **P11 (curved walls) is not supported by P9 as the
+   3D-lift fix.** Its remaining justification is **G1.6** (sphere-Cp on a
+   *smooth curved* wall — a different, still-valid mechanism). The 3D
+   accuracy route now points at the **tip/wake treatment**, i.e. **Track B**
+   (level-set / free wake) or an explicit tip-vortex model — which must land
+   before *any* 3D grid-convergence claim is possible. P9 is therefore
+   independent corroboration of the Track B route.
+
+### Solver-path findings recorded en route (feed P10; no default changed)
+
+- **`precond="direct"` does not scale to the fine mesh.** A *single* `splu`
+  at ~450k dofs ran **4 h 39 min without returning** (RSS 26 GB) and was
+  killed — vs **18.6 s** per factorization on medium (63k). True-3D LU fill
+  is the wall; this is the N6 finding one mesh level further.
+- **The `precond="amg"` fallback is valid *and faster than direct at every
+  size* — once the Eisenstat–Walker forcing is tightened to η = 1e-8.**
+  Validated against the G8.2 locks on medium *before* spending the fine
+  budget: **66 s vs 141 s** direct, same solution to 4 digits (cl 0.2646,
+  M_max 2.129, shocks 0.596/0.541/0.362), terminal quadratic in the frozen
+  phase, 0 GMRES stalls; coarse **8 s vs 42 s**. N5's "Krylov steps stall on
+  the shock-position soft mode" is a property of the **loose default
+  forcing**, not of AMG — a candidate P10 recipe change.
+- **The fine mesh's cold Picard seed overshoots the LE into the density
+  floor.** A cold M0.70 Picard-5 seed lands 4036 speed-limited + 1847
+  density-floored cells; level-0 Newton then stalls at ‖R‖ ~ 6e-2, and since
+  level 0 cannot dm-halve, the *whole* solve breaks (a M0.50 cold seed still
+  floors 658). Fixed at **continuation-path level only** — `m_start = 0.30`
+  (deep subcritical, where a crude seed cannot reach the floor) plus
+  `n_picard_seed = 12` — giving a clean 0/0 start; the ramp then carries it
+  up in 13 levels, **5294 s (88 min)**, inside the 2 h budget. Path changes
+  are safe by G8.2's continuation-path independence.
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from

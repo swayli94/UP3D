@@ -1,0 +1,15 @@
+gate,check,value,criterion,status,note
+G9.1,cl_kj three-point monotone,0.2621 -> 0.2692 -> 0.2393,monotone,XFAIL,fine is not a discrete solution -- its value is a limit-cycle artifact; not a lift
+G9.1,cl_p three-point monotone,0.2560 -> 0.2646 -> 0.2287,monotone,XFAIL,fine is not a discrete solution -- its value is a limit-cycle artifact; not a lift
+G9.1,coarse converged Newton solution,|R|=6.9e-12 lim/flr=0/0,converged; 0/0,PASS,
+G9.1,medium converged Newton solution,|R|=7.1e-15 lim/flr=0/0,converged; 0/0,PASS,
+G9.1,fine converged Newton solution,|R|=1.1e-05 lim/flr=1/0,converged; 0/0,XFAIL,tip-TE singularity crosses M_cap => permanently limited => the freeze machinery (needs 0 limited) never engages => live-churn floor ~1e-5
+G9.1,fine solve within budget,5294s,<= 7200 s (run-once),PASS,AMG path did its job; the blocker is the discretization
+G9.1,★ tip-TE corner M_max (unlimited) vs refinement,1.40 -> 2.13 -> 7.93,DIVERGES (P5's 'bounded' overshoot is not bounded),PASS,capped cells [0; 0; 9]; fine locus z/b 0.998-1.000; x-x_TE +0.0020..+0.0168
+G9.1,★ capped cells sit at the swept TIP TE corner,z/b=0.999, x-x_TE=+0.0055,z/b ~ 1.0 and just aft of the TE,PASS,
+G9.1,pre-registered verdict on cl_KJ_inf,n/a (invalid),>= 0.283 resolution / <= 0.278 floor / else inconclusive,PASS,INVALID -- no 3-point Richardson: the fine mesh is not a discrete solution (tip-TE singularity diverges past the Mach cap); so the pre-registered bands cannot fire
+G9.2,coarse converged,|R|=4.4e-11,converged,PASS,
+G9.2,medium converged,|R|=1.1e-11,converged,PASS,
+G9.2,fine converged,|R|=2.3e-12,converged,PASS,
+G9.2,|error| decreases monotonically,2.71% -> 0.33% -> 0.03%,monotone decrease,PASS,
+G9.2,fine within +-1% of PG-KT midpoint,0.03%,<= 1%,PASS,

@@ -1,0 +1,4 @@
+level,n_tets,n_nodes,cl_p,cl_kj,err_vs_midpoint_pct,wall_solve_s
+coarse,16386,6106,0.27759,0.27813,2.708,2.4
+medium,61788,21874,0.28437,0.28436,0.331,9.4
+fine,239022,82210,0.28522,0.28526,0.034,36.0

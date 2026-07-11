@@ -1,0 +1,16 @@
+quantity,value,note
+cl_kj_coarse,0.2621,converged
+cl_kj_medium,0.2692,converged; P8 anchor 0.2692
+cl_kj_fine,0.2393,NOT A SOLUTION -- limit-cycle artifact; do not use
+observed_order_p_clkj,n/a,needs 3 discrete solutions
+cl_kj_inf,n/a,Richardson -- INVALID, see g91_verdict
+external_ref,0.288,Tranair/KRATOS
+gap_vs_medium,0.0188,0.288 - medium cl_KJ; the gap P9 set out to split
+resolution_share,n/a,unsplittable: no valid extrapolant
+floor_share,n/a,unsplittable: no valid extrapolant
+m_max_unlimited_series,1.40;2.13;7.93,★ coarse/medium/fine tip-TE corner: DIVERGES past M_cap=3
+n_capped_series,0;0;9,★ cells hitting the speed limiter
+fine_capped_locus,z/b 0.998-1.000; x-x_TE +0.0020..+0.0168,★ swept TIP TE corner (z/b ~ 1, just aft of the TE)
+g91_verdict,INVALID -- no 3-point Richardson: the fine mesh is not a discrete solution (tip-TE singularity diverges past the Mach cap); so the pre-registered bands cannot fire,pre-registered bands could not fire
+g92_fine_err_pct,0.034,★ 2D sharp TE: NO lift floor (err -> 0.03%)
+g93_attribution,2D sharp TE exonerated (G9.2); the 3D flat-facet swept TIP-TE corner is a DIVERGENT singularity (G9.1) -- the 3D lift gap cannot be split by grid convergence because the sequence does not converge. User arbitrates P11.,G9.3
