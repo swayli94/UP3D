@@ -5,7 +5,7 @@ The mesh topology knows NOTHING about the wake. A level set cuts through it,
 the cut elements are enriched with auxiliary DOFs, and lift emerges. This demo
 makes every part of that visible and self-checks it.
 
-  1. flowfield_lift_vs_nolift.png (M0 embedded) and
+  1. flowfield_lift_vs_nolift_m0.png (M0 embedded) and
      flowfield_lift_vs_nolift_m3.png (M3 wake-free) -- NACA0012 at alpha = 0 (no
      lift) and alpha = 4 (lift), on the SAME mesh with the SAME level set, on
      BOTH mesh families. Speed field (smooth flow off the TE = Kutta) and the
@@ -14,13 +14,13 @@ makes every part of that visible and self-checks it.
      alpha = 4, and NO jump at all at alpha = 0. The M3 panel shows the coarser
      wake-free triangulation the level set cuts through generically.
 
-  3. levelset_region.png -- WHERE the level set acts. The unstructured mesh
+  3. levelset_region_m0.png -- WHERE the level set acts. The unstructured mesh
      near the TE and along the wake corridor, with each element coloured by
      its role: cut (enriched, assembled twice), below-TE fan (its TE reference
      is the aux DOF), and the TE's wall-adjacent upper/lower control volumes
      (where the B4 Kutta condition lives). Nothing else in the mesh is touched.
 
-  4. wake_jump.png -- HOW the jump survives from the TE to the far field. The
+  4. wake_jump_m0.png -- HOW the jump survives from the TE to the far field. The
      nodal jump [phi] at every cut node vs downstream distance: the g1+g2 wake
      LS convects it unchanged (constant = Gamma) all the way out, and the
      far-field aux DOFs are left FREE so it exits rather than being drained.
@@ -260,7 +260,7 @@ def _tri_class(mesh, cm, mvop, sec):
 
 
 def demo_levelset_region(mesh, cases, checks):
-    print("[3/6] where the level set acts (mesh + enriched elements)")
+    print("[3/6] where the level set acts (M0: mesh + enriched elements)")
     c = cases[4.0]
     cm, mvop = c["cm"], c["mvop"]
     sec = _section(mesh, cm, mvop, c["res"]["phi_ext"], 4.0)
@@ -328,8 +328,8 @@ def demo_levelset_region(mesh, cases, checks):
 
     s = cm.summary()
     fig.suptitle(
-        "The level set touches ONE layer of elements. The mesh is never "
-        "modified.\n"
+        "M0 (wake-embedded): the level set touches ONE layer of elements. "
+        "The mesh is never modified.\n"
         "(the cut layer sits just BELOW the sheet: the eps side-shift sends "
         "on-sheet nodes '+', i.e. the sheet effectively lies at y = -eps)\n"
         f"{s['n_cut_elems']} cut tets of {len(mesh.elements)} "
@@ -338,7 +338,7 @@ def demo_levelset_region(mesh, cases, checks):
         f"({100*s['n_ext_dofs']/s['n_main']:.1f}%)",
         fontsize=12.5, fontweight="semibold", color=INK)
     fig.tight_layout(rect=(0, 0.09, 1, 0.90))
-    finish(fig, OUT, "levelset_region.png")
+    finish(fig, OUT, "levelset_region_m0.png")
 
     checks.add("enrichment-cost", "aux DOFs / main DOFs",
                f"{100*s['n_ext_dofs']/s['n_main']:.1f}%",
@@ -356,7 +356,7 @@ def demo_levelset_region(mesh, cases, checks):
 # 3. how the jump survives to the far field + how it is STORED
 # ---------------------------------------------------------------------------
 def demo_wake_jump(mesh, cases, checks):
-    print("[4/6] the wake jump: convected TE -> far field, and how it is stored")
+    print("[4/6] the wake jump (M0): convected TE -> far field, and how it is stored")
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0))
 
     ax = axes[0]
@@ -407,11 +407,11 @@ def demo_wake_jump(mesh, cases, checks):
                  "extra dof per cut node -- NOT two meshes")
     ax.legend(fontsize=8.5, loc="upper right")
 
-    fig.suptitle("The wake jump: carried by the aux DOFs, convected by the "
-                 "wake LS, valued by the TE Kutta",
+    fig.suptitle("M0 (wake-embedded) -- the wake jump: carried by the aux DOFs, "
+                 "convected by the wake LS, valued by the TE Kutta",
                  fontsize=12.5, fontweight="semibold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.92))
-    finish(fig, OUT, "wake_jump.png")
+    finish(fig, OUT, "wake_jump_m0.png")
 
     c = cases[4.0]
     cm, mvop = c["cm"], c["mvop"]
@@ -495,7 +495,6 @@ def demo_wall_cp(mesh_m0, cases_m0, mesh_m3, cases_m3, checks, step):
                 o = np.argsort(xc[m])
                 ax.plot(xc[m][o], cp[m][o], ls, color=col, lw=2.0,
                         zorder=3 if ls == "-" else 4)
-        ax.invert_yaxis()
         ax.set_xlabel("x/c")
         ax.set_title(f"alpha = {a:.0f} deg      "
                      f"Gamma:  M0 {c0['res']['gamma']:+.4f}   "
@@ -525,7 +524,12 @@ def demo_wall_cp(mesh_m0, cases_m0, mesh_m3, cases_m3, checks, step):
                        f"{cl3:.4f} vs {clc:.4f}",
                        "within 5%", bool(abs(cl3 - clc) / abs(clc) < 0.05))
 
-    axes[0].set_ylabel("Cp   (inverted axis)")
+    # INVERT once (the axes share y, so a single call flips both -- calling it
+    # per-axis inside the loop would cancel out). Standard aero convention:
+    # suction (negative Cp) at the top, so bottom -> top runs positive ->
+    # negative.
+    axes[0].invert_yaxis()
+    axes[0].set_ylabel("Cp   (inverted: -Cp up)")
     handles = [
         Line2D([], [], color=CRITICAL, lw=2, label="upper surface"),
         Line2D([], [], color=S1_BLUE, lw=2, label="lower surface"),
@@ -644,7 +648,7 @@ def main():
 
     demo_flowfield(mesh_m0, cases_m0, checks, tag="M0",
                    mesh_label="M0 (embedded)",
-                   out_name="flowfield_lift_vs_nolift.png", step="1/6")
+                   out_name="flowfield_lift_vs_nolift_m0.png", step="1/6")
     demo_flowfield(mesh_m3, cases_m3, checks, tag="M3",
                    mesh_label="M3 (wake-free)",
                    out_name="flowfield_lift_vs_nolift_m3.png", step="2/6")

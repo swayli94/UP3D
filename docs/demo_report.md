@@ -1386,19 +1386,19 @@ mesh with the same level set**. The mesh topology knows nothing about the wake.
 
 **Figures.**
 
-1. `flowfield_lift_vs_nolift.png` (M0 embedded) + `flowfield_lift_vs_nolift_m3.png`
+1. `flowfield_lift_vs_nolift_m0.png` (M0 embedded) + `flowfield_lift_vs_nolift_m3.png`
    (M3 wake-free) — speed (own-side) and the perturbation potential drawn **per
    element**, i.e. exactly as the multivalued DOFs store it: a crisp branch cut
    carrying [φ] = Γ at α = 4, and a flat field with **no jump at all** at α = 0.
    Shown on **both** mesh families; the M3 panel exposes the coarser wake-free
    triangulation the level set cuts through generically.
-2. `levelset_region.png` — **where** the level set acts: ONE layer of elements
+2. `levelset_region_m0.png` — **where** the level set acts: ONE layer of elements
    (4.8% of the tets), the below-TE fan, and the B4 TE-Kutta wall-adjacent
    control volumes. The mesh is never modified. (The cut layer sits just BELOW
    the sheet — the ε side-shift sends on-sheet nodes "+", so the sheet
    effectively lies at y = −ε. That bias is exactly what B4's TE condition had
    to be made immune to.)
-3. `wake_jump.png` — **how the jump survives to the far field.** LEFT: the nodal
+3. `wake_jump_m0.png` — **how the jump survives to the far field.** LEFT: the nodal
    [φ] at every cut node vs downstream distance is **flat at Γ from the TE
    (d = 0) out to the far field (d ≈ 15 c)** — the g₁ + g₂ wake LS convects it
    unchanged, and the far-field aux DOFs are left FREE so it exits rather than
@@ -1410,7 +1410,7 @@ mesh with the same level set**. The mesh topology knows nothing about the wake.
    only a visualization).
 4. `wall_cp.png` — surface Cp at both incidences on **both mesh families**
    (solid = M0 embedded, dotted = M3 wake-free, colour = surface, grey dashed =
-   conforming reference; inverted axis), using the **D11 per-side DOF mapping**
+   conforming reference; Cp axis inverted, suction up), using the **D11 per-side DOF mapping**
    (lower-surface TE triangles must read the TE's AUX value; `phi_main` alone
    gives cl_pressure = −3.35, junk). At α = 0 upper and lower collapse; the M3
    cl_p is within 2.3% of conforming despite being a coarser, wake-free mesh.
