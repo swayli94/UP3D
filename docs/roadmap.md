@@ -5,7 +5,7 @@ This file tracks the phase order, gates, and progress ledger. [docs/design.md](d
 
 Besides Track M (meshing) and Track P (solver), two further tracks exist:
 **Track B** (level-set embedded wake) — **IN PROGRESS since 2026-07-11**
-(B1 ✓, next B2; numerics spec [design_track_b.md](design_track_b.md), which
+(B1 ✓ + B2 ✓, next B3; numerics spec [design_track_b.md](design_track_b.md), which
 supersedes DN1) — and **Track V** (viscous–inviscid coupling) — **designed but
 not started** (design records DN2/DN6 in `discussion_notes/`) — see their
 sections after Track P.
@@ -1173,7 +1173,7 @@ to P10/G10.1 the same day.)
 
 ---
 
-## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ 2026-07-11)
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ + B2 ✓ 2026-07-11)
 
 Deliverable: `wake/` — a level-set wake representation + multivalued (CutFEM-style)
 elements + implicit Kutta (TE duplication + wake least-squares condition; penalty
@@ -1187,10 +1187,10 @@ kill-the-Γ-secant efficiency motivation is obsolete post-P8 Newton
 (design_track_b.md §1); efficiency criteria below are non-regression guards only.
 Design record: DN1
 (`discussion_notes/20260707_1505_levelset_wake_design.md`); status snapshot in
-`discussion_notes/PLAN.md`. **Status: B1 closed + M3/M4 delivered 2026-07-11**
-(`pyfp3d/wake/{levelset,cut_elements}.py`, dual-mesh gate green on coarse+medium
-of both 2.5D families and on the 3D M1/M4 ONERA M6 pair); next = B2 (multivalued
-FE assembly, consuming B1's `dofs_upper`/`dofs_lower` tables + `te_lower_elems`).
+`discussion_notes/PLAN.md`. **Status: B1 + B2 closed 2026-07-11** (`pyfp3d/wake/{levelset,cut_elements,multivalued}.py`
++ `kernels/cut_assembly.py`, dual-mesh gates green on coarse+medium of both 2.5D
+families and on the 3D M1/M4 ONERA M6 pair); next = B3 (lifting solve with
+implicit Kutta — replace B2's weld closure with the g₁+g₂ wake LS, Γ emerges).
 **Numerics reference (2026-07-11):** [design_track_b.md](design_track_b.md) —
 theory/implementation analysis cross-checked against the López dissertation;
 supersedes DN1 as the Track B numerics spec (key deltas: 3D wake BC uses the
@@ -1207,14 +1207,15 @@ B4.5 M6 3D gate NEW); design_track_b.md §7 is the arbitration record.
 **Gate (dual-mesh: M0/M1 wake-embedded + M3/M4 wake-free):**
 - [x] **CLOSED 2026-07-11** (`tests/test_b1_cut_elements.py`, 34 passed, 2.5D coarse+medium of both families + 3D M6 of both families): (a) M0 embedded — every conforming sheet node ε-shifted "+" (D4 stress test at scale), census **exactly** == `cut_wake`'s minus-side element star (`cut_elems ∪ te_lower_elems`, element-by-element), TE nodes == `wc.te_nodes`; (b) M3 wake-free — generic cuts, gap-free corridor TE→far field at α=0 AND after `update_direction` to α=4° **on the same mesh**; (c) **M1/M4 ONERA M6 (3D)** — swept TE polyline: census is a strict **superset** of the conforming minus-star (0 missing, +2.9% extras, all tip-edge straddlers — the sheet's tip edge conforms to element edges on the M1 mesh but passes THROUGH elements for the level set; expected and explained), spanwise clip verified (nothing cut wholly outboard of the tip); M4 wake-free — same census structure with no `wake` tag, spanwise-gap-free sheet, α re-aim 0°→3.06° on the same mesh. Delivered: TE-**polyline** ruled level set (D9) with an **oblique (v, d̂, n̂) frame** — ★ a swept TE is not perpendicular to the wake direction, so an orthogonal span projection leaks the downstream distance into the spanwise coordinate and wrongly clips ~60% of the true M6 cut set (measured, then fixed; regression-pinned); **spanwise clip** (crossings must satisfy 0 ≤ q ≤ span_length — outboard of the tip the sheet has ended, Γ(tip)=0; without it the level set re-creates P5's far-field branch-ray artifact); downstream-crossing test (excludes the ahead-of-LE sign-change region); `te_lower_elems` recorded for B2's López-fig-3.6c aux assignment
 
-### B2 — Multivalued FE assembly ☐ (NEXT)
-**Deliverable:** Multivalued FE assembly (`wake/multivalued.py`, `kernels/cut_assembly.py`; PicardOperator + Dirichlet elimination extended)
+### B2 — Multivalued FE assembly ✓ (closed 2026-07-11)
+**Deliverable:** Multivalued FE assembly (`wake/multivalued.py::MultivaluedOperator`, `kernels/cut_assembly.py`; `solve/picard_ls.py::solve_multivalued_laplace` non-lifting driver — parallel to the conforming path, which stays byte-untouched)
 **Gates (dual-mesh):**
-- [ ] V0 freestream < 1e−12 on the cut mesh
-- [ ] V1 MMS slope ≥ 1.9
-- [ ] Laplace α = 0 gives cl ≈ 0 — all on both mesh types (dual-mesh rule)
+- [x] **CLOSED 2026-07-11** (`tests/test_b2_multivalued.py`, 17 passed on coarse+medium of both 2.5D families and 3D M6 coarse of both families; some medium/M6 parametrizations skip in CI where the meshes are gitignored). Key design: a cut element is the SAME P1 element matrix assembled twice with `dofs_upper`/`dofs_lower`, expressed as a sparse **redirection** of the single-valued matrix — on a cut element the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b) (`multivalued_redirection_coo`); everything else is byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 **continuity ("weld") closure** aux_k = main_j (`continuity_closure_coo`), which makes the extended (n_total = n_main + n_ext) system reduce EXACTLY to the single-valued one — proven directly (`test_extended_matrix_folds_to_stiffness`: folding aux→main recovers the stiffness matrix to 1e-13). The extended matrix is structurally nonsymmetric (weld rows), solved by sparse-direct LU (`spsolve`); GMRES+AMG is the B3+ scaling path (design_track_b.md §5.3). B3 replaces the weld block with the g₁+g₂ wake LS (implicit Kutta), at which point [φ] becomes nonzero.
+- [x] V0 freestream (φ = U·x, full Dirichlet) < 1e−12 on the cut mesh: 2.5D M0/M3 α=0 and α=4° = **0.0** (exact linear field); 3D M6 M1/M4 = **1.1e−14 / 3.4e−14**
+- [x] V1 MMS slope ≥ 1.9: cube cut in generic position (8° tilted half-plane), 3-level slope **1.94**
+- [x] Laplace α = 0 gives cl ≈ 0: TE jump = 0 (the weld forbids a jump) ⇒ cl_KJ = 0, and the main potential matches the single-valued `solve_laplace` oracle to **~3e−11** — on both mesh types (dual-mesh rule)
 
-### B3 — Lifting solve with implicit Kutta ☐
+### B3 — Lifting solve with implicit Kutta ☐ (NEXT)
 **Deliverable:** Lifting solve with **implicit Kutta** (TE duplication + wake-LS condition per design_track_b.md D2; penalty Kutta kept as optional diagnostic; no Γ outer loop, Γ emerges; far field = option a, Dirichlet + Γ(z)-taper vortex refreshed from the extracted jump)
 **Gates (dual-mesh; re-specced 2026-07-11 per design_track_b.md §7):**
 - [ ] V3 M0.5 α2°: cl inside [PG, KT]
@@ -1418,7 +1419,7 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
 | B1 | ✓ | 2026-07-11 | **B1 delivery (2026-07-11):** `pyfp3d/wake/levelset.py` (TE-**polyline** ruled straight wake per design_track_b.md D9, per-segment frames, `update_direction()` re-aims the wake without touching the mesh) + `pyfp3d/wake/cut_elements.py` (ε side-shift relative to local edge length (D4), **downstream-crossing test** excluding the ahead-of-LE sign-change region, TE-node flagging, below-TE fan recorded as `te_lower_elems` for B2's López-fig-3.6c aux assignment, per-node ext DOFs, López eq. 3.33–3.34 `dofs_upper`/`dofs_lower` tables); imported by nothing in the shipped solver paths. Gate evidence (`tests/test_b1_cut_elements.py`, **34 passed**, the FULL dual-mesh matrix — 2.5D M0/M3 coarse+medium AND 3D M1/M4 ONERA M6): M0 embedded — every conforming sheet node ε-shifted "+" (the D4 stress test at scale), census cross-validated EXACTLY against `cut_wake` (`cut_elems ∪ te_lower_elems` == the minus-side element star, element-by-element), TE nodes == `wc.te_nodes`; M3 wake-free — generic cuts, gap-free corridor TE→far field at α=0 AND re-aimed to α=4° **on the same mesh**; M1/M4 ONERA M6 — census a strict **superset** of the conforming minus-star (0 missing, +2.9% tip-edge straddlers: expected, since in an embedded method the sheet's tip EDGE need not conform), spanwise clip verified. ★ **Two 3D-only mechanisms found and fixed here** (both invisible on quasi-2D meshes): (1) the swept TE span axis is NOT perpendicular to the wake direction ⇒ q must come from the **oblique (v, d̂, n̂) frame** — an orthogonal projection leaks the downstream distance into the spanwise coordinate and wrongly clipped ~60% of the true M6 cut set (measured, fixed, regression-pinned); (2) the **spanwise clip** (crossings must satisfy 0 ≤ q ≤ span_length) is mandatory — without it the level set cuts the wake-plane extension beyond the tip, i.e. P5's far-field branch-ray artifact re-created (the conforming path gets the same semantics from its free-edge rule, Γ(tip)=0). Suite **218+8+2** (was 184+8+2; +34, some of which skip when the gitignored wake-free meshes aren't generated locally); conforming solver paths byte-untouched; all runs at the 8-thread cap alongside the in-flight P9 fine demo. |
-| B2 | ☐ (NEXT) | | Multivalued FE assembly (`wake/multivalued.py`, `kernels/cut_assembly.py`; PicardOperator + Dirichlet elimination extended), consuming B1's `dofs_upper`/`dofs_lower` tables + `te_lower_elems` (the López-fig-3.6c aux assignment). Gate = V0 freestream < 1e−12 on the cut mesh, V1 MMS slope ≥ 1.9, Laplace α=0 ⇒ cl ≈ 0 — on both mesh types (dual-mesh rule). |
+| B2 | ✓ | 2026-07-11 | **B2 delivery (2026-07-11):** multivalued (CutFEM-style) FE assembly. `pyfp3d/kernels/cut_assembly.py` (`multivalued_redirection_coo` + `continuity_closure_coo`) + `pyfp3d/wake/multivalued.py::MultivaluedOperator` (extended n_total = n_main + n_ext DOF assembly, TE-jump/Γ extraction) + `pyfp3d/solve/picard_ls.py::solve_multivalued_laplace` (non-lifting direct-LU driver, parallel to the conforming path). **Key simplification (design_track_b.md §2.5/D6):** a cut element is the same P1 element matrix assembled twice with B1's `dofs_upper`/`dofs_lower`; expressed as a sparse redirection of the single-valued matrix — only the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b), everything else byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 continuity ("weld") closure aux_k = main_j, so the extended system reduces EXACTLY to the single-valued one (`test_extended_matrix_folds_to_stiffness`: fold recovers the stiffness matrix to 1e-13). Extended matrix is nonsymmetric ⇒ `spsolve`; GMRES+AMG deferred to B3+ scaling (design_track_b.md §5.3). Gate (`tests/test_b2_multivalued.py`, **17 passed**, coarse+medium both 2.5D families + 3D M6 coarse both families; medium/M6 skip in CI where gitignored): V0 freestream **0.0** (2.5D, α=0/4°) / **1e-14** (3D M6) < 1e−12; V1 MMS slope **1.94** ≥ 1.9 (generic-position cube cut); Laplace α=0 ⇒ TE jump = 0, cl_KJ = 0, main φ == single-valued oracle to **3e-11**. Suite **229+8+2** (was 218+8+2; +11, some medium/M6 skip in CI); conforming solver paths byte-untouched; 8-thread cap. Next = B3 (implicit Kutta: g₁+g₂ wake LS replaces the weld). |
 | B3 | ☐ | | Lifting solve with **implicit Kutta** (TE duplication + wake-LS condition, design_track_b.md D2; no Γ outer loop — Γ emerges; penalty Kutta demoted to an optional diagnostic). Gate re-specced 2026-07-11 (user-arbitrated): per-station Γ(z) within 1% of the conforming path's on the SAME wake-embedded mesh — the D1 wake-BC check, not just total TE circulation. |
 | B3.5 | ☐ | | **NEW 2026-07-11 (user-arbitrated):** far-field A/B — option a (spherical Dirichlet + extracted-Γ(z) taper vortex) vs option b (López-style Neumann outlet, domain size re-calibrated first per the dissertation §4.1.4 method). The measured winner becomes the default for B4+. |
 | B4 | ☐ | | Transonic + Mach continuation on the level-set path (inherits `damping_theta`). **Re-anchored 2026-07-11 (P4-erratum aware):** coarse M0.80 α1.25° against the G8.1 Newton-lock bands (shock 0.658 / cl_p 0.459) as a Picard-quality comparison; medium runs M0.7875 (M0.80 medium has no reachable isolated solution); fold discipline = per-mesh locks, no cross-mesh convergence claims. |

@@ -7,5 +7,6 @@ nothing here is imported by the shipped solver paths.
 
 from pyfp3d.wake.levelset import WakeLevelSet
 from pyfp3d.wake.cut_elements import CutElementMap
+from pyfp3d.wake.multivalued import MultivaluedOperator
 
-__all__ = ["WakeLevelSet", "CutElementMap"]
+__all__ = ["WakeLevelSet", "CutElementMap", "MultivaluedOperator"]
