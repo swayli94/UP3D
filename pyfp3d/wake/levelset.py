@@ -157,3 +157,22 @@ class WakeLevelSet:
         d = d_all[idx, best]
         q = self._seg_q0[best] + u[idx, best] * self._seg_len[best]
         return s, d, q
+
+    def surface_normals(self, points: np.ndarray) -> np.ndarray:
+        """Unit "+"-side wake-surface normal n_hat at each point, taken from
+        the spanwise-closest TE segment (the same segment `evaluate` selects).
+
+        The wake least-squares condition (Track B, B3; design_track_b.md
+        section 2.2, Lopez eqs. 3.43-3.44) needs this per cut element: g1 =
+        n_hat . (grad phi_u - grad phi_l). On a single-segment (quasi-2D) TE
+        it is constant; on a swept/kinked TE it is per-panel.
+        """
+        x = np.atleast_2d(np.asarray(points, dtype=np.float64))
+        rel = x[:, None, :] - self._seg_a[None, :, :]          # (n, nseg, 3)
+        b1 = np.einsum("pns,ns->pn", rel, self._seg_v)
+        b2 = rel @ self._d_hat
+        u = (b1 - self._a12 * b2) / self._det
+        s_all = np.einsum("pns,ns->pn", rel, self._seg_n)
+        excess = np.maximum(0.0, np.maximum(-u, u - 1.0)) * self._seg_len
+        best = np.argmin(s_all**2 + excess**2, axis=1)
+        return self._seg_n[best]

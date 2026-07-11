@@ -1235,7 +1235,14 @@ to P10/G10.1 the same day.)
 
 ---
 
-## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ + B2 ✓ 2026-07-11)
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ + B2 ✓; B3 delivered-but-BLOCKED, B4 NEW 2026-07-12)
+
+> **★ Track-B renumber 2026-07-12 (user-directed).** A new **B4 — TE
+> control-volume / implicit-Kutta re-derivation** is INSERTED (B3's emergent
+> circulation converges to the wrong value; design_track_b.md §9). Everything
+> after it shifts by one: **old B4 (transonic) → B5; old B4.5 (M6 3D) → B5.5;
+> old B5 (multi-wake) → B6; old B6 (curved wake, shelved) → B7.** Docs written
+> before 2026-07-12 use the old IDs.
 
 Deliverable: `wake/` — a level-set wake representation + multivalued (CutFEM-style)
 elements + implicit Kutta (TE duplication + wake least-squares condition; penalty
@@ -1249,10 +1256,18 @@ kill-the-Γ-secant efficiency motivation is obsolete post-P8 Newton
 (design_track_b.md §1); efficiency criteria below are non-regression guards only.
 Design record: DN1
 (`discussion_notes/20260707_1505_levelset_wake_design.md`); status snapshot in
-`discussion_notes/PLAN.md`. **Status: B1 + B2 closed 2026-07-11** (`pyfp3d/wake/{levelset,cut_elements,multivalued}.py`
-+ `kernels/cut_assembly.py`, dual-mesh gates green on coarse+medium of both 2.5D
-families and on the 3D M1/M4 ONERA M6 pair); next = B3 (lifting solve with
-implicit Kutta — replace B2's weld closure with the g₁+g₂ wake LS, Γ emerges).
+`discussion_notes/PLAN.md`. **Status (2026-07-12): B1 + B2 closed; B3 machinery
+DELIVERED but BLOCKED** — the multivalued lifting solve runs and is
+self-consistent, but the emergent circulation converges to the WRONG value
+(NACA0012 α=2°: Γ 0.2074 → 0.1760 → 0.1704 on coarse/medium/fine vs the
+conforming/thin-airfoil **0.1200**; mesh-convergent ⇒ a METHOD defect).
+**★ Root cause localized (design_track_b.md §9):** the wake LS is
+STRUCTURALLY blind to a constant jump (Σ_c ∇N_c = ∇(1) = 0 ⇒ its residual is
+identically zero for any uniform Γ — measured 1.9e-16), so "g₂ IS the discrete
+Kutta" is FALSE and Γ is pinned by a SINGLE equation: the TE aux row (lower-side
+mass conservation). That row's control volume is up/down ASYMMETRIC on a
+symmetric airfoil (upper fan 9 vs lower 6), because the ε shift sends every
+on-sheet node "+". ⇒ **next = B4 (NEW): re-derive the TE control volume.**
 **Numerics reference (2026-07-11):** [design_track_b.md](design_track_b.md) —
 theory/implementation analysis cross-checked against the López dissertation;
 supersedes DN1 as the Track B numerics spec (key deltas: 3D wake BC uses the
@@ -1277,20 +1292,35 @@ B4.5 M6 3D gate NEW); design_track_b.md §7 is the arbitration record.
 - [x] V1 MMS slope ≥ 1.9: cube cut in generic position (8° tilted half-plane), 3-level slope **1.94**
 - [x] Laplace α = 0 gives cl ≈ 0: TE jump = 0 (the weld forbids a jump) ⇒ cl_KJ = 0, and the main potential matches the single-valued `solve_laplace` oracle to **~3e−11** — on both mesh types (dual-mesh rule)
 
-### B3 — Lifting solve with implicit Kutta ☐ (NEXT)
-**Deliverable:** Lifting solve with **implicit Kutta** (TE duplication + wake-LS condition per design_track_b.md D2; penalty Kutta kept as optional diagnostic; no Γ outer loop, Γ emerges; far field = option a, Dirichlet + Γ(z)-taper vortex refreshed from the extracted jump)
-**Gates (dual-mesh; re-specced 2026-07-11 per design_track_b.md §7):**
-- [ ] V3 M0.5 α2°: cl inside [PG, KT]
-- [ ] **per-station Γ(z) within 1% of the conforming path's on the SAME (wake-embedded) mesh** (strict A/B — the D1 wake-BC check, not just total TE circulation)
-- [ ] on the wake-free M3 mesh: cl inside [PG, KT] and Γ(z) within bands of the embedded-mesh B-path result (no conforming counterpart exists there)
+### B3 — Lifting solve with implicit Kutta ◐ (machinery DELIVERED 2026-07-12; gates BLOCKED on B4)
+**Deliverable:** Lifting solve with **implicit Kutta** (TE duplication + wake-LS condition; no Γ outer loop, Γ emerges; far field = Dirichlet + vortex on the MAIN DOFs, aux free)
+**Delivered (2026-07-12):** `kernels/cut_assembly.py` (`mass_conservation_coo` per-side-ρ + `wake_ls_coo` + `nonte_aux_rows`), `wake/multivalued.py` (`closure="wake_ls"`, `side_potentials`, `element_densities`, `own_side_field`, `element_mach2`), `solve/picard_ls.py::solve_multivalued_lifting` (implicit Kutta, RHS-only Γ refresh, per-side subsonic density loop with `omega_rho`). Runs, converges, self-consistent (cl_KJ 0.372 vs D11-mapped cl_pressure 0.374).
+**★ BLOCKED — the emergent Γ converges to the WRONG value** (design_track_b.md §9): NACA0012 α=2° incompressible Γ = 0.2074 / 0.1760 / 0.1704 (coarse/medium/fine) vs conforming **0.1200**. Mesh-convergent ⇒ METHOD defect. **Gates below cannot be judged until B4 lands.**
+**Gates (dual-mesh; convergence-based per user arbitration 2026-07-12 — the old "Γ(z) within 1% same-mesh" clause is RETIRED, an O(h)-convergent embedded Kutta cannot meet it):**
+- [ ] V3 M0.5 α2°: cl inside [PG, KT]  — *currently FAILS (over-circulates)*
+- [ ] Γ converges monotonically toward the conforming value under refinement
+- [ ] on the wake-free M3 mesh: cl inside [PG, KT] and Γ within bands of the embedded-mesh B-path result
 - [ ] Picard count ≤ conforming Picard path (non-regression guard only)
 
-### B3.5 — Far-field A/B: Dirichlet+vortex vs Neumann outlet ☐ (NEW 2026-07-11, user-arbitrated)
-**Deliverable:** **Far-field A/B (NEW 2026-07-11, user-arbitrated)**: option a (spherical Dirichlet + extracted-Γ(z) taper vortex) vs option b (López-style Neumann outlet, no vortex correction; domain size re-calibrated first per the dissertation §4.1.4 method) — design_track_b.md §5.4/D7
-**Gate:**
-- [ ] subsonic NACA + M6 coarse: a-vs-b cl and Γ(z) agreement within the B3 gate bands after option-b re-calibration; the measured winner becomes the default for B4+
+### B4 — TE control-volume / implicit-Kutta re-derivation ☐ (NEW 2026-07-12, user-directed — **NEXT**)
+**Why (design_track_b.md §9, the B3 blocker):** two structural facts localize the defect.
+**(1) The wake LS CANNOT pin Γ.** Its residual is identically zero for any spatially-constant jump, because Σ_c ∇N_c = ∇(Σ_c N_c) = ∇(1) = 0 (partition of unity) — measured **1.9e-16**. ⇒ design_track_b.md §2.3/D2's claim "the g₂ on the TE-adjacent wake element IS the discrete Kutta condition" is **FALSE and retired**; the dissertation has no explicit Kutta anywhere.
+**(2) Γ is therefore pinned by a SINGLE equation** — the **TE aux row** (lower-side mass conservation; the López §3.5.4 exception) — and the true solution does NOT satisfy it (manufactured-solution row residual 2.4e-3 vs bulk mean 2.8e-4). Its control volume is **up/down ASYMMETRIC on a symmetric airfoil**: TE fan = 9 upper / 6 lower / 3 cut, because the ε shift sends every on-sheet node "+", so the element layer just ABOVE the sheet is uncut while its mirror below is cut.
+**Deliverable:** re-derived TE control volume / TE equations making the discrete Kutta consistent. Candidate routes (**not yet arbitrated**, design_track_b.md §9.5): (a) symmetrize the TE control volume (no ε shift in the TE neighbourhood, or explicitly balance the TE fan); (b) impose the **nonlinear** TE pressure equality |∇φ_u|² = |∇φ_l|² (Bernoulli) — non-degenerate in Γ, unlike the linearized g₂; this is the D2 penalty-Kutta family, kept for exactly this case.
+**Diagnostic harness (delivered 2026-07-12):** `tests/test_b4_te_control_volume.py` (6 passed) — pins the LS null space and the TE-fan asymmetry, and emits the visual artifact `artifacts/EXPORT_TE_DIAGNOSIS/b4_te_control_volume.png` + `summary.csv` (TE control-volume map + Γ-vs-h convergence to the wrong limit). These tests DOCUMENT the defect and are the before/after pins.
+**Gates:**
+- [ ] TE control volume is up/down symmetric on a symmetric airfoil (or the asymmetry is shown to be irrelevant by a derivation)
+- [ ] the manufactured true solution satisfies the TE rows to discretization order (residual drops to the bulk level)
+- [ ] NACA0012 α=2° incompressible: emergent Γ within 5% of the conforming 0.1200 on medium, and converging under refinement
+- [ ] then B3's V3 gate (cl inside [PG, KT]) passes
 
-### B4 — Transonic + Mach continuation on the level-set path ☐
+### B4.5 — Far-field A/B: Dirichlet+vortex vs Neumann outlet ☐ (was B3.5; NEW 2026-07-11, user-arbitrated)
+**Deliverable:** option a (spherical Dirichlet + vortex on the main DOFs) vs option b (López-style Neumann outlet, no vortex; domain re-calibrated per the dissertation §4.1.4 — note López uses **10²–10⁷ chord** domains vs pyFP3D's 15c) — design_track_b.md §5.4/D7
+**Note (2026-07-12):** far-field truncation is **NOT** the B3 over-circulation cause — imposing the conforming true solution's far-field trace as Dirichlet still yields Γ = 0.1721. Re-check after B4 closes.
+**Gate:**
+- [ ] subsonic NACA + M6 coarse: a-vs-b cl and Γ agreement within the B3 gate bands after option-b re-calibration; the measured winner becomes the default
+
+### B5 — Transonic + Mach continuation on the level-set path ☐ (was B4)
 **Deliverable:** Transonic + Mach continuation on the level-set path (inherits `damping_theta`)
 **Gates (dual-mesh; re-anchored 2026-07-11, P4-erratum aware):**
 - [ ] **Re-anchored 2026-07-11 (P4-erratum aware)**: NACA coarse M0.80 α1.25° inside the G8.1 Newton-lock bands (shock 0.658 / cl_p 0.459) as a Picard-quality comparison
@@ -1298,18 +1328,18 @@ B4.5 M6 3D gate NEW); design_track_b.md §7 is the arbitration record.
 - [ ] same-mesh same-recipe Picard-vs-Picard A/B within 2%
 - [ ] fold discipline applies (per-mesh locks, no cross-mesh convergence claims)
 
-### B4.5 — ONERA M6 3D gate ☐ (NEW 2026-07-11, user-arbitrated)
-**Deliverable:** **M6 3D gate (NEW 2026-07-11, user-arbitrated)**: the 3D-only machinery — TE-polyline ruled level set (D9), g₂ spanwise-free wake BC (D1), tip Γ→0 — is untestable on the 2.5D meshes of B1–B4
+### B5.5 — ONERA M6 3D gate ☐ (was B4.5; NEW 2026-07-11, user-arbitrated)
+**Deliverable:** the 3D-only machinery — TE-polyline ruled level set (D9), g₂ spanwise-free wake BC (D1), tip Γ→0 — is untestable on the 2.5D meshes of B1–B5
 **Gate:**
 - [ ] M6 coarse vs the P5/P8 baseline: Γ(z) distribution, cl_KJ, and shock positions within A/B bands
 
-### B5 — Multi-wake validation (multi-element / wing-body) ☐
+### B6 — Multi-wake validation (multi-element / wing-body) ☐ (was B5)
 **Deliverable:** Multi-wake validation (multi-element / wing-body)
 **Gates:**
 - [ ] two-element cl's plausible
 - [ ] fuselage carries no lift
 
-### B6 — Curved wake / free wake ⊘ (SHELVED 2026-07-10)
+### B7 — Curved wake / free wake ⊘ (was B6; SHELVED 2026-07-10)
 **Deliverable:** Curved wake / free wake — **SHELVED 2026-07-10** (DN2 §4.5.6: loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent). `update_direction()` interface capability retained.
 **Gate:** — (shelved; no gate)
 
@@ -1319,7 +1349,7 @@ Working rules (DN1 §9–§10):
   `solve_subsonic_lifting`; the suite runs both paths parameterized; the default
   flips per-phase only after that phase's gate.
 - **Dual-mesh testing (NEW 2026-07-11, user-directed;
-  design_track_b.md §5.7).** Every B1–B4 gate runs on BOTH mesh types:
+  design_track_b.md §5.7).** Every B1–B5 gate runs on BOTH mesh types:
   (a) the existing wake-embedded meshes (M0/M1 — the "C-grid" analogue: nodes
   lie exactly on the wake plane, exercising the ε side-shift at scale, and
   enabling strict same-mesh A/B against the conforming path), and (b) the
@@ -1334,7 +1364,7 @@ Working rules (DN1 §9–§10):
   The P8 fully-coupled Newton is designed on the *conforming* wake (the
   Γ-Jacobian blocks come from `wake.py::self._h`; design.md §8.1), while B3's
   implicit Kutta removes the Γ DOF entirely. Land P8 on the conforming path
-  first (done — P8 closed 2026-07-11); a level-set Newton is a post-B4
+  first (done — P8 closed 2026-07-11); a level-set Newton is a post-B5
   re-derivation, not a parallel design (design_track_b.md §5.5: the wake-LS
   Jacobian blocks are constant in φ, no Γ elimination/Woodbury needed) —
   Track B blocks nothing in P7–P12.
@@ -1474,20 +1504,21 @@ obsolete post-P8 Newton), so the efficiency criteria in the B-gates are
 non-regression guards only. Coexistence strategy: a parallel `solve/picard_ls.py`
 path with a per-phase default flip — the conforming-path solver numerics stay
 byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
-(closed), and a level-set Newton is a post-B4 re-derivation (simpler — the
+(closed), and a level-set Newton is a post-B5 re-derivation (simpler — the
 wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
 blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
 | B1 | ✓ | 2026-07-11 | **B1 delivery (2026-07-11):** `pyfp3d/wake/levelset.py` (TE-**polyline** ruled straight wake per design_track_b.md D9, per-segment frames, `update_direction()` re-aims the wake without touching the mesh) + `pyfp3d/wake/cut_elements.py` (ε side-shift relative to local edge length (D4), **downstream-crossing test** excluding the ahead-of-LE sign-change region, TE-node flagging, below-TE fan recorded as `te_lower_elems` for B2's López-fig-3.6c aux assignment, per-node ext DOFs, López eq. 3.33–3.34 `dofs_upper`/`dofs_lower` tables); imported by nothing in the shipped solver paths. Gate evidence (`tests/test_b1_cut_elements.py`, **34 passed**, the FULL dual-mesh matrix — 2.5D M0/M3 coarse+medium AND 3D M1/M4 ONERA M6): M0 embedded — every conforming sheet node ε-shifted "+" (the D4 stress test at scale), census cross-validated EXACTLY against `cut_wake` (`cut_elems ∪ te_lower_elems` == the minus-side element star, element-by-element), TE nodes == `wc.te_nodes`; M3 wake-free — generic cuts, gap-free corridor TE→far field at α=0 AND re-aimed to α=4° **on the same mesh**; M1/M4 ONERA M6 — census a strict **superset** of the conforming minus-star (0 missing, +2.9% tip-edge straddlers: expected, since in an embedded method the sheet's tip EDGE need not conform), spanwise clip verified. ★ **Two 3D-only mechanisms found and fixed here** (both invisible on quasi-2D meshes): (1) the swept TE span axis is NOT perpendicular to the wake direction ⇒ q must come from the **oblique (v, d̂, n̂) frame** — an orthogonal projection leaks the downstream distance into the spanwise coordinate and wrongly clipped ~60% of the true M6 cut set (measured, fixed, regression-pinned); (2) the **spanwise clip** (crossings must satisfy 0 ≤ q ≤ span_length) is mandatory — without it the level set cuts the wake-plane extension beyond the tip, i.e. P5's far-field branch-ray artifact re-created (the conforming path gets the same semantics from its free-edge rule, Γ(tip)=0). Suite **218+8+2** (was 184+8+2; +34, some of which skip when the gitignored wake-free meshes aren't generated locally); conforming solver paths byte-untouched; all runs at the 8-thread cap alongside the in-flight P9 fine demo. |
-| B2 | ✓ | 2026-07-11 | **B2 delivery (2026-07-11):** multivalued (CutFEM-style) FE assembly. `pyfp3d/kernels/cut_assembly.py` (`multivalued_redirection_coo` + `continuity_closure_coo`) + `pyfp3d/wake/multivalued.py::MultivaluedOperator` (extended n_total = n_main + n_ext DOF assembly, TE-jump/Γ extraction) + `pyfp3d/solve/picard_ls.py::solve_multivalued_laplace` (non-lifting direct-LU driver, parallel to the conforming path). **Key simplification (design_track_b.md §2.5/D6):** a cut element is the same P1 element matrix assembled twice with B1's `dofs_upper`/`dofs_lower`; expressed as a sparse redirection of the single-valued matrix — only the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b), everything else byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 continuity ("weld") closure aux_k = main_j, so the extended system reduces EXACTLY to the single-valued one (`test_extended_matrix_folds_to_stiffness`: fold recovers the stiffness matrix to 1e-13). Extended matrix is nonsymmetric ⇒ `spsolve`; GMRES+AMG deferred to B3+ scaling (design_track_b.md §5.3). Gate (`tests/test_b2_multivalued.py`, **17 passed**, coarse+medium both 2.5D families + 3D M6 coarse both families; medium/M6 skip in CI where gitignored): V0 freestream **0.0** (2.5D, α=0/4°) / **1e-14** (3D M6) < 1e−12; V1 MMS slope **1.94** ≥ 1.9 (generic-position cube cut); Laplace α=0 ⇒ TE jump = 0, cl_KJ = 0, main φ == single-valued oracle to **3e-11**. Suite **229+8+2** (was 218+8+2; +11, some medium/M6 skip in CI); conforming solver paths byte-untouched; 8-thread cap. Next = B3 (implicit Kutta: g₁+g₂ wake LS replaces the weld). |
-| B3 | ☐ | | Lifting solve with **implicit Kutta** (TE duplication + wake-LS condition, design_track_b.md D2; no Γ outer loop — Γ emerges; penalty Kutta demoted to an optional diagnostic). Gate re-specced 2026-07-11 (user-arbitrated): per-station Γ(z) within 1% of the conforming path's on the SAME wake-embedded mesh — the D1 wake-BC check, not just total TE circulation. |
-| B3.5 | ☐ | | **NEW 2026-07-11 (user-arbitrated):** far-field A/B — option a (spherical Dirichlet + extracted-Γ(z) taper vortex) vs option b (López-style Neumann outlet, domain size re-calibrated first per the dissertation §4.1.4 method). The measured winner becomes the default for B4+. |
-| B4 | ☐ | | Transonic + Mach continuation on the level-set path (inherits `damping_theta`). **Re-anchored 2026-07-11 (P4-erratum aware):** coarse M0.80 α1.25° against the G8.1 Newton-lock bands (shock 0.658 / cl_p 0.459) as a Picard-quality comparison; medium runs M0.7875 (M0.80 medium has no reachable isolated solution); fold discipline = per-mesh locks, no cross-mesh convergence claims. |
-| B4.5 | ☐ | | **NEW 2026-07-11 (user-arbitrated):** ONERA M6 3D gate — the 3D-only machinery (TE-polyline ruled level set D9, g₂ spanwise-free wake BC D1, tip Γ→0) is untestable on the 2.5D meshes of B1–B4. A/B against the P5/P8 baseline on Γ(z), cl_KJ and shock positions; M4's equal-sizing property (within 6–9% of M1's tet count at equal h_wall) is what makes that comparison controlled. |
-| B5 | ☐ | | Multi-wake validation (multi-element / wing-body): two-element cl's plausible, fuselage carries no lift. Unblocks Track M's M2. |
-| B6 | ⊘ SHELVED | 2026-07-10 | Curved wake / free wake. Recorded reasons (DN1 §8 / DN2 §4.5.6): the loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent. The `update_direction()` interface capability is retained — it is what B1's α re-aim tests exercise. |
+| B2 | ✓ | 2026-07-11 | **B2 delivery (2026-07-11):** multivalued (CutFEM-style) FE assembly. `pyfp3d/kernels/cut_assembly.py` (`multivalued_redirection_coo` + `continuity_closure_coo`) + `pyfp3d/wake/multivalued.py::MultivaluedOperator` (extended n_total = n_main + n_ext DOF assembly, TE-jump/Γ extraction) + `pyfp3d/solve/picard_ls.py::solve_multivalued_laplace` (non-lifting direct-LU driver, parallel to the conforming path). **Key simplification (design_track_b.md §2.5/D6):** a cut element is the same P1 element matrix assembled twice with B1's `dofs_upper`/`dofs_lower`; expressed as a sparse redirection of the single-valued matrix — only the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b), everything else byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 continuity ("weld") closure aux_k = main_j, so the extended system reduces EXACTLY to the single-valued one (`test_extended_matrix_folds_to_stiffness`: fold recovers the stiffness matrix to 1e-13). Extended matrix is nonsymmetric ⇒ `spsolve`; GMRES+AMG deferred to B3+ scaling (design_track_b.md §5.3). Gate (`tests/test_b2_multivalued.py`, **17 passed**, coarse+medium both 2.5D families + 3D M6 coarse both families; medium/M6 skip in CI where gitignored): V0 freestream **0.0** (2.5D, α=0/4°) / **1e-14** (3D M6) < 1e−12; V1 MMS slope **1.94** ≥ 1.9 (generic-position cube cut); Laplace α=0 ⇒ TE jump = 0, cl_KJ = 0, main φ == single-valued oracle to **3e-11**. Suite **235+8+2** (was 218+8+2; +17, some medium/M6 skip in CI — the B2 commit message's "229" was measured before the medium parametrization was added, corrected 2026-07-12); conforming solver paths byte-untouched; 8-thread cap. Next = B3 (implicit Kutta: g₁+g₂ wake LS replaces the weld). |
+| B3 | ◐ | 2026-07-12 | **B3 machinery DELIVERED, gates BLOCKED on B4.** Delivered: `kernels/cut_assembly.py` (`mass_conservation_coo` with **per-side ρ** on cut elements per D10, `wake_ls_coo` = López eq. 3.43–3.51 g₁+g₂ LS on the non-TE aux rows, `nonte_aux_rows`), `wake/multivalued.py` (`closure="wake_ls"`, `side_potentials`/`element_densities`/`own_side_field`/`element_mach2`), `solve/picard_ls.py::solve_multivalued_lifting` (implicit Kutta, no Γ secant, RHS-only Γ refresh of the far-field vortex, per-side subsonic density loop). Runs, converges, self-consistent (cl_KJ 0.372 vs D11-mapped cl_pressure 0.374). **★ BLOCKED: the emergent circulation converges to the WRONG value** — NACA0012 α=2° incompressible Γ = 0.2074/0.1760/0.1704 (coarse/medium/fine) vs conforming **0.1200**; mesh-convergent ⇒ METHOD defect, not discretization ⇒ **new phase B4** (design_track_b.md §9). **Five independent correctness fixes landed en route (keep, orthogonal to B4):** (1) the far-field **aux DOFs must stay FREE** (Neumann) — pinning them to the vortex lower branch drains the circulation (jump decays 0.0147→0.001 downstream); the vortex goes on the **main** DOFs only (retires the §5.4-option-a claim that both get Dirichlet); (2) the wake must be **coplanar with the vortex branch cut** (chord plane y=0, design.md §4) — aiming the level set along the freestream while the branch cut stays horizontal leaves an unsupported Dirichlet jump at the outlet, manufacturing spurious velocity and a density blow-up (all high-M cells at x≈15, NaNs); (3) the per-side density **limit-cycles and must be under-relaxed** (`omega_rho`, default 0.5) — full adoption diverges after ~80 outers (Γ 0.126→0.010, M_max→6.7); (4) **D11 is mandatory**: wall Cp from `phi_main` makes lower-surface TE triangles reference the TE's UPPER value ⇒ cl_pressure = **−3.35** (junk); per-side `phi_up`/`phi_lo` mapping ⇒ cl_p matches cl_KJ to 0.4%; (5) **compressibility is carried by the BULK density, NOT the far-field vortex** — PG-scaling the vortex (β<1) leaves Γ unchanged (the soft Kutta does not propagate the outer stretch) while the bulk density raises it 0.1086→0.1256 (correct 1/β direction). Gate clause **"Γ(z) within 1% same-mesh" RETIRED** (user-arbitrated 2026-07-12): an O(h)-convergent embedded Kutta cannot meet a same-mesh 1% band; replaced by convergence-based criteria. |
+| B4 | ☐ | | **NEW 2026-07-12 (user-directed) — TE control-volume / implicit-Kutta re-derivation. NEXT.** The B3 blocker, root-caused to two structural facts (design_track_b.md §9): **(1) the wake LS is STRUCTURALLY blind to Γ** — its residual vanishes identically for any spatially-constant jump because Σ_c ∇N_c = ∇(1) = 0 (partition of unity); measured **1.9e-16** ⇒ design_track_b.md §2.3/D2's "g₂ IS the discrete Kutta condition" is **FALSE and retired** (the dissertation has no explicit Kutta anywhere — "Kutta" does not appear in its method chapter). **(2) Γ is therefore pinned by a SINGLE equation, the TE aux row** (lower-side mass conservation; the López §3.5.4 exception), and the manufactured true solution does NOT satisfy it (row residual 2.4e-3 vs bulk mean 2.8e-4). That row's control volume is **up/down asymmetric on a symmetric airfoil** — TE fan 9 upper / 6 lower / 3 cut — because the ε shift sends every on-sheet node "+", leaving the element layer just above the sheet uncut while its mirror below is cut. **Already fixed en route (real bug, keep):** the ε shift was also manufacturing spurious cuts in the below-TE fan (3 of 6 elements got a bogus UPPER copy *below* the wake) — exactly the López p.57 warning; the fix restored mesh convergence (Γ went from a mesh-independent wrong 0.186 to the convergent 0.207→0.176→0.170). **Candidate routes (NOT arbitrated):** (a) symmetrize the TE control volume (skip the ε shift in the TE neighbourhood, or balance the fan explicitly); (b) impose the **nonlinear** TE pressure equality \|∇φ_u\|² = \|∇φ_l\|² (Bernoulli) — non-degenerate in Γ, unlike the linearized g₂; this is the D2 penalty-Kutta family, retained for exactly this contingency. **Diagnostic harness delivered:** `tests/test_b4_te_control_volume.py` (6 passed, ~2 s) pins the LS null space + the TE-fan asymmetry and emits `artifacts/EXPORT_TE_DIAGNOSIS/b4_te_control_volume.png` + `summary.csv` (TE control-volume map + Γ-vs-h convergence to the wrong limit). **Gates:** TE control volume symmetric (or asymmetry proven irrelevant); manufactured true solution satisfies the TE rows to discretization order; NACA0012 α=2° emergent Γ within 5% of 0.1200 on medium and converging; then B3's V3 (cl in [PG, KT]) passes. **Ruled out — do not re-walk:** superposed row assignment (measured Γ=0.34, 3× worse; replacement confirmed, consistent with §3.5.4); far-field truncation (the conforming true solution's far-field trace as Dirichlet still yields Γ=0.1721); the wake LS itself (exactly satisfied, 1.9e-16); the multivalued mass conservation itself (a prescribed jump is reproduced exactly — the B2 gate). |
+| B4.5 | ☐ | | (was B3.5) **NEW 2026-07-11 (user-arbitrated):** far-field A/B — option a (spherical Dirichlet + vortex on the MAIN DOFs, aux free) vs option b (López-style Neumann outlet; domain re-calibrated per the dissertation §4.1.4 — note López uses **10²–10⁷ chord** domains vs pyFP3D's 15c). **2026-07-12: far-field truncation is NOT the B3 over-circulation cause** (see B4); re-check after B4 closes. The measured winner becomes the default. |
+| B5 | ☐ | | (was B4) Transonic + Mach continuation on the level-set path (inherits `damping_theta`). **Re-anchored 2026-07-11 (P4-erratum aware):** coarse M0.80 α1.25° against the G8.1 Newton-lock bands (shock 0.658 / cl_p 0.459) as a Picard-quality comparison; medium runs M0.7875 (M0.80 medium has no reachable isolated solution); fold discipline = per-mesh locks, no cross-mesh convergence claims. |
+| B5.5 | ☐ | | (was B4.5) **NEW 2026-07-11 (user-arbitrated):** ONERA M6 3D gate — the 3D-only machinery (TE-polyline ruled level set D9, g₂ spanwise-free wake BC D1, tip Γ→0) is untestable on the 2.5D meshes of B1–B5. A/B against the P5/P8 baseline on Γ(z), cl_KJ and shock positions; M4's equal-sizing property (within 6–9% of M1's tet count at equal h_wall) is what makes that comparison controlled. |
+| B6 | ☐ | | (was B5) Multi-wake validation (multi-element / wing-body): two-element cl's plausible, fuselage carries no lift. Unblocks Track M's M2. |
+| B7 | ⊘ SHELVED | 2026-07-10 | (was B6) Curved wake / free wake. Recorded reasons (DN1 §8 / DN2 §4.5.6): the loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent. The `update_direction()` interface capability is retained — it is what B1's α re-aim tests exercise. |
 
 ### Track V — viscous–inviscid interaction
 

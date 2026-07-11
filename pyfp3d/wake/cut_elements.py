@@ -169,15 +169,33 @@ class CutElementMap:
             downstream.any(axis=1) & ~on_sheet.any(axis=1)
         ]
 
-        # Below-TE fan: not cut, contains a TE node, all non-TE nodes "-".
+        # Below-TE fan: contains a TE node, all non-TE nodes "-". These sit
+        # entirely at/below the wake plane and only TOUCH the TE vertex -- the
+        # sheet does not pass through their interior, so they are LOWER-side
+        # elements (their TE reference is the aux DOF; Lopez fig. 3.6c), NOT
+        # cut elements.
+        #
+        # ★ TE eps-shift exception (Lopez section 3.5.4, p.57: "Moving these
+        # nodes upwards would result in cutting all wake elements under the
+        # wake that are in touch with the trailing edge, which yields
+        # inaccurate results"). The TE node is on the sheet, so the eps shift
+        # sends it "+", which manufactures a sign change against the fan's "-"
+        # nodes and a marginally-downstream crossing (d_cross -> 0+). Left
+        # alone, those elements are classified CUT and handed a spurious UPPER
+        # copy BELOW the wake, right at the TE -- which corrupts the doubled-TE
+        # mass conservation that the implicit Kutta depends on. Measured on
+        # NACA0012 a=2: 3 of the 6 below-TE fan elements were being cut, and
+        # the emergent circulation OVER-shot by ~45% (Gamma 0.186 vs the
+        # conforming/thin-airfoil 0.120), mesh-converged. So the fan is
+        # subtracted from the cut set here, BEFORE the aux DOFs are numbered.
         is_te = np.zeros(n_nodes, dtype=bool)
         is_te[self.te_nodes] = True
         te_e = is_te[el]                                 # (n_tets, 4)
         has_te = te_e.any(axis=1)
         all_nonte_lower = np.all(te_e | (side_e == -1), axis=1)
         fan_mask = has_te & all_nonte_lower
-        fan_mask[self.cut_elems] = False
         self.te_lower_elems = np.flatnonzero(fan_mask)
+        self.cut_elems = self.cut_elems[~fan_mask[self.cut_elems]]
 
         # Per-node aux DOF over the unique cut-element nodes.
         cut_nodes = np.unique(el[self.cut_elems])
