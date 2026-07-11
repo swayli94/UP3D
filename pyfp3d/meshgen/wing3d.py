@@ -152,7 +152,7 @@ def onera_m6_wing_mesh(
     does not conform to it and the mesh topology knows nothing about the
     wake -- Track B's deliverable form, now in 3D (swept TE, tip). The
     corridor sizing therefore matches the M1 family's (same h_wake, same
-    Distance thresholds), which keeps the B4.5 A/B against the P5/P8
+    Distance thresholds), which keeps the B7 A/B against the P5/P8
     baselines a controlled comparison. The returned Mesh then has NO
     "wake" group.
 

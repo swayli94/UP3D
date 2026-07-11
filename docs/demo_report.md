@@ -37,10 +37,21 @@ than silently corrected away.
 | P7 differentiable walk flux | `cases/demo/p7_diff_flux/` | 7 PASS (incl. gated converged-field) | closed 2026-07-10 (FD 3–5e-10) |
 | P8 fully-coupled Newton | `cases/demo/p8_newton/` | 15 PASS (parts 2–3 gated) | closed 2026-07-11 (G8.1 + G8.2 + G8.3) |
 | P8 capability assessment | `cases/demo/p8_capability/` | 36 PASS (full matrix gated) | **evaluation demo, not a gate** (2026-07-11) |
+| P10 (partial) G10.2 continuation tolerance | `cases/demo/p10_newton_usability/` | split A/B verdict | G10.2 + G10.3 closed 2026-07-11; phase stays open (G10.1) |
+| P9 grid-convergence & accuracy-gap discrimination | `cases/demo/p9_grid_discrimination/` | 11 PASS + 3 XFAIL | closed 2026-07-11 (G9.3 verdict awaits arbitration) |
+| **Track B** B1 cut-element identification | `tests/test_b1_cut_elements.py` (test-only) | 34 PASS | closed 2026-07-11 |
+| **Track B** B2 multivalued assembly | `tests/test_b2_multivalued.py` (test-only) | 17 PASS | closed 2026-07-11 |
+| **Track B** B3 + B4 lifting + TE Kutta | `cases/demo/b3_levelset_lifting/` | 13 demo PASS (+6, +8 tests) | closed 2026-07-12 |
+| **Track B** B5 far-field A/B | `cases/demo/b4p5_farfield/` | 9 demo PASS (+10 tests) | closed 2026-07-12 |
 
-> Track-P renumber (2026-07-08): P6 = surface recovery (this); P7 = differentiable
-> flux (Newton prereq); P8 = fully-coupled Newton; P9 = curved wall elements;
-> P10 = backlog. See roadmap.md.
+> Track-P renumber (2026-07-08, then 2026-07-11 ×2): P6 = surface recovery;
+> P7 = differentiable flux (Newton prereq); P8 = fully-coupled Newton;
+> P9 = grid-convergence discrimination; P10 = Newton generality/continuation;
+> P11 = curved wall elements; P12 = backlog.
+> **Track-B renumber (2026-07-12 ×2):** a new **B4** (TE control volume) was
+> inserted, then the half-integer IDs were regularized away — the far-field gate
+> is now **B5** (was B3.5, then B4.5; its demo dir keeps the old `b4p5_` name),
+> transonic is **B6**, ONERA M6 3D is **B7**. See roadmap.md for the full mapping.
 
 ---
 
@@ -1366,125 +1377,343 @@ isoparametric *wall* elements cannot remove the edge of a wake sheet.
   up in 13 levels, **5294 s (88 min)**, inside the 2 h budget. Path changes
   are safe by G8.2's continuation-path independence.
 
-## Track B — B3 + B4: the level-set embedded wake lifts (closed 2026-07-12)
+## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓, closed 2026-07-11/12)
 
-**Demo:** `cases/demo/b3_levelset_lifting/` — `python run_demo.py`, ~1 min,
-**8/8 PASS**. NACA0012 medium, incompressible, α = 0 and α = 4, on the **same
-mesh with the same level set**. The mesh topology knows nothing about the wake.
+**What the track replaces.** The conforming path represents the wake as a *mesh
+surface*: the sheet is embedded in the geometry, its nodes are duplicated by the
+preprocessor, and Γ is a global unknown eliminated by a master–slave constraint
+and chased by a secant loop. Track B removes all of that. The wake becomes a
+**level set** evaluated on an *unmodified* mesh; elements the sheet passes through
+get a second set of DOFs (multivalued / CutFEM-style); the jump is convected by a
+wake least-squares condition; and Γ is no longer an unknown at all — it is a
+**result**, pinned by a Kutta condition at the TE.
 
-| check | measured | criterion |
-| --- | --- | --- |
-| Γ at α = 0 | −3.9e−4 | \|Γ\| < 1e−3 (symmetric ⇒ no circulation) |
-| Γ at α = 4 | **0.2384** (conforming 0.2393, **0.4%**) | > 0.2 |
-| aux DOFs / main DOFs | **9.5%** (2982 cut tets of 61788) | < 15% — a thin strip |
-| TE Kutta control volumes | 2 upper / 2 lower, wall-adjacent | both non-empty |
-| jump drift TE → far field | **0.0%** | < 10% (no drain) |
-| cl_pressure vs conforming (α=4) | 0.4770 vs 0.4786 | within 3% |
-| cl_pressure vs cl_KJ = 2Γ | 0.4770 vs 0.4769 | within 5% (D11 mapping correct) |
-| M3 wake-free mesh has a `wake` tag | False | topology knows nothing about the wake |
-| wake-free Γ vs embedded Γ (α=4) | **0.2339 vs 0.2384** (1.9%) | within 5% (generic cuts reproduce it) |
+**Purpose (user-arbitrated 2026-07-11): mesh/geometry workflow capability, NOT
+solver speed.** No pre-embedded wake surface, α sweeps without remeshing, blunt-TE
+anchoring, multi-wake/wake–fuselage intersections, and the structural elimination
+of the P5 st133-class Kutta-probe failures. The original "kill the Γ-secant for
+speed" motivation is obsolete post-P8 Newton.
 
-**Figures.**
+**Dual-mesh rule (the acceptance discipline).** Every gate runs on **both** mesh
+families:
 
-1. `flowfield_lift_vs_nolift_m0.png` (M0 embedded) + `flowfield_lift_vs_nolift_m3.png`
-   (M3 wake-free) — speed (own-side) and the perturbation potential drawn **per
-   element**, i.e. exactly as the multivalued DOFs store it: a crisp branch cut
-   carrying [φ] = Γ at α = 4, and a flat field with **no jump at all** at α = 0.
-   Shown on **both** mesh families; the M3 panel exposes the coarser wake-free
-   triangulation the level set cuts through generically.
-2. `levelset_region_m0.png` — **where** the level set acts: ONE layer of elements
-   (4.8% of the tets), the below-TE fan, and the B4 TE-Kutta wall-adjacent
-   control volumes. The mesh is never modified. (The cut layer sits just BELOW
-   the sheet — the ε side-shift sends on-sheet nodes "+", so the sheet
-   effectively lies at y = −ε. That bias is exactly what B4's TE condition had
-   to be made immune to.)
-3. `wake_jump_m0.png` — **how the jump survives to the far field.** LEFT: the nodal
-   [φ] at every cut node vs downstream distance is **flat at Γ from the TE
-   (d = 0) out to the far field (d ≈ 15 c)** — the g₁ + g₂ wake LS convects it
-   unchanged, and the far-field aux DOFs are left FREE so it exits rather than
-   being drained. (Pinning them to the vortex's lower branch was measured to
-   decay the jump 0.0147 → 0.001, i.e. to drain the circulation.) RIGHT: the
-   **storage** — the MAIN dof holds the node's own-side value, the AUX dof the
-   other side, and the gap between them is exactly Γ, all the way out. One mesh,
-   one extra dof per cut node — NOT two meshes (López fig. 3.6's "two meshes" is
-   only a visualization).
-4. `wall_cp.png` — surface Cp at both incidences on **both mesh families**
-   (solid = M0 embedded, dotted = M3 wake-free, colour = surface, grey dashed =
-   conforming reference; Cp axis inverted, suction up), using the **D11 per-side DOF mapping**
-   (lower-surface TE triangles must read the TE's AUX value; `phi_main` alone
-   gives cl_pressure = −3.35, junk). At α = 0 upper and lower collapse; the M3
-   cl_p is within 2.3% of conforming despite being a coarser, wake-free mesh.
-5. `dual_mesh_embedded_vs_free.png` — the **dual-mesh rule** made visible: the
-   same level-set path on the wake-**embedded** M0 mesh (which HAS a `wake` tag,
-   its wake nodes lying exactly on the sheet) and on the wake-**free** M3 mesh
-   (**no `wake` tag anywhere**, the level set making generic cuts through generic
-   elements — the actual Track B workflow target). Γ agrees to **1.9%** (0.2339
-   vs 0.2384). This is the payoff: lift on a mesh that never had a wake
-   embedded, and no conforming counterpart exists there at all.
+| family | meshes | role |
+|---|---|---|
+| **wake-embedded** (the "C-grid" analogue) | M0 quasi-2D, M1 ONERA M6 | nodes lie *exactly* on the sheet ⇒ stresses the ε side-shift at scale, and enables a strict **same-mesh A/B against the conforming solver** |
+| **wake-free** (the "O-grid" analogue) | M3 quasi-2D, M4 ONERA M6 | **no `wake` tag at all**; the level set makes generic cuts through generic elements — **the actual workflow target**, where no conforming counterpart exists |
 
-**What this evidences.** Lift emerges on a mesh that never had a wake embedded:
-Γ is a RESULT (no secant, no master–slave constraint), pinned by the B4 nonlinear
-TE pressure-equality Kutta and convected downstream by the wake LS. Roadmap
-Track B B3/B4; numerics + the B4 derivation in
-[design_track_b.md §9](design_track_b.md).
+**Evidence map.**
+
+| gate | evidence | checks | verdict |
+|---|---|---|---|
+| B1 cut-element identification | `tests/test_b1_cut_elements.py` | 34 PASS | closed 2026-07-11 (test-only; no demo dir) |
+| B2 multivalued FE assembly | `tests/test_b2_multivalued.py` | 17 PASS | closed 2026-07-11 (test-only; no demo dir) |
+| B3 lifting solve + implicit Kutta | `cases/demo/b3_levelset_lifting/` + `tests/test_b3_lifting.py` | 13 demo PASS + 6 PASS | closed 2026-07-12 |
+| B4 TE control volume / Kutta | same demo + `tests/test_b4_te_control_volume.py` | 8 PASS | closed 2026-07-12 |
+| B5 far-field A/B | `cases/demo/b4p5_farfield/` + `tests/test_b45_farfield.py` | 9 demo PASS + 10 PASS | closed 2026-07-12 |
+
+75 Track B tests in total. Numerics spec: [design_track_b.md](design_track_b.md)
+(supersedes DN1). **Next = B6** (transonic + Mach continuation on the level-set
+path) / **B7** (ONERA M6 3D).
+
+> **Track-B renumber 2026-07-12.** Two renumbers landed the same day: a new **B4**
+> (TE control volume) was inserted, then the half-integer IDs were regularized
+> away. The far-field A/B gate documented below as **B5** was called *B3.5*, then
+> *B4.5*, in earlier docs — including the demo directory name
+> `cases/demo/b4p5_farfield/`, which is kept as-is so the committed paths stay
+> stable. See roadmap.md for the full mapping.
 
 ---
 
-## Track B — B4.5: far-field A/B (Dirichlet+vortex vs Neumann outlet) (closed 2026-07-12)
+### B1 — level-set wake + cut-element identification (closed 2026-07-11)
 
-**Demo:** `cases/demo/b4p5_farfield/` — `python run_demo.py` redraws + self-checks
-from the committed `summary.csv`; `PYFP3D_B45_RESOLVE=1 python run_demo.py`
-re-solves the whole study from scratch (~15 min, threads capped).
-`tests/test_b45_farfield.py` (10 passed, ~20 s) holds the cheap 15c locks.
+**Evidence:** `tests/test_b1_cut_elements.py` — **34 passed**, across the full
+dual-mesh matrix (2.5D M0/M3 coarse+medium *and* 3D M1/M4 ONERA M6). No demo
+directory: B1 delivers no solve, only a geometric predicate, so its evidence is
+the test matrix rather than a figure.
 
-**Question.** The level-set lifting path needs a far-field BC. Two self-consistent
-options (design_track_b.md §5.4): **option a (vortex)** — spherical Dirichlet
-freestream + a PG point vortex on the far-field MAIN DOFs, the emergent Γ
-refreshed into the vortex each outer iteration (pyFP3D's compact 15c domain is
-calibrated *for* this correction); **option b (Neumann)** — the López form:
-inflow Dirichlet freestream (NO vortex), outflow a Neumann outlet carrying the
-freestream flux ρ∞(u·n̂). Option b is attractive for the workflow (no
-Γ-into-far-field feedback, simplest α sweep), but with no vortex it truncates the
-O(Γ/r) far-field tail, so its domain must grow (the dissertation §4.1.4 uses
-10²–10⁷-chord domains). New solver interface:
-`solve_multivalued_lifting(farfield="vortex"|"neumann"|"freestream")`, default
-`"vortex"`; helpers `_farfield_split`/`_neumann_outlet_rhs` in
-`solve/picard_ls.py`; conforming path byte-untouched.
+**Deliverable.** `wake/levelset.py` + `wake/cut_elements.py`: a TE-**polyline**
+ruled level set, and the census of elements it cuts. The mesh is never modified.
 
-**Method — López-style domain-size re-calibration.** Coarse NACA0012, M0.5 α2°,
-on BOTH Track B mesh families (M0 embedded + M3 wake-free), far-field radius
-R ∈ {15, 30, 60, 120}c. `farfield_domain_study.png` plots Γ vs R (one panel per
-family) with the conforming reference + its ±2% B3 band.
+| check | measured | why it matters |
+|---|---|---|
+| M0 (embedded): cut census vs the conforming wake | **exactly** == `cut_wake`'s minus-side element star, element by element | the level set reproduces the conforming topology it replaces |
+| M0: on-sheet nodes | every one ε-shifted **"+"** | D4 side-shift stress test at scale |
+| M3 (wake-free): corridor TE → far field | gap-free at α=0 **and** after `update_direction` to α=4° **on the same mesh** | α sweeps without remeshing — the workflow payoff |
+| M1/M4 (ONERA M6, 3D): census vs conforming | strict **superset**: **0 missing**, **+2.9%** extras, all tip-edge straddlers | expected — the sheet's tip *edge* need not conform in an embedded method |
+| M1/M4: spanwise clip | verified (nothing cut wholly outboard of the tip) | encodes Γ(tip) = 0 |
 
-**Result (both families bit-for-bit agree).**
+**★ Two 3D-only mechanisms found and fixed here — both invisible on quasi-2D
+meshes.** This is the concrete justification for the dual-mesh rule:
 
-| R/c | conforming | option a (vortex) | option b (Neumann) | b−a% | freestream−a% |
+1. **The swept TE span axis is not perpendicular to the wake direction.** The
+   spanwise coordinate must be measured in the **oblique (v, d̂, n̂) frame**. An
+   orthogonal projection leaks the downstream distance into the spanwise
+   coordinate and wrongly clipped **~60% of the true M6 cut set** (measured, then
+   fixed, now regression-pinned).
+2. **The spanwise clip is mandatory** (crossings must satisfy 0 ≤ q ≤
+   span_length). Without it the level set cuts the wake-plane *extension beyond
+   the tip* — i.e. it re-creates P5's far-field **branch-ray artifact**. The
+   conforming path gets the same semantics for free from its free-edge rule.
+
+**The meshes the rule needs** (Track M deliverables M3/M4, built the same day).
+Left: the M3 wake-free quasi-2D layer — note there is no wake line in the
+topology, only a size-field corridor. Right: the M4 wake-free ONERA M6 corridor.
+
+![M3 wake-free quasi-2D layer](../cases/meshes/naca0012_wakefree_2.5d/coarse_layer.png)
+![M4 wake-free ONERA M6 wake corridor](../cases/meshes/onera_m6_wakefree/coarse_wake_corridor.png)
+
+M3 coarse: 29,250 tets, corridor median edge 0.0595 vs an h_wake target of 0.06.
+M4 coarse/medium: 50,605 / 329,645 tets — **within 6–9% of the M1 counts at equal
+h_wall**, which is precisely what makes the B7 A/B against the P5/P8 baseline a
+*controlled* comparison.
+
+---
+
+### B2 — multivalued FE assembly (closed 2026-07-11)
+
+**Evidence:** `tests/test_b2_multivalued.py` — **17 passed** (coarse+medium of both
+2.5D families, M6 coarse of both 3D families; some parametrizations skip in CI
+where the meshes are gitignored). Test-only, like B1: B2 delivers the assembly, not
+yet a lifting solve.
+
+**The key design insight.** A cut element is *the same P1 element matrix assembled
+twice*, once with `dofs_upper` and once with `dofs_lower`. That is expressible as a
+sparse **column redirection** of the ordinary single-valued matrix: on a cut
+element, entries whose two nodes lie on **opposite** sides move their column
+main(b) → aux(b) (`multivalued_redirection_coo`). Everything else is byte-identical
+to `PicardOperator.assemble_matrix()`. There is **one mesh and one extra DOF per cut
+node** — *not* two meshes (López fig. 3.6's "two meshes" is a visualization only).
+
+At B2 the aux rows carry a **continuity ("weld") closure** aux_k = main_j, which
+forces the jump to zero. That makes the extended system a strict generalization of
+the single-valued one — and that is exactly what B2 proves:
+
+| gate | measured | criterion |
+|---|---|---|
+| extended matrix folds back to the single-valued stiffness | **1e-13** | the weld closure degenerates *exactly* |
+| V0 freestream (φ = U·x) on the cut mesh, 2.5D M0/M3, α=0 and α=4° | **0.0** (exact linear field) | < 1e−12 |
+| V0 freestream, 3D M6 M1/M4 | **1.1e−14 / 3.4e−14** | < 1e−12 |
+| V1 MMS convergence slope (cube cut by an 8°-tilted half-plane, generic position) | **1.94** | ≥ 1.9 |
+| Laplace at α = 0 ⇒ cl ≈ 0, main potential vs the single-valued `solve_laplace` oracle | **~3e−11** | the weld forbids a jump ⇒ cl_KJ = 0 |
+
+**Recorded consequence:** the extended matrix is structurally **nonsymmetric** (the
+weld rows), so CG is inapplicable — B2 solves by sparse-direct LU (`spsolve`), and
+GMRES+AMG is the B3+ scaling path.
+
+---
+
+### B3 — lifting solve with implicit Kutta (closed 2026-07-12)
+
+**Demo:** `cases/demo/b3_levelset_lifting/` — `python run_demo.py`, ~1 min,
+**13/13 PASS**. NACA0012 medium, incompressible, α = 0 and α = 4, **on the same
+mesh with the same level set**. The mesh topology knows nothing about the wake.
+
+B3 replaces B2's weld closure with the real thing: the TE jump is carried by the
+multivalued aux DOFs, the g₁+g₂ wake LS convects it downstream, and its **value**
+is set by B4's TE Kutta condition. **Γ is a RESULT** — no secant, no master–slave
+constraint, no Γ unknown.
+
+| check | measured | criterion |
+| --- | --- | --- |
+| Γ at α = 0 — M0 embedded / M3 wake-free | −3.89e−4 / −4.15e−4 | \|Γ\| < 1e−3 (symmetric ⇒ no circulation) |
+| Γ at α = 4 — M0 embedded | **0.2384** (conforming 0.2393, **0.4%**) | > 0.2 |
+| Γ at α = 4 — M3 wake-free | **0.2339** | > 0.2 |
+| aux DOFs / main DOFs | **9.5%** | < 15% — the enrichment is a thin strip |
+| cut tets | 2982 of 61788 (**4.8%**) | (context: the level set touches ONE element layer) |
+| TE Kutta control volumes | 2 upper / 2 lower, wall-adjacent | both non-empty |
+| jump drift TE → far field | **0.0%** | < 10% (no drain) |
+| [φ] near the TE vs the reported Γ | 0.0% | < 10% |
+| cl_p vs conforming (α = 4, M0) | 0.4770 vs 0.4786 | within 3% |
+| cl_p vs cl_KJ = 2Γ (M0) | 0.4770 vs 0.4769 | within 5% (D11 mapping correct) |
+| cl_p wake-free M3 vs conforming | 0.4674 vs 0.4786 | within 5% |
+| M3 mesh has a `wake` tag | **False** | topology knows nothing about the wake |
+| wake-free Γ vs embedded Γ (α = 4) | **0.2339 vs 0.2384** (1.9%) | within 5% (generic cuts reproduce it) |
+
+The **gate** itself is the compressible one (`tests/test_b3_lifting.py`, 6 passed):
+at M0.5, α = 2°, cl_KJ = **0.2828** (medium) sits **inside** the committed
+[PG 0.2788, KT 0.2919] bracket read from `cases/reference_data/naca0012_m05/cl_reference.csv`
+— the same file the conforming G3.2 gate reads — on **both** mesh families. Same-mesh
+A/B vs conforming: Γ within **0.1–0.7%** (0.1177/0.1191/0.1197 vs 0.1175/0.1200/0.1202
+on coarse/medium/fine).
+
+**Figures.**
+
+**1. The lift, on both mesh families.** Speed (own-side) and the perturbation
+potential drawn **per element** — i.e. exactly as the multivalued DOFs store it. At
+α = 4 a crisp branch cut carries [φ] = Γ; at α = 0 the field is flat with **no jump
+at all**. The M3 panel exposes the coarser wake-free triangulation that the level
+set cuts through generically.
+
+![B3 flow field, lift vs no-lift, M0 embedded](../cases/demo/b3_levelset_lifting/results/flowfield_lift_vs_nolift_m0.png)
+![B3 flow field, lift vs no-lift, M3 wake-free](../cases/demo/b3_levelset_lifting/results/flowfield_lift_vs_nolift_m3.png)
+
+**2. How the jump survives to the far field.** LEFT: the nodal [φ] at every cut node
+vs downstream distance is **flat at Γ from the TE (d = 0) out to the far field
+(d ≈ 15 c)** — the g₁+g₂ wake LS convects it unchanged, and the far-field aux DOFs
+are left **FREE** so it exits rather than being drained. *(Pinning them to the
+vortex's lower branch was measured to decay the jump 0.0147 → 0.001 — i.e. to drain
+the circulation. This is a load-bearing fix, not a detail.)* RIGHT: the **storage** —
+the MAIN dof holds the node's own-side value, the AUX dof the other side, and the gap
+between them is exactly Γ, all the way out.
+
+![B3 wake jump convection and storage](../cases/demo/b3_levelset_lifting/results/wake_jump_m0.png)
+
+**3. Surface Cp on both families**, using the **D11 per-side DOF mapping** (solid =
+M0 embedded, dotted = M3 wake-free, grey dashed = conforming; Cp axis inverted,
+suction up). Lower-surface TE triangles *must* read the TE's AUX value — reading
+`phi_main` alone gives cl_p = **−3.35**, junk. At α = 0 upper and lower collapse; the
+M3 cl_p lands within 2.3% of conforming despite being a coarser, wake-free mesh.
+
+![B3 wall Cp, both mesh families](../cases/demo/b3_levelset_lifting/results/wall_cp.png)
+
+**4. The dual-mesh rule made visible** — the same level-set path on the
+wake-**embedded** M0 mesh (which *has* a `wake` tag, its wake nodes lying exactly on
+the sheet) and on the wake-**free** M3 mesh (**no `wake` tag anywhere**, generic cuts
+through generic elements). Γ agrees to **1.9%**. This is the payoff: **lift on a mesh
+that never had a wake embedded**, where no conforming counterpart exists at all.
+
+![B3 dual-mesh: embedded vs wake-free](../cases/demo/b3_levelset_lifting/results/dual_mesh_embedded_vs_free.png)
+
+---
+
+### B4 — TE control volume / implicit-Kutta re-derivation (NEW + closed 2026-07-12)
+
+**Evidence:** `tests/test_b4_te_control_volume.py` — **8 passed** (~29 s); the
+B3 demo above is shared. B4 was **inserted** into the track mid-flight because B3's
+emergent Γ converged to the **wrong value** — and the reason turned out to be
+structural, not a bug.
+
+**★ The finding: the wake LS CANNOT pin Γ.** Its residual is **identically zero for
+any spatially-constant jump**, because Σ_c ∇N_c = ∇(Σ_c N_c) = ∇(1) = 0 (partition of
+unity) — measured **1.9e−16**. Therefore design_track_b.md §2.3/D2's claim that "the
+g₂ on the TE-adjacent wake element **is** the discrete Kutta condition" is **FALSE and
+retired**. (Cross-checked against the source: the López dissertation has no explicit
+Kutta condition anywhere — the word never appears in its method chapter.) **Γ needs
+its own equation.**
+
+Without one, Γ was being pinned by a single *wrong* equation — the TE aux row
+(lower-side mass conservation), whose control volume is up/down **asymmetric** on a
+symmetric airfoil (the TE fan is 9 upper / 6 lower / 3 cut, because the ε shift sends
+every on-sheet node "+"). It over-circulated by **+42%**, *mesh-convergently* — which
+is the signature of a method defect rather than a discretization error.
+
+**★ The fix: the nonlinear TE pressure-equality (Bernoulli) Kutta.** Symmetrizing the
+control volume is **not available** — the mesh is naturally asymmetric at the TE
+(user-arbitrated) — so the condition is instead a **pointwise physical statement that
+needs no symmetry**:
+
+> |q_u|² = |q_l|², factorized **exactly** as (q_u + q_l)·(q_u − q_l) = 0, and
+> linearized by freezing the mean s̄ = q_u + q_l at the previous iterate.
+
+That yields a row **linear in φ**, re-linearized once per Picard outer (the same
+cadence as the density lag — **no new outer loop**), converging to the exact nonlinear
+condition. It replaces the TE **aux** row; the displaced lower-side mass-conservation
+entries are re-routed onto the TE **main** row, which then carries the **total**
+(upper + lower) balance — so mass stays conserved and no side is arbitrarily robbed of
+its equation. **Why it is non-degenerate where g₂ is not:** q_u and q_l are recovered on
+**different element sets**, so q_u − q_l is *not* a jump gradient and does not vanish for
+a constant jump.
+
+**★ The control volumes must be WALL-ADJACENT.** The Kutta condition is about *surface*
+velocities, so q must be recovered on the elements carrying a **wall face** (the
+upper/lower body surface at the TE), **not** the whole element fan. This is the single
+most consequential detail in B4, and it is measurable:
+
+| Γ recovery (α = 2°, incompressible) | coarse | medium | fine | vs conforming |
+|---|---:|---:|---:|---:|
+| conforming reference | 0.1175 | 0.1200 | 0.1202 | — |
+| old B3 `te_kutta="mass"` row | 0.2074 | 0.1760 | 0.1704 | **+42%** (wrong equation) |
+| pressure Kutta, **full-fan** control volume | 0.1407 | 0.1355 | 0.1329 | **+11–15%** (interior + wake elements pollute the average) |
+| pressure Kutta, **wall-adjacent** ✓ | **0.1177** | **0.1191** | **0.1197** | **< 1%** |
+
+The wall-adjacent control volumes are the highlighted elements in the level-set region
+figure — which also shows *where* the level set acts at all: **one** layer of elements
+(4.8% of the tets) plus the below-TE fan. The mesh is never modified. Note the cut layer
+sits just **below** the sheet: the ε side-shift sends on-sheet nodes "+", so the sheet
+effectively lies at y = −ε. **That bias is exactly what B4's TE condition had to be made
+immune to.**
+
+![B4 level-set region and TE control volumes](../cases/demo/b3_levelset_lifting/results/levelset_region_m0.png)
+
+**Gate checks.** LS constant-jump null space pinned numerically (1.9e−16 — the reason a
+separate TE condition is *structurally* required); TE control volumes verified
+wall-adjacent (every element carries a wall face); the below-TE fan is never cut (the
+López p.57 ε-shift trap, regression-pinned — the ε shift had been manufacturing
+**spurious cuts** there, giving 3 of 6 elements a bogus UPPER copy *below* the wake);
+emergent Γ within 5% of conforming (**measured 0.1–0.7%**), while the old
+`te_kutta="mass"` row is still >30% out, so the before/after contrast stays honest.
+
+**Consequence: the D2 penalty-Kutta fallback is no longer needed** — this route has **no
+penalty weight and no tuning parameter** (s̄ is solved for, not calibrated). Interfaces:
+`solve_multivalued_lifting(..., te_kutta="pressure")` (default), with `te_kutta="mass"`
+retained purely for the contrast. Derivation in [design_track_b.md §9](design_track_b.md).
+
+---
+
+### B5 — far-field A/B: Dirichlet+vortex vs Neumann outlet (closed 2026-07-12)
+
+**Demo:** `cases/demo/b4p5_farfield/` (directory name predates the renumber) —
+`python run_demo.py` redraws and self-checks from the committed `summary.csv`
+(**9/9 PASS**); `PYFP3D_B45_RESOLVE=1 python run_demo.py` re-solves the whole study
+from scratch (~15 min, threads capped). `tests/test_b45_farfield.py` (**10 passed**,
+~20 s) holds the cheap 15c locks.
+
+**Question.** The level-set lifting path needs a far-field BC, and two self-consistent
+options exist (design_track_b.md §5.4):
+
+- **option a (vortex)** — spherical Dirichlet freestream **+ a PG point vortex** on the
+  far-field MAIN DOFs, with the emergent Γ refreshed into the vortex each outer
+  iteration. pyFP3D's compact **15c** domain is calibrated *for* this correction.
+- **option b (Neumann)** — the **López** form: inflow Dirichlet freestream (**no
+  vortex**), outflow a Neumann outlet carrying the freestream flux ρ∞(u·n̂).
+
+Option b is attractive for the workflow (no Γ-into-far-field feedback, simplest α
+sweep), but **with no vortex it truncates the O(Γ/r) far-field tail**, so its domain
+must grow — which is why the dissertation uses 10²–10⁷-chord domains.
+New interface: `solve_multivalued_lifting(farfield="vortex"|"neumann"|"freestream")`,
+default `"vortex"`; helpers `_farfield_split`/`_neumann_outlet_rhs` in
+`solve/picard_ls.py`. Conforming path byte-untouched.
+
+**Method — a López-style domain-size re-calibration** (the dissertation §4.1.4 method).
+Coarse NACA0012, M0.5, α = 2°, on **both** Track B mesh families, with the far-field
+radius swept over R ∈ {15, 30, 60, 120}c. Γ vs R, one panel per family, against the
+conforming reference and its ±2% B3 band:
+
+![B5 far-field domain-size study](../cases/demo/b4p5_farfield/results/farfield_domain_study.png)
+
+**Result** (M0 embedded shown; the M3 wake-free family agrees to the third digit):
+
+| R/c | conforming | option a (vortex) | option b (Neumann) | b − a | freestream − a |
 |----:|-----:|-----:|-----:|-----:|-----:|
-| 15  | 0.1391 | 0.1394 | 0.1337 | −4.07 | −7.52 |
-| 30  | 0.1389 | 0.1392 | 0.1364 | −2.01 | −3.87 |
-| 60  | 0.1389 | 0.1397 | 0.1383 | −0.99 | −1.96 |
-| 120 | 0.1391 | 0.1388 | 0.1381 | −0.50 | −0.99 |
+| 15  | 0.1391 | 0.1394 | 0.1337 | **−4.07%** | −7.52% (**diverges**) |
+| 30  | 0.1389 | 0.1392 | 0.1364 | −2.01% | −3.87% |
+| 60  | 0.1389 | 0.1397 | 0.1383 | −0.99% | −1.96% |
+| 120 | 0.1391 | 0.1388 | 0.1381 | −0.50% | −0.99% |
 
-- **Option a is domain-robust:** Γ within **0.45%** (M0) / **1.09%** (M3) of the
-  truth across 15→120c, and **0.25%** of the conforming solver at 15c.
-- **Option b truncates O(Γ/R):** −4.07% at 15c, halving each time R doubles — the
-  textbook point-vortex far-field decay — so it meets the B3 ±2% band only at
-  **R ≥ ~30c** and <1% at **R ≥ 60c** (a 2–4× larger domain, ~4× the tets at equal
-  near-body h). This is exactly why López uses 10²–10⁷-chord domains.
+- **Option a is domain-robust:** Γ stays within **0.45%** (M0) / **1.09%** (M3) of the
+  truth across the whole 15→120c sweep, and within **0.25%** of the conforming solver
+  at 15c.
+- **Option b truncates O(Γ/R):** −4.07% at 15c, and the error **halves every time R
+  doubles** — the textbook point-vortex far-field decay, visible as a clean straight
+  line in the figure. It therefore meets the B3 ±2% band only at **R ≥ ~30c**, and gets
+  below 1% only at **R ≥ 60c** — a 2–4× larger domain, ~4× the tets at equal near-body
+  h. This is exactly why López needs 10²–10⁷-chord domains.
 - **Freestream-Dirichlet** (no vortex, whole boundary) is crudest at every R and
-  **diverges** on the compact 15c M0 (M_max 5.9) — a lifting body cannot sit in a
-  tight box without the far-field vortex or an outlet.
+  **diverges** on the compact 15c M0 mesh (M_max 5.9): a lifting body cannot sit in a
+  tight box without either the far-field vortex or an outlet.
 
-**Verdict — option a stays the DEFAULT.** For pyFP3D's compact 15c workflow the
-vortex correction pays for itself; option b is validated as an alternative but is
-domain-hungry, so its workflow simplicity does not pay at pyFP3D's scale. Because
-the O(Γ/R) truncation is geometry-universal (a 3D wing truncates the same
-horseshoe-vortex tail), this also decides the far-field default for the M6 B-path.
-**The M6 leg is folded into B5.5** (user-arbitrated 2026-07-12): running the
-level-set B-path *solve* on M6 needs the 3D wake-BC machinery that is B5.5's
-deliverable, and — measured here — the span-uniform option-a vortex without the P5
-Γ(z) taper recreates the branch-ray artifact on M6, itself B5.5 machinery. Roadmap
-Track B B4.5; design_track_b.md §5.4.
+**★ Verdict — option a stays the DEFAULT.** For pyFP3D's compact 15c workflow the vortex
+correction pays for itself. Option b is **validated** as an alternative but is
+domain-hungry, so its workflow simplicity does not pay at pyFP3D's scale. Because the
+O(Γ/R) truncation is **geometry-universal** (a 3D wing truncates the same
+horseshoe-vortex tail), this also decides the far-field default for the M6 B-path — so
+the gate did not need its own M6 run to be conclusive.
+
+**The M6 leg is folded into B7** (user-arbitrated 2026-07-12): running the level-set
+B-path *solve* on M6 needs the 3D wake-BC machinery that is B7's deliverable — and,
+separately measured here, the span-uniform option-a vortex **without** the P5 Γ(z)
+taper recreates the **branch-ray artifact** on M6, itself B7 machinery.
 
 ---
 

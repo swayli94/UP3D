@@ -187,7 +187,7 @@ def solve_multivalued_lifting(
     B3 gate is convergence-based, not same-mesh <1%; design_track_b.md section
     7 / roadmap B3).
 
-    Far-field options (design_track_b.md section 5.4, arbitrated as the B4.5
+    Far-field options (design_track_b.md section 5.4, arbitrated as the B5
     A/B stage). farfield="vortex" (default, option a): spherical Dirichlet
     freestream + PG vortex on the far-field MAIN DOFs, with the extracted
     Gamma(z) refreshed into the vortex each outer iteration (RHS-only).
@@ -196,7 +196,7 @@ def solve_multivalued_lifting(
     flux rho_inf(u.n); no Gamma-into-far-field feedback (the attractive
     workflow property -- the alpha-sweep loop needs no vortex refresh).
     farfield="freestream": Dirichlet freestream on the WHOLE far field, no
-    vortex -- the crudest truncation, kept for the B4.5 domain-size study
+    vortex -- the crudest truncation, kept for the B5 domain-size study
     (it is the upper bound on the truncation bias at a given domain radius).
 
     ★ Compressibility is carried by the BULK density, NOT the far-field vortex:

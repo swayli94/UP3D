@@ -15,7 +15,7 @@ cutting beyond the tip).
 Because the corridor size field is the SAME field the M1 family uses
 (same h_wake, same Distance thresholds, sheet at the same chord-plane
 location), element counts land close to M1's at equal h_wall -- which is
-what makes the B4.5 A/B against the P5/P8 baselines a controlled
+what makes the B7 A/B against the P5/P8 baselines a controlled
 comparison. A wide alpha-sweep corridor (the 2.5D M3 wedge) is deliberately
 NOT used here: in 3D the wedge volume scales with span and the element cost
 is prohibitive (recorded in the roadmap M4 row) -- 3D alpha sweeps re-aim

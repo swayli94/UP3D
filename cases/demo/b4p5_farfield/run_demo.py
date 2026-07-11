@@ -1,5 +1,7 @@
 """
-Track B / B4.5 demo -- far-field A/B: Dirichlet+vortex vs Neumann outlet.
+Track B / B5 demo -- far-field A/B: Dirichlet+vortex vs Neumann outlet.
+(Gate renumbered 2026-07-12: B3.5 -> B4.5 -> B5. The directory keeps its
+b4p5_ name on purpose so the committed demo path stays stable.)
 
 The level-set lifting path (B3/B4) needs a far-field boundary condition. Two
 self-consistent options exist (design_track_b.md section 5.4):
@@ -28,7 +30,7 @@ Gamma against the conforming reference. It makes the decision visible:
       R grows, meeting the band only after re-calibration.
 
   summary.csv  -- every (family, R, mode) -> Gamma, and b-vs-a / fs-vs-a %.
-  checks.csv   -- the self-check verdicts (the B4.5 gate numbers).
+  checks.csv   -- the self-check verdicts (the B5 gate numbers).
 
 VERDICT (measured): option a is domain-robust (Gamma within <1% of the truth
 from 15c to 120c) and stays the DEFAULT for pyFP3D's 15c workflow. Option b is
@@ -36,7 +38,7 @@ a valid alternative but needs the domain grown to ~30c (2% band) / ~60c (1%),
 i.e. a 2-4x larger domain -- its workflow simplicity does not pay for the
 element cost at pyFP3D's scale. The O(Gamma/R) truncation is geometry-universal
 (a 3D wing truncates the same horseshoe-vortex tail), so this decides the
-far-field default for the 3D M6 B-path too (confirmed under B5.5).
+far-field default for the 3D M6 B-path too (confirmed under B7).
 
 Standalone + self-checking:  python cases/demo/b4p5_farfield/run_demo.py
 Re-solve from scratch (~15 min, capped threads):  PYFP3D_B45_RESOLVE=1 python ...
@@ -176,7 +178,7 @@ def plot(rows):
         ax.grid(True, which="both", alpha=0.25)
     axes[0].set_ylabel(r"emergent circulation  $\Gamma$")
     axes[0].legend(loc="lower right", fontsize=8)
-    fig.suptitle("B4.5 far-field A/B: option a is domain-robust; "
+    fig.suptitle("B5 far-field A/B: option a is domain-robust; "
                  "option b truncates O(Gamma/R) and needs a larger domain")
     fig.tight_layout()
     fig.savefig(RESULTS / "farfield_domain_study.png", dpi=140, bbox_inches="tight")
@@ -242,7 +244,7 @@ def main():
         _write_summary(rows)
     plot(rows)
     ok = self_check(rows)
-    print(f"\nB4.5 demo {'PASSED' if ok else 'FAILED'} "
+    print(f"\nB5 demo {'PASSED' if ok else 'FAILED'} "
           f"({sum(1 for _ in RADII)} radii x 2 families)")
     sys.exit(0 if ok else 1)
 

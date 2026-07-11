@@ -1,6 +1,8 @@
 """
-Track B / B4.5 gate: far-field A/B -- Dirichlet+vortex (option a) vs the
-Lopez-style Neumann outlet (option b). docs/roadmap.md Track B B4.5;
+Track B / B5 gate: far-field A/B -- Dirichlet+vortex (option a) vs the
+Lopez-style Neumann outlet (option b). docs/roadmap.md Track B B5
+(renumbered 2026-07-12 from B3.5 -> B4.5 -> B5; the module name keeps the
+old b45 spelling on purpose, so the committed test path stays stable);
 docs/design_track_b.md section 5.4.
 
 The heavy Lopez-style domain-size re-calibration (Gamma vs far-field radius R,
