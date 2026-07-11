@@ -1,0 +1,10 @@
+check,status,detail
+M0_embedded: option-a domain-robust,PASS,max |dGamma_a|/Gamma = 0.45% over 15-120c
+M0_embedded: option-b converges to a,PASS,|b-a| 15c=4.07% -> 120c=0.50%
+M0_embedded: option-b needs re-calibration,PASS,"15c=4.07% (>2%), 60c=0.99% (<2%)"
+M0_embedded: freestream is crudest,PASS,|fs-a| >= |b-a| at every R
+M3_wakefree: option-a domain-robust,PASS,max |dGamma_a|/Gamma = 1.09% over 15-120c
+M3_wakefree: option-b converges to a,PASS,|b-a| 15c=4.06% -> 120c=0.50%
+M3_wakefree: option-b needs re-calibration,PASS,"15c=4.06% (>2%), 60c=0.99% (<2%)"
+M3_wakefree: freestream is crudest,PASS,|fs-a| >= |b-a| at every R
+M0 15c: option a vs conforming,PASS,Gamma_a 0.1394 vs conf 0.1391 (0.25%)

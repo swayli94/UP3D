@@ -28,7 +28,7 @@
 | P12 | 未开 | Backlog：离散伴随、VII transpiration、混合单元/BO 标定 |
 | M0/M1 | ✓ | 准 2D 挤出网格族 + M6 后掠尾迹网格族（.msh gitignored，脚本再生） |
 | M3 / M4 | ✓ | 无尾迹面("O 型")网格族（2026-07-11,Track B 双网格规则用）：M3 = NACA 准 2D（走廊扇形覆盖 α 扫掠;coarse 已提交）、M4 = ONERA M6（复用 M1 走廊尺寸场,单元数与 M1 差 6–9% ⇒ B4.5 受控 A/B;.msh 全部 gitignored） |
-| Track B | ◐ | **B1 ✓ 2026-07-11**（level-set 尾迹+切单元识别;2.5D census 与 conforming minus-star 逐单元一致,3D 为严格超集+2.9% 翼尖边跨越单元;α 重指向不动网格）。★3D 才暴露的两个机制：后掠 TE 须用**斜交展向坐标**（正交投影错切 60%）、**展向裁剪**（翼尖外不切,否则重现 P5 分支射线伪迹）。设计参考 [design_track_b.md](design_track_b.md)（取代 DN1;隐式 Kutta、3D 用 g₁+g₂ 两分量式）;下一步 B2 多值 FE 装配 |
+| Track B | ◐ | **B1–B4.5 ✓（B1 2026-07-11;B2/B3/B4/B4.5 2026-07-12）**。level-set 尾迹产生升力,隐式 Kutta,无 Γ secant。**B4：尾迹 LS 对常数跳跃恒零（单位分解,1.9e-16）⇒ "g₂ 即 Kutta" 错、退休;真 Kutta = 非线性 TE 压力相等 |q_u|²=|q_l|²,q 在壁面邻接控制体恢复**（全扇形 +11~15%、壁面邻接 <1%）。Γ 与 conforming 同网格 <1%,无尾迹 M3 差 0.3%。**B4.5：远场 A/B — 选项 a（Dirichlet+涡）保持默认**;选项 b（López Neumann 出口、无涡）截断 O(Γ/R),15c −4%,需 R≥30c 才进 ±2% 带（论文用 10²–10⁷c）;M6 腿并入 B5.5。设计 [design_track_b.md](design_track_b.md)。下一步 B5 跨声速 / B5.5 M6 三维 |
 | M2 / Track V | 未开 | 翼身组合体宜与 Track B 同排（B5);Track V = VII 粘性耦合，已设计未动工 |
 
 ## 长期挂起项（勿反复重提）
@@ -58,8 +58,8 @@
 - 贵重工件不随手重算（P4 heavy demo ~40 min、G4.1 medium ~17 min、P5 medium
   45–75 min、M6 fine 网格数分钟）；已提交的 CSV/PNG 是权威。
 - fine 网格与解算 npz 一律 gitignored，本地缓存、demo 缺则重算。
-- 回归基线：**218 passed + 8 skipped + 2 xfailed**（B1 起,2026-07-11;含 34 条
-  Track B 双网格测试,其中若干条在无尾迹网格未本地生成时跳过（M3 medium、
-  M4 M6 族）;重 gate 走 `PYFP3D_TRANSONIC_GATES=1`）。内核/装配改动后先跑
-  `tests/test_v0_freestream.py`。
+- 回归基线：**259 passed + 8 skipped + 2 xfailed**（B4.5 起,2026-07-12,实测
+  512.93 s @16 线程;含 B1–B4.5 的 Track B 测试,其中若干条在无尾迹网格未本地
+  生成时跳过（M3 medium、M4 M6 族）;重 gate 走 `PYFP3D_TRANSONIC_GATES=1`）。
+  内核/装配改动后先跑 `tests/test_v0_freestream.py`。
 - P9 demo 等重活在跑时,新测试/求解一律降到 8 线程(NUMBA/OMP/OPENBLAS 同盖)。

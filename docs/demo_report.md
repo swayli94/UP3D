@@ -1430,6 +1430,64 @@ Track B B3/B4; numerics + the B4 derivation in
 
 ---
 
+## Track B — B4.5: far-field A/B (Dirichlet+vortex vs Neumann outlet) (closed 2026-07-12)
+
+**Demo:** `cases/demo/b4p5_farfield/` — `python run_demo.py` redraws + self-checks
+from the committed `summary.csv`; `PYFP3D_B45_RESOLVE=1 python run_demo.py`
+re-solves the whole study from scratch (~15 min, threads capped).
+`tests/test_b45_farfield.py` (10 passed, ~20 s) holds the cheap 15c locks.
+
+**Question.** The level-set lifting path needs a far-field BC. Two self-consistent
+options (design_track_b.md §5.4): **option a (vortex)** — spherical Dirichlet
+freestream + a PG point vortex on the far-field MAIN DOFs, the emergent Γ
+refreshed into the vortex each outer iteration (pyFP3D's compact 15c domain is
+calibrated *for* this correction); **option b (Neumann)** — the López form:
+inflow Dirichlet freestream (NO vortex), outflow a Neumann outlet carrying the
+freestream flux ρ∞(u·n̂). Option b is attractive for the workflow (no
+Γ-into-far-field feedback, simplest α sweep), but with no vortex it truncates the
+O(Γ/r) far-field tail, so its domain must grow (the dissertation §4.1.4 uses
+10²–10⁷-chord domains). New solver interface:
+`solve_multivalued_lifting(farfield="vortex"|"neumann"|"freestream")`, default
+`"vortex"`; helpers `_farfield_split`/`_neumann_outlet_rhs` in
+`solve/picard_ls.py`; conforming path byte-untouched.
+
+**Method — López-style domain-size re-calibration.** Coarse NACA0012, M0.5 α2°,
+on BOTH Track B mesh families (M0 embedded + M3 wake-free), far-field radius
+R ∈ {15, 30, 60, 120}c. `farfield_domain_study.png` plots Γ vs R (one panel per
+family) with the conforming reference + its ±2% B3 band.
+
+**Result (both families bit-for-bit agree).**
+
+| R/c | conforming | option a (vortex) | option b (Neumann) | b−a% | freestream−a% |
+|----:|-----:|-----:|-----:|-----:|-----:|
+| 15  | 0.1391 | 0.1394 | 0.1337 | −4.07 | −7.52 |
+| 30  | 0.1389 | 0.1392 | 0.1364 | −2.01 | −3.87 |
+| 60  | 0.1389 | 0.1397 | 0.1383 | −0.99 | −1.96 |
+| 120 | 0.1391 | 0.1388 | 0.1381 | −0.50 | −0.99 |
+
+- **Option a is domain-robust:** Γ within **0.45%** (M0) / **1.09%** (M3) of the
+  truth across 15→120c, and **0.25%** of the conforming solver at 15c.
+- **Option b truncates O(Γ/R):** −4.07% at 15c, halving each time R doubles — the
+  textbook point-vortex far-field decay — so it meets the B3 ±2% band only at
+  **R ≥ ~30c** and <1% at **R ≥ 60c** (a 2–4× larger domain, ~4× the tets at equal
+  near-body h). This is exactly why López uses 10²–10⁷-chord domains.
+- **Freestream-Dirichlet** (no vortex, whole boundary) is crudest at every R and
+  **diverges** on the compact 15c M0 (M_max 5.9) — a lifting body cannot sit in a
+  tight box without the far-field vortex or an outlet.
+
+**Verdict — option a stays the DEFAULT.** For pyFP3D's compact 15c workflow the
+vortex correction pays for itself; option b is validated as an alternative but is
+domain-hungry, so its workflow simplicity does not pay at pyFP3D's scale. Because
+the O(Γ/R) truncation is geometry-universal (a 3D wing truncates the same
+horseshoe-vortex tail), this also decides the far-field default for the M6 B-path.
+**The M6 leg is folded into B5.5** (user-arbitrated 2026-07-12): running the
+level-set B-path *solve* on M6 needs the 3D wake-BC machinery that is B5.5's
+deliverable, and — measured here — the span-uniform option-a vortex without the P5
+Γ(z) taper recreates the branch-ray artifact on M6, itself B5.5 machinery. Roadmap
+Track B B4.5; design_track_b.md §5.4.
+
+---
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from

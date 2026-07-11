@@ -96,6 +96,64 @@ def _farfield_main(mesh, alpha_deg, gamma, u_inf, vortex_center, beta):
     return ff, vals
 
 
+def _farfield_split(mesh, alpha_deg, u_inf):
+    """Split the far-field boundary faces into inflow / outflow by the sign of
+    the outward flux u_inf . n_hat (design_track_b.md section 5.4 option b,
+    the Lopez rectangular-domain inlet-Dirichlet / outlet-Neumann form adapted
+    to pyFP3D's spherical/circular far field).
+
+    Outward normals are oriented away from the far-field boundary's own
+    geometric centre (a sphere/circle, so its centroid is its centre), which
+    is robust for both the quasi-2D circle and the 3D half-sphere without
+    needing the domain-interior point.
+
+    Returns:
+        faces:        (n_f, 3) far-field triangles (global node ids)
+        area:         (n_f,)  triangle areas
+        u_dot_n:      (n_f,)  u_inf . n_hat_out per face
+        inflow_nodes: unique node ids on faces with u_dot_n < 0
+    """
+    faces = np.asarray(mesh.boundary_faces["farfield"], dtype=np.int64)
+    p = mesh.nodes[faces]                       # (n_f, 3, 3)
+    v0, v1, v2 = p[:, 0], p[:, 1], p[:, 2]
+    cross = np.cross(v1 - v0, v2 - v0)
+    area = 0.5 * np.linalg.norm(cross, axis=1)
+    n_hat = cross / (np.linalg.norm(cross, axis=1, keepdims=True) + 1e-300)
+    centroid = p.mean(axis=1)                   # (n_f, 3)
+    ff_centre = np.unique(faces)
+    ctr = mesh.nodes[ff_centre].mean(axis=0)
+    outward = np.sign(np.einsum("fi,fi->f", n_hat, centroid - ctr))
+    outward[outward == 0.0] = 1.0
+    n_hat = n_hat * outward[:, None]
+
+    a = np.deg2rad(alpha_deg)
+    u_vec = np.array([u_inf * np.cos(a), u_inf * np.sin(a), 0.0])
+    u_dot_n = n_hat @ u_vec
+    inflow_nodes = np.unique(faces[u_dot_n < 0.0].ravel())
+    return faces, area, u_dot_n, inflow_nodes
+
+
+def _neumann_outlet_rhs(mesh, alpha_deg, u_inf, n_total, rho_inf=1.0):
+    """Consistent P1 load vector for the Lopez outlet Neumann flux
+    q = rho_inf (u_inf . n_hat) on the OUTFLOW far-field faces (option b).
+
+    In the Galerkin weak form the boundary term is oint rho (grad phi . n) v dS;
+    prescribing the freestream flux rho_inf (u_inf . n) on the outflow adds
+    sum_faces rho_inf (u.n) * area/3 to each of the face's three main-DOF rows.
+    (rho_inf = 1.0 in the stagnation-normalised isentropic density used here --
+    density_isentropic(u_inf^2, M_inf) == 1.) The freestream potential already
+    satisfies this flux exactly, so it imposes "the perturbation has zero net
+    outflow flux" without a vortex correction. Inflow faces are Dirichlet
+    (phi_inf), so their rows are overwritten by apply_dirichlet and any RHS
+    entry there is discarded."""
+    faces, area, u_dot_n, _ = _farfield_split(mesh, alpha_deg, u_inf)
+    out = u_dot_n > 0.0
+    b = np.zeros(n_total, dtype=np.float64)
+    contrib = rho_inf * u_dot_n[out] * area[out] / 3.0
+    np.add.at(b, faces[out].ravel(), np.repeat(contrib, 3))
+    return b
+
+
 def solve_multivalued_lifting(
     mvop: MultivaluedOperator,
     mesh,
@@ -111,6 +169,7 @@ def solve_multivalued_lifting(
     n_outer_max: int = 80,
     gamma_init: float = 0.0,
     te_kutta: str = "pressure",
+    farfield: str = "vortex",
 ) -> Dict[str, object]:
     """Subsonic lifting solve on a level-set cut mesh with IMPLICIT Kutta
     (Track B, B3; design_track_b.md D2). NO Gamma secant and no master-slave
@@ -128,6 +187,18 @@ def solve_multivalued_lifting(
     B3 gate is convergence-based, not same-mesh <1%; design_track_b.md section
     7 / roadmap B3).
 
+    Far-field options (design_track_b.md section 5.4, arbitrated as the B4.5
+    A/B stage). farfield="vortex" (default, option a): spherical Dirichlet
+    freestream + PG vortex on the far-field MAIN DOFs, with the extracted
+    Gamma(z) refreshed into the vortex each outer iteration (RHS-only).
+    farfield="neumann" (option b, Lopez): inflow far-field is Dirichlet
+    freestream (NO vortex), outflow is a Neumann outlet carrying the freestream
+    flux rho_inf(u.n); no Gamma-into-far-field feedback (the attractive
+    workflow property -- the alpha-sweep loop needs no vortex refresh).
+    farfield="freestream": Dirichlet freestream on the WHOLE far field, no
+    vortex -- the crudest truncation, kept for the B4.5 domain-size study
+    (it is the upper bound on the truncation bias at a given domain radius).
+
     ★ Compressibility is carried by the BULK density, NOT the far-field vortex:
     measured on the medium NACA case, PG-scaling the far-field vortex (beta <
     1) leaves gamma unchanged (0.1086 -> 0.1086 -- the soft Kutta does not
@@ -144,8 +215,19 @@ def solve_multivalued_lifting(
     """
     if not 0.0 <= m_inf < 1.0:
         raise ValueError(f"needs 0 <= M_inf < 1, got {m_inf}")
+    if farfield not in ("vortex", "neumann", "freestream"):
+        raise ValueError(f"farfield={farfield!r} unknown")
     beta = float(np.sqrt(1.0 - m_inf**2))
     op = mvop.op
+
+    # Option b (Neumann outlet): the outflow flux RHS is a FIXED vector
+    # (freestream flux, solution-independent), assembled once.
+    if farfield == "neumann":
+        ff_split_nodes = _farfield_split(mesh, alpha_deg, u_inf)[3]
+        ff_split_vals = freestream_phi(mesh.nodes[ff_split_nodes], alpha_deg,
+                                       u_inf)
+        neumann_rhs = _neumann_outlet_rhs(mesh, alpha_deg, u_inf,
+                                          mvop.n_total)
 
     phi_ext = np.zeros(mvop.n_total, dtype=np.float64)
     phi_ext[: mvop.n_main] = freestream_phi(mesh.nodes, alpha_deg, u_inf)
@@ -169,11 +251,17 @@ def solve_multivalued_lifting(
             te_kutta=te_kutta,
             phi_ext=phi_ext,          # re-linearizes the TE Kutta row (B4)
         )
-        ff, vals = _farfield_main(mesh, alpha_deg, gamma, u_inf,
-                                  vortex_center, beta)
-        A_free, b_free, free, phi_ext = apply_dirichlet(
-            A, np.zeros(mvop.n_total), ff, vals
-        )
+        if farfield == "vortex":
+            ff, vals = _farfield_main(mesh, alpha_deg, gamma, u_inf,
+                                      vortex_center, beta)
+            b = np.zeros(mvop.n_total)
+        elif farfield == "neumann":
+            ff, vals, b = ff_split_nodes, ff_split_vals, neumann_rhs
+        else:  # "freestream": Dirichlet freestream on the whole far field
+            ff = np.unique(mesh.boundary_faces["farfield"])
+            vals = freestream_phi(mesh.nodes[ff], alpha_deg, u_inf)
+            b = np.zeros(mvop.n_total)
+        A_free, b_free, free, phi_ext = apply_dirichlet(A, b, ff, vals)
         x = np.atleast_1d(spla.spsolve(A_free.tocsc(), b_free))
         phi_ext[free] = x
         residual = float(np.max(np.abs(b_free - A_free @ x))) if len(x) else 0.0
@@ -224,4 +312,5 @@ def solve_multivalued_lifting(
         "drho_history": drho_history,
         "residual_norm": residual,
         "mach2_max": mach2_max,
+        "farfield": farfield,
     }

@@ -48,8 +48,10 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (218 passed + 8 skipped + 2 xfailed since B1
-   2026-07-11: +34 Track B dual-mesh tests over the 184+8+2 P10/G10.2 baseline;
+3. Full suite: `pytest tests/` (259 passed + 8 skipped + 2 xfailed since B4.5
+   2026-07-12, measured 512.93 s @16 threads: +75 Track B tests (B1 dual-mesh,
+   B2 multivalued, B3 lifting, B4 TE-Kutta, B4.5 far-field) over the 184+8+2
+   P10/G10.2 baseline;
    some skip when the gitignored wake-free meshes aren't generated locally —
    M3 medium (~40 s) and the M4 ONERA M6 family (~12 s);
    ~5 min — G8.3 measured 301.66 s; the always-on coarse transonic smoke is ~170 s
