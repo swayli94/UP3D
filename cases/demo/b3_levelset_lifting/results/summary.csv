@@ -1,3 +1,3 @@
-alpha_deg,gamma_levelset,gamma_conforming,cl_p_levelset,cl_p_conforming,cl_kj_levelset
-0,-0.000389,0.000490,-0.000817,0.000955,-0.000778
-4,0.238442,0.239323,0.477045,0.478576,0.476885
+alpha_deg,gamma_m0,gamma_m3,gamma_conforming,cl_p_m0,cl_p_m3,cl_p_conforming
+0,-0.000389,-0.000415,0.000490,-0.000817,-0.001249,0.000955
+4,0.238442,0.233945,0.239323,0.477045,0.467397,0.478576

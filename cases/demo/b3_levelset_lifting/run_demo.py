@@ -5,30 +5,33 @@ The mesh topology knows NOTHING about the wake. A level set cuts through it,
 the cut elements are enriched with auxiliary DOFs, and lift emerges. This demo
 makes every part of that visible and self-checks it.
 
-  1. flowfield_lift_vs_nolift.png -- NACA0012 at alpha = 0 (no lift) and
-     alpha = 4 (lift), on the SAME mesh with the SAME level set. Speed field
-     (smooth flow off the TE = Kutta) and the perturbation potential rendered
-     DISCONTINUOUSLY, i.e. exactly as the multivalued DOFs store it: a crisp
-     branch cut along the wake carrying [phi] = Gamma at alpha = 4, and NO
-     jump at all at alpha = 0.
+  1. flowfield_lift_vs_nolift.png (M0 embedded) and
+     flowfield_lift_vs_nolift_m3.png (M3 wake-free) -- NACA0012 at alpha = 0 (no
+     lift) and alpha = 4 (lift), on the SAME mesh with the SAME level set, on
+     BOTH mesh families. Speed field (smooth flow off the TE = Kutta) and the
+     perturbation potential rendered DISCONTINUOUSLY, i.e. exactly as the
+     multivalued DOFs store it: a crisp branch cut carrying [phi] = Gamma at
+     alpha = 4, and NO jump at all at alpha = 0. The M3 panel shows the coarser
+     wake-free triangulation the level set cuts through generically.
 
-  2. levelset_region.png -- WHERE the level set acts. The unstructured mesh
+  3. levelset_region.png -- WHERE the level set acts. The unstructured mesh
      near the TE and along the wake corridor, with each element coloured by
      its role: cut (enriched, assembled twice), below-TE fan (its TE reference
      is the aux DOF), and the TE's wall-adjacent upper/lower control volumes
      (where the B4 Kutta condition lives). Nothing else in the mesh is touched.
 
-  3. wake_jump.png -- HOW the jump survives from the TE to the far field. The
+  4. wake_jump.png -- HOW the jump survives from the TE to the far field. The
      nodal jump [phi] at every cut node vs downstream distance: the g1+g2 wake
      LS convects it unchanged (constant = Gamma) all the way out, and the
      far-field aux DOFs are left FREE so it exits rather than being drained.
      Also shows the multivalued STORAGE: main vs aux DOF values at the sheet.
 
-  4. wall_cp.png -- surface Cp at both incidences, using the D11 per-side DOF
-     mapping (lower-surface TE triangles must read the TE's AUX value), cross
-     checked against the conforming solver on the same mesh.
+  5. wall_cp.png -- surface Cp at both incidences on BOTH mesh families
+     (solid = M0 embedded, dotted = M3 wake-free, colour = surface, grey dashed
+     = conforming reference), inverted axis. Uses the D11 per-side DOF mapping
+     (lower-surface TE triangles must read the TE's AUX value).
 
-  5. dual_mesh_embedded_vs_free.png -- the SAME level-set path on the
+  6. dual_mesh_embedded_vs_free.png -- the SAME level-set path on the
      wake-EMBEDDED M0 mesh (which HAS a `wake` tag, wake nodes lying exactly on
      the sheet) and on the wake-FREE M3 mesh (NO `wake` tag anywhere, generic
      cuts through generic elements -- the actual Track B workflow target). Same
@@ -38,10 +41,11 @@ Standalone + self-checking:  python cases/demo/b3_levelset_lifting/run_demo.py
 Outputs: cases/demo/b3_levelset_lifting/results/{*.png, summary.csv, checks.csv}
 Exit code 0 iff every acceptance check passes. Runtime ~2 min.
 
-Dual-mesh (roadmap Track B working rule): the detailed figures 1-4 run on the
-wake-embedded M0 family (which also permits the strict same-mesh A/B against the
-conforming solver); figure 5 adds the wake-free M3 family, where no conforming
-counterpart exists at all.
+Dual-mesh (roadmap Track B working rule): the flow field (fig 1-2) and Cp
+(fig 5) run on BOTH the wake-embedded M0 family (which also permits the strict
+same-mesh A/B against the conforming solver) and the wake-free M3 family (where
+no conforming counterpart exists at all); the enrichment map and wake-jump
+figures (3-4) are shown on M0. Runtime ~2 min.
 """
 
 import sys
@@ -156,8 +160,9 @@ def _explode(sec, wls):
     return verts, vals
 
 
-def demo_flowfield(mesh, cases, checks):
-    print("[1/5] flow field: lift vs no lift (same mesh, same level set)")
+def demo_flowfield(mesh, cases, checks, *, tag, mesh_label, out_name, step):
+    print(f"[{step}] flow field ({mesh_label}): lift vs no lift "
+          f"(same mesh, same level set)")
     fig, axes = plt.subplots(2, 2, figsize=(13.6, 9.4))
     # ONE colour scale for both rows, so "no lift" reads as a genuinely flat
     # field instead of an auto-scaled picture of round-off.
@@ -179,8 +184,8 @@ def demo_flowfield(mesh, cases, checks):
         ax.set_title(f"alpha = {a:.0f} deg   speed |grad phi| / U_inf "
                      f"(own side)")
         ax.set_ylabel("y/c")
-        if row == 1:
-            ax.set_xlabel("x/c")
+        ax.set_xlabel("x/c" if row == 1 else "")
+        ax.tick_params(labelbottom=(row == 1))
         ax.grid(False)
         cb = fig.colorbar(t, ax=ax, shrink=0.88, pad=0.02)
         cb.ax.tick_params(labelsize=8, colors=MUTED)
@@ -199,27 +204,27 @@ def demo_flowfield(mesh, cases, checks):
         jump = "NO jump ([phi] = 0)" if abs(gamma) < 1e-3 \
             else f"branch cut carries [phi] = Gamma = {gamma:.3f}"
         ax.set_title(f"alpha = {a:.0f} deg   phi - phi_inf   ({jump})")
-        if row == 1:
-            ax.set_xlabel("x/c")
+        ax.set_xlabel("x/c" if row == 1 else "")
+        ax.tick_params(labelbottom=(row == 1))
         ax.grid(False)
         cb = fig.colorbar(pc, ax=ax, shrink=0.88, pad=0.02)
         cb.ax.tick_params(labelsize=8, colors=MUTED)
         cb.outline.set_edgecolor(BASELINE)
 
-    fig.suptitle("Level-set embedded wake: the SAME mesh and the SAME level "
-                 "set, with and without lift\n"
+    fig.suptitle(f"Level-set embedded wake on the {mesh_label} mesh: the SAME "
+                 "mesh and the SAME level set, with and without lift\n"
                  "(right column drawn per-element = exactly how the "
                  "multivalued DOFs store the field)",
                  fontsize=12.5, fontweight="semibold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.92), h_pad=2.4)
-    finish(fig, OUT, "flowfield_lift_vs_nolift.png")
+    finish(fig, OUT, out_name)
 
     g0, g4 = cases[0.0]["res"]["gamma"], cases[4.0]["res"]["gamma"]
-    checks.add("no-lift", "Gamma at alpha = 0", f"{g0:.2e}",
-               "|Gamma| < 1e-3 (symmetric => no circulation)",
+    checks.add(f"no-lift[{tag}]", f"Gamma at alpha = 0 ({mesh_label})",
+               f"{g0:.2e}", "|Gamma| < 1e-3 (symmetric => no circulation)",
                bool(abs(g0) < 1e-3))
-    checks.add("lift", "Gamma at alpha = 4", f"{g4:.4f}",
-               "> 0.2 (the level-set path develops circulation)",
+    checks.add(f"lift[{tag}]", f"Gamma at alpha = 4 ({mesh_label})",
+               f"{g4:.4f}", "> 0.2 (the level-set path develops circulation)",
                bool(g4 > 0.2))
 
 
@@ -255,7 +260,7 @@ def _tri_class(mesh, cm, mvop, sec):
 
 
 def demo_levelset_region(mesh, cases, checks):
-    print("[2/5] where the level set acts (mesh + enriched elements)")
+    print("[3/6] where the level set acts (mesh + enriched elements)")
     c = cases[4.0]
     cm, mvop = c["cm"], c["mvop"]
     sec = _section(mesh, cm, mvop, c["res"]["phi_ext"], 4.0)
@@ -351,7 +356,7 @@ def demo_levelset_region(mesh, cases, checks):
 # 3. how the jump survives to the far field + how it is STORED
 # ---------------------------------------------------------------------------
 def demo_wake_jump(mesh, cases, checks):
-    print("[3/5] the wake jump: convected TE -> far field, and how it is stored")
+    print("[4/6] the wake jump: convected TE -> far field, and how it is stored")
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0))
 
     ax = axes[0]
@@ -445,17 +450,23 @@ def _cp_b(mesh, cm, mvop, phi_ext):
     return xc, cp, n_out[:, 1] > 0, cp, area, n_out
 
 
-def demo_wall_cp(mesh, cases, checks):
-    print("[4/5] wall Cp (D11 per-side mapping) vs the conforming path")
-    mesh_cut, wc = cut_wake(mesh)
+def _cl_p(mesh, cp, area, n_out, a):
+    lift = np.array([-np.sin(np.radians(a)), np.cos(np.radians(a)), 0.0])
+    dz = float(np.ptp(mesh.nodes[:, 2]))
+    return float((-(cp * area) @ n_out / dz) @ lift)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0), sharey=True)
+
+def demo_wall_cp(mesh_m0, cases_m0, mesh_m3, cases_m3, checks, step):
+    print(f"[{step}] wall Cp (D11 per-side mapping): BOTH meshes vs conforming")
+    mesh_cut, wc = cut_wake(mesh_m0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.2), sharey=True)
     rows = []
     for ax, a in zip(axes, ALPHAS):
-        c = cases[a]
-        xc, cp, upper, _, area, n_out = _cp_b(mesh, c["cm"], c["mvop"],
-                                              c["res"]["phi_ext"])
-        # conforming reference on the same mesh
+        # --- M0 (wake-EMBEDDED): level set (solid) + conforming (grey dashed)
+        c0 = cases_m0[a]
+        xc0, cp0, up0, _, area0, n0 = _cp_b(mesh_m0, c0["cm"], c0["mvop"],
+                                            c0["res"]["phi_ext"])
         rc = solve_laplace_lifting(mesh_cut, wc, alpha_deg=a)
         wall_c = mesh_cut.boundary_faces["wall"]
         n_c = wall_outward_normals(mesh_cut.nodes, mesh_cut.elements, wall_c)
@@ -466,71 +477,86 @@ def demo_wall_cp(mesh, cases, checks):
         xc_c = mesh_cut.nodes[wall_c].mean(axis=1)[:, 0]
         up_c = n_c[:, 1] > 0
 
-        for m, col, lab in ((upper, CRITICAL, "level set: upper"),
-                            (~upper, S1_BLUE, "level set: lower")):
-            o = np.argsort(xc[m])
-            ax.plot(xc[m][o], cp[m][o], "-", color=col, lw=1.9, label=lab)
-        for m, lab in ((up_c, "conforming: upper"), (~up_c, "conforming: lower")):
+        # --- M3 (wake-FREE): level set only (no conforming counterpart)
+        c3 = cases_m3[a]
+        xc3, cp3, up3, _, area3, n3 = _cp_b(mesh_m3, c3["cm"], c3["mvop"],
+                                            c3["res"]["phi_ext"])
+
+        # conforming = grey dashed reference underneath
+        for m in (up_c, ~up_c):
             o = np.argsort(xc_c[m])
-            ax.plot(xc_c[m][o], cp_c[m][o], "--", color=MUTED, lw=1.1,
-                    label=lab if "upper" in lab else None)
+            ax.plot(xc_c[m][o], cp_c[m][o], "--", color=MUTED, lw=1.2,
+                    zorder=1)
+        # colour = surface (red upper / blue lower); linestyle = mesh
+        # (solid = M0 embedded, dotted = M3 wake-free)
+        for xc, cp, up, ls, mk in ((xc0, cp0, up0, "-", None),
+                                   (xc3, cp3, up3, ":", None)):
+            for m, col in ((up, CRITICAL), (~up, S1_BLUE)):
+                o = np.argsort(xc[m])
+                ax.plot(xc[m][o], cp[m][o], ls, color=col, lw=2.0,
+                        zorder=3 if ls == "-" else 4)
         ax.invert_yaxis()
         ax.set_xlabel("x/c")
-        ax.set_title(f"alpha = {a:.0f} deg   "
-                     f"Gamma = {c['res']['gamma']:+.4f}  "
-                     f"(conforming {float(np.mean(rc['gamma'])):+.4f})")
-        ax.legend(fontsize=8.5)
+        ax.set_title(f"alpha = {a:.0f} deg      "
+                     f"Gamma:  M0 {c0['res']['gamma']:+.4f}   "
+                     f"M3 {c3['res']['gamma']:+.4f}   "
+                     f"(conforming {float(np.mean(rc['gamma'])):+.4f})",
+                     fontsize=9.5)
 
-        # cl by pressure integration, both paths
-        lift = np.array([-np.sin(np.radians(a)), np.cos(np.radians(a)), 0.0])
-        dz = float(np.ptp(mesh.nodes[:, 2]))
-        cl_b = float((-(cp * area) @ n_out / dz) @ lift)
-        cl_c = float((-(cp_c * area_c) @ n_c / dz) @ lift)
-        rows.append((f"{a:.0f}", f"{c['res']['gamma']:.6f}",
+        cl0 = _cl_p(mesh_m0, cp0, area0, n0, a)
+        cl3 = _cl_p(mesh_m3, cp3, area3, n3, a)
+        clc = _cl_p(mesh_cut, cp_c, area_c, n_c, a)
+        rows.append((f"{a:.0f}", f"{c0['res']['gamma']:.6f}",
+                     f"{c3['res']['gamma']:.6f}",
                      f"{float(np.mean(rc['gamma'])):.6f}",
-                     f"{cl_b:.6f}", f"{cl_c:.6f}",
-                     f"{2*c['res']['gamma']:.6f}"))
+                     f"{cl0:.6f}", f"{cl3:.6f}", f"{clc:.6f}"))
         if a > 0:
-            checks.add("cp-vs-conforming", f"cl_pressure alpha={a:.0f} "
-                       "(level set vs conforming)",
-                       f"{cl_b:.4f} vs {cl_c:.4f}",
-                       "within 3%", bool(abs(cl_b - cl_c) / abs(cl_c) < 0.03))
-            checks.add("D11", f"cl_pressure vs cl_KJ = 2*Gamma (alpha={a:.0f})",
-                       f"{cl_b:.4f} vs {2*c['res']['gamma']:.4f}",
+            checks.add("cp-vs-conforming",
+                       f"cl_p alpha={a:.0f}: M0 level set vs conforming",
+                       f"{cl0:.4f} vs {clc:.4f}",
+                       "within 3%", bool(abs(cl0 - clc) / abs(clc) < 0.03))
+            checks.add("D11", f"cl_p vs cl_KJ = 2*Gamma (M0, alpha={a:.0f})",
+                       f"{cl0:.4f} vs {2*c0['res']['gamma']:.4f}",
                        "within 5% (per-side wall mapping is correct)",
-                       bool(abs(cl_b - 2*c["res"]["gamma"])
-                            / abs(2*c["res"]["gamma"]) < 0.05))
+                       bool(abs(cl0 - 2*c0["res"]["gamma"])
+                            / abs(2*c0["res"]["gamma"]) < 0.05))
+            checks.add("cp-wakefree",
+                       f"cl_p alpha={a:.0f}: M3 wake-free vs conforming",
+                       f"{cl3:.4f} vs {clc:.4f}",
+                       "within 5%", bool(abs(cl3 - clc) / abs(clc) < 0.05))
 
-    axes[0].set_ylabel("Cp")
-    fig.suptitle("Surface Cp: the level-set path reproduces the conforming "
-                 "solver on the SAME mesh\n"
-                 "(alpha = 0 is symmetric => upper and lower collapse; "
-                 "alpha = 4 shows the loading)",
-                 fontsize=12.5, fontweight="semibold", color=INK)
-    fig.tight_layout(rect=(0, 0, 1, 0.91))
+    axes[0].set_ylabel("Cp   (inverted axis)")
+    handles = [
+        Line2D([], [], color=CRITICAL, lw=2, label="upper surface"),
+        Line2D([], [], color=S1_BLUE, lw=2, label="lower surface"),
+        Line2D([], [], color=INK, lw=2, ls="-",
+               label="M0 wake-embedded (level set)"),
+        Line2D([], [], color=INK, lw=2, ls=":",
+               label="M3 wake-free (level set)"),
+        Line2D([], [], color=MUTED, lw=1.4, ls="--",
+               label="conforming solver (M0, reference)"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False,
+               fontsize=9, bbox_to_anchor=(0.5, -0.02))
+    fig.suptitle("Surface Cp on BOTH mesh families: the wake-embedded (M0) and "
+                 "wake-free (M3) level-set paths\n"
+                 "reproduce the conforming solver (alpha = 0 collapses "
+                 "upper/lower; alpha = 4 shows the loading)",
+                 fontsize=12.2, fontweight="semibold", color=INK)
+    fig.tight_layout(rect=(0, 0.07, 1, 0.91))
     finish(fig, OUT, "wall_cp.png")
 
     write_csv(OUT, "summary.csv",
-              "alpha_deg,gamma_levelset,gamma_conforming,cl_p_levelset,"
-              "cl_p_conforming,cl_kj_levelset", rows)
+              "alpha_deg,gamma_m0,gamma_m3,gamma_conforming,"
+              "cl_p_m0,cl_p_m3,cl_p_conforming", rows)
 
 
 # ---------------------------------------------------------------------------
 # 5. dual-mesh: the SAME level set on a wake-EMBEDDED and a wake-FREE mesh
 # ---------------------------------------------------------------------------
-def demo_dual_mesh(mesh_m0, cases_m0, checks):
-    print("[5/5] dual-mesh: embedded (M0) vs wake-free (M3), the workflow form")
-    path = NACA_FREE_DIR / "coarse.msh"     # committed; medium is gitignored
-    if not path.exists():
-        print(f"    (skip: {path} not present)")
-        return
-    mesh_m3 = read_mesh(path)
-    assert "wake" not in mesh_m3.boundary_faces, "M3 must have NO wake tag"
-
-    # solve the wake-free mesh at alpha = 4 with the SAME level-set path
-    wls3, cm3, mvop3 = build(mesh_m3)
-    r3 = solve_multivalued_lifting(mvop3, mesh_m3, 0.0, alpha_deg=4.0)
-    print(f"    M3 wake-free: Gamma = {r3['gamma']:+.5f}")
+def demo_dual_mesh(mesh_m0, cases_m0, mesh_m3, cases_m3, checks, step):
+    print(f"[{step}] dual-mesh: embedded (M0) vs wake-free (M3) cut structure")
+    r3 = cases_m3[4.0]["res"]
 
     panels = [
         ("M0  wake-EMBEDDED  (the mesh HAS a `wake` tag;\n"
@@ -538,7 +564,8 @@ def demo_dual_mesh(mesh_m0, cases_m0, checks):
          cases_m0[4.0]["cm"], cases_m0[4.0]["mvop"],
          cases_m0[4.0]["res"], "wake" in mesh_m0.boundary_faces),
         ("M3  wake-FREE  (NO `wake` tag anywhere;\n"
-         "the level set makes GENERIC cuts)", mesh_m3, cm3, mvop3, r3, False),
+         "the level set makes GENERIC cuts)", mesh_m3,
+         cases_m3[4.0]["cm"], cases_m3[4.0]["mvop"], r3, False),
     ]
 
     fig, axes = plt.subplots(1, 2, figsize=(13.6, 5.6))
@@ -601,20 +628,30 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     checks = CheckList("Track B / B3 + B4 -- level-set embedded wake")
 
-    path = NACA_DIR / f"{LEVEL}.msh"
-    if not path.exists():
-        print(f"missing mesh: {path}")
+    path0 = NACA_DIR / f"{LEVEL}.msh"
+    path3 = NACA_FREE_DIR / "coarse.msh"    # committed; M3 medium is gitignored
+    if not path0.exists() or not path3.exists():
+        print(f"missing mesh: {path0 if not path0.exists() else path3}")
         return 1
-    print(f"[0/5] {LEVEL} NACA0012 mesh -- the topology knows nothing "
-          f"about the wake")
-    mesh = read_mesh(path)
-    cases = solve_all(mesh)
 
-    demo_flowfield(mesh, cases, checks)
-    demo_levelset_region(mesh, cases, checks)
-    demo_wake_jump(mesh, cases, checks)
-    demo_wall_cp(mesh, cases, checks)
-    demo_dual_mesh(mesh, cases, checks)
+    print(f"[0/6] wake-EMBEDDED {LEVEL} M0 mesh (has a `wake` tag)")
+    mesh_m0 = read_mesh(path0)
+    cases_m0 = solve_all(mesh_m0)
+    print("[0/6] wake-FREE coarse M3 mesh (NO `wake` tag -- the workflow form)")
+    mesh_m3 = read_mesh(path3)
+    assert "wake" not in mesh_m3.boundary_faces
+    cases_m3 = solve_all(mesh_m3)
+
+    demo_flowfield(mesh_m0, cases_m0, checks, tag="M0",
+                   mesh_label="M0 (embedded)",
+                   out_name="flowfield_lift_vs_nolift.png", step="1/6")
+    demo_flowfield(mesh_m3, cases_m3, checks, tag="M3",
+                   mesh_label="M3 (wake-free)",
+                   out_name="flowfield_lift_vs_nolift_m3.png", step="2/6")
+    demo_levelset_region(mesh_m0, cases_m0, checks)
+    demo_wake_jump(mesh_m0, cases_m0, checks)
+    demo_wall_cp(mesh_m0, cases_m0, mesh_m3, cases_m3, checks, step="5/6")
+    demo_dual_mesh(mesh_m0, cases_m0, mesh_m3, cases_m3, checks, step="6/6")
 
     return checks.report(OUT)
 
