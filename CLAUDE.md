@@ -48,7 +48,9 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (184 passed + 8 skipped + 2 xfailed since P10/G10.2,
+3. Full suite: `pytest tests/` (209 passed + 8 skipped + 2 xfailed since B1
+   2026-07-11: +25 Track B dual-mesh tests over the 184+8+2 P10/G10.2 baseline,
+   4 of which skip when the gitignored M3 medium.msh isn't generated;
    ~5 min — G8.3 measured 301.66 s; the always-on coarse transonic smoke is ~170 s
    of it, the G3.2 medium-mesh nested Picard solve ~45 s, the rule-7 sweep's M6
    coarse+medium cut_wake ingest ~15 s. The M6 .msh files are gitignored — the 13

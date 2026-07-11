@@ -67,6 +67,11 @@ cases/meshes/onera_m6/*.msh
 # regenerate: python cases/meshes/naca0012_2.5d/generate_naca0012.py --level fine)
 cases/meshes/naca0012_2.5d/fine.msh
 
+# M3 wake-free family: coarse is committed, medium/fine stay local (7.9 MB+;
+# regenerate: python cases/meshes/naca0012_wakefree_2.5d/generate_naca0012_wakefree.py)
+cases/meshes/naca0012_wakefree_2.5d/medium.msh
+cases/meshes/naca0012_wakefree_2.5d/fine.msh
+
 # P5 demo solution caches (regenerable; figures+CSVs are the committed evidence)
 cases/demo/p5_onera_m6/results/*.npz
 

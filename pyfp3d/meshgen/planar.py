@@ -154,6 +154,9 @@ def naca0012_wake_2d(
     dist_max: float = 8.0,
     wake_dist_max: float = 1.5,
     n_half: int = 120,
+    embed_wake: bool = True,
+    corridor_alpha_deg: Tuple[float, float] = (-6.0, 6.0),
+    corridor_n_lines: int = 5,
 ) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray], Dict[str, np.ndarray]]:
     """NACA0012 in a circular far field with an embedded wake line TE -> farfield.
 
@@ -164,8 +167,20 @@ def naca0012_wake_2d(
     to it, and its line elements are returned as the interior edge group
     "wake" for extrude.py to turn into the tagged interior face sheet.
 
+    With ``embed_wake=False`` (the M3 wake-free family, roadmap Track M /
+    design_track_b.md section 5.7) NO wake line is embedded -- the mesh
+    topology knows nothing about the wake, which is Track B's level-set
+    deliverable form. Because there is then no conforming sheet to attract
+    refinement, a fan of ``corridor_n_lines`` size-field-only lines from the
+    TE spanning ``corridor_alpha_deg`` (degrees, the intended alpha-sweep
+    envelope; design_track_b.md D8) keeps element size ~h_wake in the wedge
+    the level-set wake will sweep through. The fan lines are plain geometry
+    used only in the Distance size field -- never embedded, so triangle
+    edges do NOT conform to them. interior_edge_groups is then empty.
+
     Returns (points2d, triangles, edge_groups, interior_edge_groups):
-    edge_groups has "wall" and "farfield"; interior_edge_groups has "wake".
+    edge_groups has "wall" and "farfield"; interior_edge_groups has "wake"
+    (embed_wake=True) or is {} (embed_wake=False).
     """
     import gmsh
 
@@ -201,9 +216,22 @@ def naca0012_wake_2d(
         far_loop = geo.addCurveLoop(arcs)
         surface = geo.addPlaneSurface([far_loop, foil_loop])
 
-        wake_line = geo.addLine(te, p_e)
-        geo.synchronize()
-        gmsh.model.mesh.embed(1, [wake_line], 2, surface)
+        if embed_wake:
+            wake_size_lines = [geo.addLine(te, p_e)]
+            geo.synchronize()
+            gmsh.model.mesh.embed(1, wake_size_lines, 2, surface)
+        else:
+            # M3 corridor fan: size-field-only lines from the TE covering the
+            # alpha-sweep wedge. Kept strictly inside the far-field circle so
+            # the standalone curves never touch the boundary; NOT embedded.
+            a_lo, a_hi = np.radians(corridor_alpha_deg)
+            fan_len = 0.97 * (r_far - 0.5)
+            wake_size_lines = []
+            for ang in np.linspace(a_lo, a_hi, corridor_n_lines):
+                p_end = geo.addPoint(1.0 + fan_len * np.cos(ang),
+                                     fan_len * np.sin(ang), 0.0)
+                wake_size_lines.append(geo.addLine(te, p_end))
+            geo.synchronize()
 
         # Graded size: h_wall near the airfoil, h_wake near the wake sheet,
         # h_far in the bulk; overall size = min of the two thresholds.
@@ -218,7 +246,7 @@ def naca0012_wake_2d(
         gmsh.model.mesh.field.setNumber(2, "DistMax", dist_max)
 
         gmsh.model.mesh.field.add("Distance", 3)
-        gmsh.model.mesh.field.setNumbers(3, "CurvesList", [wake_line])
+        gmsh.model.mesh.field.setNumbers(3, "CurvesList", wake_size_lines)
         gmsh.model.mesh.field.setNumber(3, "Sampling", 400)
         gmsh.model.mesh.field.add("Threshold", 4)
         gmsh.model.mesh.field.setNumber(4, "InField", 3)
@@ -235,14 +263,11 @@ def naca0012_wake_2d(
         gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 0)
 
         gmsh.model.mesh.generate(2)
-        points2d, triangles, groups = _collect_2d(
-            {
-                "wall": [upper, lower],
-                "farfield": arcs,
-                "wake": [wake_line],
-            }
-        )
-        wake_edges = groups.pop("wake")
-        return points2d, triangles, groups, {"wake": wake_edges}
+        curve_groups = {"wall": [upper, lower], "farfield": arcs}
+        if embed_wake:
+            curve_groups["wake"] = wake_size_lines
+        points2d, triangles, groups = _collect_2d(curve_groups)
+        interior = {"wake": groups.pop("wake")} if embed_wake else {}
+        return points2d, triangles, groups, interior
     finally:
         gmsh.finalize()
