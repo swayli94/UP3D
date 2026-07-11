@@ -313,6 +313,9 @@ def solve_newton_lifting(
     line_search: bool = True,
     ptc_dtau: Optional[float] = None,
     rtol_seed: float = 1e-7,
+    tol_residual_loose: Optional[float] = None,
+    tol_residual_rel: Optional[float] = None,
+    accept_on_stall: bool = False,
     freeze_tol: Optional[float] = None,
     freeze_refresh_max: int = 2,
     workspace: Optional[NewtonWorkspace] = None,
@@ -344,6 +347,23 @@ def solve_newton_lifting(
     refused while any element is speed-limited or density-floored (a
     clamped state is not a converged flow -- mirrors the P5 gate
     semantics).
+
+    `tol_residual_loose` / `tol_residual_rel` / `accept_on_stall`
+    (G10.2, all default off = bit-identical): LOOSE acceptance criteria
+    for levels whose only job is seeding the next Mach-continuation
+    level. With the same 0-limited/0-floored and ||F|| < tol_gamma
+    guards, the level is also accepted once ||R||_inf < tol_residual_
+    loose, or the residual has dropped by 1/tol_residual_rel from the
+    level-entry value, or the live-stall detector fires (the same
+    plateau test that triggers the freeze) -- i.e. intermediate-level
+    stall becomes "advance" instead of "freeze and polish". All three
+    require AT LEAST ONE Newton step at this level (measured A/B trap:
+    warm-started fold-zone levels ENTER below any absolute threshold,
+    and zero-step acceptance degenerates the continuation into a level
+    skip -- the M0.7875 medium ramp then has no tracking seed and the
+    final level diverges) and never apply inside a frozen phase. The
+    result records which criterion fired as `accept_reason`
+    ("tol"/"loose_tol"/"rel_drop"/"stall").
 
     `direct_refactor_every` (the N6 3D-cost fix): with precond="direct",
     refactor the LU only every k-th Newton step and drive the steps in
@@ -433,6 +453,7 @@ def solve_newton_lifting(
     n_gmres_total = 0
     n_gmres_stalled = 0
     converged = False
+    accept_reason = None
     M_pre = None
     eta_prev = None
     lu_direct = None
@@ -533,10 +554,25 @@ def solve_newton_lifting(
             freeze_point = (phi_free.copy(), gamma.copy(), r_norm)
             # the frozen flux equals the live flux AT the freeze state, so
             # (R_free, F, state) stay valid for this iteration
-        if (r_norm < tol_residual and f_norm < tol_gamma
-                and state["n_limited"] == 0 and state["n_floored"] == 0):
+        accept = None
+        if (f_norm < tol_gamma and state["n_limited"] == 0
+                and state["n_floored"] == 0):
+            if r_norm < tol_residual:
+                accept = "tol"
+            elif frozen is None and it > 0:
+                if (tol_residual_loose is not None
+                        and r_norm < tol_residual_loose):
+                    accept = "loose_tol"
+                elif (tol_residual_rel is not None
+                      and r_norm <= tol_residual_rel
+                      * residual_history[0]):
+                    accept = "rel_drop"
+                elif accept_on_stall and live_stalled:
+                    accept = "stall"
+        if accept is not None:
             if frozen is None:
                 converged = True
+                accept_reason = accept
                 break
             # honesty check: the frozen system converged -- how far is the
             # LIVE (re-selected, re-branched) residual?
@@ -706,12 +742,15 @@ def solve_newton_lifting(
         R_free, F, state = R_try, F_try, state_try
         merit = merit_try
 
+    if converged and accept_reason is None:
+        accept_reason = "tol"          # frozen-phase acceptance paths
     q2n = state["q2l"]
     mach2_max = float(np.max(mach_squared_field(q2n, m_inf, gamma_air)))
     return {
         "phi": state["phi_cut"],
         "gamma": gamma,
         "converged": converged,
+        "accept_reason": accept_reason,
         "n_newton": len(residual_history) - (1 if converged else 0),
         "residual_history": residual_history,
         "F_history": F_history,
@@ -750,6 +789,7 @@ def solve_newton_transonic(
     m_crit: float = 0.95,
     upwind_c_post=None,
     freeze_tol: Optional[float] = 1e-6,
+    intermediate_tol: Optional[float] = None,
     newton_kw: Optional[dict] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
@@ -769,6 +809,24 @@ def solve_newton_transonic(
     only (Lopez Table 4.13's 2.0 -> 1.6 dissipation sharpening). A level
     that fails to converge is retried with the Mach step halved (down to
     dm_min).
+
+    `intermediate_tol` (G10.2, opt-in; None = current behaviour
+    BIT-IDENTICAL): level-adaptive tolerance for the INTERMEDIATE ramp
+    levels, whose only role is to warm-start the next level. When set,
+    the ORIGINAL-SCHEDULE levels except the final Mach level run with
+    loose acceptance (tol_residual_loose=intermediate_tol after >= 1
+    Newton step, a 1e3 relative-drop acceptance, stall-accept instead
+    of freeze-and-polish; freeze_tol=None) -- the 0-limited/0-floored
+    and ||F|| guards stay. The final level (and any upwind_c_post
+    stages) keeps the full tol-1e-10 + freeze/honesty machinery, so
+    the CONVERGED solution semantics are unchanged; and every level
+    INSERTED by dm-halving runs STRICT too -- the halving cascade is
+    the robustness fallback, and the A/B measured that loose retry
+    levels (1 step each) cannot repair a fold-zone seed: the loose
+    ramp reaches the final level with an untracked state, and only a
+    strictly re-converged inserted level restores the default path's
+    seed quality (the P8 "warm-start only from CONVERGED levels"
+    trap, measured on the G8.1 NACA-medium A/B).
 
     Returns the final-level result dict plus level_history (per-level
     (m, n_newton, |R|_final)) and level_results (per-level dicts with
@@ -792,10 +850,19 @@ def solve_newton_transonic(
     level_history = []
     level_results = []
     levels = mach_schedule(m_inf, m_start, dm)
+    # G10.2 loose-level flags: original-schedule intermediates only; the
+    # final level is always levels[-1] (dm-halving inserts BELOW the
+    # failed level, never past m_inf) and inserted retry levels run
+    # strict (docstring)
+    loose = [True] * (len(levels) - 1) + [False]
     i = 0
     while i < len(levels):
         m = levels[i]
         lvl_kw = dict(kw)
+        if intermediate_tol is not None and loose[i]:
+            lvl_kw.update(tol_residual_loose=intermediate_tol,
+                          tol_residual_rel=1e-3, accept_on_stall=True,
+                          freeze_tol=None)
         if last_good is not None:
             # warm-start from the last CONVERGED level (a failed level's
             # state is not a valid continuation seed)
@@ -814,6 +881,7 @@ def solve_newton_transonic(
         level_results.append({
             "m": m, "upwind_c": lvl_kw["upwind_c"],
             "converged": result["converged"],
+            "accept_reason": result["accept_reason"],
             "n_newton": result["n_newton"],
             "residual_history": result["residual_history"],
             "F_history": result["F_history"],
@@ -827,6 +895,7 @@ def solve_newton_transonic(
             if i == 0 or dm_new < dm_min:
                 break
             levels.insert(i, m_prev + dm_new)
+            loose.insert(i, False)      # retry levels run strict (G10.2)
             continue
         last_good = result
         i += 1
@@ -846,6 +915,7 @@ def solve_newton_transonic(
             level_results.append({
                 "m": m_inf, "upwind_c": lvl_kw["upwind_c"],
                 "converged": result["converged"],
+                "accept_reason": result["accept_reason"],
                 "n_newton": result["n_newton"],
                 "residual_history": result["residual_history"],
                 "F_history": result["F_history"],

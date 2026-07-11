@@ -1191,6 +1191,51 @@ order).**
 
 ---
 
+## P10 (partial) — G10.2 level-adaptive intermediate continuation tolerance (closed 2026-07-11; G10.1 still open, so the phase stays open)
+
+**Demo:** `cases/demo/p10_newton_usability/run_ab_g102.py` (one-shot A/B
+evidence, not a suite test; 16-thread timing protocol). Result: **34 PASS +
+6 XFAIL** — the XFAILs are the *documented negative result* for the
+fold-zone case, not open defects.
+
+**What shipped** (`pyfp3d/solve/newton.py`): `solve_newton_transonic`
+gained the opt-in `intermediate_tol` (default None = bit-identical,
+suite-locked); `solve_newton_lifting` gained the loose acceptance
+criteria `tol_residual_loose` / `tol_residual_rel` / `accept_on_stall`
+(all default off) and reports `accept_reason`
+("tol"/"loose_tol"/"rel_drop"/"stall") per solve and per level. Loose
+acceptance keeps the 0-limited/0-floored and ‖F‖ guards, requires ≥ 1
+Newton step at the level, and never applies inside a frozen phase; only
+ORIGINAL-SCHEDULE intermediate levels run loose — the final level and
+every dm-halving retry level keep the full strict tol-1e-10 +
+freeze/honesty machinery. Suite +2 (`tests/test_p10_continuation.py`);
+baseline **184 passed + 8 skipped + 2 xfailed**.
+
+**A/B on the two committed recipes** (`results/summary.csv`,
+`results/levels.csv`, `results/*_ab.png`):
+
+| case | default | adaptive (`intermediate_tol=1e-5`) | verdict |
+|---|---|---|---|
+| ONERA M6 medium M0.84/α3.06 (`NEWTON_M6_RECIPE`) | 239.5 s, 47 steps (intermediate levels 11+12+12) | **140.3 s (+41.4%)**, 18 steps (3+1+2 loose, ending ~1e-5) — final level IDENTICAL: 12 steps, ‖R‖ 7.8e-15, cl 0.2646 / M_max 2.129 / shocks 0.596-0.541-0.362 equal to 4 digits, all G8.2 locks PASS | **PROMOTED** into `NEWTON_M6_RECIPE` (≥ 15% criterion met; gated G8.2 now ~145 s) |
+| NACA0012 medium M0.7875/α1.25 (`NEWTON_TRANSONIC_RECIPE`, fold zone) | 79.1 s, 403 steps, 6 dm-halvings, converges 7.8e-11 | ends UNCONVERGED at 4.3e-6: cl 0.369 vs lock 0.523, shock 0.535 vs 0.674 | **NEGATIVE result recorded** — recipe unchanged |
+
+**The fold-zone failure mechanism (the pre-registered P8 trap, now
+measured).** Round 1 exposed a degenerate path: warm-started levels ENTER
+below any absolute threshold (~2-9e-6 here), so the naive ‖R‖ ≤ 1e-5
+clause accepted intermediate levels with ZERO Newton steps — the ramp
+becomes a level skip. Two hardenings were added and kept (≥ 1 step
+required; dm-halving retries strict), after which the loose ramp does 1–4
+steps/level — but near the fold (dcl/dM ≈ 6–10) that still never tracks
+the circulation: the final level arrives with an untracked Γ seed and
+stalls at the ~5e-6 live-churn floor for the full 60-step budget, and so
+do the STRICT retry levels warm-started from the same loose state (round
+2: 0.7812 and 0.7781 both 60 steps, no convergence — a strictly
+re-converged level cannot repair the seed within budget either).
+Conclusion: **loose intermediates are contraindicated in fold zones**;
+away from folds (M6 class) they are pure profit. This is the P8 N2–N4
+"warm-start only from CONVERGED levels" warning in its G10.2 form, and it
+is why the promotion is per-recipe.
+
 ## Cross-phase summary
 
 - **Functionality**: every closed gate's headline number is reproduced from

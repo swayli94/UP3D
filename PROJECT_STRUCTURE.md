@@ -155,7 +155,16 @@ pyfp3d/                    # Main package
 │                           #   preconditioned GMRES on the fresh coupled operator, refactor
 │                           #   fallback on GMRES failure (true-3D splu fill is ~100× the 2.5D
 │                           #   cost; M6 medium 1606 s → 249 s; M6 recipe:
-│                           #   tests/test_p8_newton NEWTON_M6_RECIPE, dm 0.05 + spanwise Γ)
+│                           #   tests/test_p8_newton NEWTON_M6_RECIPE, dm 0.05 + spanwise Γ);
+│                           #   ✓ [P10/G10.2] level-adaptive intermediate continuation
+│                           #   tolerance: solve_newton_transonic(intermediate_tol=…) opt-in
+│                           #   (default None bit-identical) — loose acceptance of ORIGINAL-
+│                           #   SCHEDULE intermediate levels (tol_residual_loose after ≥1
+│                           #   step / 1e3 rel-drop / stall-accept, freeze off; dm-halving
+│                           #   retries + final level stay strict). A/B: M6 medium +40.3%
+│                           #   locks-intact (promoted into NEWTON_M6_RECIPE); fold-zone NACA
+│                           #   medium NEGATIVE (untracked Γ seed) — contraindicated near
+│                           #   folds, NEWTON_TRANSONIC_RECIPE unchanged
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -268,7 +277,7 @@ tests/                     # Unit and gate tests
 │                                     #   assignment machinery (bitwise-at-freeze-state + frozen
 │                                     #   JVP); + gated converged-pocket FD on the NEWTON coarse
 │                                     #   M0.80 field (PYFP3D_TRANSONIC_GATES=1 — G8.1 FD clause)
-└── test_p8_newton.py                # ✓ [P8/N3–N5] coupled Newton: Γ-column FD (far-field-column
+├── test_p8_newton.py                # ✓ [P8/N3–N5] coupled Newton: Γ-column FD (far-field-column
                                       #   trap detector), exact Kutta row, far-field Γ-linearity,
                                       #   GMRES-vs-direct, supersonic nonsymmetry, cl/Γ match vs
                                       #   P3 Picard, terminal order p_k ~ 2, m_inf=0 single-step;
@@ -277,7 +286,12 @@ tests/                     # Unit and gate tests
                                       #   physics bands; NEWTON_TRANSONIC_RECIPE lives here);
                                       #   ✓ [P8/N6] gated G8.2 M6 medium end-to-end < 300 s
                                       #   (NEWTON_M6_RECIPE lives here too; skips without the
-                                      #   gitignored onera_m6/*.msh)
+                                      #   gitignored onera_m6/*.msh; carries the promoted
+                                      #   G10.2 intermediate_tol=1e-5 since 2026-07-11)
+└── test_p10_continuation.py         # ✓ [P10/G10.2] level-adaptive intermediate tolerance:
+                                      #   default-path accept_reason lock + subsonic-ramp
+                                      #   adaptive path (final level strict, Γ matches the
+                                      #   strict run to 1e-6, total steps not worse)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap

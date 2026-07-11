@@ -408,8 +408,17 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: vs ~0.2 s at the same ~6e4 dofs; reuse cuts the all-levels M6 medium run
 #: from 1606 s to the G8.2 budget) and the P5 dm=0.05 Mach schedule (the M6
 #: solution family is far from the NACA-medium fold; no fine steps needed).
+#: intermediate_tol=1e-5 is the G10.2 promotion (A/B 2026-07-11,
+#: cases/demo/p10_newton_usability/: all G8.2 locks intact, final level
+#: converges identically -- 12 steps, |R| 7.8e-15, cl/M_max/shocks equal
+#: to 4 digits -- solve 239.5 -> 140.3 s, +41.4%). NOT promoted into
+#: NEWTON_TRANSONIC_RECIPE: the same A/B measured the fold-zone NACA
+#: medium ramp unconverged under loose intermediates (cl 0.369 vs lock
+#: 0.523) even with strict dm-halving retries -- loose seeds are
+#: contraindicated near the fold (the P8 "warm-start only from CONVERGED
+#: levels" trap in G10.2 form).
 NEWTON_M6_RECIPE = dict(
-    dm=0.05, dm_min=0.01, freeze_tol=1e-6,
+    dm=0.05, dm_min=0.01, freeze_tol=1e-6, intermediate_tol=1e-5,
     newton_kw=dict(freeze_refresh_max=8, precond="direct",
                    direct_refactor_every=1000, n_newton_max=60,
                    farfield_spanwise_gamma=True),
@@ -459,7 +468,9 @@ def test_g82_m6_medium_newton_end_to_end():
     with NUMBA_NUM_THREADS=16 AND OMP_NUM_THREADS=16 AND
     OPENBLAS_NUM_THREADS=16 on the 16C/32T box -- without the BLAS/OMP
     caps the same run measures ~333 s (oversubscription costs ~33%,
-    measured A/B 2026-07-11); with them 252 s."""
+    measured A/B 2026-07-11); with them 252 s (G8.2 closure run), ~145 s
+    since the G10.2 intermediate_tol promotion (same final-level
+    solution, recipe comment above)."""
     r, forces, shocks, wall = _m6_case("medium")
     assert r["converged"]
     _assert_terminal_quadratic(r)

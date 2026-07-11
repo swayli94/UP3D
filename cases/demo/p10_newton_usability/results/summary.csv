@@ -1,0 +1,3 @@
+case,wall_default_s,wall_adaptive_s,speedup,steps_default,steps_adaptive,levels_default,levels_adaptive,halvings_default,halvings_adaptive
+naca_medium,79.1,43.8,0.446,403,187,11,7,6,2
+m6_medium,239.5,140.3,0.414,47,18,4,4,0,0

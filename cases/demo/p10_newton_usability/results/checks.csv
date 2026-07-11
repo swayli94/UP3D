@@ -1,0 +1,41 @@
+gate,check,value,criterion,status,note
+naca_medium/default,converged,True,True,PASS,
+naca_medium/default,final |R|,7.85e-11,< 1e-9,PASS,
+naca_medium/default,terminal quadratic pair,True,True,PASS,
+naca_medium/default,0 limited/floored,0/0,0/0,PASS,
+naca_medium/default,Kutta |F|,5.55e-17,< 1e-12,PASS,
+naca_medium/default,shock x/c,0.6738,0.674 +- 0.012,PASS,
+naca_medium/default,cl,0.5234,0.523 +- 0.01,PASS,
+naca_medium/default,M_max,1.4044,1.404 +- 0.02,PASS,
+naca_medium/adaptive,converged,False,True,XFAIL,fold-zone contraindication (recorded negative)
+naca_medium/adaptive,final |R|,4.26e-06,< 1e-9,XFAIL,fold-zone contraindication (recorded negative)
+naca_medium/adaptive,terminal quadratic pair,False,True,XFAIL,fold-zone contraindication (recorded negative)
+naca_medium/adaptive,0 limited/floored,0/0,0/0,PASS,
+naca_medium/adaptive,Kutta |F|,2.22e-16,< 1e-12,PASS,
+naca_medium/adaptive,shock x/c,0.5345,0.674 +- 0.012,XFAIL,fold-zone contraindication (recorded negative)
+naca_medium/adaptive,cl,0.3692,0.523 +- 0.01,XFAIL,fold-zone contraindication (recorded negative)
+naca_medium/adaptive,M_max,1.3531,1.404 +- 0.02,XFAIL,fold-zone contraindication (recorded negative)
+naca_medium,fold-zone negative result recorded,adaptive converged=False,do NOT promote into NEWTON_TRANSONIC_RECIPE,PASS,strict default kept for fold-zone continuation
+m6_medium/default,converged,True,True,PASS,
+m6_medium/default,final |R|,6.99e-15,< 1e-9,PASS,
+m6_medium/default,terminal quadratic pair,True,True,PASS,
+m6_medium/default,0 limited/floored,0/0,0/0,PASS,
+m6_medium/default,Kutta |F|,2.08e-16,< 1e-12,PASS,
+m6_medium/default,cl,0.2646,0.2646 +- 0.005,PASS,
+m6_medium/default,M_max,2.1288,2.134 +- 0.05,PASS,
+m6_medium/default,shock eta 0.44,0.5963,0.596 +- 0.02,PASS,
+m6_medium/default,shock eta 0.65,0.5408,0.541 +- 0.02,PASS,
+m6_medium/default,shock eta 0.90,0.3617,0.362 +- 0.02,PASS,
+m6_medium/adaptive,converged,True,True,PASS,
+m6_medium/adaptive,final |R|,7.83e-15,< 1e-9,PASS,
+m6_medium/adaptive,terminal quadratic pair,True,True,PASS,
+m6_medium/adaptive,0 limited/floored,0/0,0/0,PASS,
+m6_medium/adaptive,Kutta |F|,1.94e-16,< 1e-12,PASS,
+m6_medium/adaptive,cl,0.2646,0.2646 +- 0.005,PASS,
+m6_medium/adaptive,M_max,2.1288,2.134 +- 0.05,PASS,
+m6_medium/adaptive,shock eta 0.44,0.5963,0.596 +- 0.02,PASS,
+m6_medium/adaptive,shock eta 0.65,0.5408,0.541 +- 0.02,PASS,
+m6_medium/adaptive,shock eta 0.90,0.3617,0.362 +- 0.02,PASS,
+m6_medium,levels not worse,4 vs 4,adaptive <= default,PASS,
+m6_medium,dm-halvings not worse,0 vs 0,adaptive <= default,PASS,
+m6_medium,solve speedup,41.4%,>= 15% to promote into NEWTON_M6_RECIPE,PASS,negative result recorded if below; locks decide safety

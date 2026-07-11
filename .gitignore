@@ -70,6 +70,10 @@ cases/meshes/naca0012_2.5d/fine.msh
 # P5 demo solution caches (regenerable; figures+CSVs are the committed evidence)
 cases/demo/p5_onera_m6/results/*.npz
 
+# P9 demo solution caches (same semantics: the fine M6 Newton solve is the
+# expensive run-once artifact; figures+CSVs are the committed evidence)
+cases/demo/p9_grid_discrimination/results/*.npz
+
 # Reference papers
 docs/references
 
