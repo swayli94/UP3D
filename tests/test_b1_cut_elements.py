@@ -16,9 +16,16 @@ Dual-mesh rule (roadmap Track B working rules):
       consistency + side classification against raw geometry + an
       alpha-sweep re-aim (update_direction) that never touches the mesh.
 
+3D (ONERA M6, both families -- the machinery the 2.5D meshes cannot
+exercise): the swept TE polyline (D9) and, above all, the SPANWISE CLIP --
+the sheet ends at the wing tip, so the wake plane's extension beyond the
+tip must NOT be cut (Gamma(tip) = 0; the conforming path gets this from
+its free-edge rule). Both M6 families are gitignored, so these tests skip
+unless the meshes were generated locally.
+
 Synthetic single-tet and two-segment-TE cases pin the classification
-rules (downstream test, TE fan, per-segment frames) independently of any
-mesh file.
+rules (downstream test, spanwise clip, TE fan, per-segment frames)
+independently of any mesh file.
 """
 
 from pathlib import Path
@@ -28,11 +35,14 @@ import pytest
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
+from pyfp3d.meshgen.wing3d import B_SEMI, x_te
 from pyfp3d.wake import CutElementMap, WakeLevelSet
 
 REPO_ROOT = Path(__file__).parent.parent
 M0_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
 M3_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_wakefree_2.5d"
+M1_DIR = REPO_ROOT / "cases" / "meshes" / "onera_m6"
+M4_DIR = REPO_ROOT / "cases" / "meshes" / "onera_m6_wakefree"
 
 
 def _wall_nodes(mesh):
@@ -123,20 +133,59 @@ class TestSyntheticClassification:
         te = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 1.0], [1.2, 0.2, 2.0]])
         wls = WakeLevelSet(te, direction=(1.0, 0.0, 0.0))
         # Above panel 1 (z=0.5): plain +y offset.
-        s1, d1 = wls.evaluate(np.array([[2.0, 0.1, 0.5]]))
+        s1, d1, _ = wls.evaluate(np.array([[2.0, 0.1, 0.5]]))
         assert s1[0] > 0 and d1[0] > 0
         # Panel 2 tilts: its ruled surface through (1.1, 0.1, 1.5) --
         # a point slightly BELOW that local surface must read s < 0
         # even though its absolute y is positive.
-        s2, _ = wls.evaluate(np.array([[2.0, 0.05, 1.5]]))
+        s2, _, _ = wls.evaluate(np.array([[2.0, 0.05, 1.5]]))
         assert s2[0] < 0
+
+    def test_swept_te_span_coordinate_is_oblique(self):
+        """REGRESSION PIN: on a SWEPT TE the span axis is not
+        perpendicular to the wake direction, so q must come from the
+        OBLIQUE (v, d_hat) decomposition. An orthogonal projection leaks
+        the downstream distance into q and pushes far-downstream points
+        past the tip (measured on M6 coarse: ~60% of the true cut set
+        wrongly clipped)."""
+        te = np.array([[1.0, 0.0, 0.0], [1.6, 0.0, 1.2]])   # 0.5 sweep
+        wls = WakeLevelSet(te, direction=(1.0, 0.0, 0.0))
+        # A point far downstream at mid-span (z = 0.6) is at HALF span.
+        _, d, q = wls.evaluate(np.array([[10.0, 0.05, 0.6]]))
+        assert d[0] > 0
+        assert q[0] == pytest.approx(0.5 * wls.span_length, rel=1e-12)
+        # ... and a point beyond the tip reports q > span_length.
+        _, _, q_out = wls.evaluate(np.array([[10.0, 0.05, 1.5]]))
+        assert q_out[0] > wls.span_length
+
+    def test_spanwise_clip_rejects_beyond_tip(self):
+        """The wake plane's extension outboard of the tip must NOT be cut
+        (Gamma(tip) = 0; the conforming path's free-edge rule)."""
+        # sheet spans z in [0, 1]; the strip sits at z in [2, 3] -- same
+        # plane, downstream, but beyond the tip.
+        nodes = np.array([
+            [3.0, -0.5, 2.0], [4.0, -0.5, 2.0], [3.0, 0.5, 2.0],
+            [3.0, 0.0, 3.0], [4.0, 0.5, 3.0],
+        ])
+        elements = np.array([[0, 1, 2, 3], [1, 2, 3, 4]])
+        te = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 1.0]])
+        wls = WakeLevelSet(te, direction=(1.0, 0.0, 0.0))
+        cm = CutElementMap(nodes, elements, wls)
+        assert len(cm.cut_elems) == 0
+        assert len(cm.beyond_tip_elems) == 2   # rejected by the clip, tracked
+        # the same strip moved INSIDE the span is cut
+        nodes_in = nodes.copy()
+        nodes_in[:, 2] -= 2.0
+        cm_in = CutElementMap(nodes_in, elements, wls)
+        assert len(cm_in.cut_elems) == 2
+        assert len(cm_in.beyond_tip_elems) == 0
 
     def test_update_direction_reaims_without_mesh(self):
         nodes, elements = self._strip(x0=0.5)
         wls = WakeLevelSet([1.0, 0.0, 0.0], direction=(1.0, 0.0, 0.0))
-        s0, _ = wls.evaluate(nodes)
+        s0, _, _ = wls.evaluate(nodes)
         wls.update_direction((np.cos(0.3), np.sin(0.3), 0.0))
-        s1, _ = wls.evaluate(nodes)
+        s1, _, _ = wls.evaluate(nodes)
         assert not np.allclose(s0, s1)
 
 
@@ -269,7 +318,7 @@ class TestM3WakeFreeMesh:
         assert len(cm.te_nodes) >= 2      # both z-planes of the layer
         assert len(cm.te_lower_elems) > 0
 
-    def test_alpha_reaim_changes_cut_set(self, m3):
+    def test_alpha_reaim_changes_cut_set_2p5d(self, m3):
         wls = _levelset_for(m3, alpha_deg=0.0)
         cm0 = CutElementMap(m3.nodes, m3.elements, wls,
                             wall_nodes=_wall_nodes(m3))
@@ -281,3 +330,141 @@ class TestM3WakeFreeMesh:
         assert set0 != set4
         # both corridors share the TE neighborhood but diverge downstream
         assert len(set0 & set4) > 0
+
+
+# ---------------------------------------------------------------------------
+# 3D (ONERA M6): swept TE polyline + wing tip -- the machinery the 2.5D
+# meshes cannot exercise. Both M6 families are gitignored (regenerate:
+# python cases/meshes/onera_m6/generate_onera_m6.py [--level coarse]
+# python cases/meshes/onera_m6_wakefree/generate_onera_m6_wakefree.py).
+# ---------------------------------------------------------------------------
+
+def _m6_levelset(alpha_deg: float = 0.0) -> WakeLevelSet:
+    """Chord-plane ruled wake from the swept TE line, matching the M1
+    sheet geometry (design.md §4: planar wake in the chord plane) so the
+    level-set path and the conforming path describe the SAME surface."""
+    a = np.radians(alpha_deg)
+    te = np.array([[x_te(0.0), 0.0, 0.0], [x_te(B_SEMI), 0.0, B_SEMI]])
+    return WakeLevelSet(te, direction=(np.cos(a), np.sin(a), 0.0))
+
+
+def _load_m6(directory: Path, level: str):
+    path = directory / f"{level}.msh"
+    if not path.exists():
+        pytest.skip(f"{path} not generated (gitignored; see module header)")
+    return read_mesh(path)
+
+
+@pytest.fixture(scope="module")
+def m1_coarse():
+    mesh = _load_m6(M1_DIR, "coarse")
+    mesh_cut, wc = cut_wake(mesh)
+    mesh_orig = _load_m6(M1_DIR, "coarse")
+    cm = CutElementMap(mesh_orig.nodes, mesh_orig.elements, _m6_levelset(),
+                       wall_nodes=_wall_nodes(mesh_orig))
+    return mesh_orig, mesh_cut, wc, cm
+
+
+class TestM6Embedded:
+    """M1 (wake-embedded) M6: cross-validate the swept-TE level set against
+    the conforming preprocessor, and pin the tip semantics."""
+
+    def test_all_sheet_nodes_shifted_plus(self, m1_coarse):
+        _, _, wc, cm = m1_coarse
+        assert np.all(cm.node_side[wc.master_nodes] == 1)
+        assert set(wc.master_nodes) <= set(cm.shifted_nodes)
+
+    def test_census_is_superset_of_conforming_minus_star(self, m1_coarse):
+        """In 3D the identity is a strict SUPERSET, not equality, and the
+        extras are exactly the tip-edge straddlers: the conforming sheet's
+        tip edge conforms to element edges (its nodes stay single-valued --
+        the free-edge rule), while the level set also cuts elements the
+        sheet's edge passes THROUGH. Measured on coarse: 0 missing, 195
+        extra (2.9%), all at the tip."""
+        mesh_orig, mesh_cut, wc, cm = m1_coarse
+        el_orig = mesh_orig.elements.astype(np.int64)
+        el_cut = mesh_cut.elements.astype(np.int64)
+        is_master = np.zeros(len(mesh_orig.nodes), dtype=bool)
+        is_master[wc.master_nodes] = True
+        kept = is_master[el_orig] & (el_cut == el_orig)
+        expected = set(np.flatnonzero(kept.any(axis=1)))
+        computed = set(cm.cut_elems) | set(cm.te_lower_elems)
+
+        assert not (expected - computed), "level set MISSES conforming cuts"
+        extra = np.array(sorted(computed - expected), dtype=np.int64)
+        assert len(extra) <= 0.05 * len(expected)
+        z_max = mesh_orig.nodes[el_orig[extra], 2].max(axis=1)
+        assert np.all(z_max > 0.9 * B_SEMI), "extras are not tip-edge elements"
+
+    def test_te_nodes_superset_by_the_tip_corner(self, m1_coarse):
+        """The conforming path drops the tip TE corner from its stations
+        (free-edge node, Gamma(tip) = 0); the level set flags it as a TE
+        node. Difference must be exactly at the tip."""
+        mesh_orig, _, wc, cm = m1_coarse
+        assert set(wc.te_nodes) <= set(cm.te_nodes)
+        extra = np.array(sorted(set(cm.te_nodes) - set(wc.te_nodes)))
+        if len(extra):
+            assert np.all(mesh_orig.nodes[extra, 2] > 0.99 * B_SEMI)
+
+    def test_spanwise_clip_fires_and_nothing_cut_wholly_beyond_tip(
+            self, m1_coarse):
+        """The wake plane extends past the tip; those elements must be
+        rejected (this is P5's far-field branch-ray artifact in level-set
+        form). Cut elements may straddle the tip line, but none may lie
+        wholly outboard of it."""
+        mesh_orig, _, _, cm = m1_coarse
+        assert len(cm.beyond_tip_elems) > 0, "clip never fired -- test blind"
+        el = mesh_orig.elements.astype(np.int64)
+        q_min = cm.q[el[cm.cut_elems]].min(axis=1)
+        assert np.all(q_min <= cm.span_length)
+        # A rejected element may still have nodes INBOARD of the tip -- what
+        # disqualifies it is that its s = 0 crossings all land outboard. The
+        # provable invariant (q is linear along an edge, so every crossing
+        # value lies between two nodal values): a rejected element must
+        # reach beyond the tip with at least one node.
+        q_max_rejected = cm.q[el[cm.beyond_tip_elems]].max(axis=1)
+        assert np.all(q_max_rejected > cm.span_length)
+
+
+class TestM6WakeFree:
+    """M4 (wake-free) M6: the Track B deliverable form in 3D -- generic
+    cuts, swept TE, tip, and no `wake` tag anywhere."""
+
+    @pytest.mark.parametrize("level", ["coarse", "medium"])
+    def test_ingest_and_census(self, level):
+        mesh = _load_m6(M4_DIR, level)
+        assert "wake" not in mesh.boundary_faces
+        assert {"wall", "farfield", "symmetry"} <= set(mesh.boundary_faces)
+
+        cm = CutElementMap(mesh.nodes, mesh.elements, _m6_levelset(),
+                           wall_nodes=_wall_nodes(mesh))
+        assert len(cm.cut_elems) > 0
+        assert np.all(cm.node_side != 0)
+        cut_nodes = np.unique(mesh.elements.astype(np.int64)[cm.cut_elems])
+        assert cm.n_ext_dofs == len(cut_nodes)
+        assert len(cm.te_nodes) > 10          # swept TE line, many nodes
+        assert len(cm.te_lower_elems) > 0
+
+        el = mesh.elements.astype(np.int64)
+        # spanwise clip holds on generic (non-conforming) cuts too
+        assert len(cm.beyond_tip_elems) > 0
+        assert np.all(cm.q[el[cm.cut_elems]].min(axis=1) <= cm.span_length)
+
+        # corridor coverage: cut elements run from the TE to the far field
+        # and cover the whole span
+        cen = mesh.nodes[el[cm.cut_elems]].mean(axis=1)
+        d_cen = cen[:, 0] - np.array([x_te(z) for z in cen[:, 2]])
+        assert d_cen.min() < 0.1
+        assert d_cen.max() > 5.0
+        hist, _ = np.histogram(cen[:, 2], bins=12, range=(0.0, B_SEMI))
+        assert np.all(hist > 0), "cut sheet has spanwise gaps"
+
+    def test_alpha_reaim_changes_cut_set_3d(self):
+        mesh = _load_m6(M4_DIR, "coarse")
+        wall = _wall_nodes(mesh)
+        cm0 = CutElementMap(mesh.nodes, mesh.elements, _m6_levelset(0.0),
+                            wall_nodes=wall)
+        cm3 = CutElementMap(mesh.nodes, mesh.elements, _m6_levelset(3.06),
+                            wall_nodes=wall)
+        assert set(cm0.cut_elems) != set(cm3.cut_elems)
+        assert len(set(cm0.cut_elems) & set(cm3.cut_elems)) > 0

@@ -15,9 +15,15 @@ WakeLevelSet, classify:
     section 3.5.4 their aux DOF carries mass conservation, NOT the wake
     boundary conditions (consumed by B2 assembly).
   - cut (wake) elements: elements whose nodes change side AND whose s = 0
-    crossing lies downstream of the TE (any crossing with d > 0). The
-    downstream test is what excludes the ahead-of-leading-edge region,
-    where the domain is connected across the wake plane's extension.
+    crossing lies ON the (bounded) sheet -- downstream of the TE (d > 0)
+    AND within the sheet's spanwise extent (0 <= q <= span_length). The
+    downstream test excludes the ahead-of-leading-edge region, where the
+    domain is connected across the wake plane's extension; the spanwise
+    test excludes the region outboard of the wing TIP, where the sheet has
+    ended (Gamma(tip) = 0 -- the conforming path's free-edge rule; without
+    it a swept-wing level set cuts the whole plane extension beyond the
+    tip, i.e. P5's far-field branch-ray artifact re-created). Both tests
+    are inert on the quasi-2D meshes.
   - te_lower_elems: NOT cut, but contain a TE node with all their other
     nodes on the "-" side -- the below-TE fan whose TE reference must use
     the aux DOF in B2 (Lopez fig. 3.6c); recorded here so assembly never
@@ -74,12 +80,17 @@ class CutElementMap:
         te_tol_rel: TE-node detection threshold relative to local edge length.
 
     Attributes (all set in __init__):
-        s_raw, d: (n_nodes,) level-set offset / downstream coordinate
+        s_raw, d, q: (n_nodes,) level-set offset / downstream coordinate /
+            spanwise arclength (unclamped)
         s: (n_nodes,) shifted offset actually used for classification
         node_side: (n_nodes,) int8, +1 / -1, never 0
         shifted_nodes: ids whose |s_raw| < eps (includes the TE nodes)
         te_nodes: sorted TE node ids
         cut_elems: sorted cut (wake) element ids
+        beyond_tip_elems: sorted ids of elements the wake PLANE crosses
+            downstream of the TE but OUTBOARD of the sheet's spanwise end
+            (empty on quasi-2D meshes; on a swept wing these are the
+            beyond-tip elements the spanwise clip rejects)
         te_lower_elems: sorted below-TE fan element ids (disjoint from
             cut_elems by construction)
         n_main, n_ext_dofs, n_total_dofs
@@ -101,10 +112,12 @@ class CutElementMap:
         n_nodes = len(nodes)
         self.n_main = n_nodes
 
-        s_raw, d = levelset.evaluate(nodes)
+        s_raw, d, q = levelset.evaluate(nodes)
         h_node = _node_min_edge_length(nodes, el)
         self.s_raw = s_raw
         self.d = d
+        self.q = q
+        self.span_length = levelset.span_length
 
         # TE nodes: on the TE line itself (s ~ 0 AND d ~ 0).
         te_tol = te_tol_rel * h_node
@@ -124,20 +137,37 @@ class CutElementMap:
         self.shifted_nodes = np.flatnonzero(shift_mask)
         self.node_side = np.where(s > 0.0, 1, -1).astype(np.int8)
 
-        # Sign-change candidates, then the downstream-crossing test.
+        # Sign-change candidates, then the on-sheet crossing test
+        # (downstream of the TE AND within the sheet's spanwise extent).
         side_e = self.node_side[el]                      # (n_tets, 4)
         cand = np.flatnonzero(side_e.min(axis=1) != side_e.max(axis=1))
         s_e = s[el[cand]]                                # (n_cand, 4)
         d_e = d[el[cand]]
+        q_e = q[el[cand]]
         si = s_e[:, _TET_EDGES[:, 0]]
         sj = s_e[:, _TET_EDGES[:, 1]]
         di = d_e[:, _TET_EDGES[:, 0]]
         dj = d_e[:, _TET_EDGES[:, 1]]
+        qi = q_e[:, _TET_EDGES[:, 0]]
+        qj = q_e[:, _TET_EDGES[:, 1]]
         crossing = (si * sj) < 0.0                       # (n_cand, 6)
         with np.errstate(divide="ignore", invalid="ignore"):
             t = np.where(crossing, si / (si - sj), 0.0)
-        d_cross = np.where(crossing, di + t * (dj - di), -np.inf)
-        self.cut_elems = cand[d_cross.max(axis=1) > 0.0]
+        d_cross = di + t * (dj - di)
+        q_cross = qi + t * (qj - qi)
+        on_sheet = (
+            crossing
+            & (d_cross > 0.0)
+            & (q_cross >= 0.0)
+            & (q_cross <= self.span_length)
+        )
+        self.cut_elems = cand[on_sheet.any(axis=1)]
+        # Candidates rejected purely by the spanwise clip (the beyond-tip
+        # wake-plane extension): reported, not cut.
+        downstream = crossing & (d_cross > 0.0)
+        self.beyond_tip_elems = cand[
+            downstream.any(axis=1) & ~on_sheet.any(axis=1)
+        ]
 
         # Below-TE fan: not cut, contains a TE node, all non-TE nodes "-".
         is_te = np.zeros(n_nodes, dtype=bool)
@@ -173,6 +203,7 @@ class CutElementMap:
             "n_cut_elems": int(len(self.cut_elems)),
             "n_te_nodes": int(len(self.te_nodes)),
             "n_te_lower_elems": int(len(self.te_lower_elems)),
+            "n_beyond_tip_elems": int(len(self.beyond_tip_elems)),
             "n_shifted_nodes": int(len(self.shifted_nodes)),
             "n_side_plus": int(np.sum(self.node_side == 1)),
             "n_side_minus": int(np.sum(self.node_side == -1)),

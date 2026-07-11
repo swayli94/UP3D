@@ -63,6 +63,10 @@ cases/meshes/onera_m6/*.msh
 # Large generated meshes (regenerate: python cases/meshes/onera_m6/generate_onera_m6.py)
 cases/meshes/onera_m6/*.msh
 
+# M4 wake-free M6 family (same policy; regenerate:
+# python cases/meshes/onera_m6_wakefree/generate_onera_m6_wakefree.py)
+cases/meshes/onera_m6_wakefree/*.msh
+
 # P9 discrimination fine meshes (roadmap P9: fine stays local;
 # regenerate: python cases/meshes/naca0012_2.5d/generate_naca0012.py --level fine)
 cases/meshes/naca0012_2.5d/fine.msh

@@ -9,12 +9,26 @@ point x the level set returns
   s(x): signed offset from the wake surface plane through the spanwise
         closest TE segment ("+" = upper side),
   d(x): downstream coordinate along the wake direction, measured from the
-        TE (d < 0 means upstream of the TE -- NOT on the wake half-surface).
+        TE (d < 0 means upstream of the TE -- NOT on the wake half-surface),
+  q(x): spanwise arclength along the TE polyline, UNCLAMPED -- q < 0 or
+        q > span_length means the point is off the ends of the sheet.
 
-Cut classification needs BOTH: an element is a wake element only when the
-s = 0 crossing happens at d > 0 (design_track_b.md section 3 item 2); the
-naive sign test alone would also "cut" elements ahead of the leading edge
-where the domain is connected across the wake plane's extension.
+Cut classification needs all three, because the sheet is a BOUNDED strip:
+
+  - d > 0 excludes the region ahead of the leading edge, where the domain
+    is connected across the wake plane's own extension (the naive sign
+    test alone would "cut" it);
+  - 0 <= q <= span_length excludes the region OUTBOARD OF THE WING TIP,
+    where the sheet has ended: the tip edge is a free edge, the jump must
+    vanish there (Gamma(tip) = 0 discretely -- the same semantics the
+    conforming preprocessor gets from its free-edge rule,
+    mesh/wake_cut.py). Without this clip a swept-wing level set would
+    happily cut the whole wake-plane extension beyond the tip -- exactly
+    the far-field branch-ray artifact P5 had to fix on the conforming
+    path.
+
+On the quasi-2D meshes q spans the extruded layer and no node falls off
+the ends, so the clip is inert there.
 
 3D-readiness (design_track_b.md D9): the TE is a POLYLINE, not a point --
 a swept wing's ruled wake has a per-segment frame. The quasi-2D meshes are
@@ -71,6 +85,10 @@ class WakeLevelSet:
         if np.any(seg_len2 <= 0.0):
             raise ValueError("degenerate TE segment (repeated points)")
         self._seg_len2 = seg_len2
+        self._seg_len = np.sqrt(seg_len2)
+        # arclength at each segment's start; total = span_length
+        self._seg_q0 = np.concatenate([[0.0], np.cumsum(self._seg_len)[:-1]])
+        self.span_length = float(self._seg_len.sum())
         self._d_hat = np.empty(3)
         self._seg_n = np.empty_like(self._seg_v)
         self.update_direction(direction)
@@ -92,28 +110,50 @@ class WakeLevelSet:
         if np.any(n_norm < 1e-12 * np.sqrt(self._seg_len2)):
             raise ValueError("wake direction (near-)parallel to a TE segment")
         self._seg_n = n / n_norm[:, None]
+        # Gram data of the OBLIQUE in-plane basis (v, d_hat). On a SWEPT
+        # TE the span direction is not perpendicular to the wake direction,
+        # so an orthogonal projection would leak the downstream distance
+        # into the spanwise coordinate (measured: it pushes far-downstream
+        # points past the tip and clips ~60% of the real M6 cut set).
+        self._a12 = self._seg_v @ self._d_hat            # v . d_hat
+        self._det = self._seg_len2 - self._a12**2        # > 0 (guarded above)
 
-    def evaluate(self, points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Return (s, d) at points (n, 3).
+    def evaluate(
+        self, points: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return (s, d, q) at points (n, 3).
 
         s: signed offset from the wake surface, "+" = upper side.
         d: downstream coordinate from the (projected) TE along direction.
-        Each point uses the frame of its Euclidean-closest TE segment
-        (clamped projection), so a swept multi-segment TE works per panel.
+        q: spanwise arclength along the TE polyline, unclamped -- outside
+           [0, span_length] the point is off the ends of the sheet (past
+           the wing tip, or inboard of the root).
+
+        Each point is decomposed in the panel's OBLIQUE ruled-surface frame
+        (v_span, d_hat, n_hat): x - a = u*v + d*d_hat + s*n_hat, solved as
+        a 2x2 system in the (v, d_hat) plane (n_hat is orthogonal to both).
+        An orthogonal projection onto v would be wrong on a SWEPT TE, where
+        v is not perpendicular to the wake direction: the downstream
+        distance would leak into the spanwise coordinate. Panel selection
+        uses |s| plus the out-of-panel spanwise excess, so a multi-segment
+        (curved/kinked) TE works per panel while u stays unclamped -- which
+        is what lets q report the beyond-the-tip excess instead of
+        saturating at the tip.
         """
         x = np.atleast_2d(np.asarray(points, dtype=np.float64))
         n_pts = len(x)
-        nseg = len(self._seg_a)
-        # (n_pts, nseg) clamped projections; nseg is small (<= O(100)).
         rel = x[:, None, :] - self._seg_a[None, :, :]          # (n, nseg, 3)
-        u = np.einsum("pns,ns->pn", rel, self._seg_v) / self._seg_len2
-        u = np.clip(u, 0.0, 1.0)
-        p_closest = self._seg_a[None, :, :] + u[:, :, None] * self._seg_v
-        diff = x[:, None, :] - p_closest
-        dist2 = np.einsum("pns,pns->pn", diff, diff)
+        b1 = np.einsum("pns,ns->pn", rel, self._seg_v)         # rel . v
+        b2 = rel @ self._d_hat                                 # rel . d_hat
+        u = (b1 - self._a12 * b2) / self._det                  # span fraction
+        d_all = (self._seg_len2 * b2 - self._a12 * b1) / self._det
+        s_all = np.einsum("pns,ns->pn", rel, self._seg_n)      # (n, nseg)
+
+        excess = np.maximum(0.0, np.maximum(-u, u - 1.0)) * self._seg_len
+        dist2 = s_all**2 + excess**2
         best = np.argmin(dist2, axis=1)                        # (n,)
         idx = np.arange(n_pts)
-        rel_best = diff[idx, best]                             # (n, 3)
-        s = np.einsum("ps,ps->p", rel_best, self._seg_n[best])
-        d = rel_best @ self._d_hat
-        return s, d
+        s = s_all[idx, best]
+        d = d_all[idx, best]
+        q = self._seg_q0[best] + u[idx, best] * self._seg_len[best]
+        return s, d, q

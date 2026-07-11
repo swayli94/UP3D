@@ -138,11 +138,23 @@ def onera_m6_wing_mesh(
     name: str = "onera_m6",
     algorithm3d: int = 1,
     verbose: bool = False,
+    embed_wake: bool = True,
 ) -> Mesh:
     """Generate the ONERA M6 half-wing volume mesh with embedded wake sheet.
 
     One parameter (h_wall) controls the level; everything else defaults to
     scales of it (same policy as the M0 family).
+
+    With ``embed_wake=False`` (the M4 wake-free family, roadmap Track M /
+    design_track_b.md section 5.7) the chord-plane sheet is still built,
+    but ONLY as the source of the wake-corridor Distance size field: it is
+    neither fragmented into the fluid BRep nor embedded, so the tet mesh
+    does not conform to it and the mesh topology knows nothing about the
+    wake -- Track B's deliverable form, now in 3D (swept TE, tip). The
+    corridor sizing therefore matches the M1 family's (same h_wake, same
+    Distance thresholds), which keeps the B4.5 A/B against the P5/P8
+    baselines a controlled comparison. The returned Mesh then has NO
+    "wake" group.
 
     Args:
         h_wall: target element size on the wing surface [m]
@@ -155,11 +167,13 @@ def onera_m6_wing_mesh(
         algorithm3d: gmsh Mesh.Algorithm3D (1 = Delaunay, robust with
                 embedded surfaces)
         verbose: gmsh terminal output
+        embed_wake: embed the wake sheet in the volume mesh (M1, default)
+                or use it as a size field only (M4 wake-free)
 
     Returns:
-        Mesh with boundary groups "wall", "farfield", "symmetry" and the
-        interior sheet "wake"; tags follow the M0 naming so read_mesh /
-        cut_wake ingest it unchanged.
+        Mesh with boundary groups "wall", "farfield", "symmetry" and (when
+        embed_wake) the interior sheet "wake"; tags follow the M0 naming so
+        read_mesh / cut_wake ingest it unchanged.
     """
     import gmsh
 
@@ -208,36 +222,50 @@ def onera_m6_wing_mesh(
                  occ.addLine(pc, pd), occ.addLine(pd, pa)]
         sheet = occ.addPlaneSurface([occ.addCurveLoop(lines)])
 
-        occ.fragment(fluid, [(2, sheet)])
-        occ.synchronize()
-
-        # --- drop sheet pieces trimmed OUTSIDE the fluid ------------------
-        # OCC bounding boxes are padded by ~1e-5, and the thinnest real
-        # feature (a wing face's y-extent) is O(0.04 c), so 1e-3 m cleanly
-        # separates "geometrically thin/at a plane" from "real extent".
         tol = 1e-3
-        for dim, tag in gmsh.model.getEntities(2):
-            bb = gmsh.model.getBoundingBox(dim, tag)
-            thin_y = (bb[4] - bb[1]) < tol
-            outside = bb[2] < -tol or bb[3] > xc + r_far + tol
-            if thin_y and outside:
-                occ.remove([(dim, tag)], recursive=True)
-        occ.synchronize()
+        if embed_wake:
+            occ.fragment(fluid, [(2, sheet)])
+            occ.synchronize()
+
+            # --- drop sheet pieces trimmed OUTSIDE the fluid --------------
+            # OCC bounding boxes are padded by ~1e-5, and the thinnest real
+            # feature (a wing face's y-extent) is O(0.04 c), so 1e-3 m
+            # cleanly separates "thin/at a plane" from "real extent".
+            for dim, tag in gmsh.model.getEntities(2):
+                bb = gmsh.model.getBoundingBox(dim, tag)
+                thin_y = (bb[4] - bb[1]) < tol
+                outside = bb[2] < -tol or bb[3] > xc + r_far + tol
+                if thin_y and outside:
+                    occ.remove([(dim, tag)], recursive=True)
+            occ.synchronize()
+            corridor_tags: List[int] = []
+        else:
+            # M4: the sheet stays a free-standing surface -- no fragment,
+            # no embed. It is used ONLY by the wake Distance field below,
+            # so the tet mesh never conforms to it (its own 2D mesh is
+            # discarded by _collect_3d, which keeps only tet-referenced
+            # nodes).
+            occ.synchronize()
+            corridor_tags = [sheet]
 
         vols = gmsh.model.getEntities(3)
         assert len(vols) == 1, f"expected one fluid volume, got {vols}"
         vol_tag = vols[0][1]
 
         # --- geometric classification of surfaces -------------------------
-        groups: Dict[str, List[int]] = {
-            "wall": [], "farfield": [], "symmetry": [], "wake": []
-        }
+        groups: Dict[str, List[int]] = {"wall": [], "farfield": [],
+                                        "symmetry": []}
+        if embed_wake:
+            groups["wake"] = []
+        corridor_set = set(corridor_tags)
         for dim, tag in gmsh.model.getEntities(2):
+            if tag in corridor_set:
+                continue          # size-field-only sheet: not a mesh group
             bb = gmsh.model.getBoundingBox(dim, tag)
             extent = max(bb[3] - bb[0], bb[4] - bb[1], bb[5] - bb[2])
             if (bb[5] - bb[2]) < tol and abs(bb[5]) < tol:
                 groups["symmetry"].append(tag)
-            elif (bb[4] - bb[1]) < tol:
+            elif embed_wake and (bb[4] - bb[1]) < tol:
                 groups["wake"].append(tag)
             elif extent > 1.2 * r_far:
                 # Only the far-field sphere patches span O(2 r_far); every
@@ -248,12 +276,14 @@ def onera_m6_wing_mesh(
                 groups["wall"].append(tag)
         for g, tags in groups.items():
             assert tags, f"surface classification found no '{g}' faces"
-        # The fragment stitched the sheet's boundary curves into the fluid
-        # BRep (shared TE edge, symmetry/sphere trims) but the sheet stays
-        # a free-standing surface; embedding makes the tet mesh conform to
-        # it (wake faces shared by exactly two tets -- asserted by
-        # cut_wake at ingestion, and by _collect_3d node conformity here).
-        gmsh.model.mesh.embed(2, groups["wake"], 3, vol_tag)
+        if embed_wake:
+            # The fragment stitched the sheet's boundary curves into the
+            # fluid BRep (shared TE edge, symmetry/sphere trims) but the
+            # sheet stays a free-standing surface; embedding makes the tet
+            # mesh conform to it (wake faces shared by exactly two tets --
+            # asserted by cut_wake at ingestion, and by _collect_3d node
+            # conformity here).
+            gmsh.model.mesh.embed(2, groups["wake"], 3, vol_tag)
 
         # LE / TE edges for the edge-refinement field, identified by their
         # exact segment endpoints (the planform edges are straight lines).
@@ -291,7 +321,10 @@ def onera_m6_wing_mesh(
         field.setNumber(t_wall, "DistMax", 0.55 * r_far)
 
         f_wake = field.add("Distance")
-        field.setNumbers(f_wake, "SurfacesList", groups["wake"])
+        field.setNumbers(
+            f_wake, "SurfacesList",
+            groups["wake"] if embed_wake else corridor_tags,
+        )
         field.setNumber(f_wake, "Sampling", 200)
         t_wake = field.add("Threshold")
         field.setNumber(t_wake, "InField", f_wake)
@@ -396,9 +429,11 @@ def _builder_asserts(mesh: Mesh, r_far: float, xc: float, tol: float) -> None:
     vols = compute_tet_volumes(mesh.nodes, mesh.elements)
     assert vols.min() > 0.0, "non-positive tet volume"
 
-    wake_nodes = np.unique(mesh.boundary_faces["wake"])
-    assert np.abs(mesh.nodes[wake_nodes, 1]).max() < tol, \
-        "wake sheet not in the chord plane y = 0"
+    has_wake = "wake" in mesh.boundary_faces   # False for the M4 family
+    if has_wake:
+        wake_nodes = np.unique(mesh.boundary_faces["wake"])
+        assert np.abs(mesh.nodes[wake_nodes, 1]).max() < tol, \
+            "wake sheet not in the chord plane y = 0"
 
     sym_nodes = np.unique(mesh.boundary_faces["symmetry"])
     assert np.abs(mesh.nodes[sym_nodes, 2]).max() < tol, \
@@ -411,5 +446,6 @@ def _builder_asserts(mesh: Mesh, r_far: float, xc: float, tol: float) -> None:
         "far-field nodes not on the sphere"
 
     wall_nodes = np.unique(mesh.boundary_faces["wall"])
-    te = np.intersect1d(wake_nodes, wall_nodes)
-    assert len(te) >= 2, "wake sheet does not attach to the wing TE"
+    if has_wake:
+        te = np.intersect1d(wake_nodes, wall_nodes)
+        assert len(te) >= 2, "wake sheet does not attach to the wing TE"
