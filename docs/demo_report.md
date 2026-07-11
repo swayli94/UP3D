@@ -1064,8 +1064,10 @@ place, (a) convergence behaviour (residual, Kutta closure, circulation → KJ
 lift, per Mach level — using the new `gamma_history`/`level_results` solver
 instrumentation added for this demo, additive keys only, suite bit-unchanged
 at 182+8+2), (b) section-Cp accuracy against the available references, and
-(c) end-to-end cost — as the evidence base for choosing the next track (P9
-curved walls vs Track V viscous vs Track B level-set wake). This demo asserts
+(c) end-to-end cost — as the evidence base for choosing the next track (curved
+walls vs Track V viscous vs Track B level-set wake; on 2026-07-11, after this
+demo, the user inserted the P9 discrimination phase — curved walls are now P10,
+backlog P11). This demo asserts
 convergence quality and regression locks but does NOT close or claim any
 roadmap gate. Demo: `cases/demo/p8_capability/` (part 1 NACA coarse always;
 the full matrix under `PYFP3D_TRANSONIC_GATES=1`, ~23 min with the 16-thread
@@ -1150,9 +1152,9 @@ a discrete solution, and M6 medium P5 solve 4539 s with Kutta |F| 5.8e-4 —
    Non-lifting bodies run Picard (`solve_laplace`/`solve_subsonic`, P1/P3
    demos) and carry the OPEN G1.6 flat-facet sphere-Cp gap (~11.6% vs the
    2% gate, refinement-saturating ~3.6% at 7M tets; root-caused geometry
-   variational crime → P9). The sphere is deliberately absent from this
+   variational crime → P10 curved walls). The sphere is deliberately absent from this
    Newton demo (user arbitration 2026-07-11).
-2. **V6 lift floor (P9)**: M6 medium cl_KJ 0.2692 vs the Tranair/KRATOS
+2. **V6 lift floor (P10 curved walls; attribution under P9 test)**: M6 medium cl_KJ 0.2692 vs the Tranair/KRATOS
    inviscid reference 0.288 — the remaining 0.019 is the sharp-TE/LE P1
    wall O(h) floor (P5/P8 evidence), visible in this demo as the ~2%
    cl_KJ-over-cl_p offset.
@@ -1163,22 +1165,23 @@ a discrete solution, and M6 medium P5 solve 4539 s with Kutta |F| 5.8e-4 —
    sensitivity — P6 record); not asserted anywhere in this demo.
 5. **Viscous effects absent**: the AGARD overlay is qualitative; VII
    (Track V, designed) moves CL down toward experiment (~0.26–0.27) and
-   does NOT close the 0.288 inviscid gap (that is P9's).
+   does NOT close the 0.288 inviscid gap (that belongs to P10 curved walls,
+   pending the P9 discrimination).
 
 **Development outlook (evidence from this demo; the user arbitrates the
 order).**
 
-- **P9 curved walls** attacks the only two measured ACCURACY gaps — G1.6
+- **Curved walls (now P10)** attacks the only two measured ACCURACY gaps — G1.6
   (11.6% sphere Cp) and V6 (cl_KJ 0.019 below the inviscid references) —
   both root-caused to the flat-facet P1 wall. Highest leverage on
   reference-matching; medium-high risk (own effort, roadmap).
 - **Track V (VII/IBL)** adds the missing physics for absolute CL/CD against
   experiment (the M6 Cp overlays in this demo show exactly the inviscid
-  offsets it would shrink); V1 is parallelizable with P9, V3 consumes the
+  offsets it would shrink); V1 is parallelizable with the accuracy phases, V3 consumes the
   P8 Newton machinery.
 - **Track B (level-set wake)** buys geometry flexibility (M2 wing-body);
   no accuracy payoff on the current case set.
-- **P10 discrete adjoint** is cheap to open now: the exact P8 Jacobian +
+- **Discrete adjoint (backlog, now P11)** is cheap to open now: the exact P8 Jacobian +
   `reduce_operator` machinery is the transpose seed; note the fold finding
   also warns that fold-zone gradients will be ill-conditioned.
 - The `gamma_history`/`level_results` instrumentation added here is the

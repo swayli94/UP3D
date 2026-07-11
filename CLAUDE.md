@@ -73,7 +73,9 @@ workstation-scale (minutes for 1–3 M nodes).
 Gate IDs are `G<phase>.<n>` per roadmap.md Track P numbering (P2 = wake/Kutta,
 P3 = subsonic compressible, P4 = transonic, P5 = ONERA M6, P6 = surface-Cp
 recovery, P7 = differentiable flux at frozen selection, P8 = fully-coupled
-Newton/performance, P9 = curved wall elements, P10 = backlog; Track-P renumber
-2026-07-08 — docs before that date use the old IDs). Track V gates are
+Newton/performance, P9 = grid-convergence/accuracy-gap discrimination (evidence
+phase), P10 = curved wall elements, P11 = backlog; Track-P renumbers 2026-07-08
+and 2026-07-11 — docs before those dates use the then-current IDs, so
+pre-2026-07-11 "P9 curved walls"/"P10 backlog" read as P10/P11). Track V gates are
 `GV<phase>.<n>` (phases V1–V4, distinct from validation-case IDs V0–V6);
 design.md §11 mirrors the same order.
