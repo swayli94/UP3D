@@ -1349,10 +1349,24 @@ isoparametric *wall* elements cannot remove the edge of a wake sheet.
 3. **Recommendation:** **P11 (curved walls) is not supported by P9 as the
    3D-lift fix.** Its remaining justification is **G1.6** (sphere-Cp on a
    *smooth curved* wall — a different, still-valid mechanism). The 3D
-   accuracy route now points at the **tip/wake treatment**, i.e. **Track B**
-   (level-set / free wake) or an explicit tip-vortex model — which must land
-   before *any* 3D grid-convergence claim is possible. P9 is therefore
-   independent corroboration of the Track B route.
+   accuracy route now points at the **tip/wake treatment**: wake **roll-up**
+   or an explicit **tip-vortex** model — which must land before *any* 3D
+   grid-convergence claim is possible.
+
+   ★ **Correction 2026-07-12 (this was over-stated as "P9 corroborates the
+   Track B route").** Track B's level-set wake changes the wake
+   *representation*, not the rigid-planar-sheet *model*: it keeps the same
+   sheet ending at the tip with Γ(tip)→0. The `cases/demo/tip_edge_singularity/`
+   probe (subsonic M0.5, no limiter — the clean geometric test) measures the
+   tip-edge peak Mach **diverging under refinement on BOTH the conforming and
+   level-set paths** (same mesh, coarse→medium: ×1.38 conforming, ×2.28
+   level-set), while the wing control stays flat. So Track B does **not** fix
+   this singularity; only a genuinely new wake model (roll-up / tip vortex)
+   does, and **no current Track B phase does that** (B9 free-wake is shelved,
+   and is about O(θ²) deflection rather than roll-up). What Track B *does*
+   eliminate is the separate **secant/Kutta-closure** family of M6 defects (the
+   P5 st133 stall, the swept-TE probe-sharing degeneracy, the Γ(z) spanwise
+   jitter, the far-field branch-ray artifact) — see the B7 section.
 
 ### Solver-path findings recorded en route (feed P10; no default changed)
 
@@ -1872,6 +1886,54 @@ deferred LS Newton. (4) Coarse only.
 shock line, forward migration toward the tip), `farfield_decision.png` (the table above).
 `p5_gamma_baseline.csv` is committed alongside so the A/B curve reproduces without the
 gitignored P5 solution cache. Tests: `tests/test_b7_onera_m6.py` (6 fast + 5 gated).
+
+---
+
+## Tip-edge singularity: wake MODEL vs REPRESENTATION (`cases/demo/tip_edge_singularity/`, 7/7, 2026-07-12)
+
+**Why.** P9/G9.1 found the M6 transonic solve does not converge under refinement —
+the unlimited local Mach at the wake sheet's free tip edge climbs 1.40 → 2.13 → 7.93
+(coarse/medium/fine) and 9 cells cross the M_cap=3 limiter on the fine mesh, blocking
+the Newton freeze machinery so the fine "solution" is a limit-cycle artifact. P9 called
+it a vortex-sheet-edge singularity of the rigid planar wake and pointed at "the
+tip/wake treatment (Track B / …)". One doc over-stated that as "precisely what Track B
+exists to fix". This demo settles whether the Track B level-set **representation**
+removes it, or whether it is a wake-**model** property present on any discretization.
+
+**Method (the point is that it is cheap and clean).** Probe SUBSONICALLY (M∞ 0.5): no
+shock, no artificial density, no speed limiter — nothing to confound the pure
+potential-flow 1/r edge signal. Measure the peak local Mach in the P9 tip-edge box
+(z/b > 0.95, at/just aft of the swept tip TE corner, chord plane) coarse→medium, on the
+conforming path (`solve/newton.py`) and the level-set path (`solve/picard_ls.py`, both
+the wake-embedded M1 and wake-free M4 meshes). **conforming-M1 vs level-set-M1 use the
+IDENTICAL onera_m6 mesh** — a true same-mesh A/B of the representation change. A wing
+box (x < x_TE, z/b < 0.95) is the control: the real, bounded flow.
+
+**Result.**
+
+| path | tip-edge M_max coarse→medium | wing control | tip-box p95 |
+|---|---|---|---|
+| conforming (M1) | 0.712 → 0.981 (**×1.38**) | ×1.15 | ×0.98 |
+| level-set (M1, same mesh) | 0.672 → 1.532 (**×2.28**) | ×1.14 | ×0.98 |
+| level-set (M4, wake-free) | 0.661 → 1.151 (**×1.74**) | ×1.12 | ×0.93 |
+
+The tip-edge **peak** diverges on **all three** paths while the wing control and the
+tip-box **p95/mean stay flat** — the signature of a *localized* edge singularity (only
+the few cells at the very corner grow), now seen with **zero transonic machinery**, so
+it is a genuine potential-flow feature, not a shock/limiter artifact. The level-set
+representation does **not** remove or even blunt it: the LS tip peak is at least as
+large as conforming on the same mesh and sits in the **+2.9% straddler cells** at/just
+beyond the geometric tip (z/b ≈ 1.01), where the jump terminates mid-element.
+
+**⇒ It is a WAKE-MODEL defect.** Track B changes the wake *representation*, not the
+model (B7 keeps the same rigid planar sheet ending at the tip with Γ(tip)→0), so it
+does **not** fix G9.1's cause. The model-level fix is wake **roll-up / an explicit tip
+vortex**, which **no current Track B phase does** (B9 free-wake is shelved, and is about
+O(θ²) deflection rather than roll-up). This corrects the earlier "P9 corroborates the
+Track B route" framing. What Track B *does* structurally eliminate is the separate
+**secant/Kutta-closure** family (P5 st133, probe-sharing, Γ(z) jitter, branch-ray) — see
+the B7 section. Figure `tip_edge_growth.png` (log-log peak Mach vs 1/h, tip edge vs wing
+control); heavy solves cache to `results/*.npz` (gitignored, ~20 min to regenerate).
 
 ---
 
