@@ -168,8 +168,18 @@ def solve_multivalued_lifting(
     tol_rho: float = 1e-6,
     n_outer_max: int = 80,
     gamma_init: float = 0.0,
+    gamma_farfield_fixed: Optional[float] = None,
     te_kutta: str = "pressure",
     farfield: str = "vortex",
+    upwind_c: float = 0.0,
+    m_crit: float = 0.95,
+    m_cap: float = 3.0,
+    rho_floor: float = 0.05,
+    damping_theta: Optional[float] = None,
+    damping_scope: str = "supersonic",
+    omega: float = 1.0,
+    tol_residual: Optional[float] = None,
+    phi_init: Optional[np.ndarray] = None,
 ) -> Dict[str, object]:
     """Subsonic lifting solve on a level-set cut mesh with IMPLICIT Kutta
     (Track B, B3; design_track_b.md D2). NO Gamma secant and no master-slave
@@ -208,10 +218,26 @@ def solve_multivalued_lifting(
     The cut-strip per-side density limit-cycles, so it is under-relaxed
     (omega_rho); at omega_rho = 1 the loop diverges after ~80 iterations.
 
+    Transonic (B6, upwind_c > 0): the artificial density runs PER SIDE on the
+    cut elements with a same-side-restricted upstream walk
+    (`MultivaluedOperator.element_rho_tilde`, design_track_b.md section
+    5.2/D10), the isentropic q^2 limiter (m_cap) is applied per side, and
+    `damping_theta` adds theta*diag damping LOCALIZED to the nu > 0 rows
+    (damping_scope="supersonic"; scope "fluid" -- the conforming P4 form on
+    every fluid row -- is kept only as the measured NEGATIVE result: it
+    throttles the implicit-Kutta circulation mode, see the inline note).
+    `gamma_farfield_fixed` freezes the far-field VORTEX strength while the TE
+    jump stays free -- the fold-zone stabilizer used by
+    `solve_multivalued_transonic(farfield_lag="level")`. `tol_residual` adds a
+    nonlinear-residual convergence route (None = the B3 lag-based criterion
+    only, bit-identical). `phi_init` warm-starts the FULL extended state
+    (continuation). All defaults keep the B3/B4 subsonic behavior bitwise.
+
     Returns:
         dict: phi_ext, phi (main), gamma (extracted TE circulation),
         cl_kj (= 2 gamma / (u_inf c), c = 1), te_jump, n_outer, converged,
-        gamma_history, drho_history, residual_norm, mach2_max.
+        gamma_history, drho_history, residual_history, residual_norm,
+        mach2_max, nu_max, n_nu_active, n_limited, n_floored, rho_tilde.
     """
     if not 0.0 <= m_inf < 1.0:
         raise ValueError(f"needs 0 <= M_inf < 1, got {m_inf}")
@@ -219,6 +245,10 @@ def solve_multivalued_lifting(
         raise ValueError(f"farfield={farfield!r} unknown")
     beta = float(np.sqrt(1.0 - m_inf**2))
     op = mvop.op
+    # B6: artificial-density upwinding, per side on the cut elements
+    # (design_track_b.md §5.2/D10). upwind_c = 0 keeps the B3/B4 subcritical
+    # path bit-identical (no upwind operator is even built).
+    use_upwind = upwind_c > 0.0 and m_inf > 0.0
 
     # Option b (Neumann outlet): the outflow flux RHS is a FIXED vector
     # (freestream flux, solution-independent), assembled once.
@@ -230,19 +260,64 @@ def solve_multivalued_lifting(
                                           mvop.n_total)
 
     phi_ext = np.zeros(mvop.n_total, dtype=np.float64)
-    phi_ext[: mvop.n_main] = freestream_phi(mesh.nodes, alpha_deg, u_inf)
-    # Seed the aux DOFs with a ZERO jump (aux = main). Leaving them at 0 would
-    # manufacture a huge fake jump, and the first TE-Kutta linearization reads
-    # the seed: with a zero jump q_u = q_l = u_inf, so s = q_u + q_l = 2 u_inf
-    # and the row starts as the classical linearized Kutta.
-    cut_nodes = np.flatnonzero(mvop.cm.ext_dof_of_node >= 0)
-    phi_ext[mvop.cm.ext_dof_of_node[cut_nodes]] = phi_ext[cut_nodes]
+    if phi_init is not None:
+        # Continuation warm start (B6): the previous Mach level's full
+        # extended state, aux DOFs (i.e. the wake jump) included.
+        phi_ext[:] = np.asarray(phi_init, dtype=np.float64)
+    else:
+        phi_ext[: mvop.n_main] = freestream_phi(mesh.nodes, alpha_deg, u_inf)
+        # Seed the aux DOFs with a ZERO jump (aux = main). Leaving them at 0
+        # would manufacture a huge fake jump, and the first TE-Kutta
+        # linearization reads the seed: with a zero jump q_u = q_l = u_inf, so
+        # s = q_u + q_l = 2 u_inf and the row starts as the classical
+        # linearized Kutta.
+        cut_nodes = np.flatnonzero(mvop.cm.ext_dof_of_node >= 0)
+        phi_ext[mvop.cm.ext_dof_of_node[cut_nodes]] = phi_ext[cut_nodes]
     gamma = float(gamma_init)
     gamma_history = [gamma]
     drho_history = []
+    residual_history = []
     rho_up = rho_lo = None
     residual = np.inf
     converged = False
+    # ---- B6 damping: LOCALIZED to the supersonic zone --------------------
+    #
+    # ★ The conforming P4 stabilizer (theta*diag(A_free) on the whole reduced
+    # system, solve/picard.py) does NOT transfer to the level-set path, and the
+    # reason is structural, not a tuning issue (measured 2026-07-12; see the
+    # `damping_scope="fluid"` branch, kept so the negative result stays
+    # reproducible). The error of a damped Picard step contracts as
+    # (A+D)^{-1}D, whose eigenvalue for a mode of stiffness lambda is
+    # theta*d/(lambda + theta*d): near 0 for the stiff LOCAL modes (the shock)
+    # but near 1 for the SMOOTH GLOBAL ones. Diagonal damping is a Jacobi
+    # smoother -- it barely touches smooth modes.
+    #
+    # On the CONFORMING path that is harmless, because the smooth global mode
+    # that matters -- the circulation -- is NOT in the damped matrix at all:
+    # Gamma is an OUTER secant unknown. On the B path the implicit Kutta makes
+    # Gamma a SOLUTION MODE, so the same damping throttles precisely the thing
+    # the whole track exists to compute: measured on NACA coarse M0.60, Gamma
+    # crawls 0.0005 -> 0.017 in 160 outers (converged value 0.0968) and the
+    # residual never falls, while the undamped run converges in 35 outers.
+    #
+    # The fix follows from the mechanism: damp ONLY where the instability lives.
+    # The rows carrying nodes of supersonic (nu > 0) elements get theta*diag;
+    # everything else is untouched, so the global circulation mode converges at
+    # its undamped rate while the shock's local modes are smoothed. Measured:
+    # the M > 2 blow-up cells sit at x 0.19-0.87, y 0.02-0.23 -- the pocket ABOVE
+    # the airfoil, with ZERO cells on the wake sheet -- so the instability is the
+    # ordinary transonic one, and localizing the cure to it costs nothing.
+    #
+    # Aux rows are never damped: the wake-LS/TE-Kutta rows are CONSTRAINT rows
+    # whose diagonal is negative by construction (the LS row is +k on the phi_u
+    # columns and -k on phi_l, and a "+"-side node's own aux dof IS its phi_l
+    # column), so theta*diag there would be ANTI-damping.
+    if damping_scope not in ("supersonic", "fluid"):
+        raise ValueError(f"damping_scope={damping_scope!r} unknown")
+    is_main = np.zeros(mvop.n_total, dtype=bool)
+    is_main[: mvop.n_main] = True
+    elements = np.asarray(op.elements, dtype=np.int64)
+    dampable = is_main.copy()      # refreshed each outer when scope=supersonic
 
     for outer in range(n_outer_max):
         A = mvop.assemble_matrix(
@@ -252,7 +327,15 @@ def solve_multivalued_lifting(
             phi_ext=phi_ext,          # re-linearizes the TE Kutta row (B4)
         )
         if farfield == "vortex":
-            ff, vals = _farfield_main(mesh, alpha_deg, gamma, u_inf,
+            # B6: near the FP fold the live Gamma->far-field-vortex feedback
+            # has loop gain > 1 (measured runaway; see solve_multivalued_
+            # transonic). gamma_farfield_fixed freezes the VORTEX strength
+            # (the O(Gamma/R) outer-boundary consistency only) while the
+            # implicit Kutta still sets the TE jump freely -- the transonic
+            # driver refreshes it between Mach levels / polish rounds.
+            g_ff = (gamma if gamma_farfield_fixed is None
+                    else gamma_farfield_fixed)
+            ff, vals = _farfield_main(mesh, alpha_deg, g_ff, u_inf,
                                       vortex_center, beta)
             b = np.zeros(mvop.n_total)
         elif farfield == "neumann":
@@ -261,10 +344,32 @@ def solve_multivalued_lifting(
             ff = np.unique(mesh.boundary_faces["farfield"])
             vals = freestream_phi(mesh.nodes[ff], alpha_deg, u_inf)
             b = np.zeros(mvop.n_total)
+        phi_prev = phi_ext
         A_free, b_free, free, phi_ext = apply_dirichlet(A, b, ff, vals)
-        x = np.atleast_1d(spla.spsolve(A_free.tocsc(), b_free))
+        x_prev = phi_prev[free]
+
+        # Nonlinear (fixed-point) residual of the PREVIOUS iterate against the
+        # operator freshly assembled at that iterate's density + TE
+        # linearization -- the honest transonic convergence monitor. The
+        # post-solve ||b - A x|| is only the direct solver's ~1e-13 linear
+        # residual and says nothing about the nonlinearity.
+        residual = float(np.max(np.abs(b_free - A_free @ x_prev)))
+        residual_history.append(residual)
+
+        A_solve, b_solve = A_free, b_free
+        if damping_theta is not None:
+            import scipy.sparse as sp_
+
+            d = damping_theta * A_free.diagonal()
+            d[~dampable[free]] = 0.0
+            np.clip(d, 0.0, None, out=d)
+            A_solve = (A_free + sp_.diags(d)).tocsr()
+            b_solve = b_free + d * x_prev
+
+        x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
+        if omega != 1.0:
+            x = x_prev + omega * (x - x_prev)
         phi_ext[free] = x
-        residual = float(np.max(np.abs(b_free - A_free @ x))) if len(x) else 0.0
 
         # Gamma refresh (implicit Kutta -> extracted TE jump), relaxed.
         gamma_new = float(np.mean(mvop.te_jump(phi_ext)))
@@ -280,9 +385,22 @@ def solve_multivalued_lifting(
         # drho is measured on the OWN-SIDE (junk-free) density -- the raw
         # rho_upper/rho_lower carry other-side garbage that never enters the
         # matrix but would pollute the lag.
-        rho_up_new, rho_lo_new = mvop.element_densities(
-            phi_ext, m_inf, gamma_air, u_inf
-        )
+        if use_upwind:
+            rho_up_new, rho_lo_new = mvop.element_rho_tilde(
+                phi_ext, m_inf, upwind_c, m_crit, gamma_air, u_inf,
+                m_cap, rho_floor
+            )
+            if damping_theta is not None and damping_scope == "supersonic":
+                # Rows to damp = main DOFs of the nodes of the nu > 0 elements
+                # (the supersonic pocket + the shock), refreshed every outer so
+                # the damped set tracks the moving shock.
+                hot = np.zeros(mvop.n_total, dtype=bool)
+                hot[np.unique(elements[mvop.nu_active_elements()])] = True
+                dampable = hot & is_main
+        else:
+            rho_up_new, rho_lo_new = mvop.element_densities(
+                phi_ext, m_inf, gamma_air, u_inf
+            )
         if rho_up is None:
             drho = 0.0
             rho_up, rho_lo = rho_up_new, rho_lo_new
@@ -294,7 +412,17 @@ def solve_multivalued_lifting(
             rho_lo = rho_lo + omega_rho * (rho_lo_new - rho_lo)
         drho_history.append(drho)
 
-        if outer > 0 and dgamma < tol_gamma and drho < tol_rho:
+        # Two convergence routes: (a) the B3 fixed-point lags (dgamma, drho)
+        # both settle; (b) the honest NONLINEAR residual of the previous
+        # iterate is already below tol_residual -- the criterion that matters
+        # under B6's localized damping, where the nu > 0 damped set churns by
+        # a few elements per outer and keeps drho in a ~1e-6 micro limit cycle
+        # long after the residual has fallen to 1e-8 (measured M0.70 coarse).
+        # tol_residual=None (the B3/B4 default) keeps route (a) alone,
+        # bit-identical.
+        res_converged = tol_residual is not None and residual < tol_residual
+        if outer > 0 and ((dgamma < tol_gamma and drho < tol_rho)
+                          or res_converged):
             converged = True
             break
 
@@ -310,7 +438,168 @@ def solve_multivalued_lifting(
         "converged": converged,
         "gamma_history": gamma_history,
         "drho_history": drho_history,
+        "residual_history": residual_history,
         "residual_norm": residual,
         "mach2_max": mach2_max,
         "farfield": farfield,
+        "nu_max": mvop.nu_max if use_upwind else 0.0,
+        "n_nu_active": mvop.n_nu_active if use_upwind else 0,
+        "n_limited": mvop.n_limited if use_upwind else 0,
+        "n_floored": mvop.n_floored if use_upwind else 0,
+        "rho_tilde": (rho_up, rho_lo),
     }
+
+
+# B6 transonic recipe: the conforming TRANSONIC_DEFAULTS (solve/continuation.py)
+# carried over where they mean the same thing -- the artificial density
+# (C = 1.5, M_crit = 0.95) and theta = 0.2, but the damping is LOCALIZED to
+# the supersonic zone (damping_scope="supersonic" -- the whole-field P4 form
+# throttles the implicit-Kutta circulation mode, design_track_b.md section
+# 10.2). omega_rho = 0.5 is B3's: the per-side cut-strip density limit-cycles
+# and must be under-relaxed (already needed subsonically).
+#
+# ★ Strong-shock cases (fold neighborhood, e.g. NACA coarse M >= 0.775) must
+# ALSO pass farfield="neumann": the live option-a Gamma -> vortex feedback has
+# loop gain > 1 there and runs away monotonically through the solution, and
+# the per-level lagged variant's outer map has no fixed point (section 10.3).
+# The vortex default is kept for the subsonic/weak-transonic range (B5's
+# arbitrated verdict; more accurate on the compact 15c domain).
+B_TRANSONIC_DEFAULTS = dict(
+    upwind_c=1.5,
+    m_crit=0.95,
+    damping_theta=0.2,
+    omega_rho=0.5,
+    m_start=0.60,
+    dm=0.05,
+)
+
+
+def solve_multivalued_transonic(
+    mvop: MultivaluedOperator,
+    mesh,
+    m_target: float,
+    alpha_deg: float = 1.25,
+    u_inf: float = 1.0,
+    gamma_air: float = 1.4,
+    m_start: float = B_TRANSONIC_DEFAULTS["m_start"],
+    dm: float = B_TRANSONIC_DEFAULTS["dm"],
+    upwind_c: float = B_TRANSONIC_DEFAULTS["upwind_c"],
+    m_crit: float = B_TRANSONIC_DEFAULTS["m_crit"],
+    damping_theta: float = B_TRANSONIC_DEFAULTS["damping_theta"],
+    omega_rho: float = B_TRANSONIC_DEFAULTS["omega_rho"],
+    n_outer_seed: int = 120,
+    n_outer_level: int = 400,
+    tol_rho: float = 1e-6,
+    tol_gamma: float = 1e-6,
+    tol_residual: Optional[float] = 1e-7,
+    farfield_lag: str = "live",
+    n_ff_polish: int = 0,
+    n_outer_polish: int = 200,
+    **kwargs,
+) -> Dict[str, object]:
+    """Mach-continuation transonic solve on the level-set path (Track B, B6).
+
+    ★ The continuation is MUCH simpler than the conforming one
+    (`solve/continuation.py::solve_transonic_lifting`) and that is the Track B
+    payoff made concrete: with the implicit Kutta there is no Gamma secant and
+    no per-station Kutta-closure loop to keep alive across Mach levels, so a
+    level is just a warm-started Picard solve. The P5 failure mode that cost a
+    whole investigation (a SINGLE station's secant not closing at the top Mach
+    level, st133 32% under-circulated) cannot occur here -- Gamma is not an
+    unknown of an outer loop, it is read off the converged TE jump.
+
+    The ramp itself is kept (roadmap G10.3 verdict: KEEP the Mach ramp -- a
+    cold transonic solve transits clamped states and, in the fold zone,
+    diverges outright). Each level warm-starts from the previous level's FULL
+    extended state (aux DOFs = the wake jump included) and its Gamma.
+
+    Args:
+        m_target: the target M_inf
+        m_start, dm: the ascending Mach schedule (m_start, ..., m_target)
+        upwind_c, m_crit: artificial density (design.md §3)
+        damping_theta: LOCAL theta*diag(A) damping on the fluid rows (P4's fix)
+        n_outer_seed: outer budget at the first (subcritical) level
+        n_outer_level: outer budget at each subsequent level
+        farfield_lag: "live" keeps the per-outer Gamma -> far-field-vortex
+            refresh (the B3/B5 loop); "level" freezes the far-field vortex at
+            the PREVIOUS level's emergent Gamma for the whole level (the
+            implicit Kutta still sets the TE jump freely) -- ★ near the FP
+            fold the live loop has gain > 1 and runs away monotonically
+            THROUGH the solution (measured, NACA coarse M0.80: Gamma climbs
+            0.14 -> 0.37 past both the conforming-Picard 0.18 and the Newton
+            0.23 at flat residual ~5e-5, then blows up; under-relaxation
+            cannot fix a monotone gain > 1 loop -- 1 + omega(lambda-1) > 1
+            for every omega > 0). The stale-vortex bias is only the
+            O(dGamma/R) outer-boundary term (B5), removed by the polish
+            below. Ignored for farfield="neumann"/"freestream" (no vortex).
+        n_ff_polish: with farfield_lag="level", rounds of far-field polish at
+            the TARGET Mach -- refresh the vortex to the newest emergent
+            Gamma, re-converge (the P5 fixed-Gamma polish pattern: each round
+            is one step of the outer map at the O(1/R) coupling strength,
+            contractive even where the live per-outer loop is not).
+        n_outer_polish: outer budget per polish round.
+
+    Returns:
+        The final level's `solve_multivalued_lifting` dict, plus `levels`
+        (per-level m_inf / gamma / mach2_max / n_outer / converged / monitors,
+        polish rounds appended with m_inf=m_target) and `mach_schedule`.
+    """
+    from pyfp3d.solve.continuation import mach_schedule
+
+    if farfield_lag not in ("live", "level"):
+        raise ValueError(f"farfield_lag={farfield_lag!r} unknown")
+    lagged = (farfield_lag == "level"
+              and kwargs.get("farfield", "vortex") == "vortex")
+    schedule = mach_schedule(m_target, m_start=m_start, dm=dm)
+    phi_ext = None
+    gamma = 0.0
+    levels = []
+    res = None
+
+    def _run(m, budget, g_ff):
+        return solve_multivalued_lifting(
+            mvop, mesh, m, alpha_deg=alpha_deg, u_inf=u_inf,
+            gamma_air=gamma_air,
+            upwind_c=upwind_c, m_crit=m_crit,
+            damping_theta=damping_theta, omega_rho=omega_rho,
+            n_outer_max=budget,
+            tol_rho=tol_rho, tol_gamma=tol_gamma, tol_residual=tol_residual,
+            gamma_init=gamma, phi_init=phi_ext,
+            gamma_farfield_fixed=g_ff,
+            **kwargs,
+        )
+
+    def _record(m, r):
+        levels.append({
+            "m_inf": float(m),
+            "gamma": float(r["gamma"]),
+            "cl_kj": float(r["cl_kj"]),
+            "mach_max": float(np.sqrt(r["mach2_max"])),
+            "n_outer": int(r["n_outer"]),
+            "converged": bool(r["converged"]),
+            "n_limited": int(r["n_limited"]),
+            "n_floored": int(r["n_floored"]),
+            "residual_norm": float(r["residual_norm"]),
+        })
+
+    for k, m in enumerate(schedule):
+        # Level 0 always runs the LIVE vortex even in lagged mode: it is
+        # subcritical (the B3-proven stable regime) and a frozen Gamma_ff = 0
+        # first level briefly transits a limited state (measured on medium).
+        res = _run(m, n_outer_seed if k == 0 else n_outer_level,
+                   gamma if (lagged and k > 0) else None)
+        phi_ext = res["phi_ext"]
+        gamma = res["gamma"]
+        _record(m, res)
+
+    if lagged:
+        for _ in range(n_ff_polish):
+            res = _run(m_target, n_outer_polish, gamma)
+            phi_ext = res["phi_ext"]
+            gamma = res["gamma"]
+            _record(m_target, res)
+
+    res = dict(res)
+    res["levels"] = levels
+    res["mach_schedule"] = [float(m) for m in schedule]
+    return res

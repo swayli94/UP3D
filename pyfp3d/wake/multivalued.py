@@ -56,6 +56,7 @@ class MultivaluedOperator:
     def __init__(self, nodes: np.ndarray, elements: np.ndarray, cm,
                  levelset=None):
         self.op = PicardOperator(nodes, elements)
+        self.nodes = np.ascontiguousarray(nodes, dtype=np.float64)
         self.cm = cm
         self.levelset = levelset
         self.n_main = cm.n_main
@@ -72,6 +73,14 @@ class MultivaluedOperator:
         # direction. Constant in phi, so the LS block is cached too.
         self._nonte_rows = nonte_aux_rows(cm)
         self._elem_plus = None  # lazily built own-side element mask
+        # B6 per-side artificial density (lazy: subsonic paths never build it)
+        self._side_sets = None
+        self._side_upw = None
+        self.nu_max = 0.0
+        self.n_nu_active = 0
+        self.n_floored = 0
+        self.n_limited = 0
+        self._nu_active = np.zeros(self.op.n_tets, dtype=bool)
         self._ls_coo = None
         if levelset is not None and len(cm.cut_elems) > 0:
             el = np.asarray(elements, dtype=np.int64)
@@ -297,6 +306,124 @@ class MultivaluedOperator:
         phi_up[cut_nodes[~plus]] = phi_ext[aux[~plus]]
         return phi_up, phi_lo
 
+    # -- per-side artificial density (B6) -------------------------------------
+
+    def _side_element_sets(self):
+        """(in_upper, in_lower) boolean element masks: which elements carry an
+        UPPER / LOWER copy in the multivalued assembly. Exactly the split
+        `mass_conservation_coo` uses -- plain "+" and cut elements are weighted
+        by rho_upper; plain "-", cut and te_lower ("below-TE fan") elements by
+        rho_lower. A cut element is in BOTH (it is assembled twice)."""
+        if self._side_sets is None:
+            cm = self.cm
+            el = np.asarray(self.op.elements, dtype=np.int64)
+            n_tets = len(el)
+            is_cut = np.zeros(n_tets, dtype=bool)
+            is_cut[cm.cut_elems] = True
+            is_tel = np.zeros(n_tets, dtype=bool)
+            is_tel[cm.te_lower_elems] = True
+            plain = ~is_cut & ~is_tel
+            plain_plus = plain & (cm.node_side[el].max(axis=1) == 1)
+            in_upper = plain_plus | is_cut
+            in_lower = (plain & ~plain_plus) | is_cut | is_tel
+            self._side_sets = (in_upper, in_lower)
+        return self._side_sets
+
+    def _side_upwind(self):
+        """(upw_upper, upw_lower): two UpwindOperators whose face-adjacency
+        graphs are RESTRICTED TO THEIR OWN SIDE (design_track_b.md §5.2 / D10).
+
+        ★ The wake is a slip line: density information does not cross a
+        tangential discontinuity, so the artificial-density upstream walk must
+        not step from an upper-side element into a lower-side one. Masking the
+        face graph to the side's own element set enforces that structurally --
+        a "+" element can only reach "+" and cut elements (whose UPPER copy is
+        the upper field's own extension across the sheet), never a "-" element,
+        and vice versa. Without the mask the walk samples rho from the other
+        side of the jump and the upwind term differences ACROSS the shear layer.
+
+        DN1 §4.3's "kernels/upwind.py needs no change" was wrong (D10): a cut
+        element has two velocity states, hence two rho and two nu, so the sweep
+        runs TWICE -- once per side -- on its own masked graph.
+        """
+        if self._side_upw is None:
+            from pyfp3d.kernels.upwind import UpwindOperator
+
+            in_upper, in_lower = self._side_element_sets()
+            nodes, el = self.nodes, self.op.elements
+            ops = []
+            for keep in (in_upper, in_lower):
+                upw = UpwindOperator(nodes, el)
+                fn = upw.face_neighbors.copy()
+                nb_ok = np.where(fn >= 0, keep[np.clip(fn, 0, None)], False)
+                fn[~(nb_ok & keep[:, None])] = -1
+                upw.face_neighbors = np.ascontiguousarray(fn)
+                ops.append(upw)
+            self._side_upw = tuple(ops)
+        return self._side_upw
+
+    def element_rho_tilde(self, phi_ext, m_inf, upwind_c, m_crit,
+                          gamma_air=1.4, u_inf=1.0, m_cap=3.0,
+                          rho_floor=0.05):
+        """(rho_tilde_upper, rho_tilde_lower): the ARTIFICIAL (upwinded)
+        density per side (B6 -- the transonic level-set path).
+
+        Each side runs the shipped P4 walk flux (`UpwindOperator.rho_tilde`,
+        design.md §3) on ITS OWN field (grad, q^2, rho from that side's nodal
+        potential) and on its own same-side-restricted face graph. The
+        isentropic speed limiter (`limit_q2_field`, M^2 <= m_cap^2) is applied
+        per side before the density, exactly as the conforming path does.
+
+        Subcritical no-op: where M <= M_crit the switch gives nu == 0.0 exactly
+        and rho_tilde == rho bitwise on every CONSUMED (own-side) entry, so
+        upwind_c > 0 on a subsonic case reproduces the B3/B4 solve (gate
+        G4.2's property, inherited; measured Gamma agreement 2e-10 on the
+        M0.5 coarse case -- the sub-1e-7 tail is the q2 cap touching junk
+        other-side entries that the assembly never consumes).
+
+        Monitors refreshed on the operator (own-side only, so the invalid
+        other-side junk of `element_densities` cannot pollute them):
+        nu_max, n_nu_active, n_floored, n_limited.
+        """
+        from pyfp3d.physics.isentropic import density_field, limit_q2_field
+
+        in_upper, in_lower = self._side_element_sets()
+        upw_u, upw_l = self._side_upwind()
+        phi_up, phi_lo = self.side_potentials(phi_ext)
+
+        out, nus, floored, limited = [], [], 0, 0
+        active = np.zeros(self.op.n_tets, dtype=bool)
+        for phi_s, upw, keep in ((phi_up, upw_u, in_upper),
+                                 (phi_lo, upw_l, in_lower)):
+            grad, q2 = self.op.velocities(phi_s)
+            q2n = q2 / u_inf**2
+            q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
+            limited += int(np.count_nonzero((q2l != q2n) & keep))
+            rho = density_field(q2l, m_inf, gamma_air)
+            rt = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
+                               gamma_air, rho_floor).copy()
+            nus.append(upw.nu[keep])
+            active |= (upw.nu > 0.0) & keep
+            floored += int(np.count_nonzero((rt == rho_floor) & keep))
+            out.append(rt)
+
+        nu_own = np.concatenate(nus) if len(nus) else np.zeros(0)
+        self.nu_max = float(nu_own.max()) if nu_own.size else 0.0
+        self.n_nu_active = int(np.count_nonzero(nu_own > 0.0))
+        self.n_floored = floored
+        self.n_limited = limited
+        self._nu_active = active
+        return out[0], out[1]
+
+    def nu_active_elements(self):
+        """Element ids with a nonzero artificial-density switch (nu > 0) on
+        their OWN side, as of the last `element_rho_tilde` call -- i.e. the
+        supersonic pocket + shock. B6's localized damping uses this to damp
+        only the rows where the transonic instability lives (solve/picard_ls.py:
+        the global circulation mode must stay undamped, or the implicit Kutta
+        crawls)."""
+        return np.flatnonzero(self._nu_active)
+
     def element_densities(self, phi_ext, m_inf, gamma_air=1.4, u_inf=1.0):
         """(rho_upper, rho_lower) per element from the two side fields
         (subcritical isentropic density; nu == 0 so rho_tilde == rho). Feed
@@ -322,14 +449,22 @@ class MultivaluedOperator:
     def own_side_field(self, field_up, field_lo):
         """Pick each element's own-side value from an (upper, lower) pair,
         discarding the invalid other-side junk (see element_densities): "+"
-        and cut elements take the upper array, "-" elements the lower. For a
-        clean per-element diagnostic (drho lag, M_max) whose value is the one
-        actually assembled."""
+        and cut elements take the upper array, "-" and te_lower elements the
+        lower. For a clean per-element diagnostic (drho lag, M_max) whose value
+        is the one actually assembled.
+
+        ★ The split is `_side_element_sets()`'s, i.e. EXACTLY the one
+        `mass_conservation_coo` weights with (B6 fix). A te_lower ("below-TE
+        fan") element contains the TE node, which the eps shift marks "+", so a
+        node-side test alone (`side.max() == 1`) mislabels it UPPER -- while the
+        assembly weights it with rho_LOWER. Reading the upper field there reads
+        an aux-mixed spurious gradient: measured M_max 2.56 on a converged M0.60
+        state whose true M_max is 0.85, and the same junk entered the drho
+        convergence measure.
+        """
         if self._elem_plus is None:
-            side = self.cm.node_side[np.asarray(self.op.elements)]
-            is_cut = np.zeros(self.op.n_tets, dtype=bool)
-            is_cut[self.cm.cut_elems] = True
-            self._elem_plus = (side.max(axis=1) == 1) | is_cut
+            in_upper, _ = self._side_element_sets()
+            self._elem_plus = in_upper
         return np.where(self._elem_plus, field_up, field_lo)
 
     def element_mach2(self, phi_ext, m_inf, gamma_air=1.4, u_inf=1.0):

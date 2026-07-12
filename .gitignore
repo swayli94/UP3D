@@ -83,6 +83,10 @@ cases/demo/p5_onera_m6/results/*.npz
 # expensive run-once artifact; figures+CSVs are the committed evidence)
 cases/demo/p9_grid_discrimination/results/*.npz
 
+# B6 demo solution caches (the transonic level-set trajectories; figures+CSVs
+# are the committed evidence)
+cases/demo/b6_transonic/results/*.npz
+
 # Reference papers
 docs/references
 

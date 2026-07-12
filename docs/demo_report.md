@@ -1411,10 +1411,64 @@ families:
 | B3 lifting solve + implicit Kutta | `cases/demo/b3_levelset_lifting/` + `tests/test_b3_lifting.py` | 13 demo PASS + 6 PASS | closed 2026-07-12 |
 | B4 TE control volume / Kutta | same demo + `tests/test_b4_te_control_volume.py` | 8 PASS | closed 2026-07-12 |
 | B5 far-field A/B | `cases/demo/b4p5_farfield/` + `tests/test_b45_farfield.py` | 9 demo PASS + 10 PASS | closed 2026-07-12 |
+| B6 transonic (level-set) | `cases/demo/b6_transonic/` + `tests/test_b6_transonic.py` | 14 demo PASS + 9 PASS (+2 gated) | ◐ IN PROGRESS 2026-07-12 — coarse M0.80 gate met, medium M0.7875 fold deferred to LS Newton |
 
-75 Track B tests in total. Numerics spec: [design_track_b.md](design_track_b.md)
-(supersedes DN1). **Next = B6** (transonic + Mach continuation on the level-set
-path) / **B7** (ONERA M6 3D).
+Numerics spec: [design_track_b.md](design_track_b.md) (supersedes DN1;
+B6 findings in §10). **B6 in progress** (transonic on the level-set path);
+**next = B7** (ONERA M6 3D).
+
+### B6 — transonic on the level-set path (IN PROGRESS 2026-07-12)
+
+B6 carries the multivalued implicit-Kutta solver into the transonic regime.
+Three measured findings, each overturning a "transplant the conforming recipe"
+default (design_track_b.md §10):
+
+1. **Per-side artificial density** (D10): a cut element has two velocity
+   states, so `rho_tilde` is evaluated once per side and the upstream walk
+   runs on a same-side-restricted face graph (the wake is a slip line).
+   Subcritically an exact no-op; the M0.80 blow-up cells sit in the pocket
+   ABOVE the airfoil (zero on the wake strip), so the shock machinery is
+   isomorphic to conforming.
+2. **Damping must be LOCALIZED to the ν>0 zone.** The P4 whole-field
+   θ·diag stabilizer is a Jacobi smoother — near-transparent-yet-throttling
+   to smooth global modes. The implicit Kutta makes Γ a smooth global
+   SOLUTION mode (conforming keeps it as an outer secant unknown, outside the
+   damped matrix), so global damping throttles it: Γ crawls 0.0005→0.017 in
+   160 outers vs undamped convergence in 35. `damping_scope="supersonic"`.
+3. **Near the FP fold the option-a Γ→vortex feedback has loop gain > 1** —
+   Γ climbs monotonically through both the conforming-Picard stall and the
+   Newton truth, then blows up; the López **Neumann outlet** (B5 option b,
+   no Γ feedback) removes the loop and converges. ⇒ B6 transonic recipe =
+   `farfield="neumann"`.
+
+**★ A/B inversion (the headline result):** the raw same-mesh Picard-vs-Picard
+Γ gap grows with pocket strength (+10.5% at coarse M0.75), which looks like an
+LS error — but same-mesh conforming **Newton** arbitration shows the
+*conforming Picard* under-circulates 4–8% (its P4-erratum stall bias,
+quantified at weak shocks), while the LS Picard sits within **+0.25–1.0%** of
+the Newton truth and converges toward it under refinement. **User arbitrated
+(2026-07-12): the B6 gate baseline is the same-mesh conforming Newton truth,
+not the conforming Picard.**
+
+Coarse M0.80 α1.25 (Neumann), vs the G8.1 Newton truth (Γ 0.2295 / shock 0.658
+/ cl_p 0.459; the conforming Picard stall is Γ 0.1819 = −21%):
+
+| mesh | Γ | vs Newton | shock | cl_p | M_max | lim/flr |
+|---|---|---|---|---|---|---|
+| M0 wake-embedded | 0.2114 | −7.9% | 0.644 | 0.4154 | 1.39 | 0/0 |
+| M3 wake-free | 0.2315 | **+0.9%** | 0.678 | 0.4556 | 1.39 | 0/0 |
+
+**Medium M0.7875 = the FP fold.** With more dissipation (C=2.0, θ=0.5
+localized, dm=0.025 — the coarse recipe diverges) the LS solve stays bounded
+and physical (M_max 1.44, 0 lim/flr) but stalls at Γ −18.8% of the same-mesh
+Newton truth (0.2643): a Picard method — conforming or level-set — does not
+reach the isolated fold solution (why G8.1 re-specced the conforming path to
+Newton locks). The quantitative medium gate needs the **LS Newton** (post-B6
+re-derivation, design_track_b.md §5.5, explicitly deferred).
+
+![B6 stabilizer story: throttle / runaway / converge](../cases/demo/b6_transonic/results/stabilizer_story.png)
+![B6 transonic Cp + shock, dual-mesh vs conforming](../cases/demo/b6_transonic/results/transonic_cp_shock.png)
+![B6 A/B gap vs Mach](../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
 
 > **Track-B renumber 2026-07-12.** Two renumbers landed the same day: a new **B4**
 > (TE control volume) was inserted, then the half-integer IDs were regularized
