@@ -1,0 +1,4 @@
+model,eta_reach_inboard,n_stations_touched,cl_KJ,dcl_pct,inboard_circulation_change_pct,te_gap_eta0.44,te_gap_eta0.90,te_gap_eta0.99
+none,1.000,0,0.2037,+0.00,+0.00,0.139,0.218,0.223
+tanh_half_rc0.10,0.771,38,0.1885,-7.44,-4.90,0.140,0.972*,0.442*
+vanish_smooth_rc0.05,0.958,7,0.2005,-1.54,-0.51,0.139,0.232,1.030*

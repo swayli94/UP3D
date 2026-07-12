@@ -357,16 +357,63 @@ the edge overspeed trips the speed limiter / density floor even subsonically, so
 the fine mesh stops being a discrete solution (the M∞ 0.5 analogue of the P9/G9.1
 transonic finding). Demo: `cases/demo/tip_edge_singularity/`.
 
-**Fix = a wake-MODEL change, deferred to P13/G13.2.** Curved *wall* elements
-(P11) cannot remove a wake-sheet edge, and Track B's level-set changes the wake
-*representation* but keeps the same rigid planar sheet. The model-level cure is
-wake **roll-up / an explicit tip vortex** (the sheet rolls into a concentrated
-tip vortex, removing the free edge), which bounds the tip peak under refinement
-and lets the M6 fine mesh be a real discrete solution. Implementation is handed
-to Track B as a rescope of the shelved B9 (level-set naturally carries a
-movable/curved sheet through `update_direction()`): from "O(θ²) deflection" to
-"roll-up". Until then, any 3D grid-convergence / lift-gap claim on M6 is blocked
-(P9/G9.3).
+### 4.2 The fix: a spanwise loading taper (P13/G13.2)
+
+Curved *wall* elements (P11) cannot remove a wake-sheet edge, and Track B's
+level-set changes the wake *representation*, not the model. But the cure turned
+out to be **neither roll-up nor a vortex core** — both of which earlier drafts of
+this section proposed. The measured mechanism is **discrete**:
+
+**The solver never sees the continuum edge.** It sees the **outermost TE
+station**, which retains circulation Γ_last and sheds it as a *concentrated
+vortex over the last cell* — the sheet's free-edge nodes are single-valued, so
+the jump falls from Γ_last to 0 across one element. That shed vortex induces a
+velocity ~ Γ_last / h. Hence, with Γ_last ~ h^q,
+
+    edge peak ~ h^(q−1)        ⇒        p ≈ 1 − q                       (4.5)
+
+and the regularization criterion is **q ≥ 1**. This predicts the untapered
+baseline exactly: Γ ~ √u with u_last ~ h gives Γ_last ~ √h, i.e. q = 0.44
+(measured), so p ≈ 0.56 — against a measured p = 0.52. It is *not* the continuum
+edge exponent that matters, and *not* a viscous core: it is how fast the last
+station's circulation vanishes under refinement.
+
+**The fix follows immediately.** Taper the accepted circulation toward the tip:
+
+    Γ_eff(z) = F(z) · Γ_Kutta(z),   F = smoothstep((z_tip − z)/r_c)      (4.6)
+
+applied to the per-station Kutta target (`constraints/wake.py::tip_taper_factors`;
+`solve_newton_lifting(tip_taper=…)`, default `None` = bit-identical). F is
+geometry-only (independent of φ), so the Newton Jacobian keeps its structure —
+the Kutta row is simply scaled by the same F_j. Shipped model: `vanish_smooth`
+with **r_c = 0.05 · b_semi**.
+
+**F must have COMPACT support.** A tanh taper (F(tip)=½) also reaches q≈1 and does
+regularize, but tanh never reaches 1: its tails unload the wing to η≈0.77,
+costing −7.4% lift, −4.9% inboard circulation, and breaking TE pressure closure
+at mid-outboard span where there is no singularity to fix. A tip model must be
+*local*.
+
+**The taper is amplified, not applied.** Γ is a fixed point of Γ = F·Γ_Kutta(Γ),
+and the Kutta map has slope b ≈ 0.93 (§4, P2 measurement), so
+
+    Γ/Γ*  =  F (1 − b) / (1 − F b)                                       (4.7)
+
+— F = 0.8 yields 0.21×, not 0.8×. This is why the measured q (≈3.3) far exceeds
+the naive exponent of F, and why r_c must be kept small.
+
+**Result.** The edge peak goes flat (p: 0.592 → 0.009 over coarse/medium/fine),
+the M6 fine mesh becomes a **genuine discrete solution** (0 limited/floored) —
+what P9/G9.1 could not achieve — and at M∞0.84 the medium M_max drops 2.13 →
+1.725. **Price:** a deliberate tip unloading worth ~1–1.6% of cl (scales with
+r_c), localized inboard of η≈0.95. Evidence:
+`cases/demo/tip_edge_singularity/`.
+
+**Caveat (P13/G13.3).** Removing the tip singularity did **not** deliver 3D grid
+convergence: the M6 lift sequence is still not in the asymptotic range (its
+increments grow), and the residual growth sits in *mid-span* Γ — i.e. wing/LE
+resolution. The tip fix *revealed* that second, independent problem rather than
+curing it.
 
 ---
 

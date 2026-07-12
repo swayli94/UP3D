@@ -51,7 +51,10 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (**276 passed + 17 skipped + 2 xfailed since B7
+3. Full suite: `pytest tests/` (**291 passed + 17 skipped + 2 xfailed since
+   P13/G13.2 2026-07-13** — +15 `tests/test_p13_tip_taper.py` (tip-edge
+   desingularization taper) over the 276+17+2 B7 baseline; previously
+   **276 passed + 17 skipped + 2 xfailed since B7
    2026-07-12**, measured 719.29 s @16 threads: +92 Track B tests (B1 dual-mesh,
    B2 multivalued, B3 lifting, B4 TE-Kutta, B5 far-field, B6 transonic + LS
    Newton, B7 ONERA M6 3D) over the 184+8+2 P10/G10.2 baseline; B6 added

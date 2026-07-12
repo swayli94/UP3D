@@ -79,7 +79,8 @@ class NewtonWorkspace:
     def __init__(self, mesh_cut, wc, alpha_deg: float = 0.0,
                  u_inf: float = 1.0, gamma_air: float = 1.4,
                  vortex_center=(0.25, 0.0),
-                 farfield_spanwise_gamma: bool = False):
+                 farfield_spanwise_gamma: bool = False,
+                 tip_taper: Optional[np.ndarray] = None):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -87,6 +88,19 @@ class NewtonWorkspace:
         self.gamma_air = float(gamma_air)
         self.vortex_center = vortex_center
         self.spanwise = bool(farfield_spanwise_gamma)
+        # P13/G13.2 tip-edge desingularization: per-station loading taper
+        # F_j (constraints/wake.py::tip_taper_factors). The accepted
+        # circulation becomes Gamma_eff = F_j * Gamma_Kutta, so BOTH the
+        # residual F and its derivative K = dF/dphi scale by F_j. None (the
+        # default) = all ones = bit-identical to the untapered path.
+        self.tip_taper = (
+            np.ones(wc.n_stations, dtype=np.float64) if tip_taper is None
+            else np.asarray(tip_taper, dtype=np.float64).copy()
+        )
+        if self.tip_taper.shape != (wc.n_stations,):
+            raise ValueError(
+                f"tip_taper must be ({wc.n_stations},), got "
+                f"{self.tip_taper.shape}")
 
         self.op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
         self.upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
@@ -138,6 +152,11 @@ class NewtonWorkspace:
         self.K = sp.coo_matrix(
             (vals, (rows, cols_free)), shape=(self.n_st, self.n_free),
         ).tocsr()
+        # F_j = taper_j * mean(probe jumps)_j - Gamma_j, so dF/dphi picks up
+        # the SAME constant factor (taper is phi-independent). Scaling the
+        # rows keeps the Jacobian exact; taper == 1 leaves K untouched.
+        if not np.all(self.tip_taper == 1.0):
+            self.K = sp.diags(self.tip_taper) @ self.K
 
         self.m_inf = None
         self.beta = None
@@ -231,7 +250,9 @@ class NewtonWorkspace:
 
         R_red = self.con.T.T @ self.op.assemble_residual(phi_cut, rho_t)
         R_free = R_red[self.free]
-        F = kutta_targets(phi_cut, self.wc) - gamma
+        # Gamma_eff = taper * Gamma_Kutta (P13/G13.2; taper == 1 by default,
+        # so this is the untapered Kutta residual bit-for-bit).
+        F = self.tip_taper * kutta_targets(phi_cut, self.wc) - gamma
         state = {
             "phi_red": phi_red, "phi_cut": phi_cut, "grad": grad,
             "q2l": q2l, "lim": lim, "rho": rho, "rho_t": rho_t,
@@ -319,6 +340,7 @@ def solve_newton_lifting(
     freeze_tol: Optional[float] = None,
     freeze_refresh_max: int = 2,
     workspace: Optional[NewtonWorkspace] = None,
+    tip_taper: Optional[np.ndarray] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -409,7 +431,8 @@ def solve_newton_lifting(
     ws = workspace
     if ws is None:
         ws = NewtonWorkspace(mesh_cut, wc, alpha_deg, u_inf, gamma_air,
-                             vortex_center, farfield_spanwise_gamma)
+                             vortex_center, farfield_spanwise_gamma,
+                             tip_taper=tip_taper)
     ws.set_mach(m_inf)
 
     timings = {"seed": 0.0, "residual": 0.0, "jacobian": 0.0,

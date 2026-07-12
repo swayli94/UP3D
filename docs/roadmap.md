@@ -1304,20 +1304,86 @@ deflection" to "roll-up").
       risk clause, a drifting/off-band p would still close G13.1 (the core
       claims — singularity exists, model-not-representation, aft-of-TE — do not
       depend on p being exactly 0.5); it landed cleanly at 0.59.
-- [ ] **G13.2 — (future) wake-model fix.** Roll-up / explicit tip-vortex model
-      so the **tip peak Mach is bounded under refinement (p → 0)** and the **M6
-      fine mesh becomes a real discrete solution (0 permanently-limited cells)**,
-      unblocking G9.1's three-point Richardson. Implementation handed to
-      **Track B (rescoped B9)**. This phase only DEFINES it.
-- [ ] **G13.3 — (future) 3D grid-convergence closure.** With the model in place,
-      redo the M6 coarse/medium/fine cl_KJ/cl_p three-point Richardson (what
-      G9.1 could not do) and re-split the 0.019 external gap
-      (resolution / floor / viscous) under the P9 pre-registered bands
-      (cl_KJ∞ ≥ 0.283 resolution-dominated / ≤ 0.278 floor-confirmed). This
-      phase only DEFINES it.
-**Non-goals:** no solver/numerics changes (characterization is a demo +
-docs); fine meshes stay gitignored; the heavy conforming fine M0.5 AMG solve
-(~34 min) is a one-shot cached artifact.
+- [x] **G13.2 — tip-edge desingularization (CONFORMING path CLOSED 2026-07-13;
+      level-set clause OPEN).** The fix is a **spanwise loading taper**:
+      `Γ_eff(z) = F(z) · Γ_Kutta(z)` applied to the per-station Kutta target
+      (`constraints/wake.py::tip_taper_factors`, `solve_newton_lifting(
+      tip_taper=…)`; default `None` = **bit-identical**). Shipped model
+      (**user-arbitrated 2026-07-13**): `form="vanish_smooth"` (smoothstep,
+      **compact support**), **r_c = 0.05 · b_semi**.
+      **★ THE MECHANISM IS DISCRETE, AND IT IS NOT ROLL-UP, NOT A VORTEX CORE,
+      AND NOT THE CONTINUUM EDGE EXPONENT.** The solver never sees the continuum
+      edge: it sees the **outermost TE station**, which retains circulation
+      `Γ_last` and sheds it as a CONCENTRATED VORTEX over the last cell (free-edge
+      nodes are single-valued, so the jump falls to 0 in one element), inducing
+      `~ Γ_last/h`. With `Γ_last ~ h^q` the edge peak grows as `h^(q−1)`, i.e.
+      **p ≈ 1 − q**, and the criterion is **q ≥ 1**. This predicts the baseline
+      exactly (measured q = 0.44, since Γ~√u and u_last~h ⇒ Γ_last~√h; p_pred 0.56
+      vs p_meas 0.52). ⇒ **design.md §4.1's "roll-up / cored tip vortex" framing is
+      superseded** (2nd correction to that paragraph).
+      **★ The taper is AMPLIFIED, not applied:** Γ is a fixed point of
+      `Γ = F·Γ_Kutta(Γ)` and the Kutta map has slope **b ≈ 0.93** (P2), so
+      `Γ/Γ* = F(1−b)/(1−F·b)` — a taper of 0.8 gives **0.21×**, not 0.8×
+      (test-locked). This is why the measured `q ≈ 3.3` far exceeds the naive
+      `s+½`, and why the taper MUST be kept compact.
+      **Measured (M∞0.5, strict off-body edge box):** edge peak
+      **0.712 → 0.981 → 1.510 (p = +0.592)** untapered vs
+      **0.567 → 0.565 → 0.570 (p = +0.009)** tapered — the singularity is GONE
+      across a 45× cell-count range. **★ The M6 FINE mesh is now a GENUINE
+      DISCRETE SOLUTION** (converged, **0 limited / 0 floored / 0 NaN**), which is
+      exactly what G9.1 could not achieve. Transonic **M0.84**: coarse/medium
+      converge with **0 limited**, and the medium `M_max` drops **2.13 → 1.725**
+      (P5's "bounded tip-TE-corner overshoot" was the same object).
+      **Cost (the model's price):** `cl_KJ` **−1.1 … −1.6 %** (scales with r_c:
+      −0.70 / −1.58 / −3.27 % at r_c = 0.03 / 0.05 / 0.08 b). It is **LOCAL**:
+      Γ(η), cl(η) and sectional Cp are UNCHANGED inboard of η≈0.95 (inboard
+      circulation −0.51 %), and TE pressure closure at η = 0.90 stays at the
+      baseline value (0.232 vs 0.218). The taper also makes cl MORE
+      mesh-convergent than the untapered baseline (+0.2 % vs +0.7 % coarse→medium
+      — the untapered case is still gaining spurious tip lift).
+      **★ The originally-proposed `tanh` form (F(tip)=½) is DISQUALIFIED — but not
+      for the reason first argued.** It DOES regularize (q ≈ 1.00 — exactly the
+      marginal case its s=0 predicts). It is rejected because it has **unbounded
+      support**: tanh never reaches 1, so it depresses F over **57 of 83 stations**
+      (inboard to η = 0.77), costing **−7.4 % lift**, **−4.9 % inboard
+      circulation**, and **breaking TE pressure closure at η = 0.90** (gap 0.972 vs
+      baseline 0.218) — where there is no singularity to fix. A tip model must be
+      *local*; the tanh silently re-rigs the whole wing.
+      **★ METRIC TRAP (cost a wrong conclusion once):** G13.1's tip box
+      (z/b>0.95, dx ≥ −0.05) admits WING cells. Once the edge is regularized its
+      max MIGRATES onto the ordinary wing suction peak at z/b≈0.95 and stops
+      measuring the singularity — making a *working* fix look like it made p
+      *worse*. The edge must be measured OFF-BODY (dx > 0, z/b > 0.98).
+      Evidence: `cases/demo/tip_edge_singularity/run_taper_probe.py` (the
+      falsification ladder + r_c sweep) and `run_taper_physics.py` (Γ/cl/Cp
+      distributions); tests `tests/test_p13_tip_taper.py` (15).
+      **OPEN clause — level-set port.** NOT a mechanical port: the LS path has
+      **no Γ DOF** and its TE row (`kernels/cut_assembly.py::te_kutta_coo`) is
+      **homogeneous** (`s·(q_u−q_l) = 0`), so scaling it by F is a NO-OP. The
+      clean analogue is to BLEND the pressure-equality row with B2's continuity
+      weld (`[φ]=0`), normalized: `F·K̂ + (1−F)·Ŵ = 0` (pure Kutta at F=1, zero
+      jump at F=0). That is a *different model* from `Γ = F·Γ_Kutta`, so it needs
+      its own r_c calibration and the two-path A/B is a PHYSICS comparison, not a
+      model-identity check. Designed, not implemented.
+- [ ] **G13.3 — (future) 3D grid-convergence closure.** ★ **STILL BLOCKED after
+      G13.2 — but by a SECOND, INDEPENDENT cause, and the tip is no longer it.**
+      With the taper the three M6 meshes are all genuine discrete solutions, so a
+      Richardson is now *mechanically* possible — but the lift sequence is **NOT
+      in the asymptotic range**: cl_KJ **0.2001 → 0.2005 → 0.2121** (M0.5), i.e.
+      increments **+0.2 % then +5.8 %** — they GROW, so an extrapolation would be
+      fabrication and none was run (P9/G9.3 discipline: report `n/a`, do not
+      invent). The growth is in **mid-span Γ** (Γ_max 0.0791 → 0.0837), i.e.
+      **wing/LE resolution**, not the tip — consistent with P9's original
+      "M6 cl_KJ keeps rising under refinement". **Removing the tip singularity
+      REVEALED this second convergence problem rather than curing it.** Closing
+      G13.3 now needs that wing-resolution question answered first (mesh-family
+      self-similarity? swept-LE suction resolution? the P11 curved-wall/G1.6
+      mechanism?), then the coarse/medium/fine cl_KJ/cl_p Richardson and the
+      0.019-gap re-split under the P9 pre-registered bands (cl_KJ∞ ≥ 0.283
+      resolution-dominated / ≤ 0.278 floor-confirmed).
+**Non-goals:** fine meshes stay gitignored; heavy runs are one-shot cached
+artifacts (the conforming fine M0.5 AMG solve is ~10–34 min, the M0.84 fine
+continuation ~1 h).
 
 ---
 

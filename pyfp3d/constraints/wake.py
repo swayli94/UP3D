@@ -127,6 +127,72 @@ class WakeConstraint:
         return red_nodes, np.asarray(dirichlet_values, dtype=np.float64)[keep][idx]
 
 
+def tip_taper_factors(station_z, z_tip: float, form: str = "none",
+                      r_c: float = 0.03) -> np.ndarray:
+    """Spanwise loading taper F(z) for the tip-edge desingularization
+    (P13/G13.2). Multiplies the per-station Kutta target, so the accepted
+    circulation becomes Gamma_eff(z) = F(z) * Gamma_Kutta(z).
+
+    WHY (design.md Sec 4.1, roadmap P13): the tip-edge singularity is driven
+    by the TRAILING vorticity gamma = -dGamma/dz, not by bound Gamma. For
+    near-elliptic loading Gamma ~ C*sqrt(u) with u = z_tip - z, so
+    gamma ~ (C/2) u^(-1/2) -> infinity at the tip: a terminating flat sheet
+    of DIVERGING (or merely finite, nonzero) edge strength carries the
+    1/sqrt(r) flat-plate-edge singularity G13.1 measured (p = 0.59).
+
+    Writing F ~ u^s near the tip gives Gamma_eff ~ u^(1/2 + s) and hence
+    gamma_eff ~ u^(s - 1/2). So the edge is regularized (gamma_eff -> 0)
+    IFF s > 1/2. This is the discriminator the forms below bracket:
+
+      "none"          F = 1                     baseline, s = 0    -> p ~ 0.5
+      "tanh_half"     F = (1+tanh(u/r_c))/2     F(tip) = 1/2, s = 0
+                      -> gamma_eff = gamma/2: the peak HALVES but the
+                         exponent is UNCHANGED. (This is the proposed-but-
+                         flawed form: halving an infinity is still infinite.)
+      "vanish_sqrt"   F = sqrt(u/r_c)           s = 1/2 -> gamma_eff finite
+                      but NONZERO at the edge: still 1/sqrt(r). The
+                      borderline case, included to bracket the theory.
+      "vanish_linear" F = u/r_c                 s = 1   -> gamma_eff ~ u^(1/2)
+                      -> 0. The minimal-bias form that should regularize.
+      "vanish_smooth" F = smoothstep(u/r_c)     C1, s = 2 near the tip;
+                      regularizes harder, unloads the tip more.
+
+    The price of s > 1/2 is a MODEL BIAS: the tip is unloaded below its true
+    Kutta loading over a width r_c, costing O((r_c/b)^(3/2)) of the lift.
+    That trade is the point of the G13.2 probe.
+
+    F depends only on geometry (z), never on phi, so the Newton Jacobian
+    structure is unchanged -- the Kutta row is simply scaled by F_j.
+
+    Args:
+        station_z: (n_st,) spanwise coordinate of each TE station
+        z_tip: spanwise coordinate of the sheet's free tip edge (the
+            geometric semispan; stations sit inboard of it)
+        form: one of the five above
+        r_c: taper width (same units as z; the "core radius")
+
+    Returns:
+        (n_st,) taper factors in [0, 1]
+    """
+    z = np.asarray(station_z, dtype=np.float64)
+    if form == "none":
+        return np.ones_like(z)
+    if r_c <= 0.0:
+        raise ValueError("r_c must be > 0")
+    u = np.maximum(float(z_tip) - z, 0.0)   # distance inboard from the tip
+    t = u / float(r_c)
+    if form == "tanh_half":
+        return 0.5 * (1.0 + np.tanh(t))
+    if form == "vanish_sqrt":
+        return np.clip(np.sqrt(t), 0.0, 1.0)
+    if form == "vanish_linear":
+        return np.clip(t, 0.0, 1.0)
+    if form == "vanish_smooth":
+        s = np.clip(t, 0.0, 1.0)
+        return s * s * (3.0 - 2.0 * s)
+    raise ValueError(f"unknown tip-taper form: {form!r}")
+
+
 def kutta_targets(phi: np.ndarray, wc: WakeCut) -> np.ndarray:
     """Per-station Kutta target (design.md (4.4)), one node off the TE:
 
