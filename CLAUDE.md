@@ -48,10 +48,11 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (259 passed + 8 skipped + 2 xfailed since B5
-   2026-07-12, measured 512.93 s @16 threads: +75 Track B tests (B1 dual-mesh,
-   B2 multivalued, B3 lifting, B4 TE-Kutta, B5 far-field) over the 184+8+2
-   P10/G10.2 baseline;
+3. Full suite: `pytest tests/` (**270 passed + 12 skipped + 2 xfailed since B6
+   2026-07-12**, measured 698.47 s @16 threads: +86 Track B tests (B1 dual-mesh,
+   B2 multivalued, B3 lifting, B4 TE-Kutta, B5 far-field, B6 transonic + LS
+   Newton) over the 184+8+2 P10/G10.2 baseline; B6 added `test_b6_transonic.py`
+   (9 fast + 2 gated) and `test_b6_newton.py` (2 fast + 2 gated);
    some skip when the gitignored wake-free meshes aren't generated locally —
    M3 medium (~40 s) and the M4 ONERA M6 family (~12 s);
    ~5 min — G8.3 measured 301.66 s; the always-on coarse transonic smoke is ~170 s
@@ -59,8 +60,8 @@ workstation-scale (minutes for 1–3 M nodes).
    coarse+medium cut_wake ingest ~15 s. The M6 .msh files are gitignored — the 13
    M1 tests skip until you run `cases/meshes/onera_m6/generate_onera_m6.py`
    (~30 s). The heavy transonic/Newton gates (P4 medium + G4.3 sweep, P5, gated
-   P8 G8.1/G8.2 + FD pocket) only run under `PYFP3D_TRANSONIC_GATES=1`, shown as
-   8 skipped.)
+   P8 G8.1/G8.2 + FD pocket, and the gated B6 M0.80 dual-mesh + LS-Newton runs)
+   only run under `PYFP3D_TRANSONIC_GATES=1`, and make up most of the 12 skipped.)
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.

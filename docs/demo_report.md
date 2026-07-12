@@ -43,6 +43,7 @@ than silently corrected away.
 | **Track B** B2 multivalued assembly | `tests/test_b2_multivalued.py` (test-only) | 17 PASS | closed 2026-07-11 |
 | **Track B** B3 + B4 lifting + TE Kutta | `cases/demo/b3_levelset_lifting/` | 13 demo PASS (+6, +8 tests) | closed 2026-07-12 |
 | **Track B** B5 far-field A/B | `cases/demo/b4p5_farfield/` | 9 demo PASS (+10 tests) | closed 2026-07-12 |
+| **Track B** B6 transonic (level-set) + LS Newton | `cases/demo/b6_transonic/` | 14 demo PASS (+9, +2 tests; +2, +2 Newton) | ◐ IN PROGRESS 2026-07-12 — coarse M0.80 gate met, LS Newton reaches quadratic fold solutions, medium closure open |
 
 > Track-P renumber (2026-07-08, then 2026-07-11 ×2): P6 = surface recovery;
 > P7 = differentiable flux (Newton prereq); P8 = fully-coupled Newton;

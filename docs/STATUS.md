@@ -12,8 +12,10 @@
 了否定性但决定性的结论：3D 升力缺口不是壁面单元的问题，而是刚性平面尾迹在翼尖自由
 边上的涡片边缘奇点**——即 Track B 存在的理由；P11 曲面壁元作为"3D 升力修复"不再被
 支持（其 G1.6 球面 Cp 理由仍然成立，待用户仲裁）。**当前工作重心 = Track B**：
-B1–B5 已关（level-set 尾迹 + 隐式 Kutta 已产生升力，无 Γ secant），**正在开展 B6
-（跨声速 + Mach 续接）**。
+B1–B5 已关（level-set 尾迹 + 隐式 Kutta 已产生升力，无 Γ secant）；**B6（跨声速）进行中**——
+coarse M0.80 gate 已达成（基线改为同网格 Newton 真解）、**LS Newton 已交付并 FD 验证、
+在折叠区取得二次收敛真解**（工作流网格 M3 medium |R| 1.5e-12），medium 定量收尾余两项
+（用户决定暂不追）。**下一步 = B7（ONERA M6 三维）**。
 
 ## 阶段一览
 
@@ -64,9 +66,10 @@ B1–B5 已关（level-set 尾迹 + 隐式 Kutta 已产生升力，无 Γ secant
 - 贵重工件不随手重算（P4 heavy demo ~40 min、G4.1 medium ~17 min、P5 medium
   45–75 min、M6 fine 网格数分钟）；已提交的 CSV/PNG 是权威。
 - fine 网格与解算 npz 一律 gitignored，本地缓存、demo 缺则重算。
-- 回归基线：**268 passed + 10 skipped + 2 xfailed**（B6 起,2026-07-12;
-  +9 B6 快测 +2 gated,较 B5 的 259+8+2;实测 682.77 s @16 线程但紧接重算之后
-  冷缓存,G8.3 的 302 s 仍是 CI 参考;含 B1–B6 的 Track B 测试,其中若干条在
-  无尾迹网格未本地生成时跳过;重 gate 走 `PYFP3D_TRANSONIC_GATES=1`）。
+- 回归基线：**270 passed + 12 skipped + 2 xfailed**（B6 + LS Newton 起,2026-07-12,
+  实测 698.47 s @16 线程;较 B5 的 259+8+2 增加 `test_b6_transonic.py`（9 快测 +2
+  gated）与 `test_b6_newton.py`（2 快测 +2 gated）;G8.3 的 302 s 仍是 CI 参考;
+  含 B1–B6 的 Track B 测试,其中若干条在无尾迹网格未本地生成时跳过;
+  重 gate 走 `PYFP3D_TRANSONIC_GATES=1`）。
   内核/装配改动后先跑 `tests/test_v0_freestream.py`。
 - P9 demo 等重活在跑时,新测试/求解一律降到 8 线程(NUMBA/OMP/OPENBLAS 同盖)。
