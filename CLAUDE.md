@@ -8,15 +8,18 @@ workstation-scale (minutes for 1–3 M nodes).
 ## Document map (read the relevant one before coding)
 
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker**: phase order (Track P:
-  P0–P10 solver, Track M: M0–M2 meshing, plus the designed-not-started Track B
-  level-set wake and Track V viscous coupling), gate checklists, progress ledger.
-  "What phase are we in" and "what gate is open" live here, nowhere else.
+  P0–P12 solver, Track M: M0–M4 meshing, Track B: level-set wake — **IN PROGRESS**,
+  B1–B5 + B7 closed / B6 open — and the designed-not-started Track V viscous
+  coupling), gate checklists, progress ledger. "What phase are we in" and "what
+  gate is open" live here, nowhere else. Track B numerics live in a separate
+  spec, [docs/design_track_b.md](docs/design_track_b.md) (it supersedes DN1).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
   phases (P0, P1-partial, P2, P3, P4, P5, P6, P7, P8 + its capability assessment,
-  P10-partial G10.2/G10.3, M0, M1): one self-checking demo per phase under
+  P9, P10-partial G10.2/G10.3, M0, M1, and Track B B3/B5/B6/B7): one self-checking
+  demo per phase under
   `cases/demo/<phase>/` with committed figures + measured gate numbers.
   When a phase closes, add its demo + report section here.
 - [docs/discussion_notes/](docs/discussion_notes/) — **discussion & reference
@@ -48,11 +51,13 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (**270 passed + 12 skipped + 2 xfailed since B6
-   2026-07-12**, measured 698.47 s @16 threads: +86 Track B tests (B1 dual-mesh,
+3. Full suite: `pytest tests/` (**276 passed + 17 skipped + 2 xfailed since B7
+   2026-07-12**, measured 719.29 s @16 threads: +92 Track B tests (B1 dual-mesh,
    B2 multivalued, B3 lifting, B4 TE-Kutta, B5 far-field, B6 transonic + LS
-   Newton) over the 184+8+2 P10/G10.2 baseline; B6 added `test_b6_transonic.py`
-   (9 fast + 2 gated) and `test_b6_newton.py` (2 fast + 2 gated);
+   Newton, B7 ONERA M6 3D) over the 184+8+2 P10/G10.2 baseline; B6 added
+   `test_b6_transonic.py` (9 fast + 2 gated) and `test_b6_newton.py` (2 fast +
+   2 gated); B7 added `test_b7_onera_m6.py` (6 fast + 5 gated — the gated ones
+   are the M6 3D solves, ~20 min each, hence 12 → 17 skipped by default);
    some skip when the gitignored wake-free meshes aren't generated locally —
    M3 medium (~40 s) and the M4 ONERA M6 family (~12 s);
    ~5 min — G8.3 measured 301.66 s; the always-on coarse transonic smoke is ~170 s
@@ -60,8 +65,9 @@ workstation-scale (minutes for 1–3 M nodes).
    coarse+medium cut_wake ingest ~15 s. The M6 .msh files are gitignored — the 13
    M1 tests skip until you run `cases/meshes/onera_m6/generate_onera_m6.py`
    (~30 s). The heavy transonic/Newton gates (P4 medium + G4.3 sweep, P5, gated
-   P8 G8.1/G8.2 + FD pocket, and the gated B6 M0.80 dual-mesh + LS-Newton runs)
-   only run under `PYFP3D_TRANSONIC_GATES=1`, and make up most of the 12 skipped.)
+   P8 G8.1/G8.2 + FD pocket, the gated B6 M0.80 dual-mesh + LS-Newton runs, and
+   the gated B7 M6 3D dual-mesh solves) only run under
+   `PYFP3D_TRANSONIC_GATES=1`, and make up most of the 17 skipped.)
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. When a gate closes: tick it in roadmap.md, update the progress ledger and the
    "Current phase" line in docs/agent-rules.md, keep the commit phase-scoped.

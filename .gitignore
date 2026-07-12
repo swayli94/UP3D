@@ -87,6 +87,10 @@ cases/demo/p9_grid_discrimination/results/*.npz
 # are the committed evidence)
 cases/demo/b6_transonic/results/*.npz
 
+# B7 demo solution caches (the M6 3D level-set solves + the far-field study;
+# figures+CSVs are the committed evidence)
+cases/demo/b7_onera_m6/results/*.npz
+
 # Reference papers
 docs/references
 

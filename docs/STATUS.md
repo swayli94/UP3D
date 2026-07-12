@@ -12,10 +12,20 @@
 了否定性但决定性的结论：3D 升力缺口不是壁面单元的问题，而是刚性平面尾迹在翼尖自由
 边上的涡片边缘奇点**——即 Track B 存在的理由；P11 曲面壁元作为"3D 升力修复"不再被
 支持（其 G1.6 球面 Cp 理由仍然成立，待用户仲裁）。**当前工作重心 = Track B**：
-B1–B5 已关（level-set 尾迹 + 隐式 Kutta 已产生升力，无 Γ secant）；**B6（跨声速）进行中**——
+B1–B5 + **B7** 已关（level-set 尾迹 + 隐式 Kutta 已产生升力，无 Γ secant）；
+**★ B7（ONERA M6 三维 gate）2026-07-12 一次通过**——双网格达标，且 B6 的**升力反转在
+三维复现**：以 conforming **Newton 真解**（cl_KJ 0.2692）为基准，LS Picard 落在
+**+2.7%(M1) / +0.7%(M4 无尾迹工作流网格)**，而 conforming Picard（P5, 0.24788）低了
+**−8.6%**；三维专属机械（斜交标架、展向裁剪 ⇒ Γ(tip)→3e-4 离散归零）**无需新求解器
+代码**，唯一缺口是后处理（`section_cp_curve_levelset` / `cl_pressure_3d_levelset`）；
+**三维远场 = `neumann`，P5 的 Γ(z) taper 在 B 路径上结构性地不需要**（B 路径的涡是
+展向均匀、支割线恒为 y=0 的二维涡，两个独立错法都已实测；neumann 不带涡故二者皆
+不可能）。诚实缺口：顶部 Mach 级停在 Picard 残差尾（|R| 4–6e-6，有界物理、指标在带内，
+gate 断言"有界"而非 `converged`）；**LS Newton 在 M6 上推迟**（朴素 splu，需 lagged-LU）。
+下一步 = B8（多尾迹）。**B6（跨声速）仍进行中**——
 coarse M0.80 gate 已达成（基线改为同网格 Newton 真解）、**LS Newton 已交付并 FD 验证、
 在折叠区取得二次收敛真解**（工作流网格 M3 medium |R| 1.5e-12），medium 定量收尾余两项
-（用户决定暂不追）。**下一步 = B7（ONERA M6 三维）**。
+（用户决定暂不追）。
 
 ## 阶段一览
 
@@ -33,7 +43,7 @@ coarse M0.80 gate 已达成（基线改为同网格 Newton 真解）、**LS Newt
 | P12 | 未开 | Backlog：离散伴随、VII transpiration、混合单元/BO 标定 |
 | M0/M1 | ✓ | 准 2D 挤出网格族 + M6 后掠尾迹网格族（.msh gitignored，脚本再生） |
 | M3 / M4 | ✓ | 无尾迹面("O 型")网格族（2026-07-11,Track B 双网格规则用）：M3 = NACA 准 2D（走廊扇形覆盖 α 扫掠;coarse 已提交）、M4 = ONERA M6（复用 M1 走廊尺寸场,单元数与 M1 差 6–9% ⇒ B7 受控 A/B;.msh 全部 gitignored） |
-| Track B | ◐ | **B1–B5 ✓（B1 2026-07-11;B2/B3/B4/B5 2026-07-12）;B6 跨声速进行中（2026-07-12）**。level-set 尾迹产生升力,隐式 Kutta,无 Γ secant。**B4：尾迹 LS 对常数跳跃恒零（单位分解,1.9e-16）⇒ "g₂ 即 Kutta" 错、退休;真 Kutta = 非线性 TE 压力相等 |q_u|²=|q_l|²,q 在壁面邻接控制体恢复**（全扇形 +11~15%、壁面邻接 <1%）。Γ 与 conforming 同网格 <1%,无尾迹 M3 差 0.3%。**B5：远场 A/B — 选项 a（Dirichlet+涡）保持默认（亚声速）**;选项 b（López Neumann 出口、无涡）截断 O(Γ/R),15c −4%。**B6 已测得三个机理结论（design_track_b.md §10）**：逐侧人工密度落地（亚临界严格无操作,激波区与 conforming 同构）;P4 全场阻尼**不可平移**（Jacobi 光滑子掐死作为解模态的 Γ）⇒ 阻尼局部化到 ν>0 行;★折叠区 option a 实时涡反馈增益 >1（Γ 单调穿过真解后爆掉,lagged 外层映射无不动点）⇒ **跨声速配方 = Neumann 出口**,coarse M0.80 收敛到距 Newton 真解 −6%（比 conforming Picard 自己的 stall 态近得多）;★A/B 反转——原始 Picard-vs-Picard 差（M0.75 +10.5%）经同网格 **Newton 仲裁**证明是 **conforming Picard 的欠环量偏置**（−4~−8%,P4 勘误在弱激波区的定量化）,**LS Picard 距 Newton 真解仅 +0.25%~+1.0%** 且随加密收敛（隐式 Kutta 无可早停的 Γ 外层）。**gate 基线已改（用户裁决 2026-07-12）为同网格 Newton 真解**;**coarse M0.80 gate 达成**（M0 Γ −7.9% / M3 +0.9%,激波 0.644/0.678,demo 14/14 PASS）;**medium M0.7875 = 折叠区**——Picard 只到有界 stall（Γ −18.8%）。**★ LS Newton（`solve/newton_ls.py`，§5.5/§10.6）已交付+FD 验证 1.3e-9**：精确 Jacobian = Picard 矩阵 + 逐侧 Term 2/3 + TE Kutta 精确二次导数,尾迹 LS 行线性,无 Γ DOF/Woodbury。**在折叠区拿到机器精度、二次收敛的真离散解（0 lim/flr）**——medium M0.7875 **M3 无尾迹（工作流网格）|R| 1.5e-12** Γ 0.2292、coarse M0.80 双网格皆收敛。**两个诚实缺口**：M0 嵌入 medium 活选择 Newton 极限环于 3e-6（P8/N5 近平局 churn 的 LS 形态,需接入冻结选择）;收敛的 LS 折叠解比 conforming Newton 低 ~13%（真离散差异,待厘清 neumann 截断/切层 O(h)/人工密度网格依赖）。设计 [design_track_b.md](design_track_b.md)。B6:coarse ✓、LS Newton 交付+折叠区工作流网格达真解、medium 定量收尾余两项;B7 M6 三维在后 |
+| Track B | ◐ | **B1–B5 ✓ + B7 ✓（B1 2026-07-11;B2/B3/B4/B5/B7 2026-07-12）;B6 跨声速进行中（2026-07-12）;下一步 = B8**。level-set 尾迹产生升力,隐式 Kutta,无 Γ secant。**B4：尾迹 LS 对常数跳跃恒零（单位分解,1.9e-16）⇒ "g₂ 即 Kutta" 错、退休;真 Kutta = 非线性 TE 压力相等 |q_u|²=|q_l|²,q 在壁面邻接控制体恢复**（全扇形 +11~15%、壁面邻接 <1%）。Γ 与 conforming 同网格 <1%,无尾迹 M3 差 0.3%。**B5：远场 A/B — 选项 a（Dirichlet+涡）保持默认（亚声速）**;选项 b（López Neumann 出口、无涡）截断 O(Γ/R),15c −4%。**B6 已测得三个机理结论（design_track_b.md §10）**：逐侧人工密度落地（亚临界严格无操作,激波区与 conforming 同构）;P4 全场阻尼**不可平移**（Jacobi 光滑子掐死作为解模态的 Γ）⇒ 阻尼局部化到 ν>0 行;★折叠区 option a 实时涡反馈增益 >1（Γ 单调穿过真解后爆掉,lagged 外层映射无不动点）⇒ **跨声速配方 = Neumann 出口**,coarse M0.80 收敛到距 Newton 真解 −6%（比 conforming Picard 自己的 stall 态近得多）;★A/B 反转——原始 Picard-vs-Picard 差（M0.75 +10.5%）经同网格 **Newton 仲裁**证明是 **conforming Picard 的欠环量偏置**（−4~−8%,P4 勘误在弱激波区的定量化）,**LS Picard 距 Newton 真解仅 +0.25%~+1.0%** 且随加密收敛（隐式 Kutta 无可早停的 Γ 外层）。**gate 基线已改（用户裁决 2026-07-12）为同网格 Newton 真解**;**coarse M0.80 gate 达成**（M0 Γ −7.9% / M3 +0.9%,激波 0.644/0.678,demo 14/14 PASS）;**medium M0.7875 = 折叠区**——Picard 只到有界 stall（Γ −18.8%）。**★ LS Newton（`solve/newton_ls.py`，§5.5/§10.6）已交付+FD 验证 1.3e-9**：精确 Jacobian = Picard 矩阵 + 逐侧 Term 2/3 + TE Kutta 精确二次导数,尾迹 LS 行线性,无 Γ DOF/Woodbury。**在折叠区拿到机器精度、二次收敛的真离散解（0 lim/flr）**——medium M0.7875 **M3 无尾迹（工作流网格）|R| 1.5e-12** Γ 0.2292、coarse M0.80 双网格皆收敛。**两个诚实缺口**：M0 嵌入 medium 活选择 Newton 极限环于 3e-6（P8/N5 近平局 churn 的 LS 形态,需接入冻结选择）;收敛的 LS 折叠解比 conforming Newton 低 ~13%（真离散差异,待厘清 neumann 截断/切层 O(h)/人工密度网格依赖）。设计 [design_track_b.md](design_track_b.md)。B6:coarse ✓、LS Newton 交付+折叠区工作流网格达真解、medium 定量收尾余两项。**★ B7（ONERA M6 三维 gate）2026-07-12 一次通过**（design_track_b.md §11;demo 35/35 PASS）:M∞0.84/α3.06 coarse、`farfield="neumann"`、ramp 0.60→0.84@dm0.04;**M1 嵌入** cl_KJ 0.2765／激波 0.635/0.588/0.449／Γ 0.1076→−0.0003／M_max 1.453／**0 lim,flr**（22.7 min）,**M4 无尾迹** 0.2710／0.634/0.584/0.454／0.1055→+0.0003／1.368／**0 lim,flr**（18.4 min）;V6 1.77%/1.97%;双网格 A/B 2.0%。**★ B6 的升力反转在三维复现**:以 conforming **Newton 真解** 0.2692 为基准,LS Picard **+2.7%(M1)／+0.7%(M4)**,而 conforming Picard（P5, 0.24788）**−8.6%** ⇒ 按 P5 设 gate 等于因"更接近真解"而扣分,故升力锚定 Newton;**无尾迹工作流网格 M4 是两者中更准的**。**★ 三维远场 = neumann,P5 的 Γ(z) taper 结构性不需要**（B 路径的涡展向均匀、支割线恒为 y=0:(a) α 对准的尾迹面与之非共面 ⇒ 出口承载无切割支撑的跳跃,出口 M 0.958 vs neumann 0.513;(b) 即使共面,标量 Γ 也匹配不了 Γ(z)→0 且翼尖外无切割,出口 M 0.825 = P5 branch-ray 伪迹;neumann 不带涡故二者皆不可能）。**★ Γ(z) 本身展向光滑、无需任何平滑**（计划外结论）:归一化二阶差分 0.0079/0.0091 vs conforming P5 的 0.0970 = **光滑 11–12 倍**——conforming 每个 TE 站点解一个独立 secant（st133 那套机械;`INVESTIGATION_gamma_smoothing.md` 曾试图平滑其抖动而失败）,隐式 Kutta 没有逐站循环（Γ 是**一个解模态**）⇒ P5 的展向 Γ 问题在此**结构上不可能发生**,而非被修好。**★ 三维专属机械无需新求解器代码**（B1 的斜交标架+展向裁剪已生效,Γ(tip)→~3e-4 离散归零）,唯一缺口=后处理 `post/surface_ls.py::section_cp_curve_levelset`（D11 逐侧;**上表面与 main 场逐位相同** ⇒ gate 激波指标不受影响）+ `cl_pressure_3d_levelset`。成本远低于风险估计(~0.6 s/outer @ ~12k 三维 DOF ⇒ ~20 min/解)。**诚实缺口**:顶部 Mach 级停在 Picard 残差尾（|R| 4–6e-6,600-outer 上限;但每级有界物理 0 lim/flr、指标在带内 ⇒ gate 断言"有界"而非 `converged`）;**LS Newton 在 M6 推迟**（朴素 splu,需 lagged-LU);激波比 P5 靠后 0.02–0.04c（在带内）;仅 coarse。**下一步 = B8（多尾迹）** |
 | M2 / Track V | 未开 | 翼身组合体宜与 Track B 同排（B8);Track V = VII 粘性耦合，已设计未动工 |
 
 ## 长期挂起项（勿反复重提）
@@ -66,10 +76,10 @@ coarse M0.80 gate 已达成（基线改为同网格 Newton 真解）、**LS Newt
 - 贵重工件不随手重算（P4 heavy demo ~40 min、G4.1 medium ~17 min、P5 medium
   45–75 min、M6 fine 网格数分钟）；已提交的 CSV/PNG 是权威。
 - fine 网格与解算 npz 一律 gitignored，本地缓存、demo 缺则重算。
-- 回归基线：**270 passed + 12 skipped + 2 xfailed**（B6 + LS Newton 起,2026-07-12,
-  实测 698.47 s @16 线程;较 B5 的 259+8+2 增加 `test_b6_transonic.py`（9 快测 +2
-  gated）与 `test_b6_newton.py`（2 快测 +2 gated）;G8.3 的 302 s 仍是 CI 参考;
-  含 B1–B6 的 Track B 测试,其中若干条在无尾迹网格未本地生成时跳过;
+- 回归基线：**276 passed + 17 skipped + 2 xfailed**（B7 起,2026-07-12,
+  实测 719.29 s @16 线程;较 B6 的 270+12+2 增加 `test_b7_onera_m6.py`（6 快测 +5
+  gated——gated 是 M6 三维解,每个约 20 min,故 skipped 12→17）;G8.3 的 302 s 仍是
+  CI 参考;含 B1–B7 的 Track B 测试,其中若干条在无尾迹网格未本地生成时跳过;
   重 gate 走 `PYFP3D_TRANSONIC_GATES=1`）。
   内核/装配改动后先跑 `tests/test_v0_freestream.py`。
 - P9 demo 等重活在跑时,新测试/求解一律降到 8 线程(NUMBA/OMP/OPENBLAS 同盖)。

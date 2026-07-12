@@ -31,13 +31,20 @@ pyfp3d/                    # Main package
 │   │                       #   assert_quad_split_consistency (M0 preprocessor assert)
 │   ├── planar.py         # ✓ vanilla-Gmsh 2D builders: cylinder annulus, NACA0012
 │   │                       #   with wake line embedded via gmsh.model.mesh.embed
-│   │                       #   (gmsh imported lazily; solver tests don't need it)
+│   │                       #   (gmsh imported lazily; solver tests don't need it);
+│   │                       #   ✓ [M3/Track B] embed_wake=False + a size-field-ONLY ±6° corridor
+│   │                       #   fan -> the wake-free family (nothing in the topology knows the
+│   │                       #   wake exists; default True keeps the M0 path untouched)
 │   └── wing3d.py         # ✓ [M1] ONERA M6 half wing: OCC two-section ruled loft (exact
 │                           #   straight taper, sharp foilmod TE), spherical far field
 │                           #   15 MAC, chord-plane wake sheet swept from the TE --
 │                           #   occ.fragment stitches the shared TE edge, then
 │                           #   gmsh.model.mesh.embed makes the volume conform (fragment
-│                           #   alone does NOT); axis convention chord x / lift y / span z
+│                           #   alone does NOT); axis convention chord x / lift y / span z;
+│                           #   ✓ [M4/Track B] embed_wake=False -> the sheet is built but neither
+│                           #   fragmented nor embedded (it feeds the Distance size field only),
+│                           #   so the tets never conform to it and no `wake` group exists;
+│                           #   geometry helpers B_SEMI / C_ROOT / x_te / x_le / chord_at
 ├── constraints/          # ✓ [P2] Constraint machinery
 │   ├── __init__.py
 │   ├── wake.py           # ✓ master–slave elimination (A_red = TᵀAT once; Γ RHS-only via
@@ -81,7 +88,7 @@ pyfp3d/                    # Main package
 │   ├── residual.py       # [P1] serial reference kernels (KEPT, regression-tested against)
 │   │                       #   + ✓ [P3] assemble_residual_colored; assemble_stiffness_matrix
 │   │                       #   now delegates to the fast path (P1/P2 drivers share it) → [P8] Newton
-│   └── upwind.py         # ✓ [P4] artificial density (3.1)-(3.2): MULTI-HOP upstream walk
+│   ├── upwind.py         # ✓ [P4] artificial density (3.1)-(3.2): MULTI-HOP upstream walk
 │                           #   (single-hop reaches only ~1/3 extent on prism-split meshes --
 │                           #   measured dissipation starvation), shock-point operator
 │                           #   nu = max(nu_e, nu_up), rho_tilde floor, UpwindOperator workspace;
@@ -101,6 +108,45 @@ pyfp3d/                    # Main package
 │                           #   floor-free on branches 0–2 (driver reverts on divergence) —
 │                           #   the Newton finish phase on tie-degenerate prism meshes
 │                           #   Term-2/Term-3 physics factor (forward path byte-identical)
+│   └── cut_assembly.py   # ✓ [Track B/B2–B6] level-set CUT-element assembly (parallel to
+│                           #   jacobian.py; nothing here is imported by the conforming path):
+│                           #   multivalued_redirection_coo (the doubled assembly expressed as
+│                           #   a main→aux COLUMN redirection of the single-valued matrix),
+│                           #   continuity_closure_coo (B2 "weld" — reduces the extended system
+│                           #   EXACTLY to single-valued), wake_ls_coo (B3: the g₁+g₂ two-
+│                           #   component wake BC; DIMENSION-GENERAL — the spanwise jump
+│                           #   gradient is deliberately left FREE = the trailing-vortex DOF),
+│                           #   mass_conservation_coo, te_kutta_coo/_jacobian_coo/_residual
+│                           #   (B4: the NONLINEAR TE pressure-equality Kutta, factorized
+│                           #   (q_u+q_l)·(q_u−q_l)=0 with the mean s̄ frozen per outer),
+│                           #   newton_terms23_side_coo (B6-Newton: per-side Terms 2/3)
+├── wake/                 # ✓ [Track B] level-set EMBEDDED wake (design_track_b.md) — the
+│   │                       #   parallel path to mesh/wake_cut.py + constraints/wake.py; the
+│   │                       #   conforming solver imports NOTHING from here
+│   ├── __init__.py       #   exports WakeLevelSet / CutElementMap / MultivaluedOperator
+│   ├── levelset.py       # ✓ [B1] the wake sheet as a RULED level set over a TE polyline
+│   │                       #   (D9): per-segment OBLIQUE frame (v, d̂, n̂) — ★ on a swept wing
+│   │                       #   the span axis is NOT perpendicular to the wake direction, and an
+│   │                       #   orthogonal projection wrongly clipped ~60% of the M6 cut set
+│   │                       #   (measured, fixed, regression-pinned); update_direction() re-aims
+│   │                       #   the sheet at α without remeshing (the B9 free-wake capability)
+│   ├── cut_elements.py   # ✓ [B1] CutElementMap: the cut census + aux-DOF numbering.
+│   │                       #   ε side-shift for on-sheet nodes ("+", deterministic); the
+│   │                       #   below-TE fan is SUBTRACTED from the cut set (López p.57 — the
+│   │                       #   ε shift otherwise manufactures spurious cuts there and Γ
+│   │                       #   overshoots ~45%); ★ SPANWISE CLIP 0 ≤ q ≤ span_length ⇒ Γ(tip)=0
+│   │                       #   DISCRETELY (the LS analogue of the conforming free-edge rule);
+│   │                       #   beyond_tip_elems = the wake-PLANE crossings the clip rejects
+│   └── multivalued.py    # ✓ [B2–B6] MultivaluedOperator: extended-DOF assembly on the cut
+│                           #   mesh (assemble_matrix with closure="continuity"|"wake_ls"),
+│                           #   te_jump (= Γ per TE station), side_potentials / main_potential,
+│                           #   own_side_field; ✓ [B4] the wall-adjacent TE control volumes the
+│                           #   pressure-equality Kutta recovers q_u/q_l on (★ WALL-ADJACENT,
+│                           #   not the full element fan: full-fan gives Γ +11–15%, wall-adjacent
+│                           #   <1%); ✓ [B6] element_rho_tilde = PER-SIDE artificial density with
+│                           #   a SAME-SIDE-RESTRICTED upstream walk (the wake is a slip line —
+│                           #   density information must not cross it), newton_side_data (P7
+│                           #   sensitivities through the DOF indirection)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -134,6 +180,31 @@ pyfp3d/                    # Main package
 │   │                       #   -- the 3D secant leaves the stiffest station under-circulated
 │   │                       #   and DIVERGES if pushed (INVESTIGATION_kutta_closure.md);
 │   │                       #   default 0 = P4 path bit-identical
+│   ├── picard_ls.py      # ✓ [Track B/B2–B6] the LEVEL-SET solve drivers (parallel to
+│   │                       #   picard.py + continuation.py; the conforming path never imports
+│   │                       #   them). solve_multivalued_laplace (B2) / solve_multivalued_lifting
+│   │                       #   (B3–B4: ★ IMPLICIT Kutta — NO Γ secant and no master–slave Γ; the
+│   │                       #   TE jump is carried by the aux DOFs and Γ EMERGES as a SOLUTION
+│   │                       #   MODE) / solve_multivalued_transonic (B6: Mach ramp, no Γ secant ⇒
+│   │                       #   the P5 st133-class per-station secant failure is structurally
+│   │                       #   impossible). farfield ∈ {"vortex" (default, B5's arbitrated
+│   │                       #   subsonic verdict), "neumann" (the López outlet — ★ the TRANSONIC
+│   │                       #   recipe: near the fold the live Γ→vortex loop has gain > 1; and
+│   │                       #   ★ the 3D/B7 recipe: the vortex is SPAN-UNIFORM with a y=0 branch
+│   │                       #   cut at every z, so on a wing it prescribes a jump no cut supports),
+│   │                       #   "freestream"}; damping_scope="supersonic" (★ the P4 whole-field
+│   │                       #   θ·diag does NOT transplant — a Jacobi smoother throttles the
+│   │                       #   circulation, which here is a solution mode); omega_rho (the
+│   │                       #   per-side cut-strip density limit-cycles); B_TRANSONIC_DEFAULTS
+│   ├── newton_ls.py      # ✓ [Track B/B6-Newton] solve_multivalued_newton: the LEVEL-SET Newton
+│   │                       #   (design_track_b.md §5.5). Exact Jacobian = Picard matrix +
+│   │                       #   per-side Terms 2/3 + the EXACT quadratic TE-Kutta derivative;
+│   │                       #   the wake-LS rows are LINEAR in φ (no correction); NO Γ DOF ⇒ no
+│   │                       #   Woodbury/elimination (the implicit Kutta removed the unknown).
+│   │                       #   FD-verified 1.3e-9; reaches machine-converged terminal-QUADRATIC
+│   │                       #   discrete FOLD solutions where the Picard only stalls.
+│   │                       #   ⚠ plain splu — true-3D LU fill is ~100× the 2.5D cost (P8/N6), so
+│   │                       #   M6 use needs newton.py's lagged-LU treatment first (B7 deferral)
 │   └── newton.py         # ✓ [P8/N4] fully-coupled (φ_red, Γ) Newton driver (design.md §8.1):
 │                           #   NewtonWorkspace (free/dir split, Kutta row K, affine far-field
 │                           #   basis vals0_red + V_red·Γ via unit-Γ probing), ONE shared
@@ -179,9 +250,23 @@ pyfp3d/                    # Main package
     │                       #      accurate *enough* to close G1.6); ✓ [P2] adds triangle-wise
     │                       #      wall force integration (owner-tet-oriented outward normals,
     │                       #      no nodal averaging across the sharp TE) and KJ sectional cl
-    └── section_cut.py    # ✓ [G1.3→P2] z = const section extraction: degenerate single-layer
-                            #      path + [P2] general marching-tets interpolation path and
-                            #      wall_cp_curve() sectional Cp(x/c) upper/lower split
+    ├── section_cut.py    # ✓ [G1.3→P2] z = const section extraction: degenerate single-layer
+    │                       #      path + [P2] general marching-tets interpolation path and
+    │                       #      wall_cp_curve() sectional Cp(x/c) upper/lower split;
+    │                       #      ✓ [P5] section_cp_curve() derives the LOCAL chord/x_le from
+    │                       #      the cut itself (swept, tapered planform)
+    └── surface_ls.py     # ✓ [Track B/B3–B7] wall post-processing on the LEVEL-SET path — a TE
+                            #      node carries TWO values, so wall triangles must be told WHICH
+                            #      copy to read (★ D11, by the outward normal's lift-axis sign:
+                            #      n_y > 0 = upper). Reading phi_main on both surfaces makes the
+                            #      pressure integral junk (measured cl_pressure = −3.35 vs 0.28).
+                            #      wall_cp_levelset / surface_curve_levelset / cl_pressure_levelset
+                            #      (2.5D, normalised by the span extent);
+                            #      ✓ [B7] section_cp_curve_levelset (the D11 per-side plane cut —
+                            #      ★ its UPPER surface is BIT-IDENTICAL to section_cp_curve fed
+                            #      main_potential, so every gate shock metric is unaffected; the
+                            #      LOWER surface is where D11 bites) + cl_pressure_3d_levelset
+                            #      (planform-area normalisation, pairs with cl_kj_3d for V6)
 
 cases/                     # Test cases and reference data
 ├── meshes/               # Mesh families (coarse/medium/fine)
@@ -196,12 +281,28 @@ cases/                     # Test cases and reference data
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
-│   └── onera_m6/         # ✓ [M1] ONERA M6 swept/tapered half wing + embedded wake sheet
-│                           #   (generate_onera_m6.py, one parameter h_wall, 2x ladder:
-│                           #   coarse 55.5k / medium 350.7k / fine 2513k tets; .msh files
-│                           #   gitignored (large) -- regenerate coarse+medium ~30 s; the
-│                           #   stats CSVs + inspection PNGs are the committed evidence;
-│                           #   M1 tests skip when the meshes are absent)
+│   ├── onera_m6/         # ✓ [M1] ONERA M6 swept/tapered half wing + embedded wake sheet
+│   │                       #   (generate_onera_m6.py, one parameter h_wall, 2x ladder:
+│   │                       #   coarse 55.5k / medium 350.7k / fine 2513k tets; .msh files
+│   │                       #   gitignored (large) -- regenerate coarse+medium ~30 s; the
+│   │                       #   stats CSVs + inspection PNGs are the committed evidence;
+│   │                       #   M1 tests skip when the meshes are absent)
+│   ├── naca0012_wakefree_2.5d/  # ✓ [M3] the WAKE-FREE ("O-grid analogue") NACA family — the
+│   │                       #   other half of Track B's DUAL-MESH rule: no wake surface is
+│   │                       #   embedded, nothing in the topology knows the wake exists, so the
+│   │                       #   level set makes GENERIC cuts through generic elements (the actual
+│   │                       #   workflow target). planar.py embed_wake=False + a size-field-ONLY
+│   │                       #   ±6° corridor fan covering the α-sweep envelope; coarse committed,
+│   │                       #   medium/fine gitignored (~40 s regen)
+│   └── onera_m6_wakefree/ # ✓ [M4] the wake-free ONERA M6 family (the 3D half of the dual-mesh
+│                           #   rule; wing3d.py embed_wake=False -- the chord-plane sheet feeds
+│                           #   only the Distance size field, is never fragmented/embedded, and
+│                           #   no `wake` tag exists). ★ Sized to land within 6–9% of M1's tet
+│                           #   count at equal h_wall — that equal-sizing property is what makes
+│                           #   the B7 A/B against P5/P8 a CONTROLLED comparison. No α-wedge
+│                           #   corridor in 3D (the wedge volume scales with span: a ±3° envelope
+│                           #   would ~4× the tets), so 3D α re-aiming stays in the near-nominal
+│                           #   band; .msh gitignored, stats CSVs committed
 ├── reference_data/       # Ground truth (DO NOT EDIT)
 │   ├── naca0012_incompressible/  # ✓ [P2] Hess–Smith panel reference (generator script +
 │   │                             #   cl_reference.csv / cp_alpha4.csv / convergence.csv +
@@ -598,17 +699,62 @@ under refinement for solved fields.
 - **M0 closed** with it: wake-cut topology asserts sweep every wake-tagged mesh in
   cases/meshes/ (hard rule 7 test) and the G2.5 acceptance link is green.
 
+### ✓ Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ in progress)
+
+A **parallel** wake representation: instead of duplicating nodes so the mesh conforms to the
+wake sheet (`mesh/wake_cut.py` + `constraints/wake.py`), the sheet is a **level set** and the
+elements it cuts carry two DOF copies. Purpose (user-arbitrated) is **mesh/geometry workflow
+capability**, not solver speed: the mesh need not know the wake exists, so α can be re-aimed
+without remeshing. The conforming path stays **byte-untouched** — nothing in `wake/`,
+`kernels/cut_assembly.py`, `solve/*_ls.py` or `post/surface_ls.py` is imported by it.
+
+The two structural payoffs, both delivered:
+- **The Kutta condition is IMPLICIT** — no Γ secant, no master–slave Γ. Γ is a *solution mode*
+  read off the converged TE jump. ★ Consequence measured in B6/B7: since there is no
+  early-stoppable Γ outer loop, the level-set **Picard** tracks the conforming **Newton** truth
+  to within a few % (M6 coarse: +0.7% on the wake-free mesh), while the conforming *Picard*
+  under-circulates ~8% below it.
+- **Γ(tip) = 0 falls out discretely** from the level set's spanwise clip, with no free-edge
+  bookkeeping (B7: tip Γ ~3e-4 on ONERA M6).
+
+Two findings worth knowing before touching this code (both cost real time to discover):
+1. **The wake level set CANNOT pin Γ** (B4): its residual is identically zero for any spatially
+   constant jump, because Σ_c ∇N_c = ∇(1) = 0 (partition of unity; measured 1.9e-16). Γ needs
+   its own condition — the **nonlinear TE pressure-equality Kutta**, recovered on **wall-adjacent**
+   control volumes (the full element fan gives Γ +11–15%).
+2. **The conforming transonic recipe does not transplant** (B6): the P4 whole-field θ·diag
+   damping is a Jacobi smoother, so it throttles the (now smooth, global) circulation mode ⇒
+   damping must be localized to the supersonic rows; and near the fold the live Γ→far-field-vortex
+   loop has **gain > 1** ⇒ the transonic/3D recipe is `farfield="neumann"` (the López outlet).
+
+Authoritative: [docs/design_track_b.md](docs/design_track_b.md) (numerics; §11 = the B7 3D gate)
+and [docs/roadmap.md](docs/roadmap.md) Track B (gates + ledger). Evidence: demos
+`cases/demo/b3_levelset_lifting/`, `b4p5_farfield/`, `b6_transonic/`, `b7_onera_m6/`; tests
+`test_b1_cut_elements` / `test_b2_multivalued` / `test_b3_lifting` / `test_b4_te_control_volume` /
+`test_b45_farfield` / `test_b6_transonic` / `test_b6_newton` / `test_b7_onera_m6`.
+(Note the `b4p5_farfield` / `test_b45_farfield` names predate the 2026-07-12 Track-B renumber and
+are kept on purpose so the committed paths stay stable — that gate is now **B5**.)
+
 ### ⏳ Next
-- **P3 (subsonic compressible)** — Picard density outer loop + PG-scaled vortex far field;
-  retire the P1 assembly tech debt first (precompute B_e/V_e, colored `prange` assembly per
-  design.md §7; the outer loop makes assembly hot).
+
+> **This "Implementation Status" section is a P0–P2-era historical record and is NOT the
+> tracker.** "What phase are we in / what gate is open" lives ONLY in
+> [docs/roadmap.md](docs/roadmap.md) (progress ledger) and [docs/agent-rules.md](docs/agent-rules.md)
+> ("Current phase"); the per-phase evidence lives in [docs/demo_report.md](docs/demo_report.md).
+> P3–P10 and Track B/M all closed gates *after* the text above was written — read the roadmap,
+> not this list.
+
+- **Track B → B8** (multi-wake: multi-element / wing–body) is the current open Track B gate;
+  **B6** (transonic level-set) stays ◐ open on its medium quantitative closure.
+- **G1.6 re-spec per Option C** — still the open P1 item: draft the geometry-consistent-reference
+  acceptance criterion (design.md §5.1 Option C), comparing against a high-accuracy reference on
+  the *same polyhedral domain* (BEM or ultra-fine), separating geometric model error from code
+  error. See "Known gaps": h-refinement, recovery tweaks, Nitsche and boundary-data corrections
+  are all **ruled out with evidence** — do not re-propose them.
 - ~~G1.3/G1.4 oracle experiments~~ — DONE 2026-07-06 with negative results (see the G1.3+G1.4
   section above); DP1 decided the "> 5%" branch.
-- **G1.6 re-spec per Option C** — draft the geometry-consistent-reference acceptance criterion
-  (design.md §5.1 Option C): compare against a high-accuracy reference on the *same polyhedral
-  domain* (BEM or ultra-fine reference), separating geometric model error from code error. This
-  is now the open P1 item; the curved/isoparametric-element effort for physical accuracy is
-  separately scoped (backlog).
+- ~~P3 (subsonic compressible)~~ — long since closed (P3–P9 closed; P10 partial). Ignore the
+  stale entry that used to sit here.
 
 ## Quick Start
 

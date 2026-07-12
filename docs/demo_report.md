@@ -1378,7 +1378,7 @@ isoparametric *wall* elements cannot remove the edge of a wake sheet.
   up in 13 levels, **5294 s (88 min)**, inside the 2 h budget. Path changes
   are safe by G8.2's continuation-path independence.
 
-## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓, closed 2026-07-11/12)
+## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐)
 
 **What the track replaces.** The conforming path represents the wake as a *mesh
 surface*: the sheet is embedded in the geometry, its nodes are duplicated by the
@@ -1769,6 +1769,109 @@ the gate did not need its own M6 run to be conclusive.
 B-path *solve* on M6 needs the 3D wake-BC machinery that is B7's deliverable — and,
 separately measured here, the span-uniform option-a vortex **without** the P5 Γ(z)
 taper recreates the **branch-ray artifact** on M6, itself B7 machinery.
+
+---
+
+## B7 — ONERA M6 3D gate (closed 2026-07-12; `cases/demo/b7_onera_m6/`, 35/35 PASS)
+
+**Why the phase exists.** B1–B6 all ran on quasi-2D meshes, where the wake sheet is a
+flat strip: no sweep, no tip, no spanwise direction. Three pieces of the level-set path
+were therefore *structurally* untested — the **TE-polyline ruled level set** (D9; its
+per-segment (v, d̂, n̂) frame is oblique, and B1 already found a real defect there), the
+**spanwise clip** `0 ≤ q ≤ span_length` (what makes Γ(tip)=0 *discretely* — the LS
+analogue of the conforming free-edge rule), and the **g₂ spanwise-free jump gradient**
+(the trailing-vortex DOF). B7 runs the full transonic B-path solve on ONERA M6 and A/Bs
+it against the committed P5/P8 conforming baseline.
+
+**Setup.** M∞ 0.84 / α 3.06°, coarse, `farfield="neumann"`, Mach ramp 0.60→0.84 @
+dm 0.04, dual-mesh (M1 wake-embedded + M4 wake-free — M4 is within 6–9% of M1's tet
+count at equal h_wall, which is what makes the comparison controlled).
+
+| | **M1** embedded | **M4** wake-free | P5 conforming **Picard** | P8 conforming **Newton** |
+|---|---|---|---|---|
+| cl_KJ | **0.2765** (+2.7% of Newton) | **0.2710** (**+0.7%**) | 0.24788 (**−8.6%**) | **0.2692** (truth) |
+| cl_p (3D) | 0.2716 | 0.2656 | 0.24194 | 0.2560 |
+| V6 consistency | 1.77% | 1.97% | 2.40% | — |
+| shocks η .44/.65/.90 | 0.635/0.588/0.449 | 0.634/0.584/0.454 | 0.596/0.570/0.425 | 0.596/0.541/0.362 |
+| Γ root → tip | 0.1076 → **−0.0003** | 0.1055 → **+0.0003** | 0.097 → 0.0206 | — |
+| M_max, limited/floored | 1.453, **0/0** | 1.368, **0/0** | 1.398, 0/0 | 2.13 |
+| solve wall time | 22.7 min | 18.4 min | — | — |
+
+**★ Finding 1 — the B6 lift inversion reproduces in 3D, first try.** Against the
+conforming **Newton** truth (the B6 user-arbitrated baseline), the level-set Picard sits
+**+2.7% (M1) / +0.7% (M4)**, while the conforming **Picard** (P5) sits **−8.6%** below
+it. Same mechanism as B6's 2D finding: the LS path has **no early-stoppable Γ outer**
+(the implicit Kutta makes Γ a *solution mode*, converged with the field), whereas the
+conforming Picard's frozen-Γ inner solves plus budgeted per-station secant
+under-circulate (the P4-erratum bias; P8 measured it independently at +7.9% for M6
+medium). Gating B7's lift on P5 would have **penalised the B path for being closer to
+the truth** — hence the Newton anchor. Note the **wake-free workflow mesh (M4) is the
+more accurate of the two**, which is the outcome Track B exists to deliver.
+
+**★ Finding 2 — the 3D far field, and why the P5 Γ(z) taper is *structurally
+unnecessary* here** (`farfield_decision.png`). The B-path vortex
+(`picard_ls._farfield_main`) is a **span-uniform** 2D point vortex whose branch cut is
+the ray y=0, x>0 *at every z*. On a 3D wing it misfires two independent ways — both
+measured, both appearing as a spurious near-sonic spot at the **outlet, where the sheet
+leaves the domain** (max local Mach there, M∞ 0.5):
+
+| far field | outlet M_max | mechanism |
+|---|---|---|
+| `neumann` (no vortex) | **0.513** | — |
+| vortex, sheet re-aimed to y=0 (coplanar) | 0.825 | (b) only |
+| vortex, sheet α-aimed (the default) | **0.958** | (a) + (b) |
+
+- **(a) non-coplanarity** — the α-aimed sheet has climbed to y ≈ x·tan α ≈ 0.5 by the
+  outlet (x≈10c), far off the vortex's y=0 cut, so the outlet carries a prescribed Γ
+  jump **no cut supports**. This is B3's recorded coplanarity rule, in 3D.
+- **(b) span-uniformity** — re-aiming coplanar *shrinks but does not remove* it: one
+  scalar Γ cannot match Γ(z)→0, and outboard of the tip there is **no cut at all**.
+  This is precisely P5's branch-ray artifact, whose conforming fix was the Γ(z) taper.
+
+⇒ **neumann carries no vortex, so neither defect can exist**: the taper is *unnecessary*
+on the B path, not merely unimplemented. Price: B5's O(Γ/R) outlet truncation (a few % of
+lift on a compact domain) — which is why the gate uses A/B bands, not <1% bands.
+
+**★ Finding 3 — Γ(z) comes out spanwise-smooth, with no smoothing applied** (unplanned — it
+became visible the moment the *real* P5 curve was overlaid in `gamma_of_z.png`). Normalised RMS
+second difference of Γ(z): **0.0079 (M1) / 0.0091 (M4) vs 0.0970 for the conforming P5 — an
+11–12× reduction.** The conforming path solves a **separate secant per TE station**, so its Γ(z)
+carries station-to-station jitter — the very defect P5's `INVESTIGATION_gamma_smoothing.md`
+chased (concluding that spanwise-Γ *smoothing* moves Γ **away** from the self-consistent value),
+and the same machinery whose single-station failure (st133, 32% under-circulated) cost P5 an
+entire investigation. The implicit Kutta has **no per-station loop to be noisy in**: Γ is one
+solution mode of the coupled system. Track B therefore does not *fix* the P5 spanwise-Γ problem
+— it makes it **structurally impossible**.
+
+**★ Finding 4 — the 3D-only machinery needed no new solver code.** B1's oblique-frame and
+spanwise-clip fixes held: Γ(z) decays monotonically root→tip and reaches **~3e-4 at the
+tip** on both families (`gamma_of_z.png`). The only code gap was post-processing (the TE
+node is multivalued, and `section_cp_curve` takes a single nodal field):
+`post/surface_ls.py` gained `section_cp_curve_levelset` (D11 per-side plane cut — the
+**upper surface is bit-identical** to the `main`-based curve, so every gate shock metric
+is unaffected; the lower surface is where D11 bites, and reading `main` there is the junk
+that gave B3's cl_pressure = −3.35) and `cl_pressure_3d_levelset` (planform-area
+normalisation, pairing with `cl_kj_3d` for V6). Cost came in far under the plan's risk
+estimate: the per-outer `spsolve` on ~12k 3D DOFs is ~0.6 s, so a 7-level continuation is
+**~20 min, not hours**.
+
+**Honest caveats (recorded, not chased).** (1) **Convergence semantics = the recorded
+transonic Picard tail, not `tol_residual`**: the top Mach levels exhaust the 600-outer
+budget at |R| ~4–6e-6 (M1 levels 0.72–0.84; M4 0.68/0.76/0.84). The field is **bounded and
+physical at every level** (0 limited / 0 floored throughout) and every gate metric is in
+band, so the gate asserts *bounded + in-band*, not `converged` — the same P4/B6
+engineering-converged regime. (2) **LS Newton on M6 deferred**: `newton_ls.py` uses a
+plain `splu`, and P8/N6 measured true-3D LU fill at ~100× the 2.5D cost (it needed
+lagged-LU); porting `direct_refactor_every` is the follow-up. (3) Shocks sit 0.02–0.04 c
+aft of P5 (in band, and self-consistent with the higher circulation); against the P8
+*Newton* shocks the η=0.90 station is 0.087 aft — a like-for-like shock A/B needs the
+deferred LS Newton. (4) Coarse only.
+
+**Figures:** `gamma_of_z.png` (Γ(z) both families vs the committed P5 curve; tip→0),
+`section_cp.png` (upper/lower Cp at η = 0.44/0.65/0.90), `shock_planform.png` (swept
+shock line, forward migration toward the tip), `farfield_decision.png` (the table above).
+`p5_gamma_baseline.csv` is committed alongside so the A/B curve reproduces without the
+gitignored P5 solution cache. Tests: `tests/test_b7_onera_m6.py` (6 fast + 5 gated).
 
 ---
 
