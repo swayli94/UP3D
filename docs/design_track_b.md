@@ -811,3 +811,42 @@ P4 勘误在弱激波区的定量再现——"冻结 Γ 的密度内环 + 外层
 而诚实的非线性残差（上一迭代对新装配算子的 ||b−Ax||∞）早已到 1e-8。
 `solve_multivalued_lifting` 增加 `tol_residual` 收敛通道（默认 None =
 B3 判据，逐位不变；`solve_multivalued_transonic` 默认 1e-7）。
+
+### 10.6 ★ B6-Newton：LS Newton 交付并 FD 验证；折叠区可达真解（工作流网格），两个诚实缺口
+
+按 §5.5 交付 `solve/newton_ls.py::solve_multivalued_newton`：残差 = 多值不动点
+残差 R = A(φ)φ − b（TE Kutta 行的因式分解使 row·φ 恰等于 |q_u|²−|q_l|²，全行精确）；
+Jacobian = Picard 矩阵 + 质量行的 Term 2/3（逐侧、P7 冻结选择灵敏度，经 DOF 间接层）
++ TE Kutta 行的**精确二次导数**（替换冻结均值行——冻结行作为值精确、作为斜率不精确）；
+尾迹 LS 行线性（常数块，无需修正）。**关键实现点**：Term 2/3 的行必须走
+`assemble_matrix` 对质量行的同一映射（非 TE aux 行**丢弃**=被线性尾迹 LS 取代、
+TE aux 行**改道**到 TE 主行），否则把被丢弃的质量 Jacobian 漏到线性尾迹行上
+——FD 在 1e-4 处抓到，加映射后降到 **1.3e-9**（313 超声速单元激活，Term 2/3 受检）。
+
+**结果（neumann 远场，vs 同网格 conforming Newton 真解）：**
+
+| 工况 | conv | |R| | Γ | 距 conf-Newton | 激波 | l/f |
+| --- | --- | --- | --- | --- | --- | --- |
+| coarse M0.80 M0 嵌入 | ✓ | 9.4e-13 | 0.2124 | −7.4% | 0.645 | 0/0 |
+| coarse M0.80 M3 无尾迹 | ✓ | 3.2e-11 | 0.2322 | +1.2% | 0.679 | 0/0 |
+| **medium M0.7875 M3 无尾迹** | **✓** | **1.5e-12** | **0.2292** | **−13.3%** | 0.653 | 0/0 |
+| medium M0.7875 M0 嵌入 | ✗ | 3e-6（极限环） | 0.2196 | −16.9% | 0.633 | 0/0 |
+
+**★ 核心成果**：LS Newton 在折叠区拿到**机器精度、二次收敛的真离散解**（0 lim/flr），
+而 B6 Picard 在同一工况只到有界 stall——"是不是解"的问题被关闭。**medium M0.7875
+折叠在工作流网格 M3 上已达真解**（终段 9.9e-8→1.2e-10→1.5e-12）。
+
+**两个诚实缺口：**
+1. **M0 嵌入 medium 活选择 Newton 极限环于 |R|~3e-6**（有界物理但非机器收敛）——
+   正是 P8/N5 记录的近平局带 churn 的 LS 形态（2.5D prism-split 家族约 1e3 单元停在
+   max(ν_e,ν_u) 平局带；活 Newton 极限环、冻结选择→二次）。修复=接入 N5 的
+   **冻结选择/refresh** 机械（§5.5 说明其与尾迹表示正交、可平移；`freeze` 接口已预留
+   未接线）。
+2. **收敛的 LS 折叠解系统性低于 conforming Newton**（M3 medium −13%）——真离散差异
+   （非收敛伪迹，双方都机器收敛）。待厘清的份额：B5 的 neumann 出口 O(Γ/R) 截断
+   （−4%）、切层 O(h) 一致性误差（§2.5）、人工密度 C 的网格依赖；候选实验 = vortex
+   远场 LS Newton（去掉 neumann 截断）+ C 扫掠。
+
+⇒ B6 现状（含 Newton）：**coarse gate 达成；LS Newton 交付+FD 验证+折叠区工作流网格
+达真解；medium 定量收尾余两项（M0 冻结选择、−13% 离散差异厘清）**。
+测试 `tests/test_b6_newton.py`（FD + coarse M0.70 二次收敛，+1 gated M0.80）。

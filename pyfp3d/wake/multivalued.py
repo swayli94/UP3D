@@ -76,6 +76,7 @@ class MultivaluedOperator:
         # B6 per-side artificial density (lazy: subsonic paths never build it)
         self._side_sets = None
         self._side_upw = None
+        self._side_dof = None
         self.nu_max = 0.0
         self.n_nu_active = 0
         self.n_floored = 0
@@ -407,6 +408,83 @@ class MultivaluedOperator:
             floored += int(np.count_nonzero((rt == rho_floor) & keep))
             out.append(rt)
 
+        nu_own = np.concatenate(nus) if len(nus) else np.zeros(0)
+        self.nu_max = float(nu_own.max()) if nu_own.size else 0.0
+        self.n_nu_active = int(np.count_nonzero(nu_own > 0.0))
+        self.n_floored = floored
+        self.n_limited = limited
+        self._nu_active = active
+        return out[0], out[1]
+
+    def _side_dofvecs(self):
+        """(dof_upper, dof_lower): each (n_tets, 4) int, the extended-DOF
+        vector of every element's UPPER / LOWER copy -- EXACTLY the DOF vectors
+        `mass_conservation_coo` scatters with. Garbage rows where the element
+        is not in that side's set (guard with `_side_element_sets`). The
+        per-side Newton Terms 2/3 (LS Newton) scatter onto these."""
+        if self._side_dof is None:
+            cm = self.cm
+            el = np.asarray(self.op.elements, dtype=np.int64)
+            is_te = np.zeros(cm.n_main, dtype=bool)
+            is_te[cm.te_nodes] = True
+            n_tets = len(el)
+            cut_index = np.full(n_tets, -1, dtype=np.int64)
+            cut_index[cm.cut_elems] = np.arange(len(cm.cut_elems))
+            # upper copy: cut elements use dofs_upper; everyone else uses main.
+            du = el.copy()
+            du[cm.cut_elems] = cm.dofs_upper
+            # lower copy: cut elements use dofs_lower; te_lower uses the TE
+            # node's aux dof (Lopez fig. 3.6c); everyone else uses main.
+            dl = el.copy()
+            dl[cm.cut_elems] = cm.dofs_lower
+            tel = np.asarray(cm.te_lower_elems, dtype=np.int64)
+            if len(tel):
+                dl[tel] = np.where(is_te[el[tel]],
+                                   cm.ext_dof_of_node[el[tel]], el[tel])
+            self._side_dof = (du, dl)
+        return self._side_dof
+
+    def newton_side_data(self, phi_ext, m_inf, upwind_c, m_crit,
+                         gamma_air=1.4, u_inf=1.0, m_cap=3.0, rho_floor=0.05):
+        """Per-side state the LS Newton Jacobian needs (B6-Newton). Mirrors
+        `element_rho_tilde` but ALSO returns, per side, the frozen-selection
+        sensitivities (s_e, s_u, upstream; P7, on the same-side-masked walk
+        graph), the element gradient of that side's field, the speed-limiter
+        mask, the side element mask and the side DOF vectors.
+
+        Returns two dicts (upper, lower), each with keys:
+          rho_tilde, s_e, s_u, upstream, grad, lim_mask, keep, dofvec.
+        Also refreshes the nu/floor/limit monitors (own-side) as
+        element_rho_tilde does.
+        """
+        from pyfp3d.physics.isentropic import density_field, limit_q2_field
+
+        in_upper, in_lower = self._side_element_sets()
+        du, dl = self._side_dofvecs()
+        upw_u, upw_l = self._side_upwind()
+        phi_up, phi_lo = self.side_potentials(phi_ext)
+
+        out = []
+        nus, floored, limited = [], 0, 0
+        active = np.zeros(self.op.n_tets, dtype=bool)
+        for phi_s, upw, keep, dofvec in ((phi_up, upw_u, in_upper, du),
+                                         (phi_lo, upw_l, in_lower, dl)):
+            grad, q2 = self.op.velocities(phi_s)
+            q2n = q2 / u_inf**2
+            q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
+            lim_mask = (q2l == q2n)          # limiter INACTIVE (P8 convention)
+            limited += int(np.count_nonzero((~lim_mask) & keep))
+            rho = density_field(q2l, m_inf, gamma_air)
+            rt = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
+                               gamma_air, rho_floor).copy()
+            nus.append(upw.nu[keep])
+            active |= (upw.nu > 0.0) & keep
+            floored += int(np.count_nonzero((rt == rho_floor) & keep))
+            s_e, s_u, upstream = upw.rho_tilde_sensitivities(
+                grad, q2l, rho, m_inf, upwind_c, m_crit, gamma_air, rho_floor)
+            out.append({"rho_tilde": rt, "s_e": s_e.copy(), "s_u": s_u.copy(),
+                        "upstream": upstream.copy(), "grad": grad.copy(),
+                        "lim_mask": lim_mask, "keep": keep, "dofvec": dofvec})
         nu_own = np.concatenate(nus) if len(nus) else np.zeros(0)
         self.nu_max = float(nu_own.max()) if nu_own.size else 0.0
         self.n_nu_active = int(np.count_nonzero(nu_own > 0.0))

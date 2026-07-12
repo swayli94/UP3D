@@ -336,6 +336,120 @@ def te_kutta_coo(mvop, phi_ext):
             np.concatenate(data))
 
 
+def newton_terms23_side_coo(op, side, u_inf=1.0):
+    """LS-Newton density-sensitivity blocks (Terms 2 + 3, design.md (6.3) /
+    Lopez B.4) for ONE side of the multivalued assembly, as COO triplets on
+    the EXTENDED DOFs (B6-Newton; design_track_b.md section 5.5).
+
+    Term 2 (local): dR_a/dphi_b += 2 inv_u2 s_e V_e (gradphi_e.B_a)(gradphi_e.B_b)
+        rows/cols = the element's own side DOF vector.
+    Term 3 (upstream): dR_a/dphi_k += 2 inv_u2 s_u V_e (gradphi_e.B_a)
+        (gradphi_u.B_u,k), rows = dofvec[e], cols = dofvec[u(e)] (SAME side --
+        the walk graph is side-restricted, so u(e) is in this side's set).
+
+    `side` is a `MultivaluedOperator.newton_side_data` dict (s_e/s_u/upstream/
+    grad/lim_mask/keep/dofvec). Sensitivities are masked by lim_mask exactly as
+    P8 (flat clamp -> zero derivative on limited elements). Only elements in
+    this side's set (keep) with a nonzero sensitivity emit.
+
+    This is the per-side, DOF-indirected analogue of
+    PicardOperator.assemble_newton_jacobian's Term 2/3 -- vectorized over the
+    active elements (cut + supersonic, O(1e2-1e3)), not a hot kernel.
+    """
+    B, V = op.B, op.V
+    keep = side["keep"]
+    dof = side["dofvec"]
+    grad = side["grad"]
+    lim = side["lim_mask"]
+    inv_u2 = 1.0 / (u_inf * u_inf)
+    # gradphi_e . B_{e,a}  ->  (n_tets, 4)
+    gB = np.einsum("ed,ead->ea", grad, B)
+
+    s_e = side["s_e"] * lim                      # limiter flat clamp -> 0
+    up = side["upstream"]
+    s_u = side["s_u"] * lim[up]
+
+    rows_l, cols_l, data_l = [], [], []
+
+    # -- Term 2 -------------------------------------------------------------
+    e2 = np.flatnonzero(keep & (s_e != 0.0))
+    if len(e2):
+        w2 = (2.0 * inv_u2) * s_e[e2] * V[e2]           # (m,)
+        blk = w2[:, None, None] * (gB[e2][:, :, None] * gB[e2][:, None, :])
+        d = dof[e2]                                      # (m,4)
+        rows_l.append(np.repeat(d, 4, axis=1).reshape(-1))
+        cols_l.append(np.tile(d, (1, 4)).reshape(-1))
+        data_l.append(blk.reshape(-1))
+
+    # -- Term 3 -------------------------------------------------------------
+    e3 = np.flatnonzero(keep & (s_u != 0.0))
+    if len(e3):
+        u3 = up[e3]
+        w3 = (2.0 * inv_u2) * s_u[e3] * V[e3]            # (m,)
+        # (gradphi_e.B_e,a) outer (gradphi_u.B_u,k)
+        blk = w3[:, None, None] * (gB[e3][:, :, None] * gB[u3][:, None, :])
+        de = dof[e3]                                     # rows: nodes of e
+        du = dof[u3]                                     # cols: nodes of u(e)
+        rows_l.append(np.repeat(de, 4, axis=1).reshape(-1))
+        cols_l.append(np.tile(du, (1, 4)).reshape(-1))
+        data_l.append(blk.reshape(-1))
+
+    if not rows_l:
+        e = np.empty(0, dtype=np.int64)
+        return e, e, np.empty(0, dtype=np.float64)
+    return (np.concatenate(rows_l).astype(np.int64),
+            np.concatenate(cols_l).astype(np.int64),
+            np.concatenate(data_l))
+
+
+def te_kutta_jacobian_coo(mvop, phi_ext):
+    """EXACT Jacobian of the nonlinear TE pressure-equality Kutta residual
+    R = |q_u|^2 - |q_l|^2 (B6-Newton), replacing the frozen-mean linearized
+    row of `te_kutta_coo` on the TE aux rows.
+
+    dR/dphi = 2 q_u . dq_u/dphi - 2 q_l . dq_l/dphi, i.e. the same control-
+    volume structure as te_kutta_coo but with the UPPER part contracted
+    against s = 2 q_u and the LOWER part against s = 2 q_l (each side its own
+    velocity), instead of both against the frozen mean q_u + q_l. Quadratic in
+    phi, so this exact derivative is what gives Newton its quadratic rate; the
+    frozen-mean row is exact only as a value (row . x = R), not as a slope.
+
+    Returns (rows, cols, data) on the TE aux rows (RHS handled by the driver:
+    the Newton residual on these rows is R itself, computed separately).
+    """
+    cm = mvop.cm
+    op = mvop.op
+    qu, ql = mvop.te_velocities(phi_ext)
+
+    rows, cols, data = [], [], []
+    for i, t in enumerate(cm.te_nodes):
+        cv = mvop._te_cv[i]
+        row = cm.ext_dof_of_node[t]
+        for key, q in (("upper", 2.0 * qu[i]), ("lower", -2.0 * ql[i])):
+            e = cv[f"{key}_elems"]
+            d = cv[f"{key}_dofs"]
+            if len(e) == 0:
+                continue
+            w = op.V[e] / op.V[e].sum()
+            coef = w[:, None] * np.einsum("ead,d->ea", op.B[e], q)
+            rows.append(np.full(d.size, row, dtype=np.int64))
+            cols.append(d.reshape(-1))
+            data.append(coef.reshape(-1))
+
+    if not rows:
+        e = np.empty(0, dtype=np.int64)
+        return e, e, np.empty(0, dtype=np.float64)
+    return (np.concatenate(rows), np.concatenate(cols),
+            np.concatenate(data))
+
+
+def te_kutta_residual(mvop, phi_ext):
+    """R = |q_u|^2 - |q_l|^2 per TE node (the nonlinear pressure-equality
+    Kutta residual; B6-Newton). Ordered like cm.te_nodes / the TE aux rows."""
+    qu, ql = mvop.te_velocities(phi_ext)
+    return np.einsum("ij,ij->i", qu, qu) - np.einsum("ij,ij->i", ql, ql)
+
+
 def continuity_closure_coo(cm):
     """Aux-row COO triplets for the B2 continuity ("weld") closure:
     aux_k - main_j = 0 for every aux DOF k belonging to cut node j. This
