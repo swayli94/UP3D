@@ -1,8 +1,11 @@
 gate,check,value,criterion,status,note
-TIP,conf-M1: wing-control peak converges (real flow bounded),x1.15,0.9 < ratio < 1.3,PASS,
-TIP,conf-M1: tip-edge PEAK Mach diverges under refinement,max x1.38 (p95 x0.98),max ratio > 1.25,PASS,p95/mean flat => a localized edge singularity; not a broad region
-TIP,ls-M1: wing-control peak converges (real flow bounded),x1.14,0.9 < ratio < 1.3,PASS,
-TIP,ls-M1: tip-edge PEAK Mach diverges under refinement,max x2.28 (p95 x0.98),max ratio > 1.25,PASS,p95/mean flat => a localized edge singularity; not a broad region
-TIP,ls-M4: wing-control peak converges (real flow bounded),x1.12,0.9 < ratio < 1.3,PASS,
-TIP,ls-M4: tip-edge PEAK Mach diverges under refinement,max x1.74 (p95 x0.93),max ratio > 1.25,PASS,p95/mean flat => a localized edge singularity; not a broad region
-TIP,same-mesh A/B: level-set does NOT blunt the edge singularity,LS x2.28 vs conforming x1.38,LS growth >= conforming,PASS,=> WAKE-MODEL defect; the representation change does not remove it (LS peak sits in the straddler cells beyond the tip)
+G13.1,conf-M1: tip-box p95 stays flat (localized edge; not broad),p95 x0.98 (wing bulk x1.15),0.85 < p95 ratio < 1.15,PASS,the bulk of the tip box AND the wing interior converge; only the few cells at the very edge grow
+G13.1,conf-M1: tip-edge PEAK Mach diverges under refinement,max x1.38,max ratio > 1.25,PASS,
+G13.1,ls-M1: tip-box p95 stays flat (localized edge; not broad),p95 x0.98 (wing bulk x1.14),0.85 < p95 ratio < 1.15,PASS,the bulk of the tip box AND the wing interior converge; only the few cells at the very edge grow
+G13.1,ls-M1: tip-edge PEAK Mach diverges under refinement,max x2.28,max ratio > 1.25,PASS,
+G13.1,ls-M4: tip-box p95 stays flat (localized edge; not broad),p95 x0.93 (wing bulk x1.12),0.85 < p95 ratio < 1.15,PASS,the bulk of the tip box AND the wing interior converge; only the few cells at the very edge grow
+G13.1,ls-M4: tip-edge PEAK Mach diverges under refinement,max x1.74,max ratio > 1.25,PASS,
+G13.1,conf fine: limiter tripped => NOT a discrete solution (M0.5 analogue of G9.1),converged=False,converged is False (singularity trips the limiter subsonically),PASS,floored/limited cells appear even at M0.5; so the fine mesh limit-cycles -- exactly what G9.1 found transonically
+G13.1,same-mesh A/B: level-set does NOT blunt the edge singularity,LS x2.28 vs conforming x1.38,LS growth >= conforming,PASS,=> WAKE-MODEL defect; the representation change does not remove it (LS peak sits in the straddler cells beyond the tip)
+G13.1,conforming refinement exponent p (3-pt log-log),p = 0.592,0.4 < p < 0.65  (1/sqrt(r); flat-plate edge),PASS,peak Mach ~ h^-p; 1/r (concentrated line vortex) would give p=1 -- the earlier 'induces a 1/r-type velocity' was wrong
+G13.1,edge growth RATE: level-set >= conforming (same meshes),p_LS = 1.341 vs p_conf = 0.521,p_LS >= p_conf,PASS,both diverge; the representation change does not slow the edge singularity => model; not representation

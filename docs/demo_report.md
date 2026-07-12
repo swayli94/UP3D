@@ -1329,9 +1329,14 @@ capped cells sit at:
 
 that is, at the **free tip edge of the rigid planar wake sheet**, exactly
 where `Γ(tip) = 0` is enforced (M1: tip free edges stay single-valued).
-This is the classical **vortex-sheet-edge singularity**: a planar sheet
-that simply *ends* induces a 1/r-type velocity at its edge, whereas the
-real flow rolls the sheet up into a tip vortex. P5's "bounded tip-TE-corner
+This is the classical **vortex-sheet-edge singularity**: a flat sheet of
+trailing vorticity (strength −dΓ/ds, largest at the tip where the wing
+unloads fastest — **not** the bound Γ, which correctly → 0 there) that
+simply *ends* induces a **1/√r flat-plate-edge** velocity at its free edge
+(**corrected from the earlier "1/r-type"** — P13/G13.1 measured the
+conforming refinement exponent p ≈ 0.59, i.e. 1/√r; a 1/r line vortex would
+give p = 1), whereas the real flow rolls the sheet up into a tip vortex.
+P5's "bounded tip-TE-corner
 P1 overshoot" (M_max 1.995 on medium, recorded then as *the only surviving
 singularity trace*) is the **same object**, seen at a resolution too coarse
 to reveal that it is unbounded: refinement makes it **worse** (1.40 → 2.13
@@ -1889,7 +1894,33 @@ gitignored P5 solution cache. Tests: `tests/test_b7_onera_m6.py` (6 fast + 5 gat
 
 ---
 
-## Tip-edge singularity: wake MODEL vs REPRESENTATION (`cases/demo/tip_edge_singularity/`, 7/7, 2026-07-12)
+## P13/G13.1 — Tip / wake-edge singularity: characterization (`cases/demo/tip_edge_singularity/`, 10/10, 2026-07-13)
+
+*(This is the evidence for P13/G13.1 — roadmap.md Track P P13, design.md §4.1.
+It began 2026-07-12 as the "wake MODEL vs REPRESENTATION" probe below; the
+2026-07-13 update added the conforming **fine** third point, the refinement-rate
+fit, and the dΓ/dz mechanism, closing G13.1.)*
+
+**★ Rate + mechanism (P13/G13.1, 2026-07-13).** With the conforming **fine** M6
+mesh added as a third point (coarse/medium/fine = 55.5k / 350.7k / 2.51M tets),
+the tip-box peak Mach goes **0.712 → 0.981 → 1.510**, a log-log exponent
+**p = 0.59** (peak ~ h^−p) — squarely in the flat-plate-edge band [0.4, 0.65],
+i.e. **1/√r, not 1/r** (a 1/r concentrated line vortex would give p = 1). The
+**driver is the trailing vorticity dΓ/dz**, not the bound circulation Γ: Γ → 0
+at the tip (a necessary-not-sufficient regularity condition), but the *unloading
+rate* |dΓ/dz| is largest at the tip (~10× mid-span on B7's smooth Γ(z)), and a
+terminating flat vortex sheet cannot regularize its own free edge — exactly a
+flat-plate leading/trailing edge at incidence. Within the same tip box the
+**p95/mean stay flat** (0.573 → 0.562 → 0.525 / ~0.49) while the peak diverges —
+the localized-edge signature. **★ And the conforming fine M∞0.5 solve does NOT
+converge** (limited/floored cells, ~1.4k NaN): the tip singularity trips the
+speed limiter / density floor **even subsonically**, so the fine mesh is not a
+discrete solution — the exact M∞0.5 analogue of what G9.1 found transonically.
+This **corrects the committed "1/r-type" phrasing** (this file above and
+roadmap.md) to 1/√r and supplies the dΓ/dz mechanism. Figure `tip_edge_growth.png`
+now overlays the measured p, the 1/√r (p=0.5) and 1/r (p=1) guide slopes.
+
+**Original probe (2026-07-12): wake MODEL vs REPRESENTATION.**
 
 **Why.** P9/G9.1 found the M6 transonic solve does not converge under refinement —
 the unlimited local Mach at the wake sheet's free tip edge climbs 1.40 → 2.13 → 7.93
@@ -1911,19 +1942,24 @@ box (x < x_TE, z/b < 0.95) is the control: the real, bounded flow.
 
 **Result.**
 
-| path | tip-edge M_max coarse→medium | wing control | tip-box p95 |
-|---|---|---|---|
-| conforming (M1) | 0.712 → 0.981 (**×1.38**) | ×1.15 | ×0.98 |
-| level-set (M1, same mesh) | 0.672 → 1.532 (**×2.28**) | ×1.14 | ×0.98 |
-| level-set (M4, wake-free) | 0.661 → 1.151 (**×1.74**) | ×1.12 | ×0.93 |
+| path | tip-edge M_max (levels) | growth c→m | exponent p | tip-box p95 (c→m) |
+|---|---|---|---|---|
+| conforming (M1) | 0.712 → 0.981 → **1.510** (fine ✗conv) | ×1.38 | **0.59** (3-pt) | ×0.98 (flat) |
+| level-set (M1, same mesh) | 0.672 → 1.532 | ×2.28 | 1.34 (2-pt) | ×0.98 (flat) |
+| level-set (M4, wake-free) | 0.661 → 1.151 | ×1.74 | 0.89 (2-pt) | ×0.93 (flat) |
 
-The tip-edge **peak** diverges on **all three** paths while the wing control and the
-tip-box **p95/mean stay flat** — the signature of a *localized* edge singularity (only
-the few cells at the very corner grow), now seen with **zero transonic machinery**, so
-it is a genuine potential-flow feature, not a shock/limiter artifact. The level-set
-representation does **not** remove or even blunt it: the LS tip peak is at least as
-large as conforming on the same mesh and sits in the **+2.9% straddler cells** at/just
-beyond the geometric tip (z/b ≈ 1.01), where the jump terminates mid-element.
+The tip-edge **peak** diverges on **all three** paths while the same-box
+**p95/mean stay flat** — the signature of a *localized* edge singularity (only
+the few cells at the very corner grow), seen with **zero transonic machinery**, so
+it is a genuine potential-flow feature, not a shock/limiter artifact. (The bulk
+"wing" interior is flat coarse→medium too; only the fine conforming wing *max* is
+polluted by a separate sharp-TE edge cell — another P1 edge feature — so the clean
+same-box control plotted is the tip-box p95.) The conforming three-point exponent
+**p = 0.59** puts the growth in the **1/√r flat-plate-edge** band, not 1/r. The
+level-set representation does **not** remove or even blunt it: the LS tip peak is at
+least as large as conforming on the same mesh (exponent 1.34 ≥ conforming 0.52) and
+sits in the **+2.9% straddler cells** at/just beyond the geometric tip (z/b ≈ 1.01),
+where the jump terminates mid-element.
 
 **⇒ It is a WAKE-MODEL defect.** Track B changes the wake *representation*, not the
 model (B7 keeps the same rigid planar sheet ending at the tip with Γ(tip)→0), so it

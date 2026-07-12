@@ -321,6 +321,53 @@ with Newton, and under VII the wake instead carries a mass-transpiration
 relaxation (§5 note). The conforming path in this section stays the shipped
 default throughout P7–P10.
 
+### 4.1 Tip / wake-edge singularity (P13)
+
+The rigid **planar** wake of the previous section terminates at a free edge —
+the swept tip TE corner in 3D, from which the sheet extends downstream but has
+no continuation *beyond* the tip (M1: tip nodes stay single-valued, Γ(tip) = 0
+discretely). That free edge is **singular**, and the singularity is a property
+of the wake **model**, not of any particular discretization or wall geometry.
+
+**Bound Γ vs trailing vorticity.** The regularity condition at the tip is
+Γ(tip) = 0 — the upper/lower speeds equalize, so there is no *bound* vortex
+there. This is **necessary but not sufficient**. The physical object shed into
+the wake is the **trailing vortex sheet** of strength γ(s) = −dΓ/ds (s the
+spanwise parameter): a wing unloads towards the tip, and it is the *unloading
+rate* |dΓ/ds| — not Γ itself — that peaks at the tip (for the near-elliptic
+loading of a finite wing, dΓ/ds → −∞ at the tip in the continuum; on the B7
+level-set solution's smooth Γ(z) it is measured ~10× larger at the tip than
+mid-span while Γ itself falls 0.10 → 0). A **flat** sheet of trailing vorticity
+that simply ends induces a crossflow that turns the free edge — the same
+mechanism as the leading edge of a flat plate at incidence — so the edge
+velocity behaves as **1/√r** (r the distance from the edge), a **flat-plate-edge
+(square-root) singularity**. It is *not* the 1/r of a concentrated line vortex
+(which would need the sheet's vorticity collected onto a line — precisely the
+roll-up the rigid planar model omits). A refinement study distinguishes them by
+the exponent p in peak-velocity ~ h^(−p): 1/√r ⇒ p ≈ 0.5, 1/r ⇒ p = 1.
+
+**Evidence (P13/G13.1, 2026-07-13).** Probed subsonically (M∞ 0.5, no shock /
+artificial density / limiter) on the ONERA M6 tip box, the conforming
+three-point (coarse/medium/fine) log-log exponent of peak local Mach vs 1/h is
+**p ≈ 0.59** — consistent with 1/√r, refuting the earlier "1/r-type" phrasing.
+The peak diverges on **both** the conforming and the Track-B level-set paths
+(the representation change does not blunt it), while the surrounding field
+stays mesh-converged (a *localized* edge singularity). Under enough refinement
+the edge overspeed trips the speed limiter / density floor even subsonically, so
+the fine mesh stops being a discrete solution (the M∞ 0.5 analogue of the P9/G9.1
+transonic finding). Demo: `cases/demo/tip_edge_singularity/`.
+
+**Fix = a wake-MODEL change, deferred to P13/G13.2.** Curved *wall* elements
+(P11) cannot remove a wake-sheet edge, and Track B's level-set changes the wake
+*representation* but keeps the same rigid planar sheet. The model-level cure is
+wake **roll-up / an explicit tip vortex** (the sheet rolls into a concentrated
+tip vortex, removing the free edge), which bounds the tip peak under refinement
+and lets the M6 fine mesh be a real discrete solution. Implementation is handed
+to Track B as a rescope of the shelved B9 (level-set naturally carries a
+movable/curved sheet through `update_direction()`): from "O(θ²) deflection" to
+"roll-up". Until then, any 3D grid-convergence / lift-gap claim on M6 is blocked
+(P9/G9.3).
+
 ---
 
 ## 5. Boundary conditions

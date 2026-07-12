@@ -1033,8 +1033,15 @@ If the gap Richardson-extrapolates away, P11's lift case collapses to
       free tip edge**, exactly where `Γ(tip) = 0` is enforced (M1: tip free
       edges stay single-valued). This is the classic **vortex-sheet-edge
       singularity** of a rigid planar wake (the real flow rolls up into a tip
-      vortex; a planar sheet that simply ends induces a 1/r-type velocity).
-      P5's "bounded tip-TE-corner P1 overshoot" (M_max 1.995 medium, recorded
+      vortex). The **driver is the trailing vorticity dΓ/dz, NOT the bound
+      circulation Γ**: Γ→0 correctly at the tip (Γ(tip)=0 is a
+      necessary-not-sufficient regularity condition), but the *unloading rate*
+      |dΓ/dz| is largest at the tip (measured ~10× mid-span on B7's smooth Γ(z)),
+      and a terminating flat vortex sheet has a free-edge crossflow singularity
+      like a flat-plate edge — **1/√r (flat-plate-edge type), NOT 1/r** (a 1/r
+      concentrated line vortex would give refinement exponent p=1; P13/G13.1
+      measures the conforming peak-Mach exponent **p≈0.59**, `cases/demo/
+      tip_edge_singularity/`). P5's "bounded tip-TE-corner P1 overshoot" (M_max 1.995 medium, recorded
       as the only surviving singularity trace) is the SAME object seen at a
       resolution too coarse to reveal that it is unbounded. **It is a WAKE
       MODEL defect, not a wall-element defect — curved wall elements (P11) do
@@ -1258,6 +1265,59 @@ sphere-Cp < 2% (medium); G11.2 V6 < 1% on the M6 medium gate. **Demo:**
 
 (The non-lifting Newton entry, briefly listed here on 2026-07-11, is promoted
 to P10/G10.1 the same day.)
+
+### P13 — Tip / wake-edge singularity: characterization + wake-model fix ★ accuracy phase (NEW 2026-07-13, user-approved; appended, no renumber)
+**Motivation (direct descendant of P9).** P9/G9.1 localized the 3D
+grid-convergence blocker to a **divergent singularity on the rigid planar wake
+at its free tip edge** (the fine M6 mesh is not a discrete solution). Two things
+that P9 left loose and this phase closes/records: (1) the singularity is driven
+by the **trailing vorticity dΓ/dz** (the *unloading rate*, largest at the tip:
+~10× mid-span on B7's smooth Γ(z)), **not** the bound circulation Γ (which
+correctly → 0 at the tip — Γ(tip)=0 is a necessary-not-sufficient regularity
+condition); a terminating flat vortex sheet has a free-edge crossflow
+singularity like a flat-plate edge, i.e. **1/√r**, not the "1/r-type" earlier
+docs wrote (a 1/r line vortex would refine at exponent p=1). (2) The fix is a
+**wake-MODEL change** (roll-up / explicit tip vortex), **not** a wall-element
+change (P11 — curved walls do not remove a sheet edge) and **not** Track B as
+such (which changes the wake *representation*, not the model — measured: the
+edge singularity diverges on the level-set path too). Implementation of the fix
+is handed to **Track B as a rescope of the shelved B9** (level-set naturally
+represents a movable/curved sheet via `update_direction()` — from "O(θ²)
+deflection" to "roll-up").
+**Gates (PRE-REGISTERED, P9-style):**
+- [x] **G13.1 — Characterization (CLOSED 2026-07-13).** Prove it is a genuine
+      wake-MODEL singularity, not a format artifact. Demo
+      `cases/demo/tip_edge_singularity/` (10/10 PASS), probed SUBSONICALLY
+      (M∞0.5 — no shock/artificial-density/limiter to confound the geometric
+      edge signal). **Measured:** (a) conforming three-point (coarse/medium/fine
+      = 55.5k/350.7k/2.51M tets) log-log exponent of tip-box peak Mach vs 1/h
+      **p = 0.59 ∈ [0.4, 0.65] ⇒ 1/√r (flat-plate edge)**; (b) the tip-box
+      **p95/mean stay flat** (0.573→0.562→0.525 / ~0.49) while the **peak
+      diverges** 0.712→0.981→1.510 — a localized-edge signature; (c) the edge
+      diverges on **both** paths (conforming ×1.38 and level-set ×2.28
+      coarse→medium on the same mesh; LS exponent 1.34 ≥ conforming 0.52) ⇒
+      MODEL, not representation; peak sits **aft of the TE** in the chord plane
+      (z/b 0.999, x−x_TE +0.006, |y|<0.001) ⇒ not a wall feature; (d) ★ the
+      conforming **fine M0.5 solve does NOT converge** (limited/floored cells,
+      ~1.4k NaN) — the tip singularity trips the limiter even subsonically,
+      the exact M0.5 analogue of G9.1's transonic finding. Per the pre-registered
+      risk clause, a drifting/off-band p would still close G13.1 (the core
+      claims — singularity exists, model-not-representation, aft-of-TE — do not
+      depend on p being exactly 0.5); it landed cleanly at 0.59.
+- [ ] **G13.2 — (future) wake-model fix.** Roll-up / explicit tip-vortex model
+      so the **tip peak Mach is bounded under refinement (p → 0)** and the **M6
+      fine mesh becomes a real discrete solution (0 permanently-limited cells)**,
+      unblocking G9.1's three-point Richardson. Implementation handed to
+      **Track B (rescoped B9)**. This phase only DEFINES it.
+- [ ] **G13.3 — (future) 3D grid-convergence closure.** With the model in place,
+      redo the M6 coarse/medium/fine cl_KJ/cl_p three-point Richardson (what
+      G9.1 could not do) and re-split the 0.019 external gap
+      (resolution / floor / viscous) under the P9 pre-registered bands
+      (cl_KJ∞ ≥ 0.283 resolution-dominated / ≤ 0.278 floor-confirmed). This
+      phase only DEFINES it.
+**Non-goals:** no solver/numerics changes (characterization is a demo +
+docs); fine meshes stay gitignored; the heavy conforming fine M0.5 AMG solve
+(~34 min) is a one-shot cached artifact.
 
 ---
 
@@ -1547,6 +1607,7 @@ closed · ◐ partially closed / in progress · ☐ open or not started · ⊘ s
 | P10 | ◐ (G10.2 ✓ 2026-07-11; G10.1 open) | | **Newton generality & continuation efficiency (NEW 2026-07-11, user-proposed).** **G10.2 CLOSED 2026-07-11 — SPLIT A/B verdict** (demo `cases/demo/p10_newton_usability/`, run under the 16-thread timing protocol): `solve_newton_transonic(intermediate_tol=…)` opt-in, default None bit-identical (suite-locked; `solve_newton_lifting` grew `tol_residual_loose`/`tol_residual_rel`/`accept_on_stall` + `accept_reason` reporting; level_results record per-level accept_reason). Shipped rule = the pre-registered candidate + two A/B-measured hardenings: (1) loose acceptance requires ≥ 1 Newton step at the level (round-1 finding: warm-started levels ENTER below any absolute threshold — zero-step acceptance degenerates the ramp into a level skip); (2) dm-halving retry levels run STRICT (the halving cascade is the robustness fallback). **(a) M6 medium: all G8.2 locks intact, final level converges identically (12 steps, |R| 7.8e-15, cl/M_max/shocks equal to 4 digits), solve 239.5→140.3 s (+41.4%, intermediate levels 35→6 Newton steps: 1–3 loose steps each ending ~1e-5) ⇒ `intermediate_tol=1e-5` PROMOTED into `NEWTON_M6_RECIPE`** (gated G8.2 test now runs the adaptive path, ~145 s). **(b) NACA medium M0.7875: NEGATIVE result recorded — the P8 "warm-start only from CONVERGED levels" trap measured in G10.2 form:** near the fold (dcl/dM ~6–10) the loose ramp's 1–4-step levels never track Γ/shock, the final level and even STRICT halving-retry levels stall at the ~5e-6 live-churn floor for 60 steps each (round 2: cl 0.369 vs lock 0.523, unconverged) ⇒ `NEWTON_TRANSONIC_RECIPE` unchanged (strict); **loose intermediates are contraindicated in fold zones.** Suite +2 (`tests/test_p10_continuation.py`): default-path accept_reason lock + subsonic-ramp adaptive path (Γ matches strict to 1e-6, steps not worse). Baseline 184+8+2. **G10.3 CLOSED 2026-07-11 — verdict KEEP the ramp** (no-ramp single-level Newton at target M∞, 2 seedings × 4 cases, `run_g103_noramp.py`): far from the fold both seedings reach the SAME solution (class A — branch selection not binding there), but Picard-5 transits clamped states (peak 45 lim+flr, final 0/0, locks pass) at +44% (141.4→79.0 s) failing the pre-registered clamp-free clause, and clamp-free Picard-40 gains only +6.6% medium / −37% coarse failing ≥20%; fold-zone medium is class C under BOTH seedings (s1 stalls cl 0.449≠0.523; s2's un-continued Picard seed diverges, 9934 limited — deep seeds are HARMFUL without a ramp, the P4/P5 record); NACA coarse s1 class-A in 4 s recorded as a single-case exception. The +44%-but-clamped observation is recorded for user arbitration of the clamp-free clause; `clamp_history` added (additive). Remaining: And G10.1 non-lifting Newton entry (`wc=None` workspace, raw mesh; sphere M0.3 matches solve_subsonic to \|Δφ\|∞ < 1e-8, m_inf=0 one-step ≡ Laplace; NOT an accuracy gate — G1.6 untouched), no ordering constraint. Framing correction recorded: the coupled Newton has NO Kutta outer loop (Γ updates every step, ‖F‖ machine-zero) — the capability-demo two-level structure is the Mach ramp, so the user's "loose-then-tight" idea applies to continuation levels. |
 | P11 | ☐ (G9.3 verdict 2026-07-11: **lift case NOT supported**; G1.6 case stands — user arbitrates) | | **Curved / isoparametric wall elements (renumbered from P9 via P10 on 2026-07-11; opening CONDITIONAL on G9.3):** **P9 outcome (2026-07-11): G11.2's premise is REFUTED as stated** — the 2D sharp TE imposes no lift floor (G9.2, error → 0.03%), and the 3D blocker is a divergent vortex-sheet-edge singularity on the rigid planar wake at the tip (G9.1), which curved WALL elements cannot remove. **G11.1 (G1.6 sphere-Cp on a smooth curved wall) is unaffected and remains the phase's valid justification.** The 3D lift/accuracy route now points at the tip/wake model (Track B). Original scope follows: the shared accuracy route for **G11.1** G1.6 sphere-Cp < 2% (design.md §5.1 Option C / DP1 "> 5%" branch) and **G11.2** the residual V6 < 1% floor left after P6 removes the sawtooth (attributed to the sharp-TE/LE P1 wall gradient — P9 tests this; M6 cl_KJ 0.2692 vs Tranair/KRATOS 0.288). Large own effort per DP1. |
 | P12 | ☐ | | Backlog (renumbered from P10 via P11 on 2026-07-11; originally P8): discrete adjoint (transpose of the P8 Newton Jacobian), VII transpiration BC (now expanded into Track V), mixed prism/tet + (C, M_c, ω) BO calibration. (Non-lifting Newton promoted to P10/G10.1 on 2026-07-11.) |
+| P13 | ◐ (G13.1 ✓ 2026-07-13; G13.2/G13.3 defined, future) | | **Tip / wake-edge singularity — characterization + wake-model fix (NEW 2026-07-13, user-approved; direct descendant of P9/G9.1; appended, no renumber).** **G13.1 CLOSED 2026-07-13 — demo `cases/demo/tip_edge_singularity/` 10/10 PASS.** Probed SUBSONICALLY (M∞0.5, no transonic machinery) to isolate the geometric edge signal. **(1) It is a real 1/√r flat-plate-edge singularity, not "1/r":** the conforming three-point (coarse/medium/fine 55.5k/350.7k/2.51M tets) log-log exponent of tip-box peak Mach vs 1/h is **p = 0.59 ∈ [0.4,0.65]** (peak 0.712→0.981→1.510; a 1/r line vortex would give p=1). **(2) Driver = trailing vorticity dΓ/dz, not bound Γ:** Γ→0 at the tip (necessary-not-sufficient), but |dΓ/dz| is ~10× larger at the tip than mid-span (B7's smooth Γ(z)); the *unloading rate*, not the loading, is what a terminating flat sheet cannot regularize. **(3) MODEL not representation:** the edge diverges on BOTH the conforming (×1.38) and level-set (×2.28) paths on the SAME mesh (LS exponent 1.34 ≥ conforming 0.52) — Track B's representation change does not blunt it; tip-box p95/mean stay FLAT (0.573→0.562→0.525 / ~0.49) while max diverges (localized-edge signature); peak sits AFT of the TE in the chord plane ⇒ not a wall feature (curved walls/P11 cannot fix it). **(4) ★ The conforming FINE M0.5 solve does NOT converge** (limited/floored, ~1.4k NaN cells) — the tip singularity trips the limiter even subsonically, the exact M0.5 analogue of G9.1's transonic non-solution. **This corrects the committed docs' "1/r-type" (roadmap :1036, demo_report :1333) to 1/√r, and adds the dΓ/dz mechanism.** **G13.2 (future):** roll-up / explicit tip-vortex model ⇒ bounded tip peak (p→0) + M6 fine a real discrete solution; implementation handed to **Track B as a rescope of the shelved B9** (level-set naturally represents a movable sheet via `update_direction()`; from O(θ²) deflection → roll-up). **G13.3 (future):** with the model in place, redo the M6 3D three-point Richardson (G9.1's blocked task) under the P9 pre-registered bands. No solver/numerics changes; fine meshes gitignored; the ~34 min conforming fine M0.5 AMG solve is a one-shot cached artifact. |
 
 ### Track M — mesh generation
 
