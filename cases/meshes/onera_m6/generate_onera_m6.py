@@ -63,21 +63,60 @@ R_FAR = 15.0 * MAC
 QUALITY_BOUNDS = {"min_dihedral_deg": 2.0, "max_aspect_ratio": 60.0}
 
 
-def _level_params(h_wall: float) -> dict:
-    """Everything derived from the single wall-size parameter h."""
+def _level_params(h_wall: float, clamp_h_far: bool = True) -> dict:
+    """Everything derived from the single wall-size parameter h.
+
+    ★ THE h_far CLAMP BREAKS SELF-SIMILARITY (found 2026-07-13, P13/G13.3).
+    Every length scales with h_wall EXCEPT the far field, which is capped:
+
+        h_far = min(2.5, 120 * h_wall)
+
+    and that cap BITES ONLY AT `coarse` (120*0.030 = 3.6 > 2.5), never at
+    medium (1.8) or fine (0.9). So coarse->medium refines the far field by
+    just 1.39x while the wall refines by 2x, whereas medium->fine is a clean
+    2x throughout: **`coarse` is NOT on the same refinement ray as the other
+    two.** Consequences, measured:
+
+      * Any THREE-POINT RICHARDSON over (coarse, medium, fine) is INVALID --
+        including the one P9/G9.1 attempted. Two of the points are not
+        members of the same family.
+      * It shows up as a spanwise loading "slosh" coarse->medium (-6.3% at the
+        root against +5.4% mid-span, nearly cancelling in the total) that
+        looks like convergence noise but is really a comparison between two
+        different meshes families.
+
+    The clamp is KEPT BY DEFAULT so that `coarse`/`medium`/`fine` stay
+    BIT-IDENTICAL -- they are the shipped dev/gate meshes and carry the
+    regression locks of P5, P8/G8.2, B7 and the M1 asserts. For grid
+    convergence use RICHARDSON_LADDER below, which swaps in an UNCLAMPED
+    coarse ("coarse_ss") and reuses medium/fine unchanged (they already
+    satisfy h_far = 120*h_wall exactly), giving a family that is self-similar
+    by a factor 2 in EVERY length scale.
+    """
+    h_far = 120.0 * h_wall
     return dict(
         h_wall=h_wall,
         h_wake=3.0 * h_wall,
         h_edge=0.5 * h_wall,
-        h_far=min(2.5, 120.0 * h_wall),
+        h_far=min(2.5, h_far) if clamp_h_far else h_far,
     )
 
 
 LEVELS = {
+    # shipped dev/gate family (clamp retained => bit-identical, locks intact)
     "coarse": _level_params(0.030),
     "medium": _level_params(0.015),
     "fine": _level_params(0.0075),
+    # self-similar coarse: the ONLY level the clamp ever touched, regenerated
+    # without it (h_far 2.5 -> 3.6) so that {coarse_ss, medium, fine} is a
+    # legitimate 2x refinement ladder in every length scale.
+    "coarse_ss": _level_params(0.030, clamp_h_far=False),
 }
+
+#: The only member set valid for a three-point grid-convergence / Richardson
+#: study (P13/G13.3). medium and fine are the SAME meshes as in the shipped
+#: family -- only the coarse end had to be re-cut.
+RICHARDSON_LADDER = ("coarse_ss", "medium", "fine")
 
 
 def generate_level(out_dir: Path, level: str, inspect: bool = True) -> Path:

@@ -180,3 +180,58 @@ class TestM6WakeCut:
         # Free-edge nodes end the sheet inside the domain; their rows sum
         # fluxes from both sides like any interior node and must vanish too.
         assert np.max(np.abs(R[check])) < 1e-10
+
+
+# ---------------------------------------------------------------------------
+# Mesh-family SELF-SIMILARITY (P13/G13.3, 2026-07-13)
+#
+# The M6 family derives every length from h_wall -- except that the far field
+# was CLAMPED (h_far = min(2.5, 120*h_wall)), and the clamp bit ONLY at
+# `coarse` (120*0.030 = 3.6 > 2.5). So coarse->medium refined the far field by
+# 1.39x while the wall refined by 2x: `coarse` was NOT on the same refinement
+# ray, and ANY three-point Richardson over (coarse, medium, fine) was invalid
+# -- including the one P9/G9.1 attempted. These tests lock the fix:
+#   * the SHIPPED levels keep the clamp, so they stay bit-identical and the
+#     P5 / P8-G8.2 / B7 / M1 regression locks are untouched;
+#   * RICHARDSON_LADDER is self-similar by exactly 2 in EVERY length scale.
+# ---------------------------------------------------------------------------
+def _generator():
+    import importlib.util
+    from .conftest import REPO_ROOT
+    p = REPO_ROOT / "cases" / "meshes" / "onera_m6" / "generate_onera_m6.py"
+    spec = importlib.util.spec_from_file_location("_gen_m6", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_shipped_levels_keep_the_clamp_and_stay_bit_identical():
+    """coarse/medium/fine are the dev/gate meshes and carry regression locks;
+    the self-similarity fix must NOT move them."""
+    g = _generator()
+    for level, h_far in (("coarse", 2.5), ("medium", 1.8), ("fine", 0.9)):
+        assert g.LEVELS[level]["h_far"] == pytest.approx(h_far, rel=1e-12), level
+
+
+def test_richardson_ladder_is_self_similar():
+    """EVERY length scale must refine by exactly 2 at EVERY step, or a
+    three-point Richardson over the ladder is not a grid-convergence study."""
+    g = _generator()
+    ladder = [g.LEVELS[k] for k in g.RICHARDSON_LADDER]
+    assert len(ladder) == 3
+    for key in ("h_wall", "h_edge", "h_wake", "h_far"):
+        for a, b in zip(ladder[:-1], ladder[1:]):
+            assert a[key] / b[key] == pytest.approx(2.0, rel=1e-12), (
+                f"{key} refines by {a[key] / b[key]:.3f}, not 2 -- the ladder "
+                f"is not self-similar and no Richardson over it is valid")
+
+
+def test_the_clamp_is_what_broke_the_old_family():
+    """Regression-documents the defect itself: with the clamp ON, the coarse
+    end is off the refinement ray (far field refines 1.39x, wall 2x)."""
+    g = _generator()
+    clamped = [g._level_params(h) for h in (0.030, 0.015)]
+    assert clamped[0]["h_wall"] / clamped[1]["h_wall"] == pytest.approx(2.0)
+    ratio = clamped[0]["h_far"] / clamped[1]["h_far"]
+    assert ratio == pytest.approx(2.5 / 1.8, rel=1e-9)
+    assert ratio < 1.5, "the clamp must still be the thing we are guarding against"

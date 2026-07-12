@@ -1434,11 +1434,42 @@ deflection" to "roll-up").
       discretization floor that REFINES AWAY, now at **1.41 % on fine**, closing
       on the < 1 % target deferred since P5/G5.2. The discretization is
       consistent; the meshes were simply too coarse.
-      **⇒ To close G13.3: fix the mesh ladder FIRST** (drop the `h_far` clamp /
-      regenerate a self-similar family, optionally adding a 4th level), then
-      re-run the three-point cl_KJ/cl_p Richardson and re-split the gap
-      (resolution / floor / viscous). No wall-geometry (P11) or level-set work is
-      required for it.
+      **★ MESH LADDER FIXED 2026-07-13** (`generate_onera_m6.py`): `_level_params`
+      grew `clamp_h_far` (default True ⇒ `coarse`/`medium`/`fine` stay
+      **BIT-IDENTICAL**, so the P5 / P8-G8.2 / B7 / M1 locks are untouched), plus
+      a new **`coarse_ss`** level — the ONLY level the clamp ever touched — recut
+      without it (h_far 2.5 → 3.6, 46,067 tets, quality within M1 bounds:
+      min dihedral 4.15°, max aspect 15.5). `RICHARDSON_LADDER =
+      ("coarse_ss", "medium", "fine")` refines by **exactly 2.000 in EVERY length
+      scale** (h_wall/h_edge/h_wake/h_far), locked by 3 new tests in
+      `tests/test_m1_onera_m6.py`.
+      **★★ BUT THE SEQUENCE IS STILL NOT ASYMPTOTIC — AND THE REASON IS A THIRD
+      SINGULARITY, ON THE WALL.** On the self-similar ladder the increments still
+      GROW (M0.5: cl_KJ 0.2015 → 0.2005 → 0.2121, cl_p 0.1888 → 0.1939 → 0.2091 —
+      the cl_p increments grow ~3× while h halves). Growing increments under
+      *uniform* refinement are the signature of a singularity still being
+      resolved. Localized by a box study on the tapered solutions:
+
+      | region | coarse → medium → fine | p | verdict |
+      |---|---|---|---|
+      | **tip-cap edge (WALL)** | 0.666 → 0.824 → **0.967** | **+0.294** | **DIVERGES** |
+      | wing p99 (control) | 0.637 → 0.628 → 0.629 | −0.009 | bounded |
+      | wake free edge (G13.2-fixed) | 0.567 → 0.579 → 0.649 | +0.107 | bounded |
+
+      ⇒ The wake edge we fixed stays bounded and the wing interior is converged,
+      but the **flat tip cap's sharp wall edge diverges**. **Root cause: a
+      DOCUMENTED DELIBERATE GEOMETRY SIMPLIFICATION** — `meshgen/wing3d.py`
+      builds a **flat tip cap** where the real ONERA M6 has a **rounded** one
+      ("the real rounded tip cap is a deliberate simplification — standard for FP
+      validation meshes"). A flat cap meets the upper/lower surfaces at a sharp
+      convex edge, which in potential flow is an edge singularity of exactly the
+      kind P13 exists to remove — only on the BODY rather than the wake. **Note
+      this is NOT a P11 (curved wall ELEMENT) problem:** isoparametric elements
+      cannot regularize a genuinely sharp geometric edge; the GEOMETRY is what is
+      wrong.
+      **⇒ NEXT for G13.3: round the tip cap** (Track M, `wing3d.py`), regenerate
+      the ladder, then re-run the three-point Richardson. Neither P11 nor the
+      level-set port is required.
 **Non-goals:** fine meshes stay gitignored; heavy runs are one-shot cached
 artifacts (the conforming fine M0.5 AMG solve is ~10–34 min, the M0.84 fine
 continuation ~1 h).
