@@ -55,7 +55,7 @@ class MultivaluedOperator:
     """
 
     def __init__(self, nodes: np.ndarray, elements: np.ndarray, cm,
-                 levelset=None):
+                 levelset=None, span_blend=None):
         self.op = PicardOperator(nodes, elements)
         self.nodes = np.ascontiguousarray(nodes, dtype=np.float64)
         self.cm = cm
@@ -89,6 +89,59 @@ class MultivaluedOperator:
             centroids = nodes[el[cm.cut_elems]].mean(axis=1)
             n_hat = levelset.surface_normals(centroids)
             self._ls_coo = wake_ls_coo(self.op, cm, n_hat, levelset.direction)
+        # B8 re-spec: spanwise termination blend of the wake LS rows. The
+        # embedded sheet ends at the spanwise clip as a HEAVISIDE: the last
+        # cut ring carries a FINITE jump (measured h- and taper-independent,
+        # |delta| ~ 0.026 on M6 -- run_b8_termination_diagnosis.py D3) that
+        # the adjacent single-valued beyond-tip elements drop over one cell,
+        # i.e. a terminating sheet of finite edge strength (honest edge
+        # exponent p = +0.62, same object as the conforming +0.52). The TE
+        # tip_taper cannot reach it: it welds the TE NODES, while this jump
+        # lives on the DOWNSTREAM termination ring. The blend replaces each
+        # near-tip wake-LS aux row by the convex combination
+        #
+        #     w_j * [wake LS row]  +  (1 - w_j) * s_j * [phi_aux - phi_main]
+        #
+        # with w_j = tip_taper_factors(q_j) (the SAME F(z) family as the
+        # conforming taper, consumed by a different model) and s_j the row's
+        # own LS magnitude -- the LS entries scale like O(h) (V*B^2) while a
+        # bare weld is O(1), so an unnormalized blend would drift toward the
+        # weld under refinement and the refinement exponent would measure
+        # the blend itself. w = 1 inboard -> row untouched; w -> 0 at the
+        # termination -> pure weld -> the jump vanishes SMOOTHLY over
+        # r_blend instead of jumping to zero across one element.
+        # span_blend=None (every existing path) -> bit-identical.
+        self.span_blend = span_blend
+        self.n_span_blended = 0
+        if span_blend is not None and self._ls_coo is not None:
+            from pyfp3d.constraints.wake import tip_taper_factors
+
+            form, r_blend = span_blend
+            ls_row, ls_col, ls_data = self._ls_coo
+            cut_nodes = np.flatnonzero(cm.ext_dof_of_node >= 0)
+            is_te = np.zeros(cm.n_main, dtype=bool)
+            is_te[cm.te_nodes] = True
+            nonte = cut_nodes[~is_te[cut_nodes]]     # nodes of the LS rows
+            w = tip_taper_factors(cm.q[nonte], cm.span_length, form, r_blend)
+            if not np.all(w == 1.0):
+                aux = cm.ext_dof_of_node[nonte]
+                # per-row LS magnitude BEFORE scaling (the weld's scale)
+                s_of_row = np.zeros(self.n_total)
+                np.add.at(s_of_row, ls_row, np.abs(ls_data))
+                s_of_row *= 0.5
+                w_of_row = np.ones(self.n_total)
+                w_of_row[aux] = w
+                ls_data = ls_data * w_of_row[ls_row]
+                sel = w < 1.0
+                self.n_span_blended = int(np.count_nonzero(sel))
+                nodes_b = nonte[sel]
+                aux_b = aux[sel]
+                coef = (1.0 - w[sel]) * s_of_row[aux_b]
+                self._ls_coo = (
+                    np.concatenate([ls_row, aux_b, aux_b]),
+                    np.concatenate([ls_col, aux_b, nodes_b]),
+                    np.concatenate([ls_data, coef, -coef]),
+                )
         self._te_cv = self._build_te_control_volumes()
 
     # -- TE control volumes (B4) ---------------------------------------------
@@ -567,9 +620,30 @@ class MultivaluedOperator:
             self._elem_plus = in_upper
         return np.where(self._elem_plus, field_up, field_lo)
 
-    def element_mach2(self, phi_ext, m_inf, gamma_air=1.4, u_inf=1.0):
+    def element_mach2(self, phi_ext, m_inf, gamma_air=1.4, u_inf=1.0,
+                      mixed_plain="side"):
         """Own-side element M^2 (max of the two sides on cut elements),
-        junk-free -- for reporting M_max on the cut mesh."""
+        junk-free -- for reporting M_max on the cut mesh.
+
+        ★ mixed_plain: what to report on MIXED-side PLAIN elements (the
+        beyond-tip / wake-plane-extension cells the spanwise clip refuses to
+        cut). Their ASSEMBLY is single-valued on the MAIN dofs
+        (mass_conservation_coo scatters el[plain]), but the side fields
+        substitute AUX values at their cut-shared nodes -- so the default
+        "side" reading measures a field the element's equations never see
+        (the element_densities junk warning, in the one element class
+        own_side_field cannot fix because NEITHER side field is the
+        assembled one). Measured on the B8 verdict element (M6 medium,
+        elem 93977): side 1.532 vs main 0.309 -- a 5x inflation that
+        manufactured the LS tip exponent p = +1.34 (honest: +0.62). See
+        cases/demo/b8_tip_taper_ls/run_b8_termination_diagnosis.py.
+
+        "side" (default) keeps every committed diagnostic bit-identical
+        (B6/B7 M_max locks read through this); "main" reports those elements
+        from the main-dof field their assembly actually uses. Flipping the
+        default (and the B6/B7 M_max re-reads that come with it) is a
+        recorded user-arbitration item.
+        """
         from pyfp3d.physics.isentropic import mach_squared_field
 
         phi_up, phi_lo = self.side_potentials(phi_ext)
@@ -581,6 +655,20 @@ class MultivaluedOperator:
         m2[self.cm.cut_elems] = np.maximum(
             m2u[self.cm.cut_elems], m2l[self.cm.cut_elems]
         )
+        if mixed_plain == "main":
+            cm = self.cm
+            el = np.asarray(self.op.elements, dtype=np.int64)
+            special = np.zeros(len(el), dtype=bool)
+            special[cm.cut_elems] = True
+            special[cm.te_lower_elems] = True
+            side_e = cm.node_side[el]
+            fix = ~special & (side_e.min(axis=1) != side_e.max(axis=1))
+            if np.any(fix):
+                _, q2m = self.op.velocities(self.main_potential(phi_ext))
+                m2[fix] = mach_squared_field(
+                    q2m / u_inf**2, m_inf, gamma_air)[fix]
+        elif mixed_plain != "side":
+            raise ValueError(f"mixed_plain={mixed_plain!r} unknown")
         return m2
 
     def node_jump(self, phi_ext: np.ndarray, node_ids: np.ndarray) -> np.ndarray:

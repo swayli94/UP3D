@@ -1,0 +1,5 @@
+form,r_c_over_b,level,peak_committee,elem_committee,peak_honest,elem_honest,peak_honest_nosliver,elem_nosliver,box_nan_committee,box_nan_honest,rho_up_min_mixed_plain,rho_up_nan_mixed_plain,delta_max_box,delta_p95_box,n_aux_nodes_box,gamma_last,n_mixed_plain
+none,0.00,coarse,0.6721,25749,0.6721,25749,0.5512,53326,0,0,0.8618,0,0.026217,0.024894,20,0.000110,3378
+none,0.00,medium,1.5324,93977,0.9837,280561,0.6906,54400,0,0,0.4314,0,0.025606,0.023075,52,0.002182,9873
+vanish_linear,0.05,coarse,0.6775,25749,0.6775,25749,0.5518,53326,0,0,0.8614,0,0.026331,0.025009,20,0.000000,3378
+vanish_linear,0.05,medium,1.5690,93977,0.9254,280561,0.7043,54400,0,0,0.4152,0,0.025836,0.023348,52,0.000000,9873

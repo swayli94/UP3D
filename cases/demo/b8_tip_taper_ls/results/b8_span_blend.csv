@@ -1,0 +1,7 @@
+form,r_blend_over_b,ens_coarse,ens_medium,p_honest_nosliver,p_honest,delta_max_coarse,delta_max_medium,dcl_pct_coarse,dcl_pct_medium,cl_KJ_medium,gamma_inboard_medium,n_blended_medium
+none,0.00,0.5512,0.6906,+0.367,+0.620,0.026217,0.025606,+0.00,+0.00,0.2129,0.071309,0
+vanish_smooth,0.03,0.7647,1.7106,+1.311,+2.675,0.010362,0.057976,-13.18,-19.79,0.1708,0.057620,246
+vanish_smooth,0.05,0.5073,0.6438,+0.388,+0.519,0.000134,0.001005,-15.11,-20.22,0.1698,0.057389,314
+vanish_smooth,0.08,0.5014,0.5162,+0.048,+0.287,0.000057,0.000257,-16.95,-21.82,0.1664,0.056498,421
+iso_straddler_only,,0.5222,,,,0.005732,,-13.33,,0.1829,0.061777,86
+iso_inboard_only,,0.5024,,,,0.010143,,-10.76,,0.1883,0.063937,107

@@ -2460,3 +2460,117 @@ DOFs (~1.2 GB RSS). **M6 fine (~450k DOFs) on the level-set path would hit the
 same splu wall P9 hit on the conforming Newton — with no AMG escape hatch.** So
 this demo is coarse+medium **by necessity**, and any fine-mesh level-set work
 needs the deferred GMRES+AMG path first.
+
+## Track B / B8 re-spec — termination diagnosis + span blend (CLOSED as CHARACTERIZED-NOT-CURED, user-arbitrated 2026-07-14)
+
+Demos `cases/demo/b8_tip_taper_ls/run_b8_termination_diagnosis.py` (diagnosis;
+artifact `results/b8_termination_diagnosis.csv`) and `run_b8_span_blend.py`
+(**8/8 PASS**; artifacts `results/b8_span_blend.csv/.png`,
+`checks_b8_span_blend.csv`). Same condition throughout: M6 coarse+medium,
+M∞0.5, α3.06, `farfield="neumann"`, `upwind_c=0`. The user's re-spec proposal
+(span-blend of the wake-LS rows) was reviewed against the code first; the
+review found the B8 verdict number standing on an unaudited metric chain, so a
+**diagnosis ran before any implementation** — and it split the verdict in two.
+
+### Diagnosis finding 1 — the committed LS exponent p = +1.341 was a ×5 METRIC ARTIFACT
+
+`element_mach2` reports **mixed-side PLAIN elements** — exactly the
+`beyond_tip` class where B8's verdict cell lives — from the aux-substituted
+SIDE field (`side_potentials` puts the aux value at "−" cut nodes), but a
+plain element's **assembly is single-valued on MAIN dofs**
+(`mass_conservation_coo` scatters `el[plain]`). The diagnostic field is not
+the assembled field: this is the **B6 `own_side_field` disease in the one
+element class `own_side_field` cannot fix** (neither side field is the
+assembled one there). Measured at the verdict element (medium, elem 93977,
+2/4 nodes carry aux DOFs): **side 1.532 vs main 0.309**.
+
+| untapered tip-edge box peak | coarse | medium | p |
+|---|---|---|---|
+| committee (`element_mach2`, the committed metric) | 0.672 | 1.532 | **+1.341** |
+| **honest** (main field on mixed-side plain cells) | 0.672 | 0.984 | **+0.620** |
+| honest, no-sliver (V/median ≥ 0.1) | 0.551 | 0.691 | **+0.367** |
+
+⇒ **the honest LS exponent is the SAME OBJECT as the conforming +0.52** — the
+2026-07-13 "LS 1.34 ≥ conforming 0.52" magnitude comparison is RETIRED (and
+G13.1's LS-vs-conforming exponent comparison carries the same erratum; its
+conforming numbers are metric-clean and stand). Fix shipped **opt-in**:
+`element_mach2(mixed_plain="main")` — the default `"side"` stays bit-identical
+because the **B6/B7 M_max gate locks read through this function** (flipping
+the default + re-reading those numbers is a recorded backlog item, per the
+2026-07-14 arbitration). Related recorded, NOT fixed: the same aux-mixed side
+field feeds `element_densities`, so junk density weights DO enter the matrix
+on mixed-side plain elements (measured rho_up min 0.43 vs physical ~0.87,
+M0.5 medium; no NaN) — also backlog, since fixing it moves every committed LS
+gate number.
+
+### Diagnosis finding 2 — the honest residual object: a FINITE termination-ring jump, decoupled from the TE
+
+The last cut ring carries |δ| ≈ **0.026** (max over termination-box aux
+nodes), **h-independent** (0.0262 coarse / 0.0256 medium) and **TE-taper
+independent** (0.0256 → 0.0258 under `vanish_linear` r_c=0.05 — while the
+same taper drives Γ_last to exactly 0). **The ring jump and the TE jump are
+decoupled — which is precisely why the 2026-07-13 TE row blend measured no
+effect** (q = 4.73 yet p unchanged). Also recorded: the *untapered* emergent
+Γ(tip)→0 property degrades under refinement (Γ_last 0.00011 coarse → 0.00218
+medium; B7's ±3e-4 was coarse-only).
+
+### The span blend — machinery + result: it WELDS its target, and the price disqualifies the model
+
+`MultivaluedOperator(span_blend=(form, r_blend))`: per non-TE cut node j,
+
+    w_j · [wake LS row]  +  (1 − w_j) · s_j · [φ_aux − φ_main]  =  0
+
+with `w_j = tip_taper_factors(q_j, span_length, form, r_blend)` (the same
+F(z) family, row-level per node), `s_j` = the row's own LS 1-norm (LS entries
+are O(h), a bare weld O(1) — the normalization keeps the blend itself
+h-invariant), and beyond-tip straddler nodes (q > span_length) welded at any
+r_blend. Default `None` bit-identical (`tests/test_b8_span_blend.py`, 11
+passed; B-suite 116 passed / 9 skipped; full suite 350 + 17 + 2). The blend
+needs **no solver plumbing**: it lives in the cached `_ls_coo`, so Picard,
+transonic and LS-Newton all inherit it through `assemble_matrix`.
+
+| variant | ring |δ|max (medium) | honest no-sliver p | Δcl_KJ medium |
+|---|---|---|---|
+| none (baseline) | 0.0256 | +0.367 | — |
+| vanish_smooth rb0.03 | **0.0580 (×2.26 — WORSE)** | **+1.311 (worse)** | −19.8% |
+| vanish_smooth rb0.05 | 0.0010 (0.04×) | +0.388 | −20.2% |
+| vanish_smooth rb0.08 | 0.0003 (0.01×) | +0.048 (confounded) | −21.8% |
+
+Four measured facts (all asserted by `checks_b8_span_blend.csv`):
+
+1. **The lift cost is GLOBAL**: Γ(z) scales down ~0.8× **uniformly
+   root-to-tip**, including where the blended rows are bitwise identical to
+   baseline (test-locked) — the global circulation mode re-levels, this is
+   not local tip unloading. And it is **r_blend-insensitive** (2-point spread
+   over a 1.7× dose range).
+2. **Component isolation** (coarse): the straddler weld ALONE costs
+   **−13.3%**, the inboard smooth blend ALONE **−10.8%** — both components of
+   a sheet-side δ-pin are amplified, so this is not a defect of either piece.
+   ⇒ **the implicit Kutta has no per-station target: Γ is ONE global solution
+   mode, and ANY constraint intervention on the sheet near the tip re-levels
+   it** — G13.2 finding (2)'s fixed-point amplification (slope b ≈ 0.93 ⇒
+   ~10×) acting GLOBALLY, where the conforming secant keeps it per-station.
+   That is why the same F(z) costs −1.6% on the conforming path and −20% here.
+3. **The loss GROWS under refinement** (rb0.08: −16.9% coarse → −21.8%
+   medium), so it **contaminates the exponent**: p_unload ≈ −0.10 of the
+   apparent +0.37 → +0.05 reduction; the corrected ~+0.15 hints at a real
+   partial regularization but is **not certifiable** from a 2-point ladder
+   under a 20% global flow distortion — and is moot at this cost.
+4. **A narrow blend (~2 elements, rb0.03) is ACTIVELY harmful** — it
+   re-creates the Heaviside it was meant to remove, steeper (ring jump ×2.26,
+   honest p +1.31).
+
+### Verdict (user-arbitrated 2026-07-14)
+
+**Both constraint-side routes are now measured dead** — TE rows (2026-07-13:
+no effect on the peak) and wake-LS rows (this: target welded, ~20% global
+10×-amplified lift damage). Any further cure must change the **FUNCTION
+SPACE** at the termination (how the spanwise clip ends the multivalued
+region), not add sheet-side constraints. **B8 is CLOSED as
+CHARACTERIZED-NOT-CURED**: the honest LS tip exponent (+0.62 / +0.37
+no-sliver) is the same object, at the same magnitude, as the conforming
++0.52 that every closed conforming gate lives with — so **B9 (wing-body LS
+solve, M∞0.5) is UNBLOCKED**. Recorded backlog (arbitration items 2–3): the
+`mixed_plain` default flip + B6/B7 M_max re-reads + G13.1-LS erratum; the
+`element_densities` mixed-plain junk-weight fix. All shipped machinery
+(`span_blend`, `mixed_plain`) is default-inert and stays.

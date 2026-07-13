@@ -10,7 +10,7 @@ Besides Track M (meshing) and Track P (solver), two further tracks exist:
 fold solutions, medium quantitative closure open. **B7 (ONERA M6 3D) CLOSED
 2026-07-12** — dual-mesh gate met, and the B6 lift inversion reproduces in 3D
 (the LS Picard sits +0.7%/+2.7% of the conforming **Newton** truth while the
-conforming Picard sits −8.6% below it); next = B8 (LS tip-taper) / B9 (multi-wake); numerics spec
+conforming Picard sits −8.6% below it); next = B9 (wing-body/multi-wake; B8 closed 2026-07-14 characterized-not-cured); numerics spec
 [design_track_b.md](design_track_b.md), which
 supersedes DN1) — and **Track V** (viscous–inviscid coupling) — **designed but
 not started** (design records DN2/DN6 in `discussion_notes/`) — see their
@@ -116,7 +116,7 @@ inboard end attaches to.
 - [x] ★ **THE GATE METRIC IS THE FUSELAGE CREASE ANGLE** (`post/surface.py::wall_crease_angles`, the M5 argument applied to the body — the solver only ever sees the TRIANGULATION, so "the CAD is smooth" is not the claim that matters). p99 **20.6° → 11.2°, q ≈ −0.88 ⇒ O(h)**; median **3.60° → 0.80°**. It **DECAYS** ⇒ faceting of a smooth surface ⇒ **no seam in the limit**. (Contrast M5's flat cap, a real edge: 91.9° → 92.1°, q = −0.00 — *does not move*.) This is the evidence for the splined-meridian construction over fused primitives.
 - [x] **Both ends of the level-set TE polyline are EXACT wall nodes:** tip TE corner **0.0** (the M5 cap radius vanishes at the TE, so the fuselage fuse moved nothing) and the junction TE end **1.5e-9** (an exact OCC vertex), identically at coarse and medium ⇒ the analytic `te_polyline()` is a faithful description of the discrete TE.
 - [x] ★ **The LS path ingests it, and the wake terminates at the junction for free.** `WakeLevelSet(te_polyline) + CutElementMap` on the coarse mesh: 1,415 cut elements, **76 TE nodes spanning z ∈ [0.1500, 1.1963]** = junction → tip exactly, and **ZERO TE nodes inboard of the junction** — B1's spanwise clip (`0 ≤ q ≤ span_length`) excludes the fuselage region with no new code. TE-node identification is **identical** whether `wall_nodes` is wing-only or wing+fuselage ⇒ the fuselage does not contaminate the TE set.
-- [ ] **Solver leg = Track B / B9** (wing-body LS solve at M∞ 0.5: fuselage carries ~zero lift, α-sweep with no remesh). Gated on **B8** (the LS tip taper) closing first. **Open B9 item recorded here:** TE-node identification is clean, but the B4 TE **control volume** is built from *wall-adjacent* elements (`multivalued.py::_build_te_control_volumes`), so the innermost TE node (at the junction) has fuselage wall faces in its fan — verify the upper/lower CVs there take only wing-side elements.
+- [ ] **Solver leg = Track B / B9** (wing-body LS solve at M∞ 0.5: fuselage carries ~zero lift, α-sweep with no remesh). Was gated on **B8**; **UNBLOCKED 2026-07-14** (B8 closed characterized-not-cured: the honest LS tip exponent is the same object/magnitude as the conforming one every closed gate lives with). **Open B9 item recorded here:** TE-node identification is clean, but the B4 TE **control volume** is built from *wall-adjacent* elements (`multivalued.py::_build_te_control_volumes`), so the innermost TE node (at the junction) has fuselage wall faces in its fan — verify the upper/lower CVs there take only wing-side elements.
 **Notes:** `.msh` gitignored (M1/M5 policy); stats CSVs + inspection PNG committed
 as the evidence record. Scope decision (user-arbitrated 2026-07-13): this early
 validation is **subsonic (M∞ 0.5) only** — M0.84 is excluded, because even on the
@@ -1589,7 +1589,7 @@ continuation ~1 h).
 
 ---
 
-## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ☐ (LS tip-taper) NEW 2026-07-13** — B9 = multi-wake, B10 = curved wake shelved)
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)** — B9 = multi-wake NEXT, B10 = curved wake shelved)
 
 > **★ Track-B renumber 2026-07-12 (user-directed).** TWO renumbers landed the
 > same day. **(1)** A new **B4 — TE control-volume / implicit-Kutta
@@ -1733,7 +1733,7 @@ B7 M6 3D gate NEW); design_track_b.md §7 is the arbitration record.
 3. **Shock positions sit ~0.02–0.04 c aft of P5** (in band vs P5's ±0.06, and consistent with the higher circulation). Against the P8 *Newton* shocks the η=0.90 station is 0.087 aft — recorded; a shock-position A/B against Newton needs the deferred LS Newton to be a like-for-like comparison.
 4. **Coarse only** (medium/fine M6 deferred: cost + fold risk).
 
-### B8 — Level-set tip-edge desingularization (row-blend tip taper) ☐ (NEW 2026-07-13, user-approved; the LS analogue of P13/G13.2's conforming taper)
+### B8 — Level-set tip-edge desingularization ✓ CLOSED 2026-07-14 as CHARACTERIZED-NOT-CURED (user-arbitrated; row-blend 2026-07-13 + re-spec round 2026-07-14 both NEGATIVE with mechanisms pinned; B9 unblocked)
 **Motivation:** P13/G13.2 fixed the tip/wake-edge singularity on the **conforming**
 path with a spanwise loading taper `Γ_eff(z) = F(z)·Γ_Kutta(z)`
 (`constraints/wake.py::tip_taper_factors`, applied on the per-station Kutta
@@ -1820,6 +1820,86 @@ B2 decision; GMRES+AMG is the deferred B3+ scaling path). M6 **medium** costs
 on the LS path would hit the same splu wall P9 hit on the conforming Newton, with
 no AMG escape hatch** ⇒ this demo is coarse+medium **by necessity**, and any
 fine-mesh LS work needs the deferred GMRES+AMG path first.
+
+**★★ RE-SPEC ROUND 2026-07-14 (user re-spec doc → diagnosis-first → span blend
+RAN → NEGATIVE, mechanism pinned). Two findings supersede parts of the
+2026-07-13 verdict above:**
+
+1. **★ THE COMMITTED LS EXPONENT p = +1.34 WAS A ×5 METRIC ARTIFACT** (demo
+   `run_b8_termination_diagnosis.py`, artifact `b8_termination_diagnosis.csv`;
+   solves cached WITH `phi_ext` this time). `element_mach2` reads **mixed-side
+   PLAIN elements** (exactly the beyond-tip class) from the aux-substituted
+   SIDE field, but a plain element's **assembly is single-valued on MAIN dofs**
+   (`mass_conservation_coo` scatters `el[plain]`) — the B6 `own_side_field`
+   disease in the one element class own_side_field cannot fix (neither side
+   field is the assembled one). At the verdict element (medium, elem 93977):
+   **side 1.532 vs main 0.309**. The **HONEST untapered exponent is +0.620**
+   (+0.367 with a V/median ≥ 0.1 sliver filter) — **the SAME OBJECT as the
+   conforming +0.52, NOT a stronger one** ⇒ the 2026-07-13 "different objects"
+   verdict holds for the *mechanism* (TE taper can't reach it) but its
+   "LS 1.34 ≥ conforming 0.52" magnitude comparison is RETIRED, and **G13.1's
+   LS-vs-conforming exponent comparison needs the same erratum** (its
+   conforming numbers are metric-clean and stand). Fix shipped **opt-in**:
+   `element_mach2(mixed_plain="main")` — default `"side"` keeps every
+   committed diagnostic (B6/B7 M_max locks) bit-identical; **flipping the
+   default + re-reading the B6/B7 M_max gate numbers is a recorded user
+   arbitration item.** Related recorded (not fixed): the same aux-mixed side
+   field feeds `element_densities`, so junk density weights DO enter the
+   matrix on mixed-side plain elements (measured rho_up min 0.43 vs physical
+   ~0.87 at M0.5 medium; no NaN) — a second arbitration item, since fixing it
+   moves every committed LS gate number.
+2. **The honest residual singularity is the sheet TERMINATION carrying a
+   FINITE jump:** the last cut ring holds |δ| ≈ **0.026** (M6, h- AND
+   TE-taper-INDEPENDENT — Γ_last→0 under the TE blend while the ring jump
+   does not move; the two are **decoupled**, which is *why* the TE row blend
+   measured no effect), dropped to zero across one single-valued element.
+   Also recorded en route: the **untapered** emergent Γ(tip)→0 property
+   degrades under refinement (Γ_last 0.00011 coarse → 0.00218 medium — B7's
+   ±3e-4 was coarse-only).
+
+**★★ THE SPAN BLEND (wake-LS-row termination softening) RAN → NEGATIVE ON
+LOCALITY, mechanism pinned** (demo `run_b8_span_blend.py` **8/8**, artifacts
+`b8_span_blend.csv/.png`, `checks_b8_span_blend.csv`; machinery
+`MultivaluedOperator(span_blend=(form, r_blend))` — per non-TE cut node j,
+`w_j·[wake-LS row] + (1−w_j)·s_j·[φ_aux−φ_main] = 0`, w_j from the same
+`tip_taper_factors`, s_j = the row's own LS magnitude for h-invariance,
+beyond-tip straddler nodes get w=0 at any r_blend; default None bit-identical,
+`tests/test_b8_span_blend.py` 11 passed, B-suite 116 passed / 9 skipped).
+The blend **hits its target** — the termination-ring jump is WELDED (0.026 →
+0.001/0.0003 at r_blend 0.05/0.08 b) — **and the price disqualifies the
+model**: (a) **~20% GLOBAL lift loss** (−19.8/−20.2/−21.8% at r_blend
+0.03/0.05/0.08 medium), **UNIFORM in z** — Γ(z) scales down root-to-tip
+including where the blended rows are bitwise identical to baseline — and
+essentially **r_blend-INSENSITIVE** (2-point spread); (b) **component
+isolation** (coarse): the straddler weld ALONE costs −13.3%, the inboard
+smooth blend ALONE −10.8% ⇒ not a defect of either piece: **the implicit
+Kutta has no per-station target — Γ is ONE global solution mode, and ANY
+δ-pin on the sheet near the tip re-levels it** (G13.2 finding-(2)'s
+fixed-point amplification acting GLOBALLY; the conforming secant keeps it
+per-station, which is why the same F(z) costs −1.6% there and −20% here);
+(c) the loss **GROWS under refinement** (rb0.08: −16.9% → −21.8%), so it
+**CONTAMINATES the exponent**: p_unload ≈ −0.10 of the apparent
++0.37 → +0.05 reduction (corrected ~+0.15 — suggestive, NOT certifiable
+under a 20% flow distortion, and moot at this cost); (d) a **narrow blend
+(~2 elements, rb0.03) is ACTIVELY harmful** (ring jump ×2.26, honest
+p +1.31). ⇒ **every constraint-side route is now measured: TE rows (no
+effect), wake-LS rows (globally amplified damage). If a cure is still
+wanted, it must change the FUNCTION SPACE at the termination** (how the
+spanwise clip ends the multivalued region — e.g. sub-element termination of
+the aux-DOF set), not add sheet-side constraints.
+
+**★ ARBITRATED 2026-07-14 (user): B8 CLOSED as CHARACTERIZED-NOT-CURED.**
+The honest LS tip exponent (+0.62 / +0.37 no-sliver) is the same object at
+the same magnitude as the conforming +0.52 that every closed conforming gate
+lives with ⇒ **B9 (wing-body LS solve, M∞0.5) is UNBLOCKED**. Recorded
+BACKLOG (not scheduled): (a) flip the `element_mach2` default to
+`mixed_plain="main"` + re-read the B6/B7 M_max locks + the G13.1 LS-exponent
+erratum; (b) fix the `element_densities` mixed-plain junk weights (moves
+every committed LS gate number — needs its own A/B). The function-space
+termination re-spec stays a candidate only if a future gate actually needs
+the LS tip edge bounded. All shipped machinery (`span_blend`, `mixed_plain`)
+is default-inert and stays. Evidence: demo_report "Track B / B8 re-spec"
+section.
 
 ### B9 — Multi-wake validation (multi-element / wing-body) ☐ (was B8 2026-07-13; orig B6→B5)
 **Deliverable:** Multi-wake validation (multi-element / wing-body)
@@ -2008,7 +2088,7 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
 | B5 | ✓ | 2026-07-12 | (was B4.5, orig B3.5) **NEW 2026-07-11 + CLOSED 2026-07-12 (user-arbitrated) — far-field A/B: option a (Dirichlet+vortex) STAYS the default.** `solve_multivalued_lifting` grew `farfield="vortex"` (default, option a: spherical Dirichlet freestream + PG vortex on the MAIN DOFs with the emergent Γ refreshed in each outer iter, aux FREE) / `"neumann"` (option b, López: inflow Dirichlet freestream + outflow Neumann outlet carrying the freestream flux ρ∞(u·n̂), NO vortex, NO Γ feedback) / `"freestream"` (Dirichlet freestream everywhere, crudest). Helpers `_farfield_split`/`_neumann_outlet_rhs` in `solve/picard_ls.py`. **López-style domain-size re-calibration** (the dissertation §4.1.4 method) on BOTH NACA families (M0 embedded + M3 wake-free), coarse, M0.5 α2°, R ∈ {15,30,60,120}c: option a is **domain-robust** (Γ within 0.45%/1.09% of the truth over 15→120c; 0.25% of conforming at 15c), option b truncates the **O(Γ/R)** point-vortex tail (−4.07% at 15c → −0.50% at 120c, halving each doubling of R ⇒ meets the B3 ±2% band only at **R≥~30c**, <1% at **R≥60c** = 2–4× larger domain), freestream crudest at every R (DIVERGES on compact 15c M0). Both families bit-for-bit agree. ⇒ option a stays default (compact 15c workflow); option b validated but domain-hungry. **M6 leg folded into B7** (the 3D B-path solve is B7 machinery; the span-uniform option-a vortex also recreates the P5 branch-ray artifact on M6 without the Γ(z) taper — B7). Evidence: demo `cases/demo/b4p5_farfield/` (`farfield_domain_study.png` + summary/checks CSV, self-checking), `tests/test_b45_farfield.py` **10 passed** (15c coarse locks + `_farfield_split`/RHS unit checks). Conforming path byte-untouched. |
 | B6 | ◐ | 2026-07-12 | (was B5, orig B4) **Transonic + Mach continuation on the level-set path — coarse gate MET, medium fold = LS-Newton (delivered).** Full detail in the B6 gate section above (§"B6 — Transonic…") + design_track_b.md §10/§10.6. Delivered: per-side artificial density with a same-side-restricted upstream walk (D10; subcritical exact no-op), **supersonic-zone-localized damping** (the P4 whole-field θ·diag throttles the implicit-Kutta circulation — a Jacobi-smoother-vs-solution-mode effect), `solve_multivalued_transonic` (Mach ramp, **no Γ secant**), `post/surface_ls.py` (D11 wall-Cp/shock). **★ Gate baseline changed (user-arbitrated): same-mesh conforming NEWTON truth, not the conforming Picard** (which under-circulates 4–8% at these shocks). **coarse M0.80 MET** dual-mesh (M0 Γ 0.2124/−7.9%, M3 0.2322/+0.9%, shock 0.644/0.678, 0 lim/flr; demo `cases/demo/b6_transonic/` 14/14). **★ Fold findings:** live option-a Γ→vortex loop-gain>1 near the fold ⇒ transonic recipe = `farfield="neumann"`; and the raw Picard-vs-Picard A/B gap is the conforming Picard's own stall bias (Newton-arbitrated). **★ LS Newton (`solve/newton_ls.py`, design §5.5/§10.6): DELIVERED + FD-verified 1.3e-9**, reaches machine-converged terminal-quadratic discrete **fold** solutions (0 lim/flr): coarse M0.80 M0 |R| 9.4e-13 / M3 3.2e-11; **medium M0.7875 M3 wake-free (workflow mesh) |R| 1.5e-12** — closing the "is it a solution?" question the Picard stall left open. **Two honest gaps (open):** M0-embedded medium live-Newton limit-cycles at 3e-6 (P8/N5 near-tie churn → wire in frozen selection); converged LS fold lift ~13% below conforming-Newton (discretization difference to apportion — mesh + B5 neumann −4% + cut-O(h); user decided NOT to chase it now). Tests `tests/test_b6_transonic.py` (9 + 2 gated) + `tests/test_b6_newton.py` (2 + 2 gated). |
 | B7 | ✓ | 2026-07-12 | (was B5.5, orig B4.5) **ONERA M6 3D gate — CLOSED, dual-mesh, first try.** Full detail in the B7 gate section above + design_track_b.md §11. M∞0.84/α3.06 coarse, `farfield="neumann"`, ramp 0.60→0.84 @ dm 0.04; **M1 embedded** cl_KJ 0.2765 / shocks 0.635/0.588/0.449 / Γ 0.1076→−0.0003 / M_max 1.453 / **0 lim,flr** (22.7 min) and **M4 wake-free** cl_KJ 0.2710 / 0.634/0.584/0.454 / 0.1055→+0.0003 / 1.368 / **0 lim,flr** (18.4 min); V6 1.77%/1.97% (P5 coarse 2.40%); dual-mesh A/B 2.0%. **★ The B6 lift INVERSION reproduces in 3D:** against the conforming **NEWTON** truth (cl_KJ 0.2692, the B6-arbitrated baseline) the LS Picard is **+2.7% (M1) / +0.7% (M4)** while the conforming **Picard** (P5, 0.24788) is **−8.6%** — the LS path has no early-stoppable Γ outer (implicit Kutta ⇒ Γ is a solution mode), so gating on P5 would penalise the B path for being closer to the truth; the **wake-free workflow mesh is the more accurate of the two**. **★ 3D far field = neumann, and the P5 Γ(z) taper is structurally UNNECESSARY on the B path** (not merely unimplemented): the B-path vortex is span-uniform with a y=0,x>0 branch cut at every z, which misfires two independent ways — (a) the α-aimed sheet is not coplanar with that cut (B3's rule in 3D; outlet M 0.958 vs neumann 0.513) and (b) even re-aimed coplanar, one scalar Γ cannot match Γ(z)→0 (P5's branch-ray artifact; outlet M 0.825) — and neumann carries no vortex, so neither can exist. **★ Γ(z) comes out spanwise-SMOOTH with NO smoothing** (unplanned finding): normalised RMS 2nd difference 0.0079/0.0091 vs the conforming P5's 0.0970 — **11–12× smoother**. The conforming path runs a separate secant PER TE STATION (the machinery whose single-station failure, st133, cost P5 a whole investigation, and whose jitter `INVESTIGATION_gamma_smoothing.md` failed to smooth away); the implicit Kutta has no per-station loop — Γ is ONE solution mode ⇒ the P5 spanwise-Γ problem is not fixed but made **structurally impossible**. **★ The 3D-only machinery needed NO new solver code** (B1's oblique-frame + spanwise-clip fixes held): Γ(tip) → ~3e-4 discretely; the only gap was post-processing (`post/surface_ls.py`: `section_cp_curve_levelset` + `cl_pressure_3d_levelset`). Cost far under the risk estimate (~0.6 s/outer at ~12k 3D DOFs ⇒ ~20 min/solve, not hours). **Caveats (recorded, not chased):** top Mach levels park on the P4/B6 Picard residual tail (|R| ~4–6e-6, 600-outer cap) — bounded + physical + in band at every level, so the gate asserts *bounded*, not `converged`; **LS Newton on M6 deferred** (plain splu; P8/N6's true-3D LU fill ⇒ needs lagged-LU); shocks sit 0.02–0.04c aft of P5 (in band) and η=0.90 is 0.087 aft of the P8 Newton shock. Evidence: demo `cases/demo/b7_onera_m6/` (**35/35 PASS**, 4 figures + summary/farfield/checks CSV), `tests/test_b7_onera_m6.py` (6 fast + 5 gated). Conforming path byte-untouched. |
-| B8 | ☐ | | (NEW 2026-07-13, user-approved) **Level-set tip-edge desingularization (row-blend tip taper)** — the LS analogue of P13/G13.2's conforming taper. The conforming `Γ_eff(z)=F(z)·Γ_Kutta(z)` cannot be ported: the LS path has no Γ DOF and its TE Kutta row `s·(q_u−q_l)=0` is homogeneous ⇒ scaling by F is a no-op (G13.2 finding (8)). Fix = a convex BLEND per TE node of the pressure-equality row with B2's continuity weld: `F·[s·(q_u−q_l)] + (1−F)·[φ_aux−φ_main] = 0` (F=1 inboard ⇒ pressure Kutta bit-identical; F=0 at tip ⇒ weld ⇒ jump=0 ⇒ tip unloaded). A DIFFERENT model from `Γ=F·Γ_Kutta` ⇒ r_c independently calibrated, two-path comparison is a physics A/B. **★★ RESULT 2026-07-13 — the blend does NOT close the gate, because its PREMISE is wrong** (demo `cases/demo/b8_tip_taper_ls/` **12/12**; M6 coarse+medium, M0.5, no limiter). The blend works exactly as its model says — converges 0 lim/flr, unloads the tip circulation far past the criterion (**Γ_last ~ h^4.73**, criterion q≥1), perfectly LOCAL (inboard Γ +0.01%, cl +0.03%) — **and the tip edge still DIVERGES** (p **+1.341** untapered → +1.37…+1.58 tapered; bigger r_c is worse). **(1)** G13.2's `p ≈ 1−q` does NOT transfer (q=4.73 yet p=+1.37) ⇒ killing Γ_last does not kill the peak. **(2)** Lift cost ~0 because **there is nothing to unload** — the LS implicit Kutta already drives Γ(tip)→0 emergently (B7: ±3e-4); the conforming path needs the taper only because its free-edge rule leaves Γ_last ~ √h (q=0.44). **(3) ★ MECHANISM:** the peak cell is **OUTBOARD of the geometric tip** (z/b=1.0118), a **`beyond_tip` element the SPANWISE CLIP refuses to cut**, the SAME element tapered or not, and **NOT a small-cut sliver** (V 0.71× median, not even cut) ⇒ **the LS tip singularity lives in how the embedded sheet TERMINATES, not in the circulation it sheds.** The two paths' tip singularities are DIFFERENT OBJECTS. Machinery shipped (correct, tested, bit-identical by default) but **B8 needs a RE-SPEC aimed at the sheet termination (spanwise clip / beyond-tip zone) — user arbitration required.** Cost caveat: the LS path has **no AMG option** (hardcoded `spsolve`, B2 decision) — M6 medium is 484 s/solve at 67k dofs; **fine would hit the splu wall with no escape hatch**. |
+| B8 | ✓ | 2026-07-14 | (NEW 2026-07-13, user-approved; **CLOSED 2026-07-14 as CHARACTERIZED-NOT-CURED, user-arbitrated — B9 unblocked**) **Level-set tip-edge desingularization (row-blend tip taper)** — the LS analogue of P13/G13.2's conforming taper. The conforming `Γ_eff(z)=F(z)·Γ_Kutta(z)` cannot be ported: the LS path has no Γ DOF and its TE Kutta row `s·(q_u−q_l)=0` is homogeneous ⇒ scaling by F is a no-op (G13.2 finding (8)). Fix = a convex BLEND per TE node of the pressure-equality row with B2's continuity weld: `F·[s·(q_u−q_l)] + (1−F)·[φ_aux−φ_main] = 0` (F=1 inboard ⇒ pressure Kutta bit-identical; F=0 at tip ⇒ weld ⇒ jump=0 ⇒ tip unloaded). A DIFFERENT model from `Γ=F·Γ_Kutta` ⇒ r_c independently calibrated, two-path comparison is a physics A/B. **★★ RESULT 2026-07-13 — the blend does NOT close the gate, because its PREMISE is wrong** (demo `cases/demo/b8_tip_taper_ls/` **12/12**; M6 coarse+medium, M0.5, no limiter). The blend works exactly as its model says — converges 0 lim/flr, unloads the tip circulation far past the criterion (**Γ_last ~ h^4.73**, criterion q≥1), perfectly LOCAL (inboard Γ +0.01%, cl +0.03%) — **and the tip edge still DIVERGES** (p **+1.341** untapered → +1.37…+1.58 tapered; bigger r_c is worse). **(1)** G13.2's `p ≈ 1−q` does NOT transfer (q=4.73 yet p=+1.37) ⇒ killing Γ_last does not kill the peak. **(2)** Lift cost ~0 because **there is nothing to unload** — the LS implicit Kutta already drives Γ(tip)→0 emergently (B7: ±3e-4); the conforming path needs the taper only because its free-edge rule leaves Γ_last ~ √h (q=0.44). **(3) ★ MECHANISM:** the peak cell is **OUTBOARD of the geometric tip** (z/b=1.0118), a **`beyond_tip` element the SPANWISE CLIP refuses to cut**, the SAME element tapered or not, and **NOT a small-cut sliver** (V 0.71× median, not even cut) ⇒ **the LS tip singularity lives in how the embedded sheet TERMINATES, not in the circulation it sheds.** The two paths' tip singularities are DIFFERENT OBJECTS. Machinery shipped (correct, tested, bit-identical by default) but **B8 needs a RE-SPEC aimed at the sheet termination (spanwise clip / beyond-tip zone) — user arbitration required.** Cost caveat: the LS path has **no AMG option** (hardcoded `spsolve`, B2 decision) — M6 medium is 484 s/solve at 67k dofs; **fine would hit the splu wall with no escape hatch**. **★★ RE-SPEC ROUND 2026-07-14 (diagnosis-first, then span blend — see the B8 section):** (1) the committed p=+1.34 was a **×5 METRIC ARTIFACT** (`element_mach2` reads mixed-side plain/beyond-tip elements from the aux-substituted side field; assembly uses MAIN dofs — elem 93977: side 1.532 vs main 0.309); the **HONEST exponent is +0.62 (+0.37 no-sliver) = the SAME object as the conforming +0.52**; fix opt-in `element_mach2(mixed_plain="main")`, default bit-identical. (2) The honest residual object is the **termination ring's FINITE jump** (|δ|≈0.026, h- and TE-taper-independent — decoupled from Γ_last, which is why the TE blend measured nothing). (3) The **span blend of the wake-LS rows** (`MultivaluedOperator(span_blend=…)`, default None bit-identical, 11 tests, B-suite 116/9) **WELDS the ring (0.026→0.0003) but is NEGATIVE on locality: ~20% GLOBAL lift loss, uniform in z, r_blend-insensitive, h-GROWING** (⇒ its flat p at rb0.08 is confounded, corrected ~+0.15); component isolation: straddler weld alone −13.3%, inboard blend alone −10.8% ⇒ **the implicit Kutta has no per-station target — ANY sheet-side δ-pin re-levels the global Γ mode ~10×** (the conforming secant keeps the same F(z) at −1.6%). Demos `run_b8_termination_diagnosis.py` + `run_b8_span_blend.py` (8/8). **Both constraint-side routes now measured dead; any further cure must change the FUNCTION SPACE at the termination. ★ ARBITRATED 2026-07-14: CLOSED as characterized-not-cured (honest exponent = the conforming object every closed gate lives with) ⇒ B9 UNBLOCKED; backlog = mixed_plain default flip (+B6/B7 M_max re-reads, G13.1 erratum) + the element_densities junk-weight fix.** |
 | B9 | ☐ | | (was B8 2026-07-13; orig B6→B5) Multi-wake validation (multi-element / wing-body): two-element cl's plausible, fuselage carries no lift. Unblocks Track M's M2. |
 | B10 | ⊘ SHELVED | 2026-07-10 | (was B9 2026-07-13; orig B7→B6) Curved wake / free wake. Recorded reasons (DN1 §8 / DN2 §4.5.6): the loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent. The `update_direction()` interface capability is retained — it is what B1's α re-aim tests exercise. |
 
