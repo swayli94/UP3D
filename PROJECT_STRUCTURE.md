@@ -52,6 +52,12 @@ pyfp3d/                    # Main package
 │   │                       #   mean of probe jumps); ✓ [P8] reduce_operator(A) → (TᵀAT, TᵀAG)
 │   │                       #   pure/no-mutation (update_matrix delegates, bit-identical) —
 │   │                       #   on the Newton J its H column IS the exact wake-jump ∂R_red/∂Γ
+│   │                       #   ✓ [P13/G13.2] tip_taper_factors(station_z, z_tip, form, r_c)
+│   │                       #   — the spanwise loading taper F(z) that desingularizes the wake's
+│   │                       #   free tip edge; geometry-only (independent of φ), so the Newton
+│   │                       #   Kutta row is just scaled by F. Shipped: "vanish_smooth"
+│   │                       #   (smoothstep, COMPACT support), r_c = 0.05·b_semi. Consumed via
+│   │                       #   solve_newton_lifting(tip_taper=…), default None = bit-identical
 │   └── dirichlet.py      # ✓ far-field freestream + 2D vortex correction (branch cut ON
 │                           #   the wake sheet; eliminated ⁺-side far-field wake nodes
 │                           #   automatically consistent); ✓ [P3] Prandtl-Glauert scaling
@@ -389,10 +395,16 @@ tests/                     # Unit and gate tests
                                       #   (NEWTON_M6_RECIPE lives here too; skips without the
                                       #   gitignored onera_m6/*.msh; carries the promoted
                                       #   G10.2 intermediate_tol=1e-5 since 2026-07-11)
-└── test_p10_continuation.py         # ✓ [P10/G10.2] level-adaptive intermediate tolerance:
-                                      #   default-path accept_reason lock + subsonic-ramp
-                                      #   adaptive path (final level strict, Γ matches the
-                                      #   strict run to 1e-6, total steps not worse)
+├── test_p10_continuation.py         # ✓ [P10/G10.2] level-adaptive intermediate tolerance:
+│                                     #   default-path accept_reason lock + subsonic-ramp
+│                                     #   adaptive path (final level strict, Γ matches the
+│                                     #   strict run to 1e-6, total steps not worse)
+└── test_p13_tip_taper.py            # ✓ [P13/G13.2] spanwise loading taper (15): tip_taper=None
+                                      #   is bit-identical; F is geometry-only; compact vs
+                                      #   unbounded support; and the AMPLIFICATION law
+                                      #   Γ/Γ* = F(1−b)/(1−F·b) with the P2 Kutta slope b≈0.93
+                                      #   (F=0.8 ⇒ 0.21×, not 0.8× — the trap that makes r_c
+                                      #   have to stay small)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap
@@ -832,16 +844,25 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 
 ---
 
-**Last updated:** 2026-07-11  
+**Last updated:** 2026-07-13  
 **Status:** closed phases — P0, P2 + M0 (2026-07-06), P3 + M1 + P4 (2026-07-07),
-P5 + P6 (2026-07-08), P7 (2026-07-10), P8 (2026-07-11); P10 partial (G10.2 + G10.3
-closed 2026-07-11, G10.1 open, no ordering constraint); **P9 (grid-convergence &
-accuracy-gap discrimination) is the running phase.** Details, measured gate numbers,
-and the two 2026-07-11 Track-P renumbers (curved walls → P11, backlog → P12) live in
+P5 + P6 (2026-07-08), P7 (2026-07-10), P8 + P9 (2026-07-11); P10 partial (G10.2 +
+G10.3 closed 2026-07-11, G10.1 open, no ordering constraint). **Running: P13
+(tip / wake-edge singularity)** — G13.1 ✓ + G13.2 conforming ✓ (2026-07-13; the
+level-set clause is open); **G13.3 open, and its next action is a Track M one:
+round the flat tip cap** in `meshgen/wing3d.py` (the real ONERA M6 has a rounded
+cap; the flat one's sharp edge is the third and last singularity blocking 3D grid
+convergence — not a P11 problem, since curved *elements* cannot regularize a sharp
+geometric *edge*). Track M M1b ✓ (2026-07-13) fixed the M6 mesh ladder
+(`clamp_h_far` + `coarse_ss` + `RICHARDSON_LADDER`; the old `h_far` clamp made
+`coarse` fall off the refinement ray and invalidated every past M6 Richardson).
+Track B: B1–B5 + B7 ✓, B6 ◐, next = B8. Details, measured gate numbers, and the
+two 2026-07-11 Track-P renumbers (curved walls → P11, backlog → P12) live in
 docs/roadmap.md's ledger and docs/agent-rules.md's "Current phase" line; evidence in
 docs/demo_report.md. P1 remains partial: G1.1/G1.2 closed, G1.3/G1.4 negative oracles,
 G1.6 (sphere Cp) open as a `strict=True` xfail awaiting its Option C re-spec (see
-"Known gaps" above) — now scheduled under P11 (curved walls), conditional on the
-P9/G9.3 verdict. Default suite: 184 passed + 8 skipped (heavy transonic/Newton gates
-behind `PYFP3D_TRANSONIC_GATES=1`) + 2 xfailed, ~5 min (G8.3 measured 301.66 s); the
-13 M1 tests skip unless the gitignored M6 meshes are regenerated (~30 s).
+"Known gaps" above) — scheduled under P11, which after P13/G13.2 is down to **G1.6
+alone** (its 3D-lift justification was withdrawn). Default suite: **294 passed + 17
+skipped + 2 xfailed** (heavy transonic/Newton gates behind
+`PYFP3D_TRANSONIC_GATES=1`), ~5 min at the 16-thread cap (G8.3 measured 301.66 s);
+the 16 M1 tests skip unless the gitignored M6 meshes are regenerated (~30 s).

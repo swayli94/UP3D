@@ -1361,7 +1361,7 @@ isoparametric *wall* elements cannot remove the edge of a wake sheet.
    ★ **Correction 2026-07-12 (this was over-stated as "P9 corroborates the
    Track B route").** Track B's level-set wake changes the wake
    *representation*, not the rigid-planar-sheet *model*: it keeps the same
-   sheet ending at the tip with Γ(tip)→0. The `cases/demo/tip_edge_singularity/`
+   sheet ending at the tip with Γ(tip)→0. The `cases/demo/p13_tip_edge_singularity/`
    probe (subsonic M0.5, no limiter — the clean geometric test) measures the
    tip-edge peak Mach **diverging under refinement on BOTH the conforming and
    level-set paths** (same mesh, coarse→medium: ×1.38 conforming, ×2.28
@@ -1894,7 +1894,7 @@ gitignored P5 solution cache. Tests: `tests/test_b7_onera_m6.py` (6 fast + 5 gat
 
 ---
 
-## P13/G13.1 — Tip / wake-edge singularity: characterization (`cases/demo/tip_edge_singularity/`, 10/10, 2026-07-13)
+## P13/G13.1 — Tip / wake-edge singularity: characterization (`cases/demo/p13_tip_edge_singularity/`, 10/10, 2026-07-13)
 
 *(This is the evidence for P13/G13.1 — roadmap.md Track P P13, design.md §4.1.
 It began 2026-07-12 as the "wake MODEL vs REPRESENTATION" probe below; the
@@ -1973,7 +1973,7 @@ control); heavy solves cache to `results/*.npz` (gitignored, ~20 min to regenera
 
 ---
 
-## P13/G13.2 — Tip-edge desingularization: the spanwise loading taper (`cases/demo/tip_edge_singularity/run_taper_probe.py` + `run_taper_physics.py`, 2026-07-13)
+## P13/G13.2 — Tip-edge desingularization: the spanwise loading taper (`cases/demo/p13_tip_edge_singularity/run_taper_probe.py` + `run_taper_physics.py`, 2026-07-13)
 
 **The fix.** Taper the accepted circulation toward the tip,
 `Γ_eff(z) = F(z)·Γ_Kutta(z)`, on the per-station Kutta target
@@ -2051,16 +2051,74 @@ DOF** and its TE row is **homogeneous** (`s·(q_u−q_l)=0`), so scaling it by F
 continuity weld (`F·K̂ + (1−F)·Ŵ = 0`), which is a *different model* needing its
 own r_c calibration. Designed, not implemented.
 
-**★ Honest gap — G13.3 is still blocked, by a second cause.** All three M6 meshes
+**★ Honest gap — G13.3 is still blocked, by further causes.** All three M6 meshes
 are now discrete solutions, so a Richardson is *mechanically* possible — but the
 lift sequence is **not in the asymptotic range**: cl_KJ 0.2001 → 0.2005 → 0.2121,
 i.e. increments **+0.2 % then +5.8 %**, which *grow*. **No extrapolation was run**
-(P9/G9.3 discipline: report `n/a`, never fabricate). The residual growth is in
-**mid-span Γ** (0.0791 → 0.0837) — **wing/LE resolution, not the tip**. Removing
-the tip singularity **revealed** this second convergence problem rather than
-curing it.
+(P9/G9.3 discipline: report `n/a`, never fabricate). Removing the tip singularity
+**revealed** the remaining problems rather than curing them — see the G13.3
+section below, which localizes them (and **retracts** this section's first
+reading, that the residual growth was "mid-span Γ ⇒ wing/LE resolution": the wing
+interior turns out to be *converged*).
 
-Tests: `tests/test_p13_tip_taper.py` (15).
+Demos: `run_taper_probe.py` (**16 passed + 2 xfailed**) and `run_taper_physics.py`
+(**10 passed + 1 xfailed**). The xfails are the *documented negatives*, and they
+are the point: `tanh_half` sits exactly on the criterion's knife edge (q = 1.00)
+**and** is disqualified for unbounded support (it unloads the wing to η = 0.77);
+`vanish_smooth` at r_c = 0.03 is under-regularized (p = 0.207 > 0.20) — which is
+*why* the shipped r_c is 0.05. Tests: `tests/test_p13_tip_taper.py` (15).
+
+---
+
+## P13/G13.3 — The third singularity: a flat tip cap (`cases/demo/p13_tip_edge_singularity/run_g133_ladder.py`, 5/5, 2026-07-13)
+
+G13.2 fixed the wake's free tip edge, and Track M (M1b) fixed the mesh ladder —
+and the M6 lift sequence *still* is not asymptotic. Growing increments under
+**uniform** refinement are the signature of a singularity still being resolved,
+so a third object had to be there. A three-region box study on the self-similar
+ladder `RICHARDSON_LADDER = (coarse_ss, medium, fine)` finds it, and it is **on
+the wall, not in the wake**:
+
+| region | coarse_ss → medium → fine | p | verdict |
+|---|---|---|---|
+| **tip-cap edge (WALL)** | 0.662 → 0.824 → **1.015** | **+0.321** | **DIVERGES** |
+| wake free edge (the G13.2 fix) | 0.536 → 0.565 → 0.570 | +0.045 | bounded |
+| wing p99 (control) | 0.642 → 0.628 → 0.629 | −0.014 | bounded |
+
+The control matters: the ordinary wing field is **mesh-converged**, so this is a
+*localized* divergence (a singularity), not "the whole solution is under-resolved"
+— and it retracts the earlier "mid-span Γ / wing-LE resolution" reading. The
+G13.2 taper also **holds** across the full ladder.
+
+**Root cause: a documented, deliberate geometry simplification.**
+`meshgen/wing3d.py` builds a **flat** tip cap where the real ONERA M6 has a
+**rounded** one. A flat cap meets the upper and lower surfaces at a sharp convex
+edge — in potential flow, an edge singularity of exactly the kind P13 exists to
+remove, only on the **body** instead of the wake. **This is not a P11 (curved wall
+*element*) problem:** isoparametric elements cannot regularize a genuinely sharp
+geometric *edge*. The geometry itself is wrong, so the fix belongs to **Track M**
+(round the cap), and neither P11 nor the level-set port is required.
+
+**⇒ Three distinct defects blocked 3D grid convergence, and they were different
+objects:** (1) the wake free tip edge (p = 0.59) → **fixed** by the G13.2 taper;
+(2) the `h_far` mesh-ladder clamp → **fixed** by Track M M1b; (3) the flat tip-cap
+wall edge (p = +0.32) → **open**.
+
+**⚠ Evidence status (audit 2026-07-13) — read before citing the M0.84 numbers.**
+This report's G13.2 transonic claim (cl_KJ 0.2593 → 0.2652 → **0.2866** at M∞0.84,
+M_max 2.818, 0 limited/floored ⇒ "the 0.019 gap is resolution" ⇒ "P11's lift case
+is refuted") is **prose only**: the run left no committed script, no CSV and no
+cached `.npz`, and a repo-wide search finds those numbers in the `.md` files and
+nowhere else. It cannot be re-derived without a fresh ~1 h M0.84 fine
+continuation, so **that conclusion is currently unevidenced** even though the P11
+ledger row was changed on its strength. Everything else in G13.1/G13.2/G13.3 was
+re-verified against the surviving caches and reproduces — including the
+`coarse_ss` point (cl_KJ **0.2015**, re-solved from scratch in 5 s). The demo also
+records a smaller provenance gap: the two cached `fine` runs agree on the *field*
+to three digits but disagree on the *clamp counters* (0 lim/0 flr/converged vs
+306/138/not-converged), and the "0 lim / 0 flr" clause rests on the run whose
+script was never committed. The box-study verdicts are unaffected — both give the
+same exponent.
 
 ---
 

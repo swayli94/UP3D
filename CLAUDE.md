@@ -18,10 +18,16 @@ workstation-scale (minutes for 1–3 M nodes).
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
   phases (P0, P1-partial, P2, P3, P4, P5, P6, P7, P8 + its capability assessment,
-  P9, P10-partial G10.2/G10.3, M0, M1, and Track B B3/B5/B6/B7): one self-checking
-  demo per phase under
+  P9, P10-partial G10.2/G10.3, **P13 G13.1/G13.2/G13.3**, M0, M1, and Track B
+  B3/B5/B6/B7): one self-checking demo per phase under
   `cases/demo/<phase>/` with committed figures + measured gate numbers.
   When a phase closes, add its demo + report section here.
+  **A claim without a committed artifact is not evidence.** The 2026-07-13 audit
+  found the P13 M0.84 transonic result (cl_KJ 0.2866 ⇒ "the 0.019 gap is
+  resolution" ⇒ "P11's lift case is refuted") existing as *prose only* — no
+  script, no CSV, no cached `.npz` — after a P11 ledger status had already been
+  changed on its strength. If a run is too expensive to repeat, that is the
+  reason to commit its CSV, not a reason to skip it.
 - [docs/discussion_notes/](docs/discussion_notes/) — **discussion & reference
   material only, NEVER a coding spec.** Design notes for future tracks (DN1
   level-set wake, DN2/DN6 VII coupling, DN4/DN5 Newton) +
@@ -51,8 +57,12 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (**291 passed + 17 skipped + 2 xfailed since
-   P13/G13.2 2026-07-13** — +15 `tests/test_p13_tip_taper.py` (tip-edge
+3. Full suite: `pytest tests/` (**294 passed + 17 skipped + 2 xfailed since
+   Track M M1b 2026-07-13** — +3 M6 mesh-ladder tests in
+   `tests/test_m1_onera_m6.py` (16 total; they lock
+   `RICHARDSON_LADDER = (coarse_ss, medium, fine)` at exactly 2× per level and
+   regression-document the old `h_far` clamp defect) over the 291+17+2 P13/G13.2
+   baseline, which itself was +15 `tests/test_p13_tip_taper.py` (tip-edge
    desingularization taper) over the 276+17+2 B7 baseline; previously
    **276 passed + 17 skipped + 2 xfailed since B7
    2026-07-12**, measured 719.29 s @16 threads: +92 Track B tests (B1 dual-mesh,
@@ -65,9 +75,10 @@ workstation-scale (minutes for 1–3 M nodes).
    M3 medium (~40 s) and the M4 ONERA M6 family (~12 s);
    ~5 min — G8.3 measured 301.66 s; the always-on coarse transonic smoke is ~170 s
    of it, the G3.2 medium-mesh nested Picard solve ~45 s, the rule-7 sweep's M6
-   coarse+medium cut_wake ingest ~15 s. The M6 .msh files are gitignored — the 13
+   coarse+medium cut_wake ingest ~15 s. The M6 .msh files are gitignored — the 16
    M1 tests skip until you run `cases/meshes/onera_m6/generate_onera_m6.py`
-   (~30 s). The heavy transonic/Newton gates (P4 medium + G4.3 sweep, P5, gated
+   (~30 s; it now also emits `coarse_ss`, the self-similar coarse level —
+   `coarse`/`medium`/`fine` stay bit-identical). The heavy transonic/Newton gates (P4 medium + G4.3 sweep, P5, gated
    P8 G8.1/G8.2 + FD pocket, the gated B6 M0.80 dual-mesh + LS-Newton runs, and
    the gated B7 M6 3D dual-mesh solves) only run under
    `PYFP3D_TRANSONIC_GATES=1`, and make up most of the 17 skipped.)
@@ -93,8 +104,11 @@ P3 = subsonic compressible, P4 = transonic, P5 = ONERA M6, P6 = surface-Cp
 recovery, P7 = differentiable flux at frozen selection, P8 = fully-coupled
 Newton/performance, P9 = grid-convergence/accuracy-gap discrimination (evidence
 phase), P10 = Newton generality & continuation efficiency, P11 = curved wall
-elements, P12 = backlog, P13 = tip/wake-edge singularity (characterization +
-wake-model fix, NEW 2026-07-13, appended — no renumber); Track-P renumbers
+elements, P12 = backlog, P13 = tip/wake-edge singularity (G13.1 characterization,
+G13.2 the fix — a Kutta-target **spanwise loading taper**, NOT the wake-model
+rewrite first assumed — and G13.3 3D grid-convergence closure, whose remaining
+blocker is the **flat tip cap** and is a Track M geometry fix; NEW 2026-07-13,
+appended — no renumber); Track-P renumbers
 2026-07-08 and 2026-07-11 (two same-day insertions) — docs before those dates
 use the then-current IDs, so pre-2026-07-11 "P9 curved walls"/"P10 backlog"
 read as P11/P12). Track V gates are

@@ -350,12 +350,16 @@ the exponent p in peak-velocity ~ h^(−p): 1/√r ⇒ p ≈ 0.5, 1/r ⇒ p = 1.
 artificial density / limiter) on the ONERA M6 tip box, the conforming
 three-point (coarse/medium/fine) log-log exponent of peak local Mach vs 1/h is
 **p ≈ 0.59** — consistent with 1/√r, refuting the earlier "1/r-type" phrasing.
+(**Read §4.2 before using this continuum picture to reason about the fix.** The
+exponent is right, but the *mechanism the solver actually sees* is discrete —
+the outermost TE station shedding its retained Γ over one cell — and it is that
+discrete picture, not this continuum one, that predicts which tapers work.)
 The peak diverges on **both** the conforming and the Track-B level-set paths
 (the representation change does not blunt it), while the surrounding field
 stays mesh-converged (a *localized* edge singularity). Under enough refinement
 the edge overspeed trips the speed limiter / density floor even subsonically, so
 the fine mesh stops being a discrete solution (the M∞ 0.5 analogue of the P9/G9.1
-transonic finding). Demo: `cases/demo/tip_edge_singularity/`.
+transonic finding). Demo: `cases/demo/p13_tip_edge_singularity/`.
 
 ### 4.2 The fix: a spanwise loading taper (P13/G13.2)
 
@@ -407,13 +411,41 @@ the M6 fine mesh becomes a **genuine discrete solution** (0 limited/floored) —
 what P9/G9.1 could not achieve — and at M∞0.84 the medium M_max drops 2.13 →
 1.725. **Price:** a deliberate tip unloading worth ~1–1.6% of cl (scales with
 r_c), localized inboard of η≈0.95. Evidence:
-`cases/demo/tip_edge_singularity/`.
+`cases/demo/p13_tip_edge_singularity/`.
 
-**Caveat (P13/G13.3).** Removing the tip singularity did **not** deliver 3D grid
-convergence: the M6 lift sequence is still not in the asymptotic range (its
-increments grow), and the residual growth sits in *mid-span* Γ — i.e. wing/LE
-resolution. The tip fix *revealed* that second, independent problem rather than
-curing it.
+**Caveat (P13/G13.3): a THIRD singularity, on the WALL.** Removing the tip
+singularity did **not** deliver 3D grid convergence — the M6 lift sequence is
+still not in the asymptotic range (its increments *grow* under uniform
+refinement, the signature of a singularity still being resolved). A three-region
+box study on the self-similar ladder localizes what is left, and it is **not**
+mid-span/LE resolution (an earlier reading of the spanwise "slosh", since
+retracted — that slosh was an artifact of comparing two different mesh families,
+see below):
+
+| region | coarse_ss → medium → fine | p | verdict |
+|---|---|---|---|
+| **tip-cap edge (WALL)** | 0.662 → 0.824 → **1.015** | **+0.321** | **DIVERGES** |
+| wake free edge (the §4.2 fix) | 0.536 → 0.565 → 0.570 | +0.045 | bounded |
+| wing p99 (control) | 0.642 → 0.628 → 0.629 | −0.014 | bounded |
+
+The §4.2 fix holds and the ordinary wing field is converged; what diverges is the
+sharp convex edge where `meshgen/wing3d.py`'s **flat tip cap** meets the
+upper/lower surfaces. The real ONERA M6 has a **rounded** cap — the flat one is a
+documented deliberate simplification — so this is an edge singularity of exactly
+the kind §4.1–§4.2 treat, only on the **body** instead of the wake. **It is not a
+P11 (curved wall *element*) problem:** isoparametric elements cannot regularize a
+genuinely sharp geometric *edge*; the geometry itself is what is wrong, so the fix
+is Track M (round the cap). Evidence:
+`cases/demo/p13_tip_edge_singularity/run_g133_ladder.py` (5/5).
+
+**Mesh-ladder prerequisite (fixed 2026-07-13).** Any M6 three-point study must run
+on `generate_onera_m6.RICHARDSON_LADDER = (coarse_ss, medium, fine)`. The shipped
+`coarse` is **not on the refinement ray**: `_level_params` derived every length
+from `h_wall` except the far field, which was clamped (`h_far = min(2.5,
+120·h_wall)`), and the clamp bit only at `coarse` — so coarse→medium refined the
+far field 1.39× against the wall's 2×. `coarse_ss` is that level re-cut without
+the clamp; the ladder now refines by exactly 2.000 in every length scale. This
+invalidates every earlier M6 three-point Richardson, **including P9/G9.1's**.
 
 ---
 
