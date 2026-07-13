@@ -103,6 +103,11 @@ cases/demo/b7_onera_m6/results/*.npz
 # figure+CSVs are the committed evidence, ~20 min to regenerate)
 cases/demo/p13_tip_edge_singularity/results/*.npz
 
+# B8 level-set tip-taper demo: per-element Mach fields (M6 coarse+medium, M0.5;
+# figure+CSVs are the committed evidence, ~45 min to regenerate — medium LS is
+# ~8 min/solve, sparse-direct LU on the ~67k-dof extended system)
+cases/demo/b8_tip_taper_ls/results/*.npz
+
 # Reference papers
 docs/references
 

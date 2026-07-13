@@ -2283,3 +2283,118 @@ a flat-cap result and remains unevidenced either way.
   M∞ → 0 is bit-identical to the P1/P2 Laplace drivers; assembly is
   colored-`prange` with precomputed geometry (~160× hot reassembly) and
   every solve is bit-reproducible run-to-run (seeded AMG setup).
+
+---
+
+## Track B / B8 — level-set tip-edge desingularization (row-blend tip taper)
+
+**Status: ◐ IMPLEMENTED, GATE NOT MET — a NEGATIVE result, and the reason is the
+finding.** Demo `cases/demo/b8_tip_taper_ls/run_b8_taper_ls.py` (**12/12 PASS** —
+every check asserts a *measured fact*, including the ones that record the
+failure). Artifacts: `results/b8_taper_ls.csv`, `results/b8_taper_ls.png`,
+`results/checks_b8.csv`. Tests `tests/test_b8_tip_taper_ls.py` (13).
+Case: ONERA M6 coarse+medium, M∞ 0.5, α 3.06°, `upwind_c = 0` (no limiter, no
+shock — the clean geometric probe, as G13.1 established).
+
+### What was built
+
+P13/G13.2 killed the tip/wake-edge singularity on the **conforming** path with a
+spanwise loading taper `Γ_eff(z) = F(z)·Γ_Kutta(z)`. That cannot be ported to the
+level-set path: it has **no Γ DOF** (the implicit Kutta makes Γ a solution mode)
+and its TE Kutta row `s·(q_u − q_l) = 0` is **homogeneous** (RHS ≡ 0), so scaling
+it by F is an algebraic **no-op** (G13.2 finding (8)). B8 implements finding (8)'s
+prescribed analogue — a convex **blend** of the pressure-equality row with B2's
+continuity weld, per TE node:
+
+```
+F_i · [ s·(q_u − q_l) ]  +  (1 − F_i) · [ φ_aux − φ_main ]  =  0
+```
+
+`F=1` inboard ⇒ pure pressure Kutta (**bit-identical**); `F=0` at the tip ⇒ weld
+⇒ jump = 0 ⇒ tip unloaded. Shipped in `kernels/cut_assembly.py`
+(`te_kutta_coo(weights=F)` + new `te_weld_coo`), `wake/multivalued.py`
+(`assemble_matrix(tip_taper=…)`), and threaded through
+`solve_multivalued_lifting` / `_transonic` / `solve_multivalued_newton` (blended
+residual **and** Jacobian). Default `None` ⇒ every existing B3–B7 result is
+bitwise unchanged (B-suite **59 passed / 0 failed**).
+
+### The measured result
+
+| variant | edge peak coarse→medium | **p** | **q** (Γ_last ~ h^q) | Δ inboard Γ | Δ cl_KJ |
+|---|---|---|---|---|---|
+| untapered | 0.672 → 1.532 | **+1.341** | 0.44 | — | — |
+| `vanish_smooth` r_c=0.03 | 0.675 → 1.564 | +1.37 | | | |
+| `vanish_smooth` r_c=0.05 | 0.681 → 1.619 | +1.41 | | | |
+| `vanish_smooth` r_c=0.08 | 0.702 → 1.856 | +1.58 | | | |
+| `vanish_linear` r_c=0.05 | 0.678 → 1.569 | **+1.367** | **4.73** | **+0.01%** | **+0.03%** |
+
+The blend **works exactly as its model predicts**: it converges cleanly (0
+limited / 0 floored at every r_c), it **unloads the tip circulation far past the
+conforming criterion** (q = 4.73, criterion q ≥ 1), and it is **perfectly local**
+(inboard Γ +0.01%, cl_KJ +0.03%). **And the tip-edge peak still diverges under
+every taper** — larger r_c is *worse*.
+
+The untapered **p = +1.341 reproduces G13.1's level-set exponent (1.34)** on the
+same meshes, so the off-body metric (dx > 0, z/b > 0.98 — G13.2 finding (6)'s
+trap-free box) is measuring the right object.
+
+### Why — three findings
+
+1. **G13.2's DISCRETE mechanism does not transfer.** There, `p ≈ 1 − q`: the
+   outermost TE station sheds its retained `Γ_last` as a concentrated vortex over
+   the last cell, so the edge velocity ~ `Γ_last/h`, and `q ≥ 1` kills it. Here
+   **q = 4.73 yet p = +1.37** — nowhere near `1 − q = −3.73`. **Killing `Γ_last`
+   does not kill the peak.**
+
+2. **The lift cost is ~0 (+0.03%, vs the conforming taper's −1.74%) because there
+   is nothing to unload.** The level-set **implicit Kutta already drives
+   Γ(tip) → 0 emergently** (B7 measured ±3e-4). The conforming path *needs* the
+   taper only because its free-edge rule leaves `Γ_last ~ √h` (q = 0.44). **The
+   level-set path never had that disease.**
+
+3. **★ MECHANISM — where the peak actually lives.** The peak cell is **outboard
+   of the geometric tip** (z/b = **1.0118**, dx = +0.061); it is a **`beyond_tip`
+   element** — one the **spanwise clip refuses to cut** (`cut_elements.py`: a
+   crossing needs `q ≤ span_length`); it is the **same element tapered or not**
+   (elem 93977); and it is **not a small-cut sliver** (volume **0.71×** the
+   median, and not even a cut element — so the CutFEM small-cut instability is
+   ruled out). ⇒ **the level-set tip singularity lives in how the embedded sheet
+   TERMINATES, not in the circulation it sheds.**
+
+### Two-path physics A/B (the decisive measurement)
+
+Read from the committed conforming numbers
+(`cases/demo/p13_tip_edge_singularity/results/taper_probe.csv` — **same meshes,
+same M0.5/α3.06**; read, never recomputed, per the cost rule):
+
+| | conforming `Γ = F·Γ_Kutta` | level-set row blend |
+|---|---|---|
+| untapered | p = **+0.521** (diverges) | p = **+1.341** (diverges) |
+| `vanish_linear` r_c=0.05 | p = **+0.103** (**bounded**) | p = **+1.367** (**diverges**) |
+| lift cost | **−1.74%** | **+0.03%** |
+
+**The same F(z), the same meshes, the same condition: the conforming taper bounds
+its edge; the level-set row blend does not.**
+
+### Verdict
+
+**The two paths' tip singularities are DIFFERENT OBJECTS.** Finding (8)'s "clean
+analogue" is a faithful analogue of the conforming *model* — but the level-set
+path does not have the conforming path's disease, so the analogue treats a
+patient that is not ill. **The shipped machinery is correct, tested, and
+bit-identical by default; it is simply not the cure.** **B8 needs a re-spec aimed
+at the sheet TERMINATION** (the spanwise clip / beyond-tip zone) — candidate
+directions: a graded/faded sheet termination, ghost-penalty-style stabilization
+of the clip boundary, or extending the sheet beyond the tip. **User arbitration
+required before re-speccing.**
+
+### Cost boundary (recorded)
+
+The level-set path has **no `precond` option** — `solve_multivalued_lifting` is
+hardcoded to sparse-direct `spsolve` (a deliberate B2 decision to decouple
+"is the assembly correct" from preconditioner convergence; GMRES + AMG is the
+deferred B3+ scaling path). M6 **medium costs ~484 s / solve** at 67,426 extended
+DOFs (~1.2 GB RSS). **M6 fine (~450k DOFs) on the level-set path would hit the
+same splu wall P9 hit on the conforming Newton — with no AMG escape hatch.** So
+this demo is coarse+medium **by necessity**, and any fine-mesh level-set work
+needs the deferred GMRES+AMG path first.
