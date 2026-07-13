@@ -38,6 +38,7 @@ from pyfp3d.kernels.cut_assembly import (
     newton_terms23_side_coo,
     te_kutta_jacobian_coo,
     te_kutta_residual,
+    te_weld_coo,
 )
 from pyfp3d.solve.picard_ls import (
     _farfield_main,
@@ -85,6 +86,7 @@ def solve_multivalued_newton(
     lam_min: float = 0.05,
     freeze: bool = True,
     verbose: bool = False,
+    tip_taper: Optional[np.ndarray] = None,
 ) -> Dict[str, object]:
     """Newton solve on the level-set path (B6-Newton; design_track_b.md 5.5).
 
@@ -126,7 +128,32 @@ def solve_multivalued_newton(
         seed_omega_rho)
 
     te_aux = mvop.cm.ext_dof_of_node[mvop.cm.te_nodes].astype(np.int64)
+    te_main = np.asarray(mvop.cm.te_nodes, dtype=np.int64)
     n_total = mvop.n_total
+
+    # B8 tip taper (roadmap Track B B8; P13/G13.2 finding (8)). The blended
+    # TE Kutta residual is F_i*(|q_u|^2-|q_l|^2) + (1-F_i)*(phi_aux-phi_main)
+    # and its Jacobian is F*J_kutta + (1-F)*weld. tip_taper=None (or all ones)
+    # -> pure pressure Kutta, bit-identical. Because D_keep zeros the TE aux
+    # rows of the Picard matrix and R[te_aux] is overwritten below, the blend
+    # is applied ONLY here -- assemble_matrix keeps tip_taper=None.
+    tt = None
+    if tip_taper is not None:
+        tt = np.asarray(tip_taper, dtype=np.float64)
+        if tt.shape != te_main.shape:
+            raise ValueError(
+                f"tip_taper must be ({te_main.size},), got {tt.shape}")
+        if np.all(tt == 1.0):
+            tt = None
+    f_of_row = np.ones(n_total, dtype=np.float64)   # F_i keyed by TE aux dof
+    if tt is not None:
+        f_of_row[te_aux] = tt
+
+    def _te_residual(phi):
+        r = te_kutta_residual(mvop, phi)
+        if tt is None:
+            return r
+        return tt * r + (1.0 - tt) * (phi[te_aux] - phi[te_main])
     is_dir = np.zeros(n_total, dtype=bool)
     is_dir[ff_nodes] = True
     free = np.flatnonzero(~is_dir)
@@ -181,7 +208,7 @@ def solve_multivalued_newton(
         # residual R = A phi - b (exact on every row incl. the Kutta row);
         # overwrite the Kutta rows with the true nonlinear value for safety
         R = A @ phi_ext - b_base
-        R[te_aux] = te_kutta_residual(mvop, phi_ext)
+        R[te_aux] = _te_residual(phi_ext)
         res = float(np.max(np.abs(R[free])))
         residual_history.append(res)
         if verbose:
@@ -197,11 +224,18 @@ def solve_multivalued_newton(
         parts_r = [J.row]
         parts_c = [J.col]
         parts_d = [J.data]
-        for r_, c_, d_ in (
-            te_kutta_jacobian_coo(mvop, phi_ext),
+        # blended TE Kutta Jacobian: F*J_kutta (+ (1-F)*weld appended below)
+        kr, kc, kd = te_kutta_jacobian_coo(mvop, phi_ext)
+        if tt is not None and len(kr):
+            kd = kd * f_of_row[kr]
+        jac_parts = [(kr, kc, kd)]
+        if tt is not None:
+            jac_parts.append(te_weld_coo(mvop.cm, tt))     # (1-F)*[aux-main]
+        jac_parts += [
             _remap(*newton_terms23_side_coo(mvop.op, up, u_inf)),
             _remap(*newton_terms23_side_coo(mvop.op, lo, u_inf)),
-        ):
+        ]
+        for r_, c_, d_ in jac_parts:
             if len(r_):
                 parts_r.append(r_)
                 parts_c.append(c_)
@@ -230,7 +264,7 @@ def solve_multivalued_newton(
                                        closure="wake_ls", te_kutta="pressure",
                                        phi_ext=phi_try)
             R_t = A_t @ phi_try - b_base
-            R_t[te_aux] = te_kutta_residual(mvop, phi_try)
+            R_t[te_aux] = _te_residual(phi_try)
             if np.max(np.abs(R_t[free])) < base or lam <= lam_min:
                 break
             lam *= 0.5

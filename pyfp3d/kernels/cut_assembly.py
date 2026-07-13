@@ -265,7 +265,7 @@ def wake_ls_coo(op, cm, wake_normal: np.ndarray, u_hat: np.ndarray):
     return rows, cols, data
 
 
-def te_kutta_coo(mvop, phi_ext):
+def te_kutta_coo(mvop, phi_ext, weights=None):
     """TE Kutta row: the NONLINEAR pressure-equality (Bernoulli) condition,
     linearized about the current iterate. One row per TE node, placed on that
     node's AUX dof (Track B, B4; design_track_b.md section 9.5 route (b)).
@@ -313,10 +313,24 @@ def te_kutta_coo(mvop, phi_ext):
     qu, ql = mvop.te_velocities(phi_ext)
     s = qu + ql                                          # (n_te, 3), frozen
 
+    # Track B B8 tip-taper: an optional per-TE-node factor F_i in [0, 1]
+    # scaling this (homogeneous) pressure-equality row. Used ONLY in the
+    # row BLEND F*K + (1-F)*W (see te_weld_coo): scaling K alone is a no-op
+    # because the RHS is zero, so this must be paired with the weld. weights
+    # is None on every existing path -> bit-identical.
+    if weights is not None:
+        weights = np.asarray(weights, dtype=np.float64)
+        if weights.shape != (len(cm.te_nodes),):
+            raise ValueError(
+                f"te_kutta_coo weights must be ({len(cm.te_nodes)},), "
+                f"got {weights.shape}"
+            )
+
     rows, cols, data = [], [], []
     for i, t in enumerate(cm.te_nodes):
         cv = mvop._te_cv[i]
         row = cm.ext_dof_of_node[t]
+        f_i = 1.0 if weights is None else float(weights[i])
         for key, sign in (("upper", 1.0), ("lower", -1.0)):
             e = cv[f"{key}_elems"]
             d = cv[f"{key}_dofs"]
@@ -324,7 +338,7 @@ def te_kutta_coo(mvop, phi_ext):
                 continue
             w = op.V[e] / op.V[e].sum()                  # volume weights
             # d(s . q_side)/d(x[d[e,a]]) = w_e * (s . B[e,a,:])
-            coef = sign * w[:, None] * np.einsum("ead,d->ea", op.B[e], s[i])
+            coef = f_i * sign * w[:, None] * np.einsum("ead,d->ea", op.B[e], s[i])
             rows.append(np.full(d.size, row, dtype=np.int64))
             cols.append(d.reshape(-1))
             data.append(coef.reshape(-1))
@@ -334,6 +348,54 @@ def te_kutta_coo(mvop, phi_ext):
         return e, e, np.empty(0, dtype=np.float64)
     return (np.concatenate(rows), np.concatenate(cols),
             np.concatenate(data))
+
+
+def te_weld_coo(cm, weights):
+    """TE-restricted continuity-weld triplets scaled by (1 - F_i), the
+    second term of the Track B B8 tip-taper row blend (roadmap Track B B8;
+    P13/G13.2 finding (8)).
+
+    Per TE node i the blended Kutta row on its aux DOF is
+
+        F_i * [ s . (q_u - q_l) ]  +  (1 - F_i) * [ phi_aux - phi_main ]  = 0
+
+    The first term is `te_kutta_coo(mvop, phi_ext, weights=F)`; this function
+    supplies the second, i.e. the same weld `aux_k - main_j = 0` that
+    `continuity_closure_coo` applies to every cut node, but here restricted to
+    the TE nodes and weighted by (1 - F_i). F_i = 1 (inboard) -> no weld,
+    pure pressure Kutta (bit-identical to the untapered path); F_i = 0 (tip)
+    -> pure weld -> the jump is pinned to 0 at that node -> the tip is
+    unloaded (the level-set analogue of the conforming Gamma_eff -> 0).
+
+    Because the weld row is NOT proportional to the (homogeneous) pressure
+    row, the blend genuinely changes the solution, unlike scaling the
+    pressure row alone. The RHS stays 0 (both terms are homogeneous).
+
+    Args:
+        cm: the CutElementMap (needs `te_nodes`, `ext_dof_of_node`).
+        weights: (n_te,) tip-taper factors F_i, ordered like `cm.te_nodes`.
+
+    Returns:
+        (rows, cols, data) into the extended matrix; empty if all F_i == 1.
+    """
+    te = np.asarray(cm.te_nodes, dtype=np.int64)
+    weights = np.asarray(weights, dtype=np.float64)
+    if weights.shape != te.shape:
+        raise ValueError(
+            f"te_weld_coo weights must be ({te.size},), got {weights.shape}"
+        )
+    one_minus_f = 1.0 - weights
+    sel = one_minus_f != 0.0                 # only blended (near-tip) nodes
+    if not np.any(sel):
+        e = np.empty(0, dtype=np.int64)
+        return e, e, np.empty(0, dtype=np.float64)
+    nodes = te[sel]
+    aux_k = cm.ext_dof_of_node[nodes]
+    coef = one_minus_f[sel]
+    rows = np.concatenate([aux_k, aux_k])
+    cols = np.concatenate([aux_k, nodes])
+    data = np.concatenate([coef, -coef])
+    return rows, cols, data
 
 
 def newton_terms23_side_coo(op, side, u_inf=1.0):

@@ -180,6 +180,7 @@ def solve_multivalued_lifting(
     omega: float = 1.0,
     tol_residual: Optional[float] = None,
     phi_init: Optional[np.ndarray] = None,
+    tip_taper: Optional[np.ndarray] = None,
 ) -> Dict[str, object]:
     """Subsonic lifting solve on a level-set cut mesh with IMPLICIT Kutta
     (Track B, B3; design_track_b.md D2). NO Gamma secant and no master-slave
@@ -325,6 +326,7 @@ def solve_multivalued_lifting(
             closure="wake_ls",
             te_kutta=te_kutta,
             phi_ext=phi_ext,          # re-linearizes the TE Kutta row (B4)
+            tip_taper=tip_taper,      # B8 tip-edge desingularization (None=no-op)
         )
         if farfield == "vortex":
             # B6: near the FP fold the live Gamma->far-field-vortex feedback

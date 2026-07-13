@@ -145,7 +145,7 @@ pyfp3d/                    # Main package
 │   │                       #   the span axis is NOT perpendicular to the wake direction, and an
 │   │                       #   orthogonal projection wrongly clipped ~60% of the M6 cut set
 │   │                       #   (measured, fixed, regression-pinned); update_direction() re-aims
-│   │                       #   the sheet at α without remeshing (the B9 free-wake capability)
+│   │                       #   the sheet at α without remeshing (the B10 free-wake capability)
 │   ├── cut_elements.py   # ✓ [B1] CutElementMap: the cut census + aux-DOF numbering.
 │   │                       #   ε side-shift for on-sheet nodes ("+", deterministic); the
 │   │                       #   below-TE fan is SUBTRACTED from the cut set (López p.57 — the
@@ -778,7 +778,10 @@ are kept on purpose so the committed paths stay stable — that gate is now **B5
 > P3–P10 and Track B/M all closed gates *after* the text above was written — read the roadmap,
 > not this list.
 
-- **Track B → B8** (multi-wake: multi-element / wing–body) is the current open Track B gate;
+- **Track B → B8** (level-set tip-edge desingularization / row-blend tip taper — NEW
+  2026-07-13, the LS analogue of P13/G13.2) and **B9** (multi-wake: multi-element /
+  wing–body) are the open Track B gates (Track-B renumber 2026-07-13: new B8 inserted,
+  old B8 multi-wake → B9, old B9 curved wake → B10);
   **B6** (transonic level-set) stays ◐ open on its medium quantitative closure.
 - **G1.6 re-spec per Option C** — still the open P1 item: draft the geometry-consistent-reference
   acceptance criterion (design.md §5.1 Option C), comparing against a high-accuracy reference on
@@ -878,7 +881,8 @@ convergence — not a P11 problem, since curved *elements* cannot regularize a s
 geometric *edge*). Track M M1b ✓ (2026-07-13) fixed the M6 mesh ladder
 (`clamp_h_far` + `coarse_ss` + `RICHARDSON_LADDER`; the old `h_far` clamp made
 `coarse` fall off the refinement ray and invalidated every past M6 Richardson).
-Track B: B1–B5 + B7 ✓, B6 ◐, next = B8. Details, measured gate numbers, and the
+Track B: B1–B5 + B7 ✓, B6 ◐, next = B8 (LS tip-taper, NEW 2026-07-13) / B9
+(multi-wake). Details, measured gate numbers, and the
 two 2026-07-11 Track-P renumbers (curved walls → P11, backlog → P12) live in
 docs/roadmap.md's ledger and docs/agent-rules.md's "Current phase" line; evidence in
 docs/demo_report.md. P1 remains partial: G1.1/G1.2 closed, G1.3/G1.4 negative oracles,

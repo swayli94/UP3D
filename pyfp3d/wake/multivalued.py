@@ -34,6 +34,7 @@ from pyfp3d.kernels.cut_assembly import (
     multivalued_redirection_coo,
     nonte_aux_rows,
     te_kutta_coo,
+    te_weld_coo,
     wake_ls_coo,
 )
 from pyfp3d.kernels.jacobian import PicardOperator
@@ -189,13 +190,21 @@ class MultivaluedOperator:
         return qu, ql
 
     def assemble_matrix(self, rho_tilde=None, closure: str = "continuity",
-                        te_kutta: str = "pressure", phi_ext=None):
+                        te_kutta: str = "pressure", phi_ext=None,
+                        tip_taper=None):
         """Extended (n_total x n_total) multivalued matrix.
 
         Args:
             rho_tilde: (n_tets,) element weight (Laplace: None -> rho == 1)
             closure: aux-row block. Only "continuity" (the B2 weld) is
                 implemented; B3 adds "wake_ls".
+            tip_taper: Track B B8 tip-edge desingularization. Either None
+                (default -> pressure Kutta unchanged, bit-identical) or a
+                per-TE-node factor array F_i in [0, 1] ordered like
+                `cm.te_nodes`. The TE Kutta row becomes the BLEND
+                F_i*[s.(q_u-q_l)] + (1-F_i)*[phi_aux-phi_main] = 0 (roadmap
+                Track B B8; P13/G13.2 finding (8)). Only meaningful with
+                closure="wake_ls" and te_kutta="pressure".
 
         Returns:
             scipy CSR of shape (n_total, n_total).
@@ -256,7 +265,20 @@ class MultivaluedOperator:
                 hit = reroute[m_row] >= 0
                 m_row = m_row.copy()
                 m_row[hit] = reroute[m_row[hit]]
-                extra.append(te_kutta_coo(self, phi_ext))
+                # B8 tip taper: blend the pressure row with the TE weld.
+                # tip_taper=None (or all ones) -> pure pressure row,
+                # bit-identical to the untapered path. The mass reroute
+                # above stays unconditional: for a fully welded (F=0) TE
+                # node the main row's total-fan mass balance is exactly the
+                # single-valued mass-conservation equation for that node.
+                taper = None
+                if tip_taper is not None:
+                    taper = np.asarray(tip_taper, dtype=np.float64)
+                    if np.all(taper == 1.0):
+                        taper = None
+                extra.append(te_kutta_coo(self, phi_ext, weights=taper))
+                if taper is not None:
+                    extra.append(te_weld_coo(self.cm, taper))
             elif te_kutta != "mass":
                 raise NotImplementedError(f"te_kutta={te_kutta!r} unknown")
 
