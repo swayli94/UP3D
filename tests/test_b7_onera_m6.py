@@ -314,6 +314,11 @@ def test_b7_m6_coarse_transonic_gate(directory):
     assert r["n_limited"] == 0 and r["n_floored"] == 0, (
         r["n_limited"], r["n_floored"])
     assert r["residual_norm"] < 1e-4, r["residual_norm"]   # tail, not divergence
+    # mach2_max now reads element_mach2 with the honest mixed_plain="main"
+    # default (flipped from "side" 2026-07-14, user-arbitrated B8 backlog).
+    # Re-read on the cached B7 states (run_b8_mmax_reread.py): M1 side 1.453
+    # -> main 1.392 (the old M1 peak WAS a beyond-tip junk cell); M4 1.368
+    # unchanged either reading. Band unchanged.
     m_max = float(np.sqrt(r["mach2_max"]))
     assert 1.0 < m_max < 2.5, m_max          # P5 1.398 / P8 Newton 2.13
 

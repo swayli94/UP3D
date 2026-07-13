@@ -621,7 +621,7 @@ class MultivaluedOperator:
         return np.where(self._elem_plus, field_up, field_lo)
 
     def element_mach2(self, phi_ext, m_inf, gamma_air=1.4, u_inf=1.0,
-                      mixed_plain="side"):
+                      mixed_plain="main"):
         """Own-side element M^2 (max of the two sides on cut elements),
         junk-free -- for reporting M_max on the cut mesh.
 
@@ -629,8 +629,8 @@ class MultivaluedOperator:
         beyond-tip / wake-plane-extension cells the spanwise clip refuses to
         cut). Their ASSEMBLY is single-valued on the MAIN dofs
         (mass_conservation_coo scatters el[plain]), but the side fields
-        substitute AUX values at their cut-shared nodes -- so the default
-        "side" reading measures a field the element's equations never see
+        substitute AUX values at their cut-shared nodes -- so the "side"
+        reading measures a field the element's equations never see
         (the element_densities junk warning, in the one element class
         own_side_field cannot fix because NEITHER side field is the
         assembled one). Measured on the B8 verdict element (M6 medium,
@@ -638,11 +638,15 @@ class MultivaluedOperator:
         manufactured the LS tip exponent p = +1.34 (honest: +0.62). See
         cases/demo/b8_tip_taper_ls/run_b8_termination_diagnosis.py.
 
-        "side" (default) keeps every committed diagnostic bit-identical
-        (B6/B7 M_max locks read through this); "main" reports those elements
-        from the main-dof field their assembly actually uses. Flipping the
-        default (and the B6/B7 M_max re-reads that come with it) is a
-        recorded user-arbitration item.
+        "main" (default since 2026-07-14, user-arbitrated flip of the B8
+        backlog item) reports those elements from the main-dof field their
+        assembly actually uses -- the honest reading. "side" is kept as the
+        opt-in that reproduces the historical committed diagnostics (the
+        pre-flip B6/B7 M_max locks and the G13.1 LS exponent p=+1.34 were
+        measured through it); the B6/B7 M_max re-reads under "main" are in
+        cases/demo/b8_tip_taper_ls/results/mmax_reread.csv (2026-07-14).
+        On quasi-2D wakes (no tip, no beyond-tip cells) the two readings are
+        bit-identical.
         """
         from pyfp3d.physics.isentropic import mach_squared_field
 

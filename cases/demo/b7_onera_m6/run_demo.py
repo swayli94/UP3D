@@ -139,6 +139,11 @@ def solve_transonic(tag, path):
     o = np.argsort(z)
     d = {
         "phi_ext": r["phi_ext"], "z": z[o], "gamma": r["te_jump"][o],
+        # NOTE 2026-07-14: the solver's mach2_max now reads element_mach2
+        # with the honest mixed_plain="main" default (flipped from "side").
+        # The committed summary.csv m_max 1.453 (M1) / 1.368 (M4) came from
+        # the cached side-based npz; the main re-reads are in
+        # cases/demo/b8_tip_taper_ls/results/mmax_reread.csv.
         "m_max": float(np.sqrt(r["mach2_max"])), "wall_s": wall_s,
         "n_limited": r["n_limited"], "n_floored": r["n_floored"],
         "residual": r["residual_norm"],
@@ -174,7 +179,11 @@ def farfield_study():
             r = solve_multivalued_lifting(mvop, mesh, 0.5, alpha_deg=ALPHA,
                                           farfield=ff, n_outer_max=60,
                                           tol_residual=1e-7)
-            m = np.sqrt(mvop.element_mach2(r["phi_ext"], 0.5))
+            # mixed_plain="side" pinned 2026-07-14 (default flipped to
+            # "main"): the committed farfield_study.csv was measured through
+            # the historical side reading.
+            m = np.sqrt(mvop.element_mach2(r["phi_ext"], 0.5,
+                                           mixed_plain="side"))
             rows[f"{aim_tag}_{ff}"] = np.array(
                 [m.max(), m[outlet].max(), r["gamma"]])
             print(f"  farfield study {aim_tag:11s} {ff:9s} "

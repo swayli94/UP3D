@@ -174,7 +174,9 @@ def mach_fields(level, phi_ext):
     honest    = same, but mixed-side PLAIN elements read the MAIN field --
                 the field their (single-valued, main-DOF) assembly uses."""
     mesh, wls, cm, mvop = geom(level)
-    m2_c = mvop.element_mach2(phi_ext, M)
+    # the "committee" reading is the HISTORICAL side reading by definition
+    # (mixed_plain default flipped to "main" 2026-07-14 -- pin it explicitly)
+    m2_c = mvop.element_mach2(phi_ext, M, mixed_plain="side")
     _, q2_main = mvop.op.velocities(mvop.main_potential(phi_ext))
     m2_main = mach_squared_field(q2_main, M)
     is_cut, is_tel, plain, mixed, btip, v_rel = element_classes(level)

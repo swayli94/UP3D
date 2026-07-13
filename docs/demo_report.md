@@ -1365,7 +1365,10 @@ isoparametric *wall* elements cannot remove the edge of a wake sheet.
    probe (subsonic M0.5, no limiter — the clean geometric test) measures the
    tip-edge peak Mach **diverging under refinement on BOTH the conforming and
    level-set paths** (same mesh, coarse→medium: ×1.38 conforming, ×2.28
-   level-set), while the wing control stays flat. So Track B does **not** fix
+   level-set — ★ **ERRATUM 2026-07-14**: the LS ×2.28 is the `element_mach2`
+   mixed-plain ×5 metric artifact retired at the B8 re-spec diagnosis; honest
+   LS exponent +0.62 ≈ conforming +0.52, both still diverge, see §B8), while
+   the wing control stays flat. So Track B does **not** fix
    this singularity; only a genuinely new wake model (roll-up / tip vortex)
    does, and **no current Track B phase does that** (B9 free-wake is shelved,
    and is about O(θ²) deflection rather than roll-up). What Track B *does*
@@ -1813,8 +1816,15 @@ count at equal h_wall, which is what makes the comparison controlled).
 | V6 consistency | 1.77% | 1.97% | 2.40% | — |
 | shocks η .44/.65/.90 | 0.635/0.588/0.449 | 0.634/0.584/0.454 | 0.596/0.570/0.425 | 0.596/0.541/0.362 |
 | Γ root → tip | 0.1076 → **−0.0003** | 0.1055 → **+0.0003** | 0.097 → 0.0206 | — |
-| M_max, limited/floored | 1.453, **0/0** | 1.368, **0/0** | 1.398, 0/0 | 2.13 |
+| M_max, limited/floored | 1.453†, **0/0** | 1.368, **0/0** | 1.398, 0/0 | 2.13 |
 | solve wall time | 22.7 min | 18.4 min | — | — |
+
+> † **Re-read 2026-07-14** (B8-backlog `element_mach2` default flip to
+> `mixed_plain="main"`): M1 **1.453 (side) → 1.392 (main)** — the committed
+> M_max was itself a beyond-tip mixed-plain artifact cell; honest value sits
+> closer to P5's conforming 1.398. M4 and both 2.5D B6 states are bit-identical
+> under either reading; all gate bands unchanged. Artifact:
+> `cases/demo/b8_tip_taper_ls/results/mmax_reread.csv`.
 
 **★ Finding 1 — the B6 lift inversion reproduces in 3D, first try.** Against the
 conforming **Newton** truth (the B6 user-arbitrated baseline), the level-set Picard sits
@@ -1948,6 +1958,15 @@ box (x < x_TE, z/b < 0.95) is the control: the real, bounded flow.
 | level-set (M1, same mesh) | 0.672 → 1.532 | ×2.28 | 1.34 (2-pt) | ×0.98 (flat) |
 | level-set (M4, wake-free) | 0.661 → 1.151 | ×1.74 | 0.89 (2-pt) | ×0.93 (flat) |
 
+> ★ **ERRATUM 2026-07-14 (B8 re-spec diagnosis).** The two level-set rows were
+> read through `element_mach2`'s then-default mixed-plain "side" handling,
+> which inflates beyond-tip mixed-side plain cells ×5 (elem 93977: side 1.532
+> vs main 0.309). The HONEST LS exponent is **+0.62** (+0.37 excluding the
+> straddler sliver) — the same object and magnitude as the conforming +0.52.
+> The "LS ≥ conforming" magnitude comparison is RETIRED; the qualitative claim
+> (the edge diverges on both paths) stands. See §B8
+> (`run_b8_termination_diagnosis.py`, `b8_termination_diagnosis.csv`).
+
 The tip-edge **peak** diverges on **all three** paths while the same-box
 **p95/mean stay flat** — the signature of a *localized* edge singularity (only
 the few cells at the very corner grow), seen with **zero transonic machinery**, so
@@ -1956,8 +1975,9 @@ it is a genuine potential-flow feature, not a shock/limiter artifact. (The bulk
 polluted by a separate sharp-TE edge cell — another P1 edge feature — so the clean
 same-box control plotted is the tip-box p95.) The conforming three-point exponent
 **p = 0.59** puts the growth in the **1/√r flat-plate-edge** band, not 1/r. The
-level-set representation does **not** remove or even blunt it: the LS tip peak is at
-least as large as conforming on the same mesh (exponent 1.34 ≥ conforming 0.52) and
+level-set representation does **not** remove it: the honest LS exponent (+0.62,
+per the erratum above — the raw "1.34 ≥ conforming 0.52" comparison is retired)
+is the same object and magnitude as the conforming +0.52, and the LS peak
 sits in the **+2.9% straddler cells** at/just beyond the geometric tip (z/b ≈ 1.01),
 where the jump terminates mid-element.
 

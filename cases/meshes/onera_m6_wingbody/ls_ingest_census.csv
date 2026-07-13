@@ -1,0 +1,3 @@
+level,alpha_deg,n_cut_elems,n_te_nodes,te_z_min,te_z_max,n_te_inboard_of_junction,te_set_identical_wing_only_vs_full
+coarse,0.0,1415,76,0.14999999854585386,1.1963,0,True
+medium,0.0,29108,150,0.14999999854585386,1.1963,0,True

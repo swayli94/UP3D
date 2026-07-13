@@ -1,0 +1,8 @@
+# B6/B7 M_max re-read under element_mach2 mixed_plain='main' (default flip 2026-07-14, user-arbitrated).
+# side must reproduce the committed gate numbers (B7 M1 1.453 / M4 1.368; B6 cached mach2) -- the reconstruction self-check.
+# States are the LOCAL gitignored demo caches; the committed b6/b7 CSVs are untouched historical evidence.
+case,mesh,m_inf,mmax_side,mmax_main,n_mixed_plain_fixed
+B7-M1-embedded,onera_m6/coarse,0.84,1.453444,1.392034,3378
+B7-M4-wakefree,onera_m6_wakefree/coarse,0.84,1.368197,1.368197,3307
+B6-M0-embedded,naca0012_2.5d/coarse,0.80,1.391580,1.391580,129
+B6-M3-wakefree,naca0012_wakefree_2.5d/coarse,0.80,1.385072,1.385072,138

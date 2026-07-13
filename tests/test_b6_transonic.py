@@ -165,6 +165,9 @@ def test_supercritical_pocket_m070(mesh_dir):
                                     n_outer_level=400)
     L = r["levels"][-1]
     assert L["converged"], f"M0.70 level did not converge: {L}"
+    # element_mach2 default flipped side->main 2026-07-14: bit-identical on
+    # the quasi-2D families (no beyond-tip cells touch aux dofs; re-read
+    # cases/demo/b8_tip_taper_ls/run_b8_mmax_reread.py). Band unchanged.
     assert 1.0 < L["mach_max"] < 1.3
     assert L["n_limited"] == 0 and L["n_floored"] == 0
     # the supersonic pocket lives on the wing, not the cut strip
@@ -232,6 +235,9 @@ def test_g_b6_m080_coarse_neumann(mesh_dir):
                                     farfield="neumann", n_outer_level=3000)
     L = r["levels"][-1]
     assert L["n_limited"] == 0 and L["n_floored"] == 0
+    # element_mach2 default flipped side->main 2026-07-14: re-read on the
+    # cached M0.80 states is bit-identical (M0 1.3916 / M3 1.3851 both
+    # readings -- quasi-2D has no beyond-tip cells). Band unchanged.
     assert L["mach_max"] < 1.6
     # Gamma within the Picard-quality band of the Newton solution (~0.2295);
     # the -4% B5 outlet truncation is inside this band by construction.

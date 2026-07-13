@@ -155,7 +155,11 @@ def solve(form, frac, level):
     cen = mesh.nodes[mesh.elements].mean(axis=1)
     return dict(
         cen=cen,
-        mach=np.sqrt(mvop.element_mach2(r["phi_ext"], M)),
+        # mixed_plain="side" pinned 2026-07-14 (default flipped to "main"):
+        # this demo's committed verdict numbers (p=+1.341 untapered etc.)
+        # were measured through the historical side reading; the honest
+        # exponent lives in run_b8_termination_diagnosis.py.
+        mach=np.sqrt(mvop.element_mach2(r["phi_ext"], M, mixed_plain="side")),
         xte=np.array([x_te(np.clip(zz, 0, B_SEMI)) for zz in cen[:, 2]]),
         gamma=gamma, station_z=z,
         taper=(np.ones(len(cm.te_nodes)) if taper is None else taper)[o],

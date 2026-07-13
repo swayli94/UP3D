@@ -123,7 +123,12 @@ def _mach_field_ls(meshdir, level):
     r = solve_multivalued_lifting(mvop, mesh, M, alpha_deg=ALPHA,
                                   farfield="neumann", upwind_c=0.0,
                                   n_outer_max=80, tol_residual=1e-7)
-    return mesh.nodes, mesh.elements, np.sqrt(mvop.element_mach2(r["phi_ext"], M)), \
+    # mixed_plain="side" pinned 2026-07-14 (default flipped to "main"): the
+    # committed G13.1 LS-exponent evidence (p=+1.34, tip-box peaks) was
+    # measured through the historical side reading -- see the B8 termination
+    # diagnosis for the honest (+0.62) reading and the G13.1 erratum note.
+    return mesh.nodes, mesh.elements, \
+        np.sqrt(mvop.element_mach2(r["phi_ext"], M, mixed_plain="side")), \
         bool(r["converged"])
 
 

@@ -189,19 +189,59 @@ class TestBlendAlgebra:
 
 
 class TestHonestMach:
-    """element_mach2(mixed_plain=...) -- the B8 metric fix (opt-in)."""
+    """element_mach2(mixed_plain=...) -- the B8 metric fix.
 
-    def test_default_bitwise(self, m6):
+    Default flipped "side" -> "main" 2026-07-14 (user-arbitrated B8 backlog
+    item): the default is now the HONEST main-dof reading; "side" stays as
+    the opt-in that reproduces the historical committed diagnostics."""
+
+    def test_default_is_main(self, m6):
+        """The default reading == mixed_plain="main" (flip of 2026-07-14;
+        the pre-flip default was "side")."""
         _, _, _, base, _ = m6
         phi = _phi_seed(base)
         a = base.element_mach2(phi, M)
-        b = base.element_mach2(phi, M, mixed_plain="side")
+        b = base.element_mach2(phi, M, mixed_plain="main")
         assert np.array_equal(a, b, equal_nan=True)
+
+    def test_side_optin_unchanged(self, m6):
+        """mixed_plain="side" is still available and reproduces the old
+        reading: it differs from "main" ONLY on mixed-side plain elements,
+        where it equals the own_side_field construction (the historical
+        committed diagnostics -- pre-flip B6/B7 M_max, G13.1 LS p=+1.34 --
+        read through it)."""
+        mesh, _, cm, base, _ = m6
+        phi = _phi_seed(base)
+        a = base.element_mach2(phi, M, mixed_plain="side")
+        b = base.element_mach2(phi, M, mixed_plain="main")
+        el = np.asarray(mesh.elements, dtype=np.int64)
+        special = np.zeros(len(el), dtype=bool)
+        special[cm.cut_elems] = True
+        special[cm.te_lower_elems] = True
+        side_e = cm.node_side[el]
+        fix = ~special & (side_e.min(axis=1) != side_e.max(axis=1))
+        diff = ~np.isclose(np.nan_to_num(a, nan=-1.0),
+                           np.nan_to_num(b, nan=-1.0))
+        assert np.any(diff), "side vs main must differ on M6 (beyond-tip)"
+        assert np.all(fix[diff])
+        # "side" on the fix set == the raw own_side_field reading (old code).
+        # NB `op.velocities` reuses its q2 buffer between calls -- consume
+        # each side's q2 before computing the other (element_mach2's own
+        # ordering; aliasing here once produced a bogus test failure).
+        from pyfp3d.physics.isentropic import mach_squared_field
+        phi_up, phi_lo = base.side_potentials(phi)
+        _, q2u = base.op.velocities(phi_up)
+        m2u = mach_squared_field(q2u, M).copy()
+        _, q2l = base.op.velocities(phi_lo)
+        m2l = mach_squared_field(q2l, M).copy()
+        m2_side = base.own_side_field(m2u, m2l)
+        assert np.array_equal(np.nan_to_num(a[fix], nan=-1.0),
+                              np.nan_to_num(m2_side[fix], nan=-1.0))
 
     def test_main_changes_only_mixed_plain(self, m6):
         mesh, _, cm, base, _ = m6
         phi = _phi_seed(base)
-        a = base.element_mach2(phi, M)
+        a = base.element_mach2(phi, M, mixed_plain="side")
         b = base.element_mach2(phi, M, mixed_plain="main")
         el = np.asarray(mesh.elements, dtype=np.int64)
         special = np.zeros(len(el), dtype=bool)
