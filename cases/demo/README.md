@@ -39,6 +39,7 @@ phase has three gates and each carries its own acceptance set:
 | `run_demo.py` | G13.1 — characterize the tip/wake-edge singularity | 10 passed |
 | `run_taper_probe.py` | G13.2 — the spanwise loading taper regularizes it | 16 passed + 2 xfailed |
 | `run_taper_physics.py` | G13.2 — what the taper costs, and that it stays LOCAL | 10 passed + 1 xfailed |
+| `run_g132_transonic.py` | G13.2 — the transonic clause: is G9.1's fine mesh a discrete solution now? (**heavy, ~45 min**) | see below |
 | `run_g133_ladder.py` | G13.3 — what still blocks 3D grid convergence (the flat tip cap) | 5 passed |
 
 The P13 xfails are *documented negative results*, not breakage: `tanh_half` sits

@@ -2109,21 +2109,33 @@ becomes definable (p = 2.31, cl_KJ→0.2050). See the P13/G13.3 (subsonic) secti
 below. All three defects are now addressed at M0.5; the M0.84 P9-band verdict is
 the remaining transonic step.
 
-**⚠ Evidence status (audit 2026-07-13) — read before citing the M0.84 numbers.**
-This report's G13.2 transonic claim (cl_KJ 0.2593 → 0.2652 → **0.2866** at M∞0.84,
-M_max 2.818, 0 limited/floored ⇒ "the 0.019 gap is resolution" ⇒ "P11's lift case
-is refuted") is **prose only**: the run left no committed script, no CSV and no
-cached `.npz`, and a repo-wide search finds those numbers in the `.md` files and
-nowhere else. It cannot be re-derived without a fresh ~1 h M0.84 fine
-continuation, so **that conclusion is currently unevidenced** even though the P11
-ledger row was changed on its strength. Everything else in G13.1/G13.2/G13.3 was
-re-verified against the surviving caches and reproduces — including the
-`coarse_ss` point (cl_KJ **0.2015**, re-solved from scratch in 5 s). The demo also
-records a smaller provenance gap: the two cached `fine` runs agree on the *field*
-to three digits but disagree on the *clamp counters* (0 lim/0 flr/converged vs
-306/138/not-converged), and the "0 lim / 0 flr" clause rests on the run whose
-script was never committed. The box-study verdicts are unaffected — both give the
-same exponent.
+**✓ Evidence status (audit 2026-07-13; RESTORED same day).** This report's G13.2
+transonic claim (cl_KJ 0.2593 → 0.2652 → **0.2866** at M∞0.84, M_max 2.818, 0
+limited/floored) was found **prose only** — no committed script, CSV or cached
+solve, a repo-wide search finding those numbers in the `.md` files and nowhere
+else, while a P11 ledger status had been changed on its strength. It was **re-run
+from scratch and REPRODUCES to 4 digits**, and now has a committed artifact:
+demo `cases/demo/p13_tip_edge_singularity/run_g132_transonic.py` (5/5 PASS),
+`results/g132_transonic.csv`:
+
+| level | n_tets | cl_KJ | cl_p | M_max | over M_cap | lim | flr | conv | wall_s |
+|---|---|---|---|---|---|---|---|---|---|
+| coarse | 55 531 | 0.2593 | 0.2534 | 1.394 | 0 | 0 | 0 | ✓ | 9 |
+| medium | 350 718 | 0.2652 | 0.2608 | 1.725 | 0 | 0 | 0 | ✓ | 149 |
+| fine | 2 513 255 | 0.2866 | 0.2835 | 2.818 | 0 | 0 | 0 | ✓ | 2679 |
+
+All three are genuine discrete solutions; the census is G9.1's own (unlimited
+Mach field + M_cap count), so it is a strict A/B — the only change is `tip_taper`.
+⇒ "the flat-cap fine mesh is a discrete solution" and "cl_KJ reaches 0.2866" are
+real, not prose. **Two honest limits remain, and the M5 work above resolves the
+first:** (a) 0.2866 is on the **FLAT-cap** sequence, which is not asymptotic (the
+flat tip cap diverges — G13.3), so it is a REPORTED single point, not a Richardson
+value; the definitive P9-band verdict needs the M0.84 Richardson on the **round**
+ladder. (b) The rerun exposed the recipe trap that lost the original evidence: the
+fine mesh (~450k dofs) needs `precond="amg"` + tight EW forcing (η=1e-8) +
+`m_start=0.30, n_picard_seed=12`; the medium recipe's `precond="direct"` is P9's
+4h39m/26GB splu trap (killed at 1h16m/24GB on the first attempt). The docs' "38
+min" was in the right ballpark — the amg rerun took 44.6 min at RSS 3.9 GB.
 
 ---
 

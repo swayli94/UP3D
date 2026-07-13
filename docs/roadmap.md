@@ -1376,20 +1376,28 @@ deflection" to "roll-up").
       limited, Newton limit-cycling, and a cl_KJ (0.2393) it had to declare an
       ARTIFACT**, the tapered fine solve is a **genuine discrete solution**:
       **M_max 2.818, 0 cells over M_cap, 0 limited, 0 floored, converged**
-      (38 min).
-      > ⚠ **EVIDENCE STATUS: PROSE ONLY — NOT REPRODUCIBLE (audit 2026-07-13).**
-      > Every number in this M0.84 paragraph (0.2593/0.2652/**0.2866**, M_max
-      > 2.818, the 0-limited counts) exists **only as text**. The run that
-      > produced them left **no committed script, no CSV, no cached `.npz`** —
-      > a repo-wide search finds `0.2866` and `2.818` in these `.md` files and
-      > nowhere else. It therefore **cannot be checked or re-derived without a
-      > fresh ~1 h M0.84 fine continuation**. Everything else in G13.2/G13.3 was
-      > re-verified against the surviving caches and reproduces (see
-      > `run_g133_ladder.py`); this paragraph alone did not. **The conclusions
-      > drawn from it below — "the 0.019 gap is RESOLUTION" and "P11's lift case
-      > is REFUTED" — are consequently UNEVIDENCED as committed, and the P11
-      > ledger row's status change rests on them.** Restoring this evidence
-      > (re-run + commit a CSV) is the open action.
+      (44.6 min).
+      > ✓ **EVIDENCE RESTORED 2026-07-13 (was PROSE ONLY; now REPRODUCED with a
+      > committed artifact).** The audit found this whole M0.84 paragraph existed
+      > only as text — no script, no CSV, no cached solve — while a P11 ledger
+      > status had been changed on its strength. It was re-run from scratch and
+      > **reproduces to 4 digits**: demo
+      > `cases/demo/p13_tip_edge_singularity/run_g132_transonic.py` (5/5 PASS),
+      > artifact `results/g132_transonic.csv`. Measured coarse/medium/fine:
+      > cl_KJ **0.2593 / 0.2652 / 0.2866**, cl_p 0.2534 / 0.2608 / 0.2835,
+      > M_max **1.394 / 1.725 / 2.818**, all **0 over M_cap / 0 limited /
+      > 0 floored / converged**. The census is G9.1's own (unlimited Mach field +
+      > M_cap count), so it is a strict A/B; the only change is `tip_taper`.
+      > ★ The rerun exposed WHY the evidence was lost: the first attempt reused
+      > the medium recipe's `precond="direct"`, which at the fine mesh's ~450k
+      > dofs is P9's documented 4h39m/26GB splu trap (killed at 1h16m/24GB). The
+      > demo now uses P9's validated `precond="amg"` + tight EW forcing
+      > (η=1e-8) + the fine seed guard `m_start=0.30, n_picard_seed=12`; that ran
+      > clean at RSS 3.9 GB. **⇒ the conclusions below — "the 0.019 gap is
+      > RESOLUTION" and "P11's lift case is REFUTED" — now rest on reproducible
+      > evidence, not prose.** (The sequence is still NOT asymptotic — increments
+      > +2.27%, +8.05% — so no Richardson is extrapolated; that is G13.3's
+      > flat-tip-cap finding, addressed on the geometry side by Track M / M5.)
       Coarse/medium likewise 0-limited, and the medium `M_max` drops
       **2.13 → 1.725** (P5's "bounded tip-TE-corner overshoot" was the same
       object). **★ AND THE LIFT GAP CLOSES WITH RESOLUTION:** cl_KJ
