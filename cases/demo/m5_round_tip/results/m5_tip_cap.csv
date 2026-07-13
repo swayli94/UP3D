@@ -1,0 +1,7 @@
+family,level,n_tets,seam_crease_max_deg,seam_crease_p99_deg,n_seam_edges,wall_z_max,min_dihedral_deg,max_aspect_ratio
+flat (M1),coarse,46067,91.88,91.88,99,1.196300,4.15,15.5
+flat (M1),medium,350718,92.09,92.04,283,1.196300,10.96,6.9
+flat (M1),fine,2513255,92.09,91.74,951,1.196300,3.53,6.5
+round (M5),coarse,59359,46.84,46.84,110,1.218465,4.05,16.2
+round (M5),medium,448197,25.00,24.46,218,1.218466,5.18,6.4
+round (M5),fine,3257273,18.06,13.74,438,1.218467,8.63,6.4

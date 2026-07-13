@@ -2102,7 +2102,11 @@ geometric *edge*. The geometry itself is wrong, so the fix belongs to **Track M*
 **⇒ Three distinct defects blocked 3D grid convergence, and they were different
 objects:** (1) the wake free tip edge (p = 0.59) → **fixed** by the G13.2 taper;
 (2) the `h_far` mesh-ladder clamp → **fixed** by Track M M1b; (3) the flat tip-cap
-wall edge (p = +0.32) → **open**.
+wall edge (p = +0.32) → the **geometry** is corrected by Track M **M5** (below —
+the sharp edge is removed, seam crease q = −0.92 vs the flat cap's −0.00); whether
+that closes the **flow** divergence (the box exponent falling to ~0 and the lift
+sequence becoming asymptotic) is being measured on the rounded ladder by
+`run_g133_roundtip.py`, and is not claimed here until that solve lands.
 
 **⚠ Evidence status (audit 2026-07-13) — read before citing the M0.84 numbers.**
 This report's G13.2 transonic claim (cl_KJ 0.2593 → 0.2652 → **0.2866** at M∞0.84,
@@ -2119,6 +2123,83 @@ to three digits but disagree on the *clamp counters* (0 lim/0 flr/converged vs
 306/138/not-converged), and the "0 lim / 0 flr" clause rests on the run whose
 script was never committed. The box-study verdicts are unaffected — both give the
 same exponent.
+
+---
+
+## Track M / M5 — the tip cap, rounded (`cases/demo/m5_round_tip/`, 9/9 PASS, 2026-07-13)
+
+G13.3 named the defect; this is the fix. `meshgen/wing3d.py` grew
+**`tip_cap="round"`** (default `"flat"` ⇒ every existing family bit-identical, so
+the P5 / P8-G8.2 / B7 / M1 locks are untouched), which closes the wing with the
+**half body of revolution swept by the tip section about its own chord line** —
+`{√(y² + (z−B_SEMI)²) ≤ t(x)}`, with `t(x)` the tip section's local half
+thickness. It is an OCC revolve of the tip section's upper half-face about an
+edge *of* that face (the degenerate-at-the-axis kind, like a sphere from a half
+disc), fused onto the loft.
+
+★ **Why this construction and not a fillet, a loft, or curved elements.** The cap
+radius **vanishes at the LE and the TE**, so the cap degenerates to a *point* at
+each — which means the **TE line, the wake sheet, the tip TE corner, the Kutta
+stations and B_SEMI are all unchanged**. Only the tip *wall* moves. That is what
+makes the A/B against M1 controlled, and it is why the fix needed **no solver
+code at all**. (A constant-radius fillet is geometrically impossible here — the
+section thickness goes to zero at the TE — and P11's isoparametric *elements*
+cannot regularize a sharp *edge* in the first place.) The revolved solid was
+verified analytically and asserted at generation to protrude past the wing by at
+most **4 × 10⁻⁶ m**, three orders below the finest edge size, and never to reach
+aft of the local TE — so it can neither cut the wake sheet nor spawn slivers.
+
+★ **The gate metric is the SEAM CREASE ANGLE, because the solver never sees the
+CAD.** It only ever sees the triangulation, so "the geometry is round" is not the
+claim that has to be true — "the *mesh* has no edge" is. Measure the turning
+angle between the outward normals of adjacent wall triangles across the
+tip-section seam at `z = B_SEMI` (the locus that *is* the sharp edge in M1), away
+from the LE and TE — both sharp **by design** in either family, the TE because it
+carries the Kutta condition (`post/surface.py::wall_crease_angles`):
+
+| seam crease (p99) | coarse | medium | fine | exponent q |
+|---|---|---|---|---|
+| **flat cap (M1)** | **91.9°** | **92.1°** | **92.1°** | **−0.00** — does not move |
+| **round cap (M5)** | 46.8° | 24.5° | **13.7°** | **−0.92** — O(h) |
+
+(round cap, *max* rather than p99: 46.8 → 25.0 → 18.1°, q = −0.68 — see below.)
+
+That contrast is the whole gate. A sharp convex edge creases by its own turning
+angle: halving `h` **resolves** it better and removes nothing, which is exactly
+why refinement made the flow singularity *worse* (p = +0.321). Facets
+approximating a **smooth** surface crease by O(h · curvature) and halve when `h`
+halves — the discrete statement of "there is no edge in the limit".
+
+Two honesty notes on the metric. (i) The flat cap's **median** seam crease is
+**0.00°**: the rest of the seam is already smooth, so this metric is reading the
+edge and nothing else — it is not a diffuse mesh-quality number. (ii) The round
+cap's **max** decays more slowly (q = −0.68) than its p99 (−0.92), because the
+max is a single worst facet at the *thin* end of the seam window, where the cap
+radius is smallest and the local facet size is set by `h_edge` (the TE/LE
+refinement) rather than by `h_tip`. Both **decay**, which is the claim; the flat
+cap's decays not at all.
+
+**★ `h_tip = 0.25 · h_wall` is load-bearing, not a tuning knob.** The cap radius
+is only `TIP_CAP_RADIUS` = 22 mm (1.9 % of the semi-span). At `h_wall` the coarse
+cap would be about *one element* wide — i.e. the mesh would quietly discretize the
+rounded cap back into a flat one and the geometry change would do nothing. `h_tip`
+scales with the level, so the cap costs the same *fraction* at every level and the
+refinement ray is preserved.
+
+Other measured items (demo `run_demo.py`, 9/9; `tests/test_m5_round_tip.py`, 19):
+cap resolved to its apex (wall `z_max` 1.218465 / 1.218466 vs the analytic apex
+1.218467); quality inside the M1 bounds (min dihedral 4.05° / 5.18°, max aspect
+16.2 / 6.4); `cut_wake` keeps the M1 semantics (85 TE stations; the tip TE corner
+is still a free-edge node ⇒ Γ(tip) = 0 discretely); G2.1 freestream on the cut
+mesh < 1e-10; **tip TE corner offset exactly 0.0** and the wake sheet still in the
+chord plane, ending at B_SEMI. **Cost ×1.29 / ×1.28 tets** (59,359 / 448,197 vs
+M1's `coarse_ss` 46,067 / `medium` 350,718) — level-independent, as a self-similar
+ladder requires. Note the comparison is against M1's `coarse_ss`, not its shipped
+`coarse`: the latter still carries the M1b `h_far` clamp and would report a
+spurious ×1.07.
+
+The **flow** consequence — the tip-cap box exponent and the three-point Richardson
+— is P13/G13.3's and is reported in the section above / `run_g133_roundtip.py`.
 
 ---
 

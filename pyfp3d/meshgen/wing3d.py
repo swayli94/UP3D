@@ -6,8 +6,32 @@ Case: ONERA M6 half wing. Geometry per the NASA GRC NPARC validation
 archive (https://www.grc.nasa.gov/www/wind/valid/m6wing/m6wing.html):
 ONERA D symmetric section, foilmod.txt coordinate set (the TE thickness is
 "rounded off" to exactly zero, so the wake sheet attaches to a sharp TE
-edge), straight-tapered planform, flat tip cap (the real rounded tip cap
-is a deliberate simplification -- standard for FP validation meshes).
+edge), straight-tapered planform.
+
+Tip cap (``tip_cap``, Track M gates M1 and M5):
+
+  "flat"  (default, M1)  the loft is closed by the planar tip section at
+          z = B_SEMI. This is the standard FP-validation simplification --
+          and it is WRONG in a way that matters: the flat cap meets the
+          upper/lower surfaces at a SHARP CONVEX EDGE, which in potential
+          flow is an edge singularity. P13/G13.3 measured it diverging
+          under uniform refinement (tip-cap box peak Mach exponent
+          p = +0.321) while the wake edge and the wing interior stayed
+          bounded -- i.e. it, and not the wake, is what still blocks 3D
+          grid convergence. Kept as the default because the P5 / P8-G8.2 /
+          B7 / M1 regression locks are all anchored to it.
+
+  "round" (M5)  the cap is the half body of revolution swept by rotating
+          the tip section about its own chord line: the wing is closed by
+          {sqrt(y^2 + (z - B_SEMI)^2) <= t(x)}, where t(x) is the tip
+          section's local half thickness. There is no edge: the cap meets
+          the wing surface tangentially (dy/dz = 0 on both sides at
+          z = B_SEMI), and because t -> 0 at the LE and the TE the cap
+          degenerates to a point exactly at each -- so the TE line, the
+          wake sheet, the Kutta stations, B_SEMI and every solver-side
+          semantic are UNCHANGED. Only the wall geometry near the tip
+          moves, by at most TIP_CAP_RADIUS = 22 mm (1.9% of the semi-span)
+          and only where the section has thickness.
 
 Solver axis convention (fixed by mesh/wake_cut.py and the M0 cases):
 chord along +x, lift along +y (wake_cut upper_hint), span along +z.
@@ -20,6 +44,15 @@ agent-rules hard rule 8):
      z = 0, tip). For a straight-tapered wing with a single section shape
      the two-section ruled loft is the EXACT planform surface, and its TE
      edge is exactly the straight segment between the section TE points.
+  1b. tip_cap="round" only: the upper half of the tip section face is
+     revolved a full turn about the tip chord line (an edge OF that face,
+     so the revolution is the standard degenerate-at-the-axis kind, like a
+     sphere from a half disc) and FUSED onto the loft. The revolved solid
+     lies strictly inside the wing for z < B_SEMI -- verified analytically
+     and asserted at generation: it protrudes by at most 4e-6 m, three
+     orders below the finest edge size, and never reaches aft of the local
+     TE, so it can neither cut the wake sheet nor spawn slivers. What it
+     does is replace the flat cap's sharp edge with a tangent surface.
   2. Spherical far field of radius r_far (~15 reference chords) centered
      on the symmetry plane, cut to the z >= 0 half domain, minus the wing.
   3. Planar wake sheet in the chord plane y = 0, swept from the TE line
@@ -42,7 +75,7 @@ Gmsh is imported lazily so the solver test suite does not depend on it.
 """
 
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 import numpy as np
 
@@ -89,6 +122,14 @@ C_TIP = TAPER * C_ROOT
 
 _TAN_SWEEP = math.tan(math.radians(LE_SWEEP_DEG))
 
+#: Largest radius of the M5 rounded tip cap = the tip section's max half
+#: thickness (the cap radius at chord station x is the section half thickness
+#: there, so it tapers to zero at the LE and the TE). The rounded wing reaches
+#: z = B_SEMI + TIP_CAP_RADIUS; the flat one stops at z = B_SEMI.
+TIP_CAP_RADIUS = float(ONERA_D_UPPER[:, 1].max()) * C_TIP   # 0.02217 m
+
+TIP_CAPS = ("flat", "round")
+
 
 def chord_at(z: float) -> float:
     """Local chord of the straight-tapered planform (linear in z)."""
@@ -106,7 +147,16 @@ def x_te(z: float) -> float:
     return x_le(z) + chord_at(z)
 
 
-def _add_section_wire(occ, z: float) -> int:
+class _Section(NamedTuple):
+    """Tags of one section wire. `spl_up`, `p_le`, `p_te` are what the M5
+    rounded cap revolves; the flat path uses only `loop`."""
+    loop: int
+    spl_up: int
+    p_le: int
+    p_te: int
+
+
+def _add_section_wire(occ, z: float) -> _Section:
     """Closed two-spline section wire at span station z.
 
     Upper spline LE -> TE, lower spline TE -> LE; both share the exact LE
@@ -126,7 +176,30 @@ def _add_section_wire(occ, z: float) -> int:
     ]
     spl_up = occ.addSpline(upper_pts)
     spl_lo = occ.addSpline([upper_pts[-1]] + lower_inner + [upper_pts[0]])
-    return occ.addCurveLoop([spl_up, spl_lo])
+    return _Section(occ.addCurveLoop([spl_up, spl_lo]), spl_up,
+                    upper_pts[0], upper_pts[-1])
+
+
+def _add_round_tip_cap(occ, tip: _Section) -> List[int]:
+    """The M5 cap: revolve the upper half of the tip section face a full turn
+    about the tip chord line, giving the solid of revolution
+    {sqrt(y^2 + (z - B_SEMI)^2) <= t(x)}.
+
+    The half face is bounded by the upper spline and the chord line, and the
+    chord line IS the revolution axis -- so this is the degenerate-at-the-axis
+    revolution OCC is built for (a sphere from a half disc), and it pinches to
+    a point exactly at the LE and TE, where the section has zero thickness.
+    """
+    chord_line = occ.addLine(tip.p_te, tip.p_le)
+    half_face = occ.addPlaneSurface([occ.addCurveLoop([tip.spl_up, chord_line])])
+    cap = occ.revolve([(2, half_face)], 0.0, 0.0, B_SEMI, 1.0, 0.0, 0.0,
+                      2.0 * math.pi)
+    # The revolve leaves its base face behind as a free-standing surface. It
+    # bounds no volume, but the geometric classification below would still see
+    # it (chord-sized, thick in y, off the symmetry plane) and tag it "wall" --
+    # whose triangles then reference nodes no tet uses. Drop it here.
+    occ.remove([(2, half_face)], recursive=False)
+    return [dt for dt in cap if dt[0] == 3]
 
 
 def onera_m6_wing_mesh(
@@ -139,6 +212,8 @@ def onera_m6_wing_mesh(
     algorithm3d: int = 1,
     verbose: bool = False,
     embed_wake: bool = True,
+    tip_cap: str = "flat",
+    h_tip: Optional[float] = None,
 ) -> Mesh:
     """Generate the ONERA M6 half-wing volume mesh with embedded wake sheet.
 
@@ -162,6 +237,14 @@ def onera_m6_wing_mesh(
         h_wake: size on the wake sheet (default 3 h_wall)
         h_edge: size on the LE/TE edges (default 0.5 h_wall; the TE value
                 also controls the Kutta-probe neighborhood resolution)
+        tip_cap: "flat" (M1, default -- planar cap, sharp convex edge) or
+                "round" (M5 -- half body of revolution, no edge)
+        h_tip: size on the rounded cap (default 0.25 h_wall, so it scales
+                with the level and a refinement ladder stays self-similar).
+                The cap radius is only 22 mm, so at h_wall the coarse cap
+                would be about one element wide and would discretize back
+                into a flat one -- the whole point of the geometry change
+                would be lost. Ignored when tip_cap="flat".
         r_far: far-field sphere radius [m] (~15 MAC per roadmap M1)
         name: mesh name
         algorithm3d: gmsh Mesh.Algorithm3D (1 = Delaunay, robust with
@@ -177,12 +260,16 @@ def onera_m6_wing_mesh(
     """
     import gmsh
 
+    if tip_cap not in TIP_CAPS:
+        raise ValueError(f"tip_cap must be one of {TIP_CAPS}, got {tip_cap!r}")
     if h_far is None:
         h_far = min(2.5, 120.0 * h_wall)
     if h_wake is None:
         h_wake = 3.0 * h_wall
     if h_edge is None:
         h_edge = 0.5 * h_wall
+    if h_tip is None:
+        h_tip = 0.25 * h_wall
 
     # Sphere center: mid planform on the symmetry plane.
     xc = 0.5 * (x_le(0.0) + x_te(B_SEMI))
@@ -196,12 +283,17 @@ def onera_m6_wing_mesh(
         occ = gmsh.model.occ
 
         # --- wing solid: exact ruled loft root(extended) -> tip ----------
-        w_root = _add_section_wire(occ, z_lo)
-        w_tip = _add_section_wire(occ, B_SEMI)
+        root = _add_section_wire(occ, z_lo)
+        tip = _add_section_wire(occ, B_SEMI)
         wing = occ.addThruSections(
-            [w_root, w_tip], makeSolid=True, makeRuled=True
+            [root.loop, tip.loop], makeSolid=True, makeRuled=True
         )
         wing_vols = [dt for dt in wing if dt[0] == 3]
+
+        if tip_cap == "round":
+            # Fuse on the body of revolution; the flat cap face is strictly
+            # interior to it and is absorbed, leaving a tangent surface.
+            wing_vols, _ = occ.fuse(wing_vols, _add_round_tip_cap(occ, tip))
 
         # --- half-ball fluid domain --------------------------------------
         ball = occ.addSphere(xc, 0.0, 0.0, r_far)
@@ -276,6 +368,18 @@ def onera_m6_wing_mesh(
                 groups["wall"].append(tag)
         for g, tags in groups.items():
             assert tags, f"surface classification found no '{g}' faces"
+
+        # The rounded cap is the ONLY wall geometry outboard of z = B_SEMI --
+        # the loft's own faces stop exactly there -- so a z_max test isolates
+        # it. The threshold is a fraction of the cap radius: far above OCC's
+        # ~1e-5 bounding-box padding, far below the cap's own 22 mm reach.
+        tip_faces: List[int] = []
+        if tip_cap == "round":
+            z_cut = B_SEMI + 0.2 * TIP_CAP_RADIUS
+            tip_faces = [t for t in groups["wall"]
+                         if gmsh.model.getBoundingBox(2, t)[5] > z_cut]
+            assert tip_faces, "rounded tip cap not found among the wall faces"
+
         if embed_wake:
             # The fragment stitched the sheet's boundary curves into the
             # fluid BRep (shared TE edge, symmetry/sphere trims) but the
@@ -346,6 +450,18 @@ def onera_m6_wing_mesh(
             field.setNumber(t_edge, "DistMax", 0.3)
             thresholds.append(t_edge)
 
+        if tip_faces:
+            f_tip = field.add("Distance")
+            field.setNumbers(f_tip, "SurfacesList", tip_faces)
+            field.setNumber(f_tip, "Sampling", 200)
+            t_tip = field.add("Threshold")
+            field.setNumber(t_tip, "InField", f_tip)
+            field.setNumber(t_tip, "SizeMin", h_tip)
+            field.setNumber(t_tip, "SizeMax", h_far)
+            field.setNumber(t_tip, "DistMin", 0.02)
+            field.setNumber(t_tip, "DistMax", 0.3)
+            thresholds.append(t_tip)
+
         f_min = field.add("Min")
         field.setNumbers(f_min, "FieldsList", thresholds)
         field.setAsBackgroundMesh(f_min)
@@ -360,7 +476,8 @@ def onera_m6_wing_mesh(
         gmsh.model.mesh.generate(3)
 
         mesh = _collect_3d(groups, name=name)
-        _builder_asserts(mesh, r_far=r_far, xc=xc, tol=1e-7 * r_far)
+        _builder_asserts(mesh, r_far=r_far, xc=xc, tol=1e-7 * r_far,
+                         tip_cap=tip_cap)
         return mesh
     finally:
         gmsh.finalize()
@@ -421,7 +538,8 @@ def _collect_3d(surface_groups: Dict[str, List[int]], name: str) -> Mesh:
     return mesh
 
 
-def _builder_asserts(mesh: Mesh, r_far: float, xc: float, tol: float) -> None:
+def _builder_asserts(mesh: Mesh, r_far: float, xc: float, tol: float,
+                     tip_cap: str = "flat") -> None:
     """Cheap generation-time invariants (full topology asserts run in the
     solver preprocessor, mesh/wake_cut.py)."""
     from pyfp3d.mesh.metrics import compute_tet_volumes
@@ -449,3 +567,30 @@ def _builder_asserts(mesh: Mesh, r_far: float, xc: float, tol: float) -> None:
     if has_wake:
         te = np.intersect1d(wake_nodes, wall_nodes)
         assert len(te) >= 2, "wake sheet does not attach to the wing TE"
+
+    # --- tip cap ----------------------------------------------------------
+    # The wing must reach exactly z = B_SEMI when the cap is flat, and bulge
+    # to B_SEMI + TIP_CAP_RADIUS when it is round -- with the tip TE corner
+    # (where the cap radius vanishes and the wake attaches) unmoved either way.
+    z_wall_max = float(mesh.nodes[wall_nodes, 2].max())
+    if tip_cap == "flat":
+        assert z_wall_max <= B_SEMI + 1e-9, (
+            f"flat cap reaches z = {z_wall_max}, past the tip {B_SEMI}"
+        )
+    else:
+        apex = B_SEMI + TIP_CAP_RADIUS
+        assert B_SEMI < z_wall_max <= apex + 1e-9, (
+            f"rounded cap reaches z = {z_wall_max}, expected in "
+            f"({B_SEMI}, {apex}]"
+        )
+        # ... and it is actually resolved, not clipped to a couple of facets.
+        assert z_wall_max > B_SEMI + 0.8 * TIP_CAP_RADIUS, (
+            f"rounded cap only reaches z = {z_wall_max}: the mesh does not "
+            f"resolve it (apex {apex}); lower h_tip"
+        )
+    corner = np.array([x_te(B_SEMI), 0.0, B_SEMI])
+    d_corner = np.linalg.norm(mesh.nodes[wall_nodes] - corner, axis=1).min()
+    assert d_corner < 1e-9, (
+        f"no wall node at the tip TE corner {corner} (closest {d_corner:.2e}) "
+        "-- the wake sheet attaches there"
+    )

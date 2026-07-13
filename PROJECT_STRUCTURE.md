@@ -44,7 +44,17 @@ pyfp3d/                    # Main package
 │                           #   ✓ [M4/Track B] embed_wake=False -> the sheet is built but neither
 │                           #   fragmented nor embedded (it feeds the Distance size field only),
 │                           #   so the tets never conform to it and no `wake` group exists;
-│                           #   geometry helpers B_SEMI / C_ROOT / x_te / x_le / chord_at
+│                           #   ★ ✓ [M5] tip_cap="round" (default "flat" = bit-identical): closes
+│                           #   the wing with the HALF BODY OF REVOLUTION swept by the tip section
+│                           #   about its own chord line (OCC revolve of the tip half-face about an
+│                           #   edge OF that face, fused onto the loft) -- removes the flat cap's
+│                           #   SHARP CONVEX EDGE, the P13/G13.3 wall singularity. The cap radius
+│                           #   vanishes at the LE and TE, so it degenerates to a point at each and
+│                           #   the TE line / wake sheet / tip TE corner / Kutta stations / B_SEMI
+│                           #   are all UNCHANGED (that is what makes the M1 A/B controlled, and
+│                           #   why no solver change was needed); h_tip sizes the cap;
+│                           #   geometry helpers B_SEMI / C_ROOT / x_te / x_le / chord_at /
+│                           #   TIP_CAP_RADIUS
 ├── constraints/          # ✓ [P2] Constraint machinery
 │   ├── __init__.py
 │   ├── wake.py           # ✓ master–slave elimination (A_red = TᵀAT once; Γ RHS-only via
@@ -293,6 +303,18 @@ cases/                     # Test cases and reference data
 │   │                       #   gitignored (large) -- regenerate coarse+medium ~30 s; the
 │   │                       #   stats CSVs + inspection PNGs are the committed evidence;
 │   │                       #   M1 tests skip when the meshes are absent)
+│   ├── onera_m6_roundtip/ # ★ ✓ [M5] the ROUNDED-TIP M6 family (generate_onera_m6_roundtip.py;
+│   │                       #   wing3d.py tip_cap="round"). The flat cap's sharp convex edge was
+│   │                       #   the LAST thing blocking a 3D Richardson (P13/G13.3: its box peak
+│   │                       #   Mach DIVERGES, p = +0.321). Gate metric = the SEAM CREASE ANGLE on
+│   │                       #   the tip section (post/surface.py::wall_crease_angles): flat
+│   │                       #   91.9° -> 92.1° under refinement (a real edge -- refinement resolves
+│   │                       #   it and removes nothing) vs round 46.8° -> 25.0° (O(h) faceting of a
+│   │                       #   smooth surface). Self-similar ladder from the start (no h_far
+│   │                       #   clamp) with h_tip = 0.25 h_wall -- WITHOUT that the 22 mm cap would
+│   │                       #   be one element wide at coarse and discretize back into a flat one.
+│   │                       #   59.4k / 448k / fine tets (×1.28 of M1 at equal h_wall, level-
+│   │                       #   independent); .msh gitignored, stats CSVs + PNGs committed
 │   ├── naca0012_wakefree_2.5d/  # ✓ [M3] the WAKE-FREE ("O-grid analogue") NACA family — the
 │   │                       #   other half of Track B's DUAL-MESH rule: no wake surface is
 │   │                       #   embedded, nothing in the topology knows the wake exists, so the

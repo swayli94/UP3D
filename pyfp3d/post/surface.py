@@ -5,6 +5,8 @@ Reference: design.md Sec 9 ("Nodal q^2, M, Cp via volume-weighted element
 averages (or superconvergent patch recovery later)").
 """
 
+from typing import Tuple
+
 import numpy as np
 
 from pyfp3d.mesh.metrics import compute_tet_volumes, element_gradients
@@ -227,6 +229,37 @@ def wall_outward_normals(
     flip = np.sum(normal * (owner_centroid - face_center), axis=1) < 0
     normal[flip] *= -1.0
     return normal
+
+
+def wall_crease_angles(
+    nodes: np.ndarray, elements: np.ndarray, wall_faces: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Turning angle of the wall surface across each interior edge of its
+    triangulation: ``(angle_deg, edge_midpoint)``, one entry per edge shared by
+    two wall triangles.
+
+    The angle between the two OUTWARD normals, so it reads the geometry, not
+    the winding. On a smooth surface it is O(h * curvature) and vanishes under
+    refinement; on a sharp edge it converges to the edge's turning angle and
+    stays there -- which is the discrete signature Track M's M5 gate uses to
+    tell a rounded tip cap from a flat one, and which the sharp TE (~180 deg,
+    by design -- it carries the Kutta condition) shows too.
+    """
+    normals = wall_outward_normals(nodes, elements, wall_faces)
+    adj = wall_triangle_adjacency(wall_faces)
+    wf = np.asarray(wall_faces, dtype=np.int64)
+
+    tri = np.repeat(np.arange(len(wf), dtype=np.int64), 3)
+    slot = np.tile(np.arange(3, dtype=np.int64), len(wf))
+    nb = adj.ravel()
+    # Interior edges only, and each edge once.
+    keep = (nb >= 0) & (tri < nb)
+    tri, slot, nb = tri[keep], slot[keep], nb[keep]
+
+    cos = np.einsum("ij,ij->i", normals[tri], normals[nb])
+    angle = np.degrees(np.arccos(np.clip(cos, -1.0, 1.0)))
+    edge = np.stack([wf[tri, slot], wf[tri, (slot + 1) % 3]], axis=1)
+    return angle, nodes[edge].mean(axis=1)
 
 
 def wall_force_coefficients(
