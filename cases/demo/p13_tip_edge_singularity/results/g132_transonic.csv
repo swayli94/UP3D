@@ -1,0 +1,4 @@
+level,n_tets,cl_KJ,cl_p,M_max_unlimited,n_cells_over_Mcap,n_limited,n_floored,converged,shock_eta044,shock_eta065,shock_eta090,wall_s
+coarse,55531,0.2593,0.2534,1.394,0,0,0,1,0.599,0.573,0.428,9
+medium,350718,0.2652,0.2608,1.725,0,0,0,1,0.596,0.540,0.362,149
+fine,2513255,0.2866,0.2835,2.818,0,0,0,1,0.596,0.532,0.332,2679
