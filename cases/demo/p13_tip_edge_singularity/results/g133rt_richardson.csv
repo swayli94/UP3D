@@ -1,0 +1,2 @@
+quantity,coarse,medium,fine,increment_1_pct,increment_2_pct,asymptotic,observed_order_p,refinement_ratio,extrapolated
+cl_KJ_round_M5,0.2159,0.2073,0.2055,-3.95,-0.88,1,2.307,1.949,0.2050

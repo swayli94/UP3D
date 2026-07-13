@@ -1,0 +1,11 @@
+family,region,coarse,medium,fine,exponent_p,verdict
+flat (M1),tip_cap,0.662,0.824,1.015,+0.321,DIVERGES
+flat (M1),tip_cap_surface,0.626,0.824,0.967,+0.327,DIVERGES
+flat (M1),tip_body_noTE,0.626,0.674,0.759,+0.144,bounded
+flat (M1),wake_edge,0.536,0.565,0.570,+0.045,bounded
+flat (M1),wing_p99,0.642,0.628,0.629,-0.014,bounded
+round (M5),tip_cap,0.738,0.913,1.232,+0.383,DIVERGES
+round (M5),tip_cap_surface,0.696,0.913,0.785,+0.091,bounded
+round (M5),tip_body_noTE,0.679,0.681,0.674,-0.006,bounded
+round (M5),wake_edge,0.547,0.577,0.601,+0.071,bounded
+round (M5),wing_p99,0.641,0.628,0.630,-0.013,bounded

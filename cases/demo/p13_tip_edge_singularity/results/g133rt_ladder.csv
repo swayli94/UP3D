@@ -1,0 +1,7 @@
+family,level,n_tets,cl_KJ,converged,n_limited,n_floored,provenance
+flat (M1),coarse_ss,46067,0.2015,1,0,0,adopted:g133_coarse_ss.npz
+flat (M1),medium,350718,0.2005,1,0,0,adopted:probe_vanish_smooth_rc0.05_medium_ffspan.npz
+flat (M1),fine,2513255,0.2121,1,0,0,adopted:probe_vanish_smooth_rc0.05_fine_p9.npz
+round (M5),coarse,59359,0.2159,1,0,0,cache:g133rt_coarse.npz
+round (M5),medium,448197,0.2073,1,0,0,cache:g133rt_medium.npz
+round (M5),fine,3257273,0.2055,1,0,0,cache:g133rt_fine.npz

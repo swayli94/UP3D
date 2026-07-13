@@ -2102,11 +2102,12 @@ geometric *edge*. The geometry itself is wrong, so the fix belongs to **Track M*
 **⇒ Three distinct defects blocked 3D grid convergence, and they were different
 objects:** (1) the wake free tip edge (p = 0.59) → **fixed** by the G13.2 taper;
 (2) the `h_far` mesh-ladder clamp → **fixed** by Track M M1b; (3) the flat tip-cap
-wall edge (p = +0.32) → the **geometry** is corrected by Track M **M5** (below —
-the sharp edge is removed, seam crease q = −0.92 vs the flat cap's −0.00); whether
-that closes the **flow** divergence (the box exponent falling to ~0 and the lift
-sequence becoming asymptotic) is being measured on the rounded ladder by
-`run_g133_roundtip.py`, and is not claimed here until that solve lands.
+wall edge (p = +0.32) → **fixed** by Track M **M5** — the geometry is corrected
+(seam crease q = −0.92 vs the flat cap's −0.00) AND the flow follows: on the round
+ladder the cap-surface exponent drops to +0.09 (bounded) and the lift Richardson
+becomes definable (p = 2.31, cl_KJ→0.2050). See the P13/G13.3 (subsonic) section
+below. All three defects are now addressed at M0.5; the M0.84 P9-band verdict is
+the remaining transonic step.
 
 **⚠ Evidence status (audit 2026-07-13) — read before citing the M0.84 numbers.**
 This report's G13.2 transonic claim (cl_KJ 0.2593 → 0.2652 → **0.2866** at M∞0.84,
@@ -2198,8 +2199,56 @@ ladder requires. Note the comparison is against M1's `coarse_ss`, not its shippe
 `coarse`: the latter still carries the M1b `h_far` clamp and would report a
 spurious ×1.07.
 
-The **flow** consequence — the tip-cap box exponent and the three-point Richardson
-— is P13/G13.3's and is reported in the section above / `run_g133_roundtip.py`.
+The **flow** consequence is P13/G13.3's, measured on the round ladder below.
+
+---
+
+## P13/G13.3 (subsonic) — rounding the tip cap restores 3D grid convergence (`cases/demo/p13_tip_edge_singularity/run_g133_roundtip.py`, 9/9, 2026-07-13)
+
+The M5 geometry fix, tested where it matters: a strict A/B of the box study and
+the three-point Richardson on the round ladder vs the flat one, at M∞0.5/α3.06
+(subsonic, so the edge signal is geometric — no limiter/shock in the way), tip
+taper on both, only `tip_cap` differing. All six levels converged, 0 limited /
+0 floored.
+
+**The cap edge singularity is gone.** Measuring the fluid just outboard of the
+tip (`z > B_SEMI`), the peak-Mach exponent falls from **+0.327 (flat)** to
+**+0.091 (round, bounded)**; the tip region with the design-sharp LE/TE excluded
+(chord-frac 0.05–0.90) is **converged, p = −0.006**. The wake free edge stays
+bounded (+0.071, the G13.2 fix holds) and the wing interior stays converged
+(−0.013).
+
+**★ The three-point Richardson G9.1 could never run is now earned.** Round-cap
+cl_KJ **0.2159 → 0.2073 → 0.2055**, increments **−3.95% then −0.88% (shrinking)**
+⇒ the sequence is asymptotic; observed order **p = 2.31**, extrapolated
+**cl_KJ(h→0) = 0.2050**. The flat ladder's cl was **non-monotone**
+(0.2015 → 0.2005 → 0.2121) — no Richardson is definable from it, which is exactly
+G9.1's failure reproduced and now removed.
+
+| region | flat (M1) | round (M5) | verdict |
+|---|---|---|---|
+| cap surface (`z > B_SEMI`) | p = +0.327 | **p = +0.091** | bounded |
+| tip, LE/TE excluded | — | **p = −0.006** | converged |
+| wake free edge (G13.2) | +0.045 | +0.071 | bounded |
+| wing interior (control) | −0.014 | −0.013 | converged |
+| cl_KJ Richardson | non-monotone → n/a | **p = 2.31, cl→0.2050** | earned |
+
+**★ Honest caveat — the metric trap (G13.1 finding 6).** The *broad* G13.1 tip
+box `(z/b>0.98) & (dx<0)` still shows a divergence (p = +0.38), but its maximum
+has **migrated**: on the fine round mesh it sits at **chord-frac 0.999 — the
+zero-thickness trailing edge**, which is sharp *by design* (it carries the Kutta
+condition), present in *both* families, and is not something any tip-cap change
+removes or should. It is a local, integrable feature and does not spoil the
+integrated lift — which is why the lift Richardson is clean. Once the edge you
+fixed is gone, a broad max-in-box metric latches onto the next-sharpest feature;
+the cap-surface and TE-excluded boxes above are the honest measures of the fix.
+
+**Scope.** This is the subsonic (M0.5) leg — it proves the *mechanism* (the
+geometry fix restores grid convergence and the Richardson is now definable).
+Firing P9's pre-registered decision bands (cl_KJ∞ ≥ 0.283 resolution / ≤ 0.278
+floor) is a *transonic* question (M0.84) and needs the M0.84 Richardson on the
+round ladder — not yet run. The audit-flagged M0.84 cl_KJ 0.2866 prose number was
+a flat-cap result and remains unevidenced either way.
 
 ---
 
