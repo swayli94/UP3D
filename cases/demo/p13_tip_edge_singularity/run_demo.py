@@ -68,7 +68,7 @@ Heavy solves cache to results/*.npz (gitignored; ~30 min total to regenerate,
 the conforming fine M0.5 AMG solve being ~10-15 min of it); the committed
 evidence is the figure + CSVs. Standalone:
   NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16 \
-  python cases/demo/tip_edge_singularity/run_demo.py
+  python cases/demo/p13_tip_edge_singularity/run_demo.py
 """
 import sys, time
 from pathlib import Path
@@ -291,7 +291,7 @@ def main():
                ("conforming_2pt_exponent_p", f"{p_conf2:.4f}"),
                ("ls_M1_2pt_exponent_p", f"{p_ls_m1:.4f}"),
                ("ls_M4_2pt_exponent_p", f"{two_pt_p('ls-M4'):.4f}")])
-    return cl.report(OUT)
+    return cl.report(OUT, "checks_g131.csv")
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ whole wing.
 Cheap (coarse+medium only, ~2 min); heavy solves cache to results/phys_*.npz
 (gitignored). Standalone:
   NUMBA_NUM_THREADS=8 OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 \
-  python cases/demo/tip_edge_singularity/run_taper_physics.py
+  python cases/demo/p13_tip_edge_singularity/run_taper_physics.py
 """
 import sys, time
 from pathlib import Path
@@ -193,11 +193,23 @@ def main():
               f"inboard(eta<0.90) circulation change {dg_in:+.2f}%")
 
         if form != "none":
+            # ★ tanh_half FAILING this check IS the finding, not a demo defect:
+            #   an UNBOUNDED-support taper never reaches F=1, so it unloads the
+            #   wing all the way to eta~0.77 and breaks TE pressure closure at
+            #   mid-outboard span, where there is no singularity to fix. That is
+            #   exactly why the shipped model is the COMPACT-support smoothstep.
+            #   Recorded as XFAIL so the negative stays visible and the demo
+            #   stays green.
+            disqualified = (form == "tanh_half")
             cl.add("G13.2", f"{tag(form, frac)}: is the taper LOCAL to the tip?",
                    f"reaches inboard to eta={reach:.2f}; inboard circulation "
                    f"{dg_in:+.2f}%", "eta_reach > 0.90 and |inboard| < 1%",
                    reach > 0.90 and abs(dg_in) < 1.0,
-                   note="a LOCAL taper is a tip-model change; a GLOBAL one "
+                   xfail=disqualified,
+                   note="UNBOUNDED support => not a tip model: this failure is "
+                        "the documented reason tanh_half was rejected"
+                        if disqualified else
+                        "a LOCAL taper is a tip-model change; a GLOBAL one "
                         "silently re-rigs the whole wing")
 
         # (i) the Cp "sawtooth" is the P6 WALL-GRADIENT RECOVERY artifact --
@@ -299,7 +311,7 @@ def main():
               "model,eta_reach_inboard,n_stations_touched,cl_KJ,dcl_pct,"
               "inboard_circulation_change_pct,te_gap_eta0.44,te_gap_eta0.90,"
               "te_gap_eta0.99", rows)
-    return cl.report(OUT)
+    return cl.report(OUT, "checks_g132_physics.csv")
 
 
 if __name__ == "__main__":

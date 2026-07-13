@@ -1,0 +1,4 @@
+region,coarse_ss,medium,fine,exponent_p,verdict
+tip_cap,0.662,0.824,1.015,+0.321,DIVERGES
+wing_p99,0.642,0.628,0.629,-0.014,bounded
+wake_edge,0.536,0.565,0.570,+0.045,bounded

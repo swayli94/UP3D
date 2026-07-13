@@ -1,0 +1,19 @@
+gate,check,value,criterion,status,note
+G13.2,baseline reproduces the G13.1 edge singularity,p_edge = 0.521 (q = 0.44),0.4 < p < 0.65 (1/sqrt(r)),PASS,Gamma_last barely decays (q~0.5; i.e. ~sqrt(h)); so the shed-vortex velocity Gamma_last/h ~ h^-0.5 diverges
+G13.2,METRIC: G13.1 tip box migrates onto the WING once regularized,baseline tip-box max is the edge; tapered runs' is not,edge box (dx>0; z/b>0.98) required,PASS,the G13.1 box admits wing cells (dx>=-0.05); after the fix its max is the ordinary wing suction peak at z/b~0.95 -- the tapered p from that box is meaningless
+G13.2,LAW: edge exponent p ~ 1 - q (shed vortex ~ Gamma_last/h),baseline: 1-q = 0.56 vs measured p = 0.52,|p - (1-q)| < 0.1 where q < 1,PASS,the DISCRETE criterion is q >= 1; NOT the continuum s > 1/2
+G13.2,tanh_half_rc0.10: regularizes the edge (q>=1 => p~0),q = 1.00; p_edge = +0.079; dcl = -7.73%,q >= 1.0 and p_edge < 0.20,XFAIL,q = 1.00 is EXACTLY the criterion's knife edge (docs: 'the marginal case'); disqualified for unbounded support regardless
+G13.2,tanh_half_rc0.10: taper resolved by >= 4 TE stations,57 stations,>= 4,PASS,
+G13.2,vanish_sqrt_rc0.10: regularizes the edge (q>=1 => p~0),q = 1.62; p_edge = +0.172; dcl = -3.92%,q >= 1.0 and p_edge < 0.20,PASS,edge peak flat at ~0.56 (ambient near-wake) vs baseline 0.98 and climbing
+G13.2,vanish_sqrt_rc0.10: taper resolved by >= 4 TE stations,16 stations,>= 4,PASS,
+G13.2,vanish_linear_rc0.10: regularizes the edge (q>=1 => p~0),q = 2.25; p_edge = +0.087; dcl = -5.12%,q >= 1.0 and p_edge < 0.20,PASS,edge peak flat at ~0.54 (ambient near-wake) vs baseline 0.98 and climbing
+G13.2,vanish_linear_rc0.10: taper resolved by >= 4 TE stations,16 stations,>= 4,PASS,
+G13.2,vanish_linear_rc0.05: regularizes the edge (q>=1 => p~0),q = 2.26; p_edge = +0.103; dcl = -1.74%,q >= 1.0 and p_edge < 0.20,PASS,edge peak flat at ~0.58 (ambient near-wake) vs baseline 0.98 and climbing
+G13.2,vanish_linear_rc0.05: taper resolved by >= 4 TE stations,8 stations,>= 4,PASS,
+G13.2,vanish_smooth_rc0.08: regularizes the edge (q>=1 => p~0),q = 3.32; p_edge = +0.059; dcl = -3.27%,q >= 1.0 and p_edge < 0.20,PASS,edge peak flat at ~0.54 (ambient near-wake) vs baseline 0.98 and climbing
+G13.2,vanish_smooth_rc0.08: taper resolved by >= 4 TE stations,13 stations,>= 4,PASS,
+G13.2,vanish_smooth_rc0.05: regularizes the edge (q>=1 => p~0),q = 3.33; p_edge = -0.004; dcl = -1.58%,q >= 1.0 and p_edge < 0.20,PASS,edge peak flat at ~0.57 (ambient near-wake) vs baseline 0.98 and climbing
+G13.2,vanish_smooth_rc0.05: taper resolved by >= 4 TE stations,8 stations,>= 4,PASS,
+G13.2,vanish_smooth_rc0.03: regularizes the edge (q>=1 => p~0),q = 3.14; p_edge = +0.207; dcl = -0.70%,q >= 1.0 and p_edge < 0.20,XFAIL,r_c too small => p = 0.21 > 0.20; the under-regularized end of the r_c sweep -- the reason the shipped r_c is 0.05
+G13.2,vanish_smooth_rc0.03: taper resolved by >= 4 TE stations,4 stations,>= 4,PASS,
+G13.2,WINNER: cheapest form that regularizes,vanish_smooth_rc0.05: p=-0.004; dcl=-1.58%,|dcl| <= 2% with p < 0.20,PASS,the lift bias IS the model price of desingularizing the tip

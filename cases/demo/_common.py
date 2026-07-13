@@ -128,8 +128,15 @@ class CheckList:
              "criterion": criterion, "status": status, "note": note}
         )
 
-    def report(self, out_dir: Path) -> int:
-        """Print the PASS/FAIL table, write checks.csv, return exit code."""
+    def report(self, out_dir: Path, fname: str = "checks.csv") -> int:
+        """Print the PASS/FAIL table, write the checks CSV, return exit code.
+
+        `fname` must be distinct per script when several demo scripts share one
+        results/ directory -- otherwise the last one to run silently overwrites
+        the committed evidence of the others (this happened in
+        cases/demo/p13_tip_edge_singularity/, where three scripts all wrote
+        checks.csv and only the last survived).
+        """
         w_gate = max(len(c["gate"]) for c in self.checks)
         w_name = max(len(c["name"]) for c in self.checks)
         w_val = max(len(str(c["value"])) for c in self.checks)
@@ -139,8 +146,9 @@ class CheckList:
         for c in self.checks:
             print(f"  {c['gate']:<{w_gate}}  {c['name']:<{w_name}}  "
                   f"{str(c['value']):<{w_val}}  {c['criterion']:<{w_crit}}  {c['status']}")
-        write_csv(out_dir, "checks.csv", "gate,check,value,criterion,status,note",
-                  [(c["gate"], c["name"].replace(",", ";"), c["value"],
+        write_csv(out_dir, fname, "gate,check,value,criterion,status,note",
+                  [(c["gate"], c["name"].replace(",", ";"),
+                    str(c["value"]).replace(",", ";"),
                     c["criterion"].replace(",", ";"), c["status"],
                     c["note"].replace(",", ";")) for c in self.checks])
         n_fail = sum(c["status"] == "FAIL" for c in self.checks)

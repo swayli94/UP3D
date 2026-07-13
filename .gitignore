@@ -93,7 +93,7 @@ cases/demo/b7_onera_m6/results/*.npz
 
 # tip-edge singularity demo: per-element Mach fields (the subsonic M0.5 probe;
 # figure+CSVs are the committed evidence, ~20 min to regenerate)
-cases/demo/tip_edge_singularity/results/*.npz
+cases/demo/p13_tip_edge_singularity/results/*.npz
 
 # Reference papers
 docs/references
