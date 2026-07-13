@@ -2106,8 +2106,12 @@ wall edge (p = +0.32) → **fixed** by Track M **M5** — the geometry is correc
 (seam crease q = −0.92 vs the flat cap's −0.00) AND the flow follows: on the round
 ladder the cap-surface exponent drops to +0.09 (bounded) and the lift Richardson
 becomes definable (p = 2.31, cl_KJ→0.2050). See the P13/G13.3 (subsonic) section
-below. All three defects are now addressed at M0.5; the M0.84 P9-band verdict is
-the remaining transonic step.
+below. All three defects are addressed at M0.5. **At M0.84 the story is
+different** — the rounded tip lets flow wrap around and accelerate, which
+*amplifies* the (pre-existing, shared) sharp tip-TE singularity until the fine
+mesh's Mach ramp dies at M = 0.75 and never reaches M0.84. A sub-problem at the
+trailing edge, not a defect of the cap; the P9 band verdict is not earned on
+either geometry. See the P13/G13.3 (transonic) section below.
 
 **✓ Evidence status (audit 2026-07-13; RESTORED same day).** This report's G13.2
 transonic claim (cl_KJ 0.2593 → 0.2652 → **0.2866** at M∞0.84, M_max 2.818, 0
@@ -2258,9 +2262,67 @@ the cap-surface and TE-excluded boxes above are the honest measures of the fix.
 **Scope.** This is the subsonic (M0.5) leg — it proves the *mechanism* (the
 geometry fix restores grid convergence and the Richardson is now definable).
 Firing P9's pre-registered decision bands (cl_KJ∞ ≥ 0.283 resolution / ≤ 0.278
-floor) is a *transonic* question (M0.84) and needs the M0.84 Richardson on the
-round ladder — not yet run. The audit-flagged M0.84 cl_KJ 0.2866 prose number was
-a flat-cap result and remains unevidenced either way.
+floor) is a *transonic* question (M0.84), run next.
+
+---
+
+## P13/G13.3 (transonic) — the round cap AMPLIFIES the tip-TE singularity, and the fine mesh never reaches M0.84 (`cases/demo/p13_tip_edge_singularity/run_g133_roundtip_transonic.py`, 5/5 + `..._locate.py`, 2026-07-13/14)
+
+The M0.84/α3.06 three-point Richardson on the round ladder, same recipe as the
+committed flat-cap run (`run_g132_transonic.py`: tip taper, `precond="amg"` +
+tight EW forcing + the `m_start`/Picard fine guards). It is a **negative result**,
+and the demo's checks assert it truthfully.
+
+| level | n_tets | ramp reached | last converged | M_max | over M_cap | cl_KJ (flat-norm) |
+|---|---|---|---|---|---|---|
+| coarse | 59,359 | **M0.84** ✓ | 0.8400 | 1.51 | 0 | 0.2769 |
+| medium | 448,197 | **M0.84** ✓ | 0.8400 | 2.00 | 0 | 0.2763 |
+| **fine** | 3,257,273 | **M0.75** ✗ | 0.7375 | n/a | n/a | **n/a** |
+
+**★ The finding is sharper than "the fine did not converge": the fine mesh never
+reaches M0.84 at all.** Its Mach continuation **breaks down at M = 0.75** — it
+dm-halves until dm < dm_min and gives up (one cell in the density floor, residual
+stalling ~8e-6) — so it never gets to M0.80, let alone M0.84. **There is no M0.84
+fine state to census.** Only two of three points exist, so there is no three-point
+Richardson and no P9 band verdict.
+
+**★ The site is the SHARP TIP TE — and the round cap does not create it, it heats
+it.** The committed **flat** M0.84 run *completes* the ramp at the same refinement
+level and converges (M_max 2.818, 0 over cap, cl_KJ 0.2866), which at first seems
+to exonerate the shared trailing edge — if the TE were the culprit, the flat cap
+would die too. It does not. But the field-saving rerun
+(`run_g133_roundtip_transonic_locate.py`) settles it: of the **20 fastest cells on
+the failed fine field, 20 are on the sharp tip TE** (z/b 0.97–0.99, chord-frac
+≈ 0.998) and **none is on the new cap surface** (z/b > 1). The rounded tip lets
+flow **wrap around the tip and accelerate**, which raises the velocity at that
+same, pre-existing sharp TE at *every* level (M_max 1.51 / 2.00 round vs
+1.39 / 1.73 flat) — and at fine resolution that pushes it past the limiter, where
+the flat cap's cooler tip flow stays under. **⇒ the cap did not add a
+singularity; it amplified the tip-TE one that was always there.** This also
+*confirms* the subsonic box study's site (chord-frac 0.999), rather than
+contradicting it.
+
+**⚠ Method erratum, self-caught — three numbers retracted.**
+`solve_newton_transonic` returns the **failed level's state** (`converged=False`,
+at *that* level's Mach, not at `m_inf`). An earlier version of this demo censused
+that state at `M_INF = 0.84` anyway — applying the **wrong freestream Mach** to a
+M ≈ 0.75 velocity field — and so reported a spurious **"M_max 3.97 / 5 cells over
+M_cap / cl_KJ 0.2415 at M0.84"**. **Those three numbers are retracted.** `solve()`
+now records `target_reached` / `m_final` / `m_last_converged` and **refuses to
+census a state whose ramp did not reach the target**; every census column reads
+`n/a` for the fine level in `g133rt_transonic.csv`, and `get()` rejects any cache
+that predates the guard.
+
+**Net G13.3 picture.** Rounding the cap is a clean **subsonic** fix (Richardson
+p = 2.31). Its **transonic** cost is that the amplified tip-TE flow becomes
+unsolvable at fine resolution — a sub-problem at the *trailing edge*, not a defect
+of the cap. And the P9 transonic band verdict is **not earned on either
+geometry**: the flat cap's solves converge but its sequence *rises*
+(0.2593 → 0.2652 → 0.2866, non-asymptotic, on the clamped ladder and polluted by
+the flat cap edge), so 0.2866 is a single reported point, not a Richardson
+extrapolation; the round cap has no third point at all. The
+"0.019 gap = resolution ⇒ P11 refuted" conclusion therefore has **no clean
+asymptotic discrete-solution basis on either geometry**.
 
 ---
 

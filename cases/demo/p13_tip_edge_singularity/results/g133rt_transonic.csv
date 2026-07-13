@@ -1,0 +1,4 @@
+level,n_tets,m_target,m_final_reached,m_last_converged,target_reached,s_ref,cl_KJ_roundnorm,cl_KJ_flatnorm,cl_p,M_max_unlimited,n_over_Mcap,n_limited,n_floored,converged,shock_044,shock_065,shock_090,wall_s
+coarse,59359,0.84,0.8400,0.8400,1,0.76017,0.2743,0.2769,0.2680,1.512,0,0,0,1,0.627,0.570,0.438,14
+medium,448197,0.84,0.8400,0.8400,1,0.76022,0.2737,0.2763,0.2696,2.003,0,0,0,1,0.600,0.542,0.375,148
+fine,3257273,0.84,0.7500,0.7375,0,0.76023,n/a,n/a,n/a,n/a,n/a,0,1,0,n/a,n/a,n/a,7547

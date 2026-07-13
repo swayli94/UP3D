@@ -1,0 +1,21 @@
+rank,x,y,z,z_over_b,chord_frac,dx_past_TE,note_mach_value_invalid_ramp_died_at_M0.75
+1,1.1378,-0.00067,1.1786,0.9852,0.9979,-0.00095,rank/position valid; Mach value NOT physical
+2,1.1384,-0.00061,1.1792,0.9857,0.9988,-0.00054,rank/position valid; Mach value NOT physical
+3,1.1380,-0.00061,1.1779,0.9846,0.9989,-0.00053,rank/position valid; Mach value NOT physical
+4,1.1367,-0.00083,1.1747,0.9820,0.9980,-0.00090,rank/position valid; Mach value NOT physical
+5,1.1369,-0.00077,1.1737,0.9811,0.9991,-0.00042,rank/position valid; Mach value NOT physical
+6,1.1388,-0.00055,1.1812,0.9874,0.9985,-0.00070,rank/position valid; Mach value NOT physical
+7,1.1386,-0.00061,1.1821,0.9881,0.9975,-0.00115,rank/position valid; Mach value NOT physical
+8,1.1397,-0.00130,1.1843,0.9900,0.9985,-0.00068,rank/position valid; Mach value NOT physical
+9,1.1382,-0.00061,1.1806,0.9869,0.9975,-0.00113,rank/position valid; Mach value NOT physical
+10,1.1383,-0.00110,1.1800,0.9864,0.9983,-0.00077,rank/position valid; Mach value NOT physical
+11,1.1374,-0.00078,1.1755,0.9826,0.9990,-0.00048,rank/position valid; Mach value NOT physical
+12,1.1522,-0.00121,1.1565,0.9667,1.0424,+0.01970,rank/position valid; Mach value NOT physical
+13,1.1537,-0.00121,1.1555,0.9659,1.0462,+0.02150,rank/position valid; Mach value NOT physical
+14,1.1308,-0.00223,1.1564,0.9666,0.9963,-0.00170,rank/position valid; Mach value NOT physical
+15,1.1327,-0.00186,1.1576,0.9676,0.9999,-0.00004,rank/position valid; Mach value NOT physical
+16,1.1392,-0.00055,1.1826,0.9886,0.9985,-0.00068,rank/position valid; Mach value NOT physical
+17,1.1392,-0.00120,1.1830,0.9889,0.9984,-0.00073,rank/position valid; Mach value NOT physical
+18,1.1316,-0.00111,1.1555,0.9659,0.9987,-0.00061,rank/position valid; Mach value NOT physical
+19,1.1360,-0.00123,1.1698,0.9778,0.9996,-0.00019,rank/position valid; Mach value NOT physical
+20,1.1369,-0.00068,1.1770,0.9839,0.9969,-0.00141,rank/position valid; Mach value NOT physical
