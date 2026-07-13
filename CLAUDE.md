@@ -28,15 +28,13 @@ workstation-scale (minutes for 1–3 M nodes).
   script, no CSV, no cached `.npz` — after a P11 ledger status had already been
   changed on its strength. If a run is too expensive to repeat, that is the
   reason to commit its CSV, not a reason to skip it.
-- [docs/discussion_notes/](docs/discussion_notes/) — **discussion & reference
-  material only, NEVER a coding spec.** Design notes for future tracks (DN1
-  level-set wake, DN2/DN6 VII coupling, DN4/DN5 Newton) +
-  [PLAN.md](docs/discussion_notes/PLAN.md), the cross-track integration view
-  (Chinese). When writing code, plan against **roadmap.md gates + design.md
-  numerics only**; a discussion-note idea becomes actionable only after it is
-  merged into roadmap.md/design.md (as Track B/V were on 2026-07-10). If a note
-  contradicts roadmap/design, roadmap/design win. Sync PLAN.md when a gate
-  closes.
+- `docs/discussion_notes/` — **DELETED 2026-07-14** (commit 0e4895a; user
+  decision). The DN1–DN6 notes + PLAN.md were discussion material whose useful
+  content had already been merged into roadmap.md / design.md /
+  design_track_b.md (Track B/V merged 2026-07-10; design_track_b.md supersedes
+  DN1). For history, read them from git:
+  `git show 8aa4aee:docs/discussion_notes/<file>`. The rule stands: plan
+  against **roadmap.md gates + design.md numerics only**.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
   **"Known gaps"**: read it before touching the G1.6 sphere-Cp problem (formerly
   G1.2; P1 gates renumbered 2026-07-06, mapping in roadmap.md) — it is already
@@ -57,8 +55,17 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (**294 passed + 17 skipped + 2 xfailed since
-   Track M M1b 2026-07-13** — +3 M6 mesh-ladder tests in
+3. Full suite: `pytest tests/` (**358 passed + 17 skipped + 2 xfailed since the
+   B8-backlog execution 2026-07-14, measured 882.98 s @16 threads** — +8 over
+   the 350+17+2 B8-closure baseline: +7 M2 LS-ingestion census tests in
+   `tests/test_m2_wingbody.py` (now 20; they lock the formerly prose-only
+   f3c7989 census — coarse 1,415 cut elems / 76 TE nodes, medium 29,108/150)
+   and +1 `element_mach2` side-opt-in lock in `tests/test_b8_span_blend.py`
+   after the default flip to `mixed_plain="main"`. Lineage: 350+17+2 at B8
+   closure 2026-07-14 (+13 `test_b8_tip_taper_ls.py` + 11
+   `test_b8_span_blend.py` + 13 `test_m2_wingbody.py` + 19
+   `test_m5_round_tip.py` over the M1b 294); **294+17+2 since Track M M1b
+   2026-07-13** — +3 M6 mesh-ladder tests in
    `tests/test_m1_onera_m6.py` (16 total; they lock
    `RICHARDSON_LADDER = (coarse_ss, medium, fine)` at exactly 2× per level and
    regression-document the old `h_far` clamp defect) over the 291+17+2 P13/G13.2

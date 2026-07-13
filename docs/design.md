@@ -310,9 +310,9 @@ no secant) would replace the conforming sheet + master–slave elimination above
 so meshes need no pre-embedded wake surface (α sweeps without remeshing;
 multi-wake for wing–body). Numerics reference:
 [design_track_b.md](design_track_b.md) (2026-07-11 López-dissertation
-cross-check; supersedes DN1
-`discussion_notes/20260707_1505_levelset_wake_design.md` as the Track B design
-spec — notably the original penalty Kutta is demoted to an optional diagnostic
+cross-check; supersedes DN1 as the Track B design
+spec (DN1 lived in `discussion_notes/`, deleted 2026-07-14 — historical copy via
+`git show 8aa4aee:docs/discussion_notes/20260707_1505_levelset_wake_design.md`) — notably the original penalty Kutta is demoted to an optional diagnostic
 in favor of TE duplication + the wake least-squares condition); phase plan
 B1–B5 in roadmap.md Track B. Curved/free wake (B6) is
 **shelved** (2026-07-10, DN2 §4.5.6): the straight-wake loading error is

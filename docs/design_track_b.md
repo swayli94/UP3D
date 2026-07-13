@@ -15,8 +15,9 @@
 > 本文是 Track B 的数值理论与实现分析，与 [design.md](design.md) 同级互补；
 > **阶段/gate/进度以 [roadmap.md](roadmap.md) Track B 为准**（开发计划仍在 roadmap
 > 维护），冲突时 roadmap 胜出。本文在数值方案层面**取代 DN1**
-> （[discussion_notes/20260707_1505_levelset_wake_design.md](discussion_notes/20260707_1505_levelset_wake_design.md)）
-> 作为 Track B 的设计参考；DN1 降级为方案比选的历史讨论记录。本文与 DN1
+> 作为 Track B 的设计参考；DN1 降级为方案比选的历史讨论记录（`discussion_notes/`
+> 已于 2026-07-14 删除，commit 0e4895a，历史版本见
+> `git show 8aa4aee:docs/discussion_notes/20260707_1505_levelset_wake_design.md`）。本文与 DN1
 > 的差异点（§4）均以 López 博士论文原文为证据，逐条给出公式/表格编号。
 >
 > 主要参考：I. López Canalejo, *A Finite-Element Transonic Potential Flow
@@ -493,10 +494,11 @@ level-set 切集是 conforming minus-star 的**严格超集**（缺失 0,多 2.9
   §3.5.5（小切割/full integration）、表 4.9（Newton 收敛）、表 4.13
   （M6 load steps）、表 4.15–4.16（M6 精度/性能）、§4.9（CRM 双尾迹/钝
   尾缘/短舱）、图 4.40–4.41（[φ] 对流验证）。
-- DN1（历史讨论记录,方案 A/B/C 比选与 Davari/Núñez 摘录）：
-  `discussion_notes/20260707_1505_levelset_wake_design.md`。
-- B9（曲线/自由尾迹）维持搁置,五条理由见 roadmap Track B 表 B9 行与 DN2
-  §4.5.6;本文不重开。
+- DN1（历史讨论记录,方案 A/B/C 比选与 Davari/Núñez 摘录）：原
+  `discussion_notes/20260707_1505_levelset_wake_design.md`，目录已于
+  2026-07-14 删除，见 `git show 8aa4aee:docs/discussion_notes/…`。
+- B10（曲线/自由尾迹，旧编号 B9）维持搁置,五条理由见 roadmap Track B 表与
+  DN2 §4.5.6（同为历史笔记）;本文不重开。
 - conforming 路径的对照证据：P2（TE 复制、secant b≈0.93）、P5（st133、
   远场 Γ(z)-taper）、P8（Newton 全套、非对称 Jacobian、GMRES/direct）、
   G10.3（保留 Mach ramp）——各自条目在 roadmap 进度台账与
