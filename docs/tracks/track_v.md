@@ -14,7 +14,8 @@ motion), progressing loose → tight coupling. Design records: DN2 + DN6
 (historical; `discussion_notes/` deleted 2026-07-14 — recover via
 `git show 8aa4aee:docs/discussion_notes/20260707_2118_ibl_viscous_coupling_design.md`
 and `.../20260709_0145_3d_vii_implementation_analysis.md`; the load-bearing
-content is summarized here and in design.md §11). Design
+content is summarized here and in design.md §5/§8 notes; design.md §11 is a
+pointer to the tracks/ files since 2026-07-15). Design
 complete; **no implementation exists yet**.
 
 > **Naming disambiguation.** Track V phase IDs V1–V4 are development *phases*;
