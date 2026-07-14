@@ -1,0 +1,7 @@
+gate,check,value,criterion,status,note
+GB13.3,M6 medium spsolve lifting converged (baseline),converged,converged,PASS,
+GB13.3,M6 medium lagged-LU lifting converged,converged,converged,PASS,
+GB13.3,lagged == spsolve,6.86e-13,< 1e-6,PASS,
+GB13.3,far fewer factorizations than outers,2 vs 26,n_refactor <= n_outer/4,PASS,
+GB13.3,end-to-end (seed+Newton) converged,converged,converged,PASS,
+GB13.3,Newton gamma in the B12 lock band,0.06685284,|Δ| < 1e-4 of 0.06685284,PASS,

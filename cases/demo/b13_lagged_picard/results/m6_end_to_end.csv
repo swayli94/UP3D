@@ -1,0 +1,4 @@
+stage,wall_s,n_iters,n_refactor,gamma,converged
+seed_lagged,42.00,15,1,0.06684795,0
+newton_lagged,69.91,7,1,0.06685284,1
+total,111.91,,,,

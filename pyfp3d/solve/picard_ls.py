@@ -13,13 +13,19 @@ question.
 
 B11 (2026-07-14) lands the deferred scaling path (design_track_b.md §5.3):
 every driver here takes a `precond` kwarg (None = the bit-identical direct
-default; "ilu"/"amg" run preconditioned GMRES via solve/linear.solve_gmres),
-the escape from the M6-fine splu wall. **★ ILU is the effective escape on the
-lifting/transonic path** -- it factors the real fused matrix (434 iters, exact).
-AMG is built on an SPD surrogate (`_amg_surrogate_preconditioner`) and converges
-only on the SPD `continuity`/Laplace system; on the `wake_ls` lifting operator
-(convection-like wake-LS + TE-Kutta rows) it stalls (measured), so it stays
-wired for the Laplace case + as the recorded §5.3 knob, not the lifting escape.
+default; "ilu"/"amg" run preconditioned GMRES via solve/linear.solve_gmres).
+**★ Measured boundary: the iterative escapes are COARSE-only** -- ILU converges
+on the coarse fused matrix (434 iters, exact) but DIVERGES at 2.5D medium
+lifting and factor-fails at M6 medium; AMG is built on an SPD surrogate
+(`_amg_surrogate_preconditioner`) and converges only on the SPD
+`continuity`/Laplace system, stalling on the `wake_ls` lifting operator
+(convection-like wake-LS + TE-Kutta rows). So at medium/M6 sizes sparse-direct
+is the only converging tool and the cost driver is the NUMBER of
+factorizations. B13 (2026-07-14) attacks exactly that: `direct_refactor_every`
+on `solve_multivalued_lifting` (the B12 lagged-LU mechanism applied to the
+Picard outer loop -- refactor every k-th outer, stale-exact-LU-preconditioned
+GMRES in between; default 1 = bit-identical per-outer spsolve). The transonic
+driver inherits it through **kwargs.
 
 The lifting driver with implicit Kutta (the g1+g2 wake LS closure, no Gamma
 outer loop) is B3.
@@ -270,6 +276,8 @@ def solve_multivalued_lifting(
     gmres_restart: int = 60,
     gmres_maxiter: int = 50,
     amg_rebuild_every: int = 5,
+    direct_refactor_every: int = 1,
+    direct_reuse_rtol: float = 1e-10,
 ) -> Dict[str, object]:
     """Subsonic lifting solve on a level-set cut mesh with IMPLICIT Kutta
     (Track B, B3; design_track_b.md D2). NO Gamma secant and no master-slave
@@ -338,12 +346,32 @@ def solve_multivalued_lifting(
     (`on_fail="return"`) only perturb the Picard path and are counted as
     stalls, never raised.
 
+    `direct_refactor_every` (B13): lagged-LU direct-reuse on the `precond=None`
+    path -- the B12 mechanism applied to the Picard OUTER loop, which after B12
+    is the M6-medium cost driver (one 17.5 s spsolve per outer; B11 measured
+    ILU diverging at 2.5D medium and factor-failing at M6 medium, so at these
+    sizes sparse-direct is the only converging tool and the cost is the NUMBER
+    of factorizations). 1 (default) = the bit-identical per-outer `spsolve`.
+    > 1 = refactor the LU every k-th outer and drive the outers in between with
+    GMRES on the FRESH matrix preconditioned by the stale (exact) LU, converged
+    to `direct_reuse_rtol` and warm-started from the previous iterate; a reuse
+    step whose GMRES fails falls back to refactor + exact solve in the same
+    outer (robustness never below per-outer-direct; early outers with large
+    density moves are expected to trigger it). Ignored when precond is
+    "ilu"/"amg". `direct_reuse_rtol` defaults to 1e-10, NOT B12's 1e-8: a
+    Picard fixed point is pinned only by its lag tolerances (1e-6), so an
+    inexact reuse step SHIFTS the stopping point (measured |dgamma| 8e-8 at
+    rtol 1e-8), whereas Newton's terminus is pinned by tol_residual regardless
+    -- 1e-10 restores <1e-8 gamma agreement for ~1-2 extra Krylov iters on a
+    near-exact preconditioner.
+
     Returns:
         dict: phi_ext, phi (main), gamma (extracted TE circulation),
         cl_kj (= 2 gamma / (u_inf c), c = 1), te_jump, n_outer, converged,
         gamma_history, drho_history, residual_history, residual_norm,
         mach2_max, nu_max, n_nu_active, n_limited, n_floored, rho_tilde,
-        precond, n_gmres_total, n_gmres_stalled (B11 monitors).
+        precond, n_gmres_total, n_gmres_stalled (B11 monitors),
+        n_refactor (B13).
     """
     if precond not in (None, "ilu", "amg"):
         raise ValueError(f"precond={precond!r} unknown (None|'ilu'|'amg')")
@@ -391,6 +419,10 @@ def solve_multivalued_lifting(
     M_pre = None
     n_gmres_total = 0
     n_gmres_stalled = 0
+    # B13 lagged-LU state (inert when direct_refactor_every <= 1).
+    lu_direct = None
+    lu_age = 0
+    n_refactor = 0
     converged = False
     # ---- B6 damping: LOCALIZED to the supersonic zone --------------------
     #
@@ -480,7 +512,36 @@ def solve_multivalued_lifting(
             b_solve = b_free + d * x_prev
 
         if precond is None:
-            x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
+            if direct_refactor_every <= 1:
+                x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
+            else:
+                # B13 lagged-LU (the B12 mechanism on the Picard outer loop):
+                # refactor the LU only every k-th outer; in between, GMRES on
+                # the FRESH matrix preconditioned by the stale (exact) LU,
+                # warm-started from the previous iterate. The under-relaxed
+                # density (omega_rho) keeps the matrix drift small, so the
+                # stale LU stays near-exact; a failed reuse step refactors in
+                # the same outer (never below per-outer-direct robustness).
+                x = None
+                if lu_direct is not None and lu_age < direct_refactor_every:
+                    n = free.size
+                    A_op = spla.LinearOperator((n, n), matvec=A_solve.dot)
+                    M_lag = spla.LinearOperator((n, n), matvec=lu_direct.solve)
+                    x_try, n_it, info = solve_gmres(
+                        A_op, b_solve, M=M_lag, rtol=direct_reuse_rtol,
+                        x0=x_prev, restart=gmres_restart, maxiter=2,
+                        on_fail="return")
+                    n_gmres_total += n_it
+                    if info == 0:
+                        x = np.atleast_1d(x_try)
+                    else:
+                        n_gmres_stalled += 1   # stale LU exhausted: refactor
+                if x is None:
+                    lu_direct = spla.splu(A_solve.tocsc())
+                    lu_age = 0
+                    n_refactor += 1
+                    x = np.atleast_1d(lu_direct.solve(b_solve))
+                lu_age += 1
         else:
             # B11: preconditioned GMRES on the fused matrix, warm-started from
             # the previous outer's free-dof iterate; an inexact step
@@ -580,6 +641,7 @@ def solve_multivalued_lifting(
         "precond": precond,
         "n_gmres_total": n_gmres_total,
         "n_gmres_stalled": n_gmres_stalled,
+        "n_refactor": n_refactor,
     }
 
 

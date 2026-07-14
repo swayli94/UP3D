@@ -1609,7 +1609,7 @@ continuation ~1 h).
 
 ---
 
-## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10**; **B12 ✓ CLOSED 2026-07-14 — lagged-LU direct-reuse for LS Newton (M6 medium Newton 2.18× via 1 factorization vs 7), NEW appended after B11** — B9 = multi-wake NEXT, B10 = curved wake shelved)
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10**; **B12 ✓ CLOSED 2026-07-14 — lagged-LU direct-reuse for LS Newton (M6 medium Newton 2.18× via 1 factorization vs 7), NEW appended after B11**; **B13 ✓ CLOSED 2026-07-14 — lagged-LU on the Picard outer loop (M6 medium lifting 6.55× 447.6→68.3 s, end-to-end ~3× ~330→112 s)**; **B14 ☐ designed-not-scheduled — Schur-eliminated-aux + AMG structural preconditioner (fine-scale route; trigger recorded)** — B9 = multi-wake NEXT, B10 = curved wake shelved)
 
 > **★ Track-B renumber 2026-07-12 (user-directed).** TWO renumbers landed the
 > same day. **(1)** A new **B4 — TE control-volume / implicit-Kutta
@@ -2106,6 +2106,100 @@ analogue is a separate follow-up), and genuine AMG applicability (Núñez rows).
 `cases/demo/b12_lagged_lu/` (6/6, G12.3 headline CSV). `solve/newton_ls.py` is
 the only production change; default path byte-identical. Suite +4.
 
+### B13 — Lagged-LU on the Picard outer loop (the post-B12 cost driver) ✓ CLOSED 2026-07-14 (NEW, user-directed; appended after B12, no renumber)
+**Deliverable:** the B12 lagged-LU mechanism applied to the Picard OUTER loop
+(`solve_multivalued_lifting`; transonic inherits via `**kwargs`) — after B12
+the M6-medium cost driver is one 17.5 s spsolve per Picard outer (B11 lifting
+headline 454.8 s / 26 outers; the B12 demo's Newton seed 263 s / 15 outers).
+User goal arbitrated 2026-07-14: **compute speed at medium scale is the
+objective; fine-mesh extension is optional** — which ranks lagged-LU (this)
+above the structural preconditioner (B14, designed-not-scheduled below).
+`solve_multivalued_laplace` is excluded — it is a single-shot solve, nothing to
+amortize.
+
+**External-analysis corrections (recorded; GLM analysis + comparison doc,
+baseline f9d400a, both predating B12):** (1) "lagged-LU port = not done" was
+true at their baseline; B12 landed it for Newton the same day. (2) The Schur
+direction in both docs is inverted — the efficient elimination removes the
+SMALL aux block (`K = J_mm − J_ma·J_aa⁻¹·J_am`, J_aa an n_ext×n_ext thin-strip
+matrix ~8k at M6 medium), not the main block (which would need A_mm⁻¹ = an AMG
+inner solve per application). (3) J_aa is not fully constant — wake-LS rows are
+(§5.5) but the TE-Kutta rows (76–150) re-linearize each outer; refactoring the
+thin strip is milliseconds, a non-issue. (4) 454.8 s is 26 outers, not one
+splu (17.5 s each).
+
+**Gates (GB13.x — deliberately NOT G13.x, which is P13's namespace; Track V's
+GV prefix is the precedent):**
+- [x] **GB13.1 bit-identity — CLOSED 2026-07-14.** `direct_refactor_every=1`
+      (default) is byte-identical to the per-outer `spsolve` (same `phi_ext`,
+      `n_refactor==0`, `n_gmres_total==0`); defaults pinned.
+      `tests/test_b13_lagged_picard.py`.
+- [x] **GB13.2 equivalence (core) — CLOSED 2026-07-14.** Coarse 2.5D lifting
+      M0.5: k∈{4,1000} reach the spsolve γ to <1e-8, converged, 0 stalls,
+      `n_refactor < n_outer` (k=1000 refactors ONCE); also under
+      `farfield="neumann"` (the B6/B7 recipe) at k=8.
+      ★ **Measured finding: `direct_reuse_rtol` must default 1e-10, NOT B12's
+      1e-8** — a Picard fixed point is pinned only by its lag tolerances
+      (1e-6), so an inexact reuse step SHIFTS the stopping point (|Δγ| 8e-8 at
+      rtol 1e-8), whereas Newton's terminus is pinned by `tol_residual`
+      regardless; 1e-10 restores <1e-8 agreement for ~1–2 extra Krylov iters
+      on a near-exact preconditioner.
+- [x] **GB13.3 M6-medium headline (gated) — CLOSED 2026-07-14.** B11-headline
+      lifting (M0.5, α3.06, neumann, tol 1e-7, 67,426 dofs, 26 outers both):
+      spsolve **447.6 s** (17.2 s/outer) vs lagged-LU (k=1000) **68.3 s**
+      (2.63 s/outer) = **6.55× faster**, 2 refactors vs 26, γ bit-identical
+      (0.06685270, |Δγ| 6.9e-13). The 1 GMRES "stall" is the designed safety
+      net — an early outer's large density move exhausts the stale LU and
+      triggers an extra refactor (hence 2, not 1), never a divergence.
+      **End-to-end seed+Newton** (the B12 pipeline, both mechanisms on): seed
+      **42 s** (1 refactor / 15 outers, was 263 s spsolve) + Newton **69.9 s**
+      = **111.9 s total vs ~330 s post-B12 baseline (~3×)**, Newton γ 0.06685284
+      in the B12 lock band. Demo `cases/demo/b13_lagged_picard/` (**6/6 PASS**),
+      `m6_lifting_ab.csv` + `m6_end_to_end.csv`.
+      **★ Honest boundary:** amortizes the factorization COUNT; still needs
+      ≥1 in-memory splu ⇒ does NOT break the fine-mesh memory wall (that is
+      B14's unique value).
+
+**Result headline:** M6-medium lifting **447.6 s → 68.3 s (6.55×)**; end-to-end
+seed+Newton **~330 s → 111.9 s (~3×)** — the LS medium workflow is now the same
+order as conforming M6 medium (solve 140–240 s). **Evidence:**
+`tests/test_b13_lagged_picard.py` (5); demo `cases/demo/b13_lagged_picard/`
+(6/6, GB13.3 CSVs). `solve/picard_ls.py` is the only production change; default
+path byte-identical. Suite +5.
+
+### B14 — Schur-eliminated aux block + AMG(SPD Picard main block) ☐ DESIGNED-NOT-SCHEDULED 2026-07-14 (the structural preconditioner; trigger recorded)
+**Why not now (user-arbitrated 2026-07-14):** at medium scale its marginal gain
+over B13 is uncertain (lagged-LU already amortizes to ~1–3 factorizations per
+solve ≈ 35 s; Schur+AMG trades that for per-outer GMRES+AMG cost of the same
+order), and its unique value — the FINE-scale memory-bounded path (AMG O(n) +
+thin-strip LU, no full-size splu) — addresses a regime the user has declared
+optional. **Trigger:** GB13.3 lands and medium is still too slow, or a real
+M6/wing-body FINE campaign is scheduled.
+
+**Design snapshot (ready to build):** new `precond="schur"` on the LS drivers.
+Free dofs split main-free/aux (aux are never Dirichlet — the B3 load-bearing
+fact). Per outer/Newton step: `lu_aa = splu(J_aa)` (n_ext×n_ext thin strip,
+~8k at M6 medium, milliseconds; TE-Kutta rows re-linearize per step, so
+refactor per step). Reduced operator matrix-free:
+`K x = J_mm x − J_ma·lu_aa.solve(J_am x)`; reduced RHS
+`r = b_m − J_ma·lu_aa.solve(b_a)`; back-substitution
+`φ_a = lu_aa.solve(b_a − J_am φ_m)`. Preconditioner =
+`build_amg_preconditioner(op.assemble_matrix(rho_own))` restricted to
+main-free — the exact conforming analogue (AMG on the SPD Picard block,
+constraints eliminated exactly), **with NO springs**: the B11 surrogate's
+mismatch (springs bias the solution toward jump≈0, killing the global
+circulation mode — γ 0.0033 vs 0.139) disappears structurally because no aux
+dof survives into the preconditioned system. GMRES then faces "elliptic +
+cut-strip-localized correction" — the operator shape the conforming path
+already proved AMG-preconditionable. **Diagnostic-first gate:** J_aa
+invertibility/conditioning (the constant-jump null vector mixes main+aux
+columns ⇒ J_aa generically nonsingular, TE-Kutta pins the level — measure,
+don't assume); the discriminating tier is **2.5D medium lifting, where ILU
+DIVERGED (γ=−137)** — passing there is what "a real escape" means. Fallbacks:
+block-triangular preconditioner; last resort = the Núñez additive symmetric
+row assignment (§5.3 — a discretization change with penalty-weight
+calibration, demoted to third line).
+
 Working rules (DN1 §9–§10):
 
 - **No big-bang rewrite.** `solve/picard_ls.py` lives alongside
@@ -2290,6 +2384,8 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
 | B10 | ⊘ SHELVED | 2026-07-10 | (was B9 2026-07-13; orig B7→B6) Curved wake / free wake. Recorded reasons (DN1 §8 / DN2 §4.5.6): the loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent. The `update_direction()` interface capability is retained — it is what B1's α re-aim tests exercise. |
 | B11 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B10, no renumber) **LS-path infrastructure: unified post-processing + GMRES/AMG scaling.** Two gaps closed (a B9 enabler). **(1)** `post/surface.py` + `post/surface_ls.py` now share private cores (`_cp_from_q2`, `_pressure_force`, `_wall_plane_crossings`/`_resolve_station`/`_section_curve_dict`, `_d11_wall_state`) under a keyword-dispatched upper layer `post/unified.py` (`wall_cp`/`wall_forces`/`section_cp`, `phi=` conforming vs `mvop=,phi_ext=` level-set); every legacy function keeps its name/signature and outputs are `np.array_equal` (D11 lock + shock locks pass unchanged). **(2)** the deferred design_track_b.md §5.3 GMRES+AMG landing: `solve_multivalued_laplace`/`_lifting`/`_newton` grow `precond=None|"ilu"|"amg"` (None = the bit-identical `spsolve` default; transonic inherits via `**kwargs`), the escape from the M6-fine splu wall (roadmap "no precond option" caveat). **★ ILU is the effective escape** (spilu on the real fused matrix, 434 iters coarse, exact); **AMG (SA on an SPD Picard-block surrogate + aux↔host springs) converges only on the SPD Laplace/continuity system — on the `wake_ls` lifting operator its convection-like aux rows defeat the SPD surrogate and GMRES STALLS (measured: γ 0.0033 vs 0.139, 455 s, all outers stalled)**, so AMG stays a Laplace/§5.3 knob and ILU is shipped. Núñez symmetric row assignment stays not-prebuilt (§5.3). lagged-LU (`direct_refactor_every`) port to `newton_ls` = recorded out-of-scope follow-up → **executed by B12 (2026-07-14)**. Evidence: `tests/test_b11_post_unified.py` (9) + `tests/test_b11_linear_ls.py` (10 + 1 gated); demos `cases/demo/b11_ls_infra/` (unified-post + GMRES A/B + gated M6-medium headline CSV). Conforming numerics byte-untouched; no Numba/COO path touched. |
 | B12 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B11, no renumber; executes the B11/G11.4 follow-up) **Lagged-LU direct-reuse for LS Newton (medium/M6-scale enabler).** B11 measured that the iterative escapes fail beyond coarse (ILU diverges at 2.5D medium lifting, `factor_failed`s at M6 medium; AMG stalls), so at medium/M6 sparse-direct is the only converging tool and the cost driver is the NUMBER of factorizations (17.5 s each at 67k dofs). `solve_multivalued_newton` gains `direct_refactor_every` (default 1 = bit-identical per-step `spsolve`) + `direct_reuse_rtol`: with `k>1` it refactors the LU every k-th Newton step and drives the intermediate steps with GMRES preconditioned by the stale (exact) LU — the N6 mechanism (`solve/newton.py`) ported **minus the Woodbury** (the LS system has no Γ DOF ⇒ plain `J_free d = −R_free`). **G12.1 (bit-identity) ✓ + G12.2 (equivalence/reuse) ✓** — coarse M0.70 k∈{2,1000} reach the spsolve γ (0.1778053693) to bit-identity, 0 stalls, k=1000 refactors ONCE over 6 Newton iters. **G12.3 (M6-medium subsonic A/B) ✓** — M6 medium M0.5 (67,426 dofs), 7 Newton steps both, spsolve refactors 7× (**145.6 s**) vs lagged-LU 1× + 30 reuse-GMRES iters (**66.7 s = 2.18×**), γ bit-identical (|Δγ| 6.7e-13), 0 stalls, 0 lim/flr. Honest boundary: a real medium-scale win (one splu fits at 67k), but does NOT break the FINE memory wall (still needs ≥1 in-memory splu; that's the Núñez→AMG route). `solve/newton_ls.py` is the only production change, default byte-identical. Evidence: `tests/test_b12_lagged_lu_ls.py` (4); demo `cases/demo/b12_lagged_lu/` (6/6). |
+| B13 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B12) **Lagged-LU on the Picard OUTER loop** — the post-B12 cost driver (one 17.5 s spsolve per outer; B11 lifting headline 447.6 s / 26 outers, Newton seed 263 s / 15). `solve_multivalued_lifting` gains `direct_refactor_every` (default 1 = bit-identical) + `direct_reuse_rtol` (**1e-10, NOT B12's 1e-8** — a Picard fixed point is pinned only by its 1e-6 lag tolerances, so an inexact reuse step SHIFTS the stopping point, measured |Δγ| 8e-8 at 1e-8; Newton's terminus is pinned by tol_residual regardless); transonic inherits via `**kwargs`; laplace excluded (single-shot). User goal arbitrated: medium-scale speed is the objective, fine optional ⇒ this outranks the structural preconditioner (B14). **GB13.1 ✓ + GB13.2 ✓ + GB13.3 ✓** — M6-medium lifting **447.6 s → 68.3 s (6.55×)**, 2 refactors vs 26 outers, γ bit-identical (|Δγ| 6.9e-13); end-to-end seed+Newton **~330 s → 111.9 s (~3×)**, seed 263→42 s. (1 GMRES stall = the designed safety-net refactor on an early large-density outer, not a divergence.) External-doc corrections recorded (Schur direction inverted in both external docs; 454.8 s = 26 outers not one splu). Evidence: `tests/test_b13_lagged_picard.py` (5); demo `cases/demo/b13_lagged_picard/` (6/6). |
+| B14 | ☐ | | (NEW 2026-07-14; **designed-not-scheduled**, trigger recorded) **Schur-eliminated aux block + AMG(SPD Picard main block)** — the structural preconditioner for the fused LS matrix; `precond="schur"`. Eliminate the SMALL aux thin-strip block exactly (`K = J_mm − J_ma·J_aa⁻¹·J_am`, `lu_aa = splu(J_aa)` ~8k dofs at M6 medium), AMG on the SPD Picard main block, **no springs** — the B11 surrogate's jump≈0 bias (which killed the global circulation mode, γ 0.0033 vs 0.139) disappears structurally. GMRES faces "elliptic + cut-strip-localized correction" = the conforming-proven operator shape. Unique value = the FINE memory-bounded path (no full-size splu). **Trigger:** GB13.3 lands and medium still too slow, or a real fine campaign. Diagnostic-first (J_aa conditioning — measure, don't assume); discriminating tier = 2.5D medium lifting (where ILU diverged). Fallbacks: block-triangular; last resort Núñez additive assignment (discretization change). |
 
 ### Track V — viscous–inviscid interaction
 
