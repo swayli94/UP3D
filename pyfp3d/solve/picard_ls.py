@@ -6,11 +6,20 @@ B2 ships the NON-LIFTING driver only: a single extended assemble + direct
 solve on the multivalued operator, enough for the B2 consistency gates
 (V0 freestream, V1 MMS convergence, Laplace a=0 -> cl ~ 0). The extended
 matrix is nonsymmetric (the aux-row weld couples aux -> main one-way), so
-it is solved with a sparse direct LU (scipy `spsolve`), not CG/AMG -- for
-the coarse/medium B2 meshes the direct factor is cheap and isolates
-"is the assembly correct" from any preconditioner-convergence question.
-GMRES + AMG(main block) (solve/linear.py) is the scaling path B3+ adopts
-(design_track_b.md section 5.3).
+by default it is solved with a sparse direct LU (scipy `spsolve`), not
+CG/AMG -- for the coarse/medium meshes the direct factor is cheap and
+isolates "is the assembly correct" from any preconditioner-convergence
+question.
+
+B11 (2026-07-14) lands the deferred scaling path (design_track_b.md §5.3):
+every driver here takes a `precond` kwarg (None = the bit-identical direct
+default; "ilu"/"amg" run preconditioned GMRES via solve/linear.solve_gmres),
+the escape from the M6-fine splu wall. **★ ILU is the effective escape on the
+lifting/transonic path** -- it factors the real fused matrix (434 iters, exact).
+AMG is built on an SPD surrogate (`_amg_surrogate_preconditioner`) and converges
+only on the SPD `continuity`/Laplace system; on the `wake_ls` lifting operator
+(convection-like wake-LS + TE-Kutta rows) it stalls (measured), so it stays
+wired for the Laplace case + as the recorded §5.3 knob, not the lifting escape.
 
 The lifting driver with implicit Kutta (the g1+g2 wake LS closure, no Gamma
 outer loop) is B3.
@@ -19,11 +28,72 @@ outer loop) is B3.
 from typing import Dict, Optional
 
 import numpy as np
+import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
 from pyfp3d.constraints.dirichlet import freestream_phi, vortex_phi_2d
-from pyfp3d.solve.linear import apply_dirichlet
+from pyfp3d.solve.linear import (
+    apply_dirichlet,
+    build_amg_preconditioner,
+    build_ilu_preconditioner,
+    solve_gmres,
+)
 from pyfp3d.wake.multivalued import MultivaluedOperator
+
+
+def _amg_surrogate_preconditioner(mvop, A_fused, rho_pair, free):
+    """SA-AMG preconditioner for the FUSED extended system, built on an SPD
+    SURROGATE (B11; design_track_b.md §5.3).
+
+    pyamg smoothed aggregation assumes a near-SPD operator, but the fused
+    level-set matrix is structurally nonsymmetric (the aux weld / wake-LS /
+    TE-Kutta rows, with negative diagonals). So instead of preconditioning it
+    directly we build AMG on an SPD SURROGATE
+
+        S = op.assemble_matrix(rho_own)   [the SPD single-valued Picard block]
+          + Σ_a  k_a · (e_h - e_a)(e_h - e_a)ᵀ   [aux<->host springs]
+
+    where each aux dof a is tied to its host node h (`cm.ext_dof_of_node`) by
+    an SPD spring of strength k_a = |A_fused[a,a]| (a plain block-diagonal aux
+    singleton makes SA isolate each aux in its own aggregate; the spring makes
+    SA AGGREGATE aux WITH its coincident host, §5.3 "把 N_ext 个辅助 DOF 当普通
+    节点处理即可").
+
+    ★ MEASURED BOUNDARY (2026-07-14): this works as a GMRES preconditioner for
+    the `continuity`-closure (Laplace) system, but NOT for the `wake_ls`-closure
+    LIFTING/transonic/Newton operator -- there the aux rows are the g1+g2
+    wake-LS + nonlinear TE-Kutta rows (convection-like, not SPD springs), the
+    surrogate cannot model them, and GMRES stalls at the restart cap (coarse
+    M0.5 lifting: gamma 0.0033 vs 0.139, all outers stalled, 455 s).
+    **On the lifting path use `precond="ilu"`** -- it factors the real fused
+    matrix and converges (434 iters, exact). AMG stays wired for the SPD
+    Laplace case and as the recorded §5.3 knob; the Núñez symmetric row
+    assignment (which would restore genuine AMG applicability) is the recorded
+    not-prebuilt fallback.
+
+    Args:
+        mvop: the MultivaluedOperator (supplies op + cm + n_main/n_total).
+        A_fused: the fused extended matrix (its aux diagonal sets k_a).
+        rho_pair: (rho_up, rho_lo) per-element densities, or None (Laplace
+            limit / subcritical rho == 1).
+        free: free-dof indices (into n_total), the apply_dirichlet split.
+
+    Returns:
+        M: the pyamg preconditioner LinearOperator (restricted to free dofs).
+    """
+    rho_own = None if rho_pair is None else mvop.own_side_field(*rho_pair)
+    a = mvop.op.assemble_matrix(rho_own).tocoo()
+    n_main, n_total = mvop.n_main, mvop.n_total
+    host = np.flatnonzero(mvop.cm.ext_dof_of_node >= 0)
+    aux = mvop.cm.ext_dof_of_node[host].astype(np.int64)
+    k = np.maximum(np.abs(A_fused.diagonal()[aux]), 1e-30)
+    # SPD aux<->host spring [[k,-k],[-k,k]] per pair.
+    rows = np.concatenate([a.row, host, aux, host, aux])
+    cols = np.concatenate([a.col, host, aux, aux, host])
+    data = np.concatenate([a.data, k, k, -k, -k])
+    S = sp.coo_matrix((data, (rows, cols)),
+                      shape=(n_total, n_total)).tocsr()
+    return build_amg_preconditioner(S[free][:, free].tocsr())[1]
 
 
 def solve_multivalued_laplace(
@@ -31,6 +101,8 @@ def solve_multivalued_laplace(
     dirichlet_nodes: np.ndarray,
     dirichlet_values: np.ndarray,
     body_source_rhs: Optional[np.ndarray] = None,
+    precond: Optional[str] = None,
+    linear_rtol: float = 1e-10,
 ) -> Dict[str, object]:
     """Non-lifting Laplace solve on a level-set cut mesh (B2).
 
@@ -65,8 +137,20 @@ def solve_multivalued_laplace(
         A, b, dirichlet_nodes, dirichlet_values
     )
 
-    x = spla.spsolve(A_free.tocsc(), b_free)
-    x = np.atleast_1d(x)
+    if precond is None:
+        x = np.atleast_1d(spla.spsolve(A_free.tocsc(), b_free))
+    else:
+        # B11: iterative escape from the splu wall. One-shot solve => "retry"
+        # (a Laplace GMRES that stalls is a bug, not a step to accept).
+        if precond == "ilu":
+            M = build_ilu_preconditioner(A_free)
+        elif precond == "amg":
+            M = _amg_surrogate_preconditioner(mvop, A, None, free)
+        else:
+            raise ValueError(f"precond={precond!r} unknown (None|'ilu'|'amg')")
+        x, _, _ = solve_gmres(A_free, b_free, M=M, rtol=linear_rtol,
+                              on_fail="retry")
+        x = np.atleast_1d(x)
     phi_ext[free] = x
     residual = float(np.max(np.abs(b_free - A_free @ x))) if len(x) else 0.0
 
@@ -181,6 +265,11 @@ def solve_multivalued_lifting(
     tol_residual: Optional[float] = None,
     phi_init: Optional[np.ndarray] = None,
     tip_taper: Optional[np.ndarray] = None,
+    precond: Optional[str] = None,
+    linear_rtol: float = 1e-10,
+    gmres_restart: int = 60,
+    gmres_maxiter: int = 50,
+    amg_rebuild_every: int = 5,
 ) -> Dict[str, object]:
     """Subsonic lifting solve on a level-set cut mesh with IMPLICIT Kutta
     (Track B, B3; design_track_b.md D2). NO Gamma secant and no master-slave
@@ -234,12 +323,30 @@ def solve_multivalued_lifting(
     only, bit-identical). `phi_init` warm-starts the FULL extended state
     (continuation). All defaults keep the B3/B4 subsonic behavior bitwise.
 
+    `precond` (B11; design_track_b.md §5.3) selects the inner linear solver.
+    None (default) is the pre-B11 sparse-direct `spsolve`, bit-identical.
+    **Use "ilu"** for the iterative escape from the M6-fine splu wall (roadmap
+    "no precond option" caveat) -- preconditioned GMRES (solve/linear.solve_gmres)
+    on the fused nonsymmetric matrix, converging (434 iters coarse). "amg"
+    (the SPD surrogate `_amg_surrogate_preconditioner`) is wired but STALLS on
+    this `wake_ls` lifting operator (measured; its aux rows are convection-like,
+    not SPD) -- it is for the SPD Laplace case only. Each outer warm-starts
+    GMRES from the previous free-dof iterate (AMG surrogate rebuilt every
+    `amg_rebuild_every` outers). `linear_rtol=1e-10` is tight enough that the
+    fixed point is unperturbed at gate precision (the lag criteria live at
+    tol_gamma/tol_rho=1e-6, tol_residual~1e-7); inexact GMRES steps
+    (`on_fail="return"`) only perturb the Picard path and are counted as
+    stalls, never raised.
+
     Returns:
         dict: phi_ext, phi (main), gamma (extracted TE circulation),
         cl_kj (= 2 gamma / (u_inf c), c = 1), te_jump, n_outer, converged,
         gamma_history, drho_history, residual_history, residual_norm,
-        mach2_max, nu_max, n_nu_active, n_limited, n_floored, rho_tilde.
+        mach2_max, nu_max, n_nu_active, n_limited, n_floored, rho_tilde,
+        precond, n_gmres_total, n_gmres_stalled (B11 monitors).
     """
+    if precond not in (None, "ilu", "amg"):
+        raise ValueError(f"precond={precond!r} unknown (None|'ilu'|'amg')")
     if not 0.0 <= m_inf < 1.0:
         raise ValueError(f"needs 0 <= M_inf < 1, got {m_inf}")
     if farfield not in ("vortex", "neumann", "freestream"):
@@ -280,6 +387,10 @@ def solve_multivalued_lifting(
     residual_history = []
     rho_up = rho_lo = None
     residual = np.inf
+    # B11 iterative-solver state (inert when precond is None).
+    M_pre = None
+    n_gmres_total = 0
+    n_gmres_stalled = 0
     converged = False
     # ---- B6 damping: LOCALIZED to the supersonic zone --------------------
     #
@@ -368,7 +479,24 @@ def solve_multivalued_lifting(
             A_solve = (A_free + sp_.diags(d)).tocsr()
             b_solve = b_free + d * x_prev
 
-        x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
+        if precond is None:
+            x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
+        else:
+            # B11: preconditioned GMRES on the fused matrix, warm-started from
+            # the previous outer's free-dof iterate; an inexact step
+            # (on_fail="return") just perturbs the fixed-point path.
+            if precond == "ilu":
+                M_pre = build_ilu_preconditioner(A_solve)
+            elif outer % amg_rebuild_every == 0 or M_pre is None:
+                M_pre = _amg_surrogate_preconditioner(
+                    mvop, A, (None if rho_up is None else (rho_up, rho_lo)),
+                    free)
+            x, n_it, info = solve_gmres(
+                A_solve, b_solve, M=M_pre, rtol=linear_rtol, x0=x_prev,
+                restart=gmres_restart, maxiter=gmres_maxiter, on_fail="return")
+            x = np.atleast_1d(x)
+            n_gmres_total += n_it
+            n_gmres_stalled += int(info != 0)
         if omega != 1.0:
             x = x_prev + omega * (x - x_prev)
         phi_ext[free] = x
@@ -449,6 +577,9 @@ def solve_multivalued_lifting(
         "n_limited": mvop.n_limited if use_upwind else 0,
         "n_floored": mvop.n_floored if use_upwind else 0,
         "rho_tilde": (rho_up, rho_lo),
+        "precond": precond,
+        "n_gmres_total": n_gmres_total,
+        "n_gmres_stalled": n_gmres_stalled,
     }
 
 
@@ -540,6 +671,12 @@ def solve_multivalued_transonic(
             is one step of the outer map at the O(1/R) coupling strength,
             contractive even where the live per-outer loop is not).
         n_outer_polish: outer budget per polish round.
+
+    The B11 inner-solver knobs (`precond`, `linear_rtol`, `gmres_restart`,
+    `gmres_maxiter`, `amg_rebuild_every`) ride `**kwargs` into every level's
+    `solve_multivalued_lifting`, so `precond="amg"` here escapes the splu wall
+    over the whole Mach ramp; the GMRES warm start compounds with the
+    continuation `phi_init` warm start (each level starts near-converged).
 
     Returns:
         The final level's `solve_multivalued_lifting` dict, plus `levels`

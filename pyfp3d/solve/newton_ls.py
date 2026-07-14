@@ -23,8 +23,17 @@ rows including the TE Kutta row (its factorization makes row.x = |q_u|^2 -
 The wake-LS rows need no correction (already exact-linear).
 
 Nonsymmetric (wake-LS aux rows + supersonic upwind) -> sparse-direct LU
-(scipy splu), consistent with B2/B3's spsolve choice; GMRES+AMG is the scaling
-path if the medium LU ever dominates (it does not at 2.5D sizes).
+(scipy spsolve) by default, consistent with B2/B3's choice. B11 (2026-07-14)
+adds the `precond` kwarg (None = the bit-identical direct default; "ilu"/"amg"
+run preconditioned GMRES on the fused Jacobian): the iterative escape for when
+the LU dominates at 3D sizes (P8/N6 measured true-3D LU fill ~100x the 2.5D
+cost). **Use "ilu"** -- it factors the real fused Jacobian and converges; "amg"
+(the SPD surrogate `picard_ls._amg_surrogate_preconditioner`) STALLS on the
+wake_ls-closure operator (measured; convection-like aux rows), so it is not the
+Newton escape (design_track_b.md §5.3). NOTE the lagged-LU direct path
+(`direct_refactor_every`, solve/newton.py) is a SEPARATE follow-up (roadmap
+"LS Newton on M6 = DEFERRED"): B11 ships the iterative escape, not the
+direct-reuse one.
 """
 
 from typing import Dict, Optional
@@ -40,7 +49,9 @@ from pyfp3d.kernels.cut_assembly import (
     te_kutta_residual,
     te_weld_coo,
 )
+from pyfp3d.solve.linear import build_ilu_preconditioner, solve_gmres
 from pyfp3d.solve.picard_ls import (
+    _amg_surrogate_preconditioner,
     _farfield_main,
     _farfield_split,
     _neumann_outlet_rhs,
@@ -50,7 +61,7 @@ from pyfp3d.solve.picard_ls import (
 
 def _seed_from_picard(mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air,
                       upwind_c, m_crit, farfield, phi_init, gamma_init,
-                      n_seed, damping_theta, omega_rho):
+                      n_seed, damping_theta, omega_rho, precond=None):
     """Warm start: a short B6 Picard-LS solve to land near the solution before
     Newton (the transonic ramp / a lower-Mach state is the caller's job)."""
     r = solve_multivalued_lifting(
@@ -58,7 +69,7 @@ def _seed_from_picard(mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air,
         gamma_air=gamma_air, upwind_c=upwind_c, m_crit=m_crit,
         farfield=farfield, damping_theta=damping_theta, omega_rho=omega_rho,
         n_outer_max=n_seed, gamma_init=gamma_init, phi_init=phi_init,
-        tol_residual=None,
+        tol_residual=None, precond=precond,
     )
     return r["phi_ext"], r["gamma"]
 
@@ -87,6 +98,12 @@ def solve_multivalued_newton(
     freeze: bool = True,
     verbose: bool = False,
     tip_taper: Optional[np.ndarray] = None,
+    precond: Optional[str] = None,
+    seed_precond: Optional[str] = None,
+    linear_rtol: float = 1e-10,
+    gmres_restart: int = 60,
+    gmres_maxiter: int = 50,
+    amg_rebuild_every: int = 2,
 ) -> Dict[str, object]:
     """Newton solve on the level-set path (B6-Newton; design_track_b.md 5.5).
 
@@ -103,12 +120,24 @@ def solve_multivalued_newton(
             NOT yet needed at 2.5D (the seed lands close and live re-selection
             is stable); the flag is reserved. Live selection each step.
         tol_residual: converged when max|R_free| < tol.
+        precond (B11): inner linear solver -- None (default) = the bit-identical
+            sparse-direct `spsolve`; **use "ilu"** for the iterative escape from
+            the true-3D splu wall (factors the real fused Jacobian, converges).
+            "amg" is wired but STALLS on this wake_ls operator (measured; §5.3),
+            not the Newton escape. Inexact steps (on_fail="return") are absorbed
+            by the existing backtracking line search. `seed_precond` (default
+            None) is the same knob for the Picard warm-start solve.
+            `linear_rtol=1e-10` keeps the Newton terminus unperturbed at the
+            tol_residual gate.
 
     Returns: dict with phi_ext, phi, gamma, cl_kj, te_jump, converged,
-    residual_history, n_newton, n_limited, n_floored, mach2_max, nu_max.
+    residual_history, n_newton, n_limited, n_floored, mach2_max, nu_max,
+    precond, n_gmres_total, n_gmres_stalled (B11 monitors).
     """
     if farfield not in ("neumann", "vortex", "freestream"):
         raise ValueError(f"farfield={farfield!r} unknown")
+    if precond not in (None, "ilu", "amg"):
+        raise ValueError(f"precond={precond!r} unknown (None|'ilu'|'amg')")
     beta = float(np.sqrt(1.0 - m_inf**2))
 
     # --- far-field split (fixed across the solve) --------------------------
@@ -125,7 +154,7 @@ def solve_multivalued_newton(
     phi_ext, gamma = _seed_from_picard(
         mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air, upwind_c, m_crit,
         farfield, phi_init, gamma_init, n_seed, seed_damping_theta,
-        seed_omega_rho)
+        seed_omega_rho, precond=seed_precond)
 
     te_aux = mvop.cm.ext_dof_of_node[mvop.cm.te_nodes].astype(np.int64)
     te_main = np.asarray(mvop.cm.te_nodes, dtype=np.int64)
@@ -184,6 +213,9 @@ def solve_multivalued_newton(
 
     residual_history = []
     converged = False
+    M_pre = None
+    n_gmres_total = 0
+    n_gmres_stalled = 0
 
     for it in range(n_newton_max):
         # far-field Dirichlet values (vortex option refreshes with gamma)
@@ -244,10 +276,25 @@ def solve_multivalued_newton(
                            (np.concatenate(parts_r), np.concatenate(parts_c))),
                           shape=(n_total, n_total)).tocsr()
 
-        # reduce Dirichlet and solve J_free d = -R_free (nonsymmetric -> LU)
-        J_free = J[free][:, free].tocsc()
-        d_free = spla.spsolve(J_free, -R[free])
-        d_free = np.atleast_1d(d_free)
+        # reduce Dirichlet and solve J_free d = -R_free (nonsymmetric)
+        if precond is None:
+            J_free = J[free][:, free].tocsc()
+            d_free = np.atleast_1d(spla.spsolve(J_free, -R[free]))
+        else:
+            # B11: preconditioned GMRES on the fused Jacobian. Inexact steps
+            # (on_fail="return") are caught by the backtracking line search.
+            J_free = J[free][:, free].tocsr()
+            if precond == "ilu":
+                M_pre = build_ilu_preconditioner(J_free)
+            elif it % amg_rebuild_every == 0 or M_pre is None:
+                M_pre = _amg_surrogate_preconditioner(
+                    mvop, J, (rho_up, rho_lo), free)
+            d_free, n_it, info = solve_gmres(
+                J_free, -R[free], M=M_pre, rtol=linear_rtol,
+                restart=gmres_restart, maxiter=gmres_maxiter, on_fail="return")
+            d_free = np.atleast_1d(d_free)
+            n_gmres_total += n_it
+            n_gmres_stalled += int(info != 0)
 
         # backtracking line search on the free-DOF residual (safety only)
         lam = 1.0
@@ -287,4 +334,7 @@ def solve_multivalued_newton(
         "nu_max": mvop.nu_max,
         "mach2_max": mach2_max,
         "farfield": farfield,
+        "precond": precond,
+        "n_gmres_total": n_gmres_total,
+        "n_gmres_stalled": n_gmres_stalled,
     }

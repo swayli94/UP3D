@@ -90,10 +90,45 @@ def build_ilu_preconditioner(
     the Term-1 AMG hierarchy stalls on a strong-shock indefinite block).
     Note it factors the MATRIX it is given; when the GMRES operator is the
     low-rank-corrected J_ff + B K, preconditioning with ILU(J_ff) alone is
-    fine -- GMRES absorbs the rank-n_stations perturbation."""
-    ilu = spla.spilu(A.tocsc(), drop_tol=drop_tol, fill_factor=fill_factor)
+    fine -- GMRES absorbs the rank-n_stations perturbation.
+
+    Robustness ladder (B11): the default drop can leave the incomplete factor
+    exactly singular on the level-set fused matrix (its aux weld / wake-LS /
+    TE-Kutta rows carry zero or negative diagonals -- measured on the M6-family
+    2.5D MEDIUM and 3D MEDIUM lifting matrices). On a `spilu` RuntimeError,
+    retry with a gentler drop, then MODIFIED ILU (`ILU_MILU="SMILU_2"`, which
+    compensates dropped mass onto the diagonal), then a small DIAGONAL-SHIFTED
+    MILU (`spilu(A + eps·I)` -- a Manteuffel shift can never produce a zero
+    pivot; GMRES corrects the O(eps) perturbation). The default (first) attempt
+    is unchanged, so a matrix that factors plainly (conforming Newton Jacobian,
+    LS coarse) pays nothing, and the fallbacks stay at modest fill (not the
+    huge factor a large fill_factor would build)."""
+    Acsc = A.tocsc()
     n = A.shape[0]
-    return spla.LinearOperator((n, n), matvec=ilu.solve)
+    milu = {"ILU_MILU": "SMILU_2"}
+    # (shift, spilu_kwargs); the shift for the last attempt is built lazily
+    # only if the earlier attempts all fail (so a plainly-factorable matrix
+    # pays nothing).
+    attempts = (
+        (0.0, {"drop_tol": drop_tol, "fill_factor": fill_factor}),
+        (0.0, {"drop_tol": drop_tol * 1e-2, "fill_factor": fill_factor * 2.0}),
+        (0.0, {"drop_tol": 0.0, "fill_factor": fill_factor * 2.0, "options": milu}),
+        ("shift", {"drop_tol": 0.0, "fill_factor": fill_factor * 2.0,
+                   "options": milu}),
+    )
+    last = None
+    for shift, kw in attempts:
+        try:
+            if shift == "shift":  # Manteuffel shift: A + eps*I near-diagonal
+                eps = 1e-3 * float(np.abs(Acsc.diagonal()).mean() or 1.0)
+                mat = (Acsc + eps * sp.eye(n, format="csc")).tocsc()
+            else:
+                mat = Acsc
+            ilu = spla.spilu(mat, **kw)
+            return spla.LinearOperator((n, n), matvec=ilu.solve)
+        except RuntimeError as exc:  # "Factor is exactly singular"
+            last = exc
+    raise last
 
 
 def solve_gmres(
