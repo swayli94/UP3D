@@ -1,5 +1,10 @@
 # pyFP3D 能力盘点与批判性审查（2026-07-14）
 
+> **ADDENDUM 2026-07-15**：本报告已被
+> [capability_review_2026-07-15.md](capability_review_2026-07-15.md) 滚动取代——
+> 撰写后一天内 B11/B12/B13 + M6 medium LS 工作流落地，本文 §0/§1/§2.3/§3/§4/§5.1
+> 约 8 处断言被覆写（清单见新版 §7(D)）。引用时以新版为准。
+
 **性质**：横向审查报告（非 gate 文档，不改变任何 roadmap 状态）。
 **方法**：五路独立审计交叉验证——① roadmap/agent-rules 状态台账、② design.md + design_track_b.md 数值方法清单、③ demo_report + `cases/demo/` 证据链逐工件核对、④ **直接读代码**建立两路径能力矩阵与孤儿功能排查、⑤ 讨论笔记（git 历史）与 Track V 设计审计。凡代码与文档不符，以代码为准；凡断言无 committed 工件，按项目自己的规则（"A claim without a committed artifact is not evidence"）降级处理。
 **注**：`docs/discussion_notes/` 已于 commit `0e4895a`（本报告撰写当天、由并发会话）整目录删除，其内容仅存于 git 历史；本报告引用处均已注明。

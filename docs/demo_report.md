@@ -2914,9 +2914,10 @@ Newton solve it was seeding. The seed keeps the *lifting* default
 by its lag tolerances, so an inexact reuse step would *shift* where it stops (B13).
 
 **Defaults unchanged:** `freeze_tol=None` ⇒ the pre-B15 live solver, byte-identical
-(locked). Tests `tests/test_b15_ls_newton_freeze.py` (8).
+(locked). Tests `tests/test_b15_ls_newton_freeze.py` (12 — 11 at closure + the
+2026-07-15 errata lock `test_freeze_max_clamped_relaxes_the_convergence_semantics`).
 
-### ★ GB15.4 — ONERA M6 medium M0.84: the plateau is gone, 3.4× faster
+### ★ GB15.4 — ONERA M6 medium M0.84: the plateau is gone, 3.5× faster
 
 The target case: the one the committed Picard needs **38.4 min** to leave
 *bounded-but-not-converged*. The Picard baseline is **not re-run** — it is committed
@@ -2924,7 +2925,7 @@ evidence (`cases/demo/m6_medium_ls_workflow/results/summary.csv`).
 
 | | Picard (committed) | **Newton ramp (B15)** |
 |---|---|---|
-| wall clock | 2304.7 s (**38.4 min**) | **672 s (11.2 min) = 3.4×** |
+| wall clock | 2304.7 s (**38.4 min**) | **657.4 s (11.0 min) = 3.51×** (committed `summary.csv`; an earlier draft's 672 s was a pre-CSV trial run) |
 | residual | **1e-5…1e-4 plateau** — top two levels burn their full 200-outer budget | **~1e-11, every level converged** |
 | M_max | 2.4549 | 2.4938 (1.6% apart) |
 | clamped cells | ≤3 / 329k | 3 / 330k |

@@ -8,9 +8,10 @@ workstation-scale (minutes for 1–3 M nodes).
 ## Document map (read the relevant one before coding)
 
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker**: phase order (Track P:
-  P0–P12 solver, Track M: M0–M4 meshing, Track B: level-set wake — **IN PROGRESS**,
-  B1–B5 + B7 closed / B6 open — and the designed-not-started Track V viscous
-  coupling), gate checklists, progress ledger. "What phase are we in" and "what
+  P0–P13 solver, Track M: M0–M5 meshing, Track B: level-set wake — **IN PROGRESS**,
+  B1–B8 + B11–B13 + B15 closed / B6 ◐ (medium quantitative closed by GB15.4) /
+  B14 designed-not-scheduled / **B9 = NEXT** — and the designed-not-started
+  Track V viscous coupling), gate checklists, progress ledger. "What phase are we in" and "what
   gate is open" live here, nowhere else. Track B numerics live in a separate
   spec, [docs/design_track_b.md](docs/design_track_b.md) (it supersedes DN1).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
@@ -18,8 +19,9 @@ workstation-scale (minutes for 1–3 M nodes).
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12).
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier** for completed
   phases (P0, P1-partial, P2, P3, P4, P5, P6, P7, P8 + its capability assessment,
-  P9, P10-partial G10.2/G10.3, **P13 G13.1/G13.2/G13.3**, M0, M1, and Track B
-  B3/B5/B6/B7): one self-checking demo per phase under
+  P9, P10-partial G10.2/G10.3, **P13 G13.1/G13.2/G13.3**, M0, M1, M5, and Track B
+  B3/B5/B6/B7/B8/B11/B12+B13/B15 + the 2026-07-15 M6-medium LS workflow demo):
+  one self-checking demo per phase under
   `cases/demo/<phase>/` with committed figures + measured gate numbers.
   When a phase closes, add its demo + report section here.
   **A claim without a committed artifact is not evidence.** The 2026-07-13 audit
