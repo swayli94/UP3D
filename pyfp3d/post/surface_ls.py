@@ -21,16 +21,49 @@ from typing import Dict
 
 import numpy as np
 
-from pyfp3d.physics.isentropic import (
-    GAMMA,
-    pressure_coefficient,
-    pressure_coefficient_incompressible,
+from pyfp3d.physics.isentropic import GAMMA
+from pyfp3d.post.surface import (
+    _cp_from_q2,
+    _pressure_force,
+    smooth_wall_tangential_gradients,
+    triangle_tangential_gradients,
+    wall_outward_normals,
+    wall_triangle_adjacency,
 )
-from pyfp3d.post.surface import triangle_tangential_gradients, wall_outward_normals
+
+
+def _d11_wall_state(mesh, mvop, phi_ext, wall, u_inf: float,
+                    smooth_passes: int = 0):
+    """Per-wall-triangle speed^2 with the D11 per-side gradient selection
+    (shared core, B11).
+
+    The two side potentials are `mvop.side_potentials(phi_ext)`; each wall
+    triangle reads the side its outward normal points to (n_y > 0 = upper).
+    Away from the TE the two side fields coincide, so the selection is a
+    no-op everywhere except the TE lower-surface triangles. `smooth_passes`
+    (default 0, bit-identical) applies the normal-gated edge-neighbour
+    gradient smoothing (the LS analogue of the conforming G6.1 option).
+
+    Returns:
+        (q2, upper, area, n_out).
+    """
+    phi_up, phi_lo = mvop.side_potentials(phi_ext)
+    n_out = wall_outward_normals(mesh.nodes, mesh.elements, wall)
+    g_up, area, _ = triangle_tangential_gradients(mesh.nodes, wall, phi_up)
+    g_lo, _, _ = triangle_tangential_gradients(mesh.nodes, wall, phi_lo)
+    upper = n_out[:, 1] > 0.0
+    grad = np.where(upper[:, None], g_up, g_lo)          # D11
+    if smooth_passes > 0:
+        adj = wall_triangle_adjacency(wall)
+        grad = smooth_wall_tangential_gradients(
+            grad, n_out, area, adj, n_passes=smooth_passes)
+    q2 = np.sum(grad * grad, axis=1) / u_inf**2
+    return q2, upper, area, n_out
 
 
 def wall_cp_levelset(mesh, mvop, phi_ext, m_inf: float = 0.0,
-                     u_inf: float = 1.0, gamma: float = GAMMA) -> Dict[str, np.ndarray]:
+                     u_inf: float = 1.0, gamma: float = GAMMA,
+                     smooth_passes: int = 0) -> Dict[str, np.ndarray]:
     """Per-wall-triangle Cp on the level-set path, with the D11 per-side mapping.
 
     Args:
@@ -39,27 +72,16 @@ def wall_cp_levelset(mesh, mvop, phi_ext, m_inf: float = 0.0,
         phi_ext: the extended solution vector
         m_inf: free-stream Mach; 0.0 selects the incompressible (Bernoulli) Cp
         u_inf, gamma: free-stream speed / ratio of specific heats
+        smooth_passes: opt-in G6.1-style gradient smoothing (0 = bit-identical)
 
     Returns:
         dict: x (triangle-centroid x/c), cp, upper (bool mask, n_y > 0),
         area, n_out (outward unit normals), q2 (surface speed^2 / u_inf^2)
     """
     wall = mesh.boundary_faces["wall"]
-    phi_up, phi_lo = mvop.side_potentials(phi_ext)
-    n_out = wall_outward_normals(mesh.nodes, mesh.elements, wall)
-    g_up, area, _ = triangle_tangential_gradients(mesh.nodes, wall, phi_up)
-    g_lo, _, _ = triangle_tangential_gradients(mesh.nodes, wall, phi_lo)
-
-    upper = n_out[:, 1] > 0.0
-    grad = np.where(upper[:, None], g_up, g_lo)          # D11
-    q2 = np.sum(grad * grad, axis=1) / u_inf**2
-
-    if m_inf > 0.0:
-        # scalar njit -- evaluate per triangle (the wall set is O(10^2-10^3))
-        cp = np.array([pressure_coefficient(v, m_inf, gamma) for v in q2])
-    else:
-        cp = np.array([pressure_coefficient_incompressible(v) for v in q2])
-
+    q2, upper, area, n_out = _d11_wall_state(
+        mesh, mvop, phi_ext, wall, u_inf, smooth_passes)
+    cp = _cp_from_q2(q2, m_inf, gamma)
     return {
         "x": mesh.nodes[wall].mean(axis=1)[:, 0],
         "cp": np.asarray(cp, dtype=np.float64),
@@ -76,10 +98,8 @@ def cl_pressure_levelset(mesh, cp, area, n_out, alpha_deg: float) -> float:
     The quasi-2D meshes are one span-cell thick, so the surface integral is
     normalised by the span extent to give a SECTIONAL cl (chord = 1).
     """
-    a = np.radians(alpha_deg)
-    lift = np.array([-np.sin(a), np.cos(a), 0.0])
     dz = float(np.ptp(mesh.nodes[:, 2]))
-    return float((-(cp * area) @ n_out / dz) @ lift)
+    return _pressure_force(cp, area, n_out, dz, alpha_deg)[1]
 
 
 def surface_curve_levelset(cp_data, side: str = "upper"):
@@ -106,16 +126,15 @@ def cl_pressure_3d_levelset(mesh, cp, area, n_out, alpha_deg: float,
         alpha_deg: incidence (lift direction in the chord-lift plane)
         s_ref: half-wing planform area
     """
-    a = np.radians(alpha_deg)
-    lift = np.array([-np.sin(a), np.cos(a), 0.0])
-    return float((-(cp * area) @ n_out / s_ref) @ lift)
+    return _pressure_force(cp, area, n_out, s_ref, alpha_deg)[1]
 
 
 def section_cp_curve_levelset(mesh, mvop, phi_ext, *, eta=None, z=None,
                               b_semi=None, u_inf: float = 1.0,
                               m_inf: float = 0.0, gamma: float = GAMMA,
                               wall_tag: str = "wall",
-                              min_points_per_side: int = 5) -> Dict[str, np.ndarray]:
+                              min_points_per_side: int = 5,
+                              smooth_passes: int = 0) -> Dict[str, np.ndarray]:
     """Sectional wall Cp(x/c) at a spanwise station on the LEVEL-SET path (B7).
 
     The level-set analogue of `post/section_cut.section_cp_curve`: the same
@@ -146,74 +165,20 @@ def section_cp_curve_levelset(mesh, mvop, phi_ext, *, eta=None, z=None,
         x_le), plus chord, x_le, z, eta -- key-compatible with
         `section_cp_curve`, so it feeds `post/shock.shock_report` directly.
     """
-    from pyfp3d.physics.isentropic import (
-        pressure_coefficient,
-        pressure_coefficient_incompressible,
+    from pyfp3d.post.section_cut import (
+        _resolve_station, _section_curve_dict, _wall_plane_crossings,
     )
 
-    if (eta is None) == (z is None):
-        raise ValueError("pass exactly one of eta or z")
-    if eta is not None:
-        if b_semi is None:
-            raise ValueError("b_semi is required when eta is given")
-        z = float(eta) * float(b_semi)
-    z = float(z)
-
+    z = _resolve_station(eta, z, b_semi)
     wall = np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64)
-    phi_up, phi_lo = mvop.side_potentials(phi_ext)
-    n_out = wall_outward_normals(mesh.nodes, mesh.elements, wall)
-    g_up, _, _ = triangle_tangential_gradients(mesh.nodes, wall, phi_up)
-    g_lo, _, _ = triangle_tangential_gradients(mesh.nodes, wall, phi_lo)
-    upper = n_out[:, 1] > 0.0                                    # D11
-    grad = np.where(upper[:, None], g_up, g_lo)
-    q2 = np.sum(grad * grad, axis=1) / u_inf**2
+    q2, upper, _, _ = _d11_wall_state(
+        mesh, mvop, phi_ext, wall, u_inf, smooth_passes)
 
-    # Plane cut (mirrors section_cut._wall_section_points): every crossed
-    # triangle contributes one point at its intersection-segment midpoint,
-    # carrying that triangle's own constant Cp. A vertex exactly on the plane
-    # is nudged to the + side so a crossed triangle always yields two points.
-    sz = mesh.nodes[:, 2] - z
-    extent = float(np.ptp(mesh.nodes[:, 2]))
-    eps = 1e-12 * (extent if extent > 0 else 1.0)
-    sz = np.where(np.abs(sz) < eps, eps, sz)
-
-    xs, cps, sides = [], [], []
-    for k, tri in enumerate(wall):
-        se = sz[tri]
-        if np.all(se > 0) or np.all(se < 0):
-            continue
-        seg = []
-        for a, b in ((0, 1), (0, 2), (1, 2)):
-            if (se[a] > 0) != (se[b] > 0):
-                t = se[a] / (se[a] - se[b])
-                seg.append(mesh.nodes[tri[a]] * (1 - t) + mesh.nodes[tri[b]] * t)
-        if len(seg) != 2:
-            continue
-        mid = 0.5 * (seg[0] + seg[1])
-        xs.append(mid[0])
-        if m_inf > 0.0:
-            cps.append(pressure_coefficient(float(q2[k]), m_inf, gamma))
-        else:
-            cps.append(pressure_coefficient_incompressible(float(q2[k])))
-        sides.append(bool(upper[k]))          # D11 side, not a geometric hint
-
-    xs = np.asarray(xs, dtype=np.float64)
-    cps = np.asarray(cps, dtype=np.float64)
-    sides = np.asarray(sides, dtype=bool)
-    n_up, n_lo = int(sides.sum()), int((~sides).sum())
-    if n_up < min_points_per_side or n_lo < min_points_per_side:
-        raise ValueError(
-            f"section at z={z:.4f} too sparse (upper={n_up}, lower={n_lo}); "
-            "the plane likely missed the wing or hit the flat tip cap")
-
-    x_le = float(xs.min())
-    chord = float(xs.max() - xs.min())
-    xn = (xs - x_le) / chord
-    iu = np.argsort(xn[sides])
-    il = np.argsort(xn[~sides])
-    return {
-        "x_upper": xn[sides][iu], "cp_upper": cps[sides][iu],
-        "x_lower": xn[~sides][il], "cp_lower": cps[~sides][il],
-        "chord": chord, "x_le": x_le, "z": z,
-        "eta": (z / float(b_semi)) if b_semi else None,
-    }
+    # Plane cut (shared with the conforming path via _wall_plane_crossings);
+    # the only LS difference is the D11 physical side (upper[idx]) instead of
+    # a geometric upper_hint dot, and the D11 two-sided q2 above.
+    idx, mids = _wall_plane_crossings(mesh.nodes, wall, z)
+    xs = mids[:, 0]
+    cps = _cp_from_q2(q2[idx], m_inf, gamma)
+    sides = upper[idx]                        # D11 side, not a geometric hint
+    return _section_curve_dict(xs, cps, sides, z, b_semi, min_points_per_side)

@@ -148,6 +148,80 @@ def _section_cut_marching(mesh, point_fields: Dict[str, np.ndarray],
                        fields=fields, z=z)
 
 
+def _wall_plane_crossings(nodes: np.ndarray, wall_faces: np.ndarray, z: float):
+    """Triangles of `wall_faces` crossed by the plane z = const (shared core, B11).
+
+    Verbatim extraction of the crossing loop previously inlined in
+    `_wall_section_points` and `surface_ls.section_cp_curve_levelset`: a
+    vertex exactly on the plane is nudged to the + side (same eps), each
+    crossed triangle yields its intersection-segment midpoint. Float op
+    order is preserved so both former call sites stay bit-identical.
+
+    Returns:
+        (idx, mids): (n,) int64 indices into wall_faces, (n, 3) midpoints.
+    """
+    sz = nodes[:, 2] - z
+    extent = float(np.ptp(nodes[:, 2]))
+    eps = 1e-12 * (extent if extent > 0 else 1.0)
+    sz = np.where(np.abs(sz) < eps, eps, sz)
+
+    idx, mids = [], []
+    for k, tri in enumerate(wall_faces):
+        se = sz[tri]
+        if np.all(se > 0) or np.all(se < 0):
+            continue
+        seg = []
+        for a, b in ((0, 1), (0, 2), (1, 2)):
+            if (se[a] > 0) != (se[b] > 0):
+                t = se[a] / (se[a] - se[b])
+                seg.append(nodes[tri[a]] * (1 - t) + nodes[tri[b]] * t)
+        if len(seg) != 2:
+            continue
+        idx.append(k)
+        mids.append(0.5 * (seg[0] + seg[1]))
+
+    if not idx:
+        return np.zeros(0, dtype=np.int64), np.zeros((0, 3), dtype=np.float64)
+    return np.asarray(idx, dtype=np.int64), np.asarray(mids, dtype=np.float64)
+
+
+def _resolve_station(eta, z, b_semi) -> float:
+    """eta/z station validation shared by the conforming and LS section
+    extractors (B11): exactly one of eta/z; eta needs b_semi."""
+    if (eta is None) == (z is None):
+        raise ValueError("pass exactly one of eta or z")
+    if eta is not None:
+        if b_semi is None:
+            raise ValueError("b_semi is required when eta is given")
+        z = float(eta) * float(b_semi)
+    return float(z)
+
+
+def _section_curve_dict(xs: np.ndarray, cps: np.ndarray, sides: np.ndarray,
+                        z: float, b_semi, min_points_per_side: int) -> Dict[str, np.ndarray]:
+    """Sparse guard + chord/x_le normalization + per-side sort (shared core,
+    B11) -- the common tail of `section_cp_curve` and
+    `surface_ls.section_cp_curve_levelset`, extracted verbatim (identical
+    error string, identical float op order)."""
+    n_up, n_lo = int(sides.sum()), int((~sides).sum())
+    if n_up < min_points_per_side or n_lo < min_points_per_side:
+        raise ValueError(
+            f"section at z={z:.4f} too sparse (upper={n_up}, lower={n_lo}); "
+            "the plane likely missed the wing or hit the flat tip cap")
+
+    x_le = float(xs.min())
+    chord = float(xs.max() - xs.min())
+    xn = (xs - x_le) / chord
+    iu = np.argsort(xn[sides])
+    il = np.argsort(xn[~sides])
+    return {
+        "x_upper": xn[sides][iu], "cp_upper": cps[sides][iu],
+        "x_lower": xn[~sides][il], "cp_lower": cps[~sides][il],
+        "chord": chord, "x_le": x_le, "z": float(z),
+        "eta": (float(z) / float(b_semi)) if b_semi else None,
+    }
+
+
 def _wall_section_points(mesh, phi, z: float, u_inf: float,
                          upper_hint, wall_tag: str, m_inf: float,
                          smooth_passes: int = 0):
@@ -170,13 +244,10 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
     Returns absolute-x midpoints (no chord normalization), the per-point Cp,
     and a boolean upper-side mask (dot(mid, upper_hint) > 0).
     """
-    from pyfp3d.physics.isentropic import (
-        pressure_coefficient,
-        pressure_coefficient_incompressible,
-    )
     from pyfp3d.post.surface import (
-        smooth_wall_tangential_gradients, triangle_tangential_gradients,
-        wall_outward_normals, wall_triangle_adjacency,
+        _cp_from_q2, smooth_wall_tangential_gradients,
+        triangle_tangential_gradients, wall_outward_normals,
+        wall_triangle_adjacency,
     )
 
     wall = np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64)
@@ -190,33 +261,13 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
     hint = np.asarray(upper_hint, dtype=np.float64)
     hint /= np.linalg.norm(hint)
 
-    sz = mesh.nodes[:, 2] - z
-    extent = float(np.ptp(mesh.nodes[:, 2]))
-    eps = 1e-12 * (extent if extent > 0 else 1.0)
-    sz = np.where(np.abs(sz) < eps, eps, sz)
-
-    xs, cps, sides = [], [], []
-    for k, tri in enumerate(wall):
-        se = sz[tri]
-        if np.all(se > 0) or np.all(se < 0):
-            continue
-        seg = []
-        for a, b in ((0, 1), (0, 2), (1, 2)):
-            if (se[a] > 0) != (se[b] > 0):
-                t = se[a] / (se[a] - se[b])
-                seg.append(mesh.nodes[tri[a]] * (1 - t) + mesh.nodes[tri[b]] * t)
-        if len(seg) != 2:
-            continue
-        mid = 0.5 * (seg[0] + seg[1])
-        xs.append(mid[0])
-        if m_inf > 0.0:
-            cps.append(pressure_coefficient(float(q2[k]), m_inf))
-        else:
-            cps.append(pressure_coefficient_incompressible(float(q2[k])))
-        sides.append(float(np.dot(mid, hint)) > 0.0)
-
-    return (np.asarray(xs), np.asarray(cps),
-            np.asarray(sides, dtype=bool))
+    idx, mids = _wall_plane_crossings(mesh.nodes, wall, z)
+    xs = mids[:, 0]
+    cps = _cp_from_q2(q2[idx], m_inf)
+    # Geometric side hint (conforming path): per-row np.dot preserves the
+    # original summation order -- do NOT vectorize to `mids @ hint`.
+    sides = np.array([float(np.dot(m, hint)) > 0.0 for m in mids], dtype=bool)
+    return xs, cps, sides
 
 
 def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
@@ -343,32 +394,10 @@ def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
         ValueError: neither/both of eta/z given, eta without b_semi, or the
             cut is too sparse on a side.
     """
-    if (eta is None) == (z is None):
-        raise ValueError("pass exactly one of eta or z")
-    if eta is not None:
-        if b_semi is None:
-            raise ValueError("b_semi is required when eta is given")
-        z = float(eta) * float(b_semi)
-
+    z = _resolve_station(eta, z, b_semi)
     xs, cps, sides = _wall_section_points(
-        mesh, phi, float(z), u_inf, upper_hint, wall_tag, m_inf, smooth_passes)
-    n_up, n_lo = int(sides.sum()), int((~sides).sum())
-    if n_up < min_points_per_side or n_lo < min_points_per_side:
-        raise ValueError(
-            f"section at z={z:.4f} too sparse (upper={n_up}, lower={n_lo}); "
-            "the plane likely missed the wing or hit the flat tip cap")
-
-    x_le = float(xs.min())
-    chord = float(xs.max() - xs.min())
-    xn = (xs - x_le) / chord
-    iu = np.argsort(xn[sides])
-    il = np.argsort(xn[~sides])
-    return {
-        "x_upper": xn[sides][iu], "cp_upper": cps[sides][iu],
-        "x_lower": xn[~sides][il], "cp_lower": cps[~sides][il],
-        "chord": chord, "x_le": x_le, "z": float(z),
-        "eta": (float(z) / float(b_semi)) if b_semi else None,
-    }
+        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes)
+    return _section_curve_dict(xs, cps, sides, z, b_semi, min_points_per_side)
 
 
 def plot_section_field(section: SectionData, field_name: str, output_path,

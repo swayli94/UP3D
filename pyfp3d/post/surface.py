@@ -262,6 +262,50 @@ def wall_crease_angles(
     return angle, nodes[edge].mean(axis=1)
 
 
+def _cp_from_q2(q2: np.ndarray, m_inf: float, gamma=None) -> np.ndarray:
+    """Per-triangle Cp from normalized speed^2 (shared core, B11).
+
+    Verbatim extraction of the branch previously inlined in
+    `wall_force_coefficients` / `surface_ls.wall_cp_levelset`: scalar njit
+    calls in wall-triangle order (the wall set is O(10^2-10^3), the Python
+    loop is not the cost). `gamma=None` resolves to GAMMA, which is also
+    `pressure_coefficient`'s own default -- so the conforming call sites
+    (which never passed gamma) and the LS call sites (which pass it
+    explicitly) are both bit-identical to their pre-B11 forms.
+    """
+    from pyfp3d.physics.isentropic import (
+        GAMMA,
+        pressure_coefficient,
+        pressure_coefficient_incompressible,
+    )
+
+    if gamma is None:
+        gamma = GAMMA
+    if m_inf > 0.0:
+        return np.array([pressure_coefficient(q, m_inf, gamma) for q in q2])
+    return np.array([pressure_coefficient_incompressible(q) for q in q2])
+
+
+def _pressure_force(cp: np.ndarray, area: np.ndarray, n_out: np.ndarray,
+                    s_ref: float, alpha_deg: float):
+    """Pressure force integral + lift/drag projection (shared core, B11).
+
+    `cf = -(cp * area) @ n_out / s_ref`, then cl/cd along the freestream
+    frame. Verbatim extraction of the tail of `wall_force_coefficients`;
+    the LS sectional/3D cl functions differ only in the normalizer passed
+    as `s_ref` (span extent vs planform area). `np.deg2rad` and
+    `np.radians` are the same ufunc, so both former spellings are covered.
+
+    Returns:
+        (cf, cl, cd): the 3-vector and its lift/drag components (floats).
+    """
+    cf = -(cp * area) @ n_out / s_ref
+    a = np.deg2rad(alpha_deg)
+    lift_dir = np.array([-np.sin(a), np.cos(a), 0.0])
+    drag_dir = np.array([np.cos(a), np.sin(a), 0.0])
+    return cf, float(cf @ lift_dir), float(cf @ drag_dir)
+
+
 def wall_force_coefficients(
     nodes: np.ndarray,
     elements: np.ndarray,
@@ -301,11 +345,6 @@ def wall_force_coefficients(
     Returns:
         dict: cl, cd_pressure, cf (3-vector), cp_tri (per-triangle Cp)
     """
-    from pyfp3d.physics.isentropic import (
-        pressure_coefficient,
-        pressure_coefficient_incompressible,
-    )
-
     grad_tri, area, _ = triangle_tangential_gradients(nodes, wall_faces, phi)
     n_out = wall_outward_normals(nodes, elements, wall_faces)
     if smooth_passes > 0:
@@ -314,18 +353,11 @@ def wall_force_coefficients(
             grad_tri, n_out, area, adj, n_passes=smooth_passes)
 
     q2 = np.sum(grad_tri * grad_tri, axis=1) / u_inf**2
-    if m_inf > 0.0:
-        cp_tri = np.array([pressure_coefficient(q, m_inf) for q in q2])
-    else:
-        cp_tri = np.array([pressure_coefficient_incompressible(q) for q in q2])
-
-    cf = -(cp_tri * area) @ n_out / s_ref
-    a = np.deg2rad(alpha_deg)
-    lift_dir = np.array([-np.sin(a), np.cos(a), 0.0])
-    drag_dir = np.array([np.cos(a), np.sin(a), 0.0])
+    cp_tri = _cp_from_q2(q2, m_inf)
+    cf, cl, cd = _pressure_force(cp_tri, area, n_out, s_ref, alpha_deg)
     return {
-        "cl": float(cf @ lift_dir),
-        "cd_pressure": float(cf @ drag_dir),
+        "cl": cl,
+        "cd_pressure": cd,
         "cf": cf,
         "cp_tri": cp_tri,
     }
