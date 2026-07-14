@@ -1,0 +1,6 @@
+path,quantity,max_abs_diff
+levelset,wall_cp,0.0
+levelset,section_cp_lower,0.0
+conforming,wall_forces_cp,0.0
+conforming,wall_forces_cl,0.0
+conforming,section_cp_upper,0.0

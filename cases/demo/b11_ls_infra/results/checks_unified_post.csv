@@ -1,0 +1,5 @@
+gate,check,value,criterion,status,note
+G11.2,LS wall_cp unified==legacy,0.0,== 0.0,PASS,
+G11.2,LS section_cp unified==legacy,0.0,== 0.0,PASS,
+G11.2,conforming wall_forces unified==legacy,0.0,== 0.0,PASS,
+G11.2,conforming section_cp unified==legacy,0.0,== 0.0,PASS,

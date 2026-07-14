@@ -1,0 +1,3 @@
+gate,check,value,criterion,status,note
+G11.4,M6 medium spsolve baseline recorded (the splu wall),converged,converged,PASS,
+G11.4,M6 medium ilu: near-full ILU fill needed (not advantageous at 67k; payoff is fine-scale),recorded,informational,PASS,ILU factor resists cheap incomplete fill at M6 medium

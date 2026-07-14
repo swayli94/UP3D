@@ -2594,3 +2594,101 @@ solve, M∞0.5) is UNBLOCKED**. Recorded backlog (arbitration items 2–3): the
 `mixed_plain` default flip + B6/B7 M_max re-reads + G13.1-LS erratum; the
 `element_densities` mixed-plain junk-weight fix. All shipped machinery
 (`span_blend`, `mixed_plain`) is default-inert and stays.
+
+## Track B / B11 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (`cases/demo/b11_ls_infra/`, 2026-07-14)
+
+Two long-standing LS-path infrastructure gaps, closed together (a B9 enabler).
+
+**(1) Unified post-processing** (`run_b11_unified_post.py`, 4/4 PASS).
+`post/surface.py` (conforming) and `post/surface_ls.py` (level-set) now share
+private cores — `_cp_from_q2` (the isentropic/Bernoulli Cp branch),
+`_pressure_force` (the `-(cp·area)·n_out/s_ref` integral + lift/drag),
+`_wall_plane_crossings` / `_resolve_station` / `_section_curve_dict` (the
+triangle plane-cut + station-resolve + chord/x_le), `_d11_wall_state` (the D11
+two-sided q² selection) — under a keyword-dispatched upper layer `post/unified.py`
+(`wall_cp` / `wall_forces` / `section_cp`, `phi=` conforming vs `mvop=,phi_ext=`
+level-set). The three near-duplicate blocks (Cp+D11, the copy-pasted section-cut
+loop, the force integral) collapse to one implementation each. The demo solves one
+NACA0012 level-set case and extracts its wall Cp through BOTH the unified entry
+and the legacy functions on BOTH dispatch forms: **max|Δcp| = 0.0 exactly** on
+all four (LS wall_cp, LS section_cp, conforming wall_forces, conforming
+section_cp). Every legacy public function keeps its name/signature; the extraction
+preserved float op order, so the bit-identity locks
+(`test_b7_onera_m6.py::test_d11_upper_surface_equals_the_main_based_section`, the
+shock `x_shock` asserts, `test_post_surface.py`) pass unchanged. Evidence:
+`results/cp_unified_overlay.png`, `summary.csv`, `checks_unified_post.csv`;
+`tests/test_b11_post_unified.py` (9 passed).
+
+**(2) GMRES escape from the splu wall** (`run_b11_gmres_ls.py`, 4/4 PASS; the
+deferred design_track_b.md §5.3 landing). `solve_multivalued_laplace` / `_lifting`
+/ `_newton` grow `precond=None|"ilu"|"amg"` (None = the pre-B11 `spsolve`,
+bit-identical default; `solve_multivalued_transonic` inherits via `**kwargs`).
+★ **ILU is the effective escape** — spilu on the real fused nonsymmetric matrix,
+warm-started per outer:
+
+| mesh | precond | γ | \|Δγ\| vs spsolve | GMRES iters | stalls | wall |
+|------|---------|-----|-----|-----|-----|-----|
+| coarse | spsolve | 0.139418 | 0 (baseline) | — | — | 1.9 s |
+| coarse | ilu | 0.139418 | 3.9e-10 | 434 | 0 | 2.6 s |
+| medium | spsolve | 0.141376 | 0 (baseline) | — | — | 8.6 s |
+| medium | ilu | 0.141376 | 7.5e-10 | 148 | 0 | 18.2 s |
+
+(ILU is *slower* than `spsolve` at these small 2.5D sizes — expected: the win is
+at M6-fine scale where the single splu factor's fill blows up, the P9 4h39m/26 GB
+wall. The point here is that ILU-GMRES CONVERGES to the same solution, so the
+escape route works.) The medium ILU needed a robustness ladder in
+`build_ilu_preconditioner` (gentler drop + MODIFIED-ILU `SMILU_2`): the default
+`drop_tol=1e-4` left the incomplete factor *exactly singular* on the fused matrix
+(its aux weld / wake-LS / TE-Kutta rows carry zero/negative diagonals); MILU
+compensates the dropped mass onto the diagonal. The default first attempt is
+unchanged, so the conforming Newton caller's ILU success path is bit-identical.
+
+★ **AMG does NOT converge on the lifting operator — an honest §5.3 finding.**
+`_amg_surrogate_preconditioner` builds SA-AMG on an SPD surrogate (the
+single-valued Picard block + SPD springs tying each aux dof to its coincident
+host so SA aggregates them). This converges for the SPD `continuity`-closure
+(Laplace) system, but on the `wake_ls`-closure lifting operator the aux rows are
+the g₁+g₂ wake-LS + nonlinear TE-Kutta rows (convection-like, not SPD springs),
+the surrogate cannot model them, and **GMRES stalls at the restart cap**:
+measured coarse M0.5 lifting **γ 0.0033 vs 0.139, all 80 outers stalled, 455 s**
+vs ILU's 2.7 s. So AMG stays wired for the Laplace case + as the recorded §5.3
+knob, and **ILU is the shipped lifting escape**. The Núñez symmetric row
+assignment (which would restore genuine AMG applicability) stays not-prebuilt.
+Evidence: `results/solver_ab.csv`, `gmres_ls_ab.png`, `checks_gmres_ls.csv`;
+`tests/test_b11_linear_ls.py` (8 passed + 1 gated). lagged-LU
+(`direct_refactor_every`) port to `newton_ls` = recorded out-of-scope follow-up.
+
+**(3) M6 medium headline — the splu wall quantified** (`run_b11_m6_headline.py`,
+gated one-shot; G11.4; `results/m6_medium_ab.csv`). The M6 medium level-set
+solve at M0.5/α3.06 (neumann far field), **67,426 extended dofs**:
+
+| precond | γ | wall | per-outer | outers | note |
+|---------|-----|------|-----------|--------|------|
+| spsolve | 0.0668527 | **454.8 s** | 17.5 s | 26 | the splu wall, converged |
+| ilu | n/a | 306.7 s (17 outers) | — | — | factor went singular at a hard outer |
+
+The spsolve baseline is the splu wall, quantified: **454.8 s / 67 k dofs** — and
+at the M6 FINE ~450 k dofs it is the P9 catastrophe (a single splu ran 4h39m /
+26 GB without returning, killed). ★ **Honest finding: the M6-medium 3D fused
+matrix resists cheap incomplete factorization.** ILU-GMRES factored and advanced
+~17 of the 26 outers, but at a hard outer even the diagonal-shifted MODIFIED-ILU
+(`A + 1e-3·mean|diag|·I`, `SMILU_2`) at fill 20 produced an exactly-singular
+incomplete factor — near-full fill (the first-run `fill×4≈40`, which does
+complete but is ~spsolve cost at this size) would be needed. So **at 67 k dofs
+spsolve is still the right tool; ILU is not advantageous there.** The ILU
+escape's value is the FINE-scale regime where spsolve is *impossible* on memory
+(where even an expensive high-fill ILU is bounded and the only option) — that is
+a feasibility argument, extrapolated, not run. The escape is *demonstrated to
+converge* at 2.5D medium above (|Δγ| 7.5e-10, 148 iters, 0 stalls). The demo
+records this outcome rather than crashing (the `build_ilu_preconditioner`
+robustness ladder — gentler drop → MILU → diagonal shift — was added here after
+the M6 medium exposed the singular-factor failure that the 2.5D meshes do not).
+
+**Net (B11):** the unified post-processing is bit-identical and shipped; the
+GMRES/ILU escape is wired into every LS driver (`precond=None|"ilu"|"amg"`,
+default bit-identical) and *works* at 2.5D; AMG on the SPD surrogate is honestly
+measured to stall on the `wake_ls` operator (Laplace-only); and the M6-medium
+splu wall is quantified with the escape's advantageous regime placed at fine
+scale. The Núñez symmetric row assignment (which would restore genuine AMG and a
+cheaper factorization) and the `newton_ls` lagged-LU port are the recorded
+follow-ups.

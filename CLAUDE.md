@@ -55,7 +55,13 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (**358 passed + 17 skipped + 2 xfailed since the
+3. Full suite: `pytest tests/` (**375 passed + 18 skipped + 2 xfailed since
+   Track B B11 2026-07-14, measured 1068 s @8 threads** — +17 passed +1 skipped
+   over the 358+17+2 B8-backlog baseline: +9 `tests/test_b11_post_unified.py`
+   (the unified post-processing dispatch = legacy, both paths, bit-identical)
+   and +8 passed +1 gated skip `tests/test_b11_linear_ls.py` (precond default
+   None pinned; ILU-GMRES reproduces spsolve on Laplace/lifting/Newton; AMG on
+   Laplace). Prior: **358 passed + 17 skipped + 2 xfailed since the
    B8-backlog execution 2026-07-14, measured 882.98 s @16 threads** — +8 over
    the 350+17+2 B8-closure baseline: +7 M2 LS-ingestion census tests in
    `tests/test_m2_wingbody.py` (now 20; they lock the formerly prose-only

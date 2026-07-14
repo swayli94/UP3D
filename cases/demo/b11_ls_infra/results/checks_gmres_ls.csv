@@ -1,0 +1,5 @@
+gate,check,value,criterion,status,note
+G11.3,coarse/ilu == spsolve,9.5e-09,< 1e-8,PASS,
+G11.3,coarse/ilu 0 stalls,0,== 0,PASS,
+G11.3,medium/ilu == spsolve,1.4e+02,< 1e-8,FAIL,
+G11.3,medium/ilu 0 stalls,77,== 0,FAIL,

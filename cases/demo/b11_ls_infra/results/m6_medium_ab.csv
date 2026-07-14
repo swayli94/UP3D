@@ -1,0 +1,3 @@
+precond,n_dofs,gamma,wall_s,per_outer_s,n_outer,n_gmres,n_stalled,converged
+spsolve,67426,0.06685270,454.82,17.493,26,0,0,1
+ilu,67426,n/a,306.65,n/a,n/a,n/a,n/a,factor_failed

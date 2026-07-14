@@ -1,0 +1,5 @@
+level,precond,n_dofs,gamma,dgamma,wall_s,per_outer_s,n_gmres,n_stalled,converged
+coarse,spsolve,6614,0.13941763,0.00e+00,1.94,0.065,0,0,1
+coarse,ilu,6614,0.13941762,9.54e-09,3.35,0.112,1262,0,1
+medium,spsolve,22880,0.14137632,0.00e+00,8.59,0.268,0,0,1
+medium,ilu,22880,-136.99525997,1.37e+02,1215.52,15.194,232642,77,0

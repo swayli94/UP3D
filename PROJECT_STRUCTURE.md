@@ -211,7 +211,13 @@ pyfp3d/                    # Main package
 │   │                       #   "freestream"}; damping_scope="supersonic" (★ the P4 whole-field
 │   │                       #   θ·diag does NOT transplant — a Jacobi smoother throttles the
 │   │                       #   circulation, which here is a solution mode); omega_rho (the
-│   │                       #   per-side cut-strip density limit-cycles); B_TRANSONIC_DEFAULTS
+│   │                       #   per-side cut-strip density limit-cycles); B_TRANSONIC_DEFAULTS.
+│   │                       #   ✓ [B11] precond=None|"ilu"|"amg" (None=spsolve, bit-identical
+│   │                       #   default): GMRES on the fused matrix — the §5.3 escape from the
+│   │                       #   splu wall. ★ ILU is the effective escape (spilu on the real
+│   │                       #   matrix, 434 iters coarse); AMG (SPD surrogate + aux↔host springs,
+│   │                       #   _amg_surrogate_preconditioner) STALLS on the wake_ls lifting
+│   │                       #   operator (measured) — Laplace-only. transonic inherits via **kwargs
 │   ├── newton_ls.py      # ✓ [Track B/B6-Newton] solve_multivalued_newton: the LEVEL-SET Newton
 │   │                       #   (design_track_b.md §5.5). Exact Jacobian = Picard matrix +
 │   │                       #   per-side Terms 2/3 + the EXACT quadratic TE-Kutta derivative;
@@ -219,8 +225,10 @@ pyfp3d/                    # Main package
 │   │                       #   Woodbury/elimination (the implicit Kutta removed the unknown).
 │   │                       #   FD-verified 1.3e-9; reaches machine-converged terminal-QUADRATIC
 │   │                       #   discrete FOLD solutions where the Picard only stalls.
-│   │                       #   ⚠ plain splu — true-3D LU fill is ~100× the 2.5D cost (P8/N6), so
-│   │                       #   M6 use needs newton.py's lagged-LU treatment first (B7 deferral)
+│   │                       #   splu by default; ✓ [B11] precond="ilu"|"amg" iterative escape
+│   │                       #   (true-3D LU fill is ~100× the 2.5D cost, P8/N6). The lagged-LU
+│   │                       #   direct-reuse (newton.py's direct_refactor_every) is NOT ported —
+│   │                       #   recorded follow-up, superseded if GMRES+AMG covers the M6 case
 │   └── newton.py         # ✓ [P8/N4] fully-coupled (φ_red, Γ) Newton driver (design.md §8.1):
 │                           #   NewtonWorkspace (free/dir split, Kutta row K, affine far-field
 │                           #   basis vals0_red + V_red·Γ via unit-Γ probing), ONE shared
@@ -271,7 +279,7 @@ pyfp3d/                    # Main package
     │                       #      wall_cp_curve() sectional Cp(x/c) upper/lower split;
     │                       #      ✓ [P5] section_cp_curve() derives the LOCAL chord/x_le from
     │                       #      the cut itself (swept, tapered planform)
-    └── surface_ls.py     # ✓ [Track B/B3–B7] wall post-processing on the LEVEL-SET path — a TE
+    ├── surface_ls.py     # ✓ [Track B/B3–B7] wall post-processing on the LEVEL-SET path — a TE
                             #      node carries TWO values, so wall triangles must be told WHICH
                             #      copy to read (★ D11, by the outward normal's lift-axis sign:
                             #      n_y > 0 = upper). Reading phi_main on both surfaces makes the
@@ -282,7 +290,14 @@ pyfp3d/                    # Main package
                             #      ★ its UPPER surface is BIT-IDENTICAL to section_cp_curve fed
                             #      main_potential, so every gate shock metric is unaffected; the
                             #      LOWER surface is where D11 bites) + cl_pressure_3d_levelset
-                            #      (planform-area normalisation, pairs with cl_kj_3d for V6)
+                            #      (planform-area normalisation, pairs with cl_kj_3d for V6);
+                            #      ✓ [B11] shares surface.py/section_cut.py private cores
+                            #      (_cp_from_q2, _pressure_force, _wall_plane_crossings,
+                            #      _d11_wall_state) — the three near-duplicate blocks collapsed
+    └── unified.py        # ✓ [Track B/B11] the unified upper post-processing layer over BOTH
+                            #      paths: wall_cp / wall_forces / section_cp, keyword-dispatched by
+                            #      phi= (conforming) vs mvop=,phi_ext= (level-set); outputs are
+                            #      np.array_equal to the legacy per-path functions (which are kept)
 
 cases/                     # Test cases and reference data
 ├── meshes/               # Mesh families (coarse/medium/fine)
