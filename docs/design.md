@@ -303,23 +303,26 @@ Wake geometry: planar, aligned with freestream (or the chord plane) — standard
 FP practice; force-free wake relaxation is out of scope (error is second order
 in loading for attached flow).
 
-**Designed alternative — Track B level-set wake (2026-07-07; not started).** A
-level-set + multivalued-element (CutFEM-style) wake representation with an
-implicitly enforced Kutta condition (Γ emerges from the solution — no Γ DOF,
-no secant) would replace the conforming sheet + master–slave elimination above,
-so meshes need no pre-embedded wake surface (α sweeps without remeshing;
-multi-wake for wing–body). Numerics reference:
-[design_track_b.md](design_track_b.md) (2026-07-11 López-dissertation
-cross-check; supersedes DN1 as the Track B design
+**Designed alternative — Track B level-set wake (designed 2026-07-07; IN
+PROGRESS since 2026-07-11, largely delivered — B1–B8, B11–B13, B15 closed, B9
+next; status in [tracks/track_b.md](tracks/track_b.md)).** A level-set +
+multivalued-element (CutFEM-style) wake representation with an implicitly
+enforced Kutta condition (Γ emerges from the solution — no Γ DOF, no secant)
+replacing the conforming sheet + master–slave elimination above, so meshes need
+no pre-embedded wake surface (α sweeps without remeshing; multi-wake for
+wing–body). Numerics reference: [design_track_b.md](design_track_b.md)
+(2026-07-11 López-dissertation cross-check; supersedes DN1 as the Track B design
 spec (DN1 lived in `discussion_notes/`, deleted 2026-07-14 — historical copy via
 `git show 8aa4aee:docs/discussion_notes/20260707_1505_levelset_wake_design.md`) — notably the original penalty Kutta is demoted to an optional diagnostic
-in favor of TE duplication + the wake least-squares condition); phase plan
-B1–B5 in roadmap.md Track B. Curved/free wake (B6) is
-**shelved** (2026-07-10, DN2 §4.5.6): the straight-wake loading error is
-O(θ²) ≈ 0.1%, geometry updates force per-step cut-set/DOF rebuilds that conflict
-with Newton, and under VII the wake instead carries a mass-transpiration
-relaxation (§5 note). The conforming path in this section stays the shipped
-default throughout P7–P10.
+in favor of TE duplication + the wake least-squares condition — and itself
+superseded on the Kutta point by the B4 finding: the wake LS cannot pin Γ, the
+real closure is the nonlinear TE pressure-equality Kutta, design_track_b.md §9).
+Curved/free wake (**B10** after the 2026-07-13 renumber; was B6 when this note
+was written) is **shelved** (2026-07-10, DN2 §4.5.6): the straight-wake loading
+error is O(θ²) ≈ 0.1%, geometry updates force per-step cut-set/DOF rebuilds that
+conflict with Newton, and under VII the wake instead carries a
+mass-transpiration relaxation (§5 note). The conforming path in this section
+stays the shipped default.
 
 ### 4.1 Tip / wake-edge singularity (P13)
 
@@ -1030,79 +1033,18 @@ second — otherwise model error and code error are confounded.
 
 ---
 
-## 11. Development roadmap (vibe-coding phases)
+## 11. Development roadmap (moved to roadmap.md + docs/tracks/)
 
-> Phase numbering follows [docs/roadmap.md](roadmap.md) Track P, the *active*
-> tracker (gate checklists, progress ledger, and the parallel mesh Track M live
-> there). This section summarizes phase content and maps it onto the §10
-> verification ladder; for detailed gates and current status, follow roadmap.md.
-
-Each phase is a self-contained PR-sized unit with its gate from §10.
-
-- **P0 — Repo scaffolding + mesh infrastructure.** meshio reader, metrics
-  (B_e, V_e), adjacency, coloring, VTK writer. Gate: metrics unit tests
-  (ΣV_e = volume of unit cube; ∇(linear field) exact), coloring validity assert.
-- **P1 — Laplace solver.** ρ ≡ 1, Dirichlet far field, natural walls, CG+AMG.
-  Gates: V0 (without wake), V1, V2.
-- **P2 — Lift: wake cut + Kutta, on Laplace (★ critical phase).** Node
-  duplication, constraint elimination, Γ update, vortex far-field correction
-  (incompressible form) — all the hard topology/constraint machinery lands
-  against the linear operator. Gates: V0 *with* wake cut, V3 (incompressible
-  variant), V6.
-- **P3 — Subsonic compressible.** Density law + Picard loop with
-  under-relaxation, no upwinding; Prandtl–Glauert-scaled vortex far field.
-  Gates: sphere at M∞ = 0.3 vs Prandtl–Glauert-corrected V2; V3; convergence
-  in <30 Picard its; P1/P2 gates stay green (ν ≡ 0 path identical to Laplace).
-- **P4 — Transonic: artificial density.** Upwind element search, ν switch,
-  ρ̃; relaxation + Mach continuation. Gate: V4.
-- **P5 — 3D validation: ONERA M6.** Requires the swept-wing mesh (roadmap.md
-  Track M1). Gates: V5; V6 consistency in 3D (the *span-integrated* CL_KJ =
-  2∫Γdz/(U·S) vs total CL_p — the per-section 2Γ/c identity is 2D-only, see §10).
-> Track-P renumber (2026-07-08): the old P6 "differentiable flux (remove the
-> sawtooth)" split, once the sawtooth was root-caused to *recovery* not *flux*,
-> into P6 (recovery) + P7 (flux) + P8 (Newton, was P7) + P9 (curved walls, new)
-> + P10 (backlog, was P8). Old gate IDs map G6.x → G6.x/G7.x, G7.x → G8.x.
-
-- **P6 — Surface-pressure recovery (remove the Cp sawtooth)** (§3.1, §9.1).
-  The sawtooth is a per-triangle wall-gradient **recovery** artifact on the
-  sliver wall triangulation, NOT the artificial-density flux (proven: nodal
-  smoothing of the same solution drops the metric ~330×; a smoother flux does
-  not). Fix = normal-gated recovery smoothing in post-processing
-  (`smooth_passes`, §9.1), preserving the sharp TE, applied to the Cp curve and
-  the force integral. **Done** (2026-07-08). Gates G6.1–G6.4.
-- **P7 — Differentiable artificial-density flux at frozen selection** (§3.1/§6.3;
-  re-scoped 2026-07-08). The **P8 Newton prerequisite** = the shipped **walk**
-  flux's ∂ρ̃/∂φ made differentiable at frozen u(e) (sparse, ~+1 element/row,
-  closest to López); deliverable = derive + FD-verify it (`max_ε` optional). The
-  streamline-Gaussian kernel (Eq. 3.4′, §3.2) is an **optional** ~10×-faster
-  Picard flux with a denser Newton Jacobian, a P8 flux candidate only if measured
-  net-favourable. Neither fixes the sawtooth (that is P6). Gates G7.1–G7.3.
-- **P8 — Performance & robustness: fully-coupled Newton** (§3.2, §6.3, §8.1).
-  Consumes the P7 flux. Full Jacobian with the nonzero upstream coupling (López
-  Eq. B.4), fully-coupled (φ, Γ) solve replacing the P5-fragile Γ-secant, Mach
-  continuation + load stepping, GMRES + AMG, Eisenstat–Walker, AMG reuse,
-  profiling (target: ONERA M6 medium mesh < 5 min single node). Gates G8.1–G8.3.
-- **P9 — Curved / isoparametric wall elements** (§5.1). The shared accuracy route
-  for G1.6 sphere-Cp < 2% (Option C / DP1 "> 5%" branch) and the residual
-  V6 < 1% floor after P6 (sharp-TE/LE P1 wall gradient). Gates G9.1–G9.2.
-- **P10 — Extensions (backlog).** Mixed prism/tet; embedded-boundary wake
-  alternative; VII coupling hook (transpiration BC ∂φ/∂n = d(u_e δ*)/ds —
-  reuses the IBL work from pyTSFoil); adjoint via the Newton Jacobian
-  transpose (nearly free once (6.3) exists — high value for the MDO thread).
-
-Two further tracks are **designed but not started** (2026-07-07..10; roadmap.md
-holds the authoritative phase tables and sequencing guards):
-
-- **Track B — level-set embedded wake** (B1–B5; B6 curved/free wake shelved):
-  replaces the §4 conforming wake with a level-set + multivalued-FE + penalty
-  Kutta path; coexists with the shipped path, blocks nothing in P7–P10 (§4 note;
-  DN1).
-- **Track V — viscous–inviscid coupling** (V1 loose → V3 tight Newton; V4 wake
-  IBL rides on V1): Drela IBL3 6-equation surface FE + the §5 transpiration BC;
-  V1 needs only P6, V3 consumes P8. Phase IDs V1–V4 are *phases*, distinct from
-  the §10 validation-case IDs V0–V6 (DN2/DN6).
-
----
+> The roadmap lives in [docs/roadmap.md](roadmap.md) (track index + working
+> rules) with one file per track under [docs/tracks/](tracks/): Track P (solver
+> P0–P13), Track M (meshing M0–M5), Track B (level-set wake B1–B15; numerics
+> spec [design_track_b.md](design_track_b.md)), Track V (viscous–inviscid
+> coupling V1–V4 — phase IDs distinct from the §10 validation-case IDs V0–V6).
+> The phase summary formerly duplicated in this section had drifted from the
+> tracker (it still used pre-renumber IDs: "P9 curved walls", "P10 backlog",
+> "Track B B1–B5 with B6 = curved wake") and was removed 2026-07-15 rather than
+> maintained twice; the phase ↔ §10-validation-ladder mapping lives in each
+> track file's gate entries. Historical copy: `git show b83b6d2:docs/design.md`.
 
 ## 12. Known risks and mitigations
 
