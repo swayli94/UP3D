@@ -1,0 +1,7 @@
+regime,label,path,cl_kj,m_max,gamma_root,gamma_tip,wall_s
+sub,LS wake-free,levelset,0.21157,1.1508,0.08089,0.00134,0.0
+sub,LS embedded,levelset,0.21290,0.9837,0.08133,-0.00218,68.7
+sub,conforming,conforming,0.21257,n/a,0.07976,0.01339,0.0
+trans,LS wake-free,levelset,0.27648,2.4549,0.10735,0.00155,2304.7
+trans,LS embedded,levelset,0.27885,2.1951,0.10847,-0.00249,1469.9
+trans,conforming,conforming,0.24987,1.9949,0.09686,0.01514,0.0

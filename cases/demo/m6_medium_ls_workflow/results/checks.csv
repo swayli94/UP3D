@@ -1,0 +1,11 @@
+gate,check,value,criterion,status,note
+WF,sub/LS wake-free: Γ(tip)/Γ_max → 0,0.0166,< 0.10,PASS,
+WF,sub/LS embedded: Γ(tip)/Γ_max → 0,0.0267,< 0.10,PASS,
+WF,trans/LS wake-free: Γ(tip)/Γ_max → 0,0.0144,< 0.10,PASS,
+WF,trans/LS embedded: Γ(tip)/Γ_max → 0,0.0229,< 0.10,PASS,
+MESH,sub: LS wake-free vs embedded cl,0.62%,< 5%,PASS,
+MESH,trans: LS wake-free vs embedded cl,0.85%,< 5%,PASS,
+METHOD,sub: LS vs conforming cl,0.47%,< 15%,PASS,
+METHOD,trans: LS vs conforming cl,10.65%,< 15%,PASS,
+TRANS,LS wake-free: M_max bounded (< 3),2.455,< 3.0,PASS,
+TRANS,LS embedded: M_max bounded (< 3),2.195,< 3.0,PASS,

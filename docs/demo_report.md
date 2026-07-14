@@ -2692,3 +2692,105 @@ splu wall is quantified with the escape's advantageous regime placed at fine
 scale. The Núñez symmetric row assignment (which would restore genuine AMG and a
 cheaper factorization) and the `newton_ls` lagged-LU port are the recorded
 follow-ups.
+
+## Track B / B12 + B13 — lagged-LU direct-reuse (the medium/M6 scaling escape) (`cases/demo/b12_lagged_lu/`, `cases/demo/b13_lagged_picard/`, 2026-07-14)
+
+B11's finding — the iterative escapes are coarse-only on the fused LS matrix
+(ILU diverges at 2.5D medium lifting, `factor_failed`s at M6 medium; AMG stalls)
+— means that at medium/M6 sizes sparse-direct is the only converging tool and
+the cost driver is the **number of factorizations** (17.5 s per splu at 67 k
+dofs). B12/B13 port the conforming N6 **lagged-LU** mechanism (refactor the LU
+every k-th step, drive the steps in between with GMRES preconditioned by the
+stale *exact* LU) — **minus the Woodbury**, since the LS system has no Γ DOF and
+its step is a plain `J_free d = −R_free`. Default `direct_refactor_every=1` is
+byte-identical per-step `spsolve`.
+
+**B12 (`solve_multivalued_newton`, demo 6/6):** M6-medium Newton (M0.5, 67,426
+dofs, 7 steps) — spsolve refactors 7× (**145.6 s**), lagged-LU (k=1000)
+refactors **once** + 30 reuse-GMRES iters (**66.7 s, 2.18×**), γ bit-identical
+(|Δγ| 6.7e-13), 0 stalls.
+
+**B13 (`solve_multivalued_lifting`, demo 6/6):** the Picard OUTER loop is the
+post-B12 driver. M6-medium lifting (26 outers) — spsolve **447.6 s** vs lagged-LU
+**68.3 s (6.55×)**, 2 refactors vs 26, γ bit-identical (|Δγ| 6.9e-13); the
+end-to-end seed+Newton pipeline **~330 s → 111.9 s (~3×)**. ★ Measured: the
+Picard `direct_reuse_rtol` must be 1e-10 (not B12's 1e-8) — a Picard fixed point
+is pinned only by its 1e-6 lag tolerances, so an inexact reuse step SHIFTS the
+stopping point. **Honest boundary:** both amortize the factorization COUNT; they
+still need ≥1 in-memory splu, so they do NOT break the FINE memory wall (that is
+the B14 Schur design / Núñez route, designed-not-scheduled).
+
+## M6 medium level-set WORKFLOW — methods × meshes × regimes (`cases/demo/m6_medium_ls_workflow/`, 2026-07-15)
+
+The capability B11/B12/B13 unlock, made concrete: the ONERA M6 **medium**
+level-set solve, both **subsonic (M∞0.5)** and **transonic (M∞0.84)**, on the
+**wake-free workflow mesh** (the wake built analytically from the TE polyline,
+nothing embedded), at a wall-clock now comparable to the conforming path. The
+demo cross-checks three axes — **mesh** (level-set wake-free M4 vs wake-embedded
+M1), **method** (level-set vs conforming), **regime** (M0.5 vs M0.84) — and is
+self-checking (`checks.csv`, **10/10 PASS**). Solves cache to gitignored
+`results/*.npz` (P5 policy); the committed evidence is 4 PNGs + `summary.csv` +
+`checks.csv`.
+
+### It solves — both regimes, both meshes
+
+`summary.csv` (cl_kj / M_max / γ_root / γ_tip):
+
+| regime | LS wake-free | LS embedded | conforming |
+|---|---|---|---|
+| subsonic M0.5 | 0.2116 / 1.15 | 0.2129 / 0.98 | 0.2126 / (P3-class) |
+| transonic M0.84 | 0.2765 / 2.455 | 0.2789 / 2.195 | 0.2499 / 1.995 (P5 Picard) |
+
+- **Mesh A/B (LS wake-free vs embedded):** cl within **0.62 % (sub) / 0.85 %
+  (trans)** — the dual-mesh agreement B7 measured at coarse (~2 %) tightens at
+  medium.
+- **Method A/B (LS vs conforming):** **0.47 % subsonic**; **+10.65 % transonic**
+  — the documented B6/B7 inversion (the conforming *Picard* under-circulates
+  4–8 % at these shocks; the LS Picard sits closer to the conforming *Newton*
+  truth, so the gap is the conforming baseline's, not the LS path's).
+- **Γ(tip) → 0** on every LS solution (0.013–0.027 of Γ_max — the spanwise clip
+  / free-edge rule, discretely); **M_max bounded** < M_cap = 3 (2.455 / 2.195).
+
+### ★ The transonic solve is bounded/engineering-converged, not strict — and *why* was diagnosed live
+
+The M6-medium transonic ramp was first run with `tol_residual=1e-7` and *looked*
+stuck (~1 h, no completion). A per-level streaming diagnostic (the P4/P5/G13.3
+method: ramp M0.60→0.84 manually, print each level's residual trajectory + M_max
++ lim/flr) showed it was **not a breakdown**: M0.64 drove the residual to
+5.8e-7 by outer 59 then **plateaued flat at 3.5e-7** for 240 more outers, with
+**M_max 1.515, 0 lim/flr** — the P4/B6/N5 transonic Picard residual floor (the
+shock-position soft mode), stiffest at the shock-forming levels. `tol=1e-7` was
+below the plateau, so every level burned its full budget on the floor. Re-run
+above the plateau (`tol=1e-5`, the B7 engineering-converged level), the ramp
+completes: M_max climbs **1.39 → 1.52 → 1.64 → 1.78 → 1.95 → 2.17 → 2.455**, all
+< 3, γ rising physically 0.069 → 0.087, ≤ 3 clamped cells of 329 k. This is the
+**B7 gate semantics — assert bounded, not `converged`** — the same status as the
+committed P5 medium (M_max 1.995) and B7 coarse.
+
+### The four visualizations (physical reasonableness)
+
+- **`spanwise_loading.png`** — Γ(z) root→tip. Subsonic: the three curves overlap
+  (elliptic-ish, → 0 at tip). Transonic: the two LS curves overlap and are
+  **smooth**; the conforming curve carries the P5 spanwise Kutta-probe jitter and
+  sits below (under-circulated) — a direct picture of B7's "LS Γ(z) is 11–12×
+  smoother" and the loading inversion.
+- **`section_cp.png`** — Cp(x/c) at η = 0.44/0.65/0.90. LS and conforming track
+  each other; the transonic shock (Cp shoulder → drop, moving forward with η) and
+  the −Cp* line are clear; the conforming TE Cp dip (its potential-jump Kutta)
+  and the LE recovery sawtooth (P6/G6.1, `smooth_passes=0`) are visible and
+  documented.
+- **`wake_potential.png`** — perturbation potential φ′ on the η=0.65 slice: red
+  above / blue below, and the **jump across the wake line persists downstream**
+  (convected, not decaying) — the implicit-Kutta wake-LS signature.
+- **`tip_mach.png`** — local Mach on a chord-plane slab over the outer span
+  (Mach-1-centred diverging map): subsonic is near-uniformly subsonic with a thin
+  LE line; transonic shows a **supersonic pocket along the whole outer-span LE**
+  up to and around the tip.
+
+**Net:** M6 medium on the level-set wake-free workflow mesh is solvable and
+physically sound in **both** regimes, mesh-independent (0.6–0.9 %) and
+method-consistent (0.5 % subsonic; the transonic gap is the conforming Picard
+baseline's, per B6/B7), at conforming-comparable cost thanks to B12/B13. The
+transonic state is the bounded/engineering-converged B7-class solution; a
+strict-converged transonic would want the LS Newton ramp (newton_ls + B12
+lagged-LU — deferred, the residual plateau is exactly what Newton removes).
