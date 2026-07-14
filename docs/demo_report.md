@@ -2794,3 +2794,183 @@ baseline's, per B6/B7), at conforming-comparable cost thanks to B12/B13. The
 transonic state is the bounded/engineering-converged B7-class solution; a
 strict-converged transonic would want the LS Newton ramp (newton_ls + B12
 lagged-LU — deferred, the residual plateau is exactly what Newton removes).
+
+---
+
+## Track B / B15 — LS Newton transonic ramp + N5 freeze-selection (`cases/demo/b15_ls_newton_ramp/`, 2026-07-15)
+
+The direct answer to the sentence that closes the section above ("a strict-converged
+transonic would want the LS Newton ramp — the residual plateau is exactly what Newton
+removes"). **13/13 self-checks PASS** ungated (`results/checks.csv`); part 3 (ONERA M6
+medium) is gated.
+
+### The cost is the Picard plateau, not the linear algebra
+
+The 24.5 / 38.4 min of the M6-medium M0.84 level-set solve is **not** an inner-solver
+cost: the ramp's top Mach levels (0.80, 0.84) simply **never converge** and burn their
+full 200-outer budget on the **shock-position residual plateau** (the P4/B6/N5 soft
+mode). `tol_residual` is already pinned *above* the plateau at 1e-5 — 1e-7 would make
+every level burn its budget (~1 h). No Picard tuning escapes this; the plateau is
+intrinsic to the method. Newton has no such soft mode.
+
+Before B15 the LS Newton could not run a ramp at all: `freeze=` was a **reserved
+no-op**, the convergence gate hard-requires 0 limited/floored (which shock limiter
+cells block), and there was **no Mach-ramp wrapper**.
+
+### GB15.1 — the frozen per-side selection is exact (FD gate)
+
+The `kernels/upwind.py` frozen apparatus is reused **unmodified**: the level-set
+per-side operators are already walk-mode `UpwindOperator`s with a side-masked face
+graph, so B15 is *wiring*, not new numerics. New: `newton_side_data(frozen=…)` +
+`MultivaluedOperator.freeze_side_state`. Residual and Jacobian were extracted into
+**`LSNewtonSystem`** so the solver and the FD gate share **one** assembly path — a
+Jacobian must be the derivative of the residual the solver actually evaluates, and an
+FD test that re-implements the assembly only tests its own copy.
+
+- **FD: rel 6.7e-9** (eps 1e-5), with clean round-off scaling (5.8e-8 / 6.0e-7 at
+  1e-6 / 1e-7) — that scaling *is* the evidence it is a true derivative, not a
+  coincidence. ε-guard excludes only **3.1%** of free rows, on a real pocket
+  (`nu_max` 0.785; 1,118 elements on branches 1/2).
+- The frozen sweep reproduces the live density **bitwise** at the freeze point.
+- A clean freeze has **0 floored by design** (no floor is re-applied on branches 0–2)
+  — which is exactly what unblocks the 0-clamped convergence gate at a shock.
+
+### GB15.2 — the freeze cures a genuine limit cycle, and does not move the answer
+
+`results/gb152_freeze_limit_cycle.png`. On **NACA coarse M∞0.75** the LIVE LS Newton
+**does not converge**: it parks in a **period-6 limit cycle** (3.2e-7, 2.8e-7, 2.7e-7,
+1.3e-6, 8.6e-7, 4.3e-7 — repeating) at |R|≈2.7e-7, three orders above tol, with **0
+limited / 0 floored** — a *clean* stall, i.e. the upwind assignment churn.
+
+| | converged | steps | \|R\| final | γ |
+|---|---|---|---|---|
+| live selection | ✗ | 60 (budget) | **2.84e-7** | 0.218804 |
+| frozen selection | **✓** | **22** | **8.49e-13** | **0.218809** |
+
+The freeze removes the churn; it does **not** select a different state (γ agrees to 5
+digits), and it took **0 reverts**.
+
+### ★ GB15.2 erratum — the conforming freeze recipe does NOT transfer
+
+`solve/newton.py` arms the freeze on `(r < freeze_tol) **or** live_stalled`. Ported
+verbatim, this **breaks** the level-set solver. Measured on medium M0-embedded M0.75:
+the LS live residual **bounces ±2× for tens of steps while still descending** (γ
+travels 0.183 → 0.243 across that stretch — slow progress in a stiff direction, **not**
+a stall). `live_stalled` misfires at ~5e-6, the freeze locks a **still-moving**
+assignment, the frozen step diverges → revert → re-arm: **3 reverts, no convergence** —
+on a case the *untouched live path converges* (54 steps, 7.5e-12).
+
+With the stall trigger removed, the same solve freezes late (|R| < 1e-6, assignment
+settled) and converges: **53 steps, 2.1e-12, 0 reverts, landing on exactly the live
+γ = 0.243305**, with `residual_unfrozen = 2.1e-12` confirming the LIVE selection agrees
+there (an honest pass). ⇒ **the LS freeze arms on `freeze_tol` alone.**
+
+Two fail-safes ship with it: `freeze_max_reverts` (default 3) **disarms** a
+misbehaving freeze so it can only ever HELP, never cost convergence; and the reported
+`n_limited`/`n_floored` are always re-read **LIVE** — a frozen finish shows 0 floored
+*by design* and can never be its own evidence.
+
+### GB15.3 — the ramp beats the Picard, and `intermediate_tol` is free
+
+`results/gb153_ramp_vs_picard.png`. **NACA coarse M∞0.80 / α1.25** — the B6 gate
+condition, whose same-mesh **conforming-Newton truth** is shock 0.658 / cl_p 0.459 /
+**M_max 1.408**.
+
+| method | wall | γ | \|R\| | levels converged | iterations |
+|---|---|---|---|---|---|
+| Picard | 44.0 s | 0.190374 | **1.55e-5** (stalled) | **3/5** | 962 outers |
+| Newton ramp | **8.1 s (5.4×)** | 0.212445 | **3.10e-12** | 5/5 | 48 steps |
+| Newton + `intermediate_tol` | **6.8 s (6.5×)** | **0.212445** | 3.10e-12 | 5/5 | **38 steps** |
+
+- The **plateau is gone**: Picard's top two levels burn their budgets and it ends at
+  1.55e-5 — *not a solution*. Newton reaches 3.1e-12, 0 limited / 0 floored.
+- **`intermediate_tol` is free**: the final γ is **identical to 6 digits**, while
+  Newton steps drop 48 → 38.
+- **M_max 1.3924 vs the conforming-Newton truth 1.408 (−1.1%)** ⇒ physically
+  consistent.
+- **Honest boundary:** γ is **−7.4%** of that same truth. This is the **LS-vs-conforming
+  discretization gap** (B6 recorded it as ~13% while the LS side was a Picard stall).
+  B15 makes it measurable **strict-to-strict for the first time** — it does **not**
+  close it. That remains open.
+
+### The LS-specific ramp mask (differs from conforming on purpose)
+
+The freeze stays **ARMED on loose intermediate levels**, where the conforming mask
+(`newton.py:888`) sets `freeze_tol=None`. Reason: *every* accept route — loose ones
+included — requires 0 limited/floored, and on a 0.60→0.84 ramp the shock forms
+**mid-ramp**, so those levels carry limiter cells and can only reach a 0-clamped accept
+**through** a freeze. Loosen the *tolerance*, keep the *mechanism*. The conforming fold
+contraindication (a loose level leaving an untracked **Γ** seed, G10.2) has **no
+analogue** here: the level-set path has no Γ DOF — Γ is a solution mode carried inside
+`phi_ext`.
+
+### Seed trap (found and fixed)
+
+`_seed_from_picard` did **not** forward B13's `direct_refactor_every`, so the Newton
+warm start paid a **full sparse factorization on every seed outer** — ≈17 s × `n_seed`
+at M6 medium, i.e. **~11 min of pure seed** on a 40-outer warm start, dwarfing the
+Newton solve it was seeding. The seed keeps the *lifting* default
+`direct_reuse_rtol=1e-10` (**not** Newton's 1e-8): a Picard fixed point is pinned only
+by its lag tolerances, so an inexact reuse step would *shift* where it stops (B13).
+
+**Defaults unchanged:** `freeze_tol=None` ⇒ the pre-B15 live solver, byte-identical
+(locked). Tests `tests/test_b15_ls_newton_freeze.py` (8).
+
+### ★ GB15.4 — ONERA M6 medium M0.84: the plateau is gone, 3.4× faster
+
+The target case: the one the committed Picard needs **38.4 min** to leave
+*bounded-but-not-converged*. The Picard baseline is **not re-run** — it is committed
+evidence (`cases/demo/m6_medium_ls_workflow/results/summary.csv`).
+
+| | Picard (committed) | **Newton ramp (B15)** |
+|---|---|---|
+| wall clock | 2304.7 s (**38.4 min**) | **672 s (11.2 min) = 3.4×** |
+| residual | **1e-5…1e-4 plateau** — top two levels burn their full 200-outer budget | **~1e-11, every level converged** |
+| M_max | 2.4549 | 2.4938 (1.6% apart) |
+| clamped cells | ≤3 / 329k | 3 / 330k |
+
+Per level, freeze armed everywhere, **0 reverts**: M0.60 ✓5 steps · 0.65 ✓19 · 0.70
+✓23 · 0.75 ✓16 · 0.80 ✓19 · **0.84 ✓16 steps, |R| 6.9e-11**.
+
+**Honest limit (stated, not buried):** most levels accept via `assignment_cycle` —
+the **frozen** system converges to ~1e-11 and is accepted at the
+**assignment-discontinuity floor** (the live residual stops improving across
+refreshes). That is the N5 semantics the conforming path also uses. It beats the
+Picard plateau by 6–7 orders of magnitude, but calling it a "live-strict solution"
+would be an over-claim.
+
+### ★★ Four errata — porting the conforming N5 recipe is NOT mechanical
+
+Every one was forced out by measurement; none was foreseen. This is the same lesson
+B8 taught, and it is the most reusable output of B15.
+
+1. **The TE polyline must come from the authoritative geometry.** A hand-rolled
+   `x_te(0)=0.8059` vs `wing3d.x_te(0)=0.80611` — off by **2e-4**. `CutElementMap`
+   matches the polyline onto **wall nodes** (M2: the M6 TE endpoints are exact wall
+   nodes), so 2e-4 matches **nothing** ⇒ **0 TE nodes ⇒ no Kutta ⇒ Γ unpinned ⇒ 340k
+   limited cells and NaN** — and the solver **passed silently**. Both LS solvers now
+   **raise** on `te_nodes == 0`.
+2. **`freeze_tol` must sit ABOVE the churn floor — and that floor RISES with Mach**
+   (**<1e-6** at M0.60 → **8.6e-6** at M0.65 → **2.7e-4** at M0.70). Set below it, a
+   discrete upwind-selection flip throws the residual back before the freeze can arm
+   (clean descent, then ×300 to **the same value 2.6e-3, twice** — the signature of a
+   discrete flip) and the ramp dies. **The same law as "`tol_residual` must sit above
+   the Picard plateau".**
+3. **Residuals are not comparable across a SELECTION EPOCH.** The frozen phase drives
+   `r_best` to 1.5e-11; after a refresh the residual legitimately returns to the live
+   scale (2.6e-3) and the fail-fast reads a 1e8× "blow-up", killing a healthy
+   freeze-refresh cycle. `r_best` is now reset on every freeze / refresh / revert.
+4. **The frozen phase's clamp count is stale by construction** — `n_floored` counts
+   `branch==3`, the cells clamped *at the freeze point*, and never falls. Gating
+   acceptance on `n_flr == 0` **refuses a 7.8e-14 machine-precision solution forever**
+   (measured at M0.70: the freeze cured the period-7 limit cycle and the floored cell
+   **cleared itself** — final live `lim/flr = 0/0` — yet the gate would not fire). The
+   **live** re-evaluation is the arbiter.
+
+**New knob `freeze_max_clamped`** (default **0** = the conforming N5 rule,
+bit-identical): at M6 medium M0.70 a **single** persistently-floored cell of 330k
+blocks the freeze at **any** `freeze_tol` — **the P9/G9.1 wall**. But the frozen sweep
+represents a clamped cell *exactly* (branch 3: `nu=0`, `rho=rho_floor`, `s_e=s_u=0`),
+so the 0-clamped precondition was stricter than the machinery needs. Relaxed, the
+freeze locks the selection and **the clamped cell clears itself**. The convergence
+gate is untouched.

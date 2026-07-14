@@ -108,6 +108,11 @@ cases/demo/p13_tip_edge_singularity/results/*.npz
 # ~8 min/solve, sparse-direct LU on the ~67k-dof extended system)
 cases/demo/b8_tip_taper_ls/results/*.npz
 
+# B15 LS-Newton-ramp solution cache (the committed evidence is the
+# PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1, ~11 min for the M6
+# medium M0.84 ramp)
+cases/demo/b15_ls_newton_ramp/results/*.npz
+
 # Reference papers
 docs/references
 

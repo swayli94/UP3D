@@ -1,0 +1,20 @@
+check,status,detail
+live Newton does NOT converge (the limit cycle),PASS,|R|=2.84e-07 after 60 steps
+...and it is a CLEAN stall (0 limited/floored) = assignment churn,PASS,lim/flr=0/0
+frozen Newton CONVERGES,PASS,|R|=8.49e-13 in 22 steps (reason=assignment_cycle)
+...in fewer steps than the live budget,PASS,22 vs 60
+...and the freeze does NOT move the solution,PASS,gamma 0.218809 vs live 0.218804
+...with no freeze reverts,PASS,
+PICARD leaves top Mach levels UNCONVERGED (the plateau),PASS,"3/5 levels, |R|=1.55e-05, 962 outers, 41.9s"
+NEWTON ramp reaches the target STRICTLY,PASS,"|R|=3.10e-12, 7.5s"
+...0 limited / 0 floored,PASS,
+...and it is FASTER than the (stalled) Picard,PASS,7.5s vs 41.9s = 5.6x
+M_max consistent with the same-mesh CONFORMING-Newton truth (1.408),PASS,M_max=1.3924 vs 1.408
+intermediate_tol does NOT move the final solution,PASS,gamma 0.212445 vs strict 0.212445
+...and it is faster still,PASS,6.5s vs 7.5s; newton steps 38 vs 48
+M6 medium M0.84: the Newton ramp REACHES the target,PASS,"m_final=0.84, 657s (11.0 min)"
+...every ramp level converged,PASS,6/6 levels
+"...the freeze armed at every level, with no reverts",PASS,"froze=[1, 1, 1, 1, 1, 1]"
+...FASTER than the committed Picard (2304.7 s),PASS,657s vs 2304.7s = 3.51x
+"...and the PLATEAU is gone: |R| ~1e-11, not the Picard 1e-5..1e-4",PASS,|R|=6.94e-11 (Picard parks at 1e-5..1e-4)
+...M_max agrees with the committed Picard (2.4549) within 5%,PASS,M_max=2.4938 vs 2.4549

@@ -1052,3 +1052,162 @@ BLAS 求和次序不保证）；`_cp_from_q2` 逐三角形标量 njit 调用,与
 
 证据:`tests/test_b11_post_unified.py`（9 passed,双路径逐位相等 + 分派守卫）,demo
 `cases/demo/b11_ls_infra/run_b11_unified_post.py`（自检列 max|Δcp|=0.0）。
+
+---
+
+## 14. B15:LS Newton 跨声速续接 + N5 冻结选择（2026-07-15,进行中）
+
+### 14.0 动机:24–38 min 的成本在**哪里**
+
+M6 medium M0.84 的 LS 解耗时 **2304.7 s(wake-free)/1469.9 s(嵌入)**
+（`cases/demo/m6_medium_ls_workflow/`）。逐级缓存显示:7 级 Mach ramp
+（0.60→0.84,dm 0.04）中 **0.80 与 0.84 两级不收敛**,各自烧满 200 outer 预算,
+停在**激波位置残差 plateau**（P4/B6/N5 软模）。`tol_residual` 已被设到 1e-5
+（plateau 之上）——设 1e-7 会让每级烧满预算（~1 h）。**这是 Picard 方法的固有
+属性,不是调参问题。** Newton 没有这个软模。
+
+但 B15 之前 `newton_ls` 跑不了 ramp:`freeze=` 是**无实现的保留字段**;收敛判据
+硬性要求 0 limited/floored（激波限速单元恰好挡住它）;**没有 Mach ramp 包装器**。
+
+### 14.1 逐侧冻结:内核**原样复用**,只是接线
+
+`kernels/upwind.py` 的冻结机械（`classify_upwind_branches`、
+`rho_tilde_frozen_sweep`、`rho_tilde_frozen_sensitivities_sweep` +
+`UpwindOperator.freeze_upwind_state/rho_tilde_frozen/…`）**逐字复用**:LS 的逐侧
+算子（`multivalued.py::_side_upwind`）本就是 **walk 模式**的 `UpwindOperator`,
+只是把 face graph 掩到自己一侧。所以 B15 = 接线,不是新数值。
+
+新增:`MultivaluedOperator.newton_side_data(frozen=…)` +
+`freeze_side_state`（逐侧 `(upstream, branch)` 捕获）。冻结态下 `n_floored` 只数
+`branch==3`（分支 0–2 **不重新施加 floor**）⇒ **干净冻结天然 0 floored**,这正是
+解开 0-clamped 收敛判据的机制。限速器（m_cap）保持 **live**（与 conforming 一致）。
+
+**`LSNewtonSystem`（新类）:** 把残差与 Jacobian 装配抽出为**单一代码路径**,求解
+器与 FD gate 共用——Jacobian 必须是求解器**实际所用**残差的导数,一个自己重写装配
+的 FD 测试只是在测它自己的副本。
+
+**GB15.1 FD:** rel **6.7e-9**（eps 1e-5;1e-6/1e-7 给 5.8e-8/6.0e-7,舍入主导的
+干净标度 ⇒ 确系真导数),ε-guard 仅排除 3.1% 的行,真实激波区（nu_max 0.785,
+1118 个 branch-1/2 单元）。冻结 sweep 在冻结点**逐位复现** live 密度。
+
+### 14.2 ★ 触发器勘误:conforming 的配方**不可平移**
+
+`solve/newton.py` 的冻结触发是 `(r < freeze_tol) OR live_stalled`。**逐字移植会
+坏事。**
+
+**实测（NACA medium M0-embedded M0.75）:** LS 的 live 残差在 ±2× 区间**震荡数十
+步但仍在下降**（同期 γ 从 0.183 走到 0.243——这是**刚性方向上的慢进展,不是
+stall**）。`live_stalled` 在 ~5e-6 就误触发,冻结了一个**仍在移动**的迎风指派;
+冻结步随即发散 → revert → 重新武装 → 再发散:**3 次 revert,不收敛**——而**原封
+不动的 live 路径 54 步收敛到 7.5e-12**。
+
+去掉 stall 触发后,同一算例在 |R|<1e-6（指派已安定）才冻结,**53 步收敛到
+2.1e-12,0 revert,落在与 live 完全相同的 γ=0.243305**,且 `residual_unfrozen`
+= 2.1e-12（LIVE 残差在冻结解处同样紧）⇒ **诚实通过**。
+
+⇒ **LS 路径的冻结只由 `freeze_tol` 武装。** `stall_window` 只留给（opt-in 的）
+`accept_on_stall` 松接受路径。
+
+### 14.3 ★ 冻结确实治愈了一个**真实的极限环**（GB15.2）
+
+**NACA coarse M0.75:** live LS Newton **不收敛**——停在一个**周期 6 的极限环**
+（3.2e-7, 2.8e-7, 2.7e-7, 1.3e-6, 8.6e-7, 4.3e-7,精确重复）、|R|≈2.7e-7（高出
+tol 三个量级）、**0 limited/floored**（干净停滞 = 指派 churn）。武装冻结后:
+**22 步收敛到 8.5e-13**,0 revert,**γ 0.218809 vs live 环的 0.218804** ⇒ 冻结
+**只去掉 churn,不改变解**。
+
+**安全网（新增,B15）:** `freeze_max_reverts`（默认 3）——反复发散的冻结会**永久
+解除武装**并回落到 live 路径 ⇒ 冻结**只可能帮忙,绝不会赔掉收敛性**。报告的
+`n_limited/n_floored` **总是 live 重读**:冻结收尾天生 0 floored,不能拿它自证。
+
+### 14.4 Mach ramp 包装器 `solve_multivalued_newton_transonic`（GB15.3）
+
+镜像 conforming N5/N6:上行 `mach_schedule`;**只从收敛级热启动**;失败级把 dm
+折半、在其**下方**插入新级且**严格**运行;可选 `upwind_c_post`(López 2.0→1.6);
+诚实的 `target_reached`/`m_final`（P13/G13.3 勘误:**绝不对未达标 ramp 的状态做
+统计**）。
+
+**★ `intermediate_tol` 的 LS 专属差异:中间级**保持冻结武装**。** conforming 的
+松掩码（`newton.py:888`）在中间级设 `freeze_tol=None`;LS 不能这么做——接受判据
+的**每一条**路径（含松路径）都要求 0 limited/floored,而 0.60→0.84 的 ramp 里
+**激波在中途成形**,这些中间级带着限速单元,只有**通过冻结**才能拿到 0-clamped
+接受。⇒ **松开停止容差,保留机制。** conforming 折叠区的禁忌（松级留下一个未被
+跟踪的 **Γ 种子**,G10.2）在此**无对应物**:LS 无 Γ 自由度,Γ 是 `phi_ext` 内的
+解模态。
+
+**★ 种子也必须继承 B13 lagged-LU（实测陷阱）:** `_seed_from_picard` 原先不转发
+`direct_refactor_every`,于是种子的**每个 outer 都做一次完整稀疏分解**——M6
+medium 上 ≈17 s × n_seed,即 40-outer 种子 **~11 min 的纯热启动**,把它所要热启动
+的 Newton 解本身都盖过去了。种子沿用 lifting 的 `direct_reuse_rtol=1e-10`（**不是**
+Newton 的 1e-8):Picard 不动点只由其 lag 容差钉住,不精确的 reuse 步会**移动**它
+的停止点（B13,`picard_ls.py:361-366`）。
+
+**GB15.3 实测（NACA coarse M0.80 / α1.25 = B6 gate 工况;同网格 conforming-Newton
+真值 shock 0.658 / cl_p 0.459 / M_max 1.408）:**
+
+| 方法 | 墙钟 | γ | \|R\| | 收敛级 | 迭代 |
+|---|---|---|---|---|---|
+| Picard | 43.3 s | 0.190374 | **1.55e-5**(停滞) | **3/5** | 962 outer |
+| Newton 严格 | **8.3 s (5.2×)** | 0.212445 | **3.1e-12** | 5/5 | 48 步 |
+| Newton + `intermediate_tol` | **7.1 s (6.1×)** | **0.212445** | 3.1e-12 | 5/5 | **38 步** |
+
+⇒ (1) plateau 消失:Picard 顶部两级烧满预算、终于 1.55e-5（**不是解**);Newton
+到 3.1e-12,0 lim/flr。(2) **`intermediate_tol` 是免费的**:最终 γ **逐位相同**
+（0.212445),步数 48→38。(3) M_max **1.3924** vs conforming-Newton 真值 **1.408**
+（−1.1%）⇒ 物理自洽;γ 相对同一真值 **−7.4%** = **LS 与 conforming 的离散化差异**
+（B6 曾记为 ~13%),**现在第一次能在两侧都严格收敛的前提下干净测量**——B15 使其
+可测,但 B15 **不负责消除它**。
+
+### 14.5 ★ GB15.4:M6 medium M0.84 —— plateau 消除,3.4× 提速;以及**四条**踩坑记录
+
+**结果(ONERA M6 medium wake-free,M0.84/α3.06,63,100 ext dofs):**
+
+| | Picard(committed) | **Newton ramp(B15)** |
+|---|---|---|
+| 墙钟 | 2304.7 s(**38.4 min**) | **672 s(11.2 min)= 3.4×** |
+| 残差 | **1e-5…1e-4 plateau**(有界停滞,顶部两级烧满 200-outer 预算) | **~1e-11**,每级收敛 |
+| M_max | 2.4549 | 2.4938(差 1.6%) |
+| clamped 单元 | ≤3 / 329k | 3 / 330k |
+
+逐级(全部 froze=True,**0 次 revert**):M0.60 ✓ 5 步 / 0.65 ✓ 19 / 0.70 ✓ 23 /
+0.75 ✓ 16 / 0.80 ✓ 19 / **0.84 ✓ 16 步,|R| 6.9e-11**。
+
+**诚实限定:** 多数级的接受理由是 `assignment_cycle` —— 即**冻结系统**收敛到 ~1e-11
+后,在**指派不连续性地板**处被接受(live 残差跨 refresh 不再改善)。这是 N5 的既有
+语义(conforming 路径同样如此),**不是**"live 残差 < 1e-10"的断言。相对 Picard 的
+1e-5…1e-4 好 6–7 个数量级,但不要把它说成"live 严格解"。
+
+**★★ 四条踩坑记录(全部实测逼出,无一靠推理猜到)。把 conforming 的 N5 配方"移植"
+过来远不是机械工作——这是 B8 教过的同一课。**
+
+1. **TE 折线必须用权威几何。** 手写常数 `x_te(0)=0.8059` vs `wing3d.x_te(0)=0.80611`
+   —— **差 2e-4**。`CutElementMap` 靠把折线**匹配到壁面节点**找 TE(M2:M6 的 TE
+   端点是精确壁面节点),差 2e-4 就**一个也匹配不上** ⇒ **0 个 TE 节点 ⇒ 无 Kutta ⇒
+   Γ 不被钉住 ⇒ 340k 限速单元 + NaN**,而求解器**静默通过**。
+   ⇒ 已在两个 LS 求解器加**守卫**:`te_nodes == 0` 直接报错并指向 `meshgen.wing3d.x_te`。
+
+2. **★ `freeze_tol` 必须设在 CHURN 地板之上,而地板随马赫数上升。**
+   实测地板:**<1e-6(M0.60)→ 8.6e-6(M0.65)→ 2.7e-4(M0.70)**。设在地板之下,
+   残差会被一次**离散迎风选择翻转**甩回去(实测:干净下降到 8.6e-6,然后 ×300 跳到
+   **同一个值 2.6e-3**,重复出现 —— 离散翻转的签名),冻结**永远武装不了**,ramp 死掉。
+   **这与"`tol_residual` 必须设在 Picard plateau 之上"是同一条规律的两个面。**
+
+3. **★ 残差不能跨"选择纪元"比较。** 冻结相位把 `r_best` 压到 1.5e-11;refresh 之后
+   残差**合法地**回到 live 尺度(2.6e-3),fail-fast(`res > 100*r_best`)就读成 10⁸×
+   爆炸,把一个**完全健康**的 freeze-refresh 循环掐死。⇒ `r_best` 在 freeze / refresh
+   / revert 时**重置**(选择纪元作用域)。
+
+4. **★ 冻结相位的 clamp 计数是构造性陈旧的,不能用作接受判据。** 冻结下 `n_floored`
+   数的是 `branch==3`,即**冻结时刻**的 clamped 单元,这个数**永不下降**。用
+   `n_flr == 0` 作接受前提,会**拒绝一个 7.8e-14 的机器精度解**(实测 M0.70:冻结把
+   周期-7 极限环治成干净下降到 7.8e-14,那个 floored 单元在 live 场里**自己消失了**,
+   最终 live lim/flr = 0/0,而判据仍不触发)。⇒ 冻结相位只要求"不比冻结时更差";
+   **裁决者是 honesty 分支里已有的 LIVE 重估**(它是严格的)。
+
+**顺带一条同源发现:** `freeze_max_clamped`(默认 0 = conforming 的 N5 规则)。M6
+medium M0.70 上**一个**持久 floored 单元(330k 里的 1 个)会在**任何** `freeze_tol`
+下堵死冻结 —— 这正是 **P9/G9.1 那堵墙**("permanently-limited cells block the N5
+freeze machinery")。但冻结 sweep **本来就能精确表示** clamped 单元(branch 3:
+`nu=0`, `rho=rho_floor`, `s_e=s_u=0`,导数为零的平坦 clamp),所以"0-clamped 才能
+冻结"这个前提**比机械本身的要求更严**。放松它之后,**冻结一锁住选择,那个 floored
+单元就自己消失了**。收敛判据未动。

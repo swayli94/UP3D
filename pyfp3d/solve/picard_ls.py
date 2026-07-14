@@ -379,6 +379,21 @@ def solve_multivalued_lifting(
         raise ValueError(f"needs 0 <= M_inf < 1, got {m_inf}")
     if farfield not in ("vortex", "neumann", "freestream"):
         raise ValueError(f"farfield={farfield!r} unknown")
+    if len(mvop.cm.te_nodes) == 0:
+        # A wake level-set that matches NO trailing-edge wall node carries no
+        # Kutta condition at all: Gamma is unpinned, the TE aux rows are empty,
+        # and the solve silently produces NaN (measured on ONERA M6 medium: a
+        # hand-rolled TE polyline off by ~2e-4 in x -> 0 TE nodes -> 340k
+        # limited cells, gamma = mean([]) = NaN). Fail loudly instead. Build the
+        # polyline from the AUTHORITATIVE geometry (e.g. meshgen.wing3d.x_te),
+        # whose endpoints are exact wall nodes.
+        raise ValueError(
+            "the wake level-set matched 0 TE nodes on this mesh: the TE "
+            "polyline does not lie on the wall. Without TE nodes there is no "
+            "Kutta condition and the solution is meaningless. Check that the "
+            "polyline comes from the mesh's own geometry (e.g. "
+            "pyfp3d.meshgen.wing3d.x_te / B_SEMI) and that wall_nodes was "
+            "passed to CutElementMap.")
     beta = float(np.sqrt(1.0 - m_inf**2))
     op = mvop.op
     # B6: artificial-density upwinding, per side on the cut elements

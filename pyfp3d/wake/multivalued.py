@@ -520,7 +520,8 @@ class MultivaluedOperator:
         return self._side_dof
 
     def newton_side_data(self, phi_ext, m_inf, upwind_c, m_crit,
-                         gamma_air=1.4, u_inf=1.0, m_cap=3.0, rho_floor=0.05):
+                         gamma_air=1.4, u_inf=1.0, m_cap=3.0, rho_floor=0.05,
+                         frozen=None):
         """Per-side state the LS Newton Jacobian needs (B6-Newton). Mirrors
         `element_rho_tilde` but ALSO returns, per side, the frozen-selection
         sensitivities (s_e, s_u, upstream; P7, on the same-side-masked walk
@@ -531,6 +532,18 @@ class MultivaluedOperator:
           rho_tilde, s_e, s_u, upstream, grad, lim_mask, keep, dofvec.
         Also refreshes the nu/floor/limit monitors (own-side) as
         element_rho_tilde does.
+
+        frozen (B15 / N5 on the level-set path): None (default) = the LIVE
+        per-side selection, bit-identical to before. Otherwise a pair
+        (frozen_upper, frozen_lower) as produced by `freeze_side_state`, each
+        a tuple (upstream, branch): the density and its sensitivities are then
+        the FROZEN-assignment ones (`UpwindOperator.rho_tilde_frozen` /
+        `.rho_tilde_frozen_sensitivities`) -- no walk, the selection is fixed,
+        so the residual/Jacobian are smooth across the max(nu_e,nu_u) near-tie
+        band that makes live LS Newton limit-cycle (P8/N5 record). The speed
+        limiter stays LIVE (as the conforming path does); n_floored counts
+        branch==3 only (no floor is re-applied on branches 0-2, matching
+        `rho_tilde_frozen_sweep`), so a clean freeze has 0 floored by design.
         """
         from pyfp3d.physics.isentropic import density_field, limit_q2_field
 
@@ -538,27 +551,42 @@ class MultivaluedOperator:
         du, dl = self._side_dofvecs()
         upw_u, upw_l = self._side_upwind()
         phi_up, phi_lo = self.side_potentials(phi_ext)
+        fz_u, fz_l = (None, None) if frozen is None else frozen
 
         out = []
         nus, floored, limited = [], 0, 0
         active = np.zeros(self.op.n_tets, dtype=bool)
-        for phi_s, upw, keep, dofvec in ((phi_up, upw_u, in_upper, du),
-                                         (phi_lo, upw_l, in_lower, dl)):
+        for phi_s, upw, keep, dofvec, fz in (
+                (phi_up, upw_u, in_upper, du, fz_u),
+                (phi_lo, upw_l, in_lower, dl, fz_l)):
             grad, q2 = self.op.velocities(phi_s)
             q2n = q2 / u_inf**2
             q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
             lim_mask = (q2l == q2n)          # limiter INACTIVE (P8 convention)
             limited += int(np.count_nonzero((~lim_mask) & keep))
             rho = density_field(q2l, m_inf, gamma_air)
-            rt = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
-                               gamma_air, rho_floor).copy()
+            if fz is None:
+                rt = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
+                                   gamma_air, rho_floor).copy()
+                floored += int(np.count_nonzero((rt == rho_floor) & keep))
+                s_e, s_u, upstream = upw.rho_tilde_sensitivities(
+                    grad, q2l, rho, m_inf, upwind_c, m_crit, gamma_air,
+                    rho_floor)
+                upstream = upstream.copy()
+            else:
+                up_sel, branch = fz
+                rt = upw.rho_tilde_frozen(q2l, rho, up_sel, branch, m_inf,
+                                          upwind_c, m_crit, gamma_air,
+                                          rho_floor).copy()
+                floored += int(np.count_nonzero((branch == 3) & keep))
+                s_e, s_u = upw.rho_tilde_frozen_sensitivities(
+                    q2l, rho, up_sel, branch, m_inf, upwind_c, m_crit,
+                    gamma_air, rho_floor)
+                upstream = up_sel        # the frozen selection is the u(e) map
             nus.append(upw.nu[keep])
             active |= (upw.nu > 0.0) & keep
-            floored += int(np.count_nonzero((rt == rho_floor) & keep))
-            s_e, s_u, upstream = upw.rho_tilde_sensitivities(
-                grad, q2l, rho, m_inf, upwind_c, m_crit, gamma_air, rho_floor)
             out.append({"rho_tilde": rt, "s_e": s_e.copy(), "s_u": s_u.copy(),
-                        "upstream": upstream.copy(), "grad": grad.copy(),
+                        "upstream": upstream, "grad": grad.copy(),
                         "lim_mask": lim_mask, "keep": keep, "dofvec": dofvec})
         nu_own = np.concatenate(nus) if len(nus) else np.zeros(0)
         self.nu_max = float(nu_own.max()) if nu_own.size else 0.0
@@ -567,6 +595,34 @@ class MultivaluedOperator:
         self.n_limited = limited
         self._nu_active = active
         return out[0], out[1]
+
+    def freeze_side_state(self, phi_ext, m_inf, upwind_c, m_crit,
+                          gamma_air=1.4, u_inf=1.0, m_cap=3.0, rho_floor=0.05):
+        """B15 / N5 on the level-set path: capture the per-side upwind
+        selection (upstream, branch) at the current phi_ext, for a
+        frozen-assignment Newton finish. The per-side ops are walk-mode with a
+        same-side-masked face graph (`_side_upwind`), so this is the per-side
+        analogue of `UpwindOperator.freeze_upwind_state`.
+
+        Returns (frozen_upper, frozen_lower), each a tuple (upstream, branch)
+        of COPIES (they must survive subsequent live sweeps). Pass the pair
+        straight back as `newton_side_data(frozen=...)`. The state is captured
+        at the SAME q2l/rho `newton_side_data` computes, so the frozen sweep
+        reproduces the live density bitwise at the freeze point.
+        """
+        from pyfp3d.physics.isentropic import density_field, limit_q2_field
+
+        upw_u, upw_l = self._side_upwind()
+        phi_up, phi_lo = self.side_potentials(phi_ext)
+        frozen = []
+        for phi_s, upw in ((phi_up, upw_u), (phi_lo, upw_l)):
+            grad, q2 = self.op.velocities(phi_s)
+            q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
+            rho = density_field(q2l, m_inf, gamma_air)
+            up_sel, branch = upw.freeze_upwind_state(
+                grad, q2l, rho, m_inf, upwind_c, m_crit, gamma_air, rho_floor)
+            frozen.append((up_sel, branch))
+        return frozen[0], frozen[1]
 
     def nu_active_elements(self):
         """Element ids with a nonzero artificial-density switch (nu > 0) on

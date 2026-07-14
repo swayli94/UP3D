@@ -55,8 +55,14 @@ workstation-scale (minutes for 1–3 M nodes).
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` (**375 passed + 18 skipped + 2 xfailed since
-   Track B B11 2026-07-14, measured 1068 s @8 threads** — +17 passed +1 skipped
+3. Full suite: `pytest tests/` (**395 passed + 18 skipped + 2 xfailed since
+   Track B B15 2026-07-15, measured 968.29 s @16 threads** — +11
+   `tests/test_b15_ls_newton_freeze.py` (LS Newton N5 freeze-selection: the
+   frozen-Jacobian FD gate + the four B15 errata locked so they cannot
+   silently return). NOTE the previous "375" line was itself stale: it
+   credited only B11's +17 and omitted B12 (+4) and B13 (+5); 375+9+11 = 395
+   reconciles exactly. Prior: 375 passed + 18 skipped + 2 xfailed since
+   Track B B11 2026-07-14, measured 1068 s @8 threads — +17 passed +1 skipped
    over the 358+17+2 B8-backlog baseline: +9 `tests/test_b11_post_unified.py`
    (the unified post-processing dispatch = legacy, both paths, bit-identical)
    and +8 passed +1 gated skip `tests/test_b11_linear_ls.py` (precond default

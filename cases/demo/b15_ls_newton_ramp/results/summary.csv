@@ -1,0 +1,8 @@
+part,case,method,wall_s,n_iter,residual,converged,gamma,m_max
+GB15.2,NACA coarse M0.75,live,,60,2.840e-07,0,0.218804,1.3421
+GB15.2,NACA coarse M0.75,frozen,,22,8.488e-13,1,0.218809,1.3420
+GB15.3,NACA coarse M0.80 a1.25,picard,41.9,962,1.552e-05,0,0.190374,1.3820
+GB15.3,NACA coarse M0.80 a1.25,newton,7.5,48,3.101e-12,1,0.212445,1.3924
+GB15.3,NACA coarse M0.80 a1.25,newton+interm_tol,6.5,38,3.101e-12,1,0.212445,1.3924
+GB15.4,M6 medium M0.84 wake-free,picard (committed),2304.7,,1e-5..1e-4 (plateau),0,,2.4549
+GB15.4,M6 medium M0.84 wake-free,newton ramp,657.4,98,6.942e-11,1,0.088338,2.4938
