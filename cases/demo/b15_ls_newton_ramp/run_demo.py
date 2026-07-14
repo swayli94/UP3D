@@ -277,6 +277,30 @@ if GATED and M6_WF.exists():
     print(f"    [note] final clamped cells (live): "
           f"{r6['n_limited']}/{r6['n_floored']} of {len(m6.elements)} "
           f"(committed Picard: <=3)")
+    # ★ RECORD the clamped cells as a committed artifact. `freeze_max_clamped>0`
+    # RELAXES the convergence semantics: the assignment_cycle / refresh_budget
+    # accept routes do not re-check the clamp count, so this converged=True state
+    # CARRIES clamped cells. They do NOT "clear themselves" -- they persist at
+    # every level from M0.70 up. Anyone quoting the M6 number must see this.
+    per_level_clamped = ", ".join(
+        "M{:.2f}:{}/{}".format(l["m_inf"], l["n_limited"], l["n_floored"])
+        for l in lv)
+    accept_routes = sorted({l["accept_reason"] for l in lv})
+    check("...HONEST: the converged state CARRIES clamped cells (semantics "
+          "relaxed by freeze_max_clamped>0, NOT a 0-clamped solution)",
+          True,
+          f"live lim/flr={r6['n_limited']}/{r6['n_floored']} of "
+          f"{len(m6.elements)} tets (Picard <=3); per level "
+          f"[{per_level_clamped}]; accept routes {accept_routes}")
+    for l in lv:
+        rows.append(dict(part="GB15.4", case=f"  level M{l['m_inf']:.4f}",
+                         method=f"newton ({l['accept_reason']})",
+                         wall_s="", n_iter=l["n_newton"],
+                         residual=f"{l['residual_norm']:.3e}",
+                         converged=int(l["converged"]),
+                         gamma=f"{l['gamma']:.6f}",
+                         m_max=f"{l['mach_max']:.4f}",
+                         clamped=f"{l['n_limited']}/{l['n_floored']}"))
     rows.append(dict(part="GB15.4", case="M6 medium M0.84 wake-free",
                      method="picard (committed)",
                      wall_s=f"{PICARD_M6['wall_s']:.1f}", n_iter="",
@@ -296,7 +320,8 @@ if GATED and M6_WF.exists():
 with open(OUT / "summary.csv", "w", newline="") as f:
     w = csv.DictWriter(f, fieldnames=["part", "case", "method", "wall_s",
                                       "n_iter", "residual", "converged",
-                                      "gamma", "m_max"])
+                                      "gamma", "m_max", "clamped"],
+                       restval="")
     w.writeheader()
     w.writerows(rows)
 with open(OUT / "checks.csv", "w", newline="") as f:

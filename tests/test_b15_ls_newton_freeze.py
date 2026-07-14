@@ -359,3 +359,40 @@ def test_m6_recipe_arms_freeze_above_the_churn_floor():
         "freeze_tol must sit ABOVE the M0.70 churn floor (2.7e-4)")
     assert R["freeze_max_clamped"] >= 1, (
         "a single floored cell otherwise blocks the freeze at any freeze_tol")
+
+
+def test_freeze_max_clamped_relaxes_the_convergence_semantics():
+    """★ RETRACTION LOCK (self-caught 2026-07-15). Two claims in the first B15
+    draft were WRONG and must not creep back:
+
+      (a) "the clamped cell clears itself" -- FALSE as a general property. It was
+          over-generalised from ONE isolated 80-step M0.70 run. In the SHIPPED M6
+          ramp the clamped cells PERSIST at every level from M0.70 up (M0.84 ends
+          with 1 limited / 2 floored of 330k, matching the Picard's <=3).
+      (b) "the convergence gate is untouched" -- FALSE. With freeze_max_clamped>0
+          the `assignment_cycle` / `refresh_budget` accept routes do NOT re-check
+          the clamp count, so a returned converged=True state MAY CARRY clamped
+          cells. ONLY the strict `tol` route still demands live 0-lim/0-flr.
+
+    This test pins (b) at the source level -- it is the load-bearing one, because
+    it governs how the M6 headline number may be quoted.
+    """
+    import inspect
+    src = inspect.getsource(solve_multivalued_newton)
+    honesty = src.split("HONESTY: re-evaluate the LIVE")[1].split(
+        "--- freeze trigger")[0]
+
+    # the strict `tol` route re-checks the LIVE clamp counts...
+    tol_route = honesty.split('accept_reason = "tol"')[0]
+    assert "mvop.n_limited == 0" in tol_route
+    assert "mvop.n_floored == 0" in tol_route
+
+    # ...but assignment_cycle / refresh_budget deliberately do NOT. If someone
+    # "fixes" that, the M6 recipe stops converging -- and if someone instead
+    # removes the caveat from the docs, the reported state is mis-sold.
+    for route in ("assignment_cycle", "refresh_budget"):
+        seg = honesty.split(f'accept_reason = "{route}"')[0].rsplit(
+            'accept_reason = "tol"', 1)[-1]
+        assert "n_limited == 0" not in seg, (
+            f"the {route} route now re-checks clamps: either the M6 recipe "
+            "must be re-validated, or this retraction lock is stale")

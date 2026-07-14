@@ -570,13 +570,26 @@ def solve_multivalued_newton(
         # 0-clamped precondition. Why it exists: at M6 medium M0.70 a SINGLE
         # persistently-floored cell (of 330k) blocks the freeze at ANY
         # freeze_tol, and the live iteration then sits in an exact period-7
-        # limit cycle forever -- the same wall P9/G9.1 hit on the conforming
-        # path ("permanently-limited cells block the N5 freeze machinery"). But
-        # the frozen sweep REPRESENTS a clamped cell exactly (branch 3: nu=0,
-        # rho=rho_floor, s_e=s_u=0, a flat clamp with zero derivative), so the
-        # 0-clamped precondition is stricter than the machinery needs. The
-        # CONVERGENCE gate is untouched -- a clamped cell still cannot be
-        # reported as a converged physical solution.
+        # limit cycle forever. The frozen sweep REPRESENTS a clamped cell
+        # exactly (branch 3: nu=0, rho=rho_floor, s_e=s_u=0, a flat clamp with
+        # zero derivative), so the 0-clamped precondition is stricter than the
+        # machinery needs.
+        #
+        # !! READ THIS BEFORE QUOTING A CONVERGED STATE (self-caught, B15) !!
+        # Setting freeze_max_clamped > 0 RELAXES THE CONVERGENCE SEMANTICS. The
+        # `assignment_cycle` / `refresh_budget` accept routes below do NOT
+        # re-check the clamp count, so a returned converged=True state MAY CARRY
+        # up to that many clamped cells -- the M6 medium M0.84 solution does
+        # carry 3 of 330k (which happens to match the Picard's <=3). Only the
+        # strict `tol` route still demands live 0-limited/0-floored. And the
+        # clamped cells do NOT "clear themselves": in the shipped ramp they
+        # persist at every level from M0.70 up.
+        #
+        # P9/G9.1 is CITED, NOT RE-TESTED: its record is about permanently
+        # LIMITED cells on the CONFORMING path (solve/newton.py, which still has
+        # the hard 0-clamped rule); ours are mostly FLOORED. Whether relaxing the
+        # precondition would unblock G9.1's conforming fine mesh is an UNTESTED
+        # hypothesis.
         if (armed and frozen is None and freeze_cooldown == 0 and m_inf > 0.0
                 and n_lim + n_flr <= freeze_max_clamped
                 and res < freeze_tol):
@@ -724,10 +737,14 @@ B_NEWTON_TRANSONIC_DEFAULTS = dict(   # 2.5D fold zone: small steps, strict
 #   freeze_max_clamped=8  a SINGLE persistently-floored cell (of 330k) otherwise
 #                         blocks the freeze at ANY freeze_tol -- the P9/G9.1 wall
 #                         ("permanently-limited cells block the N5 freeze
-#                         machinery"). The frozen sweep represents a clamped cell
-#                         exactly (branch 3), so the 0-clamped precondition was
-#                         stricter than the machinery needs. Once frozen, the
-#                         clamped cell CLEARS itself.
+#                         machinery" -- CITED, NOT re-tested; that record is about
+#                         LIMITED cells on the conforming path, ours are FLOORED).
+#                         The frozen sweep represents a clamped cell exactly
+#                         (branch 3), so the precondition was stricter than the
+#                         machinery needs. NOTE the clamped cells do NOT clear:
+#                         the converged M0.84 state CARRIES 3 of 330k (matching
+#                         the Picard's <=3), and this recipe therefore RELAXES the
+#                         convergence semantics -- see solve_multivalued_newton.
 B_NEWTON_M6_DEFAULTS = dict(          # true 3D, far from the fold: lagged-LU
     m_start=0.60, dm=0.05, dm_min=0.01, freeze_tol=1e-3,
     freeze_refresh_max=8, freeze_max_clamped=8, direct_refactor_every=1000,

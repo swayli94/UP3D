@@ -2309,14 +2309,11 @@ lesson B8 taught). Every one was forced out by measurement, none was foreseen:
    ⇒ The frozen phase need only be no worse than at the freeze; the **LIVE
    re-evaluation** in the honesty branch is the arbiter (and it is strict).
 
-★ **New knob `freeze_max_clamped`** (default **0** = the conforming N5 rule,
-bit-identical). At M6 medium M0.70 a **single** persistently-floored cell (of 330k)
-blocks the freeze at **any** `freeze_tol` — **the P9/G9.1 wall** ("permanently-limited
-cells block the N5 freeze machinery"). But the frozen sweep **represents a clamped
-cell exactly** (branch 3: `nu=0`, `rho=rho_floor`, `s_e=s_u=0` — a flat clamp with
-zero derivative), so the 0-clamped precondition was **stricter than the machinery
-needs**. Relaxed, the freeze locks the selection and **the clamped cell clears
-itself**. The CONVERGENCE gate is untouched.
+★ **New knob `freeze_max_clamped`** (default **0** = the conforming N5 rule, bit-identical). At M6 medium M0.70 a **single** persistently-floored cell (of 330k) blocks the freeze at **any** `freeze_tol`. The frozen sweep **represents a clamped cell exactly** (branch 3: `nu=0`, `rho=rho_floor`, `s_e=s_u=0` — a flat clamp with zero derivative), so the 0-clamped precondition is stricter than the machinery needs; relaxing it lets the freeze arm and the ramp completes.
+⚠ **TWO CORRECTIONS to an earlier draft of this entry (2026-07-15, self-caught):**
+  (a) **The clamped cells do NOT "clear themselves".** That was over-generalised from ONE isolated 80-step run at M0.70 (driven to 7.8e-14, ending 0/0). In the SHIPPED ramp — which accepts at `assignment_cycle` after ~23 steps — the cells **PERSIST**: M0.70 `0/1`, M0.75 `0/1`, M0.80 `1/1`, **M0.84 `1/2` = 3 clamped cells** (which is exactly the Picard's ≤3, so it is consistent, not alarming). The freeze proceeds **WITH** them present.
+  (b) **The convergence semantics ARE relaxed** — the earlier "the convergence gate is untouched" was FALSE. With `freeze_max_clamped > 0` the `assignment_cycle` / `refresh_budget` accept routes do NOT re-check the clamp count, so the returned `converged=True` M0.84 state **carries 3 clamped cells of 330k**. Only the strict `tol` route still demands live 0-limited/0-floored. State this whenever the M6 number is quoted.
+⚠ **P9/G9.1 is CITED, NOT RE-TESTED.** P9/G9.1 records that permanently-**limited** cells block the N5 freeze machinery on the CONFORMING path; our blocker at M6 medium is mostly **floored** cells — the same *precondition*, a different clamp. `freeze_max_clamped` exists **only on the LS path** (`newton.py` still has the hard 0-clamped rule), and whether relaxing it would unblock G9.1's conforming fine mesh is an **UNTESTED HYPOTHESIS**, not a result. Do not cite B15 as having revived G9.1.
 
 **Bit-identity:** `freeze_tol=None` (default) + `tol_residual_loose/rel=None` +
 `accept_on_stall=False` ⇒ the pre-B15 live solver, byte-identical (locked).

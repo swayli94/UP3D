@@ -2969,8 +2969,25 @@ B8 taught, and it is the most reusable output of B15.
 
 **New knob `freeze_max_clamped`** (default **0** = the conforming N5 rule,
 bit-identical): at M6 medium M0.70 a **single** persistently-floored cell of 330k
-blocks the freeze at **any** `freeze_tol` — **the P9/G9.1 wall**. But the frozen sweep
-represents a clamped cell *exactly* (branch 3: `nu=0`, `rho=rho_floor`, `s_e=s_u=0`),
-so the 0-clamped precondition was stricter than the machinery needs. Relaxed, the
-freeze locks the selection and **the clamped cell clears itself**. The convergence
-gate is untouched.
+blocks the freeze at **any** `freeze_tol`. The frozen sweep represents a clamped cell
+*exactly* (branch 3: `nu=0`, `rho=rho_floor`, `s_e=s_u=0`), so the 0-clamped
+precondition is stricter than the machinery needs; relaxing it lets the freeze arm and
+the ramp complete.
+
+⚠ **CORRECTIONS (2026-07-15, self-caught after the first draft):**
+1. **The clamped cells do NOT "clear themselves".** Over-generalised from ONE isolated
+   80-step M0.70 run (driven to 7.8e-14, ending 0/0). In the SHIPPED ramp (which accepts at
+   `assignment_cycle` after ~23 steps) they **PERSIST**: M0.70 `0/1`, M0.75 `0/1`, M0.80
+   `1/1`, **M0.84 `1/2` = 3 clamped cells of 330k** — exactly the Picard's ≤3, so consistent,
+   but the freeze proceeds **WITH** them, it does not dissolve them.
+2. **The convergence semantics ARE relaxed** — "the convergence gate is untouched" was
+   FALSE. With `freeze_max_clamped > 0` the `assignment_cycle` / `refresh_budget` accept
+   routes do NOT re-check the clamp count, so the returned `converged=True` M0.84 state
+   **carries 3 clamped cells**. Only the strict `tol` route still demands live
+   0-limited/0-floored. Quote the M6 number WITH this caveat.
+3. **P9/G9.1 is CITED, NOT RE-TESTED.** Its record is about permanently-**limited** cells on
+   the CONFORMING path; ours are mostly **floored** — same precondition, different clamp.
+   `freeze_max_clamped` exists **only on the LS path** (`newton.py` keeps the hard rule).
+   Whether relaxing it would unblock G9.1's conforming fine mesh is an **UNTESTED
+   HYPOTHESIS**. B15 has NOT revived G9.1.
+
