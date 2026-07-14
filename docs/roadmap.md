@@ -1609,7 +1609,7 @@ continuation ~1 h).
 
 ---
 
-## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10** — B9 = multi-wake NEXT, B10 = curved wake shelved)
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10**; **B12 ✓ CLOSED 2026-07-14 — lagged-LU direct-reuse for LS Newton (M6 medium Newton 2.18× via 1 factorization vs 7), NEW appended after B11** — B9 = multi-wake NEXT, B10 = curved wake shelved)
 
 > **★ Track-B renumber 2026-07-12 (user-directed).** TWO renumbers landed the
 > same day. **(1)** A new **B4 — TE control-volume / implicit-Kutta
@@ -2027,16 +2027,84 @@ follow-up below): B11 ships the iterative escape, not the direct-reuse one.
       The escape's payoff is the FINE-scale regime where spsolve is impossible on
       memory (feasibility, extrapolated); the escape is *demonstrated to
       converge* at 2.5D medium (|Δγ| 7.5e-10, 0 stalls; `solver_ab.csv`).
-      **Follow-ups (recorded, not scheduled):** the Núñez symmetric row
-      assignment (§5.3 — would restore AMG and a cheaper factorization) and the
+      **Follow-ups:** the Núñez symmetric row assignment (§5.3 — would restore
+      AMG and a cheaper factorization; still not scheduled) and the
       `direct_refactor_every` (lagged-LU) port into `newton_ls` (roadmap "LS
-      Newton on M6 = DEFERRED").
+      Newton on M6 = DEFERRED") — the latter **executed as B12 (2026-07-14)**.
 
 **Evidence:** tests `tests/test_b11_post_unified.py` (9) +
 `tests/test_b11_linear_ls.py` (10 + 1 gated); demos
 `cases/demo/b11_ls_infra/` (`run_b11_unified_post.py`, `run_b11_gmres_ls.py`,
 `run_b11_m6_headline.py` [gated]). Conforming solver numerics byte-untouched;
 no Numba kernel or COO-assembly path touched (pure SciPy/PyAMG + numpy).
+
+### B12 — Lagged-LU direct-reuse for LS Newton (medium/M6-scale enabler) ✓ CLOSED 2026-07-14 (NEW, user-directed; appended after B11, no renumber; executes the B11/G11.4 recorded follow-up "LS Newton on M6 = DEFERRED")
+**Deliverable:** make the level-set Newton solve affordable at medium/M6 sizes by
+porting the conforming N6 **lagged-LU direct-reuse** mechanism into
+`solve/newton_ls.py`.
+
+**Why this and not the B11 iterative escapes.** B11 measured (G11.4 A/B,
+`cases/demo/b11_ls_infra/results/`) that the iterative escapes fail on the fused
+level-set matrix beyond coarse — so at medium/M6 sparse-direct is the only
+converging tool, and the cost driver is then the **number of factorizations**:
+
+| case | dofs | spsolve | ILU | AMG |
+|---|---|---|---|---|
+| 2.5D coarse lifting | 6,614 | ✓ 1.9 s | ✓ (\|Δγ\| 9.5e-9) | STALL |
+| 2.5D **medium** lifting | 22,880 | ✓ 8.6 s | ✗ **diverges** γ=−137, 77 stalls | STALL |
+| **M6 medium** lifting | 67,426 | ✓ 454.8 s / 26 outer / **17.5 s per factor** | ✗ **factor_failed** | STALL |
+
+LS Newton with `precond=None` factorizes on **every** Newton step, so on M6
+medium it pays that 17.5 s once per iteration.
+
+**Implementation (`solve/newton_ls.py`, the ONLY production change).** Two new
+kwargs on `solve_multivalued_newton`: `direct_refactor_every: int = 1` and
+`direct_reuse_rtol: float = 1e-8`, active only on the `precond is None` branch.
+`k=1` (default) = the byte-identical per-step `spsolve`. `k>1` = refactor the LU
+(`spla.splu`) every k-th step and drive the intermediate steps with GMRES on the
+FRESH Jacobian preconditioned by the stale (exact) LU, converged to
+`direct_reuse_rtol`; a reuse step whose GMRES fails falls back to a refactor +
+exact solve in the same iteration (robustness never below every-step-direct).
+This is the N6 mechanism (`solve/newton.py::direct_refactor_every`) **minus the
+Woodbury** — the level-set system has NO Γ DOF, so the step is a plain
+`J_free d = −R_free` with no low-rank coupling. New monitor `n_refactor`.
+
+**Gates:**
+- [x] **G12.1 bit-identity — CLOSED 2026-07-14.** `direct_refactor_every=1`
+      (default) is byte-identical to the pre-B12 `spsolve` path (same `phi_ext`,
+      `n_refactor==0`, `n_gmres_total==0`); the two params default to 1 / 1e-8.
+      `tests/test_b12_lagged_lu_ls.py::test_lagged_lu_param_defaults` +
+      `test_default_bit_identical_to_spsolve`. B6/B11 Newton locks unchanged.
+- [x] **G12.2 numerical equivalence (core gate) — CLOSED 2026-07-14.** On the
+      coarse 2.5D mesh at M0.70 (upwind active), `direct_refactor_every` 2 and
+      1000 both reach the spsolve default's converged γ (0.1778053693) to
+      **bit-identity** (|Δγ| < 1e-8), 0 lim/flr, 0 GMRES stalls, and actually
+      reuse the stale LU: **k=1000 refactors ONCE** over 6 Newton iters (vs 5
+      spsolve factorizations at k=1), k=2 refactors 3× — `n_refactor < n_newton`
+      and a reuse GMRES step ran. `tests/test_b12_lagged_lu_ls.py::
+      test_lagged_lu_matches_spsolve` (k∈{2,1000}).
+- [x] **G12.3 scaling headline (gated) — CLOSED 2026-07-14.** M6-medium subsonic
+      (M0.5, α3.06, `farfield="neumann"`, 67,426 dofs) LS Newton A/B from a shared
+      Picard seed. Both take **7 Newton steps to a genuine converged solution**
+      (0 lim/flr); spsolve refactors all 7 (**145.6 s**), lagged-LU (k=1000)
+      refactors **ONCE** + 30 reuse-GMRES iters (**66.7 s = 2.18× faster on the
+      Newton phase**), 0 stalls, **γ bit-identical** (0.06685284, |Δγ| = 6.74e-13).
+      Demo `cases/demo/b12_lagged_lu/run_b12_m6_newton.py` (**6/6 PASS**),
+      `results/m6_newton_ab.csv` + `checks_m6_newton.csv`.
+      **★ Honest boundary:** at 67k dofs one splu fits in memory ⇒ this is a REAL
+      runnable medium-scale win, not an extrapolation. But lagged-LU still needs
+      ≥1 in-memory splu, so it does **not** break the FINE-mesh memory wall (P9's
+      26 GB / 4h39m is per-factorization, not per-count) — that regime remains
+      the Núñez symmetric-row-assignment → AMG route (design_track_b §5.3, not
+      prebuilt).
+
+**Out of scope (recorded):** the LS-Newton Mach-continuation *ramp* wrapper
+(`newton_ls` is single-Mach-level; the conforming `solve_newton_transonic`
+analogue is a separate follow-up), and genuine AMG applicability (Núñez rows).
+
+**Evidence:** `tests/test_b12_lagged_lu_ls.py` (4); demo
+`cases/demo/b12_lagged_lu/` (6/6, G12.3 headline CSV). `solve/newton_ls.py` is
+the only production change; default path byte-identical. Suite +4.
 
 Working rules (DN1 §9–§10):
 
@@ -2220,7 +2288,8 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
 | B8 | ✓ | 2026-07-14 | (NEW 2026-07-13, user-approved; **CLOSED 2026-07-14 as CHARACTERIZED-NOT-CURED, user-arbitrated — B9 unblocked**) **Level-set tip-edge desingularization (row-blend tip taper)** — the LS analogue of P13/G13.2's conforming taper. The conforming `Γ_eff(z)=F(z)·Γ_Kutta(z)` cannot be ported: the LS path has no Γ DOF and its TE Kutta row `s·(q_u−q_l)=0` is homogeneous ⇒ scaling by F is a no-op (G13.2 finding (8)). Fix = a convex BLEND per TE node of the pressure-equality row with B2's continuity weld: `F·[s·(q_u−q_l)] + (1−F)·[φ_aux−φ_main] = 0` (F=1 inboard ⇒ pressure Kutta bit-identical; F=0 at tip ⇒ weld ⇒ jump=0 ⇒ tip unloaded). A DIFFERENT model from `Γ=F·Γ_Kutta` ⇒ r_c independently calibrated, two-path comparison is a physics A/B. **★★ RESULT 2026-07-13 — the blend does NOT close the gate, because its PREMISE is wrong** (demo `cases/demo/b8_tip_taper_ls/` **12/12**; M6 coarse+medium, M0.5, no limiter). The blend works exactly as its model says — converges 0 lim/flr, unloads the tip circulation far past the criterion (**Γ_last ~ h^4.73**, criterion q≥1), perfectly LOCAL (inboard Γ +0.01%, cl +0.03%) — **and the tip edge still DIVERGES** (p **+1.341** untapered → +1.37…+1.58 tapered; bigger r_c is worse). **(1)** G13.2's `p ≈ 1−q` does NOT transfer (q=4.73 yet p=+1.37) ⇒ killing Γ_last does not kill the peak. **(2)** Lift cost ~0 because **there is nothing to unload** — the LS implicit Kutta already drives Γ(tip)→0 emergently (B7: ±3e-4); the conforming path needs the taper only because its free-edge rule leaves Γ_last ~ √h (q=0.44). **(3) ★ MECHANISM:** the peak cell is **OUTBOARD of the geometric tip** (z/b=1.0118), a **`beyond_tip` element the SPANWISE CLIP refuses to cut**, the SAME element tapered or not, and **NOT a small-cut sliver** (V 0.71× median, not even cut) ⇒ **the LS tip singularity lives in how the embedded sheet TERMINATES, not in the circulation it sheds.** The two paths' tip singularities are DIFFERENT OBJECTS. Machinery shipped (correct, tested, bit-identical by default) but **B8 needs a RE-SPEC aimed at the sheet termination (spanwise clip / beyond-tip zone) — user arbitration required.** Cost caveat: the LS path has **no AMG option** (hardcoded `spsolve`, B2 decision) — M6 medium is 484 s/solve at 67k dofs; **fine would hit the splu wall with no escape hatch**. **★★ RE-SPEC ROUND 2026-07-14 (diagnosis-first, then span blend — see the B8 section):** (1) the committed p=+1.34 was a **×5 METRIC ARTIFACT** (`element_mach2` reads mixed-side plain/beyond-tip elements from the aux-substituted side field; assembly uses MAIN dofs — elem 93977: side 1.532 vs main 0.309); the **HONEST exponent is +0.62 (+0.37 no-sliver) = the SAME object as the conforming +0.52**; fix opt-in `element_mach2(mixed_plain="main")`, default bit-identical. (2) The honest residual object is the **termination ring's FINITE jump** (|δ|≈0.026, h- and TE-taper-independent — decoupled from Γ_last, which is why the TE blend measured nothing). (3) The **span blend of the wake-LS rows** (`MultivaluedOperator(span_blend=…)`, default None bit-identical, 11 tests, B-suite 116/9) **WELDS the ring (0.026→0.0003) but is NEGATIVE on locality: ~20% GLOBAL lift loss, uniform in z, r_blend-insensitive, h-GROWING** (⇒ its flat p at rb0.08 is confounded, corrected ~+0.15); component isolation: straddler weld alone −13.3%, inboard blend alone −10.8% ⇒ **the implicit Kutta has no per-station target — ANY sheet-side δ-pin re-levels the global Γ mode ~10×** (the conforming secant keeps the same F(z) at −1.6%). Demos `run_b8_termination_diagnosis.py` + `run_b8_span_blend.py` (8/8). **Both constraint-side routes now measured dead; any further cure must change the FUNCTION SPACE at the termination. ★ ARBITRATED 2026-07-14: CLOSED as characterized-not-cured (honest exponent = the conforming object every closed gate lives with) ⇒ B9 UNBLOCKED; backlog **EXECUTED 2026-07-14 (user-directed)**: `element_mach2` default flipped to `mixed_plain="main"` ("side" stays opt-in for reproducing committed diagnostics; demo repro scripts pin it explicitly), B6/B7 M_max re-read from the cached states WITHOUT re-solving (`run_b8_mmax_reread.py` + `mmax_reread.csv`: side values reproduce committed to 6 digits ⇒ reconstruction verified; **M1 1.453 side → 1.392 main** — the committed M_max was itself a beyond-tip artifact cell; M4 + both 2.5D states bit-identical; all gate bands unchanged), G13.1/P9 LS-exponent errata placed at the original claims in roadmap/demo_report, and the M2 LS-ingestion census landed as tests+CSV (`test_m2_wingbody.py` +7, `ls_ingest_census.csv` — the f3c7989 prose numbers 1,415/76 confirmed exactly at α=0, medium 29,108/150 added). Still recorded, NOT scheduled: the `element_densities` mixed-plain junk-weight fix.** |
 | B9 | ☐ | | (was B8 2026-07-13; orig B6→B5) Multi-wake validation (multi-element / wing-body): two-element cl's plausible, fuselage carries no lift. Unblocks Track M's M2. |
 | B10 | ⊘ SHELVED | 2026-07-10 | (was B9 2026-07-13; orig B7→B6) Curved wake / free wake. Recorded reasons (DN1 §8 / DN2 §4.5.6): the loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent. The `update_direction()` interface capability is retained — it is what B1's α re-aim tests exercise. |
-| B11 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B10, no renumber) **LS-path infrastructure: unified post-processing + GMRES/AMG scaling.** Two gaps closed (a B9 enabler). **(1)** `post/surface.py` + `post/surface_ls.py` now share private cores (`_cp_from_q2`, `_pressure_force`, `_wall_plane_crossings`/`_resolve_station`/`_section_curve_dict`, `_d11_wall_state`) under a keyword-dispatched upper layer `post/unified.py` (`wall_cp`/`wall_forces`/`section_cp`, `phi=` conforming vs `mvop=,phi_ext=` level-set); every legacy function keeps its name/signature and outputs are `np.array_equal` (D11 lock + shock locks pass unchanged). **(2)** the deferred design_track_b.md §5.3 GMRES+AMG landing: `solve_multivalued_laplace`/`_lifting`/`_newton` grow `precond=None|"ilu"|"amg"` (None = the bit-identical `spsolve` default; transonic inherits via `**kwargs`), the escape from the M6-fine splu wall (roadmap "no precond option" caveat). **★ ILU is the effective escape** (spilu on the real fused matrix, 434 iters coarse, exact); **AMG (SA on an SPD Picard-block surrogate + aux↔host springs) converges only on the SPD Laplace/continuity system — on the `wake_ls` lifting operator its convection-like aux rows defeat the SPD surrogate and GMRES STALLS (measured: γ 0.0033 vs 0.139, 455 s, all outers stalled)**, so AMG stays a Laplace/§5.3 knob and ILU is shipped. Núñez symmetric row assignment stays not-prebuilt (§5.3). lagged-LU (`direct_refactor_every`) port to `newton_ls` = recorded out-of-scope follow-up. Evidence: `tests/test_b11_post_unified.py` (9) + `tests/test_b11_linear_ls.py` (10 + 1 gated); demos `cases/demo/b11_ls_infra/` (unified-post + GMRES A/B + gated M6-medium headline CSV). Conforming numerics byte-untouched; no Numba/COO path touched. |
+| B11 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B10, no renumber) **LS-path infrastructure: unified post-processing + GMRES/AMG scaling.** Two gaps closed (a B9 enabler). **(1)** `post/surface.py` + `post/surface_ls.py` now share private cores (`_cp_from_q2`, `_pressure_force`, `_wall_plane_crossings`/`_resolve_station`/`_section_curve_dict`, `_d11_wall_state`) under a keyword-dispatched upper layer `post/unified.py` (`wall_cp`/`wall_forces`/`section_cp`, `phi=` conforming vs `mvop=,phi_ext=` level-set); every legacy function keeps its name/signature and outputs are `np.array_equal` (D11 lock + shock locks pass unchanged). **(2)** the deferred design_track_b.md §5.3 GMRES+AMG landing: `solve_multivalued_laplace`/`_lifting`/`_newton` grow `precond=None|"ilu"|"amg"` (None = the bit-identical `spsolve` default; transonic inherits via `**kwargs`), the escape from the M6-fine splu wall (roadmap "no precond option" caveat). **★ ILU is the effective escape** (spilu on the real fused matrix, 434 iters coarse, exact); **AMG (SA on an SPD Picard-block surrogate + aux↔host springs) converges only on the SPD Laplace/continuity system — on the `wake_ls` lifting operator its convection-like aux rows defeat the SPD surrogate and GMRES STALLS (measured: γ 0.0033 vs 0.139, 455 s, all outers stalled)**, so AMG stays a Laplace/§5.3 knob and ILU is shipped. Núñez symmetric row assignment stays not-prebuilt (§5.3). lagged-LU (`direct_refactor_every`) port to `newton_ls` = recorded out-of-scope follow-up → **executed by B12 (2026-07-14)**. Evidence: `tests/test_b11_post_unified.py` (9) + `tests/test_b11_linear_ls.py` (10 + 1 gated); demos `cases/demo/b11_ls_infra/` (unified-post + GMRES A/B + gated M6-medium headline CSV). Conforming numerics byte-untouched; no Numba/COO path touched. |
+| B12 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B11, no renumber; executes the B11/G11.4 follow-up) **Lagged-LU direct-reuse for LS Newton (medium/M6-scale enabler).** B11 measured that the iterative escapes fail beyond coarse (ILU diverges at 2.5D medium lifting, `factor_failed`s at M6 medium; AMG stalls), so at medium/M6 sparse-direct is the only converging tool and the cost driver is the NUMBER of factorizations (17.5 s each at 67k dofs). `solve_multivalued_newton` gains `direct_refactor_every` (default 1 = bit-identical per-step `spsolve`) + `direct_reuse_rtol`: with `k>1` it refactors the LU every k-th Newton step and drives the intermediate steps with GMRES preconditioned by the stale (exact) LU — the N6 mechanism (`solve/newton.py`) ported **minus the Woodbury** (the LS system has no Γ DOF ⇒ plain `J_free d = −R_free`). **G12.1 (bit-identity) ✓ + G12.2 (equivalence/reuse) ✓** — coarse M0.70 k∈{2,1000} reach the spsolve γ (0.1778053693) to bit-identity, 0 stalls, k=1000 refactors ONCE over 6 Newton iters. **G12.3 (M6-medium subsonic A/B) ✓** — M6 medium M0.5 (67,426 dofs), 7 Newton steps both, spsolve refactors 7× (**145.6 s**) vs lagged-LU 1× + 30 reuse-GMRES iters (**66.7 s = 2.18×**), γ bit-identical (|Δγ| 6.7e-13), 0 stalls, 0 lim/flr. Honest boundary: a real medium-scale win (one splu fits at 67k), but does NOT break the FINE memory wall (still needs ≥1 in-memory splu; that's the Núñez→AMG route). `solve/newton_ls.py` is the only production change, default byte-identical. Evidence: `tests/test_b12_lagged_lu_ls.py` (4); demo `cases/demo/b12_lagged_lu/` (6/6). |
 
 ### Track V — viscous–inviscid interaction
 

@@ -1,0 +1,3 @@
+solver,n_dofs,gamma,n_newton,n_refactor,n_gmres,n_stalled,n_limited,n_floored,wall_s,converged
+spsolve,67426,0.06685284,7,0,0,0,0,0,145.57,1
+lagged(k=1000),67426,0.06685284,7,1,30,0,0,0,66.66,1

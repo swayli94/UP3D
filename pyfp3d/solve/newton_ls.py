@@ -30,10 +30,17 @@ the LU dominates at 3D sizes (P8/N6 measured true-3D LU fill ~100x the 2.5D
 cost). **Use "ilu"** -- it factors the real fused Jacobian and converges; "amg"
 (the SPD surrogate `picard_ls._amg_surrogate_preconditioner`) STALLS on the
 wake_ls-closure operator (measured; convection-like aux rows), so it is not the
-Newton escape (design_track_b.md §5.3). NOTE the lagged-LU direct path
-(`direct_refactor_every`, solve/newton.py) is a SEPARATE follow-up (roadmap
-"LS Newton on M6 = DEFERRED"): B11 ships the iterative escape, not the
-direct-reuse one.
+Newton escape (design_track_b.md §5.3). B11 measured that ILU-GMRES is a
+COARSE-only escape on this fused matrix (it diverges at 2.5D medium lifting and
+`factor_failed`s at M6 medium), so at medium/M6 sizes sparse-direct is the only
+converging tool -- and the cost driver is then the NUMBER of factorizations.
+B12 (2026-07-14) adds the lagged-LU direct-reuse path for exactly that regime:
+with `precond=None` and `direct_refactor_every > 1`, refactor the LU only every
+k-th Newton step and drive the steps in between with GMRES on the FRESH
+Jacobian preconditioned by the stale (exact) LU (the N6 mechanism ported from
+solve/newton.py, minus the Woodbury -- the level-set system has no Gamma
+coupling). `direct_refactor_every=1` (default) keeps the bit-identical
+per-step `spsolve`.
 """
 
 from typing import Dict, Optional
@@ -104,6 +111,8 @@ def solve_multivalued_newton(
     gmres_restart: int = 60,
     gmres_maxiter: int = 50,
     amg_rebuild_every: int = 2,
+    direct_refactor_every: int = 1,
+    direct_reuse_rtol: float = 1e-8,
 ) -> Dict[str, object]:
     """Newton solve on the level-set path (B6-Newton; design_track_b.md 5.5).
 
@@ -129,10 +138,18 @@ def solve_multivalued_newton(
             None) is the same knob for the Picard warm-start solve.
             `linear_rtol=1e-10` keeps the Newton terminus unperturbed at the
             tol_residual gate.
+        direct_refactor_every (B12): lagged-LU direct-reuse, active only on the
+            `precond=None` path. 1 (default) = refactor every step, the
+            bit-identical `spsolve` behaviour. > 1 = refactor the LU every k-th
+            step and drive the intermediate steps with GMRES preconditioned by
+            the stale (exact) LU, converged to `direct_reuse_rtol` (1e-8). This
+            is the medium/M6-scale escape (ILU diverges/factor-fails there),
+            amortising the sparse factorization over k Newton steps. Ignored
+            when precond is "ilu"/"amg".
 
     Returns: dict with phi_ext, phi, gamma, cl_kj, te_jump, converged,
     residual_history, n_newton, n_limited, n_floored, mach2_max, nu_max,
-    precond, n_gmres_total, n_gmres_stalled (B11 monitors).
+    precond, n_gmres_total, n_gmres_stalled (B11 monitors), n_refactor (B12).
     """
     if farfield not in ("neumann", "vortex", "freestream"):
         raise ValueError(f"farfield={farfield!r} unknown")
@@ -216,6 +233,9 @@ def solve_multivalued_newton(
     M_pre = None
     n_gmres_total = 0
     n_gmres_stalled = 0
+    lu_direct = None       # B12: the lagged direct LU (precond is None, k > 1)
+    lu_age = 0
+    n_refactor = 0
 
     for it in range(n_newton_max):
         # far-field Dirichlet values (vortex option refreshes with gamma)
@@ -279,7 +299,41 @@ def solve_multivalued_newton(
         # reduce Dirichlet and solve J_free d = -R_free (nonsymmetric)
         if precond is None:
             J_free = J[free][:, free].tocsc()
-            d_free = np.atleast_1d(spla.spsolve(J_free, -R[free]))
+            rhs = -R[free]
+            if direct_refactor_every <= 1:
+                # default: sparse-direct spsolve every step (bit-identical)
+                d_free = np.atleast_1d(spla.spsolve(J_free, rhs))
+            else:
+                # B12 lagged-LU (design_track_b.md 5.5 / roadmap B12): refactor
+                # the LU only every direct_refactor_every steps; between
+                # refactors drive the FRESH Jacobian with GMRES preconditioned
+                # by the stale (exact) LU, converged to direct_reuse_rtol. The
+                # stale LU is a near-exact preconditioner so a reuse step
+                # converges in ~1-2 Krylov iterations. Because the level-set
+                # system has NO Gamma coupling, this is a plain solve -- no
+                # Woodbury (unlike solve/newton.py). A reuse step whose GMRES
+                # fails falls back to a refactor + exact solve in the same
+                # iteration, so robustness never drops below every-step-direct.
+                d_free = None
+                if lu_direct is not None and lu_age < direct_refactor_every:
+                    A_op = spla.LinearOperator(
+                        (free.size, free.size), matvec=J_free.dot)
+                    M_lag = spla.LinearOperator(
+                        (free.size, free.size), matvec=lu_direct.solve)
+                    d_try, n_it, info = solve_gmres(
+                        A_op, rhs, M=M_lag, rtol=direct_reuse_rtol,
+                        restart=gmres_restart, maxiter=2, on_fail="return")
+                    n_gmres_total += n_it
+                    if info == 0:
+                        d_free = np.atleast_1d(d_try)
+                    else:
+                        n_gmres_stalled += 1     # stale LU exhausted: refactor
+                if d_free is None:
+                    lu_direct = spla.splu(J_free)
+                    lu_age = 0
+                    n_refactor += 1
+                    d_free = np.atleast_1d(lu_direct.solve(rhs))
+                lu_age += 1
         else:
             # B11: preconditioned GMRES on the fused Jacobian. Inexact steps
             # (on_fail="return") are caught by the backtracking line search.
@@ -337,4 +391,5 @@ def solve_multivalued_newton(
         "precond": precond,
         "n_gmres_total": n_gmres_total,
         "n_gmres_stalled": n_gmres_stalled,
+        "n_refactor": n_refactor,
     }

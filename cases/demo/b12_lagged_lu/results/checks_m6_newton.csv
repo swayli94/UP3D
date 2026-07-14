@@ -1,0 +1,7 @@
+gate,check,value,criterion,status,note
+G12.3,M6 medium spsolve Newton converged (baseline),converged,converged,PASS,
+G12.3,M6 medium lagged-LU Newton converged,converged,converged,PASS,
+G12.3,lagged 0 limited / 0 floored,0/0,0/0,PASS,
+G12.3,lagged == spsolve,6.74e-13,< 1e-6,PASS,
+G12.3,lagged 0 GMRES stalls (stale LU is near-exact),0,== 0,PASS,
+G12.3,fewer factorizations than Newton steps,1 < 7,n_refactor < n_newton,PASS,
