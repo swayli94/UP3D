@@ -887,7 +887,7 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 **Last updated:** 2026-07-15  
 **Status:** per-track status lives in [docs/overview.md](docs/overview.md)
 (human-readable snapshot) and the per-track trackers
-[docs/tracks/](docs/tracks/) (authoritative; docs were split by track
+[docs/roadmap/](docs/roadmap/) (authoritative; docs were split by track
 2026-07-15 — docs/roadmap.md and docs/demo_report.md are now thin indexes).
 One-line summary: Track P — P0–P9 ✓ (P1: G1.6 open as a `strict=True` xfail
 awaiting its Option C re-spec, see "Known gaps" above; P11 is down to G1.6

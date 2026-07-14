@@ -3,7 +3,7 @@
 > Split verbatim from `docs/demo_report.md` on 2026-07-15 (content unchanged;
 > only this header was added; sections keep their original chronological order).
 > Scope, reproduce instructions and the honesty/evidence rule: see the
-> [demo_report.md](../demo_report.md) index. Roadmap gates: [tracks/](../tracks/).
+> [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
 ## P0 — mesh infrastructure (G0.1–G0.4, closed)
 
@@ -16,10 +16,10 @@ cubes, scaled cube) plus the committed gmsh families.
 
 **Key figures.**
 
-![G0.1 volume exactness](../cases/demo/p0_infrastructure/results/g01_volume_exactness.png)
-![G0.2 gradient exactness](../cases/demo/p0_infrastructure/results/g02_gradient_exactness.png)
-![G0.3 coloring](../cases/demo/p0_infrastructure/results/g03_coloring.png)
-![G0.4 VTK roundtrip](../cases/demo/p0_infrastructure/results/g04_vtk_roundtrip.png)
+![G0.1 volume exactness](../../cases/demo/p0_infrastructure/results/g01_volume_exactness.png)
+![G0.2 gradient exactness](../../cases/demo/p0_infrastructure/results/g02_gradient_exactness.png)
+![G0.3 coloring](../../cases/demo/p0_infrastructure/results/g03_coloring.png)
+![G0.4 VTK roundtrip](../../cases/demo/p0_infrastructure/results/g04_vtk_roundtrip.png)
 
 **Measured results.**
 
@@ -52,12 +52,12 @@ gmsh meshes (analytic φ and Cp = 1 − (9/4)sin²θ available in closed form).
 
 **Key figures.**
 
-![V0 freestream](../cases/demo/p1_laplace/results/v0_freestream.png)
-![G1.1 MMS convergence](../cases/demo/p1_laplace/results/g11_mms_convergence.png)
-![G1.2 AMG-CG scaling](../cases/demo/p1_laplace/results/g12_amg_cg_scaling.png)
-![sphere flow field](../cases/demo/p1_laplace/results/sphere_flowfield.png)
-![G1.6 open gate](../cases/demo/p1_laplace/results/g16_sphere_cp_open_gate.png)
-![G1.4 oracle negative result](../cases/demo/p1_laplace/results/g14_oracle_negative_result.png)
+![V0 freestream](../../cases/demo/p1_laplace/results/v0_freestream.png)
+![G1.1 MMS convergence](../../cases/demo/p1_laplace/results/g11_mms_convergence.png)
+![G1.2 AMG-CG scaling](../../cases/demo/p1_laplace/results/g12_amg_cg_scaling.png)
+![sphere flow field](../../cases/demo/p1_laplace/results/sphere_flowfield.png)
+![G1.6 open gate](../../cases/demo/p1_laplace/results/g16_sphere_cp_open_gate.png)
+![G1.4 oracle negative result](../../cases/demo/p1_laplace/results/g14_oracle_negative_result.png)
 
 **Measured results.**
 
@@ -110,12 +110,12 @@ loop; reference = Hess–Smith panel solution
 
 **Key figures.**
 
-![G2.1/G2.2 cut exactness](../cases/demo/p2_kutta_lifting/results/g21_g22_cut_exactness.png)
-![G2.3 Kutta convergence](../cases/demo/p2_kutta_lifting/results/g23_kutta_convergence.png)
-![G2.3 Cp vs panel](../cases/demo/p2_kutta_lifting/results/g23_cp_vs_panel.png)
-![G2.4 lift cross-check](../cases/demo/p2_kutta_lifting/results/g24_cl_crosscheck.png)
-![lifting flow field](../cases/demo/p2_kutta_lifting/results/lifting_flowfield.png)
-![G2.5 spanwise decay](../cases/demo/p2_kutta_lifting/results/g25_spanwise_decay.png)
+![G2.1/G2.2 cut exactness](../../cases/demo/p2_kutta_lifting/results/g21_g22_cut_exactness.png)
+![G2.3 Kutta convergence](../../cases/demo/p2_kutta_lifting/results/g23_kutta_convergence.png)
+![G2.3 Cp vs panel](../../cases/demo/p2_kutta_lifting/results/g23_cp_vs_panel.png)
+![G2.4 lift cross-check](../../cases/demo/p2_kutta_lifting/results/g24_cl_crosscheck.png)
+![lifting flow field](../../cases/demo/p2_kutta_lifting/results/lifting_flowfield.png)
+![G2.5 spanwise decay](../../cases/demo/p2_kutta_lifting/results/g25_spanwise_decay.png)
 
 **Measured results.**
 
@@ -175,9 +175,9 @@ against `solve_laplace_lifting`.
 
 **Key figures.**
 
-![G3.1 sphere Cp + convergence](../cases/demo/p3_subsonic/results/g31_sphere_cp_and_convergence.png)
-![G3.2 Cp + Picard convergence](../cases/demo/p3_subsonic/results/g32_naca_cp_and_convergence.png)
-![G3.2 cl bracket](../cases/demo/p3_subsonic/results/g32_cl_bracket.png)
+![G3.1 sphere Cp + convergence](../../cases/demo/p3_subsonic/results/g31_sphere_cp_and_convergence.png)
+![G3.2 Cp + Picard convergence](../../cases/demo/p3_subsonic/results/g32_naca_cp_and_convergence.png)
+![G3.2 cl bracket](../../cases/demo/p3_subsonic/results/g32_cl_bracket.png)
 
 **Measured results.**
 
@@ -252,8 +252,8 @@ README says so rather than inventing one).
 
 **Key figures.**
 
-![upwind reach evidence](../cases/demo/p4_transonic/results/p4_upwind_reach.png)
-![G4.1 Cp and shock](../cases/demo/p4_transonic/results/g41_cp_shock.png)
+![upwind reach evidence](../../cases/demo/p4_transonic/results/p4_upwind_reach.png)
+![G4.1 Cp and shock](../../cases/demo/p4_transonic/results/g41_cp_shock.png)
 
 **Measured results (coarse evidence run, re-measured 2026-07-07 under the
 `damping_theta` fix — see Addendum 3; the committed coarse/medium and
@@ -510,8 +510,8 @@ argument, kept for the record:
 refinement).** The medium mesh (61.8k tets, mean edge 0.085) resolves the
 same case at ~3.8× the coarse cell count (16.4k tets, mean edge 0.178):
 
-![G4.1 coarse Cp/shock](../cases/demo/p4_transonic/results/g41_cp_shock_coarse.png)
-![G4.1 medium Cp/shock](../cases/demo/p4_transonic/results/g41_cp_shock_medium.png)
+![G4.1 coarse Cp/shock](../../cases/demo/p4_transonic/results/g41_cp_shock_coarse.png)
+![G4.1 medium Cp/shock](../../cases/demo/p4_transonic/results/g41_cp_shock_medium.png)
 
 | Quantity | Coarse (16.4k tets) | Medium (61.8k tets) | Reading |
 |---|---|---|---|
@@ -561,7 +561,7 @@ serration character unchanged.
 default).** Two α-lines (0.0° and 1.25°) across M∞ ∈ {0.74, 0.76, 0.78,
 0.80, 0.82}, gating on convergence + physicality (not an exact cl):
 
-![G4.3 sweep dashboard](../cases/demo/p4_transonic/results/g43_sweep_dashboard.png)
+![G4.3 sweep dashboard](../../cases/demo/p4_transonic/results/g43_sweep_dashboard.png)
 
 | Trend | Evidence | Reading |
 |---|---|---|
@@ -611,10 +611,10 @@ qualitative overlay, **not** a point-wise gate for the inviscid FP solver).
 
 **Key figures (post-fix).**
 
-![sectional Cp vs AGARD experiment](../cases/demo/p5_onera_m6/results/g51_sections_coarse.png)
-![spanwise circulation and loading](../cases/demo/p5_onera_m6/results/g52_spanwise_coarse.png)
-![upper-surface Cp planform map](../cases/demo/p5_onera_m6/results/g51_surface_cp_coarse.png)
-![medium sectional Cp](../cases/demo/p5_onera_m6/results/g51_sections_medium.png)
+![sectional Cp vs AGARD experiment](../../cases/demo/p5_onera_m6/results/g51_sections_coarse.png)
+![spanwise circulation and loading](../../cases/demo/p5_onera_m6/results/g52_spanwise_coarse.png)
+![upper-surface Cp planform map](../../cases/demo/p5_onera_m6/results/g51_surface_cp_coarse.png)
+![medium sectional Cp](../../cases/demo/p5_onera_m6/results/g51_sections_medium.png)
 
 **Measured results (post-fix; demo 16/16 PASS).**
 
@@ -702,9 +702,9 @@ only the reported Cp/forces move. `smooth_passes = 1`.
 
 **Key figures.**
 
-![G6.1 wall Cp raw per-triangle vs recovery-smoothed (coarse NACA0012 M0.80)](../cases/demo/p6_surface_recovery/results/g61_cp_raw_vs_smoothed_coarse.png)
-![G6.1 the finding in one panel: a smoother FLUX (kernel) does not remove the sawtooth; smoothing the RECOVERY does](../cases/demo/p6_surface_recovery/results/g61_flux_vs_recovery_coarse.png)
-![G6.1 ONERA M6 coarse section Cp at eta=0.65, raw vs smoothed](../cases/demo/p6_surface_recovery/results/g61_m6_section_cp_coarse.png)
+![G6.1 wall Cp raw per-triangle vs recovery-smoothed (coarse NACA0012 M0.80)](../../cases/demo/p6_surface_recovery/results/g61_cp_raw_vs_smoothed_coarse.png)
+![G6.1 the finding in one panel: a smoother FLUX (kernel) does not remove the sawtooth; smoothing the RECOVERY does](../../cases/demo/p6_surface_recovery/results/g61_flux_vs_recovery_coarse.png)
+![G6.1 ONERA M6 coarse section Cp at eta=0.65, raw vs smoothed](../../cases/demo/p6_surface_recovery/results/g61_m6_section_cp_coarse.png)
 
 **Measured results (coarse NACA0012 M0.80, walk solution).**
 
@@ -764,9 +764,9 @@ verbatim, so the check verifies exactly the derivative P8 relies on.
 
 **Key figures.**
 
-![V7.1 analytic vs FD scatter + per-regime rel-err histogram (constructed multi-regime field)](../cases/demo/p7_diff_flux/results/v71_fd_scatter_constructed.png)
-![V7.3 frozen-selection regimes over the real supersonic pocket (converged G4.1 coarse field)](../cases/demo/p7_diff_flux/results/v73_regime_map_converged.png)
-![V7.4 FD accuracy on the converged G4.1 field](../cases/demo/p7_diff_flux/results/v74_fd_scatter_converged.png)
+![V7.1 analytic vs FD scatter + per-regime rel-err histogram (constructed multi-regime field)](../../cases/demo/p7_diff_flux/results/v71_fd_scatter_constructed.png)
+![V7.3 frozen-selection regimes over the real supersonic pocket (converged G4.1 coarse field)](../../cases/demo/p7_diff_flux/results/v73_regime_map_converged.png)
+![V7.4 FD accuracy on the converged G4.1 field](../../cases/demo/p7_diff_flux/results/v74_fd_scatter_converged.png)
 
 **Measured results (gate < 1e-6).**
 
@@ -834,8 +834,8 @@ bands; `cases/reference_data/naca0012_m080/` untouched (hard rule 6).
 
 **Key figures.**
 
-![V8.1a coupled-Newton convergence, coarse (subsonic + M0.80 final level)](../cases/demo/p8_newton/results/v81a_convergence_coarse.png)
-![V8.1b medium M0.7875 convergence + V8.2-lite runtime breakdown](../cases/demo/p8_newton/results/v81b_convergence_medium.png)
+![V8.1a coupled-Newton convergence, coarse (subsonic + M0.80 final level)](../../cases/demo/p8_newton/results/v81a_convergence_coarse.png)
+![V8.1b medium M0.7875 convergence + V8.2-lite runtime breakdown](../../cases/demo/p8_newton/results/v81b_convergence_medium.png)
 
 The sawtooth in both convergence plots is the freeze-refresh cycle working as
 designed: each frozen phase collapses quadratically to ~3e-13, the live
@@ -876,7 +876,7 @@ preconditioned by the stale LU at rtol 1e-8, falling back to refactor +
 exact Woodbury if GMRES fails — same solution, 6.4× faster) and the P5
 **dm=0.05 Mach schedule** (the M6 family is far from the NACA-medium fold).
 
-![V8.1c M6 medium convergence + V8.2 runtime breakdown](../cases/demo/p8_newton/results/v82_m6_medium.png)
+![V8.1c M6 medium convergence + V8.2 runtime breakdown](../../cases/demo/p8_newton/results/v82_m6_medium.png)
 
 **P5-caveat measurement** (the recorded follow-up to the P4 erratum): the
 committed P5 Picard states are not discrete solutions either, but the
@@ -974,15 +974,15 @@ retries visible in the convergence figure, still finishing at 2.0e-13.
 
 **Key figures.**
 
-![NACA convergence](../cases/demo/p8_capability/results/naca_convergence.png)
+![NACA convergence](../../cases/demo/p8_capability/results/naca_convergence.png)
 
-![M6 convergence](../cases/demo/p8_capability/results/m6_convergence.png)
+![M6 convergence](../../cases/demo/p8_capability/results/m6_convergence.png)
 
-![NACA Cp](../cases/demo/p8_capability/results/naca_cp_sections.png)
+![NACA Cp](../../cases/demo/p8_capability/results/naca_cp_sections.png)
 
-![M6 Cp](../cases/demo/p8_capability/results/m6_cp_sections.png)
+![M6 Cp](../../cases/demo/p8_capability/results/m6_cp_sections.png)
 
-![timing](../cases/demo/p8_capability/results/timing.png)
+![timing](../../cases/demo/p8_capability/results/timing.png)
 
 Presentation notes: Cp curves are plotted with the P6 normal-gated recovery
 smoothing (1 pass); forces and shock/regression locks are measured on raw

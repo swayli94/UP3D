@@ -13,17 +13,17 @@ innermost TE node's fan touches fuselage wall faces — verify the upper/lower C
 take only wing-side elements (`multivalued.py::_build_te_control_volumes`;
 recorded in Track M M2).
 
-## Track status (one line each; authority = docs/tracks/*.md ledgers)
+## Track status (one line each; authority = docs/roadmap/*.md ledgers)
 
-- **Track P** ([track_p.md](tracks/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
+- **Track P** ([track_p.md](roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
   xfail) · P10 ◐ (G10.1 open) · P11 conditional-not-opened · P13 ◐ (G13.3
   transonic NEGATIVE-open).
-- **Track M** ([track_m.md](tracks/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
+- **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
   solver leg = B9).
-- **Track B** ([track_b.md](tracks/track_b.md)): B1–B8, B11–B13, B15 ✓ ·
+- **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B13, B15 ✓ ·
   B6 ◐ (medium quantitative closed by GB15.4) · B14 designed-not-scheduled ·
   B10 shelved · **B9 next**.
-- **Track V** ([track_v.md](tracks/track_v.md)): designed, zero implementation.
+- **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 
 Human-readable snapshot + document map: [overview.md](overview.md). The pre-split
 narrative history of this file:

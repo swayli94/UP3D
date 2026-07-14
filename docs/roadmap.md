@@ -3,21 +3,21 @@
 
 **This file (plus the per-track files below) is authoritative for phase status
 and gates.** Since 2026-07-15 the phase entries, gate checklists and progress
-ledgers live in ONE FILE PER TRACK under [tracks/](tracks/) — split **verbatim**
+ledgers live in ONE FILE PER TRACK under [roadmap/](roadmap/) — split **verbatim**
 from this file (nothing was reworded in the split). Any reference elsewhere of
 the form "roadmap.md Track X / phase entry / ledger" resolves through the table:
 
 | Track | File | Status (one line — details + gates + ledger in the track file) |
 |-------|------|----------------------------------------------------------------|
-| **P — solver** | [tracks/track_p.md](tracks/track_p.md) | P0–P9 ✓ (P1: only G1.6 open, strict xfail) · P10 ◐ (G10.2/G10.3 ✓, G10.1 open) · P11 conditional, not opened (only the G1.6 rationale survives) · P12 backlog · P13 ◐ (G13.1 ✓, G13.2 conforming ✓, G13.3 subsonic ✓ / transonic NEGATIVE-open) |
-| **M — meshing** | [tracks/track_m.md](tracks/track_m.md) | M0, M1(+M1b), M3, M4, M5 ✓ · M2 ◐ (wing-body mesh ✓ 2026-07-13; solver leg = B9) |
-| **B — level-set wake** | [tracks/track_b.md](tracks/track_b.md) | B1–B5, B7, B8, B11–B13, B15 ✓ · B6 ◐ (coarse gate ✓; medium quantitative closed by GB15.4) · B14 designed-not-scheduled · B10 shelved · **B9 (wing-body LS solve, M∞0.5) = NEXT** |
-| **V — viscous coupling** | [tracks/track_v.md](tracks/track_v.md) | designed 2026-07-09/10, zero implementation |
+| **P — solver** | [roadmap/track_p.md](roadmap/track_p.md) | P0–P9 ✓ (P1: only G1.6 open, strict xfail) · P10 ◐ (G10.2/G10.3 ✓, G10.1 open) · P11 conditional, not opened (only the G1.6 rationale survives) · P12 backlog · P13 ◐ (G13.1 ✓, G13.2 conforming ✓, G13.3 subsonic ✓ / transonic NEGATIVE-open) |
+| **M — meshing** | [roadmap/track_m.md](roadmap/track_m.md) | M0, M1(+M1b), M3, M4, M5 ✓ · M2 ◐ (wing-body mesh ✓ 2026-07-13; solver leg = B9) |
+| **B — level-set wake** | [roadmap/track_b.md](roadmap/track_b.md) | B1–B5, B7, B8, B11–B13, B15 ✓ · B6 ◐ (coarse gate ✓; medium quantitative closed by GB15.4) · B14 designed-not-scheduled · B10 shelved · **B9 (wing-body LS solve, M∞0.5) = NEXT** |
+| **V — viscous coupling** | [roadmap/track_v.md](roadmap/track_v.md) | designed 2026-07-09/10, zero implementation |
 
 [design.md](design.md) remains the design reference for equations, numerics and
 architecture; Track B numerics live in [design_track_b.md](design_track_b.md)
 (supersedes DN1). Evidence for closed phases: [demo_report.md](demo_report.md)
-(index) + [demo_reports/](demo_reports/) (per track). Human-readable status
+(index) + [demo_report/](demo_report/) (per track). Human-readable status
 snapshot + document map: [overview.md](overview.md). Analysis/review reports
 (non-normative): [analysis/](analysis/).
 (`docs/discussion_notes/` — the DN1–DN6 design-note sources and the PLAN.md
@@ -82,6 +82,6 @@ Non-goals for v1.0:
 
 ## Progress ledger
 
-Moved per-track (2026-07-15): each `tracks/track_*.md` ends with its own
+Moved per-track (2026-07-15): each `roadmap/track_*.md` ends with its own
 "Progress ledger" section (status legend: ✓ closed · ◐ partially closed /
 in progress · ☐ open or not started · ⊘ shelved).

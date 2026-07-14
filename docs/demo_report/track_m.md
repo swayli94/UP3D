@@ -3,7 +3,7 @@
 > Split verbatim from `docs/demo_report.md` on 2026-07-15 (content unchanged;
 > only this header was added; sections keep their original chronological order).
 > Scope, reproduce instructions and the honesty/evidence rule: see the
-> [demo_report.md](../demo_report.md) index. Roadmap gates: [tracks/](../tracks/).
+> [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
 ## M0 — quasi-2D meshing pipeline (closed; acceptance link = G2.5)
 
@@ -20,10 +20,10 @@ against the analytic Cp = 1 − 4 sin²θ.
 
 **Key figures.**
 
-![mesh gallery](../cases/demo/m0_meshgen/results/mesh_gallery.png)
-![topology asserts](../cases/demo/m0_meshgen/results/topology_asserts.png)
-![mesh quality](../cases/demo/m0_meshgen/results/mesh_quality.png)
-![cylinder Cp convergence](../cases/demo/m0_meshgen/results/cylinder_cp_convergence.png)
+![mesh gallery](../../cases/demo/m0_meshgen/results/mesh_gallery.png)
+![topology asserts](../../cases/demo/m0_meshgen/results/topology_asserts.png)
+![mesh quality](../../cases/demo/m0_meshgen/results/mesh_quality.png)
+![cylinder Cp convergence](../../cases/demo/m0_meshgen/results/cylinder_cp_convergence.png)
 
 **Measured results.**
 
@@ -75,9 +75,9 @@ Solver axis convention: chord x, lift y, span z.
 
 **Key figures.**
 
-![wing + wake gallery](../cases/demo/m1_wing_mesh/results/wing_wake_gallery.png)
-![tip cut planes](../cases/demo/m1_wing_mesh/results/tip_cut_planes.png)
-![mesh quality](../cases/demo/m1_wing_mesh/results/mesh_quality.png)
+![wing + wake gallery](../../cases/demo/m1_wing_mesh/results/wing_wake_gallery.png)
+![tip cut planes](../../cases/demo/m1_wing_mesh/results/tip_cut_planes.png)
+![mesh quality](../../cases/demo/m1_wing_mesh/results/mesh_quality.png)
 
 **Measured results.**
 

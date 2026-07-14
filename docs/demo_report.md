@@ -1,10 +1,10 @@
 # Phase demo report — evidence for completed phases (index)
 
 **Since 2026-07-15 the per-phase evidence sections live in one file per track
-under [demo_reports/](demo_reports/)** — split verbatim from this file:
-[demo_reports/track_p.md](demo_reports/track_p.md) (solver),
-[demo_reports/track_m.md](demo_reports/track_m.md) (meshing),
-[demo_reports/track_b.md](demo_reports/track_b.md) (level-set wake; includes the
+under [demo_report/](demo_report/)** — split verbatim from this file:
+[demo_report/track_p.md](demo_report/track_p.md) (solver),
+[demo_report/track_m.md](demo_report/track_m.md) (meshing),
+[demo_report/track_b.md](demo_report/track_b.md) (level-set wake; includes the
 2026-07-15 M6-medium LS workflow demo). References of the form "demo_report §P4"
 resolve via the table below. When a phase closes, add its demo section to the
 matching track file and a row here.
@@ -28,37 +28,37 @@ is not evidence** (the 2026-07-13 audit rule).
 
 | Phase | Demo | Checks | Verdict | Report section in |
 |---|---|---|---|---|
-| P0 mesh infrastructure | `cases/demo/p0_infrastructure/` | 4 PASS | closed, reproduced | [track_p](demo_reports/track_p.md) |
-| P1 Laplace solver | `cases/demo/p1_laplace/` | 9 PASS + 1 XFAIL (G1.6) | closed gates reproduced; G1.6 open by design | [track_p](demo_reports/track_p.md) |
-| P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced | [track_p](demo_reports/track_p.md) |
-| M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced | [track_m](demo_reports/track_m.md) |
-| P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced | [track_p](demo_reports/track_p.md) |
-| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced (re-closed 2026-07-07; Picard-quality per the 2026-07-11 erratum) | [track_p](demo_reports/track_p.md) |
-| M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced (M1b self-similar ladder 2026-07-13) | [track_m](demo_reports/track_m.md) |
-| P5 3D validation (ONERA M6) | `cases/demo/p5_onera_m6/` | 16 PASS | closed 2026-07-08 (V6 < 1% deferred; see P13 for its O(h) closure trend) | [track_p](demo_reports/track_p.md) |
-| P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 6 PASS (incl. gated M6) | closed 2026-07-08 (sawtooth = recovery artifact) | [track_p](demo_reports/track_p.md) |
-| P7 differentiable walk flux | `cases/demo/p7_diff_flux/` | 7 PASS (incl. gated converged-field) | closed 2026-07-10 (FD 3–5e-10) | [track_p](demo_reports/track_p.md) |
-| P8 fully-coupled Newton | `cases/demo/p8_newton/` | 15 PASS (parts 2–3 gated) | closed 2026-07-11 (G8.1 + G8.2 + G8.3) | [track_p](demo_reports/track_p.md) |
-| P8 capability assessment | `cases/demo/p8_capability/` | 36 PASS (full matrix gated) | **evaluation demo, not a gate** (2026-07-11) | [track_p](demo_reports/track_p.md) |
-| P10 (partial) G10.2 continuation tolerance | `cases/demo/p10_newton_usability/` | split A/B verdict | G10.2 + G10.3 closed 2026-07-11; phase stays open (G10.1) | [track_p](demo_reports/track_p.md) |
-| P9 grid-convergence & accuracy-gap discrimination | `cases/demo/p9_grid_discrimination/` | 11 PASS + 3 XFAIL | closed 2026-07-11 | [track_p](demo_reports/track_p.md) |
-| **Track B** B1 cut-element identification | `tests/test_b1_cut_elements.py` (test-only) | 34 PASS | closed 2026-07-11 | [track_b](demo_reports/track_b.md) |
-| **Track B** B2 multivalued assembly | `tests/test_b2_multivalued.py` (test-only) | 17 PASS | closed 2026-07-11 | [track_b](demo_reports/track_b.md) |
-| **Track B** B3 + B4 lifting + TE Kutta | `cases/demo/b3_levelset_lifting/` | 13 demo PASS (+6, +8 tests) | closed 2026-07-12 | [track_b](demo_reports/track_b.md) |
-| **Track B** B5 far-field A/B | `cases/demo/b4p5_farfield/` | 9 demo PASS (+10 tests) | closed 2026-07-12 | [track_b](demo_reports/track_b.md) |
-| **Track B** B6 transonic (level-set) + LS Newton | `cases/demo/b6_transonic/` | 14 demo PASS (+9, +2 tests; +2, +2 Newton) | ◐ coarse gate ✓ 2026-07-12; the medium quantitative item closed by B15/GB15.4 | [track_b](demo_reports/track_b.md) |
-| **Track B** B7 ONERA M6 3D gate | `cases/demo/b7_onera_m6/` | 35 PASS | closed 2026-07-12 (M_max re-read 2026-07-14: honest main-field 1.392) | [track_b](demo_reports/track_b.md) |
-| P13 G13.1 tip/wake-edge characterization | `cases/demo/p13_tip_edge_singularity/` | 10 PASS | closed 2026-07-13 (1/√r, dΓ/dz-driven) | [track_p](demo_reports/track_p.md) |
-| P13 G13.2 spanwise loading taper | `run_taper_probe.py` + `run_taper_physics.py` | PASS | conforming fix closed 2026-07-13 | [track_p](demo_reports/track_p.md) |
-| P13 G13.3 ladder + third singularity | `run_g133_ladder.py` | 5/5 | flat-cap wall edge located (p=+0.32) → M5 | [track_p](demo_reports/track_p.md) |
-| **Track M** M5 rounded tip cap | `cases/demo/m5_round_tip/` | 9/9 | closed 2026-07-13 (seam crease O(h)) | [track_m](demo_reports/track_m.md) |
-| P13 G13.3 subsonic Richardson | `run_g133_roundtip.py` | 9/9 | earned 2026-07-13: p=2.31, cl_KJ(h→0)=0.2050 | [track_p](demo_reports/track_p.md) |
-| P13 G13.3 transonic | `run_g133_roundtip_transonic.py` + `_locate.py` | 5/5 | **NEGATIVE** 2026-07-13/14: round fine never reaches M0.84 (sharp tip-TE, amplified) | [track_p](demo_reports/track_p.md) |
-| **Track B** B8 tip-edge desingularization | `cases/demo/b8_tip_taper_ls/` + re-spec demos | 12/12 + 8/8 | closed 2026-07-14 **characterized-not-cured** (metric artifact + both cures negative) | [track_b](demo_reports/track_b.md) |
-| **Track B** B11 LS infrastructure | `cases/demo/b11_ls_infra/` | PASS | closed 2026-07-14 (unified post + ILU escape; AMG stalls on lifting) | [track_b](demo_reports/track_b.md) |
-| **Track B** B12 + B13 lagged-LU | `cases/demo/b12_lagged_lu/` + `b13_lagged_picard/` | 6/6 + 6/6 | closed 2026-07-14 (Newton 2.18×; lifting 6.55×) | [track_b](demo_reports/track_b.md) |
-| M6 medium LS workflow | `cases/demo/m6_medium_ls_workflow/` | 10/10 | demo, not a gate (2026-07-15): sub+transonic at conforming-comparable cost | [track_b](demo_reports/track_b.md) |
-| **Track B** B15 LS Newton ramp + freeze | `cases/demo/b15_ls_newton_ramp/` | 19/19 incl. gated M6 | closed 2026-07-15 (plateau gone, 3.5×; four errata) | [track_b](demo_reports/track_b.md) |
+| P0 mesh infrastructure | `cases/demo/p0_infrastructure/` | 4 PASS | closed, reproduced | [track_p](demo_report/track_p.md) |
+| P1 Laplace solver | `cases/demo/p1_laplace/` | 9 PASS + 1 XFAIL (G1.6) | closed gates reproduced; G1.6 open by design | [track_p](demo_report/track_p.md) |
+| P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced | [track_p](demo_report/track_p.md) |
+| M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced | [track_m](demo_report/track_m.md) |
+| P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced | [track_p](demo_report/track_p.md) |
+| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced (re-closed 2026-07-07; Picard-quality per the 2026-07-11 erratum) | [track_p](demo_report/track_p.md) |
+| M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced (M1b self-similar ladder 2026-07-13) | [track_m](demo_report/track_m.md) |
+| P5 3D validation (ONERA M6) | `cases/demo/p5_onera_m6/` | 16 PASS | closed 2026-07-08 (V6 < 1% deferred; see P13 for its O(h) closure trend) | [track_p](demo_report/track_p.md) |
+| P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 6 PASS (incl. gated M6) | closed 2026-07-08 (sawtooth = recovery artifact) | [track_p](demo_report/track_p.md) |
+| P7 differentiable walk flux | `cases/demo/p7_diff_flux/` | 7 PASS (incl. gated converged-field) | closed 2026-07-10 (FD 3–5e-10) | [track_p](demo_report/track_p.md) |
+| P8 fully-coupled Newton | `cases/demo/p8_newton/` | 15 PASS (parts 2–3 gated) | closed 2026-07-11 (G8.1 + G8.2 + G8.3) | [track_p](demo_report/track_p.md) |
+| P8 capability assessment | `cases/demo/p8_capability/` | 36 PASS (full matrix gated) | **evaluation demo, not a gate** (2026-07-11) | [track_p](demo_report/track_p.md) |
+| P10 (partial) G10.2 continuation tolerance | `cases/demo/p10_newton_usability/` | split A/B verdict | G10.2 + G10.3 closed 2026-07-11; phase stays open (G10.1) | [track_p](demo_report/track_p.md) |
+| P9 grid-convergence & accuracy-gap discrimination | `cases/demo/p9_grid_discrimination/` | 11 PASS + 3 XFAIL | closed 2026-07-11 | [track_p](demo_report/track_p.md) |
+| **Track B** B1 cut-element identification | `tests/test_b1_cut_elements.py` (test-only) | 34 PASS | closed 2026-07-11 | [track_b](demo_report/track_b.md) |
+| **Track B** B2 multivalued assembly | `tests/test_b2_multivalued.py` (test-only) | 17 PASS | closed 2026-07-11 | [track_b](demo_report/track_b.md) |
+| **Track B** B3 + B4 lifting + TE Kutta | `cases/demo/b3_levelset_lifting/` | 13 demo PASS (+6, +8 tests) | closed 2026-07-12 | [track_b](demo_report/track_b.md) |
+| **Track B** B5 far-field A/B | `cases/demo/b4p5_farfield/` | 9 demo PASS (+10 tests) | closed 2026-07-12 | [track_b](demo_report/track_b.md) |
+| **Track B** B6 transonic (level-set) + LS Newton | `cases/demo/b6_transonic/` | 14 demo PASS (+9, +2 tests; +2, +2 Newton) | ◐ coarse gate ✓ 2026-07-12; the medium quantitative item closed by B15/GB15.4 | [track_b](demo_report/track_b.md) |
+| **Track B** B7 ONERA M6 3D gate | `cases/demo/b7_onera_m6/` | 35 PASS | closed 2026-07-12 (M_max re-read 2026-07-14: honest main-field 1.392) | [track_b](demo_report/track_b.md) |
+| P13 G13.1 tip/wake-edge characterization | `cases/demo/p13_tip_edge_singularity/` | 10 PASS | closed 2026-07-13 (1/√r, dΓ/dz-driven) | [track_p](demo_report/track_p.md) |
+| P13 G13.2 spanwise loading taper | `run_taper_probe.py` + `run_taper_physics.py` | PASS | conforming fix closed 2026-07-13 | [track_p](demo_report/track_p.md) |
+| P13 G13.3 ladder + third singularity | `run_g133_ladder.py` | 5/5 | flat-cap wall edge located (p=+0.32) → M5 | [track_p](demo_report/track_p.md) |
+| **Track M** M5 rounded tip cap | `cases/demo/m5_round_tip/` | 9/9 | closed 2026-07-13 (seam crease O(h)) | [track_m](demo_report/track_m.md) |
+| P13 G13.3 subsonic Richardson | `run_g133_roundtip.py` | 9/9 | earned 2026-07-13: p=2.31, cl_KJ(h→0)=0.2050 | [track_p](demo_report/track_p.md) |
+| P13 G13.3 transonic | `run_g133_roundtip_transonic.py` + `_locate.py` | 5/5 | **NEGATIVE** 2026-07-13/14: round fine never reaches M0.84 (sharp tip-TE, amplified) | [track_p](demo_report/track_p.md) |
+| **Track B** B8 tip-edge desingularization | `cases/demo/b8_tip_taper_ls/` + re-spec demos | 12/12 + 8/8 | closed 2026-07-14 **characterized-not-cured** (metric artifact + both cures negative) | [track_b](demo_report/track_b.md) |
+| **Track B** B11 LS infrastructure | `cases/demo/b11_ls_infra/` | PASS | closed 2026-07-14 (unified post + ILU escape; AMG stalls on lifting) | [track_b](demo_report/track_b.md) |
+| **Track B** B12 + B13 lagged-LU | `cases/demo/b12_lagged_lu/` + `b13_lagged_picard/` | 6/6 + 6/6 | closed 2026-07-14 (Newton 2.18×; lifting 6.55×) | [track_b](demo_report/track_b.md) |
+| M6 medium LS workflow | `cases/demo/m6_medium_ls_workflow/` | 10/10 | demo, not a gate (2026-07-15): sub+transonic at conforming-comparable cost | [track_b](demo_report/track_b.md) |
+| **Track B** B15 LS Newton ramp + freeze | `cases/demo/b15_ls_newton_ramp/` | 19/19 incl. gated M6 | closed 2026-07-15 (plateau gone, 3.5×; four errata) | [track_b](demo_report/track_b.md) |
 
 > Track-P renumber (2026-07-08, then 2026-07-11 ×2): P6 = surface recovery;
 > P7 = differentiable flux (Newton prereq); P8 = fully-coupled Newton;
@@ -70,7 +70,7 @@ is not evidence** (the 2026-07-13 audit rule).
 > far-field gate is now **B5** (was B3.5, then B4.5; its demo dir keeps the old
 > `b4p5_` name), transonic is **B6**, ONERA M6 3D is **B7**; 2026-07-13 inserted
 > B8 = LS tip taper (old B8 multi-wake → B9, old B9 curved wake → B10).
-> See tracks/track_b.md for the full mapping.
+> See roadmap/track_b.md for the full mapping.
 
 ---
 

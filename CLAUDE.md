@@ -16,7 +16,7 @@ resolve through one hop.
   to update it), regression-baseline lineage, long-standing open items.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
-  gate checklists and progress ledgers live in **[docs/tracks/](docs/tracks/)**
+  gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
   (`track_p.md` P0–P13 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B15
   level-set wake — **B9 = NEXT** — `track_v.md` V1–V4 viscous, designed-not-
   started). "What phase are we in" and "what gate is open" live there, nowhere
@@ -25,10 +25,10 @@ resolve through one hop.
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12); §11 is a
-  pointer to roadmap.md + tracks/ since 2026-07-15.
+  pointer to roadmap.md + docs/roadmap/ since 2026-07-15.
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier index** (per-
   phase directory table); the evidence sections live in
-  **[docs/demo_reports/](docs/demo_reports/)** (`track_p.md`, `track_m.md`,
+  **[docs/demo_report/](docs/demo_report/)** (`track_p.md`, `track_m.md`,
   `track_b.md`): one self-checking demo per phase under `cases/demo/<phase>/`
   with committed figures + measured gate numbers. When a phase closes, add its
   demo section to the matching track file and a row to the index.
@@ -44,7 +44,7 @@ resolve through one hop.
   never a coding spec (rule 11). `docs/discussion_notes/` was **DELETED
   2026-07-14** (commit 0e4895a; history via
   `git show 8aa4aee:docs/discussion_notes/<file>`). The rule stands: plan
-  against **roadmap.md/tracks gates + design.md numerics only**.
+  against **roadmap.md/roadmap-track gates + design.md numerics only**.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — layout, per-module status, and
   **"Known gaps"**: read it before touching the G1.6 sphere-Cp problem (formerly
   G1.2; P1 gates renumbered 2026-07-06, mapping in roadmap.md) — it is already
@@ -59,7 +59,7 @@ resolve through one hop.
 
 ## Workflow
 
-1. Before coding: find the open gate in the current phase's docs/tracks/ entry
+1. Before coding: find the open gate in the current phase's docs/roadmap/ entry
    and plan against its acceptance criterion. Every visual gate needs a headless artifact
    (`artifacts/<gate_id>/*.png` + `summary.csv`; matplotlib `Agg`, PyVista
    off-screen — never GUI-only checks).
@@ -75,7 +75,7 @@ resolve through one hop.
    dual-mesh + LS-Newton, B7 M6 3D) only run under `PYFP3D_TRANSONIC_GATES=1`
    and make up most of the skips. G8.3's CI reference is 301.66 s.
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
-5. When a gate closes: tick it in the phase's `docs/tracks/track_*.md` entry,
+5. When a gate closes: tick it in the phase's `docs/roadmap/track_*.md` entry,
    update that file's progress ledger and the "Current phase" line in
    docs/agent-rules.md (refresh docs/overview.md in passing), keep the commit
    phase-scoped.
@@ -99,4 +99,4 @@ renumbered 2026-07-08 and 2026-07-11, Track B 2026-07-12 (×2) and 2026-07-13 �
 docs before those dates use the then-current IDs (e.g. pre-2026-07-11 "P9
 curved walls"/"P10 backlog" read as P11/P12). The one-line convention summary
 and per-phase mapping notes live in docs/roadmap.md and the affected
-docs/tracks/ entries.
+docs/roadmap/ entries.

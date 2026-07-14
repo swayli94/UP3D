@@ -305,7 +305,7 @@ in loading for attached flow).
 
 **Designed alternative — Track B level-set wake (designed 2026-07-07; IN
 PROGRESS since 2026-07-11, largely delivered — B1–B8, B11–B13, B15 closed, B9
-next; status in [tracks/track_b.md](tracks/track_b.md)).** A level-set +
+next; status in [roadmap/track_b.md](roadmap/track_b.md)).** A level-set +
 multivalued-element (CutFEM-style) wake representation with an implicitly
 enforced Kutta condition (Γ emerges from the solution — no Γ DOF, no secant)
 replacing the conforming sheet + master–slave elimination above, so meshes need
@@ -1033,10 +1033,10 @@ second — otherwise model error and code error are confounded.
 
 ---
 
-## 11. Development roadmap (moved to roadmap.md + docs/tracks/)
+## 11. Development roadmap (moved to roadmap.md + docs/roadmap/)
 
 > The roadmap lives in [docs/roadmap.md](roadmap.md) (track index + working
-> rules) with one file per track under [docs/tracks/](tracks/): Track P (solver
+> rules) with one file per track under [docs/roadmap/](roadmap/): Track P (solver
 > P0–P13), Track M (meshing M0–M5), Track B (level-set wake B1–B15; numerics
 > spec [design_track_b.md](design_track_b.md)), Track V (viscous–inviscid
 > coupling V1–V4 — phase IDs distinct from the §10 validation-case IDs V0–V6).

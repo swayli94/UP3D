@@ -53,7 +53,7 @@ the TE's **WALL-ADJACENT** upper/lower control volumes. **B5 closed
 (domain-robust to <1%; the López Neumann outlet truncates O(Γ/R) and needs a
 2–4× larger domain; M6 leg folded into B7). Next = B6 (transonic) / B7
 (M6 3D).
-**Numerics reference (2026-07-11):** [design_track_b.md](design_track_b.md) —
+**Numerics reference (2026-07-11):** [design_track_b.md](../design_track_b.md) —
 theory/implementation analysis cross-checked against the López dissertation;
 supersedes DN1 as the Track B numerics spec (key deltas: 3D wake BC uses the
 López g₁+g₂ two-component LS form, NOT the Núñez full-vector form; Kutta is
@@ -765,7 +765,7 @@ Working rules (DN1 §9–§10):
 ### Track B — level-set embedded wake
 
 Track status: **◐ IN PROGRESS** — design 2026-07-07; B10 shelved 2026-07-10;
-numerics spec [design_track_b.md](design_track_b.md) (supersedes DN1) + gate
+numerics spec [design_track_b.md](../design_track_b.md) (supersedes DN1) + gate
 re-arbitration 2026-07-11; **B1 CLOSED 2026-07-11**, with M3/M4 delivered the
 same day; next = B2. Purpose is user-arbitrated as **mesh/geometry workflow
 capability, not solver speed** (the kill-the-Γ-secant efficiency motivation is

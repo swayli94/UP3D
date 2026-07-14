@@ -3,7 +3,7 @@
 > Split verbatim from `docs/demo_report.md` on 2026-07-15 (content unchanged;
 > only this header was added; sections keep their original chronological order).
 > Scope, reproduce instructions and the honesty/evidence rule: see the
-> [demo_report.md](../demo_report.md) index. Roadmap gates: [tracks/](../tracks/).
+> [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
 ## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐)
 
@@ -41,7 +41,7 @@ families:
 | B5 far-field A/B | `cases/demo/b4p5_farfield/` + `tests/test_b45_farfield.py` | 9 demo PASS + 10 PASS | closed 2026-07-12 |
 | B6 transonic (level-set) | `cases/demo/b6_transonic/` + `tests/test_b6_transonic.py` | 14 demo PASS + 9 PASS (+2 gated) | ◐ IN PROGRESS 2026-07-12 — coarse M0.80 gate met, medium M0.7875 fold deferred to LS Newton |
 
-Numerics spec: [design_track_b.md](design_track_b.md) (supersedes DN1;
+Numerics spec: [design_track_b.md](../design_track_b.md) (supersedes DN1;
 B6 findings in §10). **B6 in progress** (transonic on the level-set path);
 **next = B7** (ONERA M6 3D).
 
@@ -94,9 +94,9 @@ reach the isolated fold solution (why G8.1 re-specced the conforming path to
 Newton locks). The quantitative medium gate needs the **LS Newton** (post-B6
 re-derivation, design_track_b.md §5.5, explicitly deferred).
 
-![B6 stabilizer story: throttle / runaway / converge](../cases/demo/b6_transonic/results/stabilizer_story.png)
-![B6 transonic Cp + shock, dual-mesh vs conforming](../cases/demo/b6_transonic/results/transonic_cp_shock.png)
-![B6 A/B gap vs Mach](../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
+![B6 stabilizer story: throttle / runaway / converge](../../cases/demo/b6_transonic/results/stabilizer_story.png)
+![B6 transonic Cp + shock, dual-mesh vs conforming](../../cases/demo/b6_transonic/results/transonic_cp_shock.png)
+![B6 A/B gap vs Mach](../../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
 
 > **Track-B renumber 2026-07-12.** Two renumbers landed the same day: a new **B4**
 > (TE control volume) was inserted, then the half-integer IDs were regularized
@@ -142,8 +142,8 @@ meshes.** This is the concrete justification for the dual-mesh rule:
 Left: the M3 wake-free quasi-2D layer — note there is no wake line in the
 topology, only a size-field corridor. Right: the M4 wake-free ONERA M6 corridor.
 
-![M3 wake-free quasi-2D layer](../cases/meshes/naca0012_wakefree_2.5d/coarse_layer.png)
-![M4 wake-free ONERA M6 wake corridor](../cases/meshes/onera_m6_wakefree/coarse_wake_corridor.png)
+![M3 wake-free quasi-2D layer](../../cases/meshes/naca0012_wakefree_2.5d/coarse_layer.png)
+![M4 wake-free ONERA M6 wake corridor](../../cases/meshes/onera_m6_wakefree/coarse_wake_corridor.png)
 
 M3 coarse: 29,250 tets, corridor median edge 0.0595 vs an h_wake target of 0.06.
 M4 coarse/medium: 50,605 / 329,645 tets — **within 6–9% of the M1 counts at equal
@@ -227,8 +227,8 @@ potential drawn **per element** — i.e. exactly as the multivalued DOFs store i
 at all**. The M3 panel exposes the coarser wake-free triangulation that the level
 set cuts through generically.
 
-![B3 flow field, lift vs no-lift, M0 embedded](../cases/demo/b3_levelset_lifting/results/flowfield_lift_vs_nolift_m0.png)
-![B3 flow field, lift vs no-lift, M3 wake-free](../cases/demo/b3_levelset_lifting/results/flowfield_lift_vs_nolift_m3.png)
+![B3 flow field, lift vs no-lift, M0 embedded](../../cases/demo/b3_levelset_lifting/results/flowfield_lift_vs_nolift_m0.png)
+![B3 flow field, lift vs no-lift, M3 wake-free](../../cases/demo/b3_levelset_lifting/results/flowfield_lift_vs_nolift_m3.png)
 
 **2. How the jump survives to the far field.** LEFT: the nodal [φ] at every cut node
 vs downstream distance is **flat at Γ from the TE (d = 0) out to the far field
@@ -239,7 +239,7 @@ the circulation. This is a load-bearing fix, not a detail.)* RIGHT: the **storag
 the MAIN dof holds the node's own-side value, the AUX dof the other side, and the gap
 between them is exactly Γ, all the way out.
 
-![B3 wake jump convection and storage](../cases/demo/b3_levelset_lifting/results/wake_jump_m0.png)
+![B3 wake jump convection and storage](../../cases/demo/b3_levelset_lifting/results/wake_jump_m0.png)
 
 **3. Surface Cp on both families**, using the **D11 per-side DOF mapping** (solid =
 M0 embedded, dotted = M3 wake-free, grey dashed = conforming; Cp axis inverted,
@@ -247,7 +247,7 @@ suction up). Lower-surface TE triangles *must* read the TE's AUX value — readi
 `phi_main` alone gives cl_p = **−3.35**, junk. At α = 0 upper and lower collapse; the
 M3 cl_p lands within 2.3% of conforming despite being a coarser, wake-free mesh.
 
-![B3 wall Cp, both mesh families](../cases/demo/b3_levelset_lifting/results/wall_cp.png)
+![B3 wall Cp, both mesh families](../../cases/demo/b3_levelset_lifting/results/wall_cp.png)
 
 **4. The dual-mesh rule made visible** — the same level-set path on the
 wake-**embedded** M0 mesh (which *has* a `wake` tag, its wake nodes lying exactly on
@@ -255,7 +255,7 @@ the sheet) and on the wake-**free** M3 mesh (**no `wake` tag anywhere**, generic
 through generic elements). Γ agrees to **1.9%**. This is the payoff: **lift on a mesh
 that never had a wake embedded**, where no conforming counterpart exists at all.
 
-![B3 dual-mesh: embedded vs wake-free](../cases/demo/b3_levelset_lifting/results/dual_mesh_embedded_vs_free.png)
+![B3 dual-mesh: embedded vs wake-free](../../cases/demo/b3_levelset_lifting/results/dual_mesh_embedded_vs_free.png)
 
 ---
 
@@ -316,7 +316,7 @@ sits just **below** the sheet: the ε side-shift sends on-sheet nodes "+", so th
 effectively lies at y = −ε. **That bias is exactly what B4's TE condition had to be made
 immune to.**
 
-![B4 level-set region and TE control volumes](../cases/demo/b3_levelset_lifting/results/levelset_region_m0.png)
+![B4 level-set region and TE control volumes](../../cases/demo/b3_levelset_lifting/results/levelset_region_m0.png)
 
 **Gate checks.** LS constant-jump null space pinned numerically (1.9e−16 — the reason a
 separate TE condition is *structurally* required); TE control volumes verified
@@ -329,7 +329,7 @@ emergent Γ within 5% of conforming (**measured 0.1–0.7%**), while the old
 **Consequence: the D2 penalty-Kutta fallback is no longer needed** — this route has **no
 penalty weight and no tuning parameter** (s̄ is solved for, not calibrated). Interfaces:
 `solve_multivalued_lifting(..., te_kutta="pressure")` (default), with `te_kutta="mass"`
-retained purely for the contrast. Derivation in [design_track_b.md §9](design_track_b.md).
+retained purely for the contrast. Derivation in [design_track_b.md §9](../design_track_b.md).
 
 ---
 
@@ -362,7 +362,7 @@ Coarse NACA0012, M0.5, α = 2°, on **both** Track B mesh families, with the far
 radius swept over R ∈ {15, 30, 60, 120}c. Γ vs R, one panel per family, against the
 conforming reference and its ±2% B3 band:
 
-![B5 far-field domain-size study](../cases/demo/b4p5_farfield/results/farfield_domain_study.png)
+![B5 far-field domain-size study](../../cases/demo/b4p5_farfield/results/farfield_domain_study.png)
 
 **Result** (M0 embedded shown; the M3 wake-free family agrees to the third digit):
 
