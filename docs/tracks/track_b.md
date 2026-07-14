@@ -1,0 +1,797 @@
+# pyFP3D Roadmap — Track B (level-set embedded wake B1–B15)
+
+> Split verbatim from `docs/roadmap.md` on 2026-07-15 (content unchanged; only
+> this header and the ledger heading were added). Global working rules, gate-ID
+> conventions and the track index live in [roadmap.md](../roadmap.md); the
+> human-readable status snapshot is [overview.md](../overview.md).
+
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10**; **B12 ✓ CLOSED 2026-07-14 — lagged-LU direct-reuse for LS Newton (M6 medium Newton 2.18× via 1 factorization vs 7), NEW appended after B11**; **B13 ✓ CLOSED 2026-07-14 — lagged-LU on the Picard outer loop (M6 medium lifting 6.55× 447.6→68.3 s, end-to-end ~3× ~330→112 s)**; **B14 ☐ designed-not-scheduled — Schur-eliminated-aux + AMG structural preconditioner (fine-scale route; trigger recorded)**; **B15 ✓ CLOSED 2026-07-15 — LS Newton transonic ramp + N5 freeze-selection: the Picard shock plateau is GONE (M6 medium M0.84 2304.7 s bounded-stall → 657 s all-levels-converged, 3.5×; NACA coarse M0.80 5.6× and strict), plus FOUR errata proving the conforming N5 recipe is not mechanically portable** — B9 = multi-wake NEXT, B10 = curved wake shelved)
+
+> **★ Track-B renumber 2026-07-12 (user-directed).** TWO renumbers landed the
+> same day. **(1)** A new **B4 — TE control-volume / implicit-Kutta
+> re-derivation** was INSERTED (B3's emergent circulation converges to the wrong
+> value; design_track_b.md §9). **(2)** The half-integer IDs were then
+> regularized away — the far-field A/B and the M6 3D gate become full phases and
+> everything after shifts up by one. **Net mapping from the pre-2026-07-12
+> scheme: old B4 (transonic) → B6; old B4.5 (M6 3D) → B7; old B5 (multi-wake) →
+> B8; old B6 (curved wake, shelved) → B9; and the far-field A/B (once B3.5, then
+> B4.5) → B5.** Docs written before 2026-07-12 use the old IDs; docs written
+> between the two same-day renumbers use the interim B4.5/B5/B5.5/B6/B7 IDs.
+>
+> **★ Track-B renumber 2026-07-13 (user-directed).** A new **B8 — level-set
+> tip-edge desingularization (row-blend tip taper)** was INSERTED (the LS
+> analogue of P13/G13.2's conforming taper; G13.2 finding (8)). Everything after
+> shifts up by one: old **B8 (multi-wake) → B9**; old **B9 (curved wake,
+> shelved) → B10**. Docs written before 2026-07-13 use the pre-insertion IDs
+> (B8 = multi-wake, B9 = curved wake).
+
+Deliverable: `wake/` — a level-set wake representation + multivalued (CutFEM-style)
+elements + implicit Kutta (TE duplication + wake least-squares condition; penalty
+Kutta demoted to an optional diagnostic — design_track_b.md D2), replacing the
+conforming embedded wake sheet + master–slave Γ elimination.
+**Purpose (user-arbitrated 2026-07-11): mesh/geometry workflow capability** —
+no pre-embedded wake surface, α sweeps without remeshing, blunt-TE anchoring,
+multi-wake / wake–fuselage intersections for M2, structural elimination of the
+st133-class Kutta-probe failures. NOT solver speed: the original
+kill-the-Γ-secant efficiency motivation is obsolete post-P8 Newton
+(design_track_b.md §1); efficiency criteria below are non-regression guards only.
+Design record: DN1 (historical; `discussion_notes/` deleted 2026-07-14 —
+`git show 8aa4aee:docs/discussion_notes/20260707_1505_levelset_wake_design.md`),
+superseded by design_track_b.md. **Status (2026-07-12): B1 + B2 + B3 + B4 CLOSED.**
+The level-set path now produces LIFT with an implicit Kutta (no Γ secant, no
+master–slave Γ): Γ matches the conforming solver **within 1% on the same mesh**
+at M=0 and M=0.5, cl lands inside the committed [PG, KT] bracket, and the
+**wake-free** M3 mesh (no `wake` tag at all) reproduces the embedded-mesh
+circulation to 0.3% — the workflow payoff. **★ The B4 finding (design_track_b.md
+§9):** the wake LS is STRUCTURALLY blind to a constant jump (Σ_c ∇N_c = ∇(1) = 0
+⇒ residual identically zero, measured 1.9e-16), so "g₂ IS the discrete Kutta" is
+FALSE — Γ needs its own condition. B4 supplies it: the **nonlinear TE
+pressure-equality (Bernoulli) Kutta** |q_u|² = |q_l|², factorized exactly as
+(q_u+q_l)·(q_u−q_l) = 0 and linearized by freezing the mean, with q recovered on
+the TE's **WALL-ADJACENT** upper/lower control volumes. **B5 closed
+2026-07-12 — far-field verdict: option a (Dirichlet+vortex) stays the default**
+(domain-robust to <1%; the López Neumann outlet truncates O(Γ/R) and needs a
+2–4× larger domain; M6 leg folded into B7). Next = B6 (transonic) / B7
+(M6 3D).
+**Numerics reference (2026-07-11):** [design_track_b.md](design_track_b.md) —
+theory/implementation analysis cross-checked against the López dissertation;
+supersedes DN1 as the Track B numerics spec (key deltas: 3D wake BC uses the
+López g₁+g₂ two-component LS form, NOT the Núñez full-vector form; Kutta is
+implicit via TE duplication + the wake LS condition, penalty demoted to
+optional; on-wake nodes need the ε side-shift DN1 missed). Gate re-specs were
+**user-arbitrated 2026-07-11 and merged into the phase entries below** (B3 re-spec;
+B5 far-field A/B NEW; B4 re-anchored post-P4-erratum, medium at M0.7875;
+B7 M6 3D gate NEW); design_track_b.md §7 is the arbitration record.
+
+
+### B1 — Level-set wake + cut-element identification ✓ (closed 2026-07-11)
+**Deliverable:** Level-set wake + cut-element identification (`wake/levelset.py`, `wake/cut_elements.py`)
+**Gate (dual-mesh: M0/M1 wake-embedded + M3/M4 wake-free):**
+- [x] **CLOSED 2026-07-11** (`tests/test_b1_cut_elements.py`, 34 passed, 2.5D coarse+medium of both families + 3D M6 of both families): (a) M0 embedded — every conforming sheet node ε-shifted "+" (D4 stress test at scale), census **exactly** == `cut_wake`'s minus-side element star (`cut_elems ∪ te_lower_elems`, element-by-element), TE nodes == `wc.te_nodes`; (b) M3 wake-free — generic cuts, gap-free corridor TE→far field at α=0 AND after `update_direction` to α=4° **on the same mesh**; (c) **M1/M4 ONERA M6 (3D)** — swept TE polyline: census is a strict **superset** of the conforming minus-star (0 missing, +2.9% extras, all tip-edge straddlers — the sheet's tip edge conforms to element edges on the M1 mesh but passes THROUGH elements for the level set; expected and explained), spanwise clip verified (nothing cut wholly outboard of the tip); M4 wake-free — same census structure with no `wake` tag, spanwise-gap-free sheet, α re-aim 0°→3.06° on the same mesh. Delivered: TE-**polyline** ruled level set (D9) with an **oblique (v, d̂, n̂) frame** — ★ a swept TE is not perpendicular to the wake direction, so an orthogonal span projection leaks the downstream distance into the spanwise coordinate and wrongly clips ~60% of the true M6 cut set (measured, then fixed; regression-pinned); **spanwise clip** (crossings must satisfy 0 ≤ q ≤ span_length — outboard of the tip the sheet has ended, Γ(tip)=0; without it the level set re-creates P5's far-field branch-ray artifact); downstream-crossing test (excludes the ahead-of-LE sign-change region); `te_lower_elems` recorded for B2's López-fig-3.6c aux assignment
+
+### B2 — Multivalued FE assembly ✓ (closed 2026-07-11)
+**Deliverable:** Multivalued FE assembly (`wake/multivalued.py::MultivaluedOperator`, `kernels/cut_assembly.py`; `solve/picard_ls.py::solve_multivalued_laplace` non-lifting driver — parallel to the conforming path, which stays byte-untouched)
+**Gates (dual-mesh):**
+- [x] **CLOSED 2026-07-11** (`tests/test_b2_multivalued.py`, 17 passed on coarse+medium of both 2.5D families and 3D M6 coarse of both families; some medium/M6 parametrizations skip in CI where the meshes are gitignored). Key design: a cut element is the SAME P1 element matrix assembled twice with `dofs_upper`/`dofs_lower`, expressed as a sparse **redirection** of the single-valued matrix — on a cut element the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b) (`multivalued_redirection_coo`); everything else is byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 **continuity ("weld") closure** aux_k = main_j (`continuity_closure_coo`), which makes the extended (n_total = n_main + n_ext) system reduce EXACTLY to the single-valued one — proven directly (`test_extended_matrix_folds_to_stiffness`: folding aux→main recovers the stiffness matrix to 1e-13). The extended matrix is structurally nonsymmetric (weld rows), solved by sparse-direct LU (`spsolve`); GMRES+AMG is the B3+ scaling path (design_track_b.md §5.3). B3 replaces the weld block with the g₁+g₂ wake LS (implicit Kutta), at which point [φ] becomes nonzero.
+- [x] V0 freestream (φ = U·x, full Dirichlet) < 1e−12 on the cut mesh: 2.5D M0/M3 α=0 and α=4° = **0.0** (exact linear field); 3D M6 M1/M4 = **1.1e−14 / 3.4e−14**
+- [x] V1 MMS slope ≥ 1.9: cube cut in generic position (8° tilted half-plane), 3-level slope **1.94**
+- [x] Laplace α = 0 gives cl ≈ 0: TE jump = 0 (the weld forbids a jump) ⇒ cl_KJ = 0, and the main potential matches the single-valued `solve_laplace` oracle to **~3e−11** — on both mesh types (dual-mesh rule)
+
+### B3 — Lifting solve with implicit Kutta ✓ (closed 2026-07-12)
+**Deliverable:** Lifting solve with **implicit Kutta** — no Γ secant, no master–slave Γ constraint: the TE jump is carried by the multivalued aux DOFs, the g₁+g₂ wake LS convects it downstream, and its VALUE is set by B4's nonlinear TE pressure-equality Kutta. Γ is a RESULT. `kernels/cut_assembly.py` (`mass_conservation_coo` with per-side ρ per D10, `wake_ls_coo`, `te_kutta_coo`), `wake/multivalued.py` (`closure="wake_ls"`, side potentials/densities, TE control volumes), `solve/picard_ls.py::solve_multivalued_lifting`. Far field = Dirichlet freestream + vortex on the **MAIN** DOFs, aux **FREE**.
+**Gates (dual-mesh) — `tests/test_b3_lifting.py`, 6 passed:**
+- [x] **V3 M0.5 α=2°: cl inside the committed [PG, KT] bracket** — cl_KJ **0.2828** (medium) inside [PG 0.2788, KT 0.2919], read from `cases/reference_data/naca0012_m05/cl_reference.csv` (the same file the conforming G3.2 gate reads). Holds on BOTH the wake-embedded M0 family and the **wake-free M3** family.
+- [x] **Same-mesh A/B vs conforming** (only possible on the embedded family): Γ within **0.1–0.7%** at M=0 and M=0.5, coarse/medium/fine (0.1177/0.1191/0.1197 vs 0.1175/0.1200/0.1202). *The old "within 1% same-mesh" clause — retired on 2026-07-12 as unmeetable — is in fact MET, now that B4 supplies a real Kutta.*
+- [x] **Wake-free M3 mesh** (no `wake` tag, generic cuts — the actual workflow form): Γ within **0.3%** of the embedded-mesh result; medium cl inside [PG, KT]. *(M3 coarse cl 0.2773 sits 0.5% under the PG edge — a coarse-mesh accuracy artifact; the gate lives on medium per hard rule 2.)*
+- [x] Γ emerges (no outer Γ loop) and the wake jump is CONVECTED, not decaying (pinned: far-field aux DOFs must stay free)
+
+### B4 — TE control-volume / implicit-Kutta re-derivation ✓ (NEW + closed 2026-07-12, user-directed)
+**The B3 blocker and its fix (design_track_b.md §9).** Two structural facts:
+**(1) The wake LS CANNOT pin Γ.** Its residual is identically zero for any spatially-constant jump, because Σ_c ∇N_c = ∇(Σ_c N_c) = ∇(1) = 0 (partition of unity) — measured **1.9e-16**. ⇒ design_track_b.md §2.3/D2's "the g₂ on the TE-adjacent wake element IS the discrete Kutta condition" is **FALSE and retired**; the López dissertation has no explicit Kutta anywhere ("Kutta" never appears in its method chapter).
+**(2) Γ was therefore pinned by a single, WRONG equation** — the TE aux row (lower-side mass conservation), whose control volume is up/down asymmetric on a symmetric airfoil (TE fan 9 upper / 6 lower / 3 cut, because the ε shift sends every on-sheet node "+"). It over-circulated **+42%** (Γ → 0.168 vs 0.120), mesh-convergently.
+**★ Deliverable — the nonlinear TE pressure-equality (Bernoulli) Kutta.** Symmetrizing the control volume is NOT available (the mesh is naturally asymmetric at the TE — user-arbitrated), so the condition is instead a POINTWISE PHYSICAL statement needing no symmetry: |q_u|² = |q_l|², factorized **exactly** as (q_u+q_l)·(q_u−q_l) = 0 and linearized by freezing the mean s̄ = q_u+q_l at the previous iterate — a row that is LINEAR in φ, re-linearized each Picard outer (same cadence as the density lag, no new outer loop), converging to the exact nonlinear condition. It sits on the TE **aux** row; the displaced lower-side mass-conservation entries are re-routed onto the TE **main** row, which then carries the TOTAL (upper+lower) balance — so mass stays conserved and no side is arbitrarily robbed of its equation. **Why it is non-degenerate where g₂ is not:** q_u and q_l are recovered on DIFFERENT element sets, so q_u−q_l is not a jump gradient and does not vanish for a constant jump.
+**★ The control volumes must be WALL-ADJACENT** (elements carrying a wall face — the upper/lower body surface at the TE), not the whole element fan: the Kutta condition is about the SURFACE velocities. Measured (Γ, coarse/medium/fine vs conforming 0.1175/0.1200/0.1202): full-fan recovery **0.1407/0.1355/0.1329** (+11–15%, interior and wake elements pollute the average) → wall-adjacent **0.1177/0.1191/0.1197** (**<1%**).
+**Interfaces:** `solve_multivalued_lifting(..., te_kutta="pressure")` (default); `te_kutta="mass"` keeps the old B3 row for the before/after contrast. `kernels/cut_assembly.py::te_kutta_coo`, `wake/multivalued.py::{_build_te_control_volumes, te_velocities}`. **The D2 penalty-Kutta fallback is no longer needed** — this route has no penalty weight and no tuning parameter (s̄ is solved for, not calibrated).
+**Gates — `tests/test_b4_te_control_volume.py`, 8 passed (~29 s):**
+- [x] the wake-LS constant-jump null space is pinned numerically (1.9e-16) — the reason a separate TE condition is structurally required
+- [x] the TE control volumes are wall-adjacent (every element carries a wall face)
+- [x] the below-TE fan is never cut (the López p.57 ε-shift trap; regression pin)
+- [x] **NACA0012 α=2° incompressible: emergent Γ within 5% of conforming** — measured **0.1–0.7%** on coarse and medium; and the old `te_kutta="mass"` row is still >30% out (before/after contrast held honest)
+- [x] visual artifact `artifacts/EXPORT_TE_DIAGNOSIS/b4_te_kutta.png` + `summary.csv` (wall-adjacent control volumes + the three Γ-vs-h curves against conforming)
+
+### B5 — Far-field A/B: Dirichlet+vortex vs Neumann outlet ✓ (was B4.5, orig B3.5; NEW 2026-07-11; closed 2026-07-12, user-arbitrated)
+**Deliverable:** option a (spherical Dirichlet + vortex on the main DOFs) vs option b (López-style Neumann outlet, no vortex; domain re-calibrated per the dissertation §4.1.4 — note López uses **10²–10⁷ chord** domains vs pyFP3D's 15c) — design_track_b.md §5.4/D7. **Interface:** `solve_multivalued_lifting(farfield="vortex"|"neumann"|"freestream")`; default `"vortex"`.
+**Note (2026-07-12):** far-field truncation is **NOT** the B3 over-circulation cause — imposing the conforming true solution's far-field trace as Dirichlet still yields Γ = 0.1721. Confirmed after B4 closed: with B4's correct Kutta, the far-field question decouples cleanly and is purely an O(Γ/R) truncation study.
+**Gate:**
+- [x] **CLOSED 2026-07-12 — verdict: option a (Dirichlet+vortex) STAYS the default.** López-style domain-size re-calibration on the NACA dual-mesh families (M0 embedded + M3 wake-free), coarse, M0.5 α2°, far-field radius R ∈ {15,30,60,120}c (demo `cases/demo/b4p5_farfield/`, `tests/test_b45_farfield.py` 10 passed). **Measured:** option a is **domain-robust** — Γ within **0.45%** (M0) / **1.09%** (M3) of the truth across 15→120c, and **0.25%** of the conforming solver at 15c; option b truncates the O(Γ/R) point-vortex tail — Γ **−4.07%** below a at 15c, halving each doubling of R (−2.0% at 30c, −0.99% at 60c, −0.50% at 120c), so it meets the B3 ±2% band only at **R ≥ ~30c** and <1% at **R ≥ 60c** (a 2–4× larger domain, 4× the tets at equal near-body h — consistent with why López needs 10²–10⁷c domains); freestream-Dirichlet is the crudest at every R (and DIVERGES on the compact 15c M0). Both mesh families give bit-for-bit the same story. Since the O(Γ/R) truncation is geometry-universal (a 3D wing truncates the same horseshoe tail), this decides the far-field default for the M6 B-path too. **M6 leg folded into B7** (user-arbitrated 2026-07-12): the level-set B-path *solve* on M6 needs the 3D wake-BC machinery that is B7's deliverable — and, separately measured here, the span-uniform option-a vortex without the P5 Γ(z) taper recreates the branch-ray artifact on M6, itself B7 machinery.
+
+### B6 — Transonic + Mach continuation on the level-set path ◐ IN PROGRESS 2026-07-12 (coarse gate ✓; medium = bounded Picard state, isolated fold solution deferred to LS Newton) (was B5, orig B4)
+**Deliverable:** Transonic + Mach continuation on the level-set path (~~inherits `damping_theta`~~ — **measured 2026-07-12: the inherited stabilizer does NOT transplant as-is**, see findings below). Delivered so far (design_track_b.md §10): per-side artificial density on the cut elements with a same-side-restricted upstream walk (`MultivaluedOperator.element_rho_tilde`, D10 — subcritically an exact no-op; the M0.80 blow-up cells sit in the pocket ABOVE the airfoil, zero on the wake strip, so the shock machinery is isomorphic to conforming); **supersonic-zone-LOCALIZED damping** (`damping_scope="supersonic"`) — the P4 whole-field θ·diag form is a Jacobi smoother that throttles the smooth global circulation mode, which on the B path is a SOLUTION mode (conforming keeps Γ outside the damped matrix as a secant unknown; measured: Γ crawls 0.0005→0.017 in 160 outers vs undamped convergence in 35); `solve_multivalued_transonic` Mach ramp with **no Γ secant** (a level = one warm-started Picard solve — the st133-class per-station closure failure is structurally impossible); `post/surface_ls.py` (D11 wall Cp + shock extraction on the B path); +9 suite tests (`tests/test_b6_transonic.py`) incl. the two recorded negative results.
+**★ Fold findings (2026-07-12, coarse M0.80 α1.25 vs the G8.1 anchors — Newton shock 0.658/cl_p 0.459/Γ≈0.2295; conforming Picard's own committed state is a STALL at Γ 0.1819/shock 0.604):** (1) the **live option-a Γ→far-field-vortex feedback has loop gain > 1 near the fold** — Γ climbs monotonically THROUGH the conforming-Picard value AND the Newton value at flat residual ~5e-5, then blows up (M_max 37); under-relaxation cannot fix monotone gain > 1 (1+ω(λ−1) > 1 ∀ω>0; ω_γ=0.1 measured = slower divergence). (2) the per-level lagged vortex + polish (P5 pattern) measures the outer map g(Γ_ff) = 0.1366→0.2189→0.2884→0.4514: **no fixed point below the isentropic-validity ceiling** ⇒ with a live/lagged vortex this discretization at coarse M0.80 sits PAST the fold — the P8 conforming-MEDIUM phenomenon one mesh earlier (the LS path lifts a few % higher at equal h, see (4)). (3) **the López Neumann outlet (B5 option b, no Γ feedback) removes the loop and CONVERGES to near the Newton solution** on BOTH mesh families (physical, 0 lim/flr, M_max 1.39): M0 embedded Γ 0.2114 (−7.9% of Newton), shock 0.644, cl_p 0.4154; **M3 wake-free Γ 0.2315 (+0.9% of Newton!), shock 0.678, cl_p 0.4556 (−0.7% of Newton 0.459)** — both far closer to the truth than the conforming Picard's own stall (Γ 0.1819 = −21%, shock 0.604, cl_p 0.357); structurally why the dissertation runs all transonic cases on the outlet form. ⇒ **B6 transonic recipe = `farfield="neumann"`** (B5's subsonic option-a default verdict unaffected). (4) ★ **INVERSION — the LS Picard tracks the conforming NEWTON truth to ≤1%; the deviator is the conforming Picard itself.** The raw Picard-vs-Picard gap grows with pocket strength (M0.5 +0.2% / M0.65 +0.5% / M0.70 +4.9% / M0.75 +10.5% coarse; medium M0.70 +7.4%) — but same-mesh conforming NEWTON arbitration shows the conforming PICARD under-circulates by −4.1% (coarse M0.70, Newton Γ 0.1151) / −8.4% (coarse M0.75, Newton 0.1377) / −6.6% (medium M0.70, Newton 0.1190) — the P4-erratum bias (frozen-Γ inner solves + budgeted secant early-stop) quantified at weak shocks — while the LS Picard sits at **+0.6% / +1.0% / +0.25%** of the Newton truth respectively, converging TOWARD it under refinement (no early-stoppable Γ outer exists on the LS path: Γ is a solution mode, converged with the field to residual ~1e-7).
+**Gates (dual-mesh; re-anchored 2026-07-11 P4-erratum aware; ★ BASELINE CHANGED 2026-07-12, USER-ARBITRATED: the reference is the same-mesh conforming NEWTON truth, NOT the conforming Picard — the Picard stall under-circulates 4–8% at these shock strengths (finding 4), so it was never a valid A/B target; this aligns the B6 reference with the G8.1 anchor):**
+- [x] **coarse M0.80 α1.25° inside the G8.1 Newton-lock bands** with the B6 neumann recipe: **MET** — M0 embedded shock 0.644 / cl_p 0.4154 / Γ 0.2114 (−7.9% of Newton 0.2295); M3 wake-free shock 0.678 / cl_p 0.4556 (−0.7% of Newton 0.459) / Γ 0.2315 (+0.9%); both inside shock 0.658±0.06 and Γ ±10%, physical (0 lim/flr, M_max 1.39). (The conforming Picard itself misses these locks by −21% cl / −0.054 shock — the deprecated baseline.)
+- [~] **medium M0.7875** (the G8.1 re-specced case): **PARTIAL — bounded Picard-quality state reached, isolated fold solution deferred to the LS Newton.** With the fold recipe (C=2.0, θ=0.5 localized, dm=0.025 into the fold) the LS neumann solve on M0 embedded stays BOUNDED and physical at every level (M_max 1.44 vs Newton 1.404, **0 limited / 0 floored**, shock captured) — but it STALLS at Γ 0.2146, **−18.8% of the same-mesh conforming Newton truth 0.2643**, residual parked at ~5e-6. This is the FP non-uniqueness fold: a Picard method — conforming OR level-set — does not reach the isolated solution here (exactly why G8.1 re-specced the *conforming* path to Newton locks at medium; P4-erratum / P8 fold record), and the heavier dissipation needed to keep the finer-mesh shock bounded depresses the lift further. Earlier attempt with the coarse recipe (C=1.5, θ=0.2) **diverged** (M_max 60, 1103 limited) — the medium shock needs more dissipation than coarse. ⇒ the quantitative medium gate needs the **LS Newton** (post-B6 re-derivation, design_track_b.md §5.5, explicitly deferred). The dm=0.025 M3 wake-free medium leg is not yet measured (timed out behind M0).
+- [x] **same-mesh A/B vs the conforming NEWTON solution within 2%** (re-baselined): **MET** where both converge — LS Picard is +0.5% (coarse M0.65) / +0.6% (M0.70) / +1.0% (M0.75) / +0.25% (medium M0.70) of the Newton Γ, and −7.9%/+0.9% (M0/M3 coarse M0.80, the fold, Picard-quality band). The old "Picard-vs-Picard ±2%" reading is retired (measured the conforming stall bias, not an LS error).
+- [x] fold discipline applies (per-mesh locks, no cross-mesh convergence claims) — enforced: coarse M0.80 and medium M0.7875 are separate anchors, the dual-mesh spread widens at the fold (M0/M3 straddle Newton) and is reported per mesh, never as a convergence claim.
+
+**★ B6-Newton (post-B6 re-derivation, design_track_b.md §5.5/§10.6; 2026-07-12) — the LS Newton that the medium fold needs.** `solve/newton_ls.py::solve_multivalued_newton`: exact Jacobian = Picard matrix + per-side Terms 2/3 (P7 sensitivities through the DOF indirection) + the EXACT quadratic TE-Kutta derivative; wake-LS rows linear (no correction); no Γ DOF (no Woodbury); nonsymmetric → splu. **FD-verified 1.3e-9** (`tests/test_b6_newton.py`; the Terms-2/3 row-map — drop non-TE aux, reroute TE aux → TE main — was FD-caught at 1e-4 before the fix). **★ Reaches machine-converged, terminal-QUADRATIC discrete fold solutions (0 lim/flr) where the Picard only stalled:** coarse M0.80 M0 |R| 9.4e-13 Γ 0.2124 (−7.4% of conforming Newton) / M3 3.2e-11 Γ 0.2322 (+1.2%); **medium M0.7875 M3 wake-free (the workflow mesh) |R| 1.5e-12 Γ 0.2292** — the fold is a genuine discrete solution on the B path, closing the "is it a solution?" question the Picard stall left open. **Two honest gaps remain (recorded):** (1) M0-embedded medium live-Newton limit-cycles at |R|~3e-6 (bounded/physical but not machine-converged) — the P8/N5 near-tie churn in LS form; fix = wire in the N5 frozen-selection/refresh (§5.5 says it transplants, interface `freeze` reserved); (2) the converged LS fold lift sits ~13% below the conforming-Newton truth at medium (a real discretization difference, both machine-converged) — apportionment (B5 neumann O(Γ/R) −4% vs cut-integration O(h) vs artificial-density mesh-dependence) is the recorded next investigation (candidate: a vortex-far-field LS Newton + C-sweep). ⇒ B6 stays IN PROGRESS: coarse gate met, LS Newton delivered + fold reachable, medium quantitative closure needs those two items.
+
+### B7 — ONERA M6 3D gate ✓ CLOSED 2026-07-12 (was B5.5, orig B4.5; NEW 2026-07-11, user-arbitrated)
+**Deliverable:** the 3D-only machinery — TE-polyline ruled level set (D9), g₂ spanwise-free wake BC (D1), tip Γ→0 — is untestable on the 2.5D meshes of B1–B6
+**Gate:**
+- [x] **M6 coarse vs the P5/P8 baseline: Γ(z) distribution, cl_KJ, and shock positions within A/B bands — MET on BOTH families** (dual-mesh rule), M∞ 0.84 / α 3.06°, `farfield="neumann"`, Mach ramp 0.60→0.84 @ dm 0.04. Demo `cases/demo/b7_onera_m6/` **35/35 PASS**; `tests/test_b7_onera_m6.py` (6 fast + 5 gated).
+
+**Measured (M1 wake-embedded / M4 wake-free; solve 22.7 / 18.4 min coarse):**
+
+| | M1 embedded | M4 wake-free | P5 conforming Picard | P8 conforming **Newton** |
+|---|---|---|---|---|
+| cl_KJ | **0.2765** (+2.7% of Newton) | **0.2710** (**+0.7%**) | 0.24788 (−8.6% of Newton) | **0.2692** |
+| cl_p (3D) | 0.2716 | 0.2656 | 0.24194 | 0.2560 |
+| V6 consistency | 1.77% | 1.97% | 2.40% | — |
+| shocks η .44/.65/.90 | 0.635/0.588/0.449 | 0.634/0.584/0.454 | 0.596/0.570/0.425 | 0.596/0.541/0.362 |
+| Γ root → tip | 0.1076 → −0.0003 | 0.1055 → +0.0003 | 0.097 → 0.0206 | — |
+| M_max, limited/floored | 1.453†, **0/0** | 1.368, **0/0** | 1.398, 0/0 | 2.13 |
+
+† M_max re-read 2026-07-14 with the honest `element_mach2(mixed_plain="main")`
+(default since the B8-backlog flip): **M1 1.453 (side) → 1.392 (main)** — the
+committed 1.453 was itself a beyond-tip mixed-plain artifact cell (honest value
+closer to P5's conforming 1.398); M4 and both 2.5D B6 states are **bit-identical**
+under either reading. Gate bands unchanged. Artifact:
+`cases/demo/b8_tip_taper_ls/results/mmax_reread.csv` (+ `run_b8_mmax_reread.py`).
+
+**★ Finding 1 — the B6 lift INVERSION reproduces in 3D, on the first try.** Gated against the conforming **Newton** truth (the B6 user-arbitrated baseline, not the conforming Picard), the level-set Picard lands **+2.7% (M1) / +0.7% (M4)** of cl_KJ 0.2692 — while the conforming Picard (P5) sits **−8.6%** below it. This is the same structure B6 measured in 2D and for the same reason: the LS path has **no early-stoppable Γ outer** (the implicit Kutta makes Γ a solution mode converged with the field), whereas the conforming Picard's frozen-Γ inner solves + budgeted per-station secant under-circulate (the P4-erratum bias; P8 independently measured it at +7.9% for M6 medium). Gating B7's lift on P5 would have *penalised the B path for being closer to the truth* — hence the Newton anchor. Note the **wake-free workflow mesh (M4) is the more accurate of the two**, which is the outcome Track B exists to deliver.
+
+**★ Finding 2 — the 3D far field: `farfield="neumann"`, and the P5 Γ(z) taper is NOT needed on the B path.** The B-path vortex (`picard_ls._farfield_main`) is a **span-uniform** 2D point vortex whose branch cut is the ray y=0, x>0 *at every z*. On M6 that is wrong in two independent, separately-measured ways (demo `farfield_decision.png`; gated `test_farfield_vortex_is_contraindicated_in_3d`), both showing up as a spurious near-sonic spot at the **outlet, where the sheet leaves the domain** (max local Mach there, M∞ 0.5):
+  - **(a) non-coplanarity** — the α-aimed sheet has climbed to y ≈ x·tan α ≈ 0.5 by the outlet, far off the vortex's y=0 cut, so the outlet carries a prescribed Γ jump **no cut supports**. This is B3's recorded coplanarity rule, now in 3D. Outlet M **0.958** vs neumann **0.513**.
+  - **(b) span-uniformity** — re-aiming the sheet coplanar (direction (1,0,0)) *shrinks but does not remove* it (outlet M **0.825**): one scalar Γ cannot match Γ(z)→0, and outboard of the tip there is no cut at all. This is exactly P5's branch-ray artifact, whose conforming fix was the Γ(z) taper.
+  ⇒ **neumann carries no vortex, so neither defect can exist** — the taper is unnecessary on the B path rather than merely unimplemented. Cost: B5's O(Γ/R) outlet truncation (a few % of lift on a compact domain), which is why the bands are A/B bands, not <1% bands.
+
+**★ Finding 3 — Γ(z) comes out spanwise-SMOOTH with no smoothing applied** (unplanned; it became visible the moment the real P5 curve was overlaid — `gamma_of_z.png`). Normalised RMS second difference of Γ(z): **0.0079 (M1) / 0.0091 (M4) vs 0.0970 for the conforming P5 — an 11–12× reduction.** The conforming path runs a **separate secant per TE station**, so its Γ(z) carries station-to-station jitter (this is the very defect P5's `INVESTIGATION_gamma_smoothing.md` chased, concluding that spanwise-Γ *smoothing* moves Γ **away** from the self-consistent value, and it is the same machinery whose single-station failure — st133, 32% under-circulated — cost P5 an entire investigation). The implicit Kutta has **no per-station loop to be noisy in**: Γ is one solution mode of the coupled system. So Track B does not merely *fix* the P5 spanwise-Γ problem — it makes the problem **structurally impossible**.
+
+**★ Finding 4 — the 3D-only machinery works, and is cheap.** Γ(z) decays monotonically root→tip and reaches **~3e-4 at the tip** on both families — the spanwise clip delivers Γ(tip)=0 *discretely*, the level-set analogue of the conforming free-edge rule. The swept TE-polyline oblique frame and the g₂ spanwise-free jump gradient (structurally untestable on quasi-2D meshes) needed **no new code** — B1's fixes held. Cost was far below the plan's risk estimate: the per-outer `spsolve` on ~12k 3D DOFs is ~0.6 s, so a full 7-level continuation is **~20 min**, not hours.
+
+**Honest caveats (recorded, not chased):**
+1. **Convergence semantics = the recorded transonic Picard tail, not `tol_residual`.** The top Mach levels exhaust the 600-outer budget and park at |R| ~ 4–6e-6 (M1: levels 0.72–0.84; M4: 0.68/0.76/0.84). The field is **bounded and physical at every level** (0 limited / 0 floored throughout) and every gate metric is in band, so the gate is asserted on *bounded + in-band*, not on `converged` — the same P4/B6 engineering-converged regime. The cure is the LS Newton.
+2. **LS Newton on M6 = DEFERRED.** `solve/newton_ls.py` uses a plain `splu`, and P8/N6 measured true-3D LU fill at ~100× the 2.5D cost (it needed lagged-LU). Porting `direct_refactor_every` to `newton_ls` is the follow-up; B6 already demonstrated the fold capability in 2D.
+3. **Shock positions sit ~0.02–0.04 c aft of P5** (in band vs P5's ±0.06, and consistent with the higher circulation). Against the P8 *Newton* shocks the η=0.90 station is 0.087 aft — recorded; a shock-position A/B against Newton needs the deferred LS Newton to be a like-for-like comparison.
+4. **Coarse only** (medium/fine M6 deferred: cost + fold risk).
+
+### B8 — Level-set tip-edge desingularization ✓ CLOSED 2026-07-14 as CHARACTERIZED-NOT-CURED (user-arbitrated; row-blend 2026-07-13 + re-spec round 2026-07-14 both NEGATIVE with mechanisms pinned; B9 unblocked)
+**Motivation:** P13/G13.2 fixed the tip/wake-edge singularity on the **conforming**
+path with a spanwise loading taper `Γ_eff(z) = F(z)·Γ_Kutta(z)`
+(`constraints/wake.py::tip_taper_factors`, applied on the per-station Kutta
+target). That mechanism **cannot be ported literally** to the level-set path:
+the LS path has **no Γ DOF** (Γ is a solution mode of the implicit Kutta) and its
+TE Kutta row is the **homogeneous** pressure-equality condition
+`s·(q_u−q_l) = 0` (`kernels/cut_assembly.py::te_kutta_coo`, RHS ≡ 0), so scaling
+that row by F is an algebraic **no-op** (G13.2 finding (8)). The clean analogue —
+also finding (8) — is a **convex BLEND** of the pressure-equality row with B2's
+continuity weld `continuity_closure_coo` (Ŵ: `aux_k − main_j = 0`), per TE node:
+
+    F_i · [ s·(q_u − q_l) ]  +  (1 − F_i) · [ φ_aux(i) − φ_main(i) ]  = 0
+
+F=1 inboard ⇒ full pressure Kutta (bit-identical to today); F=0 at the tip ⇒
+weld ⇒ jump `[φ]=0` at that node ⇒ the tip is unloaded — the structural analogue
+of `Γ_eff→0`. The blend is **not** a no-op because the weld row is not
+proportional to the pressure row (q_u, q_l come from different element sets, so
+`q_u−q_l` is not a jump gradient). **This is a different MODEL from
+`Γ=F·Γ_Kutta`** (finding (8)): r_c is calibrated independently and the two-path
+comparison is a **physics A/B**, not a model-identity check. F(z) reuses the same
+`tip_taper_factors`, fed the per-TE-node spanwise arclength `cm.q[cm.te_nodes]`
+with `z_tip = cm.span_length`.
+**Deliverable:** `tip_taper` (per-TE-node F array, default None ⇒ ones ⇒
+bit-identical) threaded through `MultivaluedOperator.assemble_matrix` (blend in
+the `closure="wake_ls"`, `te_kutta="pressure"` branch), the Picard drivers
+(`solve_multivalued_lifting`/`_transonic`), and the LS Newton
+(`solve_multivalued_newton`: blend residual + Jacobian on the TE aux rows).
+Subsonic only — transonic M0.84 convergence stays with G13.3's round-ladder.
+**Gates:**
+- [x] `tip_taper=None` ⇒ B3/B4/B5/B6/B7 bit-identical; `F≡1` == current
+  pressure-Kutta path (bitwise); `F≡0` ⇒ single-valued reduction (Γ≈0 / cl≈0).
+  ✓ `tests/test_b8_tip_taper_ls.py` (13 passed); B-suite 59 passed / 0 failed.
+- [x] blend-is-not-a-no-op unit test (contrast with the scaling no-op that
+  motivates the model). ✓
+- [ ] ❌ **mechanism probe — NOT MET, and the reason is the finding (below).**
+  (★ user re-affirmed 2026-07-14: this unchecked line is KEPT BY DESIGN as the
+  honest record of the characterized-not-cured closure — do not "fix" it.)
+- [x] **two-path physics A/B** — ✓ RUN, and it is the decisive measurement:
+  the taper bounds the CONFORMING edge and does NOT bound the level-set one.
+
+**★★ RESULT 2026-07-13 — THE ROW BLEND DOES NOT CLOSE B8, BECAUSE ITS PREMISE IS
+WRONG.** Demo `cases/demo/b8_tip_taper_ls/` (**12/12**, M6 coarse+medium, M∞0.5,
+α3.06, `upwind_c=0` — no limiter, no shock; artifacts `b8_taper_ls.csv/.png`,
+`checks_b8.csv`). The blend is **correctly implemented and behaves exactly as its
+model predicts**: it converges cleanly (0 lim / 0 flr at every r_c), it
+**UNLOADS the tip circulation far past the conforming criterion** (Γ_last ~ h^q
+with **q = 4.73**, criterion q ≥ 1), and it is **perfectly LOCAL** (inboard Γ
+**+0.01%**, cl_KJ **+0.03%**). **And yet the tip-edge peak STILL DIVERGES under
+every taper**: p = **+1.341** untapered → **+1.37 / +1.41 / +1.58 / +1.37**
+tapered (larger r_c is *worse*). Three findings:
+
+1. **G13.2's DISCRETE mechanism does NOT transfer.** There, `p ≈ 1 − q` (the
+   outermost TE station sheds Γ_last as a concentrated vortex over the last cell
+   ⇒ edge ~ Γ_last/h ⇒ q ≥ 1 kills it). Here **q = 4.73 yet p = +1.37**, nowhere
+   near 1 − q = −3.73. **Killing Γ_last does not kill the peak.**
+2. **The lift cost is ~0 (+0.03%, vs the conforming taper's −1.74%) because there
+   is NOTHING TO UNLOAD:** the level-set **implicit Kutta already drives
+   Γ(tip) → 0 emergently** (B7 measured ±3e-4). The conforming path *needs* the
+   taper because its free-edge rule leaves Γ_last ~ √h (q = 0.44). **The
+   level-set path never had that disease.**
+3. **★ MECHANISM — where the peak actually lives.** The peak cell is **OUTBOARD
+   of the geometric tip** (z/b = **1.0118**, dx = +0.061), it is a
+   **`beyond_tip` element** — one the **SPANWISE CLIP refuses to cut**
+   (`cut_elements.py`: a crossing needs `q ≤ span_length`) — it is the **SAME
+   element tapered or not** (elem 93977), and it is **NOT a small-cut sliver**
+   (volume **0.71×** the median, and not even a cut element, so the CutFEM
+   small-cut instability is ruled out). ⇒ **the level-set tip singularity lives
+   in how the embedded sheet TERMINATES, not in the circulation it sheds.**
+   (The untapered p = +1.341 reproduces G13.1's level-set exponent 1.34 exactly,
+   so the metric is measuring the right object.)
+
+⇒ **The two paths' tip singularities are DIFFERENT OBJECTS.** Finding (8)'s
+"clean analogue" is a faithful analogue of the conforming *model*, but the
+level-set path does not have the conforming path's disease — the analogue treats
+a patient that is not ill. **The shipped machinery (`tip_taper` on the LS path)
+is correct, tested and bit-identical by default; it is simply not the cure.**
+**B8 needs a RE-SPEC aimed at the sheet TERMINATION** (the spanwise clip /
+beyond-tip zone) — candidate directions: a graded/faded sheet termination, a
+ghost-penalty-style stabilization of the clip boundary, or extending the sheet
+past the tip. **User arbitration required before re-speccing.**
+
+**Caveat recorded (cost boundary):** the LS path has **no `precond` option** —
+`solve_multivalued_lifting` is hardcoded to sparse-direct `spsolve` (a deliberate
+B2 decision; GMRES+AMG is the deferred B3+ scaling path). M6 **medium** costs
+**~484 s / solve** at 67,426 extended dofs (~1.2 GB RSS). **M6 fine (~450k dofs)
+on the LS path would hit the same splu wall P9 hit on the conforming Newton, with
+no AMG escape hatch** ⇒ this demo is coarse+medium **by necessity**, and any
+fine-mesh LS work needs the deferred GMRES+AMG path first.
+
+**★★ RE-SPEC ROUND 2026-07-14 (user re-spec doc → diagnosis-first → span blend
+RAN → NEGATIVE, mechanism pinned). Two findings supersede parts of the
+2026-07-13 verdict above:**
+
+1. **★ THE COMMITTED LS EXPONENT p = +1.34 WAS A ×5 METRIC ARTIFACT** (demo
+   `run_b8_termination_diagnosis.py`, artifact `b8_termination_diagnosis.csv`;
+   solves cached WITH `phi_ext` this time). `element_mach2` reads **mixed-side
+   PLAIN elements** (exactly the beyond-tip class) from the aux-substituted
+   SIDE field, but a plain element's **assembly is single-valued on MAIN dofs**
+   (`mass_conservation_coo` scatters `el[plain]`) — the B6 `own_side_field`
+   disease in the one element class own_side_field cannot fix (neither side
+   field is the assembled one). At the verdict element (medium, elem 93977):
+   **side 1.532 vs main 0.309**. The **HONEST untapered exponent is +0.620**
+   (+0.367 with a V/median ≥ 0.1 sliver filter) — **the SAME OBJECT as the
+   conforming +0.52, NOT a stronger one** ⇒ the 2026-07-13 "different objects"
+   verdict holds for the *mechanism* (TE taper can't reach it) but its
+   "LS 1.34 ≥ conforming 0.52" magnitude comparison is RETIRED, and **G13.1's
+   LS-vs-conforming exponent comparison needs the same erratum** (its
+   conforming numbers are metric-clean and stand). Fix shipped **opt-in**:
+   `element_mach2(mixed_plain="main")` — default `"side"` keeps every
+   committed diagnostic (B6/B7 M_max locks) bit-identical; **flipping the
+   default + re-reading the B6/B7 M_max gate numbers is a recorded user
+   arbitration item.** Related recorded (not fixed): the same aux-mixed side
+   field feeds `element_densities`, so junk density weights DO enter the
+   matrix on mixed-side plain elements (measured rho_up min 0.43 vs physical
+   ~0.87 at M0.5 medium; no NaN) — a second arbitration item, since fixing it
+   moves every committed LS gate number.
+2. **The honest residual singularity is the sheet TERMINATION carrying a
+   FINITE jump:** the last cut ring holds |δ| ≈ **0.026** (M6, h- AND
+   TE-taper-INDEPENDENT — Γ_last→0 under the TE blend while the ring jump
+   does not move; the two are **decoupled**, which is *why* the TE row blend
+   measured no effect), dropped to zero across one single-valued element.
+   Also recorded en route: the **untapered** emergent Γ(tip)→0 property
+   degrades under refinement (Γ_last 0.00011 coarse → 0.00218 medium — B7's
+   ±3e-4 was coarse-only).
+
+**★★ THE SPAN BLEND (wake-LS-row termination softening) RAN → NEGATIVE ON
+LOCALITY, mechanism pinned** (demo `run_b8_span_blend.py` **8/8**, artifacts
+`b8_span_blend.csv/.png`, `checks_b8_span_blend.csv`; machinery
+`MultivaluedOperator(span_blend=(form, r_blend))` — per non-TE cut node j,
+`w_j·[wake-LS row] + (1−w_j)·s_j·[φ_aux−φ_main] = 0`, w_j from the same
+`tip_taper_factors`, s_j = the row's own LS magnitude for h-invariance,
+beyond-tip straddler nodes get w=0 at any r_blend; default None bit-identical,
+`tests/test_b8_span_blend.py` 11 passed, B-suite 116 passed / 9 skipped).
+The blend **hits its target** — the termination-ring jump is WELDED (0.026 →
+0.001/0.0003 at r_blend 0.05/0.08 b) — **and the price disqualifies the
+model**: (a) **~20% GLOBAL lift loss** (−19.8/−20.2/−21.8% at r_blend
+0.03/0.05/0.08 medium), **UNIFORM in z** — Γ(z) scales down root-to-tip
+including where the blended rows are bitwise identical to baseline — and
+essentially **r_blend-INSENSITIVE** (2-point spread); (b) **component
+isolation** (coarse): the straddler weld ALONE costs −13.3%, the inboard
+smooth blend ALONE −10.8% ⇒ not a defect of either piece: **the implicit
+Kutta has no per-station target — Γ is ONE global solution mode, and ANY
+δ-pin on the sheet near the tip re-levels it** (G13.2 finding-(2)'s
+fixed-point amplification acting GLOBALLY; the conforming secant keeps it
+per-station, which is why the same F(z) costs −1.6% there and −20% here);
+(c) the loss **GROWS under refinement** (rb0.08: −16.9% → −21.8%), so it
+**CONTAMINATES the exponent**: p_unload ≈ −0.10 of the apparent
++0.37 → +0.05 reduction (corrected ~+0.15 — suggestive, NOT certifiable
+under a 20% flow distortion, and moot at this cost); (d) a **narrow blend
+(~2 elements, rb0.03) is ACTIVELY harmful** (ring jump ×2.26, honest
+p +1.31). ⇒ **every constraint-side route is now measured: TE rows (no
+effect), wake-LS rows (globally amplified damage). If a cure is still
+wanted, it must change the FUNCTION SPACE at the termination** (how the
+spanwise clip ends the multivalued region — e.g. sub-element termination of
+the aux-DOF set), not add sheet-side constraints.
+
+**★ ARBITRATED 2026-07-14 (user): B8 CLOSED as CHARACTERIZED-NOT-CURED.**
+The honest LS tip exponent (+0.62 / +0.37 no-sliver) is the same object at
+the same magnitude as the conforming +0.52 that every closed conforming gate
+lives with ⇒ **B9 (wing-body LS solve, M∞0.5) is UNBLOCKED**. Recorded
+BACKLOG (not scheduled): (a) flip the `element_mach2` default to
+`mixed_plain="main"` + re-read the B6/B7 M_max locks + the G13.1 LS-exponent
+erratum; (b) fix the `element_densities` mixed-plain junk weights (moves
+every committed LS gate number — needs its own A/B). The function-space
+termination re-spec stays a candidate only if a future gate actually needs
+the LS tip edge bounded. All shipped machinery (`span_blend`, `mixed_plain`)
+is default-inert and stays. Evidence: demo_report "Track B / B8 re-spec"
+section.
+
+### B9 — Multi-wake validation (multi-element / wing-body) ☐ (was B8 2026-07-13; orig B6→B5)
+**Deliverable:** Multi-wake validation (multi-element / wing-body)
+**Gates:**
+- [ ] two-element cl's plausible
+- [ ] fuselage carries no lift
+- [ ] ★ **fuselage surface-Cp guardrail (user-arbitrated 2026-07-14):**
+      quantify the G1.6-class smooth-wall discretization error on the fuselage
+      BEFORE reading wing-body surface pressures. The fuselage is exactly the
+      geometry class where the flat-facet natural-BC "variational crime" bites
+      (sphere Cp: 11.6 % medium, saturating ~3.6 % under h-refinement —
+      PROJECT_STRUCTURE "Known gaps"; the wing gates were exonerated only
+      because lift is circulation-dominated, an argument that does not cover
+      body surface Cp). Minimum bar: an isolated body-of-revolution (or
+      wing-off fuselage) subsonic solve with an h-sweep of surface Cp, its
+      error magnitude **RECORDED** in the gate evidence — no pass/fail line;
+      a recorded caveat that every wing-body surface-pressure claim must
+      carry until P11/Option C lands.
+
+### B10 — Curved wake / free wake ⊘ (was B9 2026-07-13; orig B7→B6; SHELVED 2026-07-10)
+**Deliverable:** Curved wake / free wake — **SHELVED 2026-07-10** (DN2 §4.5.6: loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent). `update_direction()` interface capability retained.
+**Gate:** — (shelved; no gate)
+
+### B11 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling ✓ (NEW 2026-07-14, user-directed; appended after B10, no renumber; CLOSED 2026-07-14)
+**Deliverable:** two long-standing LS-path infrastructure gaps closed together
+(a B9 enabler — the wing-body medium LS solve would otherwise hit the same
+splu wall).
+
+**(1) Unified post-processing.** `post/surface.py` (conforming) and
+`post/surface_ls.py` (level-set) now share private cores — `surface._cp_from_q2`
+(the per-triangle isentropic/Bernoulli Cp branch), `surface._pressure_force`
+(the `-(cp·area)·n_out/s_ref` integral + lift/drag projection),
+`section_cut._wall_plane_crossings` + `_resolve_station` + `_section_curve_dict`
+(the triangle plane-cut loop + station resolve + chord/x_le normalize),
+`surface_ls._d11_wall_state` (the D11 two-sided q² selection, formerly
+duplicated twice inside surface_ls). The three near-duplicate blocks
+(Cp+D11, the copy-pasted section-cut loop, the force integral) collapse to
+one implementation each. New upper layer `post/unified.py` dispatches by
+keyword — `wall_cp` / `wall_forces` / `section_cp`, taking `phi=` (conforming)
+or `mvop=,phi_ext=` (level-set) — so one call site serves both paths; outputs
+are `np.array_equal` to the legacy functions by construction. **Every legacy
+public function keeps its name/signature** (14+ demos, 10+ test files), and the
+extraction preserved float op order, so the bit-identity locks
+(`test_b7_onera_m6.py::test_d11_upper_surface_equals_the_main_based_section`,
+the shock `x_shock` asserts, `test_post_surface.py`) pass unchanged. Bonus:
+`section_cp_curve_levelset` / `wall_cp_levelset` gain the opt-in `smooth_passes`
+(the conforming G6.1 gradient smoothing), default 0 = bit-identical.
+
+**(2) GMRES+AMG on the LS solvers (the deferred design_track_b.md §5.3
+landing).** `solve_multivalued_laplace` / `_lifting` / `_newton` grow
+`precond=None|"ilu"|"amg"` (None = the pre-B11 sparse-direct `spsolve`,
+bit-identical default) plus `linear_rtol=1e-10`, `gmres_restart`,
+`gmres_maxiter`, `amg_rebuild_every`; `solve_multivalued_transonic` inherits
+them through `**kwargs` (zero code); `newton_ls` adds `seed_precond`. "ilu"/"amg"
+run `solve/linear.solve_gmres` on the fused nonsymmetric matrix (the escape from
+the M6-fine splu wall). **★ ILU is the effective escape** (`precond="ilu"`,
+spilu on the real fused A_free): converges at 434 iters coarse, |Δγ| < 1e-8,
+warm-started per outer. **★ AMG does NOT converge on the lifting operator
+(measured, honest result).** `_amg_surrogate_preconditioner` builds SA-AMG on an
+SPD surrogate (the single-valued Picard block + SPD springs tying each aux dof
+to its coincident host so SA aggregates them, §5.3 "把 N_ext 个辅助 DOF 当普通节点
+处理") — this works for the `continuity`-closure (Laplace/B2) system, but on the
+`wake_ls`-closure lifting/transonic/Newton operator the aux rows are the g₁+g₂
+wake-LS + nonlinear TE-Kutta rows (convection-like, not SPD springs), the
+surrogate cannot model them, and **GMRES stalls at the restart cap** (coarse
+M0.5 lifting: γ 0.0033 vs 0.139, all 80 outers stalled, 455 s vs ILU's 2.7 s).
+So AMG stays wired for the SPD Laplace case + as the recorded §5.3 knob, and
+**ILU is the shipped lifting escape**. The **Núñez symmetric row assignment
+(§5.3 fallback) stays not-prebuilt** — the route that would restore genuine AMG
+applicability if ILU's fill ever becomes the bottleneck at fine scale.
+**lagged-LU (`direct_refactor_every`) is OUT of B11 scope** (recorded roadmap
+follow-up below): B11 ships the iterative escape, not the direct-reuse one.
+
+**Gates:**
+- [x] **G11.1 bit-identity:** full suite green with zero committed-number changes
+      (D11 array-equal lock + every shock lock pass untouched); the refactor
+      adds only the 9 `test_b11_post_unified.py` tests; `precond` default None
+      pinned by `test_b11_linear_ls.py::test_precond_default_is_none`.
+- [x] **G11.2 unified == legacy:** `np.array_equal` on cp/q2/section outputs,
+      exact-float on cl, both paths (`test_b11_post_unified.py` + demo
+      `run_b11_unified_post.py` self-check column max|Δcp| = 0.0).
+- [x] **G11.3 GMRES correctness:** ILU reproduces spsolve on the coarse
+      (+ demo medium) 2.5D meshes — Laplace/lifting/Newton |Δγ| < 1e-8 subsonic,
+      converged, 0 stalls (`test_b11_linear_ls.py`; gated transonic-forwarding
+      smoke |Δγ| < 1e-6). AMG reproduces spsolve on the SPD Laplace only;
+      measured to STALL on the wake_ls lifting operator (455 s, non-converged)
+      ⇒ ILU is the shipped lifting escape (an honest §5.3 finding).
+- [x] **G11.4 scaling headline — the splu wall quantified:** M6 medium LS A/B
+      CSV committed (`cases/demo/b11_ls_infra/results/m6_medium_ab.csv`, gated
+      one-shot). **spsolve = 454.8 s at 67,426 dofs** (the splu wall; the P9
+      catastrophe at 450 k fine). ★ **Honest finding:** the M6-medium 3D fused
+      matrix resists cheap incomplete factorization — ILU-GMRES advances ~17 of
+      26 outers, then even shifted-MILU at fill 20 goes singular at a hard
+      outer; near-full fill (≈spsolve cost at this size) would be needed ⇒ **at
+      67 k dofs spsolve is still the right tool, ILU is not advantageous there.**
+      The escape's payoff is the FINE-scale regime where spsolve is impossible on
+      memory (feasibility, extrapolated); the escape is *demonstrated to
+      converge* at 2.5D medium (|Δγ| 7.5e-10, 0 stalls; `solver_ab.csv`).
+      **Follow-ups:** the Núñez symmetric row assignment (§5.3 — would restore
+      AMG and a cheaper factorization; still not scheduled) and the
+      `direct_refactor_every` (lagged-LU) port into `newton_ls` (roadmap "LS
+      Newton on M6 = DEFERRED") — the latter **executed as B12 (2026-07-14)**.
+
+**Evidence:** tests `tests/test_b11_post_unified.py` (9) +
+`tests/test_b11_linear_ls.py` (10 + 1 gated); demos
+`cases/demo/b11_ls_infra/` (`run_b11_unified_post.py`, `run_b11_gmres_ls.py`,
+`run_b11_m6_headline.py` [gated]). Conforming solver numerics byte-untouched;
+no Numba kernel or COO-assembly path touched (pure SciPy/PyAMG + numpy).
+
+### B12 — Lagged-LU direct-reuse for LS Newton (medium/M6-scale enabler) ✓ CLOSED 2026-07-14 (NEW, user-directed; appended after B11, no renumber; executes the B11/G11.4 recorded follow-up "LS Newton on M6 = DEFERRED")
+**Deliverable:** make the level-set Newton solve affordable at medium/M6 sizes by
+porting the conforming N6 **lagged-LU direct-reuse** mechanism into
+`solve/newton_ls.py`.
+
+**Why this and not the B11 iterative escapes.** B11 measured (G11.4 A/B,
+`cases/demo/b11_ls_infra/results/`) that the iterative escapes fail on the fused
+level-set matrix beyond coarse — so at medium/M6 sparse-direct is the only
+converging tool, and the cost driver is then the **number of factorizations**:
+
+| case | dofs | spsolve | ILU | AMG |
+|---|---|---|---|---|
+| 2.5D coarse lifting | 6,614 | ✓ 1.9 s | ✓ (\|Δγ\| 9.5e-9) | STALL |
+| 2.5D **medium** lifting | 22,880 | ✓ 8.6 s | ✗ **diverges** γ=−137, 77 stalls | STALL |
+| **M6 medium** lifting | 67,426 | ✓ 454.8 s / 26 outer / **17.5 s per factor** | ✗ **factor_failed** | STALL |
+
+LS Newton with `precond=None` factorizes on **every** Newton step, so on M6
+medium it pays that 17.5 s once per iteration.
+
+**Implementation (`solve/newton_ls.py`, the ONLY production change).** Two new
+kwargs on `solve_multivalued_newton`: `direct_refactor_every: int = 1` and
+`direct_reuse_rtol: float = 1e-8`, active only on the `precond is None` branch.
+`k=1` (default) = the byte-identical per-step `spsolve`. `k>1` = refactor the LU
+(`spla.splu`) every k-th step and drive the intermediate steps with GMRES on the
+FRESH Jacobian preconditioned by the stale (exact) LU, converged to
+`direct_reuse_rtol`; a reuse step whose GMRES fails falls back to a refactor +
+exact solve in the same iteration (robustness never below every-step-direct).
+This is the N6 mechanism (`solve/newton.py::direct_refactor_every`) **minus the
+Woodbury** — the level-set system has NO Γ DOF, so the step is a plain
+`J_free d = −R_free` with no low-rank coupling. New monitor `n_refactor`.
+
+**Gates:**
+- [x] **G12.1 bit-identity — CLOSED 2026-07-14.** `direct_refactor_every=1`
+      (default) is byte-identical to the pre-B12 `spsolve` path (same `phi_ext`,
+      `n_refactor==0`, `n_gmres_total==0`); the two params default to 1 / 1e-8.
+      `tests/test_b12_lagged_lu_ls.py::test_lagged_lu_param_defaults` +
+      `test_default_bit_identical_to_spsolve`. B6/B11 Newton locks unchanged.
+- [x] **G12.2 numerical equivalence (core gate) — CLOSED 2026-07-14.** On the
+      coarse 2.5D mesh at M0.70 (upwind active), `direct_refactor_every` 2 and
+      1000 both reach the spsolve default's converged γ (0.1778053693) to
+      **bit-identity** (|Δγ| < 1e-8), 0 lim/flr, 0 GMRES stalls, and actually
+      reuse the stale LU: **k=1000 refactors ONCE** over 6 Newton iters (vs 5
+      spsolve factorizations at k=1), k=2 refactors 3× — `n_refactor < n_newton`
+      and a reuse GMRES step ran. `tests/test_b12_lagged_lu_ls.py::
+      test_lagged_lu_matches_spsolve` (k∈{2,1000}).
+- [x] **G12.3 scaling headline (gated) — CLOSED 2026-07-14.** M6-medium subsonic
+      (M0.5, α3.06, `farfield="neumann"`, 67,426 dofs) LS Newton A/B from a shared
+      Picard seed. Both take **7 Newton steps to a genuine converged solution**
+      (0 lim/flr); spsolve refactors all 7 (**145.6 s**), lagged-LU (k=1000)
+      refactors **ONCE** + 30 reuse-GMRES iters (**66.7 s = 2.18× faster on the
+      Newton phase**), 0 stalls, **γ bit-identical** (0.06685284, |Δγ| = 6.74e-13).
+      Demo `cases/demo/b12_lagged_lu/run_b12_m6_newton.py` (**6/6 PASS**),
+      `results/m6_newton_ab.csv` + `checks_m6_newton.csv`.
+      **★ Honest boundary:** at 67k dofs one splu fits in memory ⇒ this is a REAL
+      runnable medium-scale win, not an extrapolation. But lagged-LU still needs
+      ≥1 in-memory splu, so it does **not** break the FINE-mesh memory wall (P9's
+      26 GB / 4h39m is per-factorization, not per-count) — that regime remains
+      the Núñez symmetric-row-assignment → AMG route (design_track_b §5.3, not
+      prebuilt).
+
+**Out of scope (recorded):** the LS-Newton Mach-continuation *ramp* wrapper
+(`newton_ls` is single-Mach-level; the conforming `solve_newton_transonic`
+analogue is a separate follow-up), and genuine AMG applicability (Núñez rows).
+
+**Evidence:** `tests/test_b12_lagged_lu_ls.py` (4); demo
+`cases/demo/b12_lagged_lu/` (6/6, G12.3 headline CSV). `solve/newton_ls.py` is
+the only production change; default path byte-identical. Suite +4.
+
+### B13 — Lagged-LU on the Picard outer loop (the post-B12 cost driver) ✓ CLOSED 2026-07-14 (NEW, user-directed; appended after B12, no renumber)
+**Deliverable:** the B12 lagged-LU mechanism applied to the Picard OUTER loop
+(`solve_multivalued_lifting`; transonic inherits via `**kwargs`) — after B12
+the M6-medium cost driver is one 17.5 s spsolve per Picard outer (B11 lifting
+headline 454.8 s / 26 outers; the B12 demo's Newton seed 263 s / 15 outers).
+User goal arbitrated 2026-07-14: **compute speed at medium scale is the
+objective; fine-mesh extension is optional** — which ranks lagged-LU (this)
+above the structural preconditioner (B14, designed-not-scheduled below).
+`solve_multivalued_laplace` is excluded — it is a single-shot solve, nothing to
+amortize.
+
+**External-analysis corrections (recorded; GLM analysis + comparison doc,
+baseline f9d400a, both predating B12):** (1) "lagged-LU port = not done" was
+true at their baseline; B12 landed it for Newton the same day. (2) The Schur
+direction in both docs is inverted — the efficient elimination removes the
+SMALL aux block (`K = J_mm − J_ma·J_aa⁻¹·J_am`, J_aa an n_ext×n_ext thin-strip
+matrix ~8k at M6 medium), not the main block (which would need A_mm⁻¹ = an AMG
+inner solve per application). (3) J_aa is not fully constant — wake-LS rows are
+(§5.5) but the TE-Kutta rows (76–150) re-linearize each outer; refactoring the
+thin strip is milliseconds, a non-issue. (4) 454.8 s is 26 outers, not one
+splu (17.5 s each).
+
+**Gates (GB13.x — deliberately NOT G13.x, which is P13's namespace; Track V's
+GV prefix is the precedent):**
+- [x] **GB13.1 bit-identity — CLOSED 2026-07-14.** `direct_refactor_every=1`
+      (default) is byte-identical to the per-outer `spsolve` (same `phi_ext`,
+      `n_refactor==0`, `n_gmres_total==0`); defaults pinned.
+      `tests/test_b13_lagged_picard.py`.
+- [x] **GB13.2 equivalence (core) — CLOSED 2026-07-14.** Coarse 2.5D lifting
+      M0.5: k∈{4,1000} reach the spsolve γ to <1e-8, converged, 0 stalls,
+      `n_refactor < n_outer` (k=1000 refactors ONCE); also under
+      `farfield="neumann"` (the B6/B7 recipe) at k=8.
+      ★ **Measured finding: `direct_reuse_rtol` must default 1e-10, NOT B12's
+      1e-8** — a Picard fixed point is pinned only by its lag tolerances
+      (1e-6), so an inexact reuse step SHIFTS the stopping point (|Δγ| 8e-8 at
+      rtol 1e-8), whereas Newton's terminus is pinned by `tol_residual`
+      regardless; 1e-10 restores <1e-8 agreement for ~1–2 extra Krylov iters
+      on a near-exact preconditioner.
+- [x] **GB13.3 M6-medium headline (gated) — CLOSED 2026-07-14.** B11-headline
+      lifting (M0.5, α3.06, neumann, tol 1e-7, 67,426 dofs, 26 outers both):
+      spsolve **447.6 s** (17.2 s/outer) vs lagged-LU (k=1000) **68.3 s**
+      (2.63 s/outer) = **6.55× faster**, 2 refactors vs 26, γ bit-identical
+      (0.06685270, |Δγ| 6.9e-13). The 1 GMRES "stall" is the designed safety
+      net — an early outer's large density move exhausts the stale LU and
+      triggers an extra refactor (hence 2, not 1), never a divergence.
+      **End-to-end seed+Newton** (the B12 pipeline, both mechanisms on): seed
+      **42 s** (1 refactor / 15 outers, was 263 s spsolve) + Newton **69.9 s**
+      = **111.9 s total vs ~330 s post-B12 baseline (~3×)**, Newton γ 0.06685284
+      in the B12 lock band. Demo `cases/demo/b13_lagged_picard/` (**6/6 PASS**),
+      `m6_lifting_ab.csv` + `m6_end_to_end.csv`.
+      **★ Honest boundary:** amortizes the factorization COUNT; still needs
+      ≥1 in-memory splu ⇒ does NOT break the fine-mesh memory wall (that is
+      B14's unique value).
+
+**Result headline:** M6-medium lifting **447.6 s → 68.3 s (6.55×)**; end-to-end
+seed+Newton **~330 s → 111.9 s (~3×)** — the LS medium workflow is now the same
+order as conforming M6 medium (solve 140–240 s). **Evidence:**
+`tests/test_b13_lagged_picard.py` (5); demo `cases/demo/b13_lagged_picard/`
+(6/6, GB13.3 CSVs). `solve/picard_ls.py` is the only production change; default
+path byte-identical. Suite +5.
+
+**★ Workflow evidence riding on B12/B13 (2026-07-15, demo — not a gate):
+`cases/demo/m6_medium_ls_workflow/` (10/10 self-checks; full record in
+demo_report "M6 medium level-set WORKFLOW").** M6 medium wake-free LS solves
+BOTH subsonic M0.5 (cl 0.212, strict-converged) and transonic M0.84 (cl 0.276,
+M_max 2.455, bounded/engineering-converged, B7 semantics) at
+conforming-comparable cost. Mesh A/B (wake-free vs embedded) cl within
+0.62%/0.85%; method A/B (LS vs conforming) 0.47% subsonic / +10.65% transonic
+(the B6/B7 conforming-Picard under-circulation, not an LS error). Load-bearing
+recipe finding: the M6-medium transonic **Picard residual plateaus at
+1e-5..1e-4** (P4/B6/N5 shock-position soft mode) — use `tol_residual=1e-5` or
+every level burns its full budget (~1 h); a strict-converged transonic wants
+the LS Newton ramp instead — which **B15 then delivered** (GB15.4 removes this
+plateau, 3.5×).
+
+### B14 — Schur-eliminated aux block + AMG(SPD Picard main block) ☐ DESIGNED-NOT-SCHEDULED 2026-07-14 (the structural preconditioner; trigger recorded)
+**Why not now (user-arbitrated 2026-07-14):** at medium scale its marginal gain
+over B13 is uncertain (lagged-LU already amortizes to ~1–3 factorizations per
+solve ≈ 35 s; Schur+AMG trades that for per-outer GMRES+AMG cost of the same
+order), and its unique value — the FINE-scale memory-bounded path (AMG O(n) +
+thin-strip LU, no full-size splu) — addresses a regime the user has declared
+optional. **Trigger:** GB13.3 lands and medium is still too slow, or a real
+M6/wing-body FINE campaign is scheduled.
+
+**Design snapshot (ready to build):** new `precond="schur"` on the LS drivers.
+Free dofs split main-free/aux (aux are never Dirichlet — the B3 load-bearing
+fact). Per outer/Newton step: `lu_aa = splu(J_aa)` (n_ext×n_ext thin strip,
+~8k at M6 medium, milliseconds; TE-Kutta rows re-linearize per step, so
+refactor per step). Reduced operator matrix-free:
+`K x = J_mm x − J_ma·lu_aa.solve(J_am x)`; reduced RHS
+`r = b_m − J_ma·lu_aa.solve(b_a)`; back-substitution
+`φ_a = lu_aa.solve(b_a − J_am φ_m)`. Preconditioner =
+`build_amg_preconditioner(op.assemble_matrix(rho_own))` restricted to
+main-free — the exact conforming analogue (AMG on the SPD Picard block,
+constraints eliminated exactly), **with NO springs**: the B11 surrogate's
+mismatch (springs bias the solution toward jump≈0, killing the global
+circulation mode — γ 0.0033 vs 0.139) disappears structurally because no aux
+dof survives into the preconditioned system. GMRES then faces "elliptic +
+cut-strip-localized correction" — the operator shape the conforming path
+already proved AMG-preconditionable. **Diagnostic-first gate:** J_aa
+invertibility/conditioning (the constant-jump null vector mixes main+aux
+columns ⇒ J_aa generically nonsingular, TE-Kutta pins the level — measure,
+don't assume); the discriminating tier is **2.5D medium lifting, where ILU
+DIVERGED (γ=−137)** — passing there is what "a real escape" means. Fallbacks:
+block-triangular preconditioner; last resort = the Núñez additive symmetric
+row assignment (§5.3 — a discretization change with penalty-weight
+calibration, demoted to third line).
+
+### B15 — LS Newton transonic ramp + N5 freeze-selection ✓ CLOSED 2026-07-15 (NEW, user-directed; appended after B14, no renumber)
+
+**Why (the cost driver, measured):** the LS transonic **Picard**
+(`solve_multivalued_transonic`) is a Mach ramp whose top levels park on the
+**shock-position residual plateau** (the P4/B6/N5 soft mode) and burn their whole
+outer budget there. On the 2026-07-15 M6-medium workflow solve the ramp is 7
+levels (0.60→0.84, dm 0.04) and the embedded per-level cache shows levels **0.80
+and 0.84 do NOT converge** — each runs its full 200-outer budget — which is the
+bulk of the **24.5 min (embedded) / 38.4 min (wake-free)** wall clock. `tol_residual`
+is already set to 1e-5 *above* the plateau (1e-7 would burn ~1 h). A Picard method
+cannot do better: the plateau is intrinsic. **Newton has no shock-position soft
+mode** — the demo's own note says "a strict-converged transonic wants the LS Newton
+ramp". But `newton_ls` could not run a ramp: `freeze=` was a reserved no-op, the
+convergence gate hard-requires 0 limited/floored (which shock limiter cells block),
+and there was no Mach-ramp wrapper. B15 supplies all three.
+
+**Gates**
+- [x] **GB15.1 — frozen per-side selection + FD.** `MultivaluedOperator.newton_side_data(frozen=…)`
+      + new `freeze_side_state` (per-side `(upstream, branch)` capture). The
+      `kernels/upwind.py` frozen apparatus is reused **unmodified** — the per-side
+      ops are plain walk-mode `UpwindOperator`s with a same-side-masked face graph
+      — so this is wiring, not new numerics. Residual/Jacobian extracted into
+      `LSNewtonSystem` so the solver and the FD gate share ONE assembly path.
+      **FD: rel 6.7e-9** (eps 1e-5; clean round-off scaling 5.8e-8 / 6.0e-7 at
+      1e-6 / 1e-7 ⇒ a true derivative), 96.9% of free rows kept by the ε-guard,
+      on a real pocket (nu_max 0.785, 1118 elements on branches 1/2).
+      Frozen sweep reproduces the live density **bitwise** at the freeze point.
+- [x] **GB15.2 — the freeze cures the limit cycle, and does not move the answer.**
+      ★ On **NACA coarse M0.75** the LIVE LS Newton **does not converge**: it parks
+      in a genuine **period-6 limit cycle** (3.2e-7, 2.8e-7, 2.7e-7, 1.3e-6, 8.6e-7,
+      4.3e-7, repeating) at |R|≈2.7e-7 — three orders above tol — with **0
+      limited/floored** (a CLEAN stall = the assignment churn). Arming the freeze
+      converts it to a converged solve: **22 steps → |R| 8.5e-13**, 0 reverts, and
+      **γ 0.218809 vs the live cycle's 0.218804** ⇒ the freeze removes the churn, it
+      does not select a different state.
+      ★★ **TRIGGER ERRATUM (measured; the conforming recipe does NOT transfer):**
+      `solve/newton.py` also freezes on `live_stalled`. Porting that verbatim makes
+      the LS solver freeze a **still-MOVING** assignment — the LS live residual
+      bounces ±2× for tens of steps *while still descending* (γ travels 0.183→0.243
+      over that stretch: slow progress in a stiff direction, **not** a stall). The
+      frozen step then diverges → revert → re-arm: **3 reverts, no convergence**, on
+      a case (medium M0.75) the untouched live path converges (54 steps, 7.5e-12).
+      With the stall trigger removed it freezes late (|R|<1e-6, assignment settled)
+      and converges: **53 steps, 2.1e-12, 0 reverts, exactly the live γ 0.243305**,
+      with `residual_unfrozen` 2.1e-12 confirming the LIVE selection agrees there.
+      ⇒ **the freeze arms on `freeze_tol` ALONE.** Fail-safes added: disarm after
+      `freeze_max_reverts` (3) so the freeze can only ever HELP, never cost
+      convergence; the reported `n_limited`/`n_floored` are always re-read LIVE
+      (a frozen finish shows 0 floored BY DESIGN and can never be its own evidence).
+- [ ] **GB15.3 — the Mach-ramp wrapper.** `solve_multivalued_newton_transonic`:
+      upward `mach_schedule`, warm start from the last CONVERGED level only,
+      dm-halving retry inserted BELOW a failed level and run STRICT, optional
+      `upwind_c_post` staging, honest `target_reached`/`m_final` (the P13/G13.3
+      erratum: never census a state whose ramp did not reach the target).
+      `intermediate_tol` = loose stopping tol on intermediate levels, strict final.
+      ★ **LS-specific: the freeze stays ARMED on loose intermediate levels**, unlike
+      the conforming mask (`newton.py:888` sets `freeze_tol=None` there): the accept
+      gate requires 0 limited/floored on EVERY route, and on a 0.60→0.84 ramp the
+      shock forms MID-ramp, so those levels carry limiter cells and can only reach a
+      0-clamped accept THROUGH a freeze. Loosen the tolerance, keep the mechanism.
+      (The conforming fold contraindication — a loose level leaving an untracked Γ
+      seed, G10.2 — has **no analogue here**: the LS path has no Γ DOF, Γ is a
+      solution mode carried inside `phi_ext`.) A/B on NACA coarse M0.80 + fold.
+- [x] **GB15.4 — M6 medium M0.84: the plateau is GONE, 3.5× faster.** ONERA M6
+      medium wake-free (63,100 ext dofs), M0.84/α3.06. **Picard (committed):
+      2304.7 s = 38.4 min, residual parked on the 1e-5..1e-4 plateau, top two
+      levels burning their full 200-outer budget. Newton ramp (B15): 657.4 s =
+      11.0 min (3.51×; committed `summary.csv` — an earlier draft's 672 s was a
+      pre-CSV trial run), EVERY level converged to ~1e-11**, the freeze armed at
+      every level with **0 reverts**. Per level: M0.60 ✓5 / 0.65 ✓19 / 0.70 ✓23 /
+      0.75 ✓16 / 0.80 ✓19 / **0.84 ✓16 steps, |R| 6.9e-11**. Physics cross-checks
+      against the committed Picard: **M_max 2.4938 vs 2.4549** (1.6%), **3 clamped
+      cells of 330k vs Picard's ≤3**.
+      ★ **HONEST LIMIT:** most levels accept via `assignment_cycle` — the FROZEN
+      system converges to ~1e-11 and is accepted at the **assignment-discontinuity
+      floor** (the live residual stops improving across refreshes). That is the
+      N5 semantics the conforming path also uses; it is **NOT** a claim that the
+      LIVE residual is below 1e-10. It beats the Picard plateau by 6–7 orders,
+      but "live-strict solution" would be an over-claim.
+      ⇒ Closes the deferred **B6-medium quantitative** and **B7-quantitative**
+      items (the LS Newton on M6 was DEFERRED at B7).
+
+★★ **FOUR ERRATA — porting the conforming N5 recipe is NOT mechanical** (the same
+lesson B8 taught). Every one was forced out by measurement, none was foreseen:
+1. **The TE polyline must come from the AUTHORITATIVE geometry.** A hand-rolled
+   `x_te(0)=0.8059` vs `wing3d.x_te(0)=0.80611` — off by **2e-4**. `CutElementMap`
+   finds TE nodes by matching the polyline onto WALL NODES (M2: the M6 TE endpoints
+   are exact wall nodes), so 2e-4 matches **nothing** ⇒ **0 TE nodes ⇒ no Kutta ⇒ Γ
+   unpinned ⇒ 340k limited cells + NaN** — and the solver **passed silently**.
+   ⇒ Both LS solvers now **raise** on `te_nodes == 0`, pointing at `meshgen.wing3d`.
+2. **★ `freeze_tol` must sit ABOVE the CHURN FLOOR, and that floor RISES with Mach**
+   (measured: **<1e-6 at M0.60 → 8.6e-6 at M0.65 → 2.7e-4 at M0.70**). Below it, a
+   discrete upwind-selection flip throws the residual back before the freeze can arm
+   (measured: clean descent to 8.6e-6, then ×300 to **the same value 2.6e-3, twice** —
+   the signature of a discrete flip) and the ramp dies. **Same law as "tol_residual
+   must sit above the Picard plateau".**
+3. **★ Residuals are NOT comparable across a SELECTION EPOCH.** The frozen phase
+   drives `r_best` to 1.5e-11; after a refresh the residual legitimately returns to
+   the live scale (2.6e-3), and the fail-fast (`res > 100*r_best`) reads a 1e8×
+   "blow-up" and kills a perfectly healthy freeze-refresh cycle. ⇒ `r_best` is reset
+   on every freeze / refresh / revert.
+4. **★ The frozen phase's clamp count is STALE BY CONSTRUCTION and must not gate
+   acceptance.** Under a freeze `n_floored` counts `branch==3` = the cells clamped
+   **at the freeze point**; it never falls. Gating on `n_flr == 0` therefore
+   **refuses a 7.8e-14 machine-precision solution forever** (measured at M0.70: the
+   freeze cured the period-7 limit cycle, the floored cell **cleared itself** in the
+   live field — final live `lim/flr = 0/0` — and the gate still would not fire).
+   ⇒ The frozen phase need only be no worse than at the freeze; the **LIVE
+   re-evaluation** in the honesty branch is the arbiter (and it is strict).
+
+★ **New knob `freeze_max_clamped`** (default **0** = the conforming N5 rule, bit-identical). At M6 medium M0.70 a **single** persistently-floored cell (of 330k) blocks the freeze at **any** `freeze_tol`. The frozen sweep **represents a clamped cell exactly** (branch 3: `nu=0`, `rho=rho_floor`, `s_e=s_u=0` — a flat clamp with zero derivative), so the 0-clamped precondition is stricter than the machinery needs; relaxing it lets the freeze arm and the ramp completes.
+⚠ **TWO CORRECTIONS to an earlier draft of this entry (2026-07-15, self-caught):**
+  (a) **The clamped cells do NOT "clear themselves".** That was over-generalised from ONE isolated 80-step run at M0.70 (driven to 7.8e-14, ending 0/0). In the SHIPPED ramp — which accepts at `assignment_cycle` after ~23 steps — the cells **PERSIST**: M0.70 `0/1`, M0.75 `0/1`, M0.80 `1/1`, **M0.84 `1/2` = 3 clamped cells** (which is exactly the Picard's ≤3, so it is consistent, not alarming). The freeze proceeds **WITH** them present.
+  (b) **The convergence semantics ARE relaxed** — the earlier "the convergence gate is untouched" was FALSE. With `freeze_max_clamped > 0` the `assignment_cycle` / `refresh_budget` accept routes do NOT re-check the clamp count, so the returned `converged=True` M0.84 state **carries 3 clamped cells of 330k**. Only the strict `tol` route still demands live 0-limited/0-floored. State this whenever the M6 number is quoted.
+⚠ **P9/G9.1 is CITED, NOT RE-TESTED.** P9/G9.1 records that permanently-**limited** cells block the N5 freeze machinery on the CONFORMING path; our blocker at M6 medium is mostly **floored** cells — the same *precondition*, a different clamp. `freeze_max_clamped` exists **only on the LS path** (`newton.py` still has the hard 0-clamped rule), and whether relaxing it would unblock G9.1's conforming fine mesh is an **UNTESTED HYPOTHESIS**, not a result. Do not cite B15 as having revived G9.1.
+
+**Bit-identity:** `freeze_tol=None` (default) + `tol_residual_loose/rel=None` +
+`accept_on_stall=False` ⇒ the pre-B15 live solver, byte-identical (locked).
+Tests `tests/test_b15_ls_newton_freeze.py` (12 — 11 at closure + the 2026-07-15
+errata lock `test_freeze_max_clamped_relaxes_the_convergence_semantics`).
+
+Working rules (DN1 §9–§10):
+
+- **No big-bang rewrite.** `solve/picard_ls.py` lives alongside
+  `solve_subsonic_lifting`; the suite runs both paths parameterized; the default
+  flips per-phase only after that phase's gate.
+- **Dual-mesh testing (NEW 2026-07-11, user-directed;
+  design_track_b.md §5.7).** Every B1–B6 gate runs on BOTH mesh types:
+  (a) the existing wake-embedded meshes (M0/M1 — the "C-grid" analogue: nodes
+  lie exactly on the wake plane, exercising the ε side-shift at scale, and
+  enabling strict same-mesh A/B against the conforming path), and (b) the
+  wake-free meshes (the "O-grid" analogue: generic cuts through generic
+  elements — the actual workflow target): **M3** quasi-2D and **M4** ONERA M6.
+  Where no conforming counterpart exists, acceptance compares against the (a)
+  results and external references. The 3D pair (M1/M4) is not optional
+  cosmetics: the swept TE and the wing tip carry machinery — oblique span
+  frame, spanwise clip (Γ(tip)=0) — that the quasi-2D meshes cannot exercise
+  at all, and B1 found a real defect in exactly that machinery.
+- **Sequencing guard vs P8 (recorded 2026-07-10; wording updated 2026-07-11).**
+  The P8 fully-coupled Newton is designed on the *conforming* wake (the
+  Γ-Jacobian blocks come from `wake.py::self._h`; design.md §8.1), while B3's
+  implicit Kutta removes the Γ DOF entirely. Land P8 on the conforming path
+  first (done — P8 closed 2026-07-11); a level-set Newton is a post-B6
+  re-derivation, not a parallel design (design_track_b.md §5.5: the wake-LS
+  Jacobian blocks are constant in φ, no Γ elimination/Woodbury needed) —
+  Track B blocks nothing in P7–P12.
+
+---
+
+
+## Progress ledger
+
+### Track B — level-set embedded wake
+
+Track status: **◐ IN PROGRESS** — design 2026-07-07; B10 shelved 2026-07-10;
+numerics spec [design_track_b.md](design_track_b.md) (supersedes DN1) + gate
+re-arbitration 2026-07-11; **B1 CLOSED 2026-07-11**, with M3/M4 delivered the
+same day; next = B2. Purpose is user-arbitrated as **mesh/geometry workflow
+capability, not solver speed** (the kill-the-Γ-secant efficiency motivation is
+obsolete post-P8 Newton), so the efficiency criteria in the B-gates are
+non-regression guards only. Coexistence strategy: a parallel `solve/picard_ls.py`
+path with a per-phase default flip — the conforming-path solver numerics stay
+byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
+(closed), and a level-set Newton is a post-B6 re-derivation (simpler — the
+wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
+blocks nothing in P7–P12, and M2 (wing-body) wants it.
+
+| Phase | Status | Closed on | Notes |
+|-------|--------|-----------|-------|
+| B1 | ✓ | 2026-07-11 | **B1 delivery (2026-07-11):** `pyfp3d/wake/levelset.py` (TE-**polyline** ruled straight wake per design_track_b.md D9, per-segment frames, `update_direction()` re-aims the wake without touching the mesh) + `pyfp3d/wake/cut_elements.py` (ε side-shift relative to local edge length (D4), **downstream-crossing test** excluding the ahead-of-LE sign-change region, TE-node flagging, below-TE fan recorded as `te_lower_elems` for B2's López-fig-3.6c aux assignment, per-node ext DOFs, López eq. 3.33–3.34 `dofs_upper`/`dofs_lower` tables); imported by nothing in the shipped solver paths. Gate evidence (`tests/test_b1_cut_elements.py`, **34 passed**, the FULL dual-mesh matrix — 2.5D M0/M3 coarse+medium AND 3D M1/M4 ONERA M6): M0 embedded — every conforming sheet node ε-shifted "+" (the D4 stress test at scale), census cross-validated EXACTLY against `cut_wake` (`cut_elems ∪ te_lower_elems` == the minus-side element star, element-by-element), TE nodes == `wc.te_nodes`; M3 wake-free — generic cuts, gap-free corridor TE→far field at α=0 AND re-aimed to α=4° **on the same mesh**; M1/M4 ONERA M6 — census a strict **superset** of the conforming minus-star (0 missing, +2.9% tip-edge straddlers: expected, since in an embedded method the sheet's tip EDGE need not conform), spanwise clip verified. ★ **Two 3D-only mechanisms found and fixed here** (both invisible on quasi-2D meshes): (1) the swept TE span axis is NOT perpendicular to the wake direction ⇒ q must come from the **oblique (v, d̂, n̂) frame** — an orthogonal projection leaks the downstream distance into the spanwise coordinate and wrongly clipped ~60% of the true M6 cut set (measured, fixed, regression-pinned); (2) the **spanwise clip** (crossings must satisfy 0 ≤ q ≤ span_length) is mandatory — without it the level set cuts the wake-plane extension beyond the tip, i.e. P5's far-field branch-ray artifact re-created (the conforming path gets the same semantics from its free-edge rule, Γ(tip)=0). Suite **218+8+2** (was 184+8+2; +34, some of which skip when the gitignored wake-free meshes aren't generated locally); conforming solver paths byte-untouched; all runs at the 8-thread cap alongside the in-flight P9 fine demo. |
+| B2 | ✓ | 2026-07-11 | **B2 delivery (2026-07-11):** multivalued (CutFEM-style) FE assembly. `pyfp3d/kernels/cut_assembly.py` (`multivalued_redirection_coo` + `continuity_closure_coo`) + `pyfp3d/wake/multivalued.py::MultivaluedOperator` (extended n_total = n_main + n_ext DOF assembly, TE-jump/Γ extraction) + `pyfp3d/solve/picard_ls.py::solve_multivalued_laplace` (non-lifting direct-LU driver, parallel to the conforming path). **Key simplification (design_track_b.md §2.5/D6):** a cut element is the same P1 element matrix assembled twice with B1's `dofs_upper`/`dofs_lower`; expressed as a sparse redirection of the single-valued matrix — only the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b), everything else byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 continuity ("weld") closure aux_k = main_j, so the extended system reduces EXACTLY to the single-valued one (`test_extended_matrix_folds_to_stiffness`: fold recovers the stiffness matrix to 1e-13). Extended matrix is nonsymmetric ⇒ `spsolve`; GMRES+AMG deferred to B3+ scaling (design_track_b.md §5.3). Gate (`tests/test_b2_multivalued.py`, **17 passed**, coarse+medium both 2.5D families + 3D M6 coarse both families; medium/M6 skip in CI where gitignored): V0 freestream **0.0** (2.5D, α=0/4°) / **1e-14** (3D M6) < 1e−12; V1 MMS slope **1.94** ≥ 1.9 (generic-position cube cut); Laplace α=0 ⇒ TE jump = 0, cl_KJ = 0, main φ == single-valued oracle to **3e-11**. Suite **235+8+2** (was 218+8+2; +17, some medium/M6 skip in CI — the B2 commit message's "229" was measured before the medium parametrization was added, corrected 2026-07-12); conforming solver paths byte-untouched; 8-thread cap. Next = B3 (implicit Kutta: g₁+g₂ wake LS replaces the weld). |
+| B3 | ✓ | 2026-07-12 | **B3 CLOSED (with B4).** Lifting solve with implicit Kutta on the level-set path: no Γ secant, no master–slave Γ — the TE jump is carried by the multivalued aux DOFs, the g₁+g₂ wake LS convects it, and its VALUE comes from B4's nonlinear TE pressure-equality Kutta. Γ is a RESULT. Delivered: `kernels/cut_assembly.py` (`mass_conservation_coo` per-side ρ per D10, `wake_ls_coo`, `te_kutta_coo`), `wake/multivalued.py` (`closure="wake_ls"`, side potentials/densities, TE control volumes), `solve/picard_ls.py::solve_multivalued_lifting`. Far field = freestream + vortex on the **MAIN** DOFs, aux **FREE**. Gate (`tests/test_b3_lifting.py`, **6 passed**): V3 M0.5 α=2° cl_KJ **0.2828** (medium) INSIDE the committed [PG 0.2788, KT 0.2919] bracket (read from `cases/reference_data/naca0012_m05/cl_reference.csv`), on BOTH the wake-embedded M0 and the **wake-free M3** families; same-mesh A/B vs conforming Γ within **0.1–0.7%** at M=0 and M=0.5 (0.1177/0.1191/0.1197 vs 0.1175/0.1200/0.1202 on coarse/medium/fine); the **wake-free** mesh (no `wake` tag, generic cuts — the workflow form) reproduces the embedded-mesh Γ to **0.3%**; the wake jump is CONVECTED, not decaying. **Five correctness fixes landed here (all load-bearing):** (1) far-field **aux DOFs must stay FREE** (Neumann) — pinning them to the vortex lower branch drains the circulation (jump decays 0.0147→0.001); the vortex goes on the **main** DOFs only. (2) The wake must be **coplanar with the vortex branch cut** (chord plane y=0, design.md §4) — aiming the level set along the freestream while the branch cut stays horizontal leaves an unsupported Dirichlet jump at the outlet ⇒ spurious velocity ⇒ density blow-up (all high-M cells at x≈15, NaNs). (3) The per-side cut-strip density **limit-cycles and must be under-relaxed** (`omega_rho`, default 0.5); full adoption diverges after ~80 outers (Γ 0.126→0.010, M_max→6.7). (4) **D11 is mandatory**: wall Cp from `phi_main` makes lower-surface TE triangles reference the TE's UPPER value ⇒ cl_pressure = **−3.35** (junk); the per-side `phi_up`/`phi_lo` mapping brings cl_p within 0.4% of cl_KJ. (5) **Compressibility is carried by the BULK density, NOT the far-field vortex** — PG-scaling the vortex (β<1) leaves Γ unchanged, while the bulk density raises it 0.1086→0.1256 (the correct 1/β direction). |
+| B4 | ✓ | 2026-07-12 | **B4 NEW + CLOSED same day (user-directed) — TE control-volume / implicit-Kutta re-derivation.** The B3 blocker was that the emergent Γ converged to the WRONG value (0.2074/0.1760/0.1704 vs conforming 0.1175/0.1200/0.1202 — mesh-convergent ⇒ a METHOD defect, +42%). **Root cause, two structural facts:** (1) **the wake LS CANNOT pin Γ** — its residual is identically zero for any spatially-constant jump because Σ_c ∇N_c = ∇(1) = 0 (partition of unity), measured **1.9e-16** ⇒ design_track_b.md §2.3/D2's "g₂ IS the discrete Kutta condition" is **FALSE and retired** (the López dissertation has no explicit Kutta anywhere — the word never appears in its method chapter); (2) Γ was therefore pinned by a single, WRONG equation — the TE aux row (lower-side mass conservation), whose control volume is up/down **asymmetric** on a symmetric airfoil (TE fan 9 upper / 6 lower / 3 cut, because the ε shift sends every on-sheet node "+"). **★ Fix = the NONLINEAR TE pressure-equality (Bernoulli) Kutta.** Symmetrizing the control volume is NOT available (the mesh is naturally asymmetric at the TE — user-arbitrated 2026-07-12), so the condition is a POINTWISE PHYSICAL statement needing no symmetry: |q_u|² = |q_l|², factorized **exactly** as (q_u+q_l)·(q_u−q_l)=0 and linearized by freezing the mean s̄ = q_u+q_l at the previous iterate ⇒ a row LINEAR in φ, re-linearized each Picard outer (same cadence as the density lag — no new outer loop) and converging to the exact nonlinear condition. It replaces the TE **aux** row; the displaced lower-side mass-conservation entries are re-routed onto the TE **main** row, which then carries the TOTAL (upper+lower) balance, so mass stays conserved and no side is arbitrarily robbed of its equation. **Why it is non-degenerate where g₂ is not:** q_u and q_l are recovered on DIFFERENT element sets, so q_u−q_l is NOT a jump gradient and does not vanish for a constant jump. **★ The control volumes must be WALL-ADJACENT** (elements carrying a wall face = the upper/lower body surface at the TE), not the whole fan — the Kutta condition is about SURFACE velocities: full-fan recovery gives Γ 0.1407/0.1355/0.1329 (+11–15%, interior and wake elements pollute the average), wall-adjacent gives **0.1177/0.1191/0.1197** (**<1%** of conforming). **The D2 penalty-Kutta fallback is no longer needed** — no penalty weight, no tuning parameter (s̄ is solved for, not calibrated). Also fixed en route: the ε shift was manufacturing **spurious cuts in the below-TE fan** (3 of 6 elements got a bogus UPPER copy BELOW the wake) — exactly the López p.57 warning; that fix alone restored mesh convergence (Γ went from a mesh-independent wrong 0.186 to the convergent 0.207→0.176→0.170). Gate (`tests/test_b4_te_control_volume.py`, **8 passed**, ~29 s): LS null space pinned (1.9e-16); TE control volumes wall-adjacent; below-TE fan never cut; **emergent Γ within 5% of conforming (measured 0.1–0.7%)** while the old `te_kutta="mass"` row is still >30% out; visual artifact `artifacts/EXPORT_TE_DIAGNOSIS/b4_te_kutta.png`. Interfaces: `solve_multivalued_lifting(..., te_kutta="pressure")` (default), `te_kutta="mass"` retained for the before/after contrast. |
+| B5 | ✓ | 2026-07-12 | (was B4.5, orig B3.5) **NEW 2026-07-11 + CLOSED 2026-07-12 (user-arbitrated) — far-field A/B: option a (Dirichlet+vortex) STAYS the default.** `solve_multivalued_lifting` grew `farfield="vortex"` (default, option a: spherical Dirichlet freestream + PG vortex on the MAIN DOFs with the emergent Γ refreshed in each outer iter, aux FREE) / `"neumann"` (option b, López: inflow Dirichlet freestream + outflow Neumann outlet carrying the freestream flux ρ∞(u·n̂), NO vortex, NO Γ feedback) / `"freestream"` (Dirichlet freestream everywhere, crudest). Helpers `_farfield_split`/`_neumann_outlet_rhs` in `solve/picard_ls.py`. **López-style domain-size re-calibration** (the dissertation §4.1.4 method) on BOTH NACA families (M0 embedded + M3 wake-free), coarse, M0.5 α2°, R ∈ {15,30,60,120}c: option a is **domain-robust** (Γ within 0.45%/1.09% of the truth over 15→120c; 0.25% of conforming at 15c), option b truncates the **O(Γ/R)** point-vortex tail (−4.07% at 15c → −0.50% at 120c, halving each doubling of R ⇒ meets the B3 ±2% band only at **R≥~30c**, <1% at **R≥60c** = 2–4× larger domain), freestream crudest at every R (DIVERGES on compact 15c M0). Both families bit-for-bit agree. ⇒ option a stays default (compact 15c workflow); option b validated but domain-hungry. **M6 leg folded into B7** (the 3D B-path solve is B7 machinery; the span-uniform option-a vortex also recreates the P5 branch-ray artifact on M6 without the Γ(z) taper — B7). Evidence: demo `cases/demo/b4p5_farfield/` (`farfield_domain_study.png` + summary/checks CSV, self-checking), `tests/test_b45_farfield.py` **10 passed** (15c coarse locks + `_farfield_split`/RHS unit checks). Conforming path byte-untouched. |
+| B6 | ◐ | 2026-07-12 | (was B5, orig B4) **Transonic + Mach continuation on the level-set path — coarse gate MET, medium fold = LS-Newton (delivered).** Full detail in the B6 gate section above (§"B6 — Transonic…") + design_track_b.md §10/§10.6. Delivered: per-side artificial density with a same-side-restricted upstream walk (D10; subcritical exact no-op), **supersonic-zone-localized damping** (the P4 whole-field θ·diag throttles the implicit-Kutta circulation — a Jacobi-smoother-vs-solution-mode effect), `solve_multivalued_transonic` (Mach ramp, **no Γ secant**), `post/surface_ls.py` (D11 wall-Cp/shock). **★ Gate baseline changed (user-arbitrated): same-mesh conforming NEWTON truth, not the conforming Picard** (which under-circulates 4–8% at these shocks). **coarse M0.80 MET** dual-mesh (M0 Γ 0.2124/−7.9%, M3 0.2322/+0.9%, shock 0.644/0.678, 0 lim/flr; demo `cases/demo/b6_transonic/` 14/14). **★ Fold findings:** live option-a Γ→vortex loop-gain>1 near the fold ⇒ transonic recipe = `farfield="neumann"`; and the raw Picard-vs-Picard A/B gap is the conforming Picard's own stall bias (Newton-arbitrated). **★ LS Newton (`solve/newton_ls.py`, design §5.5/§10.6): DELIVERED + FD-verified 1.3e-9**, reaches machine-converged terminal-quadratic discrete **fold** solutions (0 lim/flr): coarse M0.80 M0 |R| 9.4e-13 / M3 3.2e-11; **medium M0.7875 M3 wake-free (workflow mesh) |R| 1.5e-12** — closing the "is it a solution?" question the Picard stall left open. **Two honest gaps (open):** M0-embedded medium live-Newton limit-cycles at 3e-6 (P8/N5 near-tie churn → wire in frozen selection); converged LS fold lift ~13% below conforming-Newton (discretization difference to apportion — mesh + B5 neumann −4% + cut-O(h); user decided NOT to chase it now). Tests `tests/test_b6_transonic.py` (9 + 2 gated) + `tests/test_b6_newton.py` (2 + 2 gated). |
+| B7 | ✓ | 2026-07-12 | (was B5.5, orig B4.5) **ONERA M6 3D gate — CLOSED, dual-mesh, first try.** Full detail in the B7 gate section above + design_track_b.md §11. M∞0.84/α3.06 coarse, `farfield="neumann"`, ramp 0.60→0.84 @ dm 0.04; **M1 embedded** cl_KJ 0.2765 / shocks 0.635/0.588/0.449 / Γ 0.1076→−0.0003 / M_max 1.453 / **0 lim,flr** (22.7 min) and **M4 wake-free** cl_KJ 0.2710 / 0.634/0.584/0.454 / 0.1055→+0.0003 / 1.368 / **0 lim,flr** (18.4 min); V6 1.77%/1.97% (P5 coarse 2.40%); dual-mesh A/B 2.0%. **★ The B6 lift INVERSION reproduces in 3D:** against the conforming **NEWTON** truth (cl_KJ 0.2692, the B6-arbitrated baseline) the LS Picard is **+2.7% (M1) / +0.7% (M4)** while the conforming **Picard** (P5, 0.24788) is **−8.6%** — the LS path has no early-stoppable Γ outer (implicit Kutta ⇒ Γ is a solution mode), so gating on P5 would penalise the B path for being closer to the truth; the **wake-free workflow mesh is the more accurate of the two**. **★ 3D far field = neumann, and the P5 Γ(z) taper is structurally UNNECESSARY on the B path** (not merely unimplemented): the B-path vortex is span-uniform with a y=0,x>0 branch cut at every z, which misfires two independent ways — (a) the α-aimed sheet is not coplanar with that cut (B3's rule in 3D; outlet M 0.958 vs neumann 0.513) and (b) even re-aimed coplanar, one scalar Γ cannot match Γ(z)→0 (P5's branch-ray artifact; outlet M 0.825) — and neumann carries no vortex, so neither can exist. **★ Γ(z) comes out spanwise-SMOOTH with NO smoothing** (unplanned finding): normalised RMS 2nd difference 0.0079/0.0091 vs the conforming P5's 0.0970 — **11–12× smoother**. The conforming path runs a separate secant PER TE STATION (the machinery whose single-station failure, st133, cost P5 a whole investigation, and whose jitter `INVESTIGATION_gamma_smoothing.md` failed to smooth away); the implicit Kutta has no per-station loop — Γ is ONE solution mode ⇒ the P5 spanwise-Γ problem is not fixed but made **structurally impossible**. **★ The 3D-only machinery needed NO new solver code** (B1's oblique-frame + spanwise-clip fixes held): Γ(tip) → ~3e-4 discretely; the only gap was post-processing (`post/surface_ls.py`: `section_cp_curve_levelset` + `cl_pressure_3d_levelset`). Cost far under the risk estimate (~0.6 s/outer at ~12k 3D DOFs ⇒ ~20 min/solve, not hours). **Caveats (recorded, not chased):** top Mach levels park on the P4/B6 Picard residual tail (|R| ~4–6e-6, 600-outer cap) — bounded + physical + in band at every level, so the gate asserts *bounded*, not `converged`; **LS Newton on M6 deferred** (plain splu; P8/N6's true-3D LU fill ⇒ needs lagged-LU); shocks sit 0.02–0.04c aft of P5 (in band) and η=0.90 is 0.087 aft of the P8 Newton shock. Evidence: demo `cases/demo/b7_onera_m6/` (**35/35 PASS**, 4 figures + summary/farfield/checks CSV), `tests/test_b7_onera_m6.py` (6 fast + 5 gated). Conforming path byte-untouched. |
+| B8 | ✓ | 2026-07-14 | (NEW 2026-07-13, user-approved; **CLOSED 2026-07-14 as CHARACTERIZED-NOT-CURED, user-arbitrated — B9 unblocked**) **Level-set tip-edge desingularization (row-blend tip taper)** — the LS analogue of P13/G13.2's conforming taper. The conforming `Γ_eff(z)=F(z)·Γ_Kutta(z)` cannot be ported: the LS path has no Γ DOF and its TE Kutta row `s·(q_u−q_l)=0` is homogeneous ⇒ scaling by F is a no-op (G13.2 finding (8)). Fix = a convex BLEND per TE node of the pressure-equality row with B2's continuity weld: `F·[s·(q_u−q_l)] + (1−F)·[φ_aux−φ_main] = 0` (F=1 inboard ⇒ pressure Kutta bit-identical; F=0 at tip ⇒ weld ⇒ jump=0 ⇒ tip unloaded). A DIFFERENT model from `Γ=F·Γ_Kutta` ⇒ r_c independently calibrated, two-path comparison is a physics A/B. **★★ RESULT 2026-07-13 — the blend does NOT close the gate, because its PREMISE is wrong** (demo `cases/demo/b8_tip_taper_ls/` **12/12**; M6 coarse+medium, M0.5, no limiter). The blend works exactly as its model says — converges 0 lim/flr, unloads the tip circulation far past the criterion (**Γ_last ~ h^4.73**, criterion q≥1), perfectly LOCAL (inboard Γ +0.01%, cl +0.03%) — **and the tip edge still DIVERGES** (p **+1.341** untapered → +1.37…+1.58 tapered; bigger r_c is worse). **(1)** G13.2's `p ≈ 1−q` does NOT transfer (q=4.73 yet p=+1.37) ⇒ killing Γ_last does not kill the peak. **(2)** Lift cost ~0 because **there is nothing to unload** — the LS implicit Kutta already drives Γ(tip)→0 emergently (B7: ±3e-4); the conforming path needs the taper only because its free-edge rule leaves Γ_last ~ √h (q=0.44). **(3) ★ MECHANISM:** the peak cell is **OUTBOARD of the geometric tip** (z/b=1.0118), a **`beyond_tip` element the SPANWISE CLIP refuses to cut**, the SAME element tapered or not, and **NOT a small-cut sliver** (V 0.71× median, not even cut) ⇒ **the LS tip singularity lives in how the embedded sheet TERMINATES, not in the circulation it sheds.** The two paths' tip singularities are DIFFERENT OBJECTS. Machinery shipped (correct, tested, bit-identical by default) but **B8 needs a RE-SPEC aimed at the sheet termination (spanwise clip / beyond-tip zone) — user arbitration required.** Cost caveat: the LS path has **no AMG option** (hardcoded `spsolve`, B2 decision) — M6 medium is 484 s/solve at 67k dofs; **fine would hit the splu wall with no escape hatch**. **★★ RE-SPEC ROUND 2026-07-14 (diagnosis-first, then span blend — see the B8 section):** (1) the committed p=+1.34 was a **×5 METRIC ARTIFACT** (`element_mach2` reads mixed-side plain/beyond-tip elements from the aux-substituted side field; assembly uses MAIN dofs — elem 93977: side 1.532 vs main 0.309); the **HONEST exponent is +0.62 (+0.37 no-sliver) = the SAME object as the conforming +0.52**; fix opt-in `element_mach2(mixed_plain="main")`, default bit-identical. (2) The honest residual object is the **termination ring's FINITE jump** (|δ|≈0.026, h- and TE-taper-independent — decoupled from Γ_last, which is why the TE blend measured nothing). (3) The **span blend of the wake-LS rows** (`MultivaluedOperator(span_blend=…)`, default None bit-identical, 11 tests, B-suite 116/9) **WELDS the ring (0.026→0.0003) but is NEGATIVE on locality: ~20% GLOBAL lift loss, uniform in z, r_blend-insensitive, h-GROWING** (⇒ its flat p at rb0.08 is confounded, corrected ~+0.15); component isolation: straddler weld alone −13.3%, inboard blend alone −10.8% ⇒ **the implicit Kutta has no per-station target — ANY sheet-side δ-pin re-levels the global Γ mode ~10×** (the conforming secant keeps the same F(z) at −1.6%). Demos `run_b8_termination_diagnosis.py` + `run_b8_span_blend.py` (8/8). **Both constraint-side routes now measured dead; any further cure must change the FUNCTION SPACE at the termination. ★ ARBITRATED 2026-07-14: CLOSED as characterized-not-cured (honest exponent = the conforming object every closed gate lives with) ⇒ B9 UNBLOCKED; backlog **EXECUTED 2026-07-14 (user-directed)**: `element_mach2` default flipped to `mixed_plain="main"` ("side" stays opt-in for reproducing committed diagnostics; demo repro scripts pin it explicitly), B6/B7 M_max re-read from the cached states WITHOUT re-solving (`run_b8_mmax_reread.py` + `mmax_reread.csv`: side values reproduce committed to 6 digits ⇒ reconstruction verified; **M1 1.453 side → 1.392 main** — the committed M_max was itself a beyond-tip artifact cell; M4 + both 2.5D states bit-identical; all gate bands unchanged), G13.1/P9 LS-exponent errata placed at the original claims in roadmap/demo_report, and the M2 LS-ingestion census landed as tests+CSV (`test_m2_wingbody.py` +7, `ls_ingest_census.csv` — the f3c7989 prose numbers 1,415/76 confirmed exactly at α=0, medium 29,108/150 added). Still recorded, NOT scheduled: the `element_densities` mixed-plain junk-weight fix.** |
+| B9 | ☐ | | (was B8 2026-07-13; orig B6→B5) Multi-wake validation (multi-element / wing-body): two-element cl's plausible, fuselage carries no lift. Unblocks Track M's M2. |
+| B10 | ⊘ SHELVED | 2026-07-10 | (was B9 2026-07-13; orig B7→B6) Curved wake / free wake. Recorded reasons (DN1 §8 / DN2 §4.5.6): the loading error of a straight wake is O(θ²) ≈ 0.1%; per-update CutElementMap/DOF rebuild cost; discrete cut-set jumps conflict with Newton; López precedent. The `update_direction()` interface capability is retained — it is what B1's α re-aim tests exercise. |
+| B11 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B10, no renumber) **LS-path infrastructure: unified post-processing + GMRES/AMG scaling.** Two gaps closed (a B9 enabler). **(1)** `post/surface.py` + `post/surface_ls.py` now share private cores (`_cp_from_q2`, `_pressure_force`, `_wall_plane_crossings`/`_resolve_station`/`_section_curve_dict`, `_d11_wall_state`) under a keyword-dispatched upper layer `post/unified.py` (`wall_cp`/`wall_forces`/`section_cp`, `phi=` conforming vs `mvop=,phi_ext=` level-set); every legacy function keeps its name/signature and outputs are `np.array_equal` (D11 lock + shock locks pass unchanged). **(2)** the deferred design_track_b.md §5.3 GMRES+AMG landing: `solve_multivalued_laplace`/`_lifting`/`_newton` grow `precond=None|"ilu"|"amg"` (None = the bit-identical `spsolve` default; transonic inherits via `**kwargs`), the escape from the M6-fine splu wall (roadmap "no precond option" caveat). **★ ILU is the effective escape** (spilu on the real fused matrix, 434 iters coarse, exact); **AMG (SA on an SPD Picard-block surrogate + aux↔host springs) converges only on the SPD Laplace/continuity system — on the `wake_ls` lifting operator its convection-like aux rows defeat the SPD surrogate and GMRES STALLS (measured: γ 0.0033 vs 0.139, 455 s, all outers stalled)**, so AMG stays a Laplace/§5.3 knob and ILU is shipped. Núñez symmetric row assignment stays not-prebuilt (§5.3). lagged-LU (`direct_refactor_every`) port to `newton_ls` = recorded out-of-scope follow-up → **executed by B12 (2026-07-14)**. Evidence: `tests/test_b11_post_unified.py` (9) + `tests/test_b11_linear_ls.py` (10 + 1 gated); demos `cases/demo/b11_ls_infra/` (unified-post + GMRES A/B + gated M6-medium headline CSV). Conforming numerics byte-untouched; no Numba/COO path touched. |
+| B12 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B11, no renumber; executes the B11/G11.4 follow-up) **Lagged-LU direct-reuse for LS Newton (medium/M6-scale enabler).** B11 measured that the iterative escapes fail beyond coarse (ILU diverges at 2.5D medium lifting, `factor_failed`s at M6 medium; AMG stalls), so at medium/M6 sparse-direct is the only converging tool and the cost driver is the NUMBER of factorizations (17.5 s each at 67k dofs). `solve_multivalued_newton` gains `direct_refactor_every` (default 1 = bit-identical per-step `spsolve`) + `direct_reuse_rtol`: with `k>1` it refactors the LU every k-th Newton step and drives the intermediate steps with GMRES preconditioned by the stale (exact) LU — the N6 mechanism (`solve/newton.py`) ported **minus the Woodbury** (the LS system has no Γ DOF ⇒ plain `J_free d = −R_free`). **G12.1 (bit-identity) ✓ + G12.2 (equivalence/reuse) ✓** — coarse M0.70 k∈{2,1000} reach the spsolve γ (0.1778053693) to bit-identity, 0 stalls, k=1000 refactors ONCE over 6 Newton iters. **G12.3 (M6-medium subsonic A/B) ✓** — M6 medium M0.5 (67,426 dofs), 7 Newton steps both, spsolve refactors 7× (**145.6 s**) vs lagged-LU 1× + 30 reuse-GMRES iters (**66.7 s = 2.18×**), γ bit-identical (|Δγ| 6.7e-13), 0 stalls, 0 lim/flr. Honest boundary: a real medium-scale win (one splu fits at 67k), but does NOT break the FINE memory wall (still needs ≥1 in-memory splu; that's the Núñez→AMG route). `solve/newton_ls.py` is the only production change, default byte-identical. Evidence: `tests/test_b12_lagged_lu_ls.py` (4); demo `cases/demo/b12_lagged_lu/` (6/6). |
+| B13 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B12) **Lagged-LU on the Picard OUTER loop** — the post-B12 cost driver (one 17.5 s spsolve per outer; B11 lifting headline 447.6 s / 26 outers, Newton seed 263 s / 15). `solve_multivalued_lifting` gains `direct_refactor_every` (default 1 = bit-identical) + `direct_reuse_rtol` (**1e-10, NOT B12's 1e-8** — a Picard fixed point is pinned only by its 1e-6 lag tolerances, so an inexact reuse step SHIFTS the stopping point, measured |Δγ| 8e-8 at 1e-8; Newton's terminus is pinned by tol_residual regardless); transonic inherits via `**kwargs`; laplace excluded (single-shot). User goal arbitrated: medium-scale speed is the objective, fine optional ⇒ this outranks the structural preconditioner (B14). **GB13.1 ✓ + GB13.2 ✓ + GB13.3 ✓** — M6-medium lifting **447.6 s → 68.3 s (6.55×)**, 2 refactors vs 26 outers, γ bit-identical (|Δγ| 6.9e-13); end-to-end seed+Newton **~330 s → 111.9 s (~3×)**, seed 263→42 s. (1 GMRES stall = the designed safety-net refactor on an early large-density outer, not a divergence.) External-doc corrections recorded (Schur direction inverted in both external docs; 454.8 s = 26 outers not one splu). Evidence: `tests/test_b13_lagged_picard.py` (5); demo `cases/demo/b13_lagged_picard/` (6/6). |
+| B14 | ☐ | | (NEW 2026-07-14; **designed-not-scheduled**, trigger recorded) **Schur-eliminated aux block + AMG(SPD Picard main block)** — the structural preconditioner for the fused LS matrix; `precond="schur"`. Eliminate the SMALL aux thin-strip block exactly (`K = J_mm − J_ma·J_aa⁻¹·J_am`, `lu_aa = splu(J_aa)` ~8k dofs at M6 medium), AMG on the SPD Picard main block, **no springs** — the B11 surrogate's jump≈0 bias (which killed the global circulation mode, γ 0.0033 vs 0.139) disappears structurally. GMRES faces "elliptic + cut-strip-localized correction" = the conforming-proven operator shape. Unique value = the FINE memory-bounded path (no full-size splu). **Trigger:** GB13.3 lands and medium still too slow, or a real fine campaign. Diagnostic-first (J_aa conditioning — measure, don't assume); discriminating tier = 2.5D medium lifting (where ILU diverged). Fallbacks: block-triangular; last resort Núñez additive assignment (discretization change). |
+| B15 | ✓ | 2026-07-15 | (NEW 2026-07-15, user-directed; appended after B14, no renumber) **LS Newton transonic ramp + N5 freeze-selection — the Picard shock-position PLATEAU is removed.** Root cause measured: the LS transonic Picard's top Mach levels never converge and burn their full outer budget on the plateau (M6 medium M0.84: levels 0.80/0.84 each run all 200 outers) — that IS the 24.5/38.4 min. Newton has no such soft mode, but `newton_ls` could not ramp (`freeze=` was a reserved no-op; the 0-clamped gate blocks shock limiter cells; no Mach-ramp wrapper). Delivered: `MultivaluedOperator.newton_side_data(frozen=…)` + `freeze_side_state` (the `kernels/upwind.py` frozen apparatus reused UNMODIFIED — the per-side ops are already walk-mode with a side-masked graph ⇒ wiring, not new numerics); `LSNewtonSystem` (residual+Jacobian in ONE code path shared with the FD gate); `solve_multivalued_newton_transonic`. **GB15.1 ✓** FD rel **6.7e-9**, frozen sweep reproduces live density BITWISE at the freeze point. **GB15.2 ✓** the freeze cures a genuine **period-6 limit cycle** (NACA coarse M0.75: live stuck at 2.7e-7 with 0 lim/flr = clean assignment churn → frozen **22 steps to 8.5e-13**, 0 reverts, γ 0.218809 vs the live cycle's 0.218804 ⇒ it removes churn, it does NOT move the solution). **GB15.3 ✓** NACA coarse M0.80/α1.25 (B6 gate; conforming-Newton truth M_max 1.408): Picard 41.9 s → |R| 1.55e-5 with only **3/5 levels converged (not a solution)** vs Newton **7.5 s → 3.1e-12 strict (5.6×)**, M_max 1.3924 (−1.1% of truth); **+`intermediate_tol` 6.5 s with γ 0.212445 IDENTICAL to strict** (48→38 steps) ⇒ the loose-intermediate knob is FREE. **GB15.4 ✓** M6 medium M0.84 wake-free: committed Picard **2304.7 s (38.4 min)** on the 1e-5..1e-4 plateau → Newton ramp **657 s (11.0 min) = 3.51×, ALL 6 levels converged to ~1e-11**, freeze armed everywhere, 0 reverts; M_max 2.4938 vs Picard 2.4549 (1.6%), 3 clamped cells of 330k vs ≤3. ⇒ closes the deferred **B6-medium quantitative** + **B7-quantitative** items. ★ **HONEST LIMIT:** 5 of 6 levels accept via `assignment_cycle` — the FROZEN system converges to ~1e-11 and is accepted at the **assignment-discontinuity floor** (the N5 semantics the conforming path also uses); this is NOT a claim that the LIVE residual is <1e-10. 6–7 orders better than the Picard plateau, but 'live-strict' would be an over-claim. Also open (unchanged by B15): the LS-vs-conforming **discretization gap** (γ −7.4% of the same-mesh conforming-Newton truth at NACA coarse M0.80; B6 recorded ~13%) — B15 makes it measurable strict-to-strict for the first time, it does not close it. ★★ **FOUR ERRATA (the conforming N5 recipe is NOT mechanically portable — the B8 lesson again; all four forced out by measurement):** (1) the TE polyline must come from the AUTHORITATIVE geometry — hand-rolled x_te off by **2e-4** matches ZERO wall nodes ⇒ **0 TE nodes ⇒ no Kutta ⇒ 340k limited cells + NaN, passed SILENTLY** ⇒ both LS solvers now RAISE on `te_nodes == 0`; (2) **`freeze_tol` must sit ABOVE the CHURN FLOOR, which RISES with Mach** (<1e-6 @M0.60 → 8.6e-6 @M0.65 → **2.7e-4** @M0.70) — below it a discrete selection flip throws the residual back before the freeze can arm and the ramp DIES at M≈0.66 (**same law as 'tol_residual above the Picard plateau'**); (3) **residuals are NOT comparable across a SELECTION EPOCH** — the frozen phase drives `r_best` to 1.5e-11, a refresh legitimately returns it to the live scale (2.6e-3), and the fail-fast reads a 1e8× blow-up and kills a healthy freeze-refresh cycle ⇒ `r_best` reset on freeze/refresh/revert; (4) **the frozen clamp count is STALE BY CONSTRUCTION** (`n_floored` = `branch==3` at the freeze point, never falls) ⇒ gating on `n_flr==0` **refuses a 7.8e-14 machine-precision solution forever** ⇒ the **LIVE re-evaluation** is the arbiter. New knob **`freeze_max_clamped`** (default 0 = the conforming rule): a SINGLE floored cell of 330k otherwise blocks the freeze at ANY `freeze_tol` — **the P9/G9.1 wall** — yet the frozen sweep represents a clamped cell exactly (branch 3), so the precondition was stricter than the machinery needs; relaxed, the ramp completes **WITH** the clamped cells (⚠ errata 2026-07-15: they PERSIST — the converged M0.84 state carries 3 of 330k, and the `assignment_cycle`/`refresh_budget` accept routes no longer re-check the clamp count; see the corrections block in the B15 entry). Defaults byte-identical (`freeze_tol=None`). Evidence: `tests/test_b15_ls_newton_freeze.py` (12, incl. the errata lock); demo `cases/demo/b15_ls_newton_ramp/` (**19/19 incl. gated M6**). |
+
