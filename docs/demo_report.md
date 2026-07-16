@@ -60,6 +60,7 @@ is not evidence** (the 2026-07-13 audit rule).
 | M6 medium LS workflow | `cases/demo/m6_medium_ls_workflow/` | 10/10 | demo, not a gate (2026-07-15): sub+transonic at conforming-comparable cost | [track_b](demo_report/track_b.md) |
 | **Track B** B15 LS Newton ramp + freeze | `cases/demo/b15_ls_newton_ramp/` | 19/19 incl. gated M6 | closed 2026-07-15 (plateau gone, 3.5×; four errata) | [track_b](demo_report/track_b.md) |
 | **Track A** A1 solver bottleneck study | `cases/analysis/a1_solver_bottleneck/` | 11/11 (2.5-D) + 4/4 (gated 3-D) | closed 2026-07-16: GA1.1–GA1.5; 3-D Newton is precond-bound (the 2.5-D seed headline does not transfer); GA1.5 reproduces G8.2/B15 digit-for-digit and found 4 harness defects | [track_a](demo_report/track_a.md) |
+| **Track A** A2 TE/Kutta fidelity | `cases/analysis/a2_te_kutta_fidelity/` | 22/22 (zero-solve) + 4/4 (gated intervention) | closed 2026-07-17: GA2.1–GA2.5; S1 Γ(z) jitter = a probe-difference Kutta-target measurement artifact (fixed-Γ discriminator D=7.33/25.70 coarse/medium), not flow content; S2 TE Cp jump = potential-jump Kutta form error (34×/133× vs level-set) + P1 recovery artifact; fix routed to P14 (no `pyfp3d/` edits) | [track_a](demo_report/track_a.md) |
 
 > Track-P renumber (2026-07-08, then 2026-07-11 ×2): P6 = surface recovery;
 > P7 = differentiable flux (Newton prereq); P8 = fully-coupled Newton;

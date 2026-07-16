@@ -1,0 +1,8 @@
+state,mesh_level,wake_model,n_stations,roughness_d2,jitter_localfit
+conf_picard_coarse,coarse,conforming,83,0.09700,0.03493
+conf_picard_medium,medium,conforming,166,0.03901,0.01710
+conf_newton_medium,medium,conforming,166,0.03653,0.01596
+ls_m1_coarse,coarse,level-set,84,0.00793,0.00237
+ls_m4_coarse,coarse,level-set,84,0.00912,0.00296
+ls_newton_medium,medium,level-set,167,0.00326,0.00265
+ls_picard_medium,medium,level-set,167,0.00328,0.00267

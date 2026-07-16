@@ -29,7 +29,9 @@ recorded in Track M M2).
 
 - **Track P** ([track_p.md](roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
   xfail) · P10 ◐ (G10.1 open) · P11 conditional-not-opened · P13 ◐ (G13.3
-  transonic NEGATIVE-open).
+  transonic NEGATIVE-open) · P14 ☐ designed-not-started (probe-free conforming
+  Kutta estimator, from A2 — fixes the Γ(z) jitter + TE Cp gap; not on the B9
+  path).
 - **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
   body re-spec'd 2026-07-16, solver leg = B9).
 - **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B13, B15 ✓ ·
@@ -37,8 +39,13 @@ recorded in Track M M2).
   B10 shelved · **B9 next**.
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
-  (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark).
-  A2 unscoped. ★ **In 3-D both Newton paths are PRECONDITIONER-bound (~40% of
+  (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
+  **A2 ◐** (TE/Kutta fidelity attribution — conforming Γ(z) jitter + TE Cp
+  jump; scaffolded 2026-07-16, zero-solve legs run + **GA2.2 coarse
+  intervention: H1 CONFIRMED D=7.33** — the per-station probe target estimator
+  manufactures the Γ(z) jitter, not the flow field; GA2.5 dossier/routing
+  pending; **B9 stays NEXT**).
+  ★ **In 3-D both Newton paths are PRECONDITIONER-bound (~40% of
   wall, lagged LU already on); the "Picard seed is the cost" result is 2.5-D
   ONLY** — quote a dominant phase with its mesh. ★ **"G8.2 = 250 s" is a
   superseded number**: P10's promoted recipe made it ~145 s.

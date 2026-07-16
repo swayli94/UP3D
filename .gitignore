@@ -118,6 +118,10 @@ cases/demo/b15_ls_newton_ramp/results/*.npz
 # for the M6 medium M0.84 four-method run)
 cases/analysis/a1_solver_bottleneck/results/*.npz
 
+# A2 (Track A) TE-Kutta fidelity derived caches (level-set operator products;
+# run_a2.py rebuilds them in ~1 min when absent -- PNG/CSV are the evidence)
+cases/analysis/a2_te_kutta_fidelity/results/*.npz
+
 # Reference papers
 docs/references
 

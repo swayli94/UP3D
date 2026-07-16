@@ -17,7 +17,7 @@ resolve through one hop.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
-  (`track_p.md` P0–P13 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B15
+  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B15
   level-set wake — **B9 = NEXT** — `track_v.md` V1–V4 viscous, designed-not-
   started, `track_a.md` A1– verification & analysis, created 2026-07-15).
   "What phase are we in" and "what gate is open" live there, nowhere

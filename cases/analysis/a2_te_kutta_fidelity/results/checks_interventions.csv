@@ -1,0 +1,5 @@
+gate,check,value,criterion,status,note
+GA2.2,coarse: control reproduces cached Kutta targets,max dev 0.00e+00 (1s),small vs max|Gamma| (path check; T2/T3b),PASS,
+GA2.2,coarse: discriminator D = r(targets back)/r(smooth in),D=7.33 (r 0.0126 -> 0.0921; cached 0.0970; 2s),>3.0 confirm / <1.5 refute (pre-registered),PASS,H1 CONFIRMED
+GA2.2,medium: control reproduces cached Kutta targets,max dev 0.00e+00 (2s),small vs max|Gamma| (path check; T2/T3b),PASS,
+GA2.2,medium: discriminator D = r(targets back)/r(smooth in),D=25.70 (r 0.0014 -> 0.0361; cached 0.0390; 12s),>3.0 confirm / <1.5 refute (pre-registered),PASS,H1 CONFIRMED

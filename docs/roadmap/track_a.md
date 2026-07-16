@@ -5,7 +5,7 @@
 > human-readable status snapshot is [overview.md](../overview.md). Evidence
 > sections: [demo_report/track_a.md](../demo_report/track_a.md).
 
-## Track A — Verification & analysis (created 2026-07-15; IN PROGRESS — A1)
+## Track A — Verification & analysis (created 2026-07-15; A1 ✓, A2 ✓; no A3 scoped)
 
 **Purpose (user-arbitrated 2026-07-15):** a home for cross-cutting *verification
 and analysis* work that is not a solver/mesh feature but measures the ones that
@@ -118,14 +118,145 @@ defects sat in paths the green 2.5-D `checks.csv` never executes. Full account i
 
 ---
 
+### A2 — TE/Kutta fidelity: conforming Γ(z) jitter + TE Cp jump, attribution study ✓ CLOSED 2026-07-17 (opened + scaffolded 2026-07-16; GA2.1–GA2.5 all met)
+
+**Motivation (user-flagged 2026-07-16, from committed figures).** Two symptoms:
+- **S1** — the conforming spanwise circulation Γ(z) carries station-to-station
+  jitter (`a1_m6_spanwise.png`, P5 `g52_spanwise_*.png`) while the level-set
+  path is smooth on BOTH mesh families (B7 `gamma_of_z.png`). 3-D only: the
+  quasi-2D extrusion has a single Kutta station, so there is no spanwise
+  quantity to be noisy in.
+- **S2** — section Cp jumps unphysically at the trailing edge
+  (`g51_sections_*.png`, `m6_cp_sections.png`); present in 2.5-D too
+  (`a1_cp.png`), conforming much worse than level-set (B7 `section_cp.png`).
+
+**Positioning against prior art (cited, not re-derived).** B7 committed the
+S1 *contrast* (roughness = RMS 2nd difference / range: 0.0970 conforming-P5
+vs 0.0079/0.0091 LS, 11–12×) and P13 committed the *prose attributions*
+(Γ jitter = "conforming Kutta-probe placement"; TE Cp gap 0.14–0.22 =
+potential-jump Kutta approximation + sharp-TE P1 floor) — **neither
+attribution has intervention-grade evidence**, and
+`INVESTIGATION_kutta_closure.md` left the probe degeneracy (35 upper + 41
+lower of 166 stations share probes with a neighbour; off-plane by O(h)) as a
+known-robustness item. A2's mandate is exactly the Track-A one: turn those
+prose attributions into intervention-tested, decomposed, committed evidence.
+A2 implements **no fixes** (Track A adds no physics).
+
+**Mechanism map (code facts the hypotheses are grounded in).** Conforming
+Kutta = per-station Γ whose target is a φ difference at *probe nodes one
+edge off the TE* (`constraints/wake.py::kutta_targets`,
+`mesh/wake_cut.py::_kutta_probe_nodes` — nearest-neighbour pick, off-plane
+O(h) on the swept unstructured TE), stations independent. Level-set Kutta =
+implicit pressure-equality row on wall-adjacent TE control volumes
+(`wake/multivalued.py`, B4); no per-station machinery exists. Section Cp =
+per-wall-triangle constant tangential-gradient Cp
+(`post/section_cut.py::_wall_section_points`), raw (P5) or P6-smoothed (P8).
+
+**Pre-registered hypotheses** (thresholds fixed before the intervention runs;
+do not tune after seeing numbers):
+- **H1 (S1 dominant cause = target-sampling noise).** Decided by the gated
+  intervention discriminator **D = roughness(kutta_targets(φ(Γ_smooth))) /
+  roughness(Γ_smooth)** after a fixed-Γ warm-start re-solve with a smooth
+  diagnostic Γ (the T3/E methodology — explicitly NOT the refuted
+  smoothing-as-fix route): **D > 3 ⇒ H1 confirmed** (the probe estimator
+  regenerates jitter from a smooth field); **D < 1.5 ⇒ H1 refuted**; else
+  mixed, report the split.
+- **H2 (S1 secondary = incomplete per-station closure).** Measured by the
+  |F_j|/max|Γ| census on committed final states; expected minor post-P5-polish
+  (small |F| + persisting jitter ⇒ the noise lives in the target definition).
+- **H3 (structural contrast + h-scaling).** One shared metric implementation
+  must reproduce B7's committed numbers, then extend to all cached states;
+  conforming jitter expected ~O(h).
+- **H4 (S2 dominant = Kutta-form error).** Conforming TE pressure gap
+  |Cp_u − Cp_l| = O(0.1–0.2), weakly variant-sensitive, slow in h; level-set
+  ≈ 0 under the SAME estimator (its Kutta *is* pressure equality).
+- **H5 (S2 secondary = last-point recovery artifact).** The last-point spike
+  (deviation from the x/c∈[0.85,0.97] trend fit) is a P1 recovery artifact:
+  shrinks under P6 passes / quadratic recovery / h, and exists on BOTH paths.
+
+**Deliverable** — `cases/analysis/a2_te_kutta_fidelity/`: `_metrics.py`
+(shared metric/estimator implementations; correctness anchored by GA2.1's
+reproduction, no `pyfp3d/` edits at all), `run_a2.py` (zero-solve legs:
+harvests the P5/B7/A1 local `.npz` caches — L0 unified jitter table, L1 probe
+census + Kutta-closure census, L2z wall-Δφ(z; x/c) decay profile, L3 TE
+gap/spike decomposition; ~90 s cold, level-set operator products cached to
+gitignored `results/a2_cache_*.npz`), `run_a2_interventions.py` (GATED, the
+GA2.2 discriminator: control solve + smooth-Γ fixed-Γ warm-start per the
+committed T-series operation; **written, not yet run** — user-arbitrated).
+
+**Gates (ALL MET — closed 2026-07-17):**
+- [x] **GA2.1 — metric unification + reproduction.** The shared roughness
+  implementation reproduces B7's committed 0.0970 / 0.0079 / 0.0091 within
+  ±10% and the unified table covers all cached states. *Reproduced
+  digit-for-digit (0.0970/0.0079/0.0091); table adds conf Picard medium
+  0.0390, conf Newton medium 0.0365, LS Newton/Picard medium 0.0033/0.0033
+  (`a2_jitter.csv`) — the 11–12× contrast holds at medium, and conforming
+  jitter roughly halves coarse→medium (~O(h), H3).*
+- [x] **GA2.2 — S1 attribution (H1 verdict). H1 CONFIRMED at both mesh scales:
+  D = 7.33 (coarse) / 25.70 (medium).** Fed a smooth diagnostic Γ (roughness
+  0.0126 coarse / 0.0014 medium — the finer mesh's fit is nearly flat) into a
+  fixed-Γ warm-start re-solve, then read the probe Kutta targets back off the
+  new field: they came back at **0.0921 / 0.0361 — i.e. essentially the
+  original cached jitter (0.0970 / 0.0390)**, D = 7.33 / 25.70 (both far above
+  the pre-registered >3 confirm threshold; the discriminator *grows* with
+  refinement because the smooth input flattens ~O(h) while the estimator
+  reproduces the cached jitter regardless). The control (fixed-Γ = cached)
+  reproduced the cached targets to max dev 0.00 at both levels (the cached
+  state is an exact fixed point — T2 path check clean).
+  `checks_interventions.csv`, `a2_intervention.csv/png`. **The jitter is
+  manufactured by the per-station probe-difference target estimator; it is not
+  flow-field content and not incomplete closure.** *Zero-solve support that
+  pointed here first: wall Δφ jitter at x/c=0.92 is 0.02×–0.07× the station-Γ
+  jitter (confined to the TE-adjacent enforcement layer, `a2_decay.csv`);
+  single-feature probe-geometry correlations are weak (top |r| 0.11–0.14,
+  `a2_probe_census.csv`) — the noise is the combined sampling geometry, not one
+  feature, which is why the intervention (not the correlations) earned the
+  verdict.*
+- [x] **GA2.3 — S1 closure completeness (H2).** |F_j| census on all cached
+  conforming states. *max|F|/max|Γ| = 0.51% (P5 coarse), 0.59% (P5 medium),
+  0.00% (Newton medium) — enforcement is complete; the jitter is in the
+  targets, consistent with H1 (and now proven by GA2.2).*
+- [x] **GA2.4 — S2 decomposition (H4/H5).** Gap + spike tables across
+  {estimator × variant × level × method}. *SAME
+  estimator (section last points, raw) conforming 0.318/0.228 vs level-set
+  0.009/0.002 (34×/133×, coarse/medium); conforming all-station sweep median
+  0.221/0.175 — squarely the P13 prose range 0.14–0.22; LS own-CV pressure
+  gap 1.4e-9/4.9e-7 (its constraint, zeroed). Last-point spike exists on
+  BOTH paths (conf coarse 0.147 → 0.081 under 0→2 P6 passes; LS coarse
+  0.086–0.107) — the H4/H5 split (form error vs recovery artifact) is
+  visible and quantified in `a2_spike.csv`.*
+- [x] **GA2.5 — evidence dossier + routing.** demo_report/track_a.md A2
+  section written (2026-07-17); every prose number backed by a committed CSV.
+  **Routing:** S1's fix — replace the per-station probe-difference potential-
+  jump estimator with a wall-adjacent-control-volume recovered-velocity /
+  pressure-equality estimator (the B4 objects, ported to the conforming cut
+  mesh; kills the single-node sampling noise AND closes the S2 TE Cp gap, one
+  swap) — is a change to the conforming Kutta MECHANISM ⇒ **new Track P phase
+  P14 (designed-not-started, trigger recorded)**. A2 implements nothing.
+
+**Scope guards (user-arbitrated 2026-07-16):**
+- Scaffold session (2026-07-16) = design + zero-solve legs; the gated
+  intervention + closure followed 2026-07-16/17 on user direction. **B9
+  remains NEXT** — A2 is an analysis interlude, not a queue change.
+- No new from-scratch solves anywhere in A2; interventions are warm-start
+  fixed-Γ only (coarse mandatory, medium behind `PYFP3D_A2_MEDIUM=1`).
+- Dead routes stay closed: Γ_smooth is a *diagnostic input* under the T3/E
+  precedent, NOT the refuted spanwise-smoothing fix; no B8 constraint-side
+  tip cures; no G1.6 fix routes.
+- States = the M6 wing family (P5/B7/A1 caches). Wing-body is B9 scope;
+  P13 round-tip states can join at closure if needed.
+
 ## Progress ledger
 
 ### Track A — verification & analysis
 
 Track status: **◐ IN PROGRESS** — created 2026-07-15. A1 ✓ CLOSED 2026-07-16
-(GA1.1–GA1.5 all PASS). Next A1-successor phase not yet specified — A2 is
-open for the user to scope.
+(GA1.1–GA1.5 all PASS). **A2 ✓ CLOSED 2026-07-17** (GA2.1–GA2.5; S1 = a
+Kutta-probe measurement-operator artifact, D=7.33/25.70 coarse/medium; S2 =
+potential-jump Kutta form error + P1 recovery artifact; fix routed to new
+**P14**). B9 stays NEXT.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
+| A2 | ✓ | 2026-07-17 | TE/Kutta fidelity attribution: conforming Γ(z) jitter (S1) + TE Cp jump (S2), conforming vs level-set. `cases/analysis/a2_te_kutta_fidelity/` (`_metrics.py` + `run_a2.py` zero-solve ~90 s + `run_a2_interventions.py` gated), figures `a2_jitter/decay/te_gap/spike/intervention.png` + CSVs + checks.csv (22 passed) + checks_interventions.csv (4 passed). No `pyfp3d/` edits; suite untouched. **Findings (all in committed CSVs):** **S1 SETTLED — the Γ(z) jitter is a measurement-operator artifact of the per-station probe-difference Kutta target estimator, NOT flow content and NOT unclosed stations.** Proof chain: closure |F|/max|Γ| ≤ 0.6% (not H2); wall Δφ jitter 0.02–0.07× the station-Γ jitter at x/c=0.92 (confined to the TE-adjacent enforcement layer); **decisive fixed-Γ discriminator D = roughness(probe targets read back on φ(Γ_smooth)) / roughness(Γ_smooth) = 7.33 (coarse) / 25.70 (medium)** — feeding a smooth Γ back-produces essentially the cached jitter (0.0921≈0.0970, 0.0361≈0.0390), controls exact (max dev 0.00). B7 roughness reproduced digit-for-digit; medium contrast conforming 0.0390/0.0365 vs LS 0.0033 (11–12×). **S2 DECOMPOSED:** dominant = potential-jump Kutta form error (conforming-only), SAME-estimator TE gap conforming 0.318/0.228 vs LS 0.009/0.002 (34×/133×), sweep median 0.221/0.175 = P13's prose 0.14–0.22 now measured; secondary = P1 last-point recovery artifact present on BOTH paths (conf coarse spike 0.147→0.081 over 0→2 P6 passes; LS 0.086–0.107). The 2.5-D `a1_cp.png` (S2 present, S1 absent — one Kutta station) confirms the two are distinct mechanisms. **Routing:** S1/S2 fix (probe-free wall-adjacent-CV pressure-equality Kutta estimator) → new **P14** (designed-not-started); A2 implements nothing. |
 | A1 | ✓ | 2026-07-16 | Solver bottleneck study. Instrumentation `pyfp3d/solve/timing.py` + additive edits to the four drivers and four ramp wrappers (canonical `timings` schema, `step_records`, per-solve linear-algebra counts, per-level `wall_s`/`timings`/`timings_total`). Benchmark `cases/analysis/a1_solver_bottleneck/` (`run_a1.py` ungated 2.5-D ~5 min, `run_a1_m6.py` gated 3-D ~52 min cold). Tests `tests/test_a1_instrumentation.py` (7); suite 403+18+2. **Headline finding (mesh-scale dependent — quote WITH the mesh): in 3-D (M6 medium M0.84) BOTH Newton methods are PRECONDITIONER dominated (39.5% conforming / 42.6% LS, even with B12/B13 lagged LU; conforming Newton is 76.3% linear algebra), while the Picard warm-start seed — the 2.5-D headline at 71%/85% — falls to 13.7%/20.2%. The 2.5-D "the seed is the cost" result is a small-problem artifact and is NOT the lever in 3-D; it is measured support for B14 (Schur+AMG) aiming at the right target.** BOTH Picard methods are linear-solve dominated in both dimensions (61.2% in 3-D), and conforming Picard runs >1 linear solve per outer (2.33 — the inner Kutta secant on the frozen matrix), an overhead the LS implicit Kutta does not carry. GA1.5 reproduces G8.2/B15 digit for digit and **found 4 harness defects in the process** (stale 250 s anchor; LS legs not on the committed M6 recipes; 2.5-D `cl_KJ` written for a 3-D wing; 3-D figures clobbering the 2.5-D ones) — see the corrections block above. |
