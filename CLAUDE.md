@@ -19,7 +19,8 @@ resolve through one hop.
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
   (`track_p.md` P0–P13 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B15
   level-set wake — **B9 = NEXT** — `track_v.md` V1–V4 viscous, designed-not-
-  started). "What phase are we in" and "what gate is open" live there, nowhere
+  started, `track_a.md` A1– verification & analysis, created 2026-07-15).
+  "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
   [docs/design_track_b.md](docs/design_track_b.md) (it supersedes DN1).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),

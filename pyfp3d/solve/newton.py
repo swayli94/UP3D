@@ -67,6 +67,13 @@ from pyfp3d.solve.linear import (
     build_ilu_preconditioner,
     solve_gmres,
 )
+from pyfp3d.solve.timing import (
+    finalize,
+    new_timings,
+    snapshot,
+    step_delta,
+    sum_timings,
+)
 
 
 class NewtonWorkspace:
@@ -435,8 +442,17 @@ def solve_newton_lifting(
                              tip_taper=tip_taper)
     ws.set_mach(m_inf)
 
-    timings = {"seed": 0.0, "residual": 0.0, "jacobian": 0.0,
-               "amg_setup": 0.0, "gmres": 0.0}
+    # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
+    # `jacobian`/`amg_setup`/`gmres` this driver has always reported --
+    # cases/demo/p8_newton reads them to draw a committed (gated, expensive)
+    # figure, so they stay, bit for bit. The canonical aliases are the ones
+    # to read: `assembly` = jacobian, `precond` = amg_setup (which has always
+    # included the splu factorization, despite the name), `linsolve` = gmres.
+    t_wall0 = time.perf_counter()
+    timings = new_timings()
+    timings.update({"jacobian": 0.0, "amg_setup": 0.0, "gmres": 0.0})
+    step_records = []
+    n_refactor = 0
 
     # ---- initial state -------------------------------------------------
     t0 = time.perf_counter()
@@ -500,6 +516,23 @@ def solve_newton_lifting(
     n_freeze_reverts = 0
     r_level_best = np.inf
 
+    # A1: each record carries the state ON ENTRY to a Newton step plus the
+    # cost OF that step, so it is closed once the step has been taken (the
+    # freeze revert/refresh paths `continue` without solving -- their records
+    # legitimately show n_lin_solves = 0).
+    prev_snap = snapshot(timings)
+    prev_counts = [0, 0]           # n_gmres_total, n_refactor at last close
+
+    def _close_step(rec):
+        nonlocal prev_snap
+        rec.update(step_delta(timings, prev_snap))
+        rec["n_lin_iters"] = n_gmres_total - prev_counts[0]
+        rec["n_refactor"] = n_refactor - prev_counts[1]
+        rec["wall_cum_s"] = time.perf_counter() - t_wall0
+        prev_snap = snapshot(timings)
+        prev_counts[0] = n_gmres_total
+        prev_counts[1] = n_refactor
+
     for it in range(n_newton_max):
         r_norm = float(np.max(np.abs(R_free)))
         f_norm = float(np.max(np.abs(F))) if ws.n_st > 0 else 0.0
@@ -507,6 +540,22 @@ def solve_newton_lifting(
         F_history.append(f_norm)
         gamma_history.append(gamma.copy())
         clamp_history.append((state["n_limited"], state["n_floored"]))
+        if step_records:
+            _close_step(step_records[-1])
+        rec = {
+            "i": it,
+            "residual": r_norm,
+            "F": f_norm,
+            "gamma_mean": float(np.mean(gamma)) if ws.n_st > 0 else 0.0,
+            "gamma_root": float(gamma[0]) if ws.n_st > 0 else 0.0,
+            "n_limited": int(state["n_limited"]),
+            "n_floored": int(state["n_floored"]),
+            "frozen": frozen is not None,
+            "n_lin_solves": 0,
+            "eta": None,
+            "lam": None,
+        }
+        step_records.append(rec)
         if len(residual_history) >= 3:
             r2, r1, r0 = (residual_history[-1], residual_history[-2],
                           residual_history[-3])
@@ -646,7 +695,7 @@ def solve_newton_lifting(
                                       frozen=frozen)
         if ptc_dtau is not None:
             J_ff = (J_ff + sp.diags(ws.m_lumped_free / ptc_dtau)).tocsr()
-        timings["jacobian"] += time.perf_counter() - t0
+        timings["assembly"] += time.perf_counter() - t0
 
         K = ws.K
         rhs = -R_free - B @ F
@@ -676,7 +725,7 @@ def solve_newton_lifting(
                 dphi, n_it, gmres_info = solve_gmres(
                     A_op, rhs, M=M_lag, rtol=direct_reuse_rtol,
                     restart=gmres_restart, maxiter=2, on_fail="return")
-                timings["gmres"] += time.perf_counter() - t0
+                timings["linsolve"] += time.perf_counter() - t0
                 n_gmres_total += n_it
                 if gmres_info != 0:
                     dphi = None            # stale LU exhausted: refactor
@@ -684,15 +733,18 @@ def solve_newton_lifting(
                 t0 = time.perf_counter()
                 lu_direct = spla.splu(J_ff.tocsc())
                 lu_age = 0
-                timings["amg_setup"] += time.perf_counter() - t0
+                timings["precond"] += time.perf_counter() - t0
+                n_refactor += 1
                 t0 = time.perf_counter()
                 z = lu_direct.solve(rhs)
                 JB = lu_direct.solve(B.toarray())
                 S = np.eye(ws.n_st) + K @ JB
                 dphi = z - JB @ np.linalg.solve(S, K @ z)
-                timings["gmres"] += time.perf_counter() - t0
+                timings["linsolve"] += time.perf_counter() - t0
             lu_age += 1
             eta_history.append(0.0)
+            rec["eta"] = 0.0
+            rec["n_lin_solves"] = 1
         else:
             t0 = time.perf_counter()
             if precond == "amg":
@@ -708,7 +760,7 @@ def solve_newton_lifting(
                 M_pre = build_ilu_preconditioner(J_ff)
             else:
                 raise ValueError(f"unknown precond {precond!r}")
-            timings["amg_setup"] += time.perf_counter() - t0
+            timings["precond"] += time.perf_counter() - t0
 
             A_op = spla.LinearOperator(
                 (ws.n_free, ws.n_free),
@@ -719,11 +771,13 @@ def solve_newton_lifting(
                               eta_prev, ew_eta0, ew_gamma, ew_eta_max)
             eta_prev = eta
             eta_history.append(eta)
+            rec["eta"] = eta
+            rec["n_lin_solves"] = 1
             t0 = time.perf_counter()
             dphi, n_it, gmres_info = solve_gmres(
                 A_op, rhs, M=M_pre, rtol=eta, restart=gmres_restart,
                 maxiter=gmres_maxiter, on_fail="return")
-            timings["gmres"] += time.perf_counter() - t0
+            timings["linsolve"] += time.perf_counter() - t0
             n_gmres_total += n_it
             if gmres_info != 0:
                 # take the best iterate as an INEXACT Newton step (still
@@ -762,15 +816,29 @@ def solve_newton_lifting(
                     f"Newton line search failed at iteration {it} "
                     f"(merit {merit:.3e} -> {merit_try:.3e})")
             merit_try, lam, R_try, F_try, state_try = best
+        rec["lam"] = float(lam)
         phi_free = phi_free + lam * dphi
         gamma = gamma + lam * dgamma
         R_free, F, state = R_try, F_try, state_try
         merit = merit_try
 
+    if step_records:
+        _close_step(step_records[-1])
     if converged and accept_reason is None:
         accept_reason = "tol"          # frozen-phase acceptance paths
     q2n = state["q2l"]
     mach2_max = float(np.max(mach_squared_field(q2n, m_inf, gamma_air)))
+    # Legacy aliases over the canonical buckets, so cases/demo/p8_newton keeps
+    # reading the keys it has always read (same seconds, same figure -- that
+    # demo is gated and expensive, it must not need a re-run). `kutta` stays
+    # 0.0: the Kutta residual F is evaluated inside ws.eval_residual, so its
+    # cost already sits in `residual` and cannot be split out without double
+    # counting.
+    timings["jacobian"] = timings["assembly"]
+    timings["amg_setup"] = timings["precond"]
+    timings["gmres"] = timings["linsolve"]
+    timings["kutta"] = 0.0
+    finalize(timings, time.perf_counter() - t_wall0)
     return {
         "phi": state["phi_cut"],
         "gamma": gamma,
@@ -798,6 +866,8 @@ def solve_newton_lifting(
         "n_floored": state["n_floored"],
         "jacobian_nnz": getattr(ws.op, "newton_nnz", None),
         "n_term3_active": getattr(ws.op, "n_term3_active", None),
+        "n_refactor": n_refactor,
+        "step_records": step_records,
         "timings": timings,
         "workspace": ws,
     }
@@ -912,6 +982,9 @@ def solve_newton_transonic(
             "residual_history": result["residual_history"],
             "F_history": result["F_history"],
             "gamma_history": result["gamma_history"],
+            "step_records": result["step_records"],   # A1
+            "n_lin_iters": result["n_gmres_total"],
+            "n_refactor": result["n_refactor"],
             "wall_s": wall_lvl,
             "timings": result["timings"],
         })
@@ -946,6 +1019,9 @@ def solve_newton_transonic(
                 "residual_history": result["residual_history"],
                 "F_history": result["F_history"],
                 "gamma_history": result["gamma_history"],
+                "step_records": result["step_records"],   # A1
+                "n_lin_iters": result["n_gmres_total"],
+                "n_refactor": result["n_refactor"],
                 "wall_s": wall_lvl,
                 "timings": result["timings"],
             })
@@ -955,5 +1031,9 @@ def solve_newton_transonic(
     result = dict(result)
     result["level_history"] = level_history
     result["level_results"] = level_results
+    # A1: ramp total across all levels; the top-level `timings` (inherited
+    # from dict(result)) is the FINAL level only -- the documented footgun.
+    result["timings_total"] = sum_timings(
+        [lr["timings"] for lr in level_results])
     result.pop("workspace", None)
     return result

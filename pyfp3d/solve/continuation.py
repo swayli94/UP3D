@@ -43,9 +43,12 @@ roadmap G4.1 entry for the measurement trail):
    measured cl drift scale), not to the subsonic 1e-8.
 """
 
+import time
 from typing import Dict, Optional
 
 import numpy as np
+
+from pyfp3d.solve.timing import sum_timings
 
 #: One parameter set for the whole G4.3 robustness sweep. The iteration
 #: budgets are part of the set: at transonic the frozen-Gamma evals never
@@ -167,7 +170,57 @@ def solve_transonic_lifting(
     levels = mach_schedule(m_inf, m_start, dm)
     n_picard_total = 0
 
+    # A1 (Track A): this ramp kept NO per-level record at all -- not even a
+    # wall time -- so the only thing anyone could say about its cost was the
+    # end-to-end number. Each Mach level here is a WHOLE Gamma-secant sweep of
+    # solve_subsonic_lifting calls (up to max_gamma_evals of them), so a level
+    # record accumulates over its parts.
+    t_wall0 = time.perf_counter()
+    level_results = []
+    _parts = []                # the current level's solve_subsonic_lifting runs
+
+    def _track(r_part, t0):
+        r_part["_wall_s"] = time.perf_counter() - t0
+        _parts.append(r_part)
+        return r_part
+
+    def _close_level(m, tag):
+        if not _parts:
+            return
+        # Each part is a whole solve_subsonic_lifting with its OWN wall clock,
+        # so its step_records' wall_cum_s restart from 0; offset each part by
+        # the prior parts' wall so the concatenated level trace is monotonic
+        # (A1: otherwise a 12-gamma-eval level's wall-clock sawtooths).
+        step_records = []
+        part_cum = 0.0
+        for p in _parts:
+            for s in p["step_records"]:
+                s = dict(s)
+                s["wall_cum_s"] = part_cum + s.get("wall_cum_s", 0.0)
+                step_records.append(s)
+            part_cum += float(p["_wall_s"])
+        level_results.append({
+            "m": float(m),
+            "tag": tag,
+            "n_gamma_evals": len(_parts),
+            "n_outer": int(sum(p["n_picard"] for p in _parts)),
+            "wall_s": float(sum(p["_wall_s"] for p in _parts)),
+            "timings": sum_timings([p["timings"] for p in _parts]),
+            "residual_history": [x for p in _parts
+                                 for x in p["residual_history"]],
+            "step_records": step_records,
+            "gamma_root": float(_parts[-1]["gamma"][0]),
+            "mach2_max": float(_parts[-1]["mach2_max"]),
+            "converged": bool(_parts[-1]["converged"]),
+            "n_limited": int(_parts[-1]["n_limited"]),
+            "n_floored": int(_parts[-1]["n_floored"]),
+            "n_lin_solves": int(sum(p["n_solves_total"] for p in _parts)),
+            "n_lin_iters": int(sum(p["n_cg_total"] for p in _parts)),
+        })
+        _parts.clear()
+
     # Subcritical seed level: P3 nested Kutta (stable there).
+    _t0 = time.perf_counter()
     r = solve_subsonic_lifting(
         mesh_cut, wc, m_inf=levels[0], alpha_deg=alpha_deg, u_inf=u_inf,
         omega=TRANSONIC_DEFAULTS["omega_seed"], upwind_c=upwind_c,
@@ -181,6 +234,7 @@ def solve_transonic_lifting(
         forcing=TRANSONIC_DEFAULTS["forcing_seed"], rtol=rtol, maxiter=maxiter,
         farfield_spanwise_gamma=farfield_spanwise_gamma,
     )
+    _track(r, _t0)
     phi, gamma = r["phi"], r["gamma"].copy()
     n_picard_total += r["n_picard"]
     mismatch = 0.0
@@ -188,9 +242,11 @@ def solve_transonic_lifting(
     if verbose:
         print(f"  M={levels[0]:.3f} seed: n={r['n_picard']} "
               f"gamma={gamma[0]:.5f} Mmax={np.sqrt(r['mach2_max']):.3f}")
+    _close_level(levels[0], "seed")
 
     def _density_solve(m, g, phi_seed, omr=omega_rho):
-        return solve_subsonic_lifting(
+        t0 = time.perf_counter()
+        return _track(solve_subsonic_lifting(
             mesh_cut, wc, m_inf=m, alpha_deg=alpha_deg, u_inf=u_inf,
             omega=1.0, upwind_c=upwind_c, m_crit=m_crit,
             upwind_weighted=upwind_weighted, upwind_mode=upwind_mode,
@@ -205,7 +261,7 @@ def solve_transonic_lifting(
             phi_init=phi_seed, gamma_fixed=g, rtol=rtol, maxiter=maxiter,
             farfield_spanwise_gamma=farfield_spanwise_gamma,
             omega_rho=omr,
-        )
+        ), t0)
 
     for m in levels[1:]:
         g = gamma.copy()
@@ -243,6 +299,7 @@ def solve_transonic_lifting(
             print(f"  M={m:.3f}: {n_evals} gamma evals, |F|={mismatch:.2e}, "
                   f"gamma={gamma[0]:.5f}, Mmax={np.sqrt(r['mach2_max']):.3f}, "
                   f"res={r['residual_history'][-1]:.1e}")
+        _close_level(m, "level")
 
     # Fixed-Gamma Kutta-closure polish (see docstring `n_kutta_polish`):
     # a secant-free, damped fixed-point closure at the final Mach level that
@@ -259,12 +316,15 @@ def solve_transonic_lifting(
                   f"gamma={gamma[0]:.5f}, Mmax={np.sqrt(r['mach2_max']):.3f}, "
                   f"floored/limited={r['n_floored']}/{r['n_limited']}")
 
+    _close_level(levels[-1], "polish")
+
     physical = (
         r["mach2_max"] < 9.0  # below the m_cap=3 limiter ceiling
         and r["n_limited"] == 0
         and r["n_floored"] == 0
     )
     out = dict(r)
+    out.pop("_wall_s", None)
     out["gamma"] = gamma
     out["kutta_mismatch"] = mismatch
     out["n_gamma_evals"] = n_evals_last
@@ -272,4 +332,9 @@ def solve_transonic_lifting(
     out["n_picard_total"] = n_picard_total
     out["kutta_converged"] = mismatch < tol_gamma
     out["converged"] = bool(physical and mismatch < tol_gamma)
+    # `timings` inherited from dict(r) is the FINAL solve only -- the ramp
+    # total is timings_total (A1; the same footgun the Newton ramp carries).
+    out["level_results"] = level_results
+    out["timings_total"] = sum_timings([lr["timings"] for lr in level_results])
+    out["wall_s"] = time.perf_counter() - t_wall0
     return out

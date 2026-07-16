@@ -43,6 +43,7 @@ coupling). `direct_refactor_every=1` (default) keeps the bit-identical
 per-step `spsolve`.
 """
 
+import time
 from typing import Dict, Optional
 
 import numpy as np
@@ -57,6 +58,14 @@ from pyfp3d.kernels.cut_assembly import (
     te_weld_coo,
 )
 from pyfp3d.solve.linear import build_ilu_preconditioner, solve_gmres
+from pyfp3d.solve.timing import (
+    finalize,
+    new_timings,
+    phase,
+    snapshot,
+    step_delta,
+    sum_timings,
+)
 from pyfp3d.solve.picard_ls import (
     _amg_surrogate_preconditioner,
     _farfield_main,
@@ -112,7 +121,10 @@ class LSNewtonSystem:
 
     def __init__(self, mvop, m_inf, upwind_c=1.5, m_crit=0.95, gamma_air=1.4,
                  u_inf=1.0, m_cap=3.0, rho_floor=0.05, b_base=None,
-                 tip_taper=None):
+                 tip_taper=None, timings=None):
+        # A1: the driver hands in its own timings dict; None (the FD tests and
+        # any other direct user) keeps the class free of accounting.
+        self.timings = timings
         self.mvop = mvop
         self.m_inf = float(m_inf)
         self.upwind_c = float(upwind_c)
@@ -182,16 +194,33 @@ class LSNewtonSystem:
 
     def residual(self, phi, frozen=None):
         """(A, R, up, lo) at `phi` under `frozen` (None = the live selection).
-        Refreshes mvop's n_limited / n_floored monitors for THAT state."""
+        Refreshes mvop's n_limited / n_floored monitors for THAT state.
+
+        A1 cost accounting: this residual CONTAINS an assemble_matrix, so the
+        three sub-costs are split here rather than being timed as one block by
+        the caller -- timing the whole call as `residual` would silently charge
+        the level-set path's assembly to the wrong phase and make the two wake
+        models incomparable, which is the whole point of the exercise.
+        """
         mv = self.mvop
+        tm = self.timings
+        t0 = time.perf_counter()
         up, lo = mv.newton_side_data(
             phi, self.m_inf, self.upwind_c, self.m_crit, self.gamma_air,
             self.u_inf, self.m_cap, self.rho_floor, frozen=frozen)
+        t1 = time.perf_counter()
         A = mv.assemble_matrix(
             rho_tilde=(up["rho_tilde"], lo["rho_tilde"]), closure="wake_ls",
             te_kutta="pressure", phi_ext=phi)
+        t2 = time.perf_counter()
         R = A @ phi - self.b_base
+        t3 = time.perf_counter()
         R[self.te_aux] = self.te_residual(phi)
+        if tm is not None:
+            t4 = time.perf_counter()
+            tm["assembly"] += t2 - t1
+            tm["residual"] += (t1 - t0) + (t3 - t2)
+            tm["kutta"] += t4 - t3
         return A, R, up, lo
 
     def _remap(self, r, c, d):
@@ -363,15 +392,20 @@ def solve_multivalued_newton(
 
     # --- warm start (B15: the seed inherits the B13 lagged-LU, else it pays a
     # full factorization per outer -- ~11 min of pure seed at M6 medium) ------
+    t_wall0 = time.perf_counter()
+    timings = new_timings()
+    t_seed0 = time.perf_counter()
     phi_ext, gamma = _seed_from_picard(
         mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air, upwind_c, m_crit,
         farfield, phi_init, gamma_init, n_seed, seed_damping_theta,
         seed_omega_rho, precond=seed_precond,
         direct_refactor_every=direct_refactor_every)
+    timings["seed"] = time.perf_counter() - t_seed0
 
     # the shared residual/Jacobian assembly (B15: one code path, FD-gated)
     sysm = LSNewtonSystem(mvop, m_inf, upwind_c, m_crit, gamma_air, u_inf,
-                          m_cap, rho_floor, b_base=b_base, tip_taper=tip_taper)
+                          m_cap, rho_floor, b_base=b_base, tip_taper=tip_taper,
+                          timings=timings)
     te_aux = sysm.te_aux
     n_total = mvop.n_total
     is_dir = np.zeros(n_total, dtype=bool)
@@ -379,6 +413,7 @@ def solve_multivalued_newton(
     free = np.flatnonzero(~is_dir)
 
     residual_history = []
+    step_records = []
     converged = False
     M_pre = None
     n_gmres_total = 0
@@ -414,6 +449,21 @@ def solve_multivalued_newton(
             n += int(np.count_nonzero((ba != bb) & ~moved))
         return n
 
+    # A1: state ON ENTRY to a step + the cost OF that step, so a record is
+    # closed once its step has been taken (same shape as solve/newton.py).
+    prev_snap = snapshot(timings)
+    prev_counts = [0, 0]           # n_gmres_total, n_refactor at last close
+
+    def _close_step(rec):
+        nonlocal prev_snap
+        rec.update(step_delta(timings, prev_snap))
+        rec["n_lin_iters"] = n_gmres_total - prev_counts[0]
+        rec["n_refactor"] = n_refactor - prev_counts[1]
+        rec["wall_cum_s"] = time.perf_counter() - t_wall0
+        prev_snap = snapshot(timings)
+        prev_counts[0] = n_gmres_total
+        prev_counts[1] = n_refactor
+
     for it in range(n_newton_max):
         # far-field Dirichlet values (vortex option refreshes with gamma)
         if farfield == "vortex":
@@ -430,6 +480,23 @@ def solve_multivalued_newton(
         res = float(np.max(np.abs(R[free])))
         n_lim, n_flr = mvop.n_limited, mvop.n_floored
         residual_history.append(res)
+        if step_records:
+            _close_step(step_records[-1])
+        # gamma is recomputed every step at the bottom of the loop but was
+        # never stored before A1 -- the LS Newton had no circulation
+        # trajectory at all, which is exactly what the bottleneck study needs.
+        rec = {
+            "i": it,
+            "residual": res,
+            "gamma_mean": gamma,
+            "gamma_root": gamma,
+            "n_limited": int(n_lim),
+            "n_floored": int(n_flr),
+            "frozen": frozen is not None,
+            "n_lin_solves": 0,
+            "lam": None,
+        }
+        step_records.append(rec)
         if verbose:
             print(f"    newton {it}: |R|={res:.3e} gamma={gamma:.5f} "
                   f"lim/flr={n_lim}/{n_flr}"
@@ -603,8 +670,11 @@ def solve_multivalued_newton(
             # sensitivities, so re-derive the side data under the freeze.
             A, R, up, lo = _system(phi_ext, frozen)
 
-        J = _jacobian(A, up, lo, phi_ext)
+        with phase(timings, "assembly"):
+            J = _jacobian(A, up, lo, phi_ext)
 
+        rec["n_lin_solves"] = 1
+        t_lin0 = time.perf_counter()
         # reduce Dirichlet and solve J_free d = -R_free (nonsymmetric)
         if precond is None:
             J_free = J[free][:, free].tocsc()
@@ -638,7 +708,11 @@ def solve_multivalued_newton(
                     else:
                         n_gmres_stalled += 1     # stale LU exhausted: refactor
                 if d_free is None:
+                    t_lu = time.perf_counter()
                     lu_direct = spla.splu(J_free)
+                    dt_lu = time.perf_counter() - t_lu
+                    timings["precond"] += dt_lu
+                    t_lin0 += dt_lu        # the factorization is not a solve
                     lu_age = 0
                     n_refactor += 1
                     d_free = np.atleast_1d(lu_direct.solve(rhs))
@@ -647,17 +721,22 @@ def solve_multivalued_newton(
             # B11: preconditioned GMRES on the fused Jacobian. Inexact steps
             # (on_fail="return") are caught by the backtracking line search.
             J_free = J[free][:, free].tocsr()
+            t_pre = time.perf_counter()
             if precond == "ilu":
                 M_pre = build_ilu_preconditioner(J_free)
             elif it % amg_rebuild_every == 0 or M_pre is None:
                 M_pre = _amg_surrogate_preconditioner(
                     mvop, J, (up["rho_tilde"], lo["rho_tilde"]), free)
+            dt_pre = time.perf_counter() - t_pre
+            timings["precond"] += dt_pre
+            t_lin0 += dt_pre
             d_free, n_it, info = solve_gmres(
                 J_free, -R[free], M=M_pre, rtol=linear_rtol,
                 restart=gmres_restart, maxiter=gmres_maxiter, on_fail="return")
             d_free = np.atleast_1d(d_free)
             n_gmres_total += n_it
             n_gmres_stalled += int(info != 0)
+        timings["linsolve"] += time.perf_counter() - t_lin0
 
         # Backtracking line search on the free-DOF residual (safety only),
         # evaluated under the SAME selection the step was built with. BEST-OF-
@@ -681,16 +760,22 @@ def solve_multivalued_newton(
         if best is None:
             raise RuntimeError(
                 "LS Newton line search: every trial state was non-finite")
+        rec["lam"] = float(lam)
         phi_ext = best[0]
-        gamma = float(np.mean(mvop.te_jump(phi_ext)))
+        with phase(timings, "kutta"):
+            gamma = float(np.mean(mvop.te_jump(phi_ext)))
 
+    if step_records:
+        _close_step(step_records[-1])
     # Final monitors from the LIVE selection: the reported n_limited/n_floored
     # must describe the real flow, never a frozen assignment's (floor-free)
     # bookkeeping -- a frozen finish always shows 0 floored BY DESIGN, so
     # reporting the frozen counts would be self-congratulatory.
     _system(phi_ext, None)
-    mach2_max = float(np.max(mvop.element_mach2(phi_ext, m_inf, gamma_air,
-                                               u_inf)))
+    with phase(timings, "residual"):
+        mach2_max = float(np.max(mvop.element_mach2(phi_ext, m_inf, gamma_air,
+                                                    u_inf)))
+    finalize(timings, time.perf_counter() - t_wall0)
     return {
         "phi_ext": phi_ext,
         "phi": mvop.main_potential(phi_ext),
@@ -699,6 +784,8 @@ def solve_multivalued_newton(
         "te_jump": mvop.te_jump(phi_ext),
         "converged": converged,
         "residual_history": residual_history,
+        "step_records": step_records,
+        "timings": timings,
         "n_newton": len(residual_history),
         "n_limited": mvop.n_limited,
         "n_floored": mvop.n_floored,
@@ -822,14 +909,20 @@ def solve_multivalued_newton_transonic(
     level_results = []
     res = None
     i = 0
+    t_wall0 = time.perf_counter()
 
     def _run(m, lvl_kw):
-        return solve_multivalued_newton(
+        t0 = time.perf_counter()
+        r = solve_multivalued_newton(
             mvop=mvop, mesh=mesh, m_inf=m, alpha_deg=alpha_deg,
             upwind_c=upwind_c, n_newton_max=n_newton_max, verbose=verbose,
             **lvl_kw)
+        r["_wall_s"] = time.perf_counter() - t0
+        return r
 
     def _record(m, r, tag):
+        # A1: wall_s, timings, residual_history and step_records were dropped
+        # here before -- the ramp reported one residual_norm per level.
         level_results.append({
             "m_inf": float(m), "tag": tag,
             "gamma": float(r["gamma"]), "cl_kj": float(r["cl_kj"]),
@@ -844,6 +937,13 @@ def solve_multivalued_newton_transonic(
             "n_freeze_refresh": int(r["n_freeze_refresh"]),
             "n_freeze_reverts": int(r["n_freeze_reverts"]),
             "n_refactor": int(r["n_refactor"]),
+            "wall_s": float(r["_wall_s"]),
+            "timings": r["timings"],
+            "residual_history": list(r["residual_history"]),
+            "step_records": r["step_records"],
+            "n_lin_iters": int(r["n_gmres_total"]),
+            "n_lin_solves": int(sum(s.get("n_lin_solves", 0)
+                                    for s in r["step_records"])),
         })
 
     while i < len(levels):
@@ -901,6 +1001,7 @@ def solve_multivalued_newton_transonic(
             res, last_good = r, (r["phi_ext"], r["gamma"])
 
     out = dict(res)
+    out.pop("_wall_s", None)
     out["levels"] = level_results
     out["mach_schedule"] = [float(x) for x in levels]
     out["target_reached"] = target_reached
@@ -909,4 +1010,6 @@ def solve_multivalued_newton_transonic(
     # the Mach the RETURNED state actually lives at (== m_target only when
     # target_reached; otherwise it is the level the ramp died on)
     out["m_final"] = float(levels[min(i, len(levels) - 1)])
+    out["timings_total"] = sum_timings([lv["timings"] for lv in level_results])
+    out["wall_s"] = time.perf_counter() - t_wall0
     return out

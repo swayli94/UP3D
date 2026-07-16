@@ -1,0 +1,5 @@
+gate,check,value,criterion,status,note
+GA1.5,conf_newton wall within 25% of committed anchor,149s vs 145s,|wall-anchor|/anchor < 0.25,PASS,
+GA1.5,ls_newton wall within 25% of committed anchor,668s vs 657s,|wall-anchor|/anchor < 0.25,PASS,
+GA1.5,ls_picard wall within 25% of committed anchor,2337s vs 2305s,|wall-anchor|/anchor < 0.25,PASS,
+GA1.1,unaccounted time < 5% of wall (3-D),0.7%,max pct_other < 5%,PASS,conf_newton

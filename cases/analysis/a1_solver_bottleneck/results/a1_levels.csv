@@ -1,0 +1,17 @@
+regime,method,wake_model,m,n_iter,wall_s,residual
+transonic,conf_picard,conforming,0.7,64,9.448,5.675967655460873e-10
+transonic,conf_picard,conforming,0.75,3200,45.506,0.000115775226014198
+transonic,conf_picard,conforming,0.8,7200,105.923,0.00021978315167415406
+transonic,conf_newton,conforming,0.7,5,2.918,1.924228142495307e-12
+transonic,conf_newton,conforming,0.725,7,0.222,2.5776367793731513e-13
+transonic,conf_newton,conforming,0.75,6,0.225,2.7128382124269134e-11
+transonic,conf_newton,conforming,0.775,12,0.421,3.458899511849656e-13
+transonic,conf_newton,conforming,0.8,27,0.925,2.9839465122764323e-13
+transonic,ls_picard,level-set,0.7,39,2.509,9.674799047879149e-06
+transonic,ls_picard,level-set,0.75,25,1.617,9.944909306058847e-06
+transonic,ls_picard,level-set,0.8,400,26.216,0.00010358132878168227
+transonic,ls_newton,level-set,0.7,8,3.433,6.439304645056154e-11
+transonic,ls_newton,level-set,0.75,12,1.264,1.2845141617034983e-11
+transonic,ls_newton,level-set,0.8,9,1.211,0.006497516818507465
+transonic,ls_newton,level-set,0.775,13,1.429,2.4786783736630014e-11
+transonic,ls_newton,level-set,0.8,18,2.018,2.2770535457183882e-11

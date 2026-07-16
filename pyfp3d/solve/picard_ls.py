@@ -31,6 +31,7 @@ The lifting driver with implicit Kutta (the g1+g2 wake LS closure, no Gamma
 outer loop) is B3.
 """
 
+import time
 from typing import Dict, Optional
 
 import numpy as np
@@ -43,6 +44,14 @@ from pyfp3d.solve.linear import (
     build_amg_preconditioner,
     build_ilu_preconditioner,
     solve_gmres,
+)
+from pyfp3d.solve.timing import (
+    finalize,
+    new_timings,
+    phase,
+    snapshot,
+    step_delta,
+    sum_timings,
 )
 from pyfp3d.wake.multivalued import MultivaluedOperator
 
@@ -394,6 +403,8 @@ def solve_multivalued_lifting(
             "polyline comes from the mesh's own geometry (e.g. "
             "pyfp3d.meshgen.wing3d.x_te / B_SEMI) and that wall_nodes was "
             "passed to CutElementMap.")
+    t_wall0 = time.perf_counter()
+    timings = new_timings()
     beta = float(np.sqrt(1.0 - m_inf**2))
     op = mvop.op
     # B6: artificial-density upwinding, per side on the cut elements
@@ -428,8 +439,10 @@ def solve_multivalued_lifting(
     gamma_history = [gamma]
     drho_history = []
     residual_history = []
+    step_records = []
     rho_up = rho_lo = None
     residual = np.inf
+    dgamma = np.inf
     # B11 iterative-solver state (inert when precond is None).
     M_pre = None
     n_gmres_total = 0
@@ -479,6 +492,10 @@ def solve_multivalued_lifting(
     dampable = is_main.copy()      # refreshed each outer when scope=supersonic
 
     for outer in range(n_outer_max):
+        t_phase0 = snapshot(timings)
+        n_gmres_step = n_gmres_total
+        n_refactor_step = n_refactor
+        t_assembly0 = time.perf_counter()
         A = mvop.assemble_matrix(
             rho_tilde=(None if rho_up is None else (rho_up, rho_lo)),
             closure="wake_ls",
@@ -525,7 +542,11 @@ def solve_multivalued_lifting(
             np.clip(d, 0.0, None, out=d)
             A_solve = (A_free + sp_.diags(d)).tocsr()
             b_solve = b_free + d * x_prev
+        # The residual above is one sparse matvec on an already-assembled
+        # operator -- it rides along with the assembly it is measured against.
+        timings["assembly"] += time.perf_counter() - t_assembly0
 
+        t_lin0 = time.perf_counter()
         if precond is None:
             if direct_refactor_every <= 1:
                 x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
@@ -552,7 +573,11 @@ def solve_multivalued_lifting(
                     else:
                         n_gmres_stalled += 1   # stale LU exhausted: refactor
                 if x is None:
+                    t_lu = time.perf_counter()
                     lu_direct = spla.splu(A_solve.tocsc())
+                    dt_lu = time.perf_counter() - t_lu
+                    timings["precond"] += dt_lu
+                    t_lin0 += dt_lu        # the factorization is not a solve
                     lu_age = 0
                     n_refactor += 1
                     x = np.atleast_1d(lu_direct.solve(b_solve))
@@ -561,27 +586,33 @@ def solve_multivalued_lifting(
             # B11: preconditioned GMRES on the fused matrix, warm-started from
             # the previous outer's free-dof iterate; an inexact step
             # (on_fail="return") just perturbs the fixed-point path.
+            t_pre = time.perf_counter()
             if precond == "ilu":
                 M_pre = build_ilu_preconditioner(A_solve)
             elif outer % amg_rebuild_every == 0 or M_pre is None:
                 M_pre = _amg_surrogate_preconditioner(
                     mvop, A, (None if rho_up is None else (rho_up, rho_lo)),
                     free)
+            dt_pre = time.perf_counter() - t_pre
+            timings["precond"] += dt_pre
+            t_lin0 += dt_pre
             x, n_it, info = solve_gmres(
                 A_solve, b_solve, M=M_pre, rtol=linear_rtol, x0=x_prev,
                 restart=gmres_restart, maxiter=gmres_maxiter, on_fail="return")
             x = np.atleast_1d(x)
             n_gmres_total += n_it
             n_gmres_stalled += int(info != 0)
+        timings["linsolve"] += time.perf_counter() - t_lin0
         if omega != 1.0:
             x = x_prev + omega * (x - x_prev)
         phi_ext[free] = x
 
         # Gamma refresh (implicit Kutta -> extracted TE jump), relaxed.
-        gamma_new = float(np.mean(mvop.te_jump(phi_ext)))
-        dgamma = abs(gamma_new - gamma)
-        gamma = (1.0 - omega_gamma) * gamma + omega_gamma * gamma_new
-        gamma_history.append(gamma)
+        with phase(timings, "kutta"):
+            gamma_new = float(np.mean(mvop.te_jump(phi_ext)))
+            dgamma = abs(gamma_new - gamma)
+            gamma = (1.0 - omega_gamma) * gamma + omega_gamma * gamma_new
+            gamma_history.append(gamma)
 
         # Density lag (subcritical per-side), UNDER-RELAXED. The per-side
         # density on the thin cut strip limit-cycles; adopting it fully
@@ -591,32 +622,49 @@ def solve_multivalued_lifting(
         # drho is measured on the OWN-SIDE (junk-free) density -- the raw
         # rho_upper/rho_lower carry other-side garbage that never enters the
         # matrix but would pollute the lag.
-        if use_upwind:
-            rho_up_new, rho_lo_new = mvop.element_rho_tilde(
-                phi_ext, m_inf, upwind_c, m_crit, gamma_air, u_inf,
-                m_cap, rho_floor
-            )
-            if damping_theta is not None and damping_scope == "supersonic":
-                # Rows to damp = main DOFs of the nodes of the nu > 0 elements
-                # (the supersonic pocket + the shock), refreshed every outer so
-                # the damped set tracks the moving shock.
-                hot = np.zeros(mvop.n_total, dtype=bool)
-                hot[np.unique(elements[mvop.nu_active_elements()])] = True
-                dampable = hot & is_main
-        else:
-            rho_up_new, rho_lo_new = mvop.element_densities(
-                phi_ext, m_inf, gamma_air, u_inf
-            )
-        if rho_up is None:
-            drho = 0.0
-            rho_up, rho_lo = rho_up_new, rho_lo_new
-        else:
-            used_new = mvop.own_side_field(rho_up_new, rho_lo_new)
-            used_old = mvop.own_side_field(rho_up, rho_lo)
-            drho = float(np.max(np.abs(used_new - used_old)))
-            rho_up = rho_up + omega_rho * (rho_up_new - rho_up)
-            rho_lo = rho_lo + omega_rho * (rho_lo_new - rho_lo)
-        drho_history.append(drho)
+        with phase(timings, "residual"):
+            if use_upwind:
+                rho_up_new, rho_lo_new = mvop.element_rho_tilde(
+                    phi_ext, m_inf, upwind_c, m_crit, gamma_air, u_inf,
+                    m_cap, rho_floor
+                )
+                if damping_theta is not None and damping_scope == "supersonic":
+                    # Rows to damp = main DOFs of the nodes of the nu > 0
+                    # elements (the supersonic pocket + the shock), refreshed
+                    # every outer so the damped set tracks the moving shock.
+                    hot = np.zeros(mvop.n_total, dtype=bool)
+                    hot[np.unique(elements[mvop.nu_active_elements()])] = True
+                    dampable = hot & is_main
+            else:
+                rho_up_new, rho_lo_new = mvop.element_densities(
+                    phi_ext, m_inf, gamma_air, u_inf
+                )
+            if rho_up is None:
+                drho = 0.0
+                rho_up, rho_lo = rho_up_new, rho_lo_new
+            else:
+                used_new = mvop.own_side_field(rho_up_new, rho_lo_new)
+                used_old = mvop.own_side_field(rho_up, rho_lo)
+                drho = float(np.max(np.abs(used_new - used_old)))
+                rho_up = rho_up + omega_rho * (rho_up_new - rho_up)
+                rho_lo = rho_lo + omega_rho * (rho_lo_new - rho_lo)
+            drho_history.append(drho)
+
+        step_records.append({
+            "i": outer,
+            "residual": residual,
+            "drho": drho,
+            "dgamma": dgamma,
+            "gamma_mean": gamma,
+            "gamma_root": gamma,
+            "n_lin_solves": 1,
+            "n_lin_iters": n_gmres_total - n_gmres_step,
+            "n_refactor": n_refactor - n_refactor_step,
+            "n_limited": int(mvop.n_limited) if use_upwind else 0,
+            "n_floored": int(mvop.n_floored) if use_upwind else 0,
+            "wall_cum_s": time.perf_counter() - t_wall0,
+            **step_delta(timings, t_phase0),
+        })
 
         # Two convergence routes: (a) the B3 fixed-point lags (dgamma, drho)
         # both settle; (b) the honest NONLINEAR residual of the previous
@@ -632,7 +680,10 @@ def solve_multivalued_lifting(
             converged = True
             break
 
-    mach2_max = float(np.max(mvop.element_mach2(phi_ext, m_inf, gamma_air, u_inf)))
+    with phase(timings, "residual"):
+        mach2_max = float(
+            np.max(mvop.element_mach2(phi_ext, m_inf, gamma_air, u_inf)))
+    finalize(timings, time.perf_counter() - t_wall0)
 
     return {
         "phi_ext": phi_ext,
@@ -646,6 +697,8 @@ def solve_multivalued_lifting(
         "drho_history": drho_history,
         "residual_history": residual_history,
         "residual_norm": residual,
+        "step_records": step_records,
+        "timings": timings,
         "mach2_max": mach2_max,
         "farfield": farfield,
         "nu_max": mvop.nu_max if use_upwind else 0.0,
@@ -771,9 +824,11 @@ def solve_multivalued_transonic(
     gamma = 0.0
     levels = []
     res = None
+    t_wall0 = time.perf_counter()
 
     def _run(m, budget, g_ff):
-        return solve_multivalued_lifting(
+        t0 = time.perf_counter()
+        r = solve_multivalued_lifting(
             mvop, mesh, m, alpha_deg=alpha_deg, u_inf=u_inf,
             gamma_air=gamma_air,
             upwind_c=upwind_c, m_crit=m_crit,
@@ -784,8 +839,12 @@ def solve_multivalued_transonic(
             gamma_farfield_fixed=g_ff,
             **kwargs,
         )
+        r["_wall_s"] = time.perf_counter() - t0
+        return r
 
     def _record(m, r):
+        # A1: wall_s, timings, residual_history and step_records were all
+        # dropped here before -- the ramp reported only a residual_norm.
         levels.append({
             "m_inf": float(m),
             "gamma": float(r["gamma"]),
@@ -796,6 +855,12 @@ def solve_multivalued_transonic(
             "n_limited": int(r["n_limited"]),
             "n_floored": int(r["n_floored"]),
             "residual_norm": float(r["residual_norm"]),
+            "wall_s": float(r["_wall_s"]),
+            "timings": r["timings"],
+            "residual_history": list(r["residual_history"]),
+            "step_records": r["step_records"],
+            "n_lin_iters": int(r["n_gmres_total"]),
+            "n_refactor": int(r["n_refactor"]),
         })
 
     for k, m in enumerate(schedule):
@@ -816,6 +881,9 @@ def solve_multivalued_transonic(
             _record(m_target, res)
 
     res = dict(res)
+    res.pop("_wall_s", None)
     res["levels"] = levels
     res["mach_schedule"] = [float(m) for m in schedule]
+    res["timings_total"] = sum_timings([lv["timings"] for lv in levels])
+    res["wall_s"] = time.perf_counter() - t_wall0
     return res

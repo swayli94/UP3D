@@ -113,6 +113,11 @@ cases/demo/b8_tip_taper_ls/results/*.npz
 # medium M0.84 ramp)
 cases/demo/b15_ls_newton_ramp/results/*.npz
 
+# A1 (Track A) solver-bottleneck 3-D leg solution caches (the committed
+# evidence is the PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1, ~1 h
+# for the M6 medium M0.84 four-method run)
+cases/analysis/a1_solver_bottleneck/results/*.npz
+
 # Reference papers
 docs/references
 

@@ -13,12 +13,14 @@ Reference: docs/roadmap.md P1-P3; design.md Sec 8 (Nonlinear solution
 strategy).
 """
 
+import time
 from typing import Dict, Optional
 
 import numpy as np
 
 from pyfp3d.kernels.residual import assemble_residual, assemble_stiffness_matrix
 from pyfp3d.solve.linear import apply_dirichlet, solve_cg_amg
+from pyfp3d.solve.timing import finalize, new_timings, phase, snapshot, step_delta
 
 
 def solve_laplace(
@@ -499,7 +501,10 @@ def solve_subsonic_lifting(
         ||T^T R||_inf on free reduced dofs), drho_history, gamma_history,
         rho (UPWINDED element densities actually used as the matrix
         weight), mach2_max, nu_max, n_nu_active (elements with nu > 0),
-        n_cg_total, n_solves_total
+        n_cg_total, n_solves_total, and (Track A / A1) `timings` on the
+        canonical `solve/timing.py` schema plus `step_records`, one dict
+        per outer with that outer's residual, Gamma, clamp counts, linear
+        solves/iterations and per-phase seconds.
     """
     import scipy.sparse.linalg as spla
 
@@ -520,21 +525,24 @@ def solve_subsonic_lifting(
             "pseudo_dt (global mass-lumped damping) and damping_theta (local "
             "diag(A_free) damping) are mutually exclusive stabilizers -- pick one"
         )
+    t_wall0 = time.perf_counter()
+    timings = new_timings()
     beta = float(np.sqrt(1.0 - m_inf**2))
 
-    op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
-    use_upwind = upwind_c > 0.0 and m_inf > 0.0
-    if use_upwind:
-        from pyfp3d.kernels.upwind import UpwindOperator
-        upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
-                             weighted=upwind_weighted, mode=upwind_mode,
-                             p_weight=upwind_p_weight,
-                             reach_frac=upwind_reach_frac,
-                             reach_gain_max=upwind_reach_gain_max,
-                             nbr_depth=upwind_nbr_depth,
-                             sigma_s_frac=upwind_sigma_s_frac,
-                             sigma_p_frac=upwind_sigma_p_frac)
-    con = WakeConstraint(op.assemble_matrix(), wc)
+    with phase(timings, "assembly"):
+        op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
+        use_upwind = upwind_c > 0.0 and m_inf > 0.0
+        if use_upwind:
+            from pyfp3d.kernels.upwind import UpwindOperator
+            upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
+                                 weighted=upwind_weighted, mode=upwind_mode,
+                                 p_weight=upwind_p_weight,
+                                 reach_frac=upwind_reach_frac,
+                                 reach_gain_max=upwind_reach_gain_max,
+                                 nbr_depth=upwind_nbr_depth,
+                                 sigma_s_frac=upwind_sigma_s_frac,
+                                 sigma_p_frac=upwind_sigma_p_frac)
+        con = WakeConstraint(op.assemble_matrix(), wc)
     n_red = con.n_reduced
     b_zero = np.zeros(op.n_nodes, dtype=np.float64)
 
@@ -572,6 +580,7 @@ def solve_subsonic_lifting(
         d_tau_free = m_red_free / dt_cur
 
     def _solve_for(gamma: np.ndarray, A_free, A_coupling, M, x0):
+        t_rhs = time.perf_counter()
         nodes_d, vals_d = farfield_dirichlet(
             mesh_cut, wc, alpha_deg, gamma, u_inf, vortex_center, beta=beta,
             spanwise_gamma=farfield_spanwise_gamma,
@@ -592,10 +601,13 @@ def solve_subsonic_lifting(
         else:
             atol_k = 0.0
         n_it = [0]
+        t_cg = time.perf_counter()
+        timings["assembly"] += t_cg - t_rhs
         x, info = spla.cg(
             A_free, b_free, M=M, rtol=rtol, atol=atol_k, maxiter=maxiter,
             x0=x0, callback=lambda _x: n_it.__setitem__(0, n_it[0] + 1),
         )
+        timings["linsolve"] += time.perf_counter() - t_cg
         if info != 0:
             raise RuntimeError(f"CG did not converge (info={info})")
         phi_red = np.empty(n_red, dtype=np.float64)
@@ -629,6 +641,7 @@ def solve_subsonic_lifting(
 
     residual_history = []
     drho_history = []
+    step_records = []
     n_limited = 0
     gamma_history = [gamma.copy()]
     n_cg_total = 0
@@ -641,22 +654,29 @@ def solve_subsonic_lifting(
     max_kutta_updates = 30
 
     for outer in range(n_picard_max):
-        A = op.assemble_matrix(rho_t)
-        con.update_matrix(A)
-        A_csr = con.A_reduced
-        A_free = A_csr[free][:, free].tocsr()
-        A_coupling = A_csr[free][:, dir_red].tocsr()
-        if damping_theta is not None:
-            # LOCAL form: rebuilt every outer from THIS outer's own
-            # (upwinded) operator diagonal, so the damping tracks local
-            # stiffness -- including shock strength -- instead of a fixed
-            # global time step (roadmap G4.1 diagnosis follow-up).
-            d_tau_free = damping_theta * A_free.diagonal()
-        if d_tau_free is not None:
-            import scipy.sparse as _sp
-            A_free = (A_free + _sp.diags(d_tau_free)).tocsr()
+        t_phase0 = snapshot(timings)
+        n_cg_step = n_cg_total
+        n_solves_step = n_solves_total
+        with phase(timings, "assembly"):
+            A = op.assemble_matrix(rho_t)
+            con.update_matrix(A)
+            A_csr = con.A_reduced
+            A_free = A_csr[free][:, free].tocsr()
+            A_coupling = A_csr[free][:, dir_red].tocsr()
+            if damping_theta is not None:
+                # LOCAL form: rebuilt every outer from THIS outer's own
+                # (upwinded) operator diagonal, so the damping tracks local
+                # stiffness -- including shock strength -- instead of a fixed
+                # global time step (roadmap G4.1 diagnosis follow-up).
+                d_tau_free = damping_theta * A_free.diagonal()
+            if d_tau_free is not None:
+                import scipy.sparse as _sp
+                A_free = (A_free + _sp.diags(d_tau_free)).tocsr()
+        n_precond_step = 0
         if M is None or outer % amg_rebuild_every == 0:
-            _, M = build_amg_preconditioner(A_free)
+            with phase(timings, "precond"):
+                _, M = build_amg_preconditioner(A_free)
+            n_precond_step = 1
         x0 = phi_red[free] if (m_inf > 0.0 and phi_red is not None) else None
 
         # Inner Kutta loop at frozen rho: exactly the P2 secant iteration
@@ -674,33 +694,35 @@ def solve_subsonic_lifting(
                 phi_red_new, n_cg = _solve_for(gamma, A_free, A_coupling, M, x0)
                 n_cg_total += n_cg
                 n_solves_total += 1
-                if m_inf > 0.0:
-                    x0 = phi_red_new[free]
-                target = kutta_targets(con.expand(phi_red_new, gamma), wc)
-                kutta_converged = (
-                    float(np.max(np.abs(target - gamma))) < tol_gamma
-                )
+                with phase(timings, "kutta"):
+                    if m_inf > 0.0:
+                        x0 = phi_red_new[free]
+                    target = kutta_targets(con.expand(phi_red_new, gamma), wc)
+                    kutta_converged = (
+                        float(np.max(np.abs(target - gamma))) < tol_gamma
+                    )
+                    if not kutta_converged:
+                        if prev_gamma is None or kutta_per_outer is not None:
+                            new_gamma = gamma + omega_gamma * (target - gamma)
+                        else:
+                            dg = gamma - prev_gamma
+                            b = np.where(
+                                np.abs(dg) > 1e-14,
+                                (target - prev_target) / np.where(dg == 0, 1, dg),
+                                0.0,
+                            )
+                            denom = 1.0 - b
+                            relaxed = gamma + omega_gamma * (target - gamma)
+                            new_gamma = np.where(
+                                np.abs(denom) > 1e-3,
+                                (target - b * gamma) / np.where(denom == 0, 1, denom),
+                                relaxed,
+                            )
+                        prev_gamma, prev_target = gamma, target
+                        gamma = new_gamma
+                        gamma_history.append(gamma.copy())
                 if kutta_converged:
                     break
-                if prev_gamma is None or kutta_per_outer is not None:
-                    new_gamma = gamma + omega_gamma * (target - gamma)
-                else:
-                    dg = gamma - prev_gamma
-                    b = np.where(
-                        np.abs(dg) > 1e-14,
-                        (target - prev_target) / np.where(dg == 0, 1, dg),
-                        0.0,
-                    )
-                    denom = 1.0 - b
-                    relaxed = gamma + omega_gamma * (target - gamma)
-                    new_gamma = np.where(
-                        np.abs(denom) > 1e-3,
-                        (target - b * gamma) / np.where(denom == 0, 1, denom),
-                        relaxed,
-                    )
-                prev_gamma, prev_target = gamma, target
-                gamma = new_gamma
-                gamma_history.append(gamma.copy())
 
         if omega == 1.0 or phi_red is None:
             phi_red = phi_red_new
@@ -708,19 +730,39 @@ def solve_subsonic_lifting(
             phi_red = phi_red + omega * (phi_red_new - phi_red)
         phi_cut = con.expand(phi_red, gamma)
 
-        grad, q2 = op.velocities(phi_cut)
-        q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
-        n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
-        rho_new = density_field(q2l, m_inf, gamma_air)
-        if use_upwind:
-            rho_t_new = upw.rho_tilde(grad, q2l, rho_new, m_inf, upwind_c,
-                                      m_crit, gamma_air).copy()
-        else:
-            rho_t_new = rho_new
-        R_red = con.T.T @ op.assemble_residual(phi_cut, rho_t_new)
-        residual_history.append(float(np.max(np.abs(R_red[free]))))
-        drho = float(np.max(np.abs(rho_t_new - rho_t)))
-        drho_history.append(drho)
+        with phase(timings, "residual"):
+            grad, q2 = op.velocities(phi_cut)
+            q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
+            n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
+            rho_new = density_field(q2l, m_inf, gamma_air)
+            if use_upwind:
+                rho_t_new = upw.rho_tilde(grad, q2l, rho_new, m_inf, upwind_c,
+                                          m_crit, gamma_air).copy()
+            else:
+                rho_t_new = rho_new
+            R_red = con.T.T @ op.assemble_residual(phi_cut, rho_t_new)
+            residual_history.append(float(np.max(np.abs(R_red[free]))))
+            drho = float(np.max(np.abs(rho_t_new - rho_t)))
+            drho_history.append(drho)
+
+        # A1 (Track A): per-outer cost + trajectory record. The Picard tell is
+        # n_lin_solves > 1 -- the inner Kutta secant re-solves the SAME frozen
+        # matrix up to `max_kutta_updates` times per outer.
+        step_records.append({
+            "i": outer,
+            "residual": residual_history[-1],
+            "drho": drho,
+            "gamma_mean": float(np.mean(gamma)),
+            "gamma_root": float(gamma[0]),
+            "n_lin_solves": n_solves_total - n_solves_step,
+            "n_lin_iters": n_cg_total - n_cg_step,
+            "n_precond": n_precond_step,
+            "n_limited": n_limited,
+            "n_floored": int(upw.n_floored) if use_upwind else 0,
+            "wall_cum_s": time.perf_counter() - t_wall0,
+            **step_delta(timings, t_phase0),
+        })
+
         # Density under-relaxation (transonic stabilizer; omega_rho = 1.0
         # adopts rho_t_new exactly -- bit-identical subcritical path).
         if omega_rho == 1.0:
@@ -749,8 +791,11 @@ def solve_subsonic_lifting(
             converged = True
             break
 
-    _, q2 = op.velocities(phi_cut)
-    mach2_max = float(np.max(mach_squared_field(q2 / u_inf**2, m_inf, gamma_air)))
+    with phase(timings, "residual"):
+        _, q2 = op.velocities(phi_cut)
+        mach2_max = float(
+            np.max(mach_squared_field(q2 / u_inf**2, m_inf, gamma_air)))
+    finalize(timings, time.perf_counter() - t_wall0)
 
     return {
         "phi": phi_cut,
@@ -761,6 +806,8 @@ def solve_subsonic_lifting(
         "residual_history": residual_history,
         "drho_history": drho_history,
         "gamma_history": gamma_history,
+        "step_records": step_records,
+        "timings": timings,
         "rho": rho_t,
         "mach2_max": mach2_max,
         "nu_max": upw.nu_max if use_upwind else 0.0,

@@ -13,6 +13,7 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the table:
 | **M — meshing** | [roadmap/track_m.md](roadmap/track_m.md) | M0, M1(+M1b), M3, M4, M5 ✓ · M2 ◐ (wing-body mesh ✓ 2026-07-13; solver leg = B9) |
 | **B — level-set wake** | [roadmap/track_b.md](roadmap/track_b.md) | B1–B5, B7, B8, B11–B13, B15 ✓ · B6 ◐ (coarse gate ✓; medium quantitative closed by GB15.4) · B14 designed-not-scheduled · B10 shelved · **B9 (wing-body LS solve, M∞0.5) = NEXT** |
 | **V — viscous coupling** | [roadmap/track_v.md](roadmap/track_v.md) | designed 2026-07-09/10, zero implementation |
+| **A — verification & analysis** | [roadmap/track_a.md](roadmap/track_a.md) | created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16** (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark; 3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · A2 unscoped |
 
 [design.md](design.md) remains the design reference for equations, numerics and
 architecture; Track B numerics live in [design_track_b.md](design_track_b.md)
@@ -25,7 +26,7 @@ integration view — was deleted 2026-07-14, commit 0e4895a; historical copies v
 `git show 8aa4aee:docs/discussion_notes/<file>`.)
 
 **Gate-ID / renumbering conventions.** Gate IDs are `G<phase>.<n>` (Track V:
-`GV<phase>.<n>`). Phases were renumbered twice on Track P (2026-07-08 and
+`GV<phase>.<n>`; Track A: `GA<phase>.<n>`). Phases were renumbered twice on Track P (2026-07-08 and
 2026-07-11) and twice on Track B (2026-07-12 and 2026-07-13); documents dated
 before those days use the then-current IDs. The authoritative mapping notes are
 kept verbatim inside the affected phase entries in the track files.

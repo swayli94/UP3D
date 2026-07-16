@@ -24,6 +24,12 @@ recorded in Track M M2).
   B6 ◐ (medium quantitative closed by GB15.4) · B14 designed-not-scheduled ·
   B10 shelved · **B9 next**.
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
+- **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
+  (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark).
+  A2 unscoped. ★ **In 3-D both Newton paths are PRECONDITIONER-bound (~40% of
+  wall, lagged LU already on); the "Picard seed is the cost" result is 2.5-D
+  ONLY** — quote a dominant phase with its mesh. ★ **"G8.2 = 250 s" is a
+  superseded number**: P10's promoted recipe made it ~145 s.
 
 Human-readable snapshot + document map: [overview.md](overview.md). The pre-split
 narrative history of this file:

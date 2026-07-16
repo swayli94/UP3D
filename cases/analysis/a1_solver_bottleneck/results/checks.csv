@@ -1,0 +1,12 @@
+gate,check,value,criterion,status,note
+GA1.1,unaccounted time < 5% of wall (all runs),0.7%,max pct_other < 5%,PASS,worst = conf_newton transonic
+GA1.3,four methods agree on Γ at M0.50,0.322%,spread/mean < 2%,PASS,conforming vs level-set on the same mesh
+GA1.3,all SUBSONIC runs converged,6/6,all subsonic converged,PASS,transonic coarse fold-zone convergence reported; not gated
+GA1.4,subsonic conf_picard: dominant phase named,linsolve (95.8%),dominant phase reported,PASS,wall=6.247s conv=True
+GA1.4,subsonic conf_newton: dominant phase named,seed (70.6%),dominant phase reported,PASS,wall=2.716s conv=True
+GA1.4,subsonic ls_picard: dominant phase named,linsolve (54.7%),dominant phase reported,PASS,wall=1.736s conv=True
+GA1.4,subsonic ls_newton: dominant phase named,seed (84.8%),dominant phase reported,PASS,wall=2.361s conv=True
+GA1.4,transonic conf_picard: dominant phase named,linsolve (38.3%),dominant phase reported,PASS,wall=160.887s conv=True
+GA1.4,transonic conf_newton: dominant phase named,seed (57.1%),dominant phase reported,PASS,wall=4.712s conv=True
+GA1.4,transonic ls_picard: dominant phase named,linsolve (52.8%),dominant phase reported,PASS,wall=30.342s conv=False
+GA1.4,transonic ls_newton: dominant phase named,assembly (46.6%),dominant phase reported,PASS,wall=9.355s conv=True

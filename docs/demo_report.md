@@ -59,6 +59,7 @@ is not evidence** (the 2026-07-13 audit rule).
 | **Track B** B12 + B13 lagged-LU | `cases/demo/b12_lagged_lu/` + `b13_lagged_picard/` | 6/6 + 6/6 | closed 2026-07-14 (Newton 2.18×; lifting 6.55×) | [track_b](demo_report/track_b.md) |
 | M6 medium LS workflow | `cases/demo/m6_medium_ls_workflow/` | 10/10 | demo, not a gate (2026-07-15): sub+transonic at conforming-comparable cost | [track_b](demo_report/track_b.md) |
 | **Track B** B15 LS Newton ramp + freeze | `cases/demo/b15_ls_newton_ramp/` | 19/19 incl. gated M6 | closed 2026-07-15 (plateau gone, 3.5×; four errata) | [track_b](demo_report/track_b.md) |
+| **Track A** A1 solver bottleneck study | `cases/analysis/a1_solver_bottleneck/` | 11/11 (2.5-D) + 4/4 (gated 3-D) | closed 2026-07-16: GA1.1–GA1.5; 3-D Newton is precond-bound (the 2.5-D seed headline does not transfer); GA1.5 reproduces G8.2/B15 digit-for-digit and found 4 harness defects | [track_a](demo_report/track_a.md) |
 
 > Track-P renumber (2026-07-08, then 2026-07-11 ×2): P6 = surface recovery;
 > P7 = differentiable flux (Newton prereq); P8 = fully-coupled Newton;
