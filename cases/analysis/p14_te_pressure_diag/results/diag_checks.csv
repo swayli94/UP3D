@@ -1,0 +1,21 @@
+check,value,criterion,ok
+naca_cv_asserts,all constructor asserts passed,no raise,PASS
+naca_fd_D_relerr,7.09e-11,< 1e-9 (F exactly quadratic),PASS
+naca_D_nondegenerate,|D_jj| min 81.7,> 0 with margin,PASS
+naca_gamma_star_band,0.01%,< 10% of converged probe gamma (plausibility; S2 offset expected),PASS
+m6_coarse_cv_asserts,"{'n_te': 83, 'n_st': 83, 'fan_u_min': 2, 'fan_u_med': 3.0, 'fan_u_max': 4, 'fan_l_min': 2, 'fan_l_med': 3.0, 'fan_l_max': 4}","no raise, fans non-empty",PASS
+m6_coarse_fd_D_relerr,1.22e-10,< 1e-9,PASS
+m6_coarse_D_sign_uniform,True,uniform D_jj sign,PASS
+m6_coarse_D_well_conditioned,"cond 4.2, min dominance margin -0.21, |D_jj| in [59.3, 130.6], bandwidth 1",cond(D) < 100 (dominance is only sufficient; D is solved dense),PASS
+conf_picard_coarse_D_sign_uniform,True,uniform D_jj sign at converged state,PASS
+conf_picard_coarse_D_nondegenerate,"|D_jj| in [29.0, 113.0], min dominance margin -0.27",|D_jj| bounded away from 0,PASS
+conf_picard_coarse_gamma_star_plausible,2.15%,"< 15% median (S2 offset expected, not a closure yet)",PASS
+conf_picard_coarse_gamma_star_smoother,0.0965 -> 0.0226,gamma*(z) roughness <= probe-target roughness (S1 preview),PASS
+conf_picard_medium_D_sign_uniform,True,uniform D_jj sign at converged state,PASS
+conf_picard_medium_D_nondegenerate,"|D_jj| in [95.0, 207.3], min dominance margin 3.19",|D_jj| bounded away from 0,PASS
+conf_picard_medium_gamma_star_plausible,1.03%,"< 15% median (S2 offset expected, not a closure yet)",PASS
+conf_picard_medium_gamma_star_smoother,0.0389 -> 0.0081,gamma*(z) roughness <= probe-target roughness (S1 preview),PASS
+conf_newton_medium_D_sign_uniform,True,uniform D_jj sign at converged state,PASS
+conf_newton_medium_D_nondegenerate,"|D_jj| in [99.6, 215.9], min dominance margin 5.60",|D_jj| bounded away from 0,PASS
+conf_newton_medium_gamma_star_plausible,0.88%,"< 15% median (S2 offset expected, not a closure yet)",PASS
+conf_newton_medium_gamma_star_smoother,0.0365 -> 0.0074,gamma*(z) roughness <= probe-target roughness (S1 preview),PASS

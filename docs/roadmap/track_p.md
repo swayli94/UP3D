@@ -1429,7 +1429,7 @@ continuation ~1 h).
 
 ---
 
-### P14 — Probe-free conforming Kutta target: wall-adjacent-CV pressure-equality estimator ☐ DESIGNED-NOT-STARTED 2026-07-17 (Track A / A2 routing; trigger recorded)
+### P14 — Probe-free conforming Kutta target: wall-adjacent-CV pressure-equality estimator ◐ IN PROGRESS (OPENED 2026-07-17, user-directed; two-tier gates firmed at open; Stage-D diagnostic GO)
 
 > **Origin.** Track A / A2 (`cases/analysis/a2_te_kutta_fidelity/`, closed
 > 2026-07-17; [roadmap/track_a.md](track_a.md) A2, dossier
@@ -1466,32 +1466,91 @@ per-station secant becomes a per-station nonlinear closure, which the transonic
 path already approximates (`kutta_per_outer=1`); the subsonic path's affine
 secant reasoning is replaced by the recovered-velocity residual.
 
-**Provisional gates (to be firmed at open):**
-- **G14.1 — S1 removed.** Conforming Γ(z) roughness (A2's `roughness_d2`) drops
-  to the level-set band (≈ 0.003–0.009, from 0.039/0.097) on the committed M6
-  coarse+medium, and A2's discriminator D → O(1) (the new estimator does not
-  regenerate jitter from a smooth field).
-- **G14.2 — S2 removed.** Section TE Cp gap → the level-set band (< 0.02, from
-  0.22) on the same meshes, raw recovery.
-- **G14.3 — lift preserved / V6 not worse.** cl_p, cl_KJ and V6 consistency
-  move < 1–2% vs the committed conforming Newton locks (G8.2 0.2646/0.2692);
-  the change is a Kutta *estimator*, not a loading change — a large lift shift
-  is a red flag, not a feature.
-- **G14.4 — inert by default.** New estimator behind a flag; the committed P4/
-  P5/P8/P13 conforming results stay bit-identical with the flag off.
+**Gates (firmed at open 2026-07-17 — user-arbitrated TWO-TIER structure).**
+Mapping from the provisional list: provisional G14.1/G14.2/G14.3 become tier-2
+G14.5/G14.6/G14.7 with their numbers unchanged; provisional G14.4 keeps its ID;
+tier 1 is the NEW subsonic milestone — a deliverable stop point if the M0.84
+nonlinear per-station closure proves to need its own damping study (the spec's
+recorded risk). **Wiring scope (user-arbitrated same day): the pressure
+estimator wires into the coupled Newton drivers (`solve_newton_lifting` /
+`solve_newton_transonic`) + `solve_laplace_lifting` (cheap B4-parity
+verification) ONLY; `solve_subsonic_lifting`'s inner Kutta secant and
+`continuation.py`'s Γ-secant/polish stay probe-based (the P5-era warm-start
+engines — excluded to keep the blast radius down; the estimator MEASUREMENT
+function is solver-independent, which is all the discriminator rerun needs.**
+
+Tier 1 — subsonic M0.5 milestone:
+- **G14.1 — estimator validity.** CV construction asserts all pass (two-sided
+  non-empty wall-adjacent fans via EXACT wall-face ownership, probe-membership
+  side identity, zero far-field-Dirichlet contact, uniform-sign dF/dΓ diagonal)
+  + dF/dΓ non-degenerate and FD-exact at committed states + implied Γ* within
+  the B4 band of the probe target (~1–2% NACA incompressible + M6 M0.5).
+- **G14.2 — S1/S2 A/B at M0.5.** M6 coarse+medium M0.5, pressure vs probe path
+  same-run A/B: `roughness_d2`(Γ(z)) and section TE Cp gap through the A2
+  metric pipeline, committed CSV.
+- **G14.3 — subsonic lift preserved.** Γ/cl move < 1% vs the probe path
+  (NACA + M6 M0.5).
+- **G14.4 — inert by default.** New estimator behind `kutta_estimator`
+  (default "probe"); committed P4/P5/P8/P13 conforming results bit-identical
+  with the flag off (cached-state machine-zero reproduction + full suite).
+
+Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
+- **G14.5 — S1 removed.** Conforming Γ(z) roughness (A2's `roughness_d2`)
+  drops to the level-set band (≈ 0.003–0.009, from 0.039/0.097) on the
+  committed M6 coarse+medium, and A2's discriminator D → O(1) (the new
+  estimator does not regenerate jitter from a smooth field).
+- **G14.6 — S2 removed.** Section TE Cp gap → the level-set band (< 0.02, from
+  0.22) on the same meshes, raw recovery. **Pre-registered fallback clause
+  (recorded at open):** the gap is a DIFFERENTIAL metric — the LS numbers
+  prove the two sides' P1 recovery artifacts largely cancel in the gap there
+  (own-spikes 0.086–0.107 with gap 0.009/0.002), and the conforming sides'
+  artifact asymmetry is only partly the Kutta form error — so the fallback
+  acceptance is: raw gap ≤ 3× the LS band AND ≤ 0.02 at `smooth_passes=1`.
+  Honest floor to quote: enforcement (station-mean CV velocities) ≠
+  measurement (section-last-point per-triangle Cp) — LS closes its own
+  residual to 1e-9 yet measures 2e-3–9e-3.
+- **G14.7 — lift preserved / V6 not worse.** cl_p, cl_KJ and V6 consistency
+  move < 1–2% vs the committed conforming Newton locks (G8.2 0.2646/0.2692;
+  compare against the committed locks, do NOT re-run the probe path); the
+  change is a Kutta *estimator*, not a loading change — a large lift shift is
+  a red flag, not a feature.
 
 **Dead routes (A2, do not re-propose):** spanwise-Γ smoothing (moves Γ off the
 self-consistent value — P5 `INVESTIGATION_gamma_smoothing.md`); full-element-fan
 recovery at the TE (B4: +11–15% wrong, wall-adjacent < 1%); better probe-picking
 alone (a band-aid on the sampling, not a fix of the mechanism).
 
-**Risks / unknowns (why it is only *indicated*, not proven):** porting B4's
-control volumes onto the conforming cut mesh has to cope with the duplicated TE
-nodes and the explicit per-station Γ DOF (the level-set path has neither); the
-tip region (P13) and the wall-adjacent-CV construction there are unexamined; a
-nonlinear per-station closure may need its own damping. Diagnostic-first at
-open: build the conforming TE control volumes and verify the recovered
-two-sided velocity is non-degenerate in Γ before wiring the residual.
+**Risks / unknowns (as designed):** porting B4's control volumes onto the
+conforming cut mesh has to cope with the duplicated TE nodes and the explicit
+per-station Γ DOF (the level-set path has neither); the tip region (P13) and
+the wall-adjacent-CV construction there are unexamined; a nonlinear per-station
+closure may need its own damping. Diagnostic-first at open: build the
+conforming TE control volumes and verify the recovered two-sided velocity is
+non-degenerate in Γ before wiring the residual.
+
+**Stage-D diagnostic — GO (2026-07-17, `cases/analysis/p14_te_pressure_diag/`,
+20/20 checks, committed `results/diag_checks.csv` + `diag_states.csv`).**
+Retired at the diagnostic: (a) CV construction is clean on NACA coarse + M6
+coarse/medium — two-sided wall-adjacent fans never empty (min fan 1 element on
+the NACA family, 2 on M6; recorded), exact wall-face ownership, probe-membership
+side identity (slave="+"=upper ties to the `upper_hint` convention
+structurally), zero far-field-Dirichlet contact (⇒ dF/dΓ carries only the
+slave-jump chain, no V_red term); (b) **non-degeneracy is measured, not
+assumed**: dF/dΓ is tridiagonal (bandwidth 1 in station index), uniform-sign,
+|D_jj| ∈ [29, 216] across states with cond(D) 4.2–6.4 (NOT always strictly
+diagonally dominant — freestream/coarse margins go to −0.27, which is why the
+implied-target solve is dense, dominance being only sufficient); central-FD of
+D at fixed φ_red is exact to roundoff (7.1e-11 / 1.2e-10 — F is exactly
+quadratic in Γ, validating the whole row-builder chain); (c) **estimator
+plausibility on the committed converged probe states**: implied Γ* deviates
+from the closed Γ by 0.01% (NACA incompressible — the B4 band) and
+0.88–2.15% median (M6 M0.84 states — the expected S2-scale offset); (d) **S1
+preview**: measuring Γ*(z) on the SAME cached fields gives roughness
+0.0226/0.0081/0.0074 (P5-coarse/P5-medium/Newton-medium) vs the probe-target
+curve's 0.0965/0.0389/0.0365 — the pressure estimator does not manufacture the
+jitter, and the medium numbers already sit in the LS band. Remaining risks →
+tier 2: the nonlinear closure's behaviour inside an actual transonic Newton
+ramp (damping), and the tip station under a live pressure closure.
 
 **Trigger (designed-not-started, like B14):** open when a conforming-path
 accuracy campaign needs smooth spanwise loading or a closed TE (e.g. a Track V
@@ -1522,5 +1581,5 @@ symptom by construction).
 | P11 | ☐ (**lift case STRONGLY INDICATED MOOT — NOT EARNED** (wording downgraded 2026-07-14, user-arbitrated; was "REFUTED with evidence 2026-07-13") — P13/G13.2 + G13.3-transonic NEGATIVE; G1.6 case stands as the only remaining justification) | | ★ **2026-07-13 (P13/G13.2); wording downgraded 2026-07-14 (user-arbitrated) — the lift justification is STRONGLY INDICATED MOOT by a real fine solution, NOT refuted per P9 discipline.** Once the tip taper made the M6 **fine** mesh a genuine discrete solution at M0.84 (G9.1's own scenario, where fine had been a limit-cycle artifact), cl_KJ reached **0.2866** (untapered-equivalent ≈ 0.291) against the Tranair/KRATOS **0.288** — 99.5 % of the reference, on the resolution side of P9's ≥ 0.283 threshold. **But the pre-registered band fires on the Richardson EXTRAPOLANT**, and no admissible extrapolant exists: the flat-cap sequence is non-asymptotic (increments grow) and the round ladder has no M0.84 fine state (G13.3 transonic NEGATIVE) ⇒ the *direction* is established with evidence, the *verdict* is not earned on either geometry. **P11's remaining valid case is G1.6 alone** (sphere-Cp on a SMOOTH curved wall — a different mechanism, untouched by any of this). Prior entry follows. **Curved / isoparametric wall elements (renumbered from P9 via P10 on 2026-07-11; opening CONDITIONAL on G9.3):** **P9 outcome (2026-07-11): G11.2's premise is REFUTED as stated** — the 2D sharp TE imposes no lift floor (G9.2, error → 0.03%), and the 3D blocker is a divergent vortex-sheet-edge singularity on the rigid planar wake at the tip (G9.1), which curved WALL elements cannot remove. **G11.1 (G1.6 sphere-Cp on a smooth curved wall) is unaffected and remains the phase's valid justification.** The 3D lift/accuracy route now points at the tip/wake model (Track B). Original scope follows: the shared accuracy route for **G11.1** G1.6 sphere-Cp < 2% (design.md §5.1 Option C / DP1 "> 5%" branch) and **G11.2** the residual V6 < 1% floor left after P6 removes the sawtooth (attributed to the sharp-TE/LE P1 wall gradient — P9 tests this; M6 cl_KJ 0.2692 vs Tranair/KRATOS 0.288). Large own effort per DP1. |
 | P12 | ☐ | | Backlog (renumbered from P10 via P11 on 2026-07-11; originally P8): discrete adjoint (transpose of the P8 Newton Jacobian), VII transpiration BC (now expanded into Track V), mixed prism/tet + (C, M_c, ω) BO calibration. (Non-lifting Newton promoted to P10/G10.1 on 2026-07-11.) |
 | P13 | ◐ (G13.1 ✓ + **G13.2 conforming ✓** + **G13.3 subsonic ✓** 2026-07-13; G13.2 level-set clause open; G13.3 transonic RAN → NEGATIVE (the round FINE mesh never reaches M0.84 — its Mach ramp dies at M=0.75; site = the sharp tip TE, which the rounded cap AMPLIFIES rather than creates; P9-band verdict NOT earned on either geometry)) | | **Tip / wake-edge singularity (NEW 2026-07-13, user-approved; descendant of P9/G9.1; appended, no renumber).** **G13.2 CLOSED (conforming path):** the fix is a **spanwise loading taper** `Γ_eff(z)=F(z)·Γ_Kutta(z)` on the per-station Kutta target (`constraints/wake.py::tip_taper_factors`; `solve_newton_lifting(tip_taper=…)`, default `None` = bit-identical). Shipped model: `vanish_smooth` (smoothstep, COMPACT support), r_c = 0.05·b_semi. ★ **NOT roll-up, NOT a vortex core, and NOT via Track B** — the earlier plan recorded in this row ("hand G13.2 to Track B as a rescope of the shelved B9") was **superseded**: the mechanism is DISCRETE (the outermost TE station sheds its retained Γ_last over ONE cell ⇒ p ≈ 1 − q, criterion q ≥ 1), so a Kutta-target taper fixes it with no wake-model rewrite. Edge peak p: **+0.592 → +0.009**; the M6 fine mesh becomes a genuine discrete solution; cost ≈ −1.1…−1.6 % cl, LOCAL (inboard of η≈0.95 unchanged). Tests `tests/test_p13_tip_taper.py` (15); demos `cases/demo/p13_tip_edge_singularity/` (G13.1 10/10, G13.2 probe 16+2 xfail, G13.2 physics 10+1 xfail, **G13.3 5/5**). **G13.3 SUBSONIC ✓ — the flat tip cap was a THIRD singularity, on the WALL, and rounding it (Track M / M5) RESTORES 3D grid convergence.** With the tip taper AND the self-similar ladder, lift increments still GREW; a box study localized the remaining divergence to the **flat tip cap's sharp wall edge** (p = +0.321) while the wake edge (+0.045) and wing interior (−0.014) stayed bounded. Track M / M5 (`wing3d.py::tip_cap="round"`, below) replaces it with a half-body-of-revolution cap. Re-run on the round ladder (demo `run_g133_roundtip.py`, **9/9**, M∞0.5, A/B vs the flat ladder): **(1)** the **cap-surface** exponent falls from **+0.327 (flat) → +0.091 (round, bounded)** and the tip region excluding the design-sharp LE/TE is **converged (p = −0.006)** ⇒ the cap edge singularity is GONE; **(2) ★ the three-point Richardson G9.1 could NEVER run is now EARNED** — round cl_KJ 0.2159 → 0.2073 → 0.2055, increments SHRINK (−3.95%, −0.88%), observed order **p = 2.31**, **cl_KJ(h→0) = 0.2050**; the flat ladder's cl was non-monotone (0.2015 → 0.2005 → 0.2121, no Richardson). **(3) HONESTY / metric trap (G13.1 finding 6):** the *broad* G13.1 tip box still "diverges" (p = +0.38), but its max MIGRATED to the **design-sharp tip TE** (fine peak at chord-frac 0.999, present in BOTH families, carries the Kutta condition) — a different, integrable feature that no tip-cap change removes and that does not spoil the integrated lift (which converged). **G13.3 TRANSONIC — RAN, NEGATIVE RESULT (2026-07-13, demo `run_g133_roundtip_transonic.py`, 6/6):** the M0.84/α3.06 three-point Richardson on the ROUND ladder was run (amg + tight EW forcing + m_start/Picard guards). **coarse + medium are clean discrete solutions** (M_max 1.51 / 2.00, 0 over cap, converged; cl_KJ flat-normalised 0.2769 → 0.2763, nearly flat), **but the FINE solve is NOT** — M_max 3.97, **5 cells over M_cap**, 1 floored, not converged; its cl_KJ 0.2415 is a limit-cycle **artifact** (cf. G9.1's 0.2393 non-lift), not a convergence point. — **and it is worse than "the fine did not converge": the fine mesh never REACHES M0.84 at all.** Its Mach continuation **breaks down at M = 0.75** (last converged level M = 0.7375; dm-halves to below dm_min and gives up, 1 cell in the density floor), so **no M0.84 fine state exists** and no census of one is possible. ⇒ **only two of three points exist; no three-point Richardson at M0.84; the P9 band verdict is STILL NOT EARNED.** ★★ **THE SITE IS THE SHARP TIP TE — the round cap does NOT create it, it HEATS it.** The committed **flat** M0.84 run (`run_g132_transonic.py`, 39e1ded, same taper) *completes* the ramp at the same refinement level and converges (M_max 2.818, 0 over cap, cl_KJ 0.2866), which at first seems to exonerate the shared TE. It does not: the field-saving rerun `run_g133_roundtip_transonic_locate.py` puts **20 of the 20 fastest cells ON the sharp tip TE** (z/b 0.97–0.99, chord-frac ≈ 0.998) and **NONE on the new cap surface** (z/b > 1). The rounded tip lets flow **wrap around the tip and accelerate**, raising the velocity at that same, pre-existing sharp TE at **every** level (M_max 1.51 / 2.00 round vs 1.39 / 1.73 flat) — and at fine that pushes it past the limiter where the flat cap's cooler tip flow stays under. **⇒ the cap did not add a singularity; it AMPLIFIED the tip-TE one that was always there.** The round cap remains a clean **subsonic** fix (Richardson p = 2.31); its transonic cost is a *new sub-problem at the tip TE*, not a defect of the cap geometry. ⚠ **METHOD ERRATUM (self-caught):** an earlier version of the transonic demo censused the *failed* (M ≈ 0.75) state at M_INF = 0.84 — the WRONG freestream Mach — and reported a spurious "M_max 3.97 / 5 cells over M_cap / cl_KJ 0.2415 at M0.84". **Those numbers are RETRACTED.** `solve()` now records the level sequence and refuses to census a state whose ramp did not reach the target (`target_reached`, `m_final`, `m_last_converged` in `g133rt_transonic.csv`; every census column reads `n/a` for the fine level). ⚠ **P9 transonic verdict, both geometries:** flat gives converged solves but the sequence 0.2593→0.2652→**0.2866** RISES (not asymptotic; on the CLAMPED non-self-similar ladder AND polluted by the flat cap edge), so 0.2866 is a single-point value, not a Richardson extrapolation; round has no third point at all. **Neither earns the "0.019 gap = resolution ⇒ P11 refuted" conclusion** — it has no clean asymptotic discrete-solution basis on either geometry. **Historical G13.1 record follows.** **Tip / wake-edge singularity — characterization + wake-model fix (NEW 2026-07-13, user-approved; direct descendant of P9/G9.1; appended, no renumber).** **G13.1 CLOSED 2026-07-13 — demo `cases/demo/p13_tip_edge_singularity/` 10/10 PASS.** Probed SUBSONICALLY (M∞0.5, no transonic machinery) to isolate the geometric edge signal. **(1) It is a real 1/√r flat-plate-edge singularity, not "1/r":** the conforming three-point (coarse/medium/fine 55.5k/350.7k/2.51M tets) log-log exponent of tip-box peak Mach vs 1/h is **p = 0.59 ∈ [0.4,0.65]** (peak 0.712→0.981→1.510; a 1/r line vortex would give p=1). **(2) Driver = trailing vorticity dΓ/dz, not bound Γ:** Γ→0 at the tip (necessary-not-sufficient), but |dΓ/dz| is ~10× larger at the tip than mid-span (B7's smooth Γ(z)); the *unloading rate*, not the loading, is what a terminating flat sheet cannot regularize. **(3) MODEL not representation:** the edge diverges on BOTH the conforming (×1.38) and level-set (×2.28) paths on the SAME mesh (LS exponent 1.34 ≥ conforming 0.52) — Track B's representation change does not blunt it; tip-box p95/mean stay FLAT (0.573→0.562→0.525 / ~0.49) while max diverges (localized-edge signature); peak sits AFT of the TE in the chord plane ⇒ not a wall feature (curved walls/P11 cannot fix it). **(4) ★ The conforming FINE M0.5 solve does NOT converge** (limited/floored, ~1.4k NaN cells) — the tip singularity trips the limiter even subsonically, the exact M0.5 analogue of G9.1's transonic non-solution. **This corrects the committed docs' "1/r-type" (roadmap :1036, demo_report :1333) to 1/√r, and adds the dΓ/dz mechanism.** **G13.2 (future):** roll-up / explicit tip-vortex model ⇒ bounded tip peak (p→0) + M6 fine a real discrete solution; implementation handed to **Track B as a rescope of the shelved B9** (level-set naturally represents a movable sheet via `update_direction()`; from O(θ²) deflection → roll-up). **G13.3 (future):** with the model in place, redo the M6 3D three-point Richardson (G9.1's blocked task) under the P9 pre-registered bands. No solver/numerics changes; fine meshes gitignored; the ~34 min conforming fine M0.5 AMG solve is a one-shot cached artifact. |
-| P14 | ☐ (**designed-not-started 2026-07-17**, trigger recorded; Track A / A2 routing) | | **Probe-free conforming Kutta target: wall-adjacent-CV pressure-equality estimator (NEW 2026-07-17, from A2; appended, no renumber).** A2 (`cases/analysis/a2_te_kutta_fidelity/`, closed 2026-07-17) proved two conforming symptoms are one estimator's fault: **S1** the Γ(z) jitter is a measurement-operator artifact of the per-station probe-difference potential-jump Kutta target (fixed-Γ discriminator D=7.33/25.70 coarse/medium — the estimator regenerates the jitter from a smooth field; closure |F|/max|Γ| ≤ 0.6%, so not unclosed stations); **S2** the TE Cp jump is that same target being equal-*potential* not equal-*pressure* (same-estimator gap 34×/133× vs level-set; P13's 0.14–0.22 confirmed). **Fix (this phase):** replace it with a wall-adjacent control-volume recovered-velocity / pressure-equality estimator — the B4 objects (`wake/multivalued.py::_build_te_control_volumes` + `te_velocities`) ported to the conforming cut mesh; kills the single-node sampling (S1) and closes the gap (S2) in one swap; per-station closure becomes nonlinear (as the transonic `kutta_per_outer=1` path already approximates). Provisional gates: G14.1 Γ(z) roughness → LS band + D→O(1); G14.2 section TE gap → LS band; G14.3 lift/V6 move <1–2% vs the G8.2 locks; G14.4 inert by default (flag off = bit-identical). Dead routes (A2): spanwise-Γ smoothing, full-fan TE recovery (+11–15%), better-probe-picking alone. Risks: conforming duplicated TE nodes + explicit Γ DOF (LS has neither), tip region unexamined, nonlinear closure may need damping — diagnostic-first at open. **Not on the B9 critical path** (level-set has neither symptom by construction). **Trigger:** a conforming accuracy campaign needing smooth Γ(z) or a closed TE (e.g. Track V sectional-Cp coupling, an MDO Γ(z) objective), or user direction. |
+| P14 | ◐ (**OPENED 2026-07-17 user-directed**; two-tier gates firmed, wiring scope arbitrated = Newton + Laplace only; Stage-D diagnostic GO 20/20 — `cases/analysis/p14_te_pressure_diag/`; tier-1 subsonic milestone in progress) | | **Probe-free conforming Kutta target: wall-adjacent-CV pressure-equality estimator (NEW 2026-07-17, from A2; appended, no renumber).** A2 (`cases/analysis/a2_te_kutta_fidelity/`, closed 2026-07-17) proved two conforming symptoms are one estimator's fault: **S1** the Γ(z) jitter is a measurement-operator artifact of the per-station probe-difference potential-jump Kutta target (fixed-Γ discriminator D=7.33/25.70 coarse/medium — the estimator regenerates the jitter from a smooth field; closure |F|/max|Γ| ≤ 0.6%, so not unclosed stations); **S2** the TE Cp jump is that same target being equal-*potential* not equal-*pressure* (same-estimator gap 34×/133× vs level-set; P13's 0.14–0.22 confirmed). **Fix (this phase):** replace it with a wall-adjacent control-volume recovered-velocity / pressure-equality estimator — the B4 objects (`wake/multivalued.py::_build_te_control_volumes` + `te_velocities`) ported to the conforming cut mesh; kills the single-node sampling (S1) and closes the gap (S2) in one swap; per-station closure becomes nonlinear (as the transonic `kutta_per_outer=1` path already approximates). Provisional gates: G14.1 Γ(z) roughness → LS band + D→O(1); G14.2 section TE gap → LS band; G14.3 lift/V6 move <1–2% vs the G8.2 locks; G14.4 inert by default (flag off = bit-identical). Dead routes (A2): spanwise-Γ smoothing, full-fan TE recovery (+11–15%), better-probe-picking alone. Risks: conforming duplicated TE nodes + explicit Γ DOF (LS has neither), tip region unexamined, nonlinear closure may need damping — diagnostic-first at open. **Not on the B9 critical path** (level-set has neither symptom by construction). **Trigger:** a conforming accuracy campaign needing smooth Γ(z) or a closed TE (e.g. Track V sectional-Cp coupling, an MDO Γ(z) objective), or user direction. |
 

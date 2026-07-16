@@ -1,8 +1,14 @@
 # pyFP3D Agent Rules
 
-Current phase: **B15 ✓ CLOSED 2026-07-15 (LS Newton transonic ramp + N5
-freeze-selection; the M6-medium Picard plateau is gone, 38.4 → 11.0 min = 3.51×)
-⇒ B9 (wing-body LS solve, M∞ 0.5) = NEXT** (user-arbitrated 2026-07-14).
+Current phase: **P14 ◐ OPENED 2026-07-17 (user-directed): probe-free
+conforming Kutta target — wall-adjacent-CV pressure-equality estimator (from
+A2). Two-tier gates firmed at open (tier 1 = subsonic M0.5 milestone
+G14.1–G14.4, tier 2 = transonic M0.84 G14.5–G14.7); wiring scope arbitrated =
+coupled Newton + `solve_laplace_lifting` ONLY (subsonic/continuation Picard
+secants stay probe-based); Stage-D diagnostic GO 20/20
+(`cases/analysis/p14_te_pressure_diag/`).** Track B's next phase remains
+**B9 (wing-body LS solve, M∞ 0.5)** (user-arbitrated 2026-07-14; B15 ✓ CLOSED
+2026-07-15 — the M6-medium Picard plateau is gone, 38.4 → 11.0 min = 3.51×).
 
 B9 scope guards (user-arbitrated): **subsonic M∞ 0.5 ONLY** (M0.84 excluded —
 the round-cap transonic fine is still a non-converged limit cycle, G13.3
@@ -29,9 +35,9 @@ recorded in Track M M2).
 
 - **Track P** ([track_p.md](roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
   xfail) · P10 ◐ (G10.1 open) · P11 conditional-not-opened · P13 ◐ (G13.3
-  transonic NEGATIVE-open) · P14 ☐ designed-not-started (probe-free conforming
+  transonic NEGATIVE-open) · **P14 ◐ OPENED 2026-07-17** (probe-free conforming
   Kutta estimator, from A2 — fixes the Γ(z) jitter + TE Cp gap; not on the B9
-  path).
+  path; two-tier gates, Stage-D GO).
 - **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
   body re-spec'd 2026-07-16, solver leg = B9).
 - **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B13, B15 ✓ ·
