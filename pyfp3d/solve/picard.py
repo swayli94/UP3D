@@ -88,6 +88,7 @@ def solve_laplace_lifting(
     max_kutta_updates: int = 30,
     rtol: float = 1e-10,
     maxiter: int = 2000,
+    kutta_estimator: str = "probe",
 ) -> Dict[str, object]:
     """
     Incompressible lifting Laplace solve on a wake-cut mesh: outer Kutta
@@ -118,6 +119,15 @@ def solve_laplace_lifting(
         tol_gamma: convergence tolerance on ||Delta Gamma||_inf
         max_kutta_updates: hard cap on outer updates
         rtol, maxiter: inner CG controls
+        kutta_estimator: "probe" (default -- the historical potential-jump
+            probe target, BIT-IDENTICAL) or "pressure" (P14: the
+            wall-adjacent-CV pressure-equality implied target,
+            constraints/te_pressure.py). NOTE for "pressure" the outer map
+            target(Gamma) is rational, not affine (F is quadratic in
+            Gamma), so the secant no longer jumps to the fixed point in
+            one step -- it stays a secant on a smooth map (s_bar ~ 2 u_inf
+            dominates, weak curvature) with the relaxed update as the
+            existing fallback branch; budget 1-3 extra outer solves.
 
     Returns:
         dict: phi (cut-mesh nodal potential), gamma (per station),
@@ -127,6 +137,9 @@ def solve_laplace_lifting(
     """
     from pyfp3d.constraints.dirichlet import farfield_dirichlet
     from pyfp3d.constraints.wake import WakeConstraint, kutta_targets
+
+    if kutta_estimator not in ("probe", "pressure"):
+        raise ValueError(f"unknown kutta_estimator {kutta_estimator!r}")
 
     A = assemble_stiffness_matrix(mesh_cut.nodes, mesh_cut.elements)
     con = WakeConstraint(A, wc)
@@ -138,6 +151,11 @@ def solve_laplace_lifting(
     dir_nodes, _ = farfield_dirichlet(
         mesh_cut, wc, alpha_deg, np.zeros(wc.n_stations), u_inf, vortex_center
     )
+    cvs = None
+    if kutta_estimator == "pressure":
+        from pyfp3d.constraints.te_pressure import TEControlVolumes
+
+        cvs = TEControlVolumes(mesh_cut, wc, dirichlet_nodes=dir_nodes)
     dir_red, _ = con.to_reduced_dirichlet(dir_nodes, np.zeros(len(dir_nodes)))
     is_dir = np.zeros(n_red, dtype=bool)
     is_dir[dir_red] = True
@@ -197,7 +215,11 @@ def solve_laplace_lifting(
     for _ in range(max_kutta_updates):
         phi_red, res, n_cg = _solve_for(gamma)
         n_cg_total += n_cg
-        target = kutta_targets(con.expand(phi_red, gamma), wc)
+        phi_cut = con.expand(phi_red, gamma)
+        if cvs is not None:
+            target = cvs.implied_targets(phi_cut, gamma)
+        else:
+            target = kutta_targets(phi_cut, wc)
         if float(np.max(np.abs(target - gamma))) < tol_gamma:
             converged = True
             break
