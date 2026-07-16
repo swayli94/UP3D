@@ -41,6 +41,12 @@ Jacobian preconditioned by the stale (exact) LU (the N6 mechanism ported from
 solve/newton.py, minus the Woodbury -- the level-set system has no Gamma
 coupling). `direct_refactor_every=1` (default) keeps the bit-identical
 per-step `spsolve`.
+
+B14 (2026-07-17) adds `precond="schur"`, the STRUCTURAL iterative escape
+(solve/schur_ls.py): eliminate the aux thin-strip block exactly per step and
+precondition the reduced main-free operator with AMG on the SPD Picard block
+-- no springs, no full-size factorization, the conforming-Newton operator
+shape. The ramp wrapper forwards it via **newton_kw.
 """
 
 import time
@@ -58,6 +64,7 @@ from pyfp3d.kernels.cut_assembly import (
     te_weld_coo,
 )
 from pyfp3d.solve.linear import build_ilu_preconditioner, solve_gmres
+from pyfp3d.solve.schur_ls import SchurReducedSystem, main_block_preconditioner
 from pyfp3d.solve.timing import (
     finalize,
     new_timings,
@@ -345,7 +352,15 @@ def solve_multivalued_newton(
             by the existing backtracking line search. `seed_precond` (default
             None) is the same knob for the Picard warm-start solve.
             `linear_rtol=1e-10` keeps the Newton terminus unperturbed at the
-            tol_residual gate.
+            tol_residual gate. **"schur" (B14)** is the STRUCTURAL escape
+            (solve/schur_ls.py): exact per-step elimination of the aux
+            thin-strip block (`lu_aa = splu(J_aa)`, n_ext-sized,
+            milliseconds) + GMRES on the reduced main-free operator
+            preconditioned by AMG on the SPD Picard block, NO springs -- the
+            surrogate's jump==0 bias is structurally absent. A stalled
+            reduced GMRES falls back to a full fused spsolve in the same
+            step (`n_schur_fallback`), never below per-step-direct
+            robustness.
         direct_refactor_every (B12): lagged-LU direct-reuse, active only on the
             `precond=None` path. 1 (default) = refactor every step, the
             bit-identical `spsolve` behaviour. > 1 = refactor the LU every k-th
@@ -353,11 +368,12 @@ def solve_multivalued_newton(
             the stale (exact) LU, converged to `direct_reuse_rtol` (1e-8). This
             is the medium/M6-scale escape (ILU diverges/factor-fails there),
             amortising the sparse factorization over k Newton steps. Ignored
-            when precond is "ilu"/"amg".
+            when precond is "ilu"/"amg"/"schur".
 
     Returns: dict with phi_ext, phi, gamma, cl_kj, te_jump, converged,
     residual_history, n_newton, n_limited, n_floored, mach2_max, nu_max,
-    precond, n_gmres_total, n_gmres_stalled (B11 monitors), n_refactor (B12).
+    precond, n_gmres_total, n_gmres_stalled (B11 monitors), n_refactor (B12),
+    n_schur_fallback (B14).
     """
     if farfield not in ("neumann", "vortex", "freestream"):
         raise ValueError(f"farfield={farfield!r} unknown")
@@ -376,8 +392,9 @@ def solve_multivalued_newton(
             "polyline comes from the mesh's own geometry (e.g. "
             "pyfp3d.meshgen.wing3d.x_te / B_SEMI) and that wall_nodes was "
             "passed to CutElementMap.")
-    if precond not in (None, "ilu", "amg"):
-        raise ValueError(f"precond={precond!r} unknown (None|'ilu'|'amg')")
+    if precond not in (None, "ilu", "amg", "schur"):
+        raise ValueError(
+            f"precond={precond!r} unknown (None|'ilu'|'amg'|'schur')")
     beta = float(np.sqrt(1.0 - m_inf**2))
 
     # --- far-field split (fixed across the solve) --------------------------
@@ -421,6 +438,7 @@ def solve_multivalued_newton(
     lu_direct = None       # B12: the lagged direct LU (precond is None, k > 1)
     lu_age = 0
     n_refactor = 0
+    n_schur_fallback = 0   # B14: full-spsolve fallbacks (precond == "schur")
 
     # --- B15 freeze state (N5 ported to the per-side level-set operator) ----
     frozen = None            # ((upstream, branch) upper, (.., ..) lower)
@@ -514,6 +532,8 @@ def solve_multivalued_newton(
             freeze_cooldown = 5
             n_freeze_reverts += 1
             lu_direct = None          # the stale LU belongs to the frozen J
+            if precond == "schur":
+                M_pre = None          # B14: AMG built on the frozen rho
             r_best = np.inf           # new selection epoch: rescale fail-fast
             # FAIL-SAFE: a freeze that keeps diverging is worse than no freeze.
             # Disarm for the rest of the level and fall back to the live path
@@ -617,6 +637,8 @@ def solve_multivalued_newton(
             frozen = fz_new
             freeze_point = (phi_ext.copy(), residual_unfrozen)
             lu_direct = None                    # assignment moved: J changed
+            if precond == "schur":
+                M_pre = None                    # B14: rho changed with it
             r_best = np.inf                     # new selection epoch
             continue
 
@@ -664,6 +686,8 @@ def solve_multivalued_newton(
             freeze_point = (phi_ext.copy(), res)
             freeze_clamped_at = n_lim + n_flr
             lu_direct = None
+            if precond == "schur":
+                M_pre = None                    # B14: new selection epoch
             r_best = np.inf                     # new selection epoch
             # The frozen flux equals the live flux AT the freeze state, so the
             # residual is unchanged -- but the JACOBIAN needs the frozen
@@ -720,22 +744,53 @@ def solve_multivalued_newton(
         else:
             # B11: preconditioned GMRES on the fused Jacobian. Inexact steps
             # (on_fail="return") are caught by the backtracking line search.
+            # B14 "schur": exact per-step elimination of the aux thin-strip
+            # block, GMRES on the reduced main-free operator with AMG on the
+            # SPD Picard block (built from the CURRENT -- possibly frozen --
+            # side densities, the conforming newton.py analogue).
             J_free = J[free][:, free].tocsr()
             t_pre = time.perf_counter()
+            schur = None
             if precond == "ilu":
                 M_pre = build_ilu_preconditioner(J_free)
+            elif precond == "schur":
+                schur = SchurReducedSystem(J_free, free, mvop.n_main,
+                                           n_aux_expected=mvop.n_ext)
+                if it % amg_rebuild_every == 0 or M_pre is None:
+                    M_pre = main_block_preconditioner(
+                        mvop, (up["rho_tilde"], lo["rho_tilde"]),
+                        schur.main_free)
             elif it % amg_rebuild_every == 0 or M_pre is None:
                 M_pre = _amg_surrogate_preconditioner(
                     mvop, J, (up["rho_tilde"], lo["rho_tilde"]), free)
             dt_pre = time.perf_counter() - t_pre
             timings["precond"] += dt_pre
             t_lin0 += dt_pre
-            d_free, n_it, info = solve_gmres(
-                J_free, -R[free], M=M_pre, rtol=linear_rtol,
-                restart=gmres_restart, maxiter=gmres_maxiter, on_fail="return")
-            d_free = np.atleast_1d(d_free)
-            n_gmres_total += n_it
-            n_gmres_stalled += int(info != 0)
+            if precond == "schur":
+                d_free, n_it, info = schur.solve(
+                    -R[free], M=M_pre, rtol=linear_rtol,
+                    restart=gmres_restart, maxiter=gmres_maxiter)
+                n_gmres_total += n_it
+                if info != 0:
+                    # Safety net (the lagged-LU pattern): refactor-and-solve
+                    # the full fused system in the same step, so robustness
+                    # never drops below per-step-direct. The line search
+                    # WOULD absorb an inexact step, but a silently degraded
+                    # Krylov solve was B11's failure mode -- count it and
+                    # solve exactly instead.
+                    n_gmres_stalled += 1
+                    n_schur_fallback += 1
+                    d_free = np.atleast_1d(
+                        spla.spsolve(J_free.tocsc(), -R[free]))
+                d_free = np.atleast_1d(d_free)
+            else:
+                d_free, n_it, info = solve_gmres(
+                    J_free, -R[free], M=M_pre, rtol=linear_rtol,
+                    restart=gmres_restart, maxiter=gmres_maxiter,
+                    on_fail="return")
+                d_free = np.atleast_1d(d_free)
+                n_gmres_total += n_it
+                n_gmres_stalled += int(info != 0)
         timings["linsolve"] += time.perf_counter() - t_lin0
 
         # Backtracking line search on the free-DOF residual (safety only),
@@ -796,6 +851,7 @@ def solve_multivalued_newton(
         "n_gmres_total": n_gmres_total,
         "n_gmres_stalled": n_gmres_stalled,
         "n_refactor": n_refactor,
+        "n_schur_fallback": n_schur_fallback,
         # B15 freeze monitors
         "accept_reason": accept_reason,
         "froze": frozen is not None,
@@ -937,6 +993,7 @@ def solve_multivalued_newton_transonic(
             "n_freeze_refresh": int(r["n_freeze_refresh"]),
             "n_freeze_reverts": int(r["n_freeze_reverts"]),
             "n_refactor": int(r["n_refactor"]),
+            "n_schur_fallback": int(r["n_schur_fallback"]),
             "wall_s": float(r["_wall_s"]),
             "timings": r["timings"],
             "residual_history": list(r["residual_history"]),

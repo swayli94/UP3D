@@ -27,6 +27,14 @@ Picard outer loop -- refactor every k-th outer, stale-exact-LU-preconditioned
 GMRES in between; default 1 = bit-identical per-outer spsolve). The transonic
 driver inherits it through **kwargs.
 
+B14 (2026-07-17) adds `precond="schur"` to `solve_multivalued_lifting` (and,
+via kwargs, the transonic driver): exact Schur elimination of the aux
+thin-strip block + AMG on the SPD Picard main block, NO springs
+(solve/schur_ls.py) -- the structural fix for the surrogate's stall.
+`solve_multivalued_laplace` keeps None|'ilu'|'amg' only: its weld-closure aux
+block is the trivially invertible identity redirection and the SPD surrogate
+already works there.
+
 The lifting driver with implicit Kutta (the g1+g2 wake LS closure, no Gamma
 outer loop) is B3.
 """
@@ -45,6 +53,7 @@ from pyfp3d.solve.linear import (
     build_ilu_preconditioner,
     solve_gmres,
 )
+from pyfp3d.solve.schur_ls import SchurReducedSystem, main_block_preconditioner
 from pyfp3d.solve.timing import (
     finalize,
     new_timings,
@@ -355,6 +364,15 @@ def solve_multivalued_lifting(
     (`on_fail="return"`) only perturb the Picard path and are counted as
     stalls, never raised.
 
+    "schur" (B14; design_track_b.md §5.3, roadmap §B14) is the STRUCTURAL
+    iterative escape: eliminate the aux thin-strip block exactly per outer
+    (`lu_aa = splu(J_aa)`, n_ext-sized, milliseconds) and run GMRES on the
+    reduced main-free operator preconditioned by AMG on the SPD single-valued
+    Picard block -- NO springs, so the B11 surrogate's jump==0 bias is
+    structurally absent and the circulation mode survives. A stalled reduced
+    GMRES falls back to a full fused spsolve in the same outer
+    (`n_schur_fallback`), so robustness never drops below per-outer-direct.
+
     `direct_refactor_every` (B13): lagged-LU direct-reuse on the `precond=None`
     path -- the B12 mechanism applied to the Picard OUTER loop, which after B12
     is the M6-medium cost driver (one 17.5 s spsolve per outer; B11 measured
@@ -367,7 +385,7 @@ def solve_multivalued_lifting(
     step whose GMRES fails falls back to refactor + exact solve in the same
     outer (robustness never below per-outer-direct; early outers with large
     density moves are expected to trigger it). Ignored when precond is
-    "ilu"/"amg". `direct_reuse_rtol` defaults to 1e-10, NOT B12's 1e-8: a
+    "ilu"/"amg"/"schur". `direct_reuse_rtol` defaults to 1e-10, NOT B12's 1e-8: a
     Picard fixed point is pinned only by its lag tolerances (1e-6), so an
     inexact reuse step SHIFTS the stopping point (measured |dgamma| 8e-8 at
     rtol 1e-8), whereas Newton's terminus is pinned by tol_residual regardless
@@ -380,10 +398,11 @@ def solve_multivalued_lifting(
         gamma_history, drho_history, residual_history, residual_norm,
         mach2_max, nu_max, n_nu_active, n_limited, n_floored, rho_tilde,
         precond, n_gmres_total, n_gmres_stalled (B11 monitors),
-        n_refactor (B13).
+        n_refactor (B13), n_schur_fallback (B14).
     """
-    if precond not in (None, "ilu", "amg"):
-        raise ValueError(f"precond={precond!r} unknown (None|'ilu'|'amg')")
+    if precond not in (None, "ilu", "amg", "schur"):
+        raise ValueError(
+            f"precond={precond!r} unknown (None|'ilu'|'amg'|'schur')")
     if not 0.0 <= m_inf < 1.0:
         raise ValueError(f"needs 0 <= M_inf < 1, got {m_inf}")
     if farfield not in ("vortex", "neumann", "freestream"):
@@ -451,6 +470,8 @@ def solve_multivalued_lifting(
     lu_direct = None
     lu_age = 0
     n_refactor = 0
+    # B14 Schur state (inert unless precond == "schur").
+    n_schur_fallback = 0
     converged = False
     # ---- B6 damping: LOCALIZED to the supersonic zone --------------------
     #
@@ -586,9 +607,23 @@ def solve_multivalued_lifting(
             # B11: preconditioned GMRES on the fused matrix, warm-started from
             # the previous outer's free-dof iterate; an inexact step
             # (on_fail="return") just perturbs the fixed-point path.
+            # B14 "schur": exact aux-block elimination per outer + AMG on the
+            # SPD Picard main block; the Schur split is built on A_solve --
+            # the theta*diag damping is main-rows-only (dampable is a main
+            # mask), so J_aa is undamped, which is correct (aux diagonals are
+            # negative; damping there would be anti-damping).
             t_pre = time.perf_counter()
+            schur = None
             if precond == "ilu":
                 M_pre = build_ilu_preconditioner(A_solve)
+            elif precond == "schur":
+                schur = SchurReducedSystem(A_solve, free, mvop.n_main,
+                                           n_aux_expected=mvop.n_ext)
+                if outer % amg_rebuild_every == 0 or M_pre is None:
+                    M_pre = main_block_preconditioner(
+                        mvop,
+                        (None if rho_up is None else (rho_up, rho_lo)),
+                        schur.main_free)
             elif outer % amg_rebuild_every == 0 or M_pre is None:
                 M_pre = _amg_surrogate_preconditioner(
                     mvop, A, (None if rho_up is None else (rho_up, rho_lo)),
@@ -596,12 +631,30 @@ def solve_multivalued_lifting(
             dt_pre = time.perf_counter() - t_pre
             timings["precond"] += dt_pre
             t_lin0 += dt_pre
-            x, n_it, info = solve_gmres(
-                A_solve, b_solve, M=M_pre, rtol=linear_rtol, x0=x_prev,
-                restart=gmres_restart, maxiter=gmres_maxiter, on_fail="return")
-            x = np.atleast_1d(x)
-            n_gmres_total += n_it
-            n_gmres_stalled += int(info != 0)
+            if precond == "schur":
+                x, n_it, info = schur.solve(
+                    b_solve, M=M_pre, rtol=linear_rtol,
+                    x0_main=x_prev[:schur.n_mf],
+                    restart=gmres_restart, maxiter=gmres_maxiter)
+                n_gmres_total += n_it
+                if info != 0:
+                    # Safety net (the lagged-LU pattern): a stalled reduced
+                    # GMRES never leaves an inexact Picard step behind -- the
+                    # fixed point MOVES under inexact steps (B13, |dgamma|
+                    # 8e-8 at rtol 1e-8) -- refactor-and-solve the full fused
+                    # system in the same outer instead.
+                    n_gmres_stalled += 1
+                    n_schur_fallback += 1
+                    x = np.atleast_1d(spla.spsolve(A_solve.tocsc(), b_solve))
+                x = np.atleast_1d(x)
+            else:
+                x, n_it, info = solve_gmres(
+                    A_solve, b_solve, M=M_pre, rtol=linear_rtol, x0=x_prev,
+                    restart=gmres_restart, maxiter=gmres_maxiter,
+                    on_fail="return")
+                x = np.atleast_1d(x)
+                n_gmres_total += n_it
+                n_gmres_stalled += int(info != 0)
         timings["linsolve"] += time.perf_counter() - t_lin0
         if omega != 1.0:
             x = x_prev + omega * (x - x_prev)
@@ -710,6 +763,7 @@ def solve_multivalued_lifting(
         "n_gmres_total": n_gmres_total,
         "n_gmres_stalled": n_gmres_stalled,
         "n_refactor": n_refactor,
+        "n_schur_fallback": n_schur_fallback,
     }
 
 

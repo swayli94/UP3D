@@ -225,7 +225,17 @@ pyfp3d/                    # Main package
 │   │                       #   splu wall. ★ ILU is the effective escape (spilu on the real
 │   │                       #   matrix, 434 iters coarse); AMG (SPD surrogate + aux↔host springs,
 │   │                       #   _amg_surrogate_preconditioner) STALLS on the wake_ls lifting
-│   │                       #   operator (measured) — Laplace-only. transonic inherits via **kwargs
+│   │                       #   operator (measured) — Laplace-only. transonic inherits via **kwargs.
+│   │                       #   ✓ [B13] direct_refactor_every lagged-LU on the outer loop;
+│   │                       #   ✓ [B14] precond="schur" (the structural escape, schur_ls.py)
+│   ├── schur_ls.py       # ✓ [Track B/B14] SchurReducedSystem + main_block_preconditioner +
+│   │                       #   jaa_diagnostic: exact per-step elimination of the aux thin-strip
+│   │                       #   block (lu_aa = splu(J_aa), n_ext-sized, ms) + GMRES on the reduced
+│   │                       #   main-free operator with AMG on the SPD Picard block — NO springs
+│   │                       #   (the B11 surrogate's jump≈0 bias is structurally absent), no
+│   │                       #   full-size factorization. Shared by picard_ls + newton_ls
+│   │                       #   (precond="schur"); stalled reduced GMRES falls back to a full
+│   │                       #   spsolve in the same step (n_schur_fallback)
 │   ├── newton_ls.py      # ✓ [Track B/B6-Newton] solve_multivalued_newton: the LEVEL-SET Newton
 │   │                       #   (design_track_b.md §5.5). Exact Jacobian = Picard matrix +
 │   │                       #   per-side Terms 2/3 + the EXACT quadratic TE-Kutta derivative;
@@ -234,9 +244,11 @@ pyfp3d/                    # Main package
 │   │                       #   FD-verified 1.3e-9; reaches machine-converged terminal-QUADRATIC
 │   │                       #   discrete FOLD solutions where the Picard only stalls.
 │   │                       #   splu by default; ✓ [B11] precond="ilu"|"amg" iterative escape
-│   │                       #   (true-3D LU fill is ~100× the 2.5D cost, P8/N6). The lagged-LU
-│   │                       #   direct-reuse (newton.py's direct_refactor_every) is NOT ported —
-│   │                       #   recorded follow-up, superseded if GMRES+AMG covers the M6 case
+│   │                       #   (true-3D LU fill is ~100× the 2.5D cost, P8/N6); ✓ [B12] lagged-LU
+│   │                       #   direct-reuse ported (direct_refactor_every, no Woodbury — no Γ
+│   │                       #   DOF); ✓ [B15] freeze-selection + solve_multivalued_newton_transonic
+│   │                       #   Mach ramp (B_NEWTON_M6_DEFAULTS); ✓ [B14] precond="schur"
+│   │                       #   (schur_ls.py, epoch-aware AMG invalidation)
 │   └── newton.py         # ✓ [P8/N4] fully-coupled (φ_red, Γ) Newton driver (design.md §8.1):
 │                           #   NewtonWorkspace (free/dir split, Kutta row K, affine far-field
 │                           #   basis vals0_red + V_red·Γ via unit-Γ probing), ONE shared
