@@ -127,6 +127,11 @@ cases/analysis/a2_te_kutta_fidelity/results/*.npz
 # pressure ramp is minutes on top of its probe M0.70 seed solve)
 cases/demo/p14_pressure_kutta/results/*.npz
 
+# B14 Schur+AMG demo M6-medium A/B solution caches (committed evidence is the
+# PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1, ~30-45 min for the two
+# M0.84 ramp arms + two M0.5 lifting arms)
+cases/demo/b14_schur_precond/results/*.npz
+
 # Reference papers
 docs/references
 
