@@ -206,7 +206,7 @@ def m6_subsonic_ab(level, gate_id):
                "< 8% vs probe path, spanwise dGamma committed",
                rel_p < 0.08 and rel_kj < 0.08)
     o = np.argsort(wc.station_z)
-    write_csv(OUT, f"dgamma_{level}_m05",
+    write_csv(OUT, f"dgamma_{level}_m05.csv",
               "z_over_b,gamma_probe,gamma_pressure",
               [(f"{wc.station_z[j] / B_SEMI:.5f}",
                 f"{p['r']['gamma'][j]:.6f}", f"{q['r']['gamma'][j]:.6f}")
@@ -248,7 +248,7 @@ def fig_ab(recs, m_label, fname):
     axes[1].set_title(f"TE pressure gap ({m_label})")
     for ax in axes:
         ax.legend(fontsize=7)
-    finish(fig, OUT, fname)
+    finish(fig, OUT, fname + ".png")
 
 
 # ============================================================ tier 1 (M0.5)
@@ -283,7 +283,7 @@ if len(sub_recs) == 2:
                < sub_recs["coarse"]["cross_rel"])
 if sub_recs:
     fig_ab(sub_recs, "M0.5", "m05_ab")
-    write_csv(OUT, "m05_ab",
+    write_csv(OUT, "m05_ab.csv",
               "level,estimator,converged,n_newton,cl_p,cl_kj,roughness,"
               "te_gap_median,wall_s",
               [(lv, est, rec[est]["r"]["converged"],
@@ -443,8 +443,8 @@ if GATES:
         axes[1].set_title("TE pressure gap, M0.84 (dotted: G14.6 band)")
         for ax in axes:
             ax.legend(fontsize=7)
-        finish(fig, OUT, "m084_pressure")
-        write_csv(OUT, "m084_pressure",
+        finish(fig, OUT, "m084_pressure.png")
+        write_csv(OUT, "m084_pressure.csv",
                   "level,converged,cl_p,cl_kj,roughness,te_gap_median,"
                   "wall_s",
                   [(lv, rec["r"]["converged"],
