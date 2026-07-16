@@ -364,13 +364,19 @@ medium 升力上发散（γ=−137,77 stalls）、在 M6 medium 上 `factor_fail
   1e-6 的 lag 判据钉住,不精确重用步会**移动停止点**（1e-8 时 |Δγ|=8e-8）,而
   Newton 终点由 tol_residual 钉住不受影响。
 - **诚实边界**：lagged-LU 摊薄的是次数,仍需 ≥1 次能进内存的 splu ⇒ 不破 fine
-  内存墙。fine 路线 = **B14（designed-not-scheduled,roadmap）:Schur 精确消元
-  aux 薄带块**（`K = J_mm − J_ma·J_aa⁻¹·J_am`,lu_aa 为 n_ext 薄带 LU）+ AMG 建在
-  SPD Picard 主块,**无弹簧**——B11 代理的失配（弹簧先验 = jump≈0,恰好抹杀全局
-  环量模式）从结构上消失,GMRES 面对 "椭圆 + 切割带局部修正" = conforming 已证
-  可 AMG 预条件的算子形状。方向要点：消**小**的 aux 块（消 main 需 A_mm⁻¹ 的
-  作用 = 每次应用一趟 AMG 内循环,不可取）。Núñez 叠加式行分配（改离散、罚权
-  标定）降为三级后备,仅当 Schur 在诊断/判别档失败才启动。
+  内存墙。fine 路线 = **B14（✓ 已建成 2026-07-17,`pyfp3d/solve/schur_ls.py`）:
+  Schur 精确消元 aux 薄带块**（`K = J_mm − J_ma·J_aa⁻¹·J_am`,lu_aa 为 n_ext
+  薄带 LU）+ AMG 建在 SPD Picard 主块,**无弹簧**——B11 代理的失配（弹簧先验 =
+  jump≈0,恰好抹杀全局环量模式）从结构上消失,GMRES 面对 "椭圆 + 切割带局部修正"
+  = conforming 已证可 AMG 预条件的算子形状。方向要点：消**小**的 aux 块（消 main
+  需 A_mm⁻¹ 的作用 = 每次应用一趟 AMG 内循环,不可取）。Núñez 叠加式行分配（改
+  离散、罚权标定）降为三级后备——**实测未触发**（aux 块全部可分解、GMRES 全部
+  收敛）。★ **实测（roadmap §B14）:** 诊断先行 J_aa cond1 5.1e8–8.2e9 有限;
+  M6 medium M0.84 precond 42.6%→2.6%、ramp 1.43×、亚声速 2.08×,γ = 已提交
+  GB15.4;但**小规模反而更慢**（直接解已够便宜,多出的 Krylov 迭代不划算）——
+  加速只在 M6-medium 及以上出现,故**真正的独占价值——fine 内存受限路线（AMG
+  O(n) + 薄带 LU,无法进内存的全尺寸 splu 消失）——仍是未建的设计用例**（本轮用户
+  限定 coarse+medium）。
 
 后处理合并同批交付（§13）。
 

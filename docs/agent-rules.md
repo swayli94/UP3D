@@ -103,9 +103,13 @@ recorded in Track M M2).
   path; two-tier gates, Stage-D GO).
 - **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
   body re-spec'd 2026-07-16, solver leg = B9).
-- **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B13, B15 ✓ ·
-  B6 ◐ (medium quantitative closed by GB15.4) · B14 designed-not-scheduled ·
-  B10 shelved · **B9 next**.
+- **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B15 ✓ ·
+  B6 ◐ (medium quantitative closed by GB15.4) · **B14 ✓ CLOSED 2026-07-17**
+  (`precond="schur"` Schur-eliminated-aux + AMG(SPD Picard main block),
+  `pyfp3d/solve/schur_ls.py`; the A1 precond bottleneck is GONE — M6 medium
+  M0.84 42.6% → 2.6%, ramp 1.43× / subsonic 2.08×, γ = the committed GB15.4;
+  ★ SLOWER at small scale, the fine memory-bounded route stays the unbuilt
+  designed use-case) · B10 shelved · **B9 next**.
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -166,9 +170,12 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **421 passed + 18 skipped + 2 xfailed** (2026-07-17, P14 tier 1+2,
-+15 = `tests/test_p14_te_pressure.py`; measured 1015.17 s @8 threads).
-Previous: 406 (= the 399 M2 number once A1's 7 tests landed), 973.59 s
-@8 threads, 2026-07-16; 396, 988.73 s @16 threads, 2026-07-15; lineage in
-[overview.md](overview.md). After any kernel/assembly change run
-`pytest tests/test_v0_freestream.py` first (CLAUDE.md hard rule 1).
+Baseline: **429 passed + 19 skipped + 2 xfailed** (2026-07-17, B14 Schur+AMG,
++8 passed / +1 skipped = `tests/test_b14_schur_ls.py`, the +1 skip = the gated
+GB14.3 medium-lifting escape; measured 1043.37 s @16 threads).
+Previous: 421 + 18 + 2 (2026-07-17, P14 tier 1+2, +15 =
+`tests/test_p14_te_pressure.py`; 1015.17 s @8 threads); 406 (= the 399 M2
+number once A1's 7 tests landed), 973.59 s @8 threads, 2026-07-16; 396,
+988.73 s @16 threads, 2026-07-15; lineage in [overview.md](overview.md). After
+any kernel/assembly change run `pytest tests/test_v0_freestream.py` first
+(CLAUDE.md hard rule 1).

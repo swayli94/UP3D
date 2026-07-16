@@ -5,7 +5,7 @@
 > Scope, reproduce instructions and the honesty/evidence rule: see the
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
-## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐)
+## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**)
 
 **What the track replaces.** The conforming path represents the wake as a *mesh
 surface*: the sheet is embedded in the geometry, its nodes are duplicated by the
@@ -1133,3 +1133,80 @@ the ramp complete.
    Whether relaxing it would unblock G9.1's conforming fine mesh is an **UNTESTED
    HYPOTHESIS**. B15 has NOT revived G9.1.
 
+
+## Track B / B14 — Schur+AMG structural preconditioner (`cases/demo/b14_schur_precond/`, 2026-07-17)
+
+`precond="schur"` on the level-set drivers — the structural answer to A1's
+finding that the 3-D LS Newton path is **preconditioner-bound** (M6 medium
+M0.84 = 42.6% of wall in `precond`, even with the B12/B13 lagged-LU). **7/7
+self-checks PASS**; parts 4–5 (ONERA M6 coarse + medium A/B) are gated.
+
+### The mechanism, in one sentence
+
+The fused `wake_ls` matrix is nonsymmetric only because of the aux rows
+(wake-LS g1+g2 + the nonlinear TE-Kutta row, convection-like, negative
+diagonals). B14 removes that mismatch *structurally* rather than papering over
+it: eliminate the small aux thin-strip block **exactly** per step
+(`lu_aa = splu(J_aa)`, n_ext-sized — 1004/3701 dofs at M6 coarse/medium, split
++ factor **≤ 19 ms**), run GMRES on the reduced main-free operator
+`K = J_mm − J_ma·J_aa⁻¹·J_am`, and precondition *that* with AMG on the SPD
+single-valued Picard block — the exact operator shape the conforming
+`solve/newton.py` already preconditions with AMG. **No springs**: because no
+aux DOF survives into the preconditioned system, the B11 surrogate's implicit
+jump≈0 prior (which killed the global circulation mode — γ 0.0033 vs 0.139) is
+gone by construction. The aux part is recovered by exact back-substitution, so
+the aux rows hold to machine precision and the reduced GMRES rtol *is* the
+full-system main-row relative residual (locked numerically in the test).
+
+### GB14.1 — J_aa is invertible (measured, not assumed)
+
+The pre-registered diagnostic-first gate. `splu(J_aa)` succeeds on all four
+cases and the 1-norm condition estimate is finite: 2.5D coarse **5.1e8**, 2.5D
+medium **8.2e9**, M6 coarse **6.5e6**, M6 medium **7.4e7**
+(`results/jaa_diag.csv`). The constant-jump null vector mixes main+aux columns
+and the TE-Kutta rows pin the level, so the strip is generically nonsingular —
+and it is.
+
+### GB14.2 / GB14.3 — correctness, and the ILU-divergence tier
+
+On 2.5D coarse (the exact operator where the B11 spring surrogate **stalled** to
+γ 0.0033) schur lands on the spsolve γ to \|Δγ\| 4.2e-11 (lifting) / 2.0e-12
+(Newton M0.7, supersonic pocket — Terms 2/3 live in `J_mm`, invisible to the
+Term-1 AMG, and it still converges), 0 fallbacks. The pre-registered
+**discriminating tier** is 2.5D **medium** lifting, where ILU DIVERGED to
+γ = −136.99 (77 stalls, `b11_ls_infra/solver_ab.csv`): schur converges to
+γ 0.14137632, \|Δγ\| 9.3e-10. That is what "a real escape" means.
+
+### GB14.4 — ONERA M6 3-D capability, and the timing (RECORDED, not gated)
+
+Fresh same-session A/B on the wake-free family (identical lagged-LU seeds), both
+regimes, both levels. Every schur arm converges / reaches the target, and γ
+matches both the lagged-LU arm (\|Δγ\| ≤ 1.5e-8) and the **committed GB15.4
+state** exactly (γ **0.088338**, M_max **2.4938**). `results/b14_field.png`
+shows the Γ(z) arms overlaying and the M0.84 shock the schur path computed.
+
+The design pre-declared the medium-scale gain "uncertain". Measured, it landed
+on the winning side (`results/schur_ab.csv`, `b14_wall_ab.png`,
+`b14_phase_fractions.png`):
+
+| M6 medium (63,100 dofs) | lagged-LU | schur | speedup | precond share |
+|---|---|---|---|---|
+| M0.5 subsonic lifting | 73.2 s | **35.2 s** | **2.08×** | 51.7% → **5.2%** |
+| M0.84 transonic ramp | 671.2 s | **469.3 s** | **1.43×** | 43.6% → **2.6%** |
+
+The two full-size `splu` factorizations lagged-LU still needs (17.5 s each) are
+replaced by a thin-strip LU + AMG V-cycles, so the A1 bottleneck is
+structurally gone — below the user's <10% target on both regimes.
+
+### ★ Honest limit — where schur is SLOWER, and what is still unbuilt
+
+At small scale schur **loses**: 2.5D coarse/medium and M6 coarse are 3–6×
+slower (the direct solve is already trivially cheap — the reduced-GMRES
+iteration count costs more than the tiny factorization). The win appears only
+at M6-medium size and grows with the mesh — exactly the design's own prediction
+("marginal at medium; the unique value is the FINE memory-bounded path"). The
+**fine-scale route — AMG O(n) + thin-strip LU, no full-size splu that cannot
+fit in memory — remains the designed, unbuilt use-case**, out of scope here by
+user direction (coarse + medium only). The recorded fallbacks (block-triangular;
+Núñez additive assignment) were not needed: the aux block factored and GMRES
+converged on every case, with **0 spsolve fallbacks** across the whole campaign.
