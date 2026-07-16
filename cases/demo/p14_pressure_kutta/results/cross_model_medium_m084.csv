@@ -1,0 +1,4 @@
+path,mesh_family,cl_p,cl_kj,roughness_d2,te_gap_median_allstation,n_limited,n_floored
+conforming probe (G8.2 lock),onera_m6,0.2646,0.2692,0.0390,0.1585,0,0
+conforming pressure (P14),onera_m6,0.2776,0.2823,0.0024,0.0024,0,0
+level-set Newton (B15),onera_m6_wakefree,0.2772,0.2813,0.0033,0.0047,1,2

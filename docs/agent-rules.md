@@ -13,10 +13,27 @@ AS WRITTEN ⇒ USER ARBITRATION OPEN (below). Demo
 **P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
 **0.0043** (coarse) / 0.0390 → **0.0024** (medium) — at/below the level-set
-band; raw TE Cp gap 0.318 → **0.0040** / 0.228 → **0.0024** (80×/95×), on
-G14.6's PRIMARY clause (raw recovery), fallback unused. Wiring scope
-(user-arbitrated): coupled Newton + `solve_laplace_lifting` only —
+band; all-station raw TE Cp gap 0.2206 → **0.0040** / 0.1585 → **0.0024**
+(**55×/67×**), on G14.6's PRIMARY clause (raw recovery), fallback unused.
+★ **Metric-baseline trap (I fell in it; erratum same-day):** A2 measured the TE
+gap TWO ways — *section-last-point* (0.318/0.228 conf vs 0.009/0.002 LS = the
+34×/133× headline) and the *all-station sweep* (0.2206/0.1585 conf). Quote the
+one your pipeline actually ran. And `a2_te_gap.csv`'s LS rows are ≈0 because
+they read the LS's OWN control volumes (its own constraint residual — A2's
+"cannot be used as A/B"): to compare TE gaps across paths you must re-measure
+the LS wall through the same section sweep (V14.6 does; LS = 0.0047 medium).
+Wiring scope (user-arbitrated): coupled Newton + `solve_laplace_lifting` only —
 `solve_subsonic_lifting`'s inner secant and `continuation.py` stay probe-based.
+- ★ **The cross-MODEL result (V14.6, `cross_model_medium_m084.csv`) — the
+  phase's strongest evidence.** The level-set path has ALWAYS used
+  pressure-equality Kutta (B4). Medium M0.84: conforming-pressure
+  **0.2776/0.2823** vs level-set **0.2772/0.2813** = agreement to
+  **0.17%/0.36%**, where the probe path sat **4.5%/4.3% BELOW** LS — from a
+  different wake model, DOF space, and mesh family (`onera_m6_wakefree`). The
+  long-standing conforming-vs-LS lift disagreement WAS the Kutta form. Caveats:
+  cross-model, NOT a same-mesh A/B; the LS state carries 1 lim/2 flr (B15
+  caveat) vs 0/0; and "both agree" ≠ "both right" (a shared model error like
+  the rigid planar wake is common to both by construction).
 - ★ **G14.7 XFAIL — the lift MOVES and the band was NOT moved to match.**
   Medium M0.84 cl_p 0.2776 (+4.92%) / cl_KJ 0.2823 (+4.85%) vs the G8.2
   **probe-path** locks. Mechanism measured in tier 1 and pre-registered BEFORE

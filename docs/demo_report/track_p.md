@@ -1629,16 +1629,26 @@ bit-identical). **Both symptoms are gone in one swap, at both Mach numbers.**
 |---|---|---|---|---|
 | Γ(z) roughness, M0.84 | coarse | 0.0970 (A2) | **0.0043** | 23× |
 | Γ(z) roughness, M0.84 | medium | 0.0390 (A2) | **0.0024** | 16× |
-| raw TE Cp gap (median), M0.84 | coarse | 0.318 (A2) | **0.0040** | 80× |
-| raw TE Cp gap (median), M0.84 | medium | 0.228 (A2) | **0.0024** | 95× |
+| raw TE Cp gap (all-station median), M0.84 | coarse | 0.2206 (A2) | **0.0040** | 55× |
+| raw TE Cp gap (all-station median), M0.84 | medium | 0.1585 (A2) | **0.0024** | 67× |
 | Γ(z) roughness, M0.5 | coarse / medium | 0.1203 / 0.0504 | **0.0052 / 0.0024** | 23× / 21× |
 | raw TE Cp gap, M0.5 | coarse / medium | 0.2278 / 0.1603 | **0.0045 / 0.0026** | 51× / 62× |
 
 The M0.84 roughness lands AT/BELOW the level-set band (0.003–0.009) and the TE
-gap inside the LS path's own measured band (0.009/0.002) — on the **primary**
-G14.6 clause (raw recovery, < 0.02); the pre-registered `smooth_passes=1`
-fallback was not needed. Ramps converge clean: coarse 11 steps |R| 7.0e-12,
-medium 12 steps |R| 5.6e-15, 0 limited/floored, 9.9 s / 288.0 s.
+gap passes on the **primary** G14.6 clause (raw recovery, < 0.02); the
+pre-registered `smooth_passes=1` fallback was not needed. Ramps converge clean:
+coarse 11 steps |R| 7.0e-12, medium 12 steps |R| 5.6e-15, 0 limited/floored,
+9.9 s / 288.0 s.
+
+> **★ Baseline erratum (caught same-day, 2026-07-17, on a user question).** The
+> first version of this table quoted the TE gap against A2's **0.318/0.228** and
+> claimed **80×/95×**. Those are A2's *section-last-point* numbers; this demo
+> measures the *all-station sweep*, whose A2 probe baseline is **0.2206/0.1585**
+> (`a2_te_gap.csv`). Corrected above to **55×/67×** — the effect stands, the
+> metric now matches. The mirror-image trap on the LS side: `a2_te_gap.csv`'s
+> LS rows read ≈ 0 because they evaluate the LS's OWN control volumes (its own
+> constraint residual — A2's recorded "cannot be used as A/B"), so the
+> cross-model leg below re-measures the LS wall through this demo's sweep.
 
 ### What did NOT change, stated honestly
 
@@ -1653,6 +1663,41 @@ medium 12 steps |R| 5.6e-15, 0 limited/floored, 9.9 s / 288.0 s.
   The jitter-manufacturing *mechanism* is gone (0.0043 absolute is LS-grade),
   but the estimator is not a perfect measurement operator, and the residual
   factor is recorded rather than rounded away.
+
+### ★ V14.6 — the cross-MODEL check: conforming-pressure lands ON the level-set answer
+
+Added 2026-07-17 in response to a user question ("how do the results now compare
+to level-set?"), and it is the strongest independent evidence in the phase — so
+it is a measured demo leg with a committed CSV (`cross_model_medium_m084.csv`),
+not prose. The level-set path has **always** used pressure-equality Kutta on
+wall-adjacent control volumes (B4). So if the conforming lift move is really the
+Kutta *form*, the pressure path must land on the LS answer — from a different
+wake model (multivalued aux DOFs, no Γ DOF, no secant), a different DOF space,
+and a **different mesh family** (`onera_m6_wakefree`).
+
+| medium M0.84 | cl_p | cl_KJ | roughness_d2 | all-station TE gap | lim/flr |
+|---|---|---|---|---|---|
+| conforming **probe** (G8.2 lock) | 0.2646 | 0.2692 | 0.0365 | 0.1585 | 0/0 |
+| conforming **pressure** (P14) | **0.2776** | **0.2823** | **0.0024** | **0.0024** | 0/0 |
+| **level-set** Newton (B15, via A1 cache) | 0.2772 | 0.2813 | 0.0033 | 0.0047 | 1/2 |
+
+**The two independently-implemented wake models now agree to 0.17% / 0.36% on
+cl_p / cl_KJ**, where the probe path sat **4.5% / 4.3% below** the LS one. The
+long-standing conforming-vs-level-set lift disagreement *was* the Kutta form,
+and it is gone. On both A2 symptom metrics the conforming pressure path is now
+at or below the LS path (roughness 0.0024 vs 0.0033; TE gap 0.0024 vs 0.0047).
+
+This reframes G14.7 considerably: the +4.85% move is not merely "toward one
+inviscid reference number" — it is *onto an independent implementation that
+already used the physically-correct Kutta form*. Convergent validity from two
+wake models is a much stronger statement than proximity to Tranair's 0.288.
+
+**Caveats kept:** different mesh families, so this is a cross-model agreement,
+NOT a same-mesh A/B; the LS state carries 1 limited / 2 floored cells (the B15
+`freeze_max_clamped` caveat) while the conforming pressure state has 0/0; and
+"both paths agree" is not "both paths are right" — a shared model error (e.g.
+the rigid planar wake / tip-edge singularity, P9/P13) is common to both by
+construction.
 
 ### ★ G14.7 XFAIL — the lift moves, and the band was not moved to match
 

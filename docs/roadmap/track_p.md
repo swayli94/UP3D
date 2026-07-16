@@ -1565,14 +1565,21 @@ Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
   jitter-manufacturing mechanism is gone: 0.0043 absolute is LS-grade), and
   the residual 1.8 is recorded, not claimed away.
 - **G14.6 ✓ (2026-07-17) — S2 removed.** All-station raw TE Cp gap median
-  **0.0040** (coarse, from A2's probe 0.318 = 80×) and **0.0024** (medium,
-  from 0.228 = 95×) — both < 0.02 on the PRIMARY clause, raw recovery; the
-  pre-registered fallback (≤ 3× LS band, smooth_passes=1) was not needed. The
-  numbers land inside the LS path's own measured band (0.009/0.002), which is
-  the honest floor: enforcement (station-mean CV velocities) ≠ measurement
-  (section-last-point per-triangle Cp), and the shared P1 recovery spike
-  (~0.08–0.1, A2 GA2.4) is untouched by P14 — it cancels in this differential
-  metric on both paths.
+  **0.0040** (coarse) and **0.0024** (medium) — both < 0.02 on the PRIMARY
+  clause, raw recovery; the pre-registered fallback (≤ 3× LS band,
+  smooth_passes=1) was not needed. **★ Baseline erratum (caught 2026-07-17,
+  same day, on a user question — corrected in the demo + every doc):** the
+  first write-up quoted these against A2's **0.318/0.228** and claimed
+  **80×/95×**. Those are A2's *section-last-point* numbers; this demo measures
+  the *all-station sweep*, whose A2 probe baseline is **0.2206/0.1585**
+  (`a2_te_gap.csv`). The correct factors are **55× / 67×** — still the effect,
+  but the metric had to match. Same trap on the other side: `a2_te_gap.csv`'s
+  LS rows read ≈ 0 because they evaluate the LS's OWN control volumes (its
+  own constraint residual, the "cannot be used as A/B" caveat), so V14.6 now
+  re-measures the LS wall through this demo's sweep instead: **LS = 0.0047**
+  (medium), i.e. the conforming pressure path is ~2× BELOW the level-set path
+  on its own metric. The shared P1 recovery spike (~0.08–0.1, A2 GA2.4) is
+  untouched by P14 — it cancels in this differential metric on both paths.
 - **G14.7 ✗ XFAIL-as-written (2026-07-17) — the lift MOVES; verdict
   user-arbitrated.** Measured medium M0.84: cl_p **0.2776 (+4.92%)**, cl_KJ
   **0.2823 (+4.85%)** vs the G8.2 locks 0.2646/0.2692 — outside the
@@ -1592,6 +1599,26 @@ Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
   single-mesh medium number moving toward one inviscid reference. What it does
   establish: a measurable share of the gap was **Kutta-estimator bias**, which
   P9 could not see because both its meshes used the same estimator.
+  **★ Independent corroboration (V14.6, added 2026-07-17 on a user question;
+  `cross_model_medium_m084.csv`).** The level-set path has ALWAYS used
+  pressure-equality Kutta on wall-adjacent CVs (B4). If the conforming lift
+  move is really the Kutta *form*, the pressure path must land on the LS
+  answer — and it does, from a different wake model (multivalued aux DOFs, no
+  Γ DOF), a different DOF space, and a *different mesh family*
+  (`onera_m6_wakefree`):
+
+  | medium M0.84 | cl_p | cl_KJ | roughness | all-station TE gap |
+  |---|---|---|---|---|
+  | conforming **probe** (G8.2 lock) | 0.2646 | 0.2692 | 0.0365 | 0.1585 |
+  | conforming **pressure** (P14) | **0.2776** | **0.2823** | **0.0024** | **0.0024** |
+  | **level-set** Newton (B15/A1 cache) | 0.2772 | 0.2813 | 0.0033 | 0.0047 |
+
+  The two independently-implemented wake models now agree to **0.17% / 0.36%**
+  on cl_p / cl_KJ, where the probe path sat **4.5% / 4.3% below** the LS one —
+  i.e. the long-standing conforming-vs-LS lift disagreement WAS the Kutta
+  form, and it is gone. Caveats kept: different mesh families (not a
+  same-mesh A/B), and the LS state carries 1 limited / 2 floored cells (the
+  B15 `freeze_max_clamped` caveat) while the pressure state has 0/0.
   **User arbitration needed:** accept the move as the finding (and re-lock
   G14.7 against pressure-path locks), or treat it as a defect to chase.
 
