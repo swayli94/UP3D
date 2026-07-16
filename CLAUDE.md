@@ -66,9 +66,12 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **396 passed + 18 skipped +
-   2 xfailed** (2026-07-15; ~16 min @16 threads — the full lineage lives in
-   [docs/overview.md](docs/overview.md), do not re-grow it here). Skip
+3. Full suite: `pytest tests/` — current baseline **399 passed + 18 skipped +
+   2 xfailed** (2026-07-16, M2 body + far-field re-spec, +3; ~16 min @8 threads
+   — the full lineage lives in [docs/overview.md](docs/overview.md), do not
+   re-grow it here). Measured **406** in a tree that also carried Track A's
+   then-uncommitted 7 A1 tests, so 406 − 7 = 399 is what this change accounts
+   for; once A1 lands the number is 406. Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until
    `cases/meshes/onera_m6/generate_onera_m6.py` runs (~30 s); the wake-free
    families likewise (M3 medium ~40 s, M4 ~12 s); the heavy transonic/Newton

@@ -25,7 +25,12 @@ from pyfp3d.meshgen.fuselage import (
     radius_at,
 )
 from pyfp3d.meshgen.wing3d import B_SEMI, TIP_CAP_RADIUS, x_te
-from pyfp3d.meshgen.wingbody import junction_z, te_polyline
+from pyfp3d.meshgen.wingbody import (
+    H_FAR_IN_H_WALL,
+    R_FAR,
+    junction_z,
+    te_polyline,
+)
 from pyfp3d.post.surface import wall_crease_angles
 from pyfp3d.wake import CutElementMap, WakeLevelSet
 
@@ -73,10 +78,11 @@ def test_fuselage_profile_closes_on_the_axis():
 def test_fuselage_sections_match_the_piecewise_law():
     p = FuselageParams()
     # cylinder section is exactly r_f
-    for x in (0.0, 0.5 * p.x_body_end, p.x_body_end):
+    for x in (p.x_nose_end, 0.0, p.x_body_end):
         assert math.isclose(radius_at(p, x), p.r_f, rel_tol=1e-12)
-    # nose is an ellipse: R(-l_nose/2) = r_f * sqrt(3)/2
-    assert math.isclose(radius_at(p, -0.5 * p.l_nose),
+    # nose is an ellipse of x semi-axis l_nose about the shoulder:
+    # half a semi-axis forward of it, R = r_f * sqrt(3)/2
+    assert math.isclose(radius_at(p, p.x_nose_end - 0.5 * p.l_nose),
                         p.r_f * math.sqrt(3.0) / 2.0, rel_tol=1e-12)
     # cone tapers linearly r_f -> r_tail
     mid = 0.5 * (p.x_body_end + p.x_tail_start)
@@ -85,19 +91,41 @@ def test_fuselage_sections_match_the_piecewise_law():
     assert math.isclose(radius_at(p, p.x_tail_start), p.r_tail, rel_tol=1e-12)
 
 
+def test_fuselage_proportions_follow_the_2026_07_16_respec():
+    """The body is sized and POSITIONED by rules, not by station numbers:
+    5 root chords long, wing root chord centered on it, nose ellipsoid
+    2 body diameters long. The delivered 2026-07-13 body had the nose tip
+    0.37 C_ROOT ahead of the root LE, which is what this re-spec fixes."""
+    from pyfp3d.meshgen.wing3d import C_ROOT, x_le
+
+    p = FuselageParams()
+    assert math.isclose(p.length, 5.0 * C_ROOT, rel_tol=1e-12)
+    assert math.isclose(p.l_nose, 2.0 * (2.0 * p.r_f), rel_tol=1e-12)
+    # wing root chord centered on the body: equal body fore and aft of it
+    fore = x_le(0.0) - p.x_nose_tip
+    aft = p.x_tail_tip - x_te(0.0)
+    assert math.isclose(fore, aft, rel_tol=1e-12)
+    assert math.isclose(fore, 2.0 * C_ROOT, rel_tol=1e-12)
+    # ... which is what "the wing is in the middle" means for the body itself
+    assert math.isclose(p.x_center, 0.5 * (p.x_nose_tip + p.x_tail_tip),
+                        rel_tol=1e-12)
+
+
 def test_fuselage_params_reject_nonsense():
     with pytest.raises(ValueError):
         FuselageParams(r_f=-1.0)
     with pytest.raises(ValueError):
         FuselageParams(r_tail=0.5, r_f=0.15)   # afterbody must taper
+    with pytest.raises(ValueError):
+        FuselageParams(length=0.5)             # no cylinder left
 
 
 def test_wing_root_chord_lies_in_the_constant_radius_section():
     """This is what makes junction_z = r_f EXACT: the M6 root chord
     (x in [0, C_ROOT]) never leaves the cylinder, where R(x) = r_f."""
-    from pyfp3d.meshgen.wing3d import C_ROOT, x_le
+    from pyfp3d.meshgen.wing3d import x_le
     p = FuselageParams()
-    assert x_le(0.0) >= 0.0
+    assert x_le(0.0) >= p.x_nose_end
     assert x_te(0.0) <= p.x_body_end
     assert math.isclose(radius_at(p, x_le(0.0)), p.r_f, rel_tol=1e-12)
     assert math.isclose(radius_at(p, x_te(0.0)), p.r_f, rel_tol=1e-12)
@@ -166,7 +194,9 @@ def test_wake_polyline_endpoints_are_exact_wall_nodes(coarse):
     Outboard: the tip TE corner (the round cap's radius vanishes there, so the
     M5 fuse never moved it -- measured 0.0). Inboard: the wing TE (y = 0) meets
     the fuselage skin (z = r_f in the constant-radius section) at an exact OCC
-    vertex -- measured 1.5e-9 at coarse and medium alike. This is what makes
+    vertex -- measured 2.2e-16 at coarse and medium alike (it was 1.5e-9 on the
+    2026-07-13 body; the re-spec moved the nose shoulder far from the root
+    chord, so the vertex no longer sits near a spline knot). This is what makes
     the analytic te_polyline() a faithful description of the discrete TE.
     """
     p = FuselageParams()
@@ -223,26 +253,52 @@ def _cut_map(mesh, alpha_deg: float = 0.0, *, include_fuselage: bool = False):
                          wall_nodes=np.unique(wall))
 
 
-# junction TE node is an OCC vertex 1.5e-9 off exact z = r_f (measured, both
-# levels), so "inboard of the junction" uses the same 1e-6 tolerance as
+# junction TE node is an OCC vertex within 2.2e-16 of exact z = r_f (measured,
+# both levels), so "inboard of the junction" uses the same 1e-6 tolerance as
 # test_wake_polyline_endpoints_are_exact_wall_nodes.
 INBOARD_TOL = 1e-6
 
 
 def test_ls_ingest_census_coarse_exact(coarse):
-    """Locks the numbers quoted by commit f3c7989 / roadmap M2 (measured,
-    alpha=0): 1,415 cut elements, 76 TE nodes."""
+    """Locks the coarse census (measured, alpha=0) on the 2026-07-16 family:
+    1,583 cut elements, 76 TE nodes. Was 1,415 / 76 on the 2026-07-13 one."""
     cm = _cut_map(coarse)
-    assert len(cm.cut_elems) == 1415
+    assert len(cm.cut_elems) == 1583
     assert len(cm.te_nodes) == 76
 
 
 def test_ls_ingest_census_medium_counts(medium):
-    """Medium-level census (measured 2026-07-14; NOT in the f3c7989 prose,
-    which quoted the coarse level only)."""
+    """Medium-level census on the 2026-07-16 family: 30,177 / 150. Was
+    29,108 / 150."""
     cm = _cut_map(medium)
-    assert len(cm.cut_elems) == 29108
+    assert len(cm.cut_elems) == 30177
     assert len(cm.te_nodes) == 150
+
+
+def test_committed_census_csv_locks_the_te_node_counts():
+    """The committed census artifact must still report 76 / 150 TE nodes.
+
+    Unlike the two census tests above, this one reads the COMMITTED CSV, so it
+    runs in a fresh checkout where the gitignored .msh are absent -- it is what
+    catches a regeneration that silently moved the TE discretization.
+
+    Why 76 / 150 specifically: they are bit-identical across ALL THREE of the
+    2026-07-16 changes -- the body re-spec, the far-field enlargement, and
+    Netgen optimization -- because none of them touches the wing skin's own
+    sizing or its surface triangulation. (The cut-element counts legitimately
+    DID move, 1,415 -> 1,583 coarse and 29,108 -> 30,177 medium: those live in
+    the volume all three reshaped.) That separation is why the re-spec leaves
+    the Kutta stations B9 will build exactly where they were.
+    """
+    import csv as _csv
+
+    path = MESH_DIR / "ls_ingest_census.csv"
+    if not path.exists():
+        pytest.skip("ls_ingest_census.csv not generated")
+    with open(path) as fh:
+        rows = {r["level"]: r for r in _csv.DictReader(fh)}
+    assert int(rows["coarse"]["n_te_nodes"]) == 76
+    assert int(rows["medium"]["n_te_nodes"]) == 150
 
 
 @pytest.mark.parametrize("level_fixture", ["coarse", "medium"])
@@ -284,14 +340,39 @@ def test_symmetry_plane_and_farfield(coarse):
     """Symmetry at z = 0; far field on the sphere. NOTE the center is the
     geometric one, NOT the far-field nodes' centroid -- they are only the
     z >= 0 HALF sphere, so their centroid sits well off the axis."""
-    from pyfp3d.meshgen.wing3d import MAC
-
     sym = coarse.nodes[np.unique(coarse.boundary_faces["symmetry"])]
     assert np.abs(sym[:, 2]).max() < 1e-6
 
     p = FuselageParams()
-    r_far = 15.0 * MAC
     xc = 0.5 * (p.x_nose_tip + max(x_te(B_SEMI), p.x_tail_tip))
     far = coarse.nodes[np.unique(coarse.boundary_faces["farfield"])]
     r = np.linalg.norm(far - np.array([xc, 0.0, 0.0]), axis=1)
-    assert np.abs(r - r_far).max() < 1e-3 * r_far
+    assert np.abs(r - R_FAR).max() < 1e-3 * R_FAR
+
+
+def test_farfield_is_clear_of_the_body_and_the_wake_corridor():
+    """The 2026-07-16 far-field enlargement (user-directed), as rules.
+
+    15 MAC was the wing-ALONE convention: once the body became 5 root chords
+    long it left the boundary only ~1.9 body lengths off the tips. 25 MAC is
+    3.5 body lengths clear of each tip -- and the wake sheet, which is a
+    size-field source only, must now stop SHORT of the sphere so its h_wake
+    corridor cannot refine the outflow boundary (that interaction produced
+    every bad tet in the mesh: min dihedral 3.03 deg vs 7.43 with it clear).
+    """
+    from pyfp3d.meshgen.wing3d import MAC
+
+    p = FuselageParams()
+    assert math.isclose(R_FAR, 25.0 * MAC, rel_tol=1e-12)
+    xc = 0.5 * (p.x_nose_tip + max(x_te(B_SEMI), p.x_tail_tip))
+    # >= 3 body lengths of clearance off each tip
+    assert (xc + R_FAR) - p.x_tail_tip > 3.0 * p.length
+    assert p.x_nose_tip - (xc - R_FAR) > 3.0 * p.length
+    # the sheet's corridor (h_wake within ~1.2 of the sheet) clears the sphere
+    x_down = xc + 0.8 * R_FAR
+    assert (xc + R_FAR) - x_down > 1.2
+
+    # h_far scales WITH r_far, which is what holds every near-body gradient
+    # fixed: each Threshold grows SizeMin -> h_far across 0.55 * r_far.
+    assert math.isclose(H_FAR_IN_H_WALL / R_FAR, 120.0 / (15.0 * MAC),
+                        rel_tol=1e-12)

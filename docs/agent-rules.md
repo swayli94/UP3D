@@ -7,7 +7,19 @@ freeze-selection; the M6-medium Picard plateau is gone, 38.4 → 11.0 min = 3.51
 B9 scope guards (user-arbitrated): **subsonic M∞ 0.5 ONLY** (M0.84 excluded —
 the round-cap transonic fine is still a non-converged limit cycle, G13.3
 transonic NEGATIVE); mesh = the delivered M2 wing-body family
-(`cases/meshes/onera_m6_wingbody/`, wake-free, LS TE polyline endpoints exact);
+(`cases/meshes/onera_m6_wingbody/`, wake-free, LS TE polyline endpoints exact)
+— **body + far field re-spec'd and regenerated 2026-07-16 (user-directed):
+5 root chords long, wing root chord centered on it, 2-diameter ellipsoid nose,
+skin graded to `h_body = 2 h_wall` away from the wing and radius-driven at the
+tips; `R_FAR = 25 MAC` (was 15 = the wing-alone convention) with h_far and every
+fixed refinement distance scaled with it, so the 2.78× domain is ~free. The wing
+is untouched (TE nodes bit-identical 76/150) — B9's Kutta stations do not move.
+Now 65,621 / 533,129 tets at BEST-EVER quality (min dihedral 19.5 / 11.0). ★ It
+needed `Mesh.OptimizeNetgen`: the wake sheet's inboard edge (z = 0.15) hangs
+over open fluid aft of the body and its corridor prints a fine ribbon down the
+symmetry plane ⇒ sliver LOTTERY (min dihedral 0.31/4.80/2.63 for h_far/h_wall
+120/160/200 — not monotone; the old family was just winning it). Regenerate
+before B9 — the `.msh` are gitignored, ~5 min for both levels**;
 **open verification item**: the B4 TE control volumes are wall-adjacent, so the
 innermost TE node's fan touches fuselage wall faces — verify the upper/lower CVs
 take only wing-side elements (`multivalued.py::_build_te_control_volumes`;
@@ -19,7 +31,7 @@ recorded in Track M M2).
   xfail) · P10 ◐ (G10.1 open) · P11 conditional-not-opened · P13 ◐ (G13.3
   transonic NEGATIVE-open).
 - **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
-  solver leg = B9).
+  body re-spec'd 2026-07-16, solver leg = B9).
 - **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B13, B15 ✓ ·
   B6 ◐ (medium quantitative closed by GB15.4) · B14 designed-not-scheduled ·
   B10 shelved · **B9 next**.
@@ -76,6 +88,10 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **396 passed + 18 skipped + 2 xfailed** (measured 988.73 s
-@16 threads, 2026-07-15; lineage in [overview.md](overview.md)). After any kernel/assembly change run
+Baseline: **399 passed + 18 skipped + 2 xfailed** (2026-07-16, M2 body +
+far-field re-spec, +3; measured 973.59 s @8 threads — the run reported **406**
+because the tree also carried Track A's then-uncommitted 7 A1 tests, and
+406 − 7 = 399 is what M2 accounts for; the number becomes 406 once A1 lands.
+Previous: 396, 988.73 s @16 threads, 2026-07-15; lineage in
+[overview.md](overview.md)). After any kernel/assembly change run
 `pytest tests/test_v0_freestream.py` first (CLAUDE.md hard rule 1).

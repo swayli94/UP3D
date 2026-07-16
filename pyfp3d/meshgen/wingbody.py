@@ -24,6 +24,16 @@ Design choices (and why they differ from the plan sketch):
   * Round tip cap by default (tip_cap="round"), so the only sharp wall
     features are the wing LE/TE that carry the physics -- the M5 geometry.
 
+  * The fuselage skin is sized SEPARATELY from the wing skin (h_body, default
+    2 h_wall) -- user re-spec 2026-07-16. The body is now 5 root chords long
+    with the wing in the middle (fuselage.py), so h_wall over the whole skin
+    would spend most of the mesh resolving a body whose flow is a smooth
+    displacement field. Near the wing the body still lands at h_wall, because
+    the wing's own distance field wins the Min there; only the far body (nose,
+    mid-body, afterbody) coarsens. The two tips are the exception and get
+    their own refinement -- they are the only high-curvature parts of the body,
+    and they are also the parts farthest from the wing.
+
 The wing solid, its round cap, the planform helpers and the mesh-extraction
 and far-field machinery are reused verbatim from wing3d.py; this module only
 adds the fuselage fuse and the wing/fuselage surface split.
@@ -53,6 +63,37 @@ from pyfp3d.meshgen.wing3d import (
     x_te,
 )
 from pyfp3d.meshgen.fuselage import FuselageParams, add_fuselage_solid, radius_at
+
+#: Far-field sphere radius, 2026-07-16 (user-directed; was 15 MAC = 9.69, the
+#: wing-ALONE convention inherited from wing3d). Once the body became 5 root
+#: chords long the wing's MAC stopped being the scale that sets this: the old
+#: sphere left the boundary only ~1.9 body lengths off the nose/tail tips, and
+#: the body spanned ~42% of the far-field diameter. 25 MAC = 16.15 puts it
+#: 3.5 body lengths clear of each tip and 25 MAC clear of the wing.
+R_FAR = 25.0 * MAC
+
+#: Far-field element size, in units of h_wall. Scaled WITH R_FAR (120 -> 200 =
+#: 120 * 25/15) so that h_far / r_far is UNCHANGED. That ratio is what every
+#: size field here is really written in: each Distance+Threshold grows from its
+#: SizeMin to h_far across 0.55 * r_far, so holding h_far/r_far fixed holds
+#: every near-body gradient — and therefore the whole mesh near the aircraft —
+#: exactly where it was, while the domain grows. It is also why the bigger
+#: domain is nearly free: the added shell's cells grow with it.
+H_FAR_IN_H_WALL = 200.0
+
+#: h_far of the design every FIXED refinement distance below was tuned against
+#: (the 15-MAC / 120-h_wall family, through 2026-07-15). Those distances are
+#: rescaled by h_far / (H_FAR_REF * h_wall) so that each field's GRADIENT --
+#: SizeMin climbing to h_far across the distance -- is invariant when h_far
+#: moves. Do not drop this: raising h_far alone (1.8 -> 3.0 at medium) steepens
+#: every one of them by the same factor, and the wake corridor cannot take it.
+#: Measured 2026-07-16 with the distances left at their old values: the corridor
+#: under the sheet's inboard edge (z = 0.15, hanging over open fluid aft of the
+#: body) demanded 0.3 m elements while the symmetry plane 1.2 m away sat at
+#: 2.9 m, and the mesher answered with pancakes -- 72 tets under 5 deg, min
+#: dihedral 0.17 deg vs the 2.0 deg bound. The 0.55 * r_far distances scale on
+#: their own and were never part of the problem.
+H_FAR_REF = 120.0
 
 
 def junction_z(p: FuselageParams) -> float:
@@ -109,12 +150,14 @@ def onera_m6_wingbody_mesh(
     h_edge: Optional[float] = None,
     h_tip: Optional[float] = None,
     h_junction: Optional[float] = None,
-    r_far: float = 15.0 * MAC,
+    h_body: Optional[float] = None,
+    h_body_tip: Optional[float] = None,
+    r_far: float = R_FAR,
     name: str = "onera_m6_wingbody",
     algorithm3d: int = 1,
     verbose: bool = False,
     tip_cap: str = "round",
-    n_profile: int = 80,
+    n_profile: int = 120,
 ) -> Mesh:
     """Generate the ONERA M6 wing-body half-model volume mesh (wake-free).
 
@@ -123,14 +166,22 @@ def onera_m6_wingbody_mesh(
     coarse/medium/fine ladder is self-similar).
 
     Args:
-        h_wall: target element size on the wing + fuselage surface [m]
+        h_wall: target element size on the WING surface [m]
         fuselage: FuselageParams (default = the standard simplified body)
-        h_far:  far-field size (default 120 h_wall -- NO clamp, self-similar)
+        h_far:  far-field size (default 200 h_wall -- NO clamp, self-similar;
+                scaled with r_far so h_far/r_far, and hence every gradient
+                below, is fixed)
         h_wake: wake-corridor size (default 3 h_wall)
         h_edge: wing LE/TE edge size (default 0.5 h_wall)
         h_tip:  round-cap size (default 0.25 h_wall; ignored if flat)
         h_junction: wing-fuselage junction-curve size (default 0.5 h_wall --
                 the junction is a high-curvature intersection needing refinement)
+        h_body: fuselage skin size AWAY from the wing (default 2 h_wall). Near
+                the wing the body still gets h_wall from the wing's own field.
+        h_body_tip: fuselage nose/tail tip size (default 0.25 h_wall, the same
+                policy as the M5 round tip cap) -- the tips are the body's only
+                high-curvature regions, and the size ramps back up to h_body
+                over the nose / afterbody length
         tip_cap: "round" (default, M5) or "flat"
         n_profile: fuselage meridian spline sample count
 
@@ -145,7 +196,8 @@ def onera_m6_wingbody_mesh(
         raise ValueError(f"tip_cap must be one of {TIP_CAPS}, got {tip_cap!r}")
     p = fuselage if fuselage is not None else FuselageParams()
     if h_far is None:
-        h_far = 120.0 * h_wall            # NO clamp (M1b defect); self-similar
+        # NO clamp (M1b defect); self-similar. 200, not 120: scaled with R_FAR.
+        h_far = H_FAR_IN_H_WALL * h_wall
     if h_wake is None:
         h_wake = 3.0 * h_wall
     if h_edge is None:
@@ -154,13 +206,28 @@ def onera_m6_wingbody_mesh(
         h_tip = 0.25 * h_wall
     if h_junction is None:
         h_junction = 0.5 * h_wall
+    if h_body is None:
+        h_body = 2.0 * h_wall             # far body: coarser than the wing
+    if h_body_tip is None:
+        h_body_tip = 0.25 * h_wall        # as the M5 round tip cap (h_tip)
 
     z_lo = -0.08 * C_ROOT
     z_junc = junction_z(p)
     # Far-field sphere centered on the whole body (nose..tail), not just the
     # wing -- the fuselage now sets the fore/aft extent.
     xc = 0.5 * (p.x_nose_tip + max(x_te(B_SEMI), p.x_tail_tip))
-    x_down = xc + r_far + 0.5
+    # Downstream end of the wake sheet. The sheet is a SIZE-FIELD SOURCE only
+    # (never fragmented or embedded), so its extent is free -- and it must stop
+    # SHORT of the far-field sphere, which `xc + r_far + 0.5` did not.
+    # Measured 2026-07-16: a sheet that pierces the sphere drags its corridor
+    # (h_wake = 3 h_wall within ~1.2 of the sheet) onto the OUTFLOW BOUNDARY,
+    # which put 0.087 m triangles on a sphere sized h_far = 6.0 and produced
+    # every bad tet in the mesh -- all 13 sat at the downstream pole, min
+    # dihedral 3.03 deg vs 5.60 with the sheet clear. Nothing is served by
+    # resolving a wake as it leaves a Dirichlet boundary. 0.8 r_far clears the
+    # corridor by ~2.4 m and still leaves MORE downstream corridor (~16 MAC)
+    # than the old 15-MAC sphere physically had room for.
+    x_down = xc + 0.8 * r_far
 
     gmsh.initialize()
     try:
@@ -246,8 +313,13 @@ def onera_m6_wingbody_mesh(
         field = gmsh.model.mesh.field
         thresholds: List[int] = []
 
+        #: Scales every FIXED refinement distance below with h_far, holding each
+        #: field's gradient at the H_FAR_REF design's. See H_FAR_REF.
+        grad = h_far / (H_FAR_REF * h_wall)
+
         def _dist_threshold(surfs=None, curves=None, size_min=h_wall,
-                            dist_min=0.05, dist_max=0.55 * r_far, sampling=200):
+                            dist_min=0.05, dist_max=0.55 * r_far, sampling=200,
+                            register=True):
             f = field.add("Distance")
             if surfs:
                 field.setNumbers(f, "SurfacesList", surfs)
@@ -260,22 +332,83 @@ def onera_m6_wingbody_mesh(
             field.setNumber(t, "SizeMax", h_far)
             field.setNumber(t, "DistMin", dist_min)
             field.setNumber(t, "DistMax", dist_max)
-            thresholds.append(t)
+            if register:
+                thresholds.append(t)
             return t
 
-        _dist_threshold(surfs=groups["wall"] + groups["fuselage"],
-                        size_min=h_wall)
+        def _tip_ball(x_tip: float, ramp: float) -> int:
+            """h_body_tip on the axis at a body tip, ramping to h_body over
+            `ramp`. VOut is h_body, NOT h_far, because this field is read as a
+            size FLOOR under Max, never under Min (see _fuselage_field).
+            """
+            f = field.add("Ball")
+            field.setNumber(f, "XCenter", x_tip)
+            field.setNumber(f, "YCenter", 0.0)
+            field.setNumber(f, "ZCenter", 0.0)
+            field.setNumber(f, "Radius", 0.2 * p.r_f)
+            field.setNumber(f, "Thickness", ramp)
+            field.setNumber(f, "VIn", h_body_tip)
+            field.setNumber(f, "VOut", h_body)
+            return f
+
+        def _fuselage_field() -> int:
+            """Body skin at h_body, EXCEPT near the two tips, where the size
+            follows the body's local RADIUS (2026-07-16).
+
+            Why the tips need their own law: the body is a surface of
+            revolution, so its circumferential faceting angle is h / R(x), and
+            R(x) collapses to zero at both ends -- to r_tail = 30 mm on the
+            tail cap, and through the nose ellipsoid's 37 mm tip curvature
+            radius. A single h_body over the whole skin therefore facets the
+            afterbody into a polygonal needle however generous h_body looks
+            against r_f (measured on the first cut of this re-spec: cone p99
+            45.9 deg, 20 of the 26 worst edges on the aft cone, vs 20.7 deg on
+            the cylinder). Ramping h_body_tip -> h_body over the afterbody
+            length reproduces h ~ 0.4 R(x) along the cone almost exactly,
+            because a cone's radius grows linearly with distance from its tip;
+            over the nose it is conservative (R grows like sqrt there).
+
+            Composed with Max, not Min: each of these two fields states a
+            FLOOR on the size ("no finer than"), and the result is the finest
+            size honouring both -- the tip balls floor the skin at h_body
+            everywhere except the tips, and the distance ramp floors the size
+            at h_far once away from the body. Min would instead read the tip
+            balls' VOut = h_body as a CEILING and cap the whole domain, far
+            field included, at 2 h_wall. The caller's Min over `thresholds`
+            then applies the real ceilings (the wing, wake and edge fields).
+
+            The witness that the far field escaped: n_tris_farfield in the
+            stats CSV is 193 coarse / 732 medium, vs 193 / 730 on the pre-
+            re-spec body -- untouched. Under Min it would have exploded.
+            """
+            ramp = _dist_threshold(surfs=groups["fuselage"],
+                                   size_min=h_body_tip, register=False)
+            tips = field.add("Min")
+            field.setNumbers(tips, "FieldsList",
+                             [_tip_ball(p.x_nose_tip, 0.5 * p.l_nose),
+                              _tip_ball(p.x_tail_tip, p.l_tail + p.r_tail)])
+            f = field.add("Max")
+            field.setNumbers(f, "FieldsList", [ramp, tips])
+            thresholds.append(f)
+            return f
+
+        # Wing skin and fuselage skin are sized separately (2026-07-16): the
+        # body is 5 root chords long and only the part near the wing needs
+        # h_wall. The wing's field wins the Min over the body near the
+        # junction, so the transition needs no explicit blend region.
+        _dist_threshold(surfs=groups["wall"], size_min=h_wall)
+        _fuselage_field()
         _dist_threshold(surfs=[sheet], size_min=h_wake,
-                        dist_min=0.05, dist_max=1.2)
+                        dist_min=0.05, dist_max=1.2 * grad)
         if edge_curves:
             _dist_threshold(curves=edge_curves, size_min=h_edge,
-                            dist_min=0.02, dist_max=0.3, sampling=400)
+                            dist_min=0.02, dist_max=0.3 * grad, sampling=400)
         if tip_faces:
             _dist_threshold(surfs=tip_faces, size_min=h_tip,
-                            dist_min=0.02, dist_max=0.3)
+                            dist_min=0.02, dist_max=0.3 * grad)
         if junction_curves:
             _dist_threshold(curves=junction_curves, size_min=h_junction,
-                            dist_min=0.02, dist_max=0.3, sampling=400)
+                            dist_min=0.02, dist_max=0.3 * grad, sampling=400)
 
         f_min = field.add("Min")
         field.setNumbers(f_min, "FieldsList", thresholds)
@@ -286,6 +419,23 @@ def onera_m6_wingbody_mesh(
         gmsh.option.setNumber("Mesh.Algorithm", 6)
         gmsh.option.setNumber("Mesh.Algorithm3D", algorithm3d)
         gmsh.option.setNumber("Mesh.Optimize", 1)
+        # Netgen's tet optimizer on top of gmsh's own (2026-07-16). This family
+        # has ONE fragile spot, and it is structural rather than a tuning
+        # accident: the wake sheet's inboard edge sits at z = z_junc = 0.15,
+        # hanging over open fluid everywhere aft of the body, so its corridor
+        # prints a ~0.2 m-wide FINE RIBBON down the symmetry plane at y ~ 0
+        # while the plane a metre away is at h_far. The mesher answers that
+        # with pancakes. Measured on medium at r_far = 25 MAC, min dihedral by
+        # h_far/h_wall: 120 -> 0.31 deg, 160 -> 4.80, 200 -> 2.63 -- NOT
+        # monotone, i.e. a lottery, and the pre-2026-07-16 family was simply
+        # winning it (5.88). Netgen removes the ribbon's slivers outright: the
+        # same three cases give 0 tets under 5 deg and min dihedral 11-13.6,
+        # BETTER than the 15-MAC family ever was and on ~9% FEWER tets.
+        # It only touches the volume -- the fuselage crease p99 (10.07) and
+        # every boundary invariant in _wingbody_asserts are unchanged, which is
+        # what makes it a mesh-quality knob and not a change of geometry.
+        # NOT set in wing3d.py: the M1/M4/M5 families stay bit-identical.
+        gmsh.option.setNumber("Mesh.OptimizeNetgen", 1)
 
         gmsh.model.mesh.generate(3)
 
