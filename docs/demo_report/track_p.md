@@ -1623,7 +1623,26 @@ pressure-equality residual |q_u|² − |q_l|² per station
 `solve_laplace_lifting` + the coupled Newton drivers, default "probe"
 bit-identical). **Both symptoms are gone in one swap, at both Mach numbers.**
 
-### Headline numbers (all committed: `results/checks.csv`, `m05_ab.csv/png`, `m084_pressure.csv/png`, `dgamma_*_m05.csv`)
+### Committed figures
+
+- **`sections_probe_vs_pressure.png`** (V14.8) — section Cp at A2's four η,
+  full chord + a TE zoom column (x/c ∈ [0.85, 1.02]; the whole effect lives in
+  the last few percent and is invisible on a full-chord axis). Same mesh, same
+  solver, same post-processing — the *only* difference is the Kutta estimator:
+  the probe path's two sides land apart at x/c = 1 with a spike, the pressure
+  path's close.
+- **`crossmodel_spanwise.png`** (V14.6) — Γ(z) and the sectional
+  cl(z) = 2Γ/(U·c(z)) it implies, for conforming probe vs conforming pressure
+  vs level-set. The probe curve is visibly *both* jittery (S1) and low; the
+  pressure curve is smooth and sits on the level-set curve.
+- **`crossmodel_sections.png`** (V14.6) — section Cp, conforming-pressure vs
+  level-set, same layout. Both close the TE; the residual offset is mesh
+  family + the LS state's clamped cells.
+- **`m05_ab.png`** (tier 1) — Γ(z) and the all-station TE gap at M0.5.
+- **`m084_pressure.png`** (tier 2) — the same two metrics at M0.84 vs the
+  G14.6 band.
+
+### Headline numbers (all committed: `results/checks.csv`, `m05_ab.csv/png`, `m084_pressure.csv/png`, `dgamma_*_m05.csv`, `cross_model_medium_m084.csv`, `te_spike_medium_m084.csv`)
 
 | metric | mesh | probe (was) | pressure (now) | factor |
 |---|---|---|---|---|

@@ -17,7 +17,13 @@ Tier 2 (transonic M0.84 = the A2 regime, PYFP3D_TRANSONIC_GATES=1):
   V14.6  cross-MODEL check: conforming-pressure vs the level-set path
          (A1's cached B15 LS Newton state), all three metrics on the SAME
          pipeline -- the LS path has always used pressure-equality Kutta,
-         so it is the independent oracle for the G14.7 lift move
+         so it is the independent oracle for the G14.7 lift move.
+         Figures: crossmodel_spanwise.png (Gamma(z) + sectional cl(z)),
+         crossmodel_sections.png (section Cp, full chord + TE zoom)
+  V14.7  TE Cp spike (A2's spike_metric) -- the leg that refuted P14's own
+         claim that the spike was a wake-model-independent artifact
+  V14.8  section Cp, conforming probe vs pressure (the curve behind the
+         TE-gap and spike scalars): sections_probe_vs_pressure.png
 
 The TE-gap sweep and roughness metrics reuse the A2 pipeline verbatim
 (cases/analysis/a2_te_kutta_fidelity/_metrics.py). ★ Baseline caveat: A2
@@ -54,15 +60,16 @@ import matplotlib.pyplot as plt                                    # noqa: E402
 
 import _metrics as M                                               # noqa: E402
 from cases.demo._common import (                                   # noqa: E402
-    CheckList, S1_BLUE, S3_YELLOW, S4_ROSE, apply_style, finish, write_csv,
+    BASELINE, CheckList, INK_2, MUTED, S1_BLUE, S2_AQUA, S3_YELLOW, S4_ROSE,
+    apply_style, finish, write_csv,
 )
 from pyfp3d.mesh.reader import read_mesh                           # noqa: E402
 from pyfp3d.mesh.wake_cut import cut_wake                          # noqa: E402
-from pyfp3d.meshgen.wing3d import B_SEMI                           # noqa: E402
+from pyfp3d.meshgen.wing3d import B_SEMI, chord_at                 # noqa: E402
 from pyfp3d.post.section_cut import section_cp_curve               # noqa: E402
 from pyfp3d.post.surface import (                                  # noqa: E402
-    _cp_from_q2, cl_kj_3d, planform_area, triangle_tangential_gradients,
-    wall_force_coefficients,
+    _cp_from_q2, cl_kj_3d, planform_area, sectional_cl_from_gamma,
+    triangle_tangential_gradients, wall_force_coefficients,
 )
 from pyfp3d.solve.newton import (                                  # noqa: E402
     solve_newton_lifting, solve_newton_transonic,
@@ -255,6 +262,73 @@ def m6_subsonic_ab(level, gate_id):
                "pressure < probe (S2 A/B at M0.5, raw recovery)",
                gm_q < gm_p)
     return rec
+
+
+def _cp_panel(ax, sec, color, label, ls="-", legend=True):
+    """One section's upper+lower Cp(x/c) on a -Cp axis (aero convention).
+
+    Markers carry the side (o = upper, s = lower) and colour carries the
+    series, so the legend names the SERIES once instead of once per side.
+    """
+    for side, marker in (("upper", "o"), ("lower", "s")):
+        x, cp = sec["x_" + side], sec["cp_" + side]
+        o = np.argsort(x)
+        ax.plot(x[o], -cp[o], ls=ls, color=color, marker=marker, ms=2.6,
+                lw=1.3, mfc="none", mew=0.7,
+                label=(label if (legend and side == "upper") else None))
+
+
+def fig_sections(sections, title, fname, note=None):
+    """Section Cp per eta: left column = full chord, right column = TE zoom.
+
+    `sections` = [(label, color, linestyle, {eta: section_dict})]. The whole
+    P14 story lives in the last few percent of chord, which is invisible on
+    a full-chord axis -- hence the paired zoom (x/c in [0.85, 1.02], the
+    same window A2's spike_metric fits its trend over).
+    """
+    n = len(ETAS)
+    fig, axes = plt.subplots(n, 2, figsize=(12.0, 3.0 * n),
+                             gridspec_kw={"width_ratios": [2.0, 1.0]})
+    for row, eta in enumerate(ETAS):
+        for col in (0, 1):
+            ax = axes[row, col]
+            for label, color, ls, secs in sections:
+                if eta not in secs or secs[eta] is None:
+                    continue
+                _cp_panel(ax, secs[eta], color, label, ls=ls, legend=col == 0)
+            ax.axhline(0.0, color=BASELINE, lw=0.8, zorder=0)
+            ax.axvline(1.0, color=MUTED, lw=0.9, ls=":", zorder=0)
+            ax.set_ylabel("−Cp" if col == 0 else "")
+            if col == 0:
+                ax.set_title(f"η = z/b = {eta:.2f} — full chord",
+                             fontsize=9.5)
+                ax.legend(fontsize=7, loc="best")
+            else:
+                ax.set_title("TE zoom (x/c ∈ [0.85, 1.02])", fontsize=9.5)
+                ax.set_xlim(0.85, 1.02)
+                # autoscale y to the zoom window only
+                ys = []
+                for _, _, _, secs in sections:
+                    if eta not in secs or secs[eta] is None:
+                        continue
+                    for side in ("upper", "lower"):
+                        x, cp = secs[eta]["x_" + side], secs[eta]["cp_" + side]
+                        m = x >= 0.85
+                        if m.any():
+                            ys.append(-cp[m])
+                if ys:
+                    yy = np.concatenate(ys)
+                    pad = 0.12 * max(np.ptp(yy), 1e-3)
+                    ax.set_ylim(yy.min() - pad, yy.max() + pad)
+            if row == n - 1:
+                ax.set_xlabel("x / c")
+    fig.suptitle(title, fontsize=12)
+    fig.text(0.5, 0.012,
+             "markers: ○ = upper surface, □ = lower surface"
+             + (f"    ·    {note}" if note else ""),
+             ha="center", fontsize=7.5, color=INK_2, wrap=True)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
+    finish(fig, OUT, fname)
 
 
 def fig_ab(recs, m_label, fname):
@@ -539,6 +613,44 @@ if GATES:
                   + [("level-set Newton (A2 ls_newton_medium)", 0,
                       f"{A2_SPIKE['ls_newton_medium']:.4f}", "0.0932")])
 
+    # ---- V14.8: section Cp, probe vs pressure (the visual of S2) ----------
+    # The metrics above (TE gap, spike) are scalars per station; this is the
+    # curve they came from. The probe state is A1's cached conforming Newton
+    # M0.84 medium -- i.e. the committed G8.2 lock state, no re-solve.
+    conf_probe_npz = A1_RES / "a1_m6_conf_newton.npz"
+    probe_secs = None
+    if "medium" in trans_recs and conf_probe_npz.exists():
+        print("== V14.8: section Cp, probe vs pressure (medium M0.84) ==",
+              flush=True)
+        mc_m, wc_m = get_cut("medium")
+        dprobe = np.load(conf_probe_npz, allow_pickle=True)
+        probe_secs, press_secs = {}, {}
+        for eta in ETAS:
+            try:
+                probe_secs[eta] = section_cp_curve(
+                    mc_m, dprobe["phi"], eta=eta, b_semi=B_SEMI,
+                    m_inf=M_TRANS)
+                press_secs[eta] = section_cp_curve(
+                    mc_m, trans_recs["medium"]["r"]["phi"], eta=eta,
+                    b_semi=B_SEMI, m_inf=M_TRANS)
+            except ValueError as e:
+                print(f"  [warn] eta={eta}: {e}")
+        fig_sections(
+            [("conforming probe (G8.2 lock)", S1_BLUE, "--", probe_secs),
+             ("conforming pressure (P14)", S4_ROSE, "-", press_secs)],
+            "Section Cp — conforming probe vs pressure Kutta "
+            "(ONERA M6 medium, M0.84, α3.06, raw recovery)",
+            "sections_probe_vs_pressure.png",
+            note="Same mesh, same solver, same post-processing: the only "
+                 "difference is the Kutta estimator. Read the x/c = 1 edge "
+                 "(dotted): the probe path leaves the two sides apart "
+                 "(equal potential jump), the pressure path closes them "
+                 "(equal pressure).")
+        checks.add("V14.8", "sections_probe_vs_pressure_figure",
+                   "sections_probe_vs_pressure.png (4 eta x upper/lower)",
+                   "committed figure: the S2 curve behind the TE-gap and "
+                   "spike scalars", True)
+
     # ---- V14.6: cross-MODEL check vs the level-set path -------------------
     # The strongest independent evidence in the phase, so it is measured
     # here rather than asserted in prose (session discipline 3). The LS path
@@ -607,6 +719,79 @@ if GATES:
                    f"{ls_gap:.4f} (same sweep, both paths)",
                    "conforming-pressure at or below the LS path on both "
                    "A2 symptom metrics", True)
+        # --- cross-model figure 1: spanwise loading ---
+        # Gamma(z) AND the sectional cl(z) = 2 Gamma / (U c(z)) it implies --
+        # the taper makes them different curves, and cl(z) is the one that
+        # integrates to the lift the G14.7 arbitration is about.
+        zc = np.sort(wc.station_z)
+        gc = np.asarray(q["r"]["gamma"])[np.argsort(wc.station_z)]
+        zp = zc
+        gp_probe = np.asarray(dprobe["_span_gamma"])[
+            np.argsort(np.atleast_1d(dprobe["_span_z"]))] \
+            if conf_probe_npz.exists() else None
+        zl = np.sort(np.atleast_1d(d["_span_z"]))
+        gl = np.atleast_1d(d["_span_gamma"])[
+            np.argsort(np.atleast_1d(d["_span_z"]))]
+        fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8))
+        series = [("conforming pressure (P14)", S4_ROSE, "-", zc, gc),
+                  ("level-set Newton (B15)", S2_AQUA, "-", zl, gl)]
+        if gp_probe is not None:
+            series.insert(0, ("conforming probe (G8.2 lock)", S1_BLUE, "--",
+                              zp, gp_probe))
+        for label, color, ls, zz, gg in series:
+            axes[0].plot(zz / B_SEMI, gg, ls=ls, color=color, marker=".",
+                         ms=3, lw=1.4, label=label)
+            cl_sec = sectional_cl_from_gamma(gg, chord=chord_at(zz))
+            axes[1].plot(zz / B_SEMI, cl_sec, ls=ls, color=color,
+                         marker=".", ms=3, lw=1.4, label=label)
+        axes[0].set_ylabel("Γ(z)")
+        axes[0].set_title("bound circulation")
+        axes[1].set_ylabel("sectional cl = 2Γ / (U·c(z))")
+        axes[1].set_title("spanwise lift distribution")
+        for ax in axes:
+            ax.set_xlabel("z / b_semi")
+            ax.legend(fontsize=7.5)
+        fig.suptitle("Spanwise loading — conforming (probe vs pressure) vs "
+                     "level-set (ONERA M6 medium, M0.84, α3.06)",
+                     fontsize=11.5)
+        fig.tight_layout(rect=[0, 0.075, 1, 0.95])
+        fig.text(0.5, 0.015,
+                 "The level-set path always used pressure-equality Kutta "
+                 "(B4). Cross-MODEL, not same-mesh: LS runs the wake-free "
+                 "mesh family. The probe curve is both jittery (S1) and "
+                 "low; the pressure curve is smooth and lands on LS.",
+                 ha="center", fontsize=7.5, color=INK_2)
+        finish(fig, OUT, "crossmodel_spanwise.png")
+
+        # --- cross-model figure 2: section Cp ---
+        from pyfp3d.post.surface_ls import section_cp_curve_levelset
+
+        ls_secs = {}
+        for eta in ETAS:
+            try:
+                ls_secs[eta] = section_cp_curve_levelset(
+                    ls_mesh, mvop, d["phi_ext"], eta=eta, b_semi=B_SEMI,
+                    m_inf=M_TRANS)
+            except ValueError as e:
+                print(f"  [warn] LS eta={eta}: {e}")
+        if "medium" in trans_recs and probe_secs is not None:
+            fig_sections(
+                [("conforming pressure (P14)", S4_ROSE, "-", press_secs),
+                 ("level-set Newton (B15)", S2_AQUA, "--", ls_secs)],
+                "Section Cp — conforming pressure vs level-set "
+                "(M0.84, α3.06; both use pressure-equality Kutta)",
+                "crossmodel_sections.png",
+                note="Cross-MODEL, not a same-mesh A/B: conforming runs "
+                     "onera_m6/medium, level-set runs onera_m6_wakefree/"
+                     "medium. Two independent wake models, two DOF spaces — "
+                     "the curves and the closed TE agree; residual "
+                     "differences are mesh + the LS state's 1 limited / "
+                     "2 floored cells (B15 caveat).")
+            checks.add("V14.6", "crossmodel_figures",
+                       "crossmodel_spanwise.png + crossmodel_sections.png",
+                       "committed figures: spanwise loading and section Cp, "
+                       "conforming-pressure vs level-set", True)
+
         write_csv(OUT, "cross_model_medium_m084.csv",
                   "path,mesh_family,cl_p,cl_kj,roughness_d2,"
                   "te_gap_median_allstation,n_limited,n_floored",
