@@ -1555,7 +1555,7 @@ Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
   (probe-seeded level 0), both committed M6 levels converged with 0
   limited/floored (coarse 11 steps |R| 7.0e-12; medium 12 steps |R| 5.6e-15).
   Γ(z) roughness **0.0043** (coarse, from A2's probe 0.0970 = 23×) and
-  **0.0024** (medium, from 0.0390 = 16×) — both AT/BELOW the level-set band
+  **0.0024** (medium, from 0.0365 = 15×) — both AT/BELOW the level-set band
   0.003–0.009. A2's fixed-Γ discriminator rerun on the NEW estimator:
   **D = 1.80** vs the probe's 7.33 (pre-registered confirm > 3 / refute < 1.5).
   **Honest reading: D = 1.80 lands in A2's INCONCLUSIVE zone, not at 1.0** —

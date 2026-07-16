@@ -87,7 +87,12 @@ TRANAIR_CL = 0.288
 # headline) and the ALL-STATION sweep median (conforming 0.2206 coarse-Picard /
 # 0.1585 medium-Newton, a2_te_gap.csv). This demo measures the ALL-STATION
 # sweep, so the all-station numbers are the only honest baseline for it.
-A2_ROUGH = {"coarse": 0.0970, "medium": 0.0390}          # roughness_d2
+# Per-state, because A2 cached both a Picard and a Newton conforming medium and
+# their metrics differ: the coarse rows are conf_picard_coarse (A2 has no
+# conforming Newton coarse), the medium rows are conf_NEWTON_medium -- which is
+# the state the G8.2 locks describe, so the cross-model table stays one state
+# per row instead of mixing Picard roughness with Newton lift.
+A2_ROUGH = {"coarse": 0.0970, "medium": 0.0365}          # roughness_d2
 A2_GAP = {"coarse": 0.2206, "medium": 0.1585}            # all-station median
 LS_ROUGH_BAND = (0.003, 0.009)
 # LS Newton medium M0.84 (B15/A1 cache) re-measured through THIS demo's

@@ -1628,7 +1628,7 @@ bit-identical). **Both symptoms are gone in one swap, at both Mach numbers.**
 | metric | mesh | probe (was) | pressure (now) | factor |
 |---|---|---|---|---|
 | Γ(z) roughness, M0.84 | coarse | 0.0970 (A2) | **0.0043** | 23× |
-| Γ(z) roughness, M0.84 | medium | 0.0390 (A2) | **0.0024** | 16× |
+| Γ(z) roughness, M0.84 | medium | 0.0365 (A2) | **0.0024** | 15× |
 | raw TE Cp gap (all-station median), M0.84 | coarse | 0.2206 (A2) | **0.0040** | 55× |
 | raw TE Cp gap (all-station median), M0.84 | medium | 0.1585 (A2) | **0.0024** | 67× |
 | Γ(z) roughness, M0.5 | coarse / medium | 0.1203 / 0.0504 | **0.0052 / 0.0024** | 23× / 21× |

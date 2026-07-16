@@ -12,7 +12,7 @@ AS WRITTEN ⇒ USER ARBITRATION OPEN (below). Demo
 
 **P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
-**0.0043** (coarse) / 0.0390 → **0.0024** (medium) — at/below the level-set
+**0.0043** (coarse) / 0.0365 → **0.0024** (medium) — at/below the level-set
 band; all-station raw TE Cp gap 0.2206 → **0.0040** / 0.1585 → **0.0024**
 (**55×/67×**), on G14.6's PRIMARY clause (raw recovery), fallback unused.
 ★ **Metric-baseline trap (I fell in it; erratum same-day):** A2 measured the TE
