@@ -40,11 +40,13 @@ recorded in Track M M2).
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
-  **A2 ◐** (TE/Kutta fidelity attribution — conforming Γ(z) jitter + TE Cp
-  jump; scaffolded 2026-07-16, zero-solve legs run + **GA2.2 coarse
-  intervention: H1 CONFIRMED D=7.33** — the per-station probe target estimator
-  manufactures the Γ(z) jitter, not the flow field; GA2.5 dossier/routing
-  pending; **B9 stays NEXT**).
+  **A2 ✓** (CLOSED 2026-07-17, GA2.1–GA2.5; TE/Kutta fidelity attribution —
+  **S1 conforming Γ(z) jitter = a per-station probe-difference Kutta-target
+  measurement artifact, NOT flow content** (fixed-Γ discriminator D=7.33/25.70
+  coarse/medium; closure |F|/|Γ| ≤ 0.6%); **S2 TE Cp jump = potential-jump
+  Kutta form error** (34×/133× vs level-set) **+ P1 recovery artifact** (both
+  paths); fix routed to **P14** designed-not-started; no `pyfp3d/` edits;
+  **B9 stays NEXT**).
   ★ **In 3-D both Newton paths are PRECONDITIONER-bound (~40% of
   wall, lagged LU already on); the "Picard seed is the cost" result is 2.5-D
   ONLY** — quote a dominant phase with its mesh. ★ **"G8.2 = 250 s" is a
