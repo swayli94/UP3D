@@ -1608,3 +1608,106 @@ asymptotic discrete-solution basis on either geometry**.
 
 ---
 
+
+## P14 — Probe-free conforming Kutta: the wall-adjacent-CV pressure-equality estimator (`cases/demo/p14_pressure_kutta/`, 20 PASS + 1 XFAIL, 2026-07-17)
+
+A2 proved two conforming symptoms were one estimator's fault and routed the fix
+here (S1 Γ(z) jitter = the per-station probe-difference sampler manufacturing
+jitter from a smooth field, D = 7.33/25.70; S2 TE Cp gap = equal-*potential*
+standing in for equal-*pressure*, 34×/133× vs level-set). P14 replaced it with
+the B4 objects ported to the conforming cut mesh: per TE node, an UPPER
+(slave-copy) and LOWER (master-copy) **wall-adjacent** element fan (exact
+wall-face ownership), a per-side volume-weighted P1 velocity, and the
+pressure-equality residual |q_u|² − |q_l|² per station
+(`constraints/te_pressure.py`; opt-in `kutta_estimator="pressure"` on
+`solve_laplace_lifting` + the coupled Newton drivers, default "probe"
+bit-identical). **Both symptoms are gone in one swap, at both Mach numbers.**
+
+### Headline numbers (all committed: `results/checks.csv`, `m05_ab.csv/png`, `m084_pressure.csv/png`, `dgamma_*_m05.csv`)
+
+| metric | mesh | probe (was) | pressure (now) | factor |
+|---|---|---|---|---|
+| Γ(z) roughness, M0.84 | coarse | 0.0970 (A2) | **0.0043** | 23× |
+| Γ(z) roughness, M0.84 | medium | 0.0390 (A2) | **0.0024** | 16× |
+| raw TE Cp gap (median), M0.84 | coarse | 0.318 (A2) | **0.0040** | 80× |
+| raw TE Cp gap (median), M0.84 | medium | 0.228 (A2) | **0.0024** | 95× |
+| Γ(z) roughness, M0.5 | coarse / medium | 0.1203 / 0.0504 | **0.0052 / 0.0024** | 23× / 21× |
+| raw TE Cp gap, M0.5 | coarse / medium | 0.2278 / 0.1603 | **0.0045 / 0.0026** | 51× / 62× |
+
+The M0.84 roughness lands AT/BELOW the level-set band (0.003–0.009) and the TE
+gap inside the LS path's own measured band (0.009/0.002) — on the **primary**
+G14.6 clause (raw recovery, < 0.02); the pre-registered `smooth_passes=1`
+fallback was not needed. Ramps converge clean: coarse 11 steps |R| 7.0e-12,
+medium 12 steps |R| 5.6e-15, 0 limited/floored, 9.9 s / 288.0 s.
+
+### What did NOT change, stated honestly
+
+- **The shared P1 recovery spike is untouched** (A2 GA2.4: ~0.08–0.1 per side,
+  present on the level-set path too). It cancels in the differential TE-gap
+  metric on both paths — P14 fixes the Kutta *form* error, not the recovery
+  artifact. That is A2's own decomposition, and the second half is still open.
+- **The discriminator is 1.80, not 1.0.** A2's fixed-Γ protocol rerun on the
+  new estimator gives D = 1.80 (probe: 7.33). A2's pre-registration was
+  confirm > 3 / refute < 1.5, so **1.80 sits in the INCONCLUSIVE zone**: the
+  pressure estimator still regenerates ~1.8× the roughness of a smooth input.
+  The jitter-manufacturing *mechanism* is gone (0.0043 absolute is LS-grade),
+  but the estimator is not a perfect measurement operator, and the residual
+  factor is recorded rather than rounded away.
+
+### ★ G14.7 XFAIL — the lift moves, and the band was not moved to match
+
+Medium M0.84: cl_p **0.2776 (+4.92%)**, cl_KJ **0.2823 (+4.85%)** vs the G8.2
+locks 0.2646/0.2692 — outside the pre-registered 1–2% band. **Reported
+failing; the band stands as written.** The interpretation note in
+[roadmap/track_p.md](../roadmap/track_p.md) P14 was written and committed
+*before* these runs and fired exactly as anticipated:
+
+- The G8.2 locks are **probe-path** locks. Tier 1 had already measured that
+  the swap MUST move the converged lift: the two closures agree pointwise only
+  to the probe's own O(h) reading bias (cross-read at the pressure-converged
+  state: 3.67% → 1.05% coarse→medium at M0.5, **0.79% at medium M0.84** — so
+  this is a shifted closure, not a wandered solution), and the Kutta map's
+  near-unity slope b ≈ 0.93 (P2 record) amplifies that bias by 1/(1−b) ≈ 14×
+  into the converged Γ.
+- **Direction (RECORDED, not a gate):** |cl_KJ − 0.288| goes **0.0188 →
+  0.0057 — 69% of P9's "0.019 gap" closed** by an estimator swap. P9 could not
+  see this: both its meshes used the same estimator, so the bias was common
+  mode to its Richardson.
+- **What this is NOT:** not a grid-convergence claim (P9: the M6 fine mesh is
+  not a discrete solution — no Richardson exists here); not a re-opening of
+  "the 0.019 gap is resolution" (still *strongly indicated, NOT earned*,
+  2026-07-14 arbitration); not proof the pressure lift is *right* — it is one
+  single-mesh medium number moving toward one inviscid reference. What it does
+  establish: a measurable share of that gap was **Kutta-estimator bias**.
+- **User arbitration open:** accept the move as the finding (and re-lock G14.7
+  against pressure-path locks), or treat it as a defect to chase.
+
+### Solver-recipe finding: seed the pressure Newton from the probe solution
+
+The quadratic pressure row has a **smaller Newton basin** than the affine probe
+row. On M6 medium M0.5 a Picard-5 cold seed wanders to cl +16% and fail-fasts
+at step 29 (417 s wasted); probe-seeded, the same solve converges in **3
+quadratic steps** (|F| 6e-3 → 2.8e-4 → 2e-6 → 5e-11, 26 s — *faster* than the
+probe path's own 6 steps/60 s). The M0.84 ramp seeds its level 0 (M0.70) from a
+probe Newton solve at the same Mach; later levels warm-start from the previous
+pressure level as usual. This is the spec's "the nonlinear closure may need its
+own damping" risk landing in its mild form: a seeding rule, not a damping
+scheme.
+
+### Diagnostic-first (spec-mandated), `cases/analysis/p14_te_pressure_diag/`, 20/20
+
+Run BEFORE any wiring: CV construction clean on NACA coarse + M6
+coarse/medium (two-sided fans never empty — min fan 1 element on NACA, 2 on M6;
+exact wall-face ownership ≡ the LS ≥3-node proxy on both; probe-membership side
+identity; **zero far-field-Dirichlet contact** ⇒ dF/dΓ carries only the
+slave-jump chain, no V_red term); dF/dΓ tridiagonal, cond 4.2–6.4, |D_jj| ∈
+[29, 216], central-FD exact to roundoff (7.1e-11 / 1.2e-10 — F is exactly
+quadratic in Γ); implied Γ* 0.01% off the converged probe Γ on NACA and
+0.88–2.15% median on the cached M6 M0.84 states; S1 preview on the SAME cached
+fields: Γ*(z) roughness 0.0226/0.0081/0.0074 vs the probe target's
+0.0965/0.0389/0.0365. One firming correction it forced: the "uniform-sign
+dF/dΓ diagonal" clause holds at converged states (0 flips at all five) but NOT
+at a rough Picard-5 seed, so σ-freeze records the flip count
+(`kutta_sigma_sign_flips`) instead of raising — σ is merit weighting only (it
+cancels in the elimination, `test_newton_pressure_sigma_independence`), and the
+per-step exact D carries the true signs.

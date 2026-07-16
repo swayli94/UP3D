@@ -2,4 +2,4 @@ level,estimator,converged,n_newton,cl_p,cl_kj,roughness,te_gap_median,wall_s
 coarse,probe,True,3,0.198941,0.202349,0.12031,0.22777,4.3
 coarse,pressure,True,4,0.203073,0.206456,0.00524,0.00451,1.6
 medium,probe,True,6,0.201506,0.203664,0.05037,0.16032,60.9
-medium,pressure,True,3,0.210583,0.212756,0.00237,0.00258,27.1
+medium,pressure,True,3,0.210583,0.212756,0.00237,0.00258,26.9

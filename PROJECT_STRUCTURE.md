@@ -68,6 +68,14 @@ pyfp3d/                    # Main package
 │   │                       #   Kutta row is just scaled by F. Shipped: "vanish_smooth"
 │   │                       #   (smoothstep, COMPACT support), r_c = 0.05·b_semi. Consumed via
 │   │                       #   solve_newton_lifting(tip_taper=…), default None = bit-identical
+│   ├── te_pressure.py    # ✓ [P14] probe-free Kutta estimator: TEControlVolumes — the B4
+│   │                       #   wall-adjacent upper(slave)/lower(master) TE fans on the
+│   │                       #   conforming cut mesh (EXACT wall-face ownership), per-side
+│   │                       #   volume-weighted P1 recovery, pressure-equality residual
+│   │                       #   |q_u|²−|q_l|² per station, frozen-mean implied targets (the
+│   │                       #   secant drivers' drop-in), exact Newton rows (K_p, D=∂F/∂Γ).
+│   │                       #   Self-contained on (mesh_cut, wc); imported ONLY when
+│   │                       #   kutta_estimator="pressure" (probe default untouched)
 │   └── dirichlet.py      # ✓ far-field freestream + 2D vortex correction (branch cut ON
 │                           #   the wake sheet; eliminated ⁺-side far-field wake nodes
 │                           #   automatically consistent); ✓ [P3] Prandtl-Glauert scaling
@@ -884,17 +892,20 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 
 ---
 
-**Last updated:** 2026-07-15  
+**Last updated:** 2026-07-17  
 **Status:** per-track status lives in [docs/overview.md](docs/overview.md)
 (human-readable snapshot) and the per-track trackers
 [docs/roadmap/](docs/roadmap/) (authoritative; docs were split by track
 2026-07-15 — docs/roadmap.md and docs/demo_report.md are now thin indexes).
 One-line summary: Track P — P0–P9 ✓ (P1: G1.6 open as a `strict=True` xfail
 awaiting its Option C re-spec, see "Known gaps" above; P11 is down to G1.6
-alone), P10 ◐, P13 ◐ (G13.3 transonic NEGATIVE-open); Track M — M0–M5 ✓,
+alone), P10 ◐, P13 ◐ (G13.3 transonic NEGATIVE-open), **P14 ◐ (2026-07-17:
+pressure-equality Kutta estimator built; G14.1–G14.6 ✓, ★ G14.7 XFAIL —
+the estimator swap moves cl_KJ +4.85% off the probe-path G8.2 locks and
+closes 69% of P9's 0.019 gap; USER ARBITRATION OPEN)**; Track M — M0–M5 ✓,
 M2 ◐ (mesh ✓, solver leg = B9); Track B — B1–B8, B11–B13, B15 ✓, B6 ◐,
-**B9 (wing-body LS solve, M∞0.5) = NEXT**; Track V — designed, not started.
-Default suite: **396 passed + 18 skipped + 2 xfailed** (measured 988.73 s
-@16 threads, 2026-07-15; heavy transonic/Newton gates behind
-`PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests skip unless the gitignored M6
-meshes are regenerated (~30 s).
+**B9 (wing-body LS solve, M∞0.5) = NEXT**; Track V — designed, not started;
+Track A — A1, A2 ✓. Default suite: **421 passed + 18 skipped + 2 xfailed**
+(measured 1015.17 s @8 threads, 2026-07-17; heavy transonic/Newton gates
+behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests skip unless the
+gitignored M6 meshes are regenerated (~30 s).

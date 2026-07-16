@@ -299,6 +299,36 @@ of the TE station they emanate from — the wake mesh preprocessor must build
 this station→wake-line map. Convergence monitor: ‖ΔΓ‖∞ alongside the residual
 norm.
 
+**(4.4) is the LEGACY (probe) estimator since P14 (2026-07-17).** A2 measured
+its two defects: the single-node probe sampling *manufactures* the spanwise
+Γ(z) jitter (fixed-Γ discriminator D = 7.33/25.70), and equal *potential*
+jump is only an O(h)-biased proxy for equal *pressure* (TE Cp gap 34×/133×
+vs the level-set path). The P14 replacement (`constraints/te_pressure.py`,
+opt-in `kutta_estimator="pressure"` on `solve_laplace_lifting` and the
+coupled Newton drivers; default "probe" is bit-identical) is the
+**wall-adjacent control-volume pressure-equality estimator** — the B4
+objects ported to the conforming cut mesh:
+
+    F_j = mean over the station's TE nodes of (|q_u|² − |q_l|²) = 0   (4.4′)
+
+with q_u/q_l the volume-weighted P1 velocities over the TE node's UPPER
+(slave-copy) / LOWER (master-copy) wall-adjacent element fans (exact
+wall-face ownership; the full fan is measured +11–15% wrong, B4). The exact
+factorization (q_u+q_l)·(q_u−q_l) with a frozen mean gives the affine
+implied target the secant drivers consume; the Newton drivers use the exact
+quadratic residual with rows (K_p, D = ∂F/∂Γ) rebuilt per step and the
+generalized elimination K̃ = −D⁻¹K_p (probe: D = −I reduces to the historical
+code exactly). Two measured properties to respect: (i) the two closures
+agree pointwise only to the probe's own O(h) reading bias (cross-read 3.7%
+coarse → 1.05% medium on M6 M0.5), which the near-unity map slope b ≈ 0.93
+amplifies by 1/(1−b) ≈ 14× into the converged Γ — the converged lift
+legitimately moves (+2.1%/+4.5% coarse/medium at M0.5); (ii) the quadratic
+row has a smaller Newton basin than the affine probe row — seed the pressure
+solve from the probe solution (P14 recipe; a cold Picard-5 seed on M6 medium
+wanders and fail-fasts). `solve_subsonic_lifting`'s inner secant and the
+`continuation.py` Γ-secant/polish stay on the probe form (P14 wiring scope,
+user-arbitrated).
+
 Wake geometry: planar, aligned with freestream (or the chord plane) — standard
 FP practice; force-free wake relaxation is out of scope (error is second order
 in loading for attached flow).

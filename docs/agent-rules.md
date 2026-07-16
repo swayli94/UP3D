@@ -1,14 +1,48 @@
 # pyFP3D Agent Rules
 
-Current phase: **P14 ◐ OPENED 2026-07-17 (user-directed): probe-free
-conforming Kutta target — wall-adjacent-CV pressure-equality estimator (from
-A2). Two-tier gates firmed at open (tier 1 = subsonic M0.5 milestone
-G14.1–G14.4, tier 2 = transonic M0.84 G14.5–G14.7); wiring scope arbitrated =
-coupled Newton + `solve_laplace_lifting` ONLY (subsonic/continuation Picard
-secants stay probe-based); Stage-D diagnostic GO 20/20
-(`cases/analysis/p14_te_pressure_diag/`).** Track B's next phase remains
+Current phase: **P14 ◐ (opened + built 2026-07-17, user-directed): probe-free
+conforming Kutta target — wall-adjacent-CV pressure-equality estimator (A2's
+routed fix). Tier 1 (subsonic M0.5) G14.1–G14.3 ✓ · tier 2 (transonic M0.84)
+G14.5/G14.6 ✓ · G14.4 (inert-by-default) ticks at close · ★ G14.7 XFAIL
+AS WRITTEN ⇒ USER ARBITRATION OPEN (below). Demo
+`cases/demo/p14_pressure_kutta/` 20 PASS + 1 XFAIL; diagnostic
+`cases/analysis/p14_te_pressure_diag/` 20/20.** Track B's next phase remains
 **B9 (wing-body LS solve, M∞ 0.5)** (user-arbitrated 2026-07-14; B15 ✓ CLOSED
 2026-07-15 — the M6-medium Picard plateau is gone, 38.4 → 11.0 min = 3.51×).
+
+**P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
+S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
+**0.0043** (coarse) / 0.0390 → **0.0024** (medium) — at/below the level-set
+band; raw TE Cp gap 0.318 → **0.0040** / 0.228 → **0.0024** (80×/95×), on
+G14.6's PRIMARY clause (raw recovery), fallback unused. Wiring scope
+(user-arbitrated): coupled Newton + `solve_laplace_lifting` only —
+`solve_subsonic_lifting`'s inner secant and `continuation.py` stay probe-based.
+- ★ **G14.7 XFAIL — the lift MOVES and the band was NOT moved to match.**
+  Medium M0.84 cl_p 0.2776 (+4.92%) / cl_KJ 0.2823 (+4.85%) vs the G8.2
+  **probe-path** locks. Mechanism measured in tier 1 and pre-registered BEFORE
+  the tier-2 runs: the closures agree pointwise to the probe's own O(h)
+  reading bias (cross-read 0.79% at medium M0.84 — a shifted closure, not a
+  wandered solution), which the Kutta map's b ≈ 0.93 amplifies 1/(1−b) ≈ 14×
+  into Γ. **Direction, RECORDED not a gate:** |cl_KJ − 0.288| 0.0188 → 0.0057,
+  **69% of P9's "0.019 gap" closed** — P9 could not see it (both its meshes
+  shared the estimator, so the bias was common mode to its Richardson).
+  **NOT** a grid-convergence claim (the M6 fine is not a discrete solution),
+  **NOT** a revival of "the 0.019 gap is resolution" (still *strongly
+  indicated, NOT earned*), **NOT** proof the pressure lift is right.
+  **User decides:** accept the move as the finding (re-lock G14.7 on
+  pressure-path locks) or treat it as a defect to chase.
+- **Recorded honestly, not rounded away:** the fixed-Γ discriminator on the new
+  estimator is **D = 1.80** (probe 7.33) — inside A2's INCONCLUSIVE zone
+  (confirm > 3 / refute < 1.5), so the estimator is 4× cleaner but not a
+  perfect measurement operator; and the **shared P1 recovery spike (~0.08–0.1,
+  both paths) is untouched** — P14 fixes the Kutta form error, A2's other half
+  stays open.
+- **Recipe (measured):** seed the pressure Newton from the probe solution — the
+  quadratic row's basin is smaller (M6 medium M0.5: cold Picard-5 seed wanders
+  to cl +16% and fail-fasts at 29 steps/417 s; probe-seeded = 3 quadratic
+  steps/26 s, faster than the probe path itself). The M0.84 ramp seeds level 0
+  the same way. tip_taper + pressure raises NotImplementedError (the B8 blend
+  is not re-derived).
 
 B9 scope guards (user-arbitrated): **subsonic M∞ 0.5 ONLY** (M0.84 excluded —
 the round-cap transonic fine is still a non-converged limit cycle, G13.3
@@ -103,10 +137,9 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **399 passed + 18 skipped + 2 xfailed** (2026-07-16, M2 body +
-far-field re-spec, +3; measured 973.59 s @8 threads — the run reported **406**
-because the tree also carried Track A's then-uncommitted 7 A1 tests, and
-406 − 7 = 399 is what M2 accounts for; the number becomes 406 once A1 lands.
-Previous: 396, 988.73 s @16 threads, 2026-07-15; lineage in
-[overview.md](overview.md)). After any kernel/assembly change run
+Baseline: **421 passed + 18 skipped + 2 xfailed** (2026-07-17, P14 tier 1+2,
++15 = `tests/test_p14_te_pressure.py`; measured 1015.17 s @8 threads).
+Previous: 406 (= the 399 M2 number once A1's 7 tests landed), 973.59 s
+@8 threads, 2026-07-16; 396, 988.73 s @16 threads, 2026-07-15; lineage in
+[overview.md](overview.md). After any kernel/assembly change run
 `pytest tests/test_v0_freestream.py` first (CLAUDE.md hard rule 1).

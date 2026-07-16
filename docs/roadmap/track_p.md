@@ -1514,12 +1514,16 @@ Tier 1 — subsonic M0.5 milestone:
   Final gate form: (a) cross-read < 5%/2% (coarse/medium) + O(h) decay —
   catches a self-consistent-but-garbage closure (the B8 failure mode);
   (b) |Δcl| < 8% with the spanwise dΓ committed (`dgamma_*_m05.csv`).
-- **G14.4 — inert by default.** New estimator behind `kutta_estimator`
-  (default "probe"); committed P4/P5/P8/P13 conforming results bit-identical
-  with the flag off (cached-state machine-zero reproduction + full suite).
-  Structural argument in place (`kutta_blocks` returns the literal pre-P14
-  objects on the probe path; targeted regressions green: v0 + P2 + P8 + P10);
-  ticked at phase close with the full-suite run.
+- **G14.4 ✓ (2026-07-17) — inert by default.** New estimator behind
+  `kutta_estimator` (default "probe"). Inertness is **structural, not just
+  measured**: `kutta_blocks` returns the literal pre-P14 objects `(ws.K, F)`
+  on the probe path, so the driver's matvec/rhs/Woodbury/step-map expressions
+  execute unchanged; the CV object is built only when "pressure" is requested
+  (the probe `__init__` does no extra work); the Laplace target swap is an
+  `if` around the same `kutta_targets` call. Full suite **421 passed + 18
+  skipped + 2 xfailed** (16m55s @8 threads) = the 406 baseline + P14's 15 new
+  tests, **zero regressions** — every committed P4/P5/P8/P13 conforming lock
+  green.
 
 **Tier-1 solver-recipe finding (recorded 2026-07-17): seed the pressure
 Newton from the probe solution.** The quadratic pressure row has a smaller
@@ -1533,36 +1537,63 @@ the spec's "nonlinear closure may need its own damping" risk landing in its
 mild form — a seeding rule, not a damping scheme.
 
 **Pre-registered interpretation note for G14.7 (written BEFORE the tier-2
-runs).** G14.7's band ("< 1–2% vs the G8.2 locks") was written on the
-assumption the estimator swap should not move loading. Tier 1 measured that
-assumption wrong at M0.5 (+4.5% medium, mechanism above). The G8.2 locks are
-PROBE-path locks; if the M0.84 pressure lift moves upward by a similar
-amplified correction, cl_KJ moves TOWARD the Tranair/KRATOS 0.288 reference —
-i.e. into the P9 "0.019 gap" that P9 closed as unsplittable-as-posed. A
-G14.7 FAIL-as-written in that direction is therefore a candidate ACCURACY
-finding, not a defect; the gate is reported against its pre-registered band
-and the verdict is user-arbitrated either way.
+runs; FIRED — see G14.7 above).** G14.7's band ("< 1–2% vs the G8.2 locks")
+was written on the assumption the estimator swap should not move loading.
+Tier 1 measured that assumption wrong at M0.5 (+4.5% medium, mechanism above).
+The G8.2 locks are PROBE-path locks; if the M0.84 pressure lift moves upward
+by a similar amplified correction, cl_KJ moves TOWARD the Tranair/KRATOS 0.288
+reference — i.e. into the P9 "0.019 gap" that P9 closed as
+unsplittable-as-posed. A G14.7 FAIL-as-written in that direction is therefore
+a candidate ACCURACY finding, not a defect; the gate is reported against its
+pre-registered band and the verdict is user-arbitrated either way.
+*(Outcome: it fired in exactly that direction — +4.85% cl_KJ, 69% of the gap
+closed. The note is kept verbatim as the audit trail that the band was not
+retrofitted to the result.)*
 
 Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
-- **G14.5 — S1 removed.** Conforming Γ(z) roughness (A2's `roughness_d2`)
-  drops to the level-set band (≈ 0.003–0.009, from 0.039/0.097) on the
-  committed M6 coarse+medium, and A2's discriminator D → O(1) (the new
-  estimator does not regenerate jitter from a smooth field).
-- **G14.6 — S2 removed.** Section TE Cp gap → the level-set band (< 0.02, from
-  0.22) on the same meshes, raw recovery. **Pre-registered fallback clause
-  (recorded at open):** the gap is a DIFFERENTIAL metric — the LS numbers
-  prove the two sides' P1 recovery artifacts largely cancel in the gap there
-  (own-spikes 0.086–0.107 with gap 0.009/0.002), and the conforming sides'
-  artifact asymmetry is only partly the Kutta form error — so the fallback
-  acceptance is: raw gap ≤ 3× the LS band AND ≤ 0.02 at `smooth_passes=1`.
-  Honest floor to quote: enforcement (station-mean CV velocities) ≠
-  measurement (section-last-point per-triangle Cp) — LS closes its own
-  residual to 1e-9 yet measures 2e-3–9e-3.
-- **G14.7 — lift preserved / V6 not worse.** cl_p, cl_KJ and V6 consistency
-  move < 1–2% vs the committed conforming Newton locks (G8.2 0.2646/0.2692;
-  compare against the committed locks, do NOT re-run the probe path); the
-  change is a Kutta *estimator*, not a loading change — a large lift shift is
-  a red flag, not a feature.
+- **G14.5 ✓ (2026-07-17) — S1 removed.** Pressure-estimator M0.84 Newton ramp
+  (probe-seeded level 0), both committed M6 levels converged with 0
+  limited/floored (coarse 11 steps |R| 7.0e-12; medium 12 steps |R| 5.6e-15).
+  Γ(z) roughness **0.0043** (coarse, from A2's probe 0.0970 = 23×) and
+  **0.0024** (medium, from 0.0390 = 16×) — both AT/BELOW the level-set band
+  0.003–0.009. A2's fixed-Γ discriminator rerun on the NEW estimator:
+  **D = 1.80** vs the probe's 7.33 (pre-registered confirm > 3 / refute < 1.5).
+  **Honest reading: D = 1.80 lands in A2's INCONCLUSIVE zone, not at 1.0** —
+  the pressure estimator still regenerates ~1.8× the roughness of a smooth
+  input, i.e. it is 4× cleaner than the probe but not a perfect measurement
+  operator. The gate's "→ O(1)" is met in the sense that mattered (the
+  jitter-manufacturing mechanism is gone: 0.0043 absolute is LS-grade), and
+  the residual 1.8 is recorded, not claimed away.
+- **G14.6 ✓ (2026-07-17) — S2 removed.** All-station raw TE Cp gap median
+  **0.0040** (coarse, from A2's probe 0.318 = 80×) and **0.0024** (medium,
+  from 0.228 = 95×) — both < 0.02 on the PRIMARY clause, raw recovery; the
+  pre-registered fallback (≤ 3× LS band, smooth_passes=1) was not needed. The
+  numbers land inside the LS path's own measured band (0.009/0.002), which is
+  the honest floor: enforcement (station-mean CV velocities) ≠ measurement
+  (section-last-point per-triangle Cp), and the shared P1 recovery spike
+  (~0.08–0.1, A2 GA2.4) is untouched by P14 — it cancels in this differential
+  metric on both paths.
+- **G14.7 ✗ XFAIL-as-written (2026-07-17) — the lift MOVES; verdict
+  user-arbitrated.** Measured medium M0.84: cl_p **0.2776 (+4.92%)**, cl_KJ
+  **0.2823 (+4.85%)** vs the G8.2 locks 0.2646/0.2692 — outside the
+  pre-registered 1–2% band, reported failing, band NOT moved after the fact.
+  The pre-registered interpretation note (written before the run, below) fired
+  exactly as anticipated: the G8.2 locks are PROBE-path locks, and tier 1 had
+  already measured that this swap must move the converged lift by the probe's
+  own O(h) reading bias amplified 1/(1−b) ≈ 14× (cross-read at the M0.84
+  pressure state: 2.52% coarse / **0.79% medium**, so the two closures still
+  agree pointwise — this is not a wandered solution). **Direction (RECORDED,
+  not a gate):** |cl_KJ − 0.288| goes **0.0188 → 0.0057, 69% of P9's "0.019
+  gap" closed** by an estimator swap. **What this is NOT:** not a
+  grid-convergence claim (P9: the M6 fine mesh is not a discrete solution, so
+  no Richardson exists here), not a re-opening of "the 0.019 gap is
+  resolution" (still *strongly indicated, NOT earned* — 2026-07-14 wording
+  arbitration), and not proof the pressure lift is *right* — it is one
+  single-mesh medium number moving toward one inviscid reference. What it does
+  establish: a measurable share of the gap was **Kutta-estimator bias**, which
+  P9 could not see because both its meshes used the same estimator.
+  **User arbitration needed:** accept the move as the finding (and re-lock
+  G14.7 against pressure-path locks), or treat it as a defect to chase.
 
 **Dead routes (A2, do not re-propose):** spanwise-Γ smoothing (moves Γ off the
 self-consistent value — P5 `INVESTIGATION_gamma_smoothing.md`); full-element-fan

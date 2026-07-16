@@ -68,6 +68,8 @@ M_SUB = 0.5
 M_TRANS = 0.84
 # G8.2 committed conforming Newton locks (medium M0.84; roadmap P8/P10)
 LOCK_CL_P, LOCK_CL_KJ = 0.2646, 0.2692
+# Tranair/KRATOS inviscid reference (Lopez Table 4.15) -- P9's "0.019 gap"
+TRANAIR_CL = 0.288
 # A2 committed baselines (M0.84): roughness + all-station TE-gap median
 A2_ROUGH = {"coarse": 0.0970, "medium": 0.0390}
 A2_GAP = {"coarse": 0.318, "medium": 0.228}
@@ -310,6 +312,7 @@ if GATES:
               "Newton ramp (pressure) ==", flush=True)
         t0 = time.perf_counter()
         cache = OUT / f"m084_pressure_{level}.npz"   # LOCAL, gitignored
+        cached_wall = None
         if cache.exists():
             d = np.load(cache)
             r = {"phi": d["phi"], "gamma": d["gamma"],
@@ -318,7 +321,11 @@ if GATES:
                  "residual_history": list(d["residual_history"]),
                  "n_limited": int(d["n_limited"]),
                  "n_floored": int(d["n_floored"])}
-            print(f"  [cache] {cache.name}", flush=True)
+            # the solve's ORIGINAL wall clock, so the committed CSV always
+            # reports a measured cost and never a cache-read's 0.0 s
+            cached_wall = float(d["wall_s"]) if "wall_s" in d else np.nan
+            print(f"  [cache] {cache.name} (solve was {cached_wall:.0f}s)",
+                  flush=True)
         else:
             # P14 recipe: seed the ramp's level 0 (M0.70) from a PROBE
             # Newton solve at the same Mach (subsequent levels warm-start
@@ -336,8 +343,10 @@ if GATES:
             np.savez(cache, phi=r["phi"], gamma=r["gamma"],
                      converged=r["converged"], n_newton=r["n_newton"],
                      residual_history=np.asarray(r["residual_history"]),
-                     n_limited=r["n_limited"], n_floored=r["n_floored"])
-        wall_s = time.perf_counter() - t0
+                     n_limited=r["n_limited"], n_floored=r["n_floored"],
+                     wall_s=time.perf_counter() - t0)
+        wall_s = (cached_wall if cached_wall is not None
+                  else time.perf_counter() - t0)
         met = lift_metrics(mc, wc, r, M_TRANS)
         te_z, gap = te_gap_sweep(mc, wc, r["phi"], M_TRANS)
         gap_med = float(np.median(gap))
@@ -378,11 +387,33 @@ if GATES:
         if level == "medium":
             rel_p = abs(met["cl_p"] / LOCK_CL_P - 1)
             rel_kj = abs(met["cl_kj"] / LOCK_CL_KJ - 1)
+            # XFAIL-as-written, per the interpretation note PRE-REGISTERED
+            # in roadmap/track_p.md BEFORE this run: the G8.2 locks are
+            # PROBE-path locks, and tier 1 already measured that the
+            # estimator swap MUST move the converged lift (the probe's O(h)
+            # reading bias, 1/(1-b) ~ 14x amplified). The band stands as
+            # written and is reported failing; the verdict (defect vs
+            # accuracy finding) is user-arbitrated -- see the direction
+            # check below.
             checks.add("G14.7", "medium_m084_lift_locks",
-                       f"cl_p {met['cl_p']:.4f} ({100 * rel_p:.2f}%), "
-                       f"cl_KJ {met['cl_kj']:.4f} ({100 * rel_kj:.2f}%)",
-                       "< 2% vs G8.2 locks 0.2646/0.2692",
-                       rel_p < 0.02 and rel_kj < 0.02)
+                       f"cl_p {met['cl_p']:.4f} ({100 * rel_p:+.2f}%), "
+                       f"cl_KJ {met['cl_kj']:.4f} ({100 * rel_kj:+.2f}%)",
+                       "< 2% vs G8.2 PROBE locks 0.2646/0.2692",
+                       rel_p < 0.02 and rel_kj < 0.02,
+                       xfail=True,
+                       note="pre-registered: the swap moves lift by "
+                            "construction; verdict user-arbitrated")
+            # the direction the pre-registered note flagged: does the move
+            # go TOWARD the Tranair/KRATOS reference (P9's 0.019 gap)?
+            gap_before = abs(TRANAIR_CL - LOCK_CL_KJ)
+            gap_after = abs(TRANAIR_CL - met["cl_kj"])
+            checks.add("G14.7", "medium_m084_gap_direction",
+                       f"|cl_KJ - 0.288|: {gap_before:.4f} (probe lock) -> "
+                       f"{gap_after:.4f} (pressure), "
+                       f"{100 * (1 - gap_after / gap_before):.0f}% closed",
+                       "RECORDED, not a gate: single-mesh medium number, "
+                       "NOT a grid-convergence claim (P9: the fine mesh is "
+                       "not a discrete solution)", True)
 
         # fixed-Gamma discriminator rerun on the NEW estimator (coarse
         # always when gated; the A2 protocol: smooth Gamma in, warm
