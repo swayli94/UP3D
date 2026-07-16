@@ -1,0 +1,6 @@
+path,smooth_passes,spike_mean,spike_max
+conforming probe (A2 conf_newton_medium),0,0.1143,0.2721
+conforming pressure (P14),0,0.0533,0.0756
+conforming pressure (P14),1,0.0660,0.0893
+conforming pressure (P14),2,0.0626,0.0770
+level-set Newton (A2 ls_newton_medium),0,0.0743,0.0932

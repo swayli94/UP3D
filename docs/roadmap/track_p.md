@@ -1578,8 +1578,30 @@ Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
   own constraint residual, the "cannot be used as A/B" caveat), so V14.6 now
   re-measures the LS wall through this demo's sweep instead: **LS = 0.0047**
   (medium), i.e. the conforming pressure path is ~2× BELOW the level-set path
-  on its own metric. The shared P1 recovery spike (~0.08–0.1, A2 GA2.4) is
-  untouched by P14 — it cancels in this differential metric on both paths.
+  on its own metric.
+- **★ Correction to P14's own claim, and a partial correction to A2's S2
+  decomposition (measured 2026-07-17 on a user question; V14.7,
+  `te_spike_medium_m084.csv`).** Every earlier P14 write-up asserted that the
+  TE Cp **spike** (A2's `spike_metric`: the last section point's deviation from
+  its own x/c ∈ [0.85,0.97] trend — a COMMON-MODE metric, unlike the
+  differential gap) would be **untouched**, because A2 read it as "a P1
+  recovery artifact, present on the level-set path too ⇒ wake-model
+  independent". That was a *prediction from A2's reasoning, never measured on
+  the pressure path*. Measured now, medium M0.84 raw (smooth_passes=0, mean
+  over A2's 4 η × 2 sides): conforming probe **0.1143** → conforming pressure
+  **0.0533** (2.1×), which is also **below the level-set path's 0.0743**.
+  **What A2 got right:** a spike remains (~0.05), and it is shared — the LS
+  path has one too. **What needs correcting:** the conforming path's EXCESS
+  over LS was *also* Kutta-form error, not recovery. That is mechanically
+  sensible: a wrong Kutta gives a genuinely wrong TE flow, and the last point
+  then departs from the upstream trend for a physical reason, which a
+  common-mode metric cannot separate from a recovery artifact. Corroborating
+  detail: P6 normal-gated smoothing no longer helps on the pressure path
+  (0.0533 → 0.0660 → 0.0626 over 0/1/2 passes; A2 measured 0.147 → 0.081 on
+  the probe path) — consistent with the Kutta-form component being gone and
+  only the genuine recovery floor left for smoothing to chew on.
+  **Still open:** that residual ~0.05 floor (the honest remainder of A2's
+  second S2 component) — P14 does not close it.
 - **G14.7 ✗ XFAIL-as-written (2026-07-17) — the lift MOVES; verdict
   user-arbitrated.** Measured medium M0.84: cl_p **0.2776 (+4.92%)**, cl_KJ
   **0.2823 (+4.85%)** vs the G8.2 locks 0.2646/0.2692 — outside the

@@ -48,12 +48,24 @@ Wiring scope (user-arbitrated): coupled Newton + `solve_laplace_lifting` only �
   indicated, NOT earned*), **NOT** proof the pressure lift is right.
   **User decides:** accept the move as the finding (re-lock G14.7 on
   pressure-path locks) or treat it as a defect to chase.
+- ★ **CORRECTION (measured 2026-07-17, V14.7) — the TE Cp SPIKE drops too, and
+  A2's S2 decomposition needs a nuance.** P14's own earlier write-ups asserted
+  the spike was "untouched, a wake-model-independent P1 recovery artifact" —
+  that was a PREDICTION from A2's reasoning, never measured on the pressure
+  path. Measured medium M0.84 raw: probe **0.1143** → pressure **0.0533**
+  (2.1×), and now BELOW the level-set path's 0.0743. A2 was right that a
+  spike is shared (~0.05 residual = the genuine recovery floor); it was wrong
+  that the conforming EXCESS over LS was recovery — that part was Kutta-form
+  error too (a wrong Kutta gives a genuinely wrong TE flow, and the
+  common-mode spike metric cannot separate that from a recovery artifact).
+  Tell: P6 smoothing no longer helps on the pressure path (0.0533→0.0660→
+  0.0626 over 0/1/2 passes; A2 measured 0.147→0.081 on the probe path).
+  **General lesson: do not carry a prior phase's attribution into a new
+  measurement as if it were a result — measure it.**
 - **Recorded honestly, not rounded away:** the fixed-Γ discriminator on the new
   estimator is **D = 1.80** (probe 7.33) — inside A2's INCONCLUSIVE zone
   (confirm > 3 / refute < 1.5), so the estimator is 4× cleaner but not a
-  perfect measurement operator; and the **shared P1 recovery spike (~0.08–0.1,
-  both paths) is untouched** — P14 fixes the Kutta form error, A2's other half
-  stays open.
+  perfect measurement operator.
 - **Recipe (measured):** seed the pressure Newton from the probe solution — the
   quadratic row's basin is smaller (M6 medium M0.5: cold Picard-5 seed wanders
   to cl +16% and fail-fasts at 29 steps/417 s; probe-seeded = 3 quadratic

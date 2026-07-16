@@ -1631,6 +1631,7 @@ bit-identical). **Both symptoms are gone in one swap, at both Mach numbers.**
 | Γ(z) roughness, M0.84 | medium | 0.0365 (A2) | **0.0024** | 15× |
 | raw TE Cp gap (all-station median), M0.84 | coarse | 0.2206 (A2) | **0.0040** | 55× |
 | raw TE Cp gap (all-station median), M0.84 | medium | 0.1585 (A2) | **0.0024** | 67× |
+| TE Cp **spike** (A2 spike_metric, raw), M0.84 | medium | 0.1143 (A2) | **0.0533** | 2.1× |
 | Γ(z) roughness, M0.5 | coarse / medium | 0.1203 / 0.0504 | **0.0052 / 0.0024** | 23× / 21× |
 | raw TE Cp gap, M0.5 | coarse / medium | 0.2278 / 0.1603 | **0.0045 / 0.0026** | 51× / 62× |
 
@@ -1652,10 +1653,9 @@ coarse 11 steps |R| 7.0e-12, medium 12 steps |R| 5.6e-15, 0 limited/floored,
 
 ### What did NOT change, stated honestly
 
-- **The shared P1 recovery spike is untouched** (A2 GA2.4: ~0.08–0.1 per side,
-  present on the level-set path too). It cancels in the differential TE-gap
-  metric on both paths — P14 fixes the Kutta *form* error, not the recovery
-  artifact. That is A2's own decomposition, and the second half is still open.
+- **A residual TE Cp spike (~0.05) remains** — the honest remainder of A2's
+  second S2 component. But see the correction below: the claim that P14 leaves
+  the spike *untouched* was a prediction, and it is measured false.
 - **The discriminator is 1.80, not 1.0.** A2's fixed-Γ protocol rerun on the
   new estimator gives D = 1.80 (probe: 7.33). A2's pre-registration was
   confirm > 3 / refute < 1.5, so **1.80 sits in the INCONCLUSIVE zone**: the
@@ -1663,6 +1663,49 @@ coarse 11 steps |R| 7.0e-12, medium 12 steps |R| 5.6e-15, 0 limited/floored,
   The jitter-manufacturing *mechanism* is gone (0.0043 absolute is LS-grade),
   but the estimator is not a perfect measurement operator, and the residual
   factor is recorded rather than rounded away.
+
+### ★ V14.7 — the TE Cp spike: P14's own claim, measured and refuted
+
+Every earlier version of this section asserted that the TE Cp **spike** would be
+untouched by P14, citing A2's S2 decomposition ("a P1 last-point recovery
+artifact, present on the level-set path too ⇒ wake-model independent"). That was
+a **prediction inherited from A2's reasoning and never measured on the pressure
+path**. A user asked whether the spike was gone; measuring it refuted the claim.
+
+A2's `spike_metric` is the last section point's deviation from its own
+x/c ∈ [0.85, 0.97] quadratic trend — a **common-mode** metric, unlike the
+differential TE gap. Medium M0.84, same `section_cp_curve` pipeline, mean over
+A2's 4 η × 2 sides (`te_spike_medium_m084.csv`):
+
+| path | raw (0 passes) | 1 pass | 2 passes | max (raw) |
+|---|---|---|---|---|
+| conforming **probe** (A2 conf_newton_medium) | 0.1143 | — | — | 0.2721 |
+| conforming **pressure** (P14) | **0.0533** | 0.0660 | 0.0626 | **0.0756** |
+| **level-set** Newton (A2 ls_newton_medium) | 0.0743 | — | — | 0.0932 |
+
+**The spike drops 2.1×, and lands below the level-set path.**
+
+**What A2 got right:** a spike remains (~0.05) and it *is* shared — the LS path
+has one too, so there is a genuine P1 recovery floor, and P14 does not close it.
+
+**What needs correcting:** the conforming path's **excess over LS** (0.1143 vs
+0.0743) was *also* Kutta-form error, not recovery. Mechanically that is what one
+should expect: a wrong Kutta condition produces a genuinely wrong TE flow field,
+so the last point departs from the upstream trend for a *physical* reason — and
+a common-mode metric cannot separate that from a measurement artifact. A2 read
+"present on both paths" as "the same object on both paths"; it is the same
+*family*, but the conforming path carried an extra, wake-model-dependent share.
+
+**Corroborating tell:** P6 normal-gated smoothing no longer helps on the
+pressure path (0.0533 → 0.0660 → 0.0626 over 0/1/2 passes — it mildly *hurts*),
+whereas A2 measured 0.147 → 0.081 on the probe path. Consistent with the
+Kutta-form component being gone and only the genuine recovery floor left, which
+smoothing cannot improve and can bias.
+
+**Lesson recorded (agent-rules):** do not carry a prior phase's attribution into
+a new measurement as if it were a result. A2's decomposition was evidence about
+the *probe* path; whether it survived the estimator swap was an open empirical
+question, and P14 asserted an answer for it four commits running.
 
 ### ★ V14.6 — the cross-MODEL check: conforming-pressure lands ON the level-set answer
 

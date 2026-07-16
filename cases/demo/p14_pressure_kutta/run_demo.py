@@ -59,6 +59,7 @@ from cases.demo._common import (                                   # noqa: E402
 from pyfp3d.mesh.reader import read_mesh                           # noqa: E402
 from pyfp3d.mesh.wake_cut import cut_wake                          # noqa: E402
 from pyfp3d.meshgen.wing3d import B_SEMI                           # noqa: E402
+from pyfp3d.post.section_cut import section_cp_curve               # noqa: E402
 from pyfp3d.post.surface import (                                  # noqa: E402
     _cp_from_q2, cl_kj_3d, planform_area, triangle_tangential_gradients,
     wall_force_coefficients,
@@ -95,6 +96,12 @@ TRANAIR_CL = 0.288
 A2_ROUGH = {"coarse": 0.0970, "medium": 0.0365}          # roughness_d2
 A2_GAP = {"coarse": 0.2206, "medium": 0.1585}            # all-station median
 LS_ROUGH_BAND = (0.003, 0.009)
+ETAS = (0.20, 0.44, 0.65, 0.90)          # A2's section stations
+# A2 committed spike (spike_metric, smooth_passes=0, mean over eta x side):
+# the conforming probe Newton medium and the level-set Newton medium. P14's
+# first write-up PREDICTED this metric would be untouched ("a shared P1
+# recovery artifact, wake-model independent") -- V14.7 measures it instead.
+A2_SPIKE = {"conf_newton_medium": 0.1143, "ls_newton_medium": 0.0743}
 # LS Newton medium M0.84 (B15/A1 cache) re-measured through THIS demo's
 # all-station sweep -- see the cross-model leg, which recomputes it live.
 LS_REF = {"cl_p": 0.2772, "cl_kj": 0.2813, "rough": 0.0033}
@@ -473,6 +480,64 @@ if GATES:
                        "D = O(1): new estimator does not regenerate "
                        "jitter from a smooth field (pre-registered "
                        "confirm-band was > 3)", D_disc < 3.0)
+
+    # ---- V14.7: the TE Cp SPIKE (A2's second S2 component) ----------------
+    # A2 decomposed S2 into (1) the Kutta form error, measured by the
+    # DIFFERENTIAL TE gap, and (2) a P1 last-point recovery artifact,
+    # measured by the COMMON-MODE spike (deviation of the last section point
+    # from its own x/c in [0.85,0.97] trend) and read as "present on the
+    # level-set path too => wake-model independent". P14's first write-up
+    # took that at face value and asserted the spike would be untouched.
+    # ★ MEASURED FALSE (2026-07-17, on a user question) -- see the roadmap
+    # correction. Kept as a demo leg so the claim has an artifact.
+    if "medium" in trans_recs:
+        print("== V14.7: TE Cp spike (A2 spike_metric, same pipeline) ==",
+              flush=True)
+        mc_m, wc_m = get_cut("medium")
+        spike_rows = []
+        for p in (0, 1, 2):
+            sp = []
+            for eta in ETAS:
+                sec = section_cp_curve(mc_m, trans_recs["medium"]["r"]["phi"],
+                                       eta=eta, b_semi=B_SEMI, m_inf=M_TRANS,
+                                       smooth_passes=p)
+                for side in ("upper", "lower"):
+                    sp.append(M.spike_metric(sec["x_" + side],
+                                             sec["cp_" + side])["spike"])
+            sp = np.asarray(sp)
+            spike_rows.append((p, float(sp.mean()), float(sp.max())))
+            print(f"  smooth_passes={p}: mean {sp.mean():.4f} "
+                  f"max {sp.max():.4f}", flush=True)
+        raw_mean = spike_rows[0][1]
+        checks.add("V14.7", "te_spike_vs_probe",
+                   f"raw mean {raw_mean:.4f} vs A2's conforming-probe "
+                   f"{A2_SPIKE['conf_newton_medium']:.4f} "
+                   f"({A2_SPIKE['conf_newton_medium'] / raw_mean:.1f}x)",
+                   "the spike DROPS -- refuting P14's own first claim that "
+                   "it is a wake-model-independent recovery artifact",
+                   raw_mean < A2_SPIKE["conf_newton_medium"])
+        checks.add("V14.7", "te_spike_vs_levelset",
+                   f"raw mean {raw_mean:.4f} vs level-set "
+                   f"{A2_SPIKE['ls_newton_medium']:.4f}",
+                   "at/below the level-set path (whose Kutta was already "
+                   "pressure-equality) -- the residual is the genuine "
+                   "shared P1 recovery floor",
+                   raw_mean <= A2_SPIKE["ls_newton_medium"])
+        checks.add("V14.7", "te_spike_smoothing_inert",
+                   f"passes 0/1/2 -> {spike_rows[0][1]:.4f}/"
+                   f"{spike_rows[1][1]:.4f}/{spike_rows[2][1]:.4f}",
+                   "RECORDED: P6 smoothing no longer helps (A2 measured "
+                   "0.147->0.081 on the probe path) -- consistent with the "
+                   "Kutta-form component being gone, not the recovery one",
+                   True)
+        write_csv(OUT, "te_spike_medium_m084.csv",
+                  "path,smooth_passes,spike_mean,spike_max",
+                  [("conforming probe (A2 conf_newton_medium)", 0,
+                    f"{A2_SPIKE['conf_newton_medium']:.4f}", "0.2721")]
+                  + [("conforming pressure (P14)", p, f"{m:.4f}",
+                      f"{mx:.4f}") for p, m, mx in spike_rows]
+                  + [("level-set Newton (A2 ls_newton_medium)", 0,
+                      f"{A2_SPIKE['ls_newton_medium']:.4f}", "0.0932")])
 
     # ---- V14.6: cross-MODEL check vs the level-set path -------------------
     # The strongest independent evidence in the phase, so it is measured
