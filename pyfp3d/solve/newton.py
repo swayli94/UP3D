@@ -50,6 +50,7 @@ import time
 from typing import Dict, Optional
 
 import numpy as np
+import scipy.linalg as sla
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
@@ -76,18 +77,50 @@ from pyfp3d.solve.timing import (
 )
 
 
+class _EliminatedKuttaRow:
+    """K_tilde = -D^{-1} K_p as an operator supporting `@` on vectors AND
+    dense matrices -- the pressure-estimator counterpart of the probe
+    path's constant sparse K (whose D = -I makes K_tilde = K exactly).
+    Used in exactly the three driver expressions the probe K is used in:
+    the coupled matvec J_ff x + B (K x), the Woodbury S = I + K @ JB, and
+    the step map dgamma = K @ dphi + F_tilde."""
+
+    def __init__(self, Kp_free: sp.csr_matrix, D_lu):
+        self._Kp = Kp_free
+        self._lu = D_lu
+        self.shape = Kp_free.shape
+
+    def __matmul__(self, x):
+        return -sla.lu_solve(self._lu, self._Kp @ x)
+
+
 class NewtonWorkspace:
     """Per-case precomputation for the coupled Newton solve: operators,
     the free/Dirichlet split, the Kutta row K, and the per-Mach-level
     far-field basis (vals0_red, V_red). Reused across the Mach levels of
     solve_newton_transonic (set_mach re-derives only the beta-dependent
-    far-field basis)."""
+    far-field basis).
+
+    `kutta_estimator` selects the Kutta closure residual F (P14):
+      "probe" (default, BIT-IDENTICAL): F = tip_taper * kutta_targets - Gamma
+        with the constant sparse row K and dF/dGamma = -I exactly.
+      "pressure": F = sigma * station-mean(|q_u|^2 - |q_l|^2) on the
+        wall-adjacent TE control volumes (constraints/te_pressure.py).
+        sigma_j = 1/max(|D_jj|, 0.1 median) is frozen at the FIRST residual
+        evaluation of this workspace (the seed state) -- once per workspace,
+        NOT per Mach level (the transonic ramp reuses the workspace, and
+        re-freezing would add a second ramp-history dependence on top of
+        warm starts) -- so F stays in Gamma-like units for the shared merit
+        |R|^2 + |F|^2 and the f_norm < tol_gamma check. sigma cancels in
+        the eliminated step (kutta_blocks), so the Newton ITERATES are
+        sigma-independent; only the merit weighting sees it."""
 
     def __init__(self, mesh_cut, wc, alpha_deg: float = 0.0,
                  u_inf: float = 1.0, gamma_air: float = 1.4,
                  vortex_center=(0.25, 0.0),
                  farfield_spanwise_gamma: bool = False,
-                 tip_taper: Optional[np.ndarray] = None):
+                 tip_taper: Optional[np.ndarray] = None,
+                 kutta_estimator: str = "probe"):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -108,6 +141,17 @@ class NewtonWorkspace:
             raise ValueError(
                 f"tip_taper must be ({wc.n_stations},), got "
                 f"{self.tip_taper.shape}")
+        if kutta_estimator not in ("probe", "pressure"):
+            raise ValueError(f"unknown kutta_estimator {kutta_estimator!r}")
+        if kutta_estimator == "pressure" and not np.all(self.tip_taper == 1.0):
+            raise NotImplementedError(
+                "tip_taper with the pressure Kutta estimator needs the B8 "
+                "row-blend re-derivation (the pressure row is homogeneous, "
+                "so scaling it alone is a no-op) -- not built in P14; the "
+                "committed M6 recipes run untapered")
+        self.kutta_estimator = kutta_estimator
+        self.kutta_sigma = None        # frozen at the first eval_residual
+        self.kutta_sigma_sign_flips = 0
 
         self.op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
         self.upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
@@ -138,6 +182,17 @@ class NewtonWorkspace:
         _, idx = np.unique(dir_nodes[keep], return_index=True)
         self._ff_keep = keep
         self._ff_idx = idx
+
+        # P14 pressure estimator: build the TE control volumes ONLY when
+        # requested (the probe path's construction work is untouched). The
+        # Dirichlet-contact assert inside guarantees dF/dGamma carries only
+        # the slave-jump chain -- no V_red far-field term to add.
+        self.cvs = None
+        if kutta_estimator == "pressure":
+            from pyfp3d.constraints.te_pressure import TEControlVolumes
+
+            self.cvs = TEControlVolumes(mesh_cut, wc,
+                                        dirichlet_nodes=dir_nodes)
 
         # K = dF/dphi_free: station row j holds +1/n_j at that station's
         # upper TE probes and -1/n_j at the lower (kutta_targets is the
@@ -257,9 +312,32 @@ class NewtonWorkspace:
 
         R_red = self.con.T.T @ self.op.assemble_residual(phi_cut, rho_t)
         R_free = R_red[self.free]
-        # Gamma_eff = taper * Gamma_Kutta (P13/G13.2; taper == 1 by default,
-        # so this is the untapered Kutta residual bit-for-bit).
-        F = self.tip_taper * kutta_targets(phi_cut, self.wc) - gamma
+        if self.kutta_estimator == "pressure":
+            # P14: sigma-scaled pressure-equality residual; sigma frozen at
+            # the first evaluation of this workspace (class docstring).
+            F_raw = self.cvs.residual_stations(phi_cut)
+            if self.kutta_sigma is None:
+                # sigma is a MERIT WEIGHTING only (it cancels in the
+                # eliminated step -- kutta_blocks), so a rough seed state
+                # is good enough: |D_jj| sets the scale, the floor bounds
+                # stations sitting near a transient sign change (a 5-step
+                # Picard seed CAN carry flipped-sign stations near the tip
+                # -- measured on M6 medium M0.5 -- without the estimator
+                # being degenerate; the per-step exact D carries the true
+                # signs). Flip count recorded for diagnostics.
+                D0 = self.cvs.gamma_jacobian(phi_cut, mode="exact")
+                dj = np.diag(D0)
+                sign_ref = np.sign(np.median(dj))
+                self.kutta_sigma_sign_flips = int(
+                    np.count_nonzero(np.sign(dj) != sign_ref))
+                adj = np.abs(dj)
+                self.kutta_sigma = 1.0 / np.maximum(
+                    adj, 0.1 * np.median(adj))
+            F = self.kutta_sigma * F_raw
+        else:
+            # Gamma_eff = taper * Gamma_Kutta (P13/G13.2; taper == 1 by
+            # default, so this is the untapered Kutta residual bit-for-bit).
+            F = self.tip_taper * kutta_targets(phi_cut, self.wc) - gamma
         state = {
             "phi_red": phi_red, "phi_cut": phi_cut, "grad": grad,
             "q2l": q2l, "lim": lim, "rho": rho, "rho_t": rho_t,
@@ -296,6 +374,33 @@ class NewtonWorkspace:
         J_fd = J_red[self.free][:, self.dir_red].tocsr()
         B = (J_fd @ self._V_red_sp + H_J.tocsr()[self.free, :]).tocsc()
         return J_ff, B
+
+    def kutta_blocks(self, state, F):
+        """(K_tilde, F_tilde) for the eliminated coupled step
+
+            delta_gamma = K_tilde @ dphi + F_tilde,
+            (J_ff + B K_tilde) dphi = -R - B F_tilde,
+
+        exact for BOTH estimators (elimination of the second block row
+        K dphi + D dgamma = -F with K = dF/dphi_free, D = dF/dGamma).
+
+        Probe: D = -I exactly, so this returns (self.K, F) verbatim and
+        the pre-P14 driver expressions execute unchanged (G14.4 by
+        structure). Pressure: K_tilde = -D^{-1} K_p, F_tilde = -D^{-1}
+        F_raw, with (K_p, D) the EXACT state-dependent rows rebuilt every
+        Newton step (unlike the constant probe K); sigma cancels
+        (-(sigma D)^{-1} (sigma F_raw) = -D^{-1} F_raw), so the Newton
+        iterates are sigma-independent. D carries only the slave-jump
+        chain: the CV construction asserted no control-volume dof is a
+        far-field Dirichlet node, so restricting K_p to free columns
+        drops nothing."""
+        if self.kutta_estimator == "probe":
+            return self.K, F
+        Kp_cut, D = self.cvs.newton_rows(state["phi_cut"])
+        Kp_free = (Kp_cut @ self.con.T).tocsr()[:, self.free]
+        D_lu = sla.lu_factor(D)
+        F_tilde = -sla.lu_solve(D_lu, F / self.kutta_sigma)
+        return _EliminatedKuttaRow(Kp_free, D_lu), F_tilde
 
 
 def _ew_forcing(r_norm, r_norm_prev, eta_prev, eta0=1e-2, gamma_ew=0.9,
@@ -348,6 +453,7 @@ def solve_newton_lifting(
     freeze_refresh_max: int = 2,
     workspace: Optional[NewtonWorkspace] = None,
     tip_taper: Optional[np.ndarray] = None,
+    kutta_estimator: str = "probe",
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -424,11 +530,19 @@ def solve_newton_lifting(
     active-set iteration) and the best result reported. None = off
     (bit-identical to the pre-freeze driver).
 
+    `kutta_estimator` (P14): "probe" (default, bit-identical) or
+    "pressure" -- the wall-adjacent-CV pressure-equality Kutta residual
+    (NewtonWorkspace docstring for the sigma scaling; kutta_blocks for the
+    exact eliminated step). Forwarded through solve_newton_transonic via
+    newton_kw; a reused workspace must have been built with the same flag.
+
     Returns the Picard-compatible result keys (phi on the cut mesh, gamma,
     converged, residual_history, mach2_max, nu_max, n_nu_active,
     n_limited, n_floored) plus F_history, newton_orders (per-step observed
     order p_k), eta_history, n_gmres_total, n_newton, jacobian_nnz,
-    n_term3_active, timings (per-stage wall-clock seconds).
+    n_term3_active, timings (per-stage wall-clock seconds), and
+    kutta_estimator/kutta_sigma (the frozen pressure scaling, None on the
+    probe path).
     """
     if m_inf > 0.0 and upwind_c <= 0.0:
         raise ValueError(
@@ -439,7 +553,14 @@ def solve_newton_lifting(
     if ws is None:
         ws = NewtonWorkspace(mesh_cut, wc, alpha_deg, u_inf, gamma_air,
                              vortex_center, farfield_spanwise_gamma,
-                             tip_taper=tip_taper)
+                             tip_taper=tip_taper,
+                             kutta_estimator=kutta_estimator)
+    elif ws.kutta_estimator != kutta_estimator:
+        raise ValueError(
+            f"workspace was built with kutta_estimator="
+            f"{ws.kutta_estimator!r} but {kutta_estimator!r} was requested "
+            "-- pass the flag consistently (transonic ramps forward it via "
+            "newton_kw)")
     ws.set_mach(m_inf)
 
     # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
@@ -697,8 +818,12 @@ def solve_newton_lifting(
             J_ff = (J_ff + sp.diags(ws.m_lumped_free / ptc_dtau)).tocsr()
         timings["assembly"] += time.perf_counter() - t0
 
-        K = ws.K
-        rhs = -R_free - B @ F
+        # (K, F_elim) = the eliminated Kutta blocks. Probe: literally
+        # (ws.K, F) -- the historical expressions below run unchanged.
+        # Pressure: state-dependent, rebuilt EVERY Newton step (the probe
+        # K's loop-invariance does not carry over -- P14 trap A).
+        K, F_elim = ws.kutta_blocks(state, F)
+        rhs = -R_free - B @ F_elim
         if precond == "direct":
             # exact Newton step: sparse LU of J_ff + Woodbury for the
             # rank-n_st coupling B K. The transonic Jacobian carries a
@@ -784,7 +909,7 @@ def solve_newton_lifting(
                 # a useful direction; the line search guards it) instead
                 # of burning stagnating Krylov cycles
                 n_gmres_stalled += 1
-        dgamma = K @ dphi + F
+        dgamma = K @ dphi + F_elim
 
         # safety-only backtracking: accept the full step unless the merit
         # blows up or goes non-finite (Lopez runs plain Newton; the load
@@ -869,6 +994,9 @@ def solve_newton_lifting(
         "n_refactor": n_refactor,
         "step_records": step_records,
         "timings": timings,
+        "kutta_estimator": ws.kutta_estimator,
+        "kutta_sigma": ws.kutta_sigma,
+        "kutta_sigma_sign_flips": ws.kutta_sigma_sign_flips,
         "workspace": ws,
     }
 

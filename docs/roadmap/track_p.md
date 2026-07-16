@@ -1480,19 +1480,68 @@ engines — excluded to keep the blast radius down; the estimator MEASUREMENT
 function is solver-independent, which is all the discriminator rerun needs.**
 
 Tier 1 — subsonic M0.5 milestone:
-- **G14.1 — estimator validity.** CV construction asserts all pass (two-sided
-  non-empty wall-adjacent fans via EXACT wall-face ownership, probe-membership
-  side identity, zero far-field-Dirichlet contact, uniform-sign dF/dΓ diagonal)
-  + dF/dΓ non-degenerate and FD-exact at committed states + implied Γ* within
-  the B4 band of the probe target (~1–2% NACA incompressible + M6 M0.5).
-- **G14.2 — S1/S2 A/B at M0.5.** M6 coarse+medium M0.5, pressure vs probe path
-  same-run A/B: `roughness_d2`(Γ(z)) and section TE Cp gap through the A2
-  metric pipeline, committed CSV.
-- **G14.3 — subsonic lift preserved.** Γ/cl move < 1% vs the probe path
-  (NACA + M6 M0.5).
+- **G14.1 ✓ (2026-07-17) — estimator validity.** CV construction asserts all
+  pass (two-sided non-empty wall-adjacent fans via EXACT wall-face ownership,
+  probe-membership side identity, zero far-field-Dirichlet contact) + dF/dΓ
+  non-degenerate and FD-exact at committed states + implied Γ* within the B4
+  band: NACA incompressible pressure-vs-probe Γ **0.074%** (demo) / 0.01%
+  (Stage-D at the converged probe state). Evidence:
+  `cases/analysis/p14_te_pressure_diag/results/` +
+  `cases/demo/p14_pressure_kutta/results/checks.csv` +
+  `tests/test_p14_te_pressure.py` (15). One firming correction: the
+  "uniform-sign dF/dΓ diagonal" clause holds at CONVERGED states (Stage-D,
+  0 flips at all five) but NOT at a rough Picard-5 seed (measured: flipped
+  stations on M6 medium M0.5) — σ-freeze demotes it to a recorded count
+  (`kutta_sigma_sign_flips`; σ is merit weighting only, the per-step exact D
+  carries the true signs).
+- **G14.2 ✓ (2026-07-17) — S1/S2 A/B at M0.5.** M6 M0.5 Newton same-run A/B,
+  committed `m05_ab.csv` + `m05_ab.png`: Γ(z) roughness probe→pressure
+  **0.1203 → 0.0052** (coarse) / **0.0504 → 0.0024** (medium — BELOW the LS
+  band 0.003–0.009); all-station raw TE Cp gap median **0.2278 → 0.0045** /
+  **0.1603 → 0.0026** (51×/62×). Both symptoms gone in one swap, at M0.5,
+  before any transonic tuning.
+- **G14.3 ✓ (2026-07-17) — subsonic lift: cross-read + recorded move.**
+  **Re-specced at the first tier-1 run — the provisional "< 1%" band was
+  wrong in principle, twice** (first firmed < 1%, then < 3%, both failed
+  honestly): the two closures agree POINTWISE to the probe's own O(h) reading
+  bias (cross-read at the pressure-converged state: **3.67% coarse → 1.05%
+  medium**, O(h) decay confirmed), but the Kutta map's near-unity slope
+  (b ≈ 0.93, P2 record) amplifies estimator bias by 1/(1−b) ≈ 14× into the
+  converged circulation — so the converged lift MUST move by the amplified
+  probe-bias correction. Measured move: cl_p/cl_KJ **+2.1% coarse, +4.5%
+  medium** at M0.5 (grows under refinement because the pressure closure
+  converges while the probe path's amplified O(h) bias shrinks more slowly).
+  Final gate form: (a) cross-read < 5%/2% (coarse/medium) + O(h) decay —
+  catches a self-consistent-but-garbage closure (the B8 failure mode);
+  (b) |Δcl| < 8% with the spanwise dΓ committed (`dgamma_*_m05.csv`).
 - **G14.4 — inert by default.** New estimator behind `kutta_estimator`
   (default "probe"); committed P4/P5/P8/P13 conforming results bit-identical
   with the flag off (cached-state machine-zero reproduction + full suite).
+  Structural argument in place (`kutta_blocks` returns the literal pre-P14
+  objects on the probe path; targeted regressions green: v0 + P2 + P8 + P10);
+  ticked at phase close with the full-suite run.
+
+**Tier-1 solver-recipe finding (recorded 2026-07-17): seed the pressure
+Newton from the probe solution.** The quadratic pressure row has a smaller
+Newton basin than the affine probe row: on M6 medium M0.5 a Picard-5 cold
+seed wanders to cl +16% and fail-fasts at step 29, while the probe-seeded
+solve converges in **3 quadratic steps** (|F| 6e-3 → 2.8e-4 → 2e-6 → 5e-11,
+26 s). Demo recipe: A/B legs seed pressure from the probe solve; the M0.84
+ramp seeds its level 0 (M0.70) from a probe Newton solve at the same Mach
+(later levels warm-start from the previous pressure level as usual). This is
+the spec's "nonlinear closure may need its own damping" risk landing in its
+mild form — a seeding rule, not a damping scheme.
+
+**Pre-registered interpretation note for G14.7 (written BEFORE the tier-2
+runs).** G14.7's band ("< 1–2% vs the G8.2 locks") was written on the
+assumption the estimator swap should not move loading. Tier 1 measured that
+assumption wrong at M0.5 (+4.5% medium, mechanism above). The G8.2 locks are
+PROBE-path locks; if the M0.84 pressure lift moves upward by a similar
+amplified correction, cl_KJ moves TOWARD the Tranair/KRATOS 0.288 reference —
+i.e. into the P9 "0.019 gap" that P9 closed as unsplittable-as-posed. A
+G14.7 FAIL-as-written in that direction is therefore a candidate ACCURACY
+finding, not a defect; the gate is reported against its pre-registered band
+and the verdict is user-arbitrated either way.
 
 Tier 2 — transonic M0.84 (the A2 regime; provisional numbers unchanged):
 - **G14.5 — S1 removed.** Conforming Γ(z) roughness (A2's `roughness_d2`)

@@ -18,9 +18,12 @@ from pyfp3d.constraints.wake import WakeConstraint, kutta_targets
 from pyfp3d.kernels.residual import assemble_stiffness_matrix
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
+from pyfp3d.solve.newton import NewtonWorkspace, solve_newton_lifting
 from pyfp3d.solve.picard import solve_laplace_lifting
 
 ALPHA = 2.0
+M_INF = 0.5
+UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR = 1.5, 0.95, 3.0, 0.05
 
 
 @pytest.fixture(scope="module")
@@ -136,3 +139,136 @@ def test_unknown_estimator_raises(naca_case):
     with pytest.raises(ValueError, match="kutta_estimator"):
         solve_laplace_lifting(mc, wc, alpha_deg=ALPHA,
                               kutta_estimator="typo")
+
+
+# ---------------------------------------------------- stage 2: Newton path
+
+
+@pytest.fixture(scope="module")
+def newton_pressure_case(naca_case):
+    mc, wc, _, _, _ = naca_case
+    r = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
+                             kutta_estimator="pressure", precond="direct")
+    return mc, wc, r
+
+
+def test_newton_pressure_converges_matches_probe(newton_pressure_case):
+    """Coupled Newton with the pressure estimator converges at M0.5 and
+    lands within 1% of the probe path's Gamma (G14.3 NACA leg)."""
+    mc, wc, r = newton_pressure_case
+    assert r["converged"]
+    assert r["kutta_estimator"] == "pressure"
+    assert r["kutta_sigma"] is not None
+    r_probe = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
+                                   precond="direct")
+    assert r_probe["kutta_sigma"] is None
+    rel = abs(r["gamma"][0] - r_probe["gamma"][0]) / abs(r_probe["gamma"][0])
+    assert rel < 0.01, f"pressure vs probe Gamma differs {100 * rel:.2f}%"
+
+
+def test_newton_pressure_kutta_row_fd(newton_pressure_case):
+    """sigma-scaled K_p rows vs central FD of F w.r.t. phi_free through
+    eval_residual: F is exactly quadratic, so this is roundoff-exact (the
+    pressure analog of test_kutta_row_exact)."""
+    _, _, r = newton_pressure_case
+    ws = r["workspace"]
+    phi_free = np.asarray(r["phi"])[:ws.n_red][ws.free].copy()
+    gamma = np.asarray(r["gamma"], dtype=np.float64).copy()
+    _, _, state = ws.eval_residual(phi_free, gamma, UPWIND_C, M_CRIT,
+                                   M_CAP, RHO_FLOOR)
+    Kp_cut, _ = ws.cvs.newton_rows(state["phi_cut"])
+    Kp_free = (Kp_cut @ ws.con.T).tocsr()[:, ws.free]
+
+    rng = np.random.default_rng(7)
+    eps = 1e-4
+    for _ in range(3):
+        delta = rng.standard_normal(ws.n_free)
+        delta /= np.abs(delta).max()
+        _, F_p, _ = ws.eval_residual(phi_free + eps * delta, gamma,
+                                     UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR)
+        _, F_m, _ = ws.eval_residual(phi_free - eps * delta, gamma,
+                                     UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR)
+        fd = (F_p - F_m) / (2.0 * eps)
+        exact = ws.kutta_sigma * (Kp_free @ delta)
+        scale = max(np.abs(fd).max(), 1e-30)
+        assert np.abs(exact - fd).max() / scale < 1e-8
+
+
+def test_newton_pressure_gamma_jacobian_fd(newton_pressure_case):
+    """Central FD of F w.r.t. Gamma THROUGH eval_residual (which also moves
+    the far-field Dirichlet values by V_red) vs sigma * D from newton_rows:
+    equality end-to-end proves the CV Dirichlet-contact assert's promise
+    that dF/dGamma carries only the slave-jump chain (the pressure analog
+    of test_gamma_column_fd's dF/dGamma = -I clause)."""
+    _, _, r = newton_pressure_case
+    ws = r["workspace"]
+    phi_free = np.asarray(r["phi"])[:ws.n_red][ws.free].copy()
+    gamma = np.asarray(r["gamma"], dtype=np.float64).copy()
+    _, _, state = ws.eval_residual(phi_free, gamma, UPWIND_C, M_CRIT,
+                                   M_CAP, RHO_FLOOR)
+    _, D = ws.cvs.newton_rows(state["phi_cut"])
+    D_s = ws.kutta_sigma[:, None] * D
+
+    eps = 1e-6
+    for j in range(ws.n_st):
+        dg = np.zeros(ws.n_st)
+        dg[j] = eps
+        _, F_p, _ = ws.eval_residual(phi_free, gamma + dg, UPWIND_C,
+                                     M_CRIT, M_CAP, RHO_FLOOR)
+        _, F_m, _ = ws.eval_residual(phi_free, gamma - dg, UPWIND_C,
+                                     M_CRIT, M_CAP, RHO_FLOOR)
+        fd = (F_p - F_m) / (2.0 * eps)
+        scale = max(np.abs(fd).max(), 1e-30)
+        assert np.abs(D_s[:, j] - fd).max() / scale < 1e-7
+
+
+def test_newton_pressure_sigma_independence(newton_pressure_case):
+    """sigma cancels in the eliminated blocks (-(sigma D)^{-1}(sigma F)):
+    scaling the frozen sigma leaves K_tilde @ x and F_tilde unchanged, so
+    the Newton iterates are sigma-independent."""
+    _, _, r = newton_pressure_case
+    ws = r["workspace"]
+    phi_free = np.asarray(r["phi"])[:ws.n_red][ws.free].copy()
+    gamma = np.asarray(r["gamma"], dtype=np.float64).copy()
+    _, F, state = ws.eval_residual(phi_free, gamma, UPWIND_C, M_CRIT,
+                                   M_CAP, RHO_FLOOR)
+    K1, F1 = ws.kutta_blocks(state, F)
+    sigma_old = ws.kutta_sigma
+    try:
+        ws.kutta_sigma = 7.0 * sigma_old
+        K2, F2 = ws.kutta_blocks(state, 7.0 * F)
+    finally:
+        ws.kutta_sigma = sigma_old
+    rng = np.random.default_rng(11)
+    x = rng.standard_normal(ws.n_free)
+    np.testing.assert_allclose(K1 @ x, K2 @ x, rtol=1e-12, atol=1e-14)
+    np.testing.assert_allclose(F1, F2, rtol=1e-12, atol=1e-16)
+
+
+def test_newton_m0_matches_laplace_pressure(naca_case):
+    """m_inf = 0 pressure Newton (cold start) and the pressure Laplace
+    driver converge to the same circulation -- two independent closures of
+    the same nonlinear pressure equality on the linear PDE."""
+    mc, wc, _, _, _ = naca_case
+    r_n = solve_newton_lifting(mc, wc, m_inf=0.0, alpha_deg=ALPHA,
+                               kutta_estimator="pressure", n_picard_seed=0,
+                               precond="direct")
+    r_l = solve_laplace_lifting(mc, wc, alpha_deg=ALPHA,
+                                kutta_estimator="pressure")
+    assert r_n["converged"]
+    assert abs(r_n["gamma"][0] - r_l["gamma"][0]) < 1e-6
+
+
+def test_newton_workspace_estimator_mismatch_raises(newton_pressure_case):
+    mc, wc, r = newton_pressure_case
+    with pytest.raises(ValueError, match="kutta_estimator"):
+        solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
+                             workspace=r["workspace"])   # default = probe
+
+
+def test_pressure_tip_taper_not_implemented(naca_case):
+    mc, wc, _, _, _ = naca_case
+    with pytest.raises(NotImplementedError, match="tip_taper"):
+        NewtonWorkspace(mc, wc, alpha_deg=ALPHA,
+                        tip_taper=np.full(wc.n_stations, 0.5),
+                        kutta_estimator="pressure")

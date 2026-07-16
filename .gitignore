@@ -122,6 +122,11 @@ cases/analysis/a1_solver_bottleneck/results/*.npz
 # run_a2.py rebuilds them in ~1 min when absent -- PNG/CSV are the evidence)
 cases/analysis/a2_te_kutta_fidelity/results/*.npz
 
+# P14 pressure-Kutta demo tier-2 solution caches (committed evidence is the
+# PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1 -- the M6 medium M0.84
+# pressure ramp is minutes on top of its probe M0.70 seed solve)
+cases/demo/p14_pressure_kutta/results/*.npz
+
 # Reference papers
 docs/references
 
