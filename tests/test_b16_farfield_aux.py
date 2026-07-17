@@ -151,11 +151,15 @@ def test_neumann_bit_identical_pin_vs_legacy():
 
 
 # ---------------------------------------------------------------------------
-# 4. the knob: default "pin", validated
+# 4. the knob: default "pin_gamma" (B17 changed it from "pin"; see
+#    test_b17_farfield_pin_gamma), validated
 # ---------------------------------------------------------------------------
 def test_farfield_aux_knob():
     p = inspect.signature(solve_multivalued_newton).parameters
-    assert p["farfield_aux"].default == "pin"
+    # B17: the default is now "pin_gamma" (jump=gamma). The B16 "pin" (jump=0)
+    # is kept as an explicit diagnostic value -- reproduce this file's coarse
+    # jump=0 results by passing farfield_aux="pin".
+    assert p["farfield_aux"].default == "pin_gamma"
     mesh = _naca()
     with pytest.raises(ValueError, match="farfield_aux"):
         solve_multivalued_newton(mesh=mesh, mvop=_naca_mvop(mesh), m_inf=0.5,

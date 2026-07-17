@@ -1,0 +1,4 @@
+far_field,cl_p_wing,vs_conforming_pct,note
+conforming,0.2173,0.0,reference (P14 Newton)
+freestream_pin_gamma,0.2117,-2.6,recommended; clean at both resolutions
+vortex_legacy,0.2227,+2.5,brackets from above; churns at coarse (free aux)

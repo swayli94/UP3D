@@ -1346,7 +1346,12 @@ fail-loudly）。
   不触发——但 D5 把这 3 个单元定位在翼身交界处，是 **B8 mixed-plain junk / G1.6 机身 Cp** 类
   （M²_side 7.32 vs M²_main 0.29；交界处 max 诚实 M²_main 1.273），与 **GB9.4** 机身升力 xfail
   同根，是先于 B16 存在、与远场 BC 修复正交的问题，不追。
-- **GB16.4 XFAIL —— ★★ 未解决的非收敛问题（用户 2026-07-18 标记，不得掩盖）**。三路升力
+- **GB16.4 —— ★★ 已由 B17 解决（2026-07-18）：不是非收敛，是 freestream pin 的 BC 建模错误**（详见
+  §17）。B16 的 freestream pin 把出流尾迹跳跃强制为 **0**，抹掉尾迹携带到边界的物理环量 ⇒ 分辨率相关
+  的升力误差（非求解器停滞：独立的 Picard-pin 干净收敛到 Newton-pin "停滞" 的同一 medium 0.169）。修复
+  = `farfield_aux="pin_gamma"`（jump→γ），三角单调闭合向 conforming（coarse 0.2087 / medium 0.2117
+  Picard、0.2115 Newton）。以下原始（已被取代）诊断保留存档：
+- ~~**GB16.4 XFAIL —— ★★ 未解决的非收敛问题（用户 2026-07-18 标记，不得掩盖）**~~。三路升力
   {Newton-pin, LS-Picard, conforming} 的三角**不闭合**，且随分辨率**翻转**（cl_p，机翼）：
   - **coarse**：机器收敛的 Newton-pin **0.2086** 与 conforming **0.2089** 吻合（0.1%），LS Picard
     0.1853 是低离群；
@@ -1367,3 +1372,67 @@ fail-loudly）。
 证据：`tests/test_b16_farfield_aux.py`（9，含门控 GB16.3）；demo `cases/demo/b16_farfield_aux/`
 （coarse 5/5 PASS + 门控 medium）。求解器仅动 LS Newton 远场接线 + 一个纯查询 helper；conforming
 路与 Picard 驱动逐位不变。
+
+
+## 17. B17：远场 aux 钉扎必须携带 jump=γ 而非 0（解决 GB16.4，2026-07-18，已关闭）
+
+**GB16.4 不是非收敛，是 B16 freestream pin 的边界条件建模错误。**
+
+### 17.1 机理
+
+尾迹在真问题里把势跳跃 [φ]=Γ 沿尾迹面一路带到出流边界（无穷远）。B16 的 pin 在
+`farfield="freestream"` 上把出流环上的 aux 钉到 host 的单值 φ∞，即 **jump→0**——这等于在
+出流处**杀死尾迹环量**，是 O(Γ) 的**主阶**误差（Γ≈0.066，却移动升力 22%），不是 design §16.2
+声称的"受控 O(Γ) 环误差"。
+
+- **legacy**（aux 自由，由 wake-LS 行约束）尝试沿尾迹维持跳跃：medium 大致成功（远场 |jump|≈0.105≈Γ
+  ⇒ cl_p 0.2165≈conforming），coarse 巨型外层 tet 近奇异 ⇒ 垃圾 |jump|=53 ⇒ cl_p 0.1853。
+- **pin jump=0**：medium 掉 22%（0.2165→0.1690）；coarse "蒙对"（0.1853→0.2086）纯属 jump=0 的误差
+  恰好抵消了 legacy 的 +53 外层 tet 垃圾。
+
+### 17.2 判别性证据（两个求解器同 BC 一致）
+
+给 Picard 驱动（`solve_multivalued_lifting`）加同样的 freestream pin（新 `farfield_aux` 旋钮），
+medium Picard-pin 干净收敛（res 7.5e-8，34 outer）到 **cl_p 0.1691**，与"停滞"的 Newton-pin
+**0.1690** 吻合 0.1%。两个完全独立的求解器落到同一个不动点 ⇒ 那是一个真实的 BC 决定的态，**不是**
+Newton 停滞。B16 的可能性 (a) 被否证——pin 不动点本身就是错的。
+
+后处理排查（GB17.2）：cl_p（壁面压力面积分）与 cl_KJ（环量积分）**同步移动**（medium 两者都 ~22%）
+⇒ 是真实流场态变化，非后处理伪影。用户观察的"Cp 目测对齐却 cl_p 差 22%"是 Cp 轴尺度错觉——绘制的
+展向 sectional cl 是 **Γ 基** `2Γ/(u·c)`，逐站 ∫Cp 实差 24–44%，而 Cp 曲线绝对差仅 ~0.03–0.05。
+
+### 17.3 修复：`farfield_aux="pin_gamma"`（jump→γ，新默认）
+
+出流 aux = host φ∞ − side·γ，随迭代刷新当前 γ（Picard 每 outer；Newton 每步，冻结于步内）。这是
+B16 正确识别的近奇异外层 aux 的**同一个** Dirichlet 条件数治疗（cond1 O(1e19)→8.7e6，与 jump 值
+无关），但用了**物理正确的环值**。三角单调闭合：
+
+| 远场 aux | coarse cl_p | medium cl_p | 趋势 |
+| --- | --- | --- | --- |
+| conforming（P14 Newton，参考） | 0.2089 | 0.2173 | ↑ |
+| legacy（自由 aux） | 0.1853 | 0.2165 | coarse 被 \|jump\|=53 外层 tet 污染 |
+| pin jump=0（B16） | 0.2086 | 0.1690 | ✗ 非单调、杀出流环量 |
+| **pin_gamma（B17）** | **0.2087** | **0.2117**（Picard）/ **0.2115**（Newton） | ✓ 单调 |
+
+Newton-pin_gamma 与 Picard-pin_gamma 两分辨率都吻合 0.1%，均欠 conforming 0.1%/2.6%（远场截断）。
+★ **B16 混淆了两个正交问题**：远场近奇异**条件数**（pin 治，jump 值无关）与出流**环量**（需 jump=γ）。
+medium Newton-pin_gamma 仍带翼身交界 churn（nlim 42/nflr 40，res 5.5e-5，**G1.6/GB9.4** 类）——但
+γ 稳定 0.06420、cl_p 0.2115 已正确，churn 只限制残差地板不再污染升力（第三个、既有的问题）。
+
+### 17.4 默认值与惰性（用户裁决 2026-07-18）
+
+`farfield_aux="pin_gamma"` 成两个求解器新默认。**仅作用于** `farfield="freestream"`；在 vortex/neumann
+上**惰性**（逐位等同 legacy）——所以所有已提交的 2.5D NACA vortex/neumann Picard 运行、所有 neumann
+Newton 锚点逐字节不变。B9/B16 的 freestream Picard demo 已钉 explicit `farfield_aux="legacy"` 以保留
+committed 数字；B16 的 jump=0 数字用 explicit `"pin"` 复现。`"pin"`（jump=0）保留为诊断值。
+
+### 17.5 vortex 评估（GB17.6，RECORDED，用户要求）
+
+`farfield="vortex"`（物理一致的升力远场：freestream + PG 涡加在远场 MAIN dof）**不能**消除 pin_gamma
+的 medium 2.6% 余差——它从**另一侧 bracket** conforming（medium **+2.5%**，vs pin_gamma −2.6%），且其
+自由远场 aux 在 **coarse 上 churn**（res 3.2，|jump|=71，需自己的 pin）。2–3% 是远场截断，非 bug；
+**freestream pin_gamma 仍是推荐 BC**（两分辨率都干净收敛）。
+
+证据：`tests/test_b17_farfield_pin_gamma.py`（6，ungated）；demo `cases/demo/b17_farfield_pin_gamma/`
+（Part 1–2 coarse ungated + Part 3 medium 门控）。求解器仅动 `newton_ls.py`/`picard_ls.py` 的 freestream
+远场 aux 接线（vortex/neumann/conforming 路逐位不变）。

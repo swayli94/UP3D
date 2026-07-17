@@ -184,8 +184,16 @@ def solve_ls(level):
     else:
         t0 = time.perf_counter()
         r = solve_multivalued_lifting(mvop, mesh, M, alpha_deg=ALPHA,
-                                      farfield="freestream", n_outer_max=80,
-                                      tol_residual=1e-7)
+                                      farfield="freestream", farfield_aux="legacy",
+                                      n_outer_max=80, tol_residual=1e-7)
+        # B17 erratum: farfield_aux="legacy" (free aux) pins this to B9's
+        # COMMITTED behaviour. B17 found the far-field aux pin matters here --
+        # legacy leaves them free (the wake-LS carries the jump: at medium
+        # jump~0.105~Gamma -> cl_p 0.2165~conforming; at COARSE the giant outer
+        # tet is near-singular -> garbage |jump|=53 -> cl_p 0.1853, so B9's
+        # "coarse 12.8% = resolution" was largely far-field CONTAMINATION, not
+        # resolution). farfield_aux="pin_gamma" (the new default) carries jump
+        # =Gamma cleanly at both (coarse 0.2087, medium 0.2117). See B17.
         wall_s = time.perf_counter() - t0
         rec.update(phi_ext=r["phi_ext"], res=list(r["residual_history"]),
                    wall_s=wall_s, n=r["n_outer"], conv=bool(r["converged"]),

@@ -1,42 +1,66 @@
 # pyFP3D Agent Rules
 
-Current phase: **B16 ✓ CLOSED 2026-07-18 (churn fix; lift-convergence OPEN)
-(NEW, user-directed; appended after B15): LS Newton far-field BC generalisation
-— far-field aux-DOF pin. Executes the B9 recorded follow-up.** ★ HEADLINE: the
+Current phase: **B17 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
+B16; resolves GB16.4): the far-field aux pin must carry jump=γ, not 0.** ★★
+HEADLINE: **GB16.4 was NOT a non-convergence — it was a BC-modelling error in
+B16's freestream pin.** B16 pinned the outflow wake jump to **0**, which REMOVES
+the circulation the wake physically carries out (medium cl_p 0.2165→0.1690, a
+−22% resolution-dependent error; the coarse "match to conforming" was a
+coincidence — jump=0 there cancelled the coarse legacy's outer-tet garbage).
+**Decisive discriminator:** giving the **Picard** driver the same freestream pin
+(new `farfield_aux` knob on `solve_multivalued_lifting`) makes medium Picard-pin
+converge cleanly (res 7.5e-8) to cl_p **0.1691** — matching the "stalled"
+Newton-pin **0.1690** to 0.1% ⇒ two independent solvers on the same value ⇒ a
+genuine BC-determined state, NOT a Newton stall. Fix = `farfield_aux="pin_gamma"`
+(aux = host φ∞ − side·γ, jump→γ, refreshed with the live γ — the new default on
+**both** solvers): the triangle closes MONOTONE to conforming (cl_p wing) —
+coarse conf 0.2089 / legacy 0.1853 / pin0 0.2086 / **pin_gamma 0.2087**; medium
+conf 0.2173 / legacy 0.2165 / pin0 0.1690 / **pin_gamma 0.2117 (Picard) = 0.2115
+(Newton)**, both solvers agreeing 0.1%. GB17.1–17.4 ✓, GB17.5/17.6 RECORDED;
+demo `cases/demo/b17_farfield_pin_gamma/` (3 coarse PASS + gated medium), tests
+`tests/test_b17_farfield_pin_gamma.py` (6).
+- ★ **B16 conflated two orthogonal issues:** the far-field near-singular
+  **conditioning** (the pin cures it, jump value irrelevant — cond1 O(1e19)→8.7e6
+  either way) and the outflow **circulation** (needs jump=γ). A third, pre-existing
+  issue — the wing-fuselage-junction churn (medium Newton-pin_gamma still carries
+  nlim 42/nflr 40, res 5.5e-5, the **G1.6/GB9.4** class) — survives but limits only
+  the residual floor, not the lift (γ stable 0.06420, cl_p 0.2115 correct).
+- ★ **Post-processing is NOT the cause (user's suspicion checked, GB17.2):** cl_p
+  (surface-pressure integral) and cl_KJ (circulation integral) move together
+  (~22% both) ⇒ a real flow-state change. The "section Cp looks aligned yet cl_p
+  differs 22%" is a Cp-axis scale illusion; the plotted spanwise sectional cl(z)
+  is the **Γ-based** `2Γ/(u·c)`, and per-station ∫Cp differs 24–44% while Cp
+  curves differ only ~0.03–0.05 on a ±1 axis.
+- ★ **Defaults (user-arbitrated 2026-07-18):** `pin_gamma` is the new default on
+  BOTH `solve_multivalued_newton` (was `"pin"`) and `solve_multivalued_lifting`
+  (was free/legacy). It acts ONLY on `farfield="freestream"`, inert (bit-identical
+  to legacy) on vortex/neumann ⇒ every committed 2.5D vortex/neumann Picard run +
+  every neumann Newton anchor byte-untouched. B9/B16 **freestream** Picard demos
+  pinned to explicit `farfield_aux="legacy"`; B16 jump=0 reproduces with explicit
+  `"pin"`. **B9 erratum:** coarse 12.8% was far-field contamination, not resolution
+  (its medium legacy≈conforming headline stands). `"pin"` (jump=0) kept as the
+  diagnostic value.
+- ★ **vortex evaluation (GB17.6, user-requested):** `farfield="vortex"` does NOT
+  close the 2.6% residual — it BRACKETS conforming from the other side (medium
+  +2.5%) and its free far-field aux churn at coarse (res 3.2, needs its own pin).
+  freestream pin_gamma stays recommended.
+
+**B16 ✓ CLOSED 2026-07-18 (churn fix; GB16.4 RESOLVED BY B17 above):** the
 wing-body LS-Newton churn is a **near-singular far-field aux block** — a wake
 level set has no outflow clip, so the sheet reaches the far field and the outer
 nodes it crosses carry aux DOFs governed only by near-singular wake-LS rows on
 giant outer tets; at the freestream Picard state they hold garbage (coarse
 |jump| **53.4** at x≥10 vs Γ̄ 0.0586), which Picard absorbs but the Newton
-residual reads as the **8 far-field MAIN rows max|R| = 84.457** (reproduced to
-the digit; aux-block cond1 **O(1e19)** — above the 1e14 GB14.1 ceiling — **→
-8.70e6** pinned). Fix = `farfield_aux="pin"` (default) on
-`solve_multivalued_newton`: coarse wing-body freestream Newton reaches **res
-5.88e-14, 0 limited** where legacy churns at 7.95 with 3690 limited, and the
-coarse converged lift matches conforming 0.1%. GB16.1/16.2/16.3-coarse/16.5 ✓,
-**GB16.4 XFAIL (open non-convergence, see below)**, GB16.6 RECORDED; demo
-`cases/demo/b16_farfield_aux/` (9 PASS + 1 XFAIL).
+residual reads as the **8 far-field MAIN rows max|R| = 84.457** (aux-block cond1
+**O(1e19) → 8.70e6** pinned). The pin fixes the CONDITIONING (coarse freestream
+Newton res 5.88e-14, 0 limited vs legacy 7.95/3690) — but B16's freestream jump=0
+value was wrong for the lift; see B17 above. GB16.1/16.2/16.3-coarse/16.5 ✓,
+GB16.6 RECORDED; demo `cases/demo/b16_farfield_aux/` (9 PASS + 1 XFAIL, the XFAIL
+now resolved by B17).
 - ★ **The proposal's mechanism was WRONG** (self-corrected): it blamed the
   Picard weld (`closure="continuity"`) vs Newton `wake_ls`, but the lifting
   Picard uses `wake_ls` too — the difference is fixed-point ABSORPTION of the
   near-singular rows vs Newton's residual reading them, NOT the closure.
-- ★ **Mode-adaptive pin (user-arbitrated), Newton-only.** freestream aux → φ∞
-  (jump→0); vortex aux → main − side·γ (jump→γ, the conforming lower_branch_mask
-  analogue, NOT the B3 both-sides pin that drained circulation); `neumann`
-  byte-identical (default flip vacuous on every committed anchor). New knob
-  `farfield_aux` default `"pin"`; `"legacy"` reproduces the pathology.
-- ★★ **UNRESOLVED NON-CONVERGENCE (GB16.4 XFAIL, user-flagged 2026-07-18 — do
-  NOT paper over).** The churn fix is solid on its own (coarse: res 84→5.88e-14,
-  0 limited, cond1 O(1e19)→8.7e6, and the coarse converged lift MATCHES
-  conforming 0.1%: cl_p 0.2086 vs 0.2089). BUT the {Newton-pin, LS-Picard,
-  conforming} lift triangle does NOT close and FLIPS with resolution — coarse:
-  Newton-pin≈conforming, Picard 0.1853 low; **medium: Picard 0.2165 ≈ conforming
-  0.2173 (B9's 0.4%), Newton-pin 0.1690 low (22%, STALLED at res 7e-6)**. ⇒ at
-  least one path is not converged: either the medium Newton-pin is non-converged
-  (a warm start from the converged Picard also failed in ~10 min ⇒ not a shallow
-  seed), OR B9's LS-Picard≈conforming was itself a non-converged coincidence.
-  UNRESOLVED, analysis deferred. Do NOT claim "LS Newton now matches the other
-  paths".
 - ★ **GB16.3 coarse honest limit:** pin carries `n_flr=3` at the wing-fuselage
   junction = the **B8 mixed-plain / G1.6 fuselage-Cp** class (M²_side 7.32 vs
   M²_main 0.29, same root as GB9.4's xfail), orthogonal to the BC fix, not chased.
@@ -164,14 +188,19 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   wing-body cross-model: LS (Picard) + conforming (NEW capability, Newton)
   agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6; LS Newton
   diverges on the wing-body = the neumann far-field blockage, not the solver ·
-  **B16 ✓ CLOSED 2026-07-18 (churn fix; lift-convergence OPEN)** (NEW, executes
+  **B16 ✓ CLOSED 2026-07-18 (churn fix; GB16.4 resolved by B17)** (NEW, executes
   the B9 follow-up) — the wing-body LS-Newton churn is a near-singular far-field
-  aux block (cond1 O(1e19), 8 rows |R|≈84 reproduced); `farfield_aux="pin"`
-  (default) drops it to 8.7e6 ⇒ COARSE freestream Newton res 5.88e-14 / 0
-  limited (lift matches conforming 0.1%) where legacy churns at 7.95; neumann
-  byte-identical. ★★ GB16.4 XFAIL — MEDIUM Newton-pin STALLS at res 7e-6, lift
-  22% below Picard/conforming ⇒ UNRESOLVED non-convergence (one of the paths
-  isn't converged; open follow-up).
+  aux block (cond1 O(1e19), 8 rows |R|≈84 reproduced); the pin drops it to 8.7e6
+  ⇒ COARSE freestream Newton res 5.88e-14 / 0 limited where legacy churns at
+  7.95; neumann byte-identical · **B17 ✓ CLOSED 2026-07-18 (NEW, resolves
+  GB16.4)** — GB16.4 was a BC-modelling error, not a non-convergence: B16's
+  freestream pin forced the outflow wake jump to 0, removing the physical
+  circulation (medium −22%); an independent Picard-pin converges to the same
+  0.169 the Newton-pin "stalls" at (both solvers agree per-BC).
+  `farfield_aux="pin_gamma"` (jump→γ, new default on both solvers) closes the
+  triangle MONOTONE to conforming (coarse 0.2087, medium 0.2117 Picard / 0.2115
+  Newton); acts only on freestream, inert on vortex/neumann; vortex brackets from
+  +2.5%; B9 coarse-12.8% erratum'd as far-field contamination.
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -232,10 +261,11 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **450 passed + 21 skipped + 2 xfailed** (2026-07-17, B16 far-field aux
-pin, +8 passed / +1 skipped = `tests/test_b16_farfield_aux.py` (8 ungated —
-2 wing-body-mesh-gated skip in CI — + 1 gated GB16.3 skip)).
-Previous: 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =
+Baseline: **456 passed + 21 skipped + 2 xfailed** (2026-07-18, B17 far-field
+pin_gamma, +6 passed = `tests/test_b17_farfield_pin_gamma.py` (6 ungated on the
+committed 2.5D NACA mesh); 1097.11 s @16 threads).
+Previous: 450 + 21 + 2 (2026-07-17, B16 far-field aux pin, +8 passed / +1 skipped
+= `tests/test_b16_farfield_aux.py`); 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =
 `tests/test_b9_wingbody_{conforming,ls}.py`, 1084.20 s @16 threads);
 429 + 19 + 2 (2026-07-17, B14 Schur+AMG, +8/+1 =
 `tests/test_b14_schur_ls.py`; 1043.37 s @16 threads); 421 + 18 + 2 (P14 tier 1+2, +15 =

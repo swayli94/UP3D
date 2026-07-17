@@ -147,3 +147,6 @@ cases/demo/b9_wingbody/results/*.npz
 
 # B16 far-field aux pin demo solution caches (figures+CSVs are the committed evidence)
 cases/demo/b16_farfield_aux/results/*.npz
+
+# B17 far-field aux pin_gamma demo solution caches (figures+CSVs are the committed evidence)
+cases/demo/b17_farfield_pin_gamma/results/*.npz

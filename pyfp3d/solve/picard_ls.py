@@ -311,6 +311,7 @@ def solve_multivalued_lifting(
     gamma_farfield_fixed: Optional[float] = None,
     te_kutta: str = "pressure",
     farfield: str = "vortex",
+    farfield_aux: str = "pin_gamma",
     upwind_c: float = 0.0,
     m_crit: float = 0.95,
     m_cap: float = 3.0,
@@ -356,6 +357,33 @@ def solve_multivalued_lifting(
     farfield="freestream": Dirichlet freestream on the WHOLE far field, no
     vortex -- the crudest truncation, kept for the B5 domain-size study
     (it is the upper bound on the truncation bias at a given domain radius).
+
+    `farfield_aux` (B17): how the far-field-BOUNDARY aux DOFs are treated when
+    the wake sheet reaches the outflow (no LS outflow clip; farfield_aux_dofs).
+    Acts ONLY on farfield="freestream"; inert on vortex/neumann (so the default
+    leaves every committed 2.5D vortex/neumann run bit-identical). "legacy"
+    leaves them FREE -- the pre-B17 Picard behaviour (the B9/B16 freestream demos
+    pass it explicitly to keep their committed numbers). The Picard fixed point
+    absorbs the near-singular outer wake-LS rows (it solves them to zero
+    garbage-and-all, |jump| 22-53 at the converged state) which is why Picard
+    "works" where the Newton residual reads the same rows as an O(1)
+    inconsistency (B16/GB16.1).
+    "pin" adds the far-field aux to the Dirichlet set at the host node's own
+    single-valued phi_inf (jump -> 0 on the outflow ring), the SAME pin B16
+    applies on the Newton path (solve/newton_ls.py) -- so a Picard-vs-Newton A/B
+    is on ONE far-field discretization. ★ B17 MEASURED that jump -> 0 REMOVES the
+    wake circulation the outflow physically carries: the medium wing-body cl_p
+    drops from 0.2165 (legacy/conforming) to 0.1691, a 22% resolution-dependent
+    error (the coarse "match" was a coincidence -- jump=0 there cancelled the
+    coarse legacy's outer-tet garbage). "pin" is kept as the B16 reproduction.
+    "pin_gamma" (default) is the FIX: aux = host phi_inf - side*gamma, i.e.
+    jump -> gamma, carrying the circulation OUT (refreshed with the live gamma
+    each outer). It cures the same near-singular outer wake-LS rows (identical
+    Dirichlet conditioning) while keeping cl_p monotone-convergent to conforming
+    (coarse 0.2087, medium 0.2117). All three act on farfield="freestream" only;
+    on vortex/neumann they are inert (neumann's outer aux ARE
+    wake-LS-constrained, and farfield="vortex" already pins aux to jump=gamma on
+    the Newton path -- see solve/newton_ls.py).
 
     ★ Compressibility is carried by the BULK density, NOT the far-field vortex:
     measured on the medium NACA case, PG-scaling the far-field vortex (beta <
@@ -439,6 +467,16 @@ def solve_multivalued_lifting(
         raise ValueError(f"needs 0 <= M_inf < 1, got {m_inf}")
     if farfield not in ("vortex", "neumann", "freestream"):
         raise ValueError(f"farfield={farfield!r} unknown")
+    if farfield_aux not in ("legacy", "pin", "pin_gamma"):
+        raise ValueError(f"farfield_aux={farfield_aux!r} unknown")
+    # B17: the pin acts only on farfield="freestream" (the B9/B16 wing-body BC).
+    # It is INERT on vortex/neumann -- exactly like B16's neumann inertness --
+    # so the default "pin_gamma" leaves EVERY committed vortex/neumann Picard run
+    # (all the 2.5D NACA cases) bit-identical. A freestream Picard that wants the
+    # pre-B17 free-aux behaviour must pass farfield_aux="legacy" explicitly (the
+    # B9/B16 demos do, to keep their committed legacy numbers reproducible).
+    pin_aux = farfield_aux in ("pin", "pin_gamma") and farfield == "freestream"
+    pin_gamma = farfield_aux == "pin_gamma"
     if len(mvop.cm.te_nodes) == 0:
         # A wake level-set that matches NO trailing-edge wall node carries no
         # Kutta condition at all: Gamma is unpinned, the TE aux rows are empty,
@@ -544,6 +582,21 @@ def solve_multivalued_lifting(
     elements = np.asarray(op.elements, dtype=np.int64)
     dampable = is_main.copy()      # refreshed each outer when scope=supersonic
 
+    # B17: far-field aux pin (freestream only). Precompute the aux DOF ids and
+    # their host phi_inf once -- structural, Gamma/Mach-independent -- and assert
+    # they are disjoint from the TE (Kutta) aux so the pin never overwrites a
+    # Kutta row. Same guard as solve/newton_ls.py.
+    if pin_aux:
+        ff_aux_hosts, ff_aux_dofs = farfield_aux_dofs(mesh, mvop.cm)
+        ff_aux_vals = freestream_phi(mesh.nodes[ff_aux_hosts], alpha_deg, u_inf)
+        te_aux = mvop.cm.ext_dof_of_node[mvop.cm.te_nodes]
+        te_aux = te_aux[te_aux >= 0]
+        if np.intersect1d(ff_aux_dofs, te_aux).size:
+            raise RuntimeError(
+                "a TE aux DOF lies on the far-field boundary; pinning it would "
+                "overwrite a Kutta row -- the wake reaches the outflow at a TE "
+                "station, which the wing-body geometry should preclude")
+
     for outer in range(n_outer_max):
         t_phase0 = snapshot(timings)
         n_gmres_step = n_gmres_total
@@ -573,6 +626,22 @@ def solve_multivalued_lifting(
         else:  # "freestream": Dirichlet freestream on the whole far field
             ff = np.unique(mesh.boundary_faces["farfield"])
             vals = freestream_phi(mesh.nodes[ff], alpha_deg, u_inf)
+            if pin_aux:
+                # B17: also pin the far-field-boundary aux. ff are all main
+                # nodes and ff_aux_dofs are all >= n_main, so the concatenated
+                # set has no duplicate DOF. Two branches:
+                #   "pin"       -> aux = host phi_inf  (jump -> 0, the B16 rule)
+                #   "pin_gamma" -> aux = host phi_inf - side*gamma (jump -> gamma,
+                #                  carrying the wake circulation OUT through the
+                #                  outflow -- refreshed with the live gamma each
+                #                  outer, the physically correct ring value).
+                if pin_gamma:
+                    side = mvop.cm.node_side[ff_aux_hosts]
+                    aux_vals = ff_aux_vals - side * gamma
+                else:
+                    aux_vals = ff_aux_vals
+                ff = np.concatenate([ff, ff_aux_dofs])
+                vals = np.concatenate([vals, aux_vals])
             b = np.zeros(mvop.n_total)
         phi_prev = phi_ext
         A_free, b_free, free, phi_ext = apply_dirichlet(A, b, ff, vals)

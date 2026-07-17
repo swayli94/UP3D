@@ -122,8 +122,8 @@ def picard_state(level, mesh, mvop):
     if cache.exists():
         return np.load(cache)["phi_ext"]
     r = solve_multivalued_lifting(mvop, mesh, M, alpha_deg=ALPHA,
-                                  farfield="freestream", n_outer_max=80,
-                                  tol_residual=1e-7)
+                                  farfield="freestream", farfield_aux="legacy",
+                                  n_outer_max=80, tol_residual=1e-7)
     np.savez(cache, phi_ext=r["phi_ext"])
     return r["phi_ext"]
 
@@ -540,8 +540,9 @@ def run_medium():
     else:
         t0 = time.perf_counter()
         r = solve_multivalued_lifting(mvop, mesh, M, alpha_deg=ALPHA,
-                                      farfield="freestream", n_outer_max=80,
-                                      tol_residual=1e-7, direct_refactor_every=1000)
+                                      farfield="freestream", farfield_aux="legacy",
+                                      n_outer_max=80, tol_residual=1e-7,
+                                      direct_refactor_every=1000)
         pic_wall = time.perf_counter() - t0
         pic_gamma = float(np.abs(mvop.te_jump(r["phi_ext"])).mean())
         np.savez(fair, wall=pic_wall, gamma=pic_gamma)

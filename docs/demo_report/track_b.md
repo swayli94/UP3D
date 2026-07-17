@@ -1225,6 +1225,14 @@ four things the phase was re-spec'd around.
 | coarse | 0.2089 / 0.2117 | 0.1853 / 0.1948 | 12.8% / 8.7% (RECORDED) |
 | **medium** | **0.2173 / 0.2188** | **0.2165 / 0.2175** | **0.4% / 0.6%** (PASS < 1%) |
 
+> **B17 erratum (2026-07-18):** the coarse LS 0.1853 is NOT "pure resolution" — it
+> is largely **far-field contamination**. The coarse legacy far-field aux (free,
+> on near-singular giant-outer-tet wake-LS rows) carry |jump|=53 garbage; pinning
+> them to jump=γ (`farfield_aux="pin_gamma"`, B17) lifts the coarse LS to **0.2087**
+> ≡ conforming 0.2089 (0.1%). The **medium** legacy 0.2165 stands — the medium
+> wake-LS carries the ring jump correctly (|jump|≈0.105≈Γ), so the GB9.5 headline
+> is unaffected. See the B17 demo section.
+
 Two independent wake models — different DOF space, different Kutta (conforming
 per-station Γ + P14 pressure estimator vs level-set implicit pressure-equality
 B4), different mesh families (`onera_m6_wingbody_conforming` vs
@@ -1358,7 +1366,14 @@ the SAME root as GB9.4's fuselage-lift xfail. That is a pre-existing issue
 orthogonal to the far-field BC fix; B16 fixes the BC layer (the churn) and does
 not chase the junction floor (G1.6 fix routes are closed negatives).
 
-### GB16.4 — the lift triangle does NOT close: an UNRESOLVED non-convergence (user-flagged)
+### GB16.4 — the lift triangle does NOT close: ~~an UNRESOLVED non-convergence~~ RESOLVED BY B17 (see the B17 demo section below)
+
+> **B17 (2026-07-18) resolved this:** it was NOT a non-convergence but a
+> BC-modelling error in the freestream pin (jump=0 kills the outflow wake
+> circulation). An independent Picard-pin converges cleanly to the same medium
+> 0.169 the Newton-pin "stalls" at (both solvers agree per-BC). `pin_gamma`
+> (jump→γ) closes the triangle monotone to conforming. The original diagnosis is
+> kept below for the record.
 
 `b16_spanwise_{level}.png` (Γ(z) + sectional cl(z)) and `b16_sections_{level}.png`
 (section Cp at η = 0.20/0.44/0.65/0.90, same extractor, wing wall) draw the
@@ -1403,3 +1418,73 @@ The medium pin removes the churn (0 limited *and* 0 floored — the coarse
 fair lagged-LU Picard arm is only 205 s. B16's value is emphatically not
 wall-clock; the "Newton ≪ Picard" hypothesis was measured FALSE and recorded as
 such.
+
+## B17 — Far-field aux pin carries jump=γ, not 0 (resolves GB16.4)
+
+Demo `cases/demo/b17_farfield_pin_gamma/` (Part 1–2 coarse ungated, Part 3 medium
+gated). It reproduces the B16 lift triangle with the **Picard** driver also given
+the far-field pin, which is what breaks GB16.4 open.
+
+### The finding: GB16.4 was a BC-modelling error, not a non-convergence
+
+`triangle_{level}.csv` — cl_p (wing), M0.5, α 3.06:
+
+| far-field aux | coarse | medium | trend |
+|---|---|---|---|
+| conforming (P14 Newton, ref) | 0.2089 | 0.2173 | ↑ |
+| legacy (free aux) | 0.1853 | 0.2165 | coarse polluted by \|jump\|=53 outer tet |
+| pin jump=0 (B16) | 0.2086 | 0.1690 | ✗ non-monotone, kills outflow circ |
+| **pin_gamma (B17)** | **0.2087** | **0.2117** (Picard) / **0.2115** (Newton) | ✓ monotone |
+
+The B16 freestream pin forces the outflow wake potential-jump to **0**. Physically
+the wake carries [φ]=Γ out to the boundary; zeroing it removes the outflow
+circulation — a resolution-dependent lift error. Invisible at coarse (the jump=0
+error cancels the coarse legacy's near-singular outer-tet garbage), un-masked at
+medium (legacy already carries the jump, so the pin's error dominates: −22%).
+
+**GB17.3 — the decisive discriminator (`triangle_medium.csv`):** the *Picard*
+pin-jump0 converges cleanly (res 7.5e-8, 34 outers) to cl_p **0.1691** — matching
+the "stalled" Newton-pin-jump0 **0.1690** to 0.1%. Two independent solvers on the
+same value ⇒ a genuine BC-determined state, **not** a Newton stall. B16's
+possibility (a) was wrong.
+
+**GB17.4 — the fix closes the triangle (`triangle_medium.csv`, `b17_triangle.png`):**
+`farfield_aux="pin_gamma"` (aux = host φ∞ − side·γ, refreshed with the live γ) is
+the same near-singular-aux Dirichlet cure with the physical ring value. Newton
+0.2115 ≈ Picard 0.2117 (<1%), monotone coarse→medium toward conforming.
+`newton_pin_gamma_trajectory_medium.csv` shows γ settling to 0.06420 (vs jump=0's
+0.0518); the run still carries the wing-fuselage-junction churn (nlim 42/nflr 40,
+res 5.5e-5, the G1.6/GB9.4 class) but the lift is correct regardless — the
+conditioning, the outflow circulation, and the junction churn are three orthogonal
+issues B16 had conflated.
+
+### GB17.1 — the ring-jump collapse (`b17_jump_collapse_coarse.png`, `triangle_coarse.csv`)
+
+The far-field ring |jump| collapses legacy **53.4** → pin **0** → pin_gamma
+**0.063** = γ. The coarse **legacy** garbage (|jump|=53) is itself a 12% lift
+deficit ⇒ B9's "coarse 12.8% = resolution" was largely far-field **contamination**
+(a B9 erratum records this; its medium legacy≈conforming headline stands — legacy
+happens to carry the jump correctly at medium).
+
+### GB17.2 — post-processing is NOT the cause (`postproc_audit_{level}.csv`)
+
+cl_p (surface-pressure integral) and cl_KJ (circulation integral) move together
+(~22% both at medium) ⇒ the pin gap is a genuine flow-state change, not a
+post-processing artifact. The user's suspicion (section Cp "looks aligned" yet
+cl_p differs 22%) is a Cp-axis scale illusion: the plotted sectional cl(z) is the
+**Γ-based** `2Γ/(u·c)` (not a pressure integral), and per-station ∫Cp actually
+differs 24–44% while the Cp curves differ only ~0.03–0.05 on a ±1 axis.
+
+### GB17.5 — spanwise Γ(z) uniform offset removed (`b17_spanwise_medium.png`)
+
+The pin jump=0 spanwise Γ(z) is a uniform multiplicative deficit (~22% at every
+station — the flow lost circulation everywhere, the signature the user spotted);
+pin_gamma restores it onto the legacy/conforming curve.
+
+### GB17.6 — vortex evaluation (RECORDED, user-requested) (`farfield_bc_bracket_medium.csv`)
+
+`farfield="vortex"` (the physically-consistent lifting far field) does NOT close
+the residual gap — it **brackets** conforming from the other side (medium **+2.5%**
+vs pin_gamma's −2.6%) and its free far-field aux **churn at coarse** (res 3.2,
+|jump|=71, would need its own pin). The 2–3% is far-field truncation; **freestream
+pin_gamma stays the recommended BC** (clean at both resolutions).

@@ -86,7 +86,8 @@ from pyfp3d.solve.picard_ls import (
 def _seed_from_picard(mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air,
                       upwind_c, m_crit, farfield, phi_init, gamma_init,
                       n_seed, damping_theta, omega_rho, precond=None,
-                      direct_refactor_every=1, direct_reuse_rtol=1e-10):
+                      direct_refactor_every=1, direct_reuse_rtol=1e-10,
+                      farfield_aux="legacy"):
     """Warm start: a short B6 Picard-LS solve to land near the solution before
     Newton (the transonic ramp / a lower-Mach state is the caller's job).
 
@@ -101,7 +102,8 @@ def _seed_from_picard(mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air,
     r = solve_multivalued_lifting(
         mvop, mesh, m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
         gamma_air=gamma_air, upwind_c=upwind_c, m_crit=m_crit,
-        farfield=farfield, damping_theta=damping_theta, omega_rho=omega_rho,
+        farfield=farfield, farfield_aux=farfield_aux,
+        damping_theta=damping_theta, omega_rho=omega_rho,
         n_outer_max=n_seed, gamma_init=gamma_init, phi_init=phi_init,
         tol_residual=None, precond=precond,
         direct_refactor_every=direct_refactor_every,
@@ -278,7 +280,7 @@ def solve_multivalued_newton(
     m_cap: float = 3.0,
     rho_floor: float = 0.05,
     farfield: str = "neumann",
-    farfield_aux: str = "pin",
+    farfield_aux: str = "pin_gamma",
     vortex_center=(0.25, 0.0),
     phi_init: Optional[np.ndarray] = None,
     gamma_init: float = 0.0,
@@ -319,23 +321,35 @@ def solve_multivalued_newton(
             far-field column vanishes), "vortex" (option a; adds the low-rank
             Gamma(z) far-field column -- handled by refreshing the RHS each
             Newton step, frozen within the step) or "freestream".
-        farfield_aux (B16): how the far-field-BOUNDARY aux DOFs are treated on
-            a Dirichlet far field. "pin" (default) adds them to the Dirichlet
-            set at the branch value their host node carries (freestream: the
-            same single-valued phi_inf; vortex: phi_inf +/- gamma by the host's
-            own side) -- removing the free-floating garbage a wake sheet
-            reaching the outflow otherwise leaves on near-singular outer wake-LS
-            rows (GB16.1; the B9 wing-body churn). "legacy" leaves them free
-            (the pre-B16 behaviour, kept as the diagnostic reproduction switch).
-            Inert on farfield="neumann" (whose outer aux ARE constrained by the
-            wake-LS rows) and when the sheet does not reach the boundary, so
-            every committed neumann run is bit-identical either way.
+        farfield_aux (B16/B17): how the far-field-BOUNDARY aux DOFs are treated
+            on a Dirichlet far field. "pin" (default) adds them to the Dirichlet
+            set at the branch value their host node carries -- removing the
+            free-floating garbage a wake sheet reaching the outflow otherwise
+            leaves on near-singular outer wake-LS rows (GB16.1; the B9 wing-body
+            churn). The RING JUMP it imposes is mode-dependent: vortex -> gamma
+            (phi_inf +/- gamma by the host's own side, refreshed per step),
+            which is physically correct (the wake carries its circulation OUT);
+            freestream -> 0 (the same single-valued phi_inf). ★ B17 MEASURED
+            that the freestream jump=0 is WRONG: it removes the outflow
+            circulation, dropping medium wing-body cl_p from 0.2165 to 0.1690
+            (a 22% resolution-dependent error, GB16.4; the coarse "match to
+            conforming" was a jump=0/legacy-garbage cancellation coincidence).
+            "pin_gamma" is the freestream FIX: aux = host phi_inf - side*gamma
+            (jump -> gamma, refreshed per step) -- same Dirichlet conditioning
+            cure, but cl_p stays monotone-convergent to conforming (coarse
+            0.2087, medium 0.2117). "legacy" leaves them free (the pre-B16
+            behaviour, kept as the diagnostic reproduction switch). All pin
+            modes are inert on farfield="neumann" (whose outer aux ARE
+            constrained by the wake-LS rows) and when the sheet does not reach
+            the boundary, so every committed neumann run is bit-identical.
         freeze / freeze_tol (B15; N5 on the level-set path): freeze the
             PER-SIDE upwind selection between Newton steps. `freeze_tol=None`
             (default) = live re-selection every step, bit-identical to the
-            pre-B15 behaviour. Set `freeze_tol` (recipe: 1e-6) to arm the
-            machinery: once the live residual falls below it -- or the live
-            iteration PLATEAUS (`live_stalled`) -- with 0 limited/floored, the
+            pre-B15 behaviour. Set `freeze_tol` to arm the machinery: once the
+            live residual falls below it (recipe: ABOVE the upwind-selection
+            churn floor, which RISES with Mach -- see the note at the freeze
+            trigger below; a freeze_tol beneath the floor never arms and the
+            live iteration limit-cycles) with 0 limited/floored, the
             per-side (upstream, branch) assignment is captured
             (`mvop.freeze_side_state`) and held. Within a frozen assignment the
             residual is smooth (no max(nu_e,nu_u) near-tie churn) so Newton
@@ -408,14 +422,20 @@ def solve_multivalued_newton(
     if precond not in (None, "ilu", "amg", "schur"):
         raise ValueError(
             f"precond={precond!r} unknown (None|'ilu'|'amg'|'schur')")
-    if farfield_aux not in ("pin", "legacy"):
+    if farfield_aux not in ("pin", "pin_gamma", "legacy"):
         raise ValueError(
-            f"farfield_aux={farfield_aux!r} unknown ('pin'|'legacy')")
+            f"farfield_aux={farfield_aux!r} unknown ('pin'|'pin_gamma'|'legacy')")
     beta = float(np.sqrt(1.0 - m_inf**2))
 
-    # --- B16: the far-field-boundary aux DOFs to pin (Dirichlet far field
+    # --- B16/B17: the far-field-boundary aux DOFs to pin (Dirichlet far field
     # only). Empty on neumann/legacy -> everything below is bit-identical.
-    pin_aux = farfield_aux == "pin" and farfield in ("freestream", "vortex")
+    # "pin"       -> outflow jump 0   (B16; kills the wake circulation at the
+    #                ring -- a resolution-dependent lift error, GB16.4/B17).
+    # "pin_gamma" -> outflow jump gamma (B17; carries the wake circulation OUT,
+    #                the physically correct ring value; refreshed per step).
+    pin_aux = farfield_aux in ("pin", "pin_gamma") and farfield in (
+        "freestream", "vortex")
+    pin_gamma = farfield_aux == "pin_gamma"
     ff_aux_hosts = ff_aux_dofs = np.empty(0, dtype=np.int64)
     if pin_aux:
         ff_aux_hosts, ff_aux_dofs = farfield_aux_dofs(mesh, mvop.cm)
@@ -441,16 +461,21 @@ def solve_multivalued_newton(
         # domain makes full-freestream Dirichlet accurate.)
         ff_nodes = np.unique(mesh.boundary_faces["farfield"])
         ff_vals = freestream_phi(mesh.nodes[ff_nodes], alpha_deg, u_inf)
+        ff_aux_host_vals = np.empty(0)
+        ff_aux_side = np.empty(0)
         if pin_aux:
-            # B16: aux pinned to the SAME single-valued freestream phi as its
-            # host, i.e. jump -> 0 on the outflow ring. This is consistent with
-            # the freestream Dirichlet itself already suppressing circulation at
-            # the boundary (the 25-MAC domain makes that a controlled O(Gamma)
-            # ring error -- design_track_b.md §16; GB16.4 is its detector).
+            # B16/B17: the far-field aux enter the Dirichlet set. Their host
+            # phi_inf is constant; the aux VALUE is host - side*gamma with a
+            # per-step gamma (pin_gamma) or gamma == 0 (pin, the B16 jump->0
+            # rule). B17 measured that jump->0 removes the wake circulation the
+            # outflow physically carries -> a resolution-dependent lift error
+            # (GB16.4); jump->gamma is the fix. The aux slot of ff_vals is a
+            # placeholder here and is overwritten each step in the loop below.
+            ff_aux_host_vals = freestream_phi(mesh.nodes[ff_aux_hosts],
+                                              alpha_deg, u_inf)
+            ff_aux_side = mvop.cm.node_side[ff_aux_hosts]
             ff_nodes = np.concatenate([ff_nodes, ff_aux_dofs])
-            ff_vals = np.concatenate(
-                [ff_vals, freestream_phi(mesh.nodes[ff_aux_hosts],
-                                         alpha_deg, u_inf)])
+            ff_vals = np.concatenate([ff_vals, ff_aux_host_vals])
         b_base = np.zeros(mvop.n_total)
     else:  # vortex: (re)built per step with the current gamma
         ff_nodes = np.unique(mesh.boundary_faces["farfield"])
@@ -470,7 +495,11 @@ def solve_multivalued_newton(
         mvop, mesh, m_inf, alpha_deg, u_inf, gamma_air, upwind_c, m_crit,
         farfield, phi_init, gamma_init, n_seed, seed_damping_theta,
         seed_omega_rho, precond=seed_precond,
-        direct_refactor_every=direct_refactor_every)
+        direct_refactor_every=direct_refactor_every,
+        farfield_aux=farfield_aux)      # B17: seed with the SAME far-field aux
+                                        # mode (inert on neumann; keeps a
+                                        # freestream pin_gamma seed consistent
+                                        # with the Newton it feeds)
     timings["seed"] = time.perf_counter() - t_seed0
 
     # the shared residual/Jacobian assembly (B15: one code path, FD-gated)
@@ -559,6 +588,12 @@ def solve_multivalued_newton(
         else:
             phi_ext[ff_nodes] = ff_vals
             dir_nodes = ff_nodes
+            if pin_gamma and ff_aux_dofs.size:
+                # B17: freestream far field, aux carry jump = gamma (the wake
+                # circulation flowing OUT). The main ff_vals stay phi_inf; only
+                # the aux slot is refreshed with the live gamma. "pin" (jump 0)
+                # leaves the placeholder host phi_inf untouched here.
+                phi_ext[ff_aux_dofs] = ff_aux_host_vals - ff_aux_side * gamma
 
         # residual under the CURRENT selection (frozen or live)
         A, R, up, lo = _system(phi_ext, frozen)

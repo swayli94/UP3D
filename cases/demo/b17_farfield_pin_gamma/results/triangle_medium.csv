@@ -1,0 +1,6 @@
+path,cl_p_wing,cl_kj_exposed,solver
+conforming,0.2173,,Newton(P14)
+legacy,0.2165,0.2175,Picard
+pin_jump0,0.1691,0.1714,Picard
+pin_gamma,0.2117,0.2128,Picard
+pin_gamma,0.2115,0.2125,Newton
