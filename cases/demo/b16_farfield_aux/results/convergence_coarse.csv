@@ -1,0 +1,4 @@
+path,converged,n_iter,res_final,n_lim,n_flr,wall_s
+neumann,False,8,7.878e+06,,,
+freestream_legacy,False,40,7.951e+00,3690,758,62.9
+freestream_pin,False,40,5.884e-14,0,3,52.1

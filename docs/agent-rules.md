@@ -1,28 +1,61 @@
 # pyFP3D Agent Rules
 
-Current phase: **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved): wing-body
-cross-model validation — BOTH wake models on the M2 wing-body (M∞0.5, α3.06°,
-coarse+medium).** ★ HEADLINE: the level-set (Picard) and conforming (NEW
-capability, P14 Newton) wing-body lifts AGREE to **cl_p 0.4% / cl_kj 0.6%** at
-medium (conf 0.2173/0.2188 vs LS 0.2165/0.2175; coarse 12.8% = resolution) —
-the wing-body analogue of P14's wing-alone cross-model. GB9.1/9.2/9.3/9.5 ✓,
-GB9.6 RECORDED, **GB9.4 XFAIL** (fuselage lift 16-20%, resolution/model-sensitive
-⇒ G1.6 fuselage-Cp error, band NOT moved). Demo `cases/demo/b9_wingbody/`
-7 PASS + 1 XFAIL; guardrail `cases/analysis/b9_fuselage_guardrail/`.
+Current phase: **B16 ✓ CLOSED 2026-07-18 (churn fix; lift-convergence OPEN)
+(NEW, user-directed; appended after B15): LS Newton far-field BC generalisation
+— far-field aux-DOF pin. Executes the B9 recorded follow-up.** ★ HEADLINE: the
+wing-body LS-Newton churn is a **near-singular far-field aux block** — a wake
+level set has no outflow clip, so the sheet reaches the far field and the outer
+nodes it crosses carry aux DOFs governed only by near-singular wake-LS rows on
+giant outer tets; at the freestream Picard state they hold garbage (coarse
+|jump| **53.4** at x≥10 vs Γ̄ 0.0586), which Picard absorbs but the Newton
+residual reads as the **8 far-field MAIN rows max|R| = 84.457** (reproduced to
+the digit; aux-block cond1 **O(1e19)** — above the 1e14 GB14.1 ceiling — **→
+8.70e6** pinned). Fix = `farfield_aux="pin"` (default) on
+`solve_multivalued_newton`: coarse wing-body freestream Newton reaches **res
+5.88e-14, 0 limited** where legacy churns at 7.95 with 3690 limited, and the
+coarse converged lift matches conforming 0.1%. GB16.1/16.2/16.3-coarse/16.5 ✓,
+**GB16.4 XFAIL (open non-convergence, see below)**, GB16.6 RECORDED; demo
+`cases/demo/b16_farfield_aux/` (9 PASS + 1 XFAIL).
+- ★ **The proposal's mechanism was WRONG** (self-corrected): it blamed the
+  Picard weld (`closure="continuity"`) vs Newton `wake_ls`, but the lifting
+  Picard uses `wake_ls` too — the difference is fixed-point ABSORPTION of the
+  near-singular rows vs Newton's residual reading them, NOT the closure.
+- ★ **Mode-adaptive pin (user-arbitrated), Newton-only.** freestream aux → φ∞
+  (jump→0); vortex aux → main − side·γ (jump→γ, the conforming lower_branch_mask
+  analogue, NOT the B3 both-sides pin that drained circulation); `neumann`
+  byte-identical (default flip vacuous on every committed anchor). New knob
+  `farfield_aux` default `"pin"`; `"legacy"` reproduces the pathology.
+- ★★ **UNRESOLVED NON-CONVERGENCE (GB16.4 XFAIL, user-flagged 2026-07-18 — do
+  NOT paper over).** The churn fix is solid on its own (coarse: res 84→5.88e-14,
+  0 limited, cond1 O(1e19)→8.7e6, and the coarse converged lift MATCHES
+  conforming 0.1%: cl_p 0.2086 vs 0.2089). BUT the {Newton-pin, LS-Picard,
+  conforming} lift triangle does NOT close and FLIPS with resolution — coarse:
+  Newton-pin≈conforming, Picard 0.1853 low; **medium: Picard 0.2165 ≈ conforming
+  0.2173 (B9's 0.4%), Newton-pin 0.1690 low (22%, STALLED at res 7e-6)**. ⇒ at
+  least one path is not converged: either the medium Newton-pin is non-converged
+  (a warm start from the converged Picard also failed in ~10 min ⇒ not a shallow
+  seed), OR B9's LS-Picard≈conforming was itself a non-converged coincidence.
+  UNRESOLVED, analysis deferred. Do NOT claim "LS Newton now matches the other
+  paths".
+- ★ **GB16.3 coarse honest limit:** pin carries `n_flr=3` at the wing-fuselage
+  junction = the **B8 mixed-plain / G1.6 fuselage-Cp** class (M²_side 7.32 vs
+  M²_main 0.29, same root as GB9.4's xfail), orthogonal to the BC fix, not chased.
+- ★ **Pinning the 4 far-field-boundary aux also cured the 4 INTERIOR junk aux**
+  (their wake-LS rows now anchor to clean Dirichlet data) — the R2 risk void.
+
+**B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved): wing-body cross-model
+validation** — the level-set (Picard) and conforming (NEW capability, P14
+Newton) wing-body lifts AGREE to **cl_p 0.4% / cl_kj 0.6%** at medium (conf
+0.2173/0.2188 vs LS 0.2165/0.2175; coarse 12.8% = resolution). GB9.1/9.2/9.3/9.5
+✓, GB9.6 RECORDED, **GB9.4 XFAIL** (fuselage lift 16-20% ⇒ G1.6 fuselage-Cp
+error, band NOT moved). Demo `cases/demo/b9_wingbody/` 7 PASS + 1 XFAIL. The B9
+LS-Newton follow-up ("neumann res 1e43; freestream Newton 8 rows |R|≈84") is now
+**closed by B16** — the freestream Newton path works with the aux pin.
 - ★ **Conforming wing-body is the NEW capability** —
   `onera_m6_wingbody_mesh(embed_wake=True)`: fuselage built as TWO π-revolves
   (`add_fuselage_solid_split`, else the waterline-imprinted single revolve
   surface is unmeshable), through-body sheet, Netgen OFF; `cut_wake` /
   constraints / P14 pressure-Kutta ALL unchanged; embed_wake=False bit-identical.
-- ★ **LS uses PICARD, not Newton — measured (user-questioned).** The committed
-  LS Newton recipes (lagged-LU, `precond="schur"` B14, N5 freeze, B15 ramp) ALL
-  diverge/churn on the subsonic wing-body: the FAILURE IS THE FAR-FIELD BC, not
-  the solver. `neumann` is unbounded under the fuselage blockage (res 1e43);
-  the `freestream` Newton path (never exercised — all committed LS Newton use
-  neumann) is locally inconsistent (te_aux perfect 1.8e-8, 8 far-field fluid
-  rows |R|≈84). LS Picard + `freestream` converges cleanly (res 3e-7). A
-  `newton_ls.py` freestream Dirichlet bug was fixed in passing; the outer-row
-  residual inconsistency is a recorded follow-up. **Next phase = user's call.**
 
 **P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
@@ -130,7 +163,15 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   designed use-case) · B10 shelved · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D)** —
   wing-body cross-model: LS (Picard) + conforming (NEW capability, Newton)
   agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6; LS Newton
-  diverges on the wing-body = the neumann far-field blockage, not the solver.
+  diverges on the wing-body = the neumann far-field blockage, not the solver ·
+  **B16 ✓ CLOSED 2026-07-18 (churn fix; lift-convergence OPEN)** (NEW, executes
+  the B9 follow-up) — the wing-body LS-Newton churn is a near-singular far-field
+  aux block (cond1 O(1e19), 8 rows |R|≈84 reproduced); `farfield_aux="pin"`
+  (default) drops it to 8.7e6 ⇒ COARSE freestream Newton res 5.88e-14 / 0
+  limited (lift matches conforming 0.1%) where legacy churns at 7.95; neumann
+  byte-identical. ★★ GB16.4 XFAIL — MEDIUM Newton-pin STALLS at res 7e-6, lift
+  22% below Picard/conforming ⇒ UNRESOLVED non-convergence (one of the paths
+  isn't converged; open follow-up).
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -191,10 +232,12 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **442 passed + 20 skipped + 2 xfailed** (2026-07-17, B9 wing-body,
-+13 passed / +1 skipped = `tests/test_b9_wingbody_{conforming,ls}.py`
-(conforming 8 + 1 gated skip, LS 5), measured 1084.20 s @16 threads).
-Previous: 429 + 19 + 2 (2026-07-17, B14 Schur+AMG, +8/+1 =
+Baseline: **450 passed + 21 skipped + 2 xfailed** (2026-07-17, B16 far-field aux
+pin, +8 passed / +1 skipped = `tests/test_b16_farfield_aux.py` (8 ungated —
+2 wing-body-mesh-gated skip in CI — + 1 gated GB16.3 skip)).
+Previous: 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =
+`tests/test_b9_wingbody_{conforming,ls}.py`, 1084.20 s @16 threads);
+429 + 19 + 2 (2026-07-17, B14 Schur+AMG, +8/+1 =
 `tests/test_b14_schur_ls.py`; 1043.37 s @16 threads); 421 + 18 + 2 (P14 tier 1+2, +15 =
 `tests/test_p14_te_pressure.py`; 1015.17 s @8 threads); 406 (= the 399 M2
 number once A1's 7 tests landed), 973.59 s @8 threads, 2026-07-16; 396,

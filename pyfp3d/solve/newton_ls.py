@@ -78,6 +78,7 @@ from pyfp3d.solve.picard_ls import (
     _farfield_main,
     _farfield_split,
     _neumann_outlet_rhs,
+    farfield_aux_dofs,
     solve_multivalued_lifting,
 )
 
@@ -277,6 +278,7 @@ def solve_multivalued_newton(
     m_cap: float = 3.0,
     rho_floor: float = 0.05,
     farfield: str = "neumann",
+    farfield_aux: str = "pin",
     vortex_center=(0.25, 0.0),
     phi_init: Optional[np.ndarray] = None,
     gamma_init: float = 0.0,
@@ -317,6 +319,17 @@ def solve_multivalued_newton(
             far-field column vanishes), "vortex" (option a; adds the low-rank
             Gamma(z) far-field column -- handled by refreshing the RHS each
             Newton step, frozen within the step) or "freestream".
+        farfield_aux (B16): how the far-field-BOUNDARY aux DOFs are treated on
+            a Dirichlet far field. "pin" (default) adds them to the Dirichlet
+            set at the branch value their host node carries (freestream: the
+            same single-valued phi_inf; vortex: phi_inf +/- gamma by the host's
+            own side) -- removing the free-floating garbage a wake sheet
+            reaching the outflow otherwise leaves on near-singular outer wake-LS
+            rows (GB16.1; the B9 wing-body churn). "legacy" leaves them free
+            (the pre-B16 behaviour, kept as the diagnostic reproduction switch).
+            Inert on farfield="neumann" (whose outer aux ARE constrained by the
+            wake-LS rows) and when the sheet does not reach the boundary, so
+            every committed neumann run is bit-identical either way.
         freeze / freeze_tol (B15; N5 on the level-set path): freeze the
             PER-SIDE upwind selection between Newton steps. `freeze_tol=None`
             (default) = live re-selection every step, bit-identical to the
@@ -395,7 +408,22 @@ def solve_multivalued_newton(
     if precond not in (None, "ilu", "amg", "schur"):
         raise ValueError(
             f"precond={precond!r} unknown (None|'ilu'|'amg'|'schur')")
+    if farfield_aux not in ("pin", "legacy"):
+        raise ValueError(
+            f"farfield_aux={farfield_aux!r} unknown ('pin'|'legacy')")
     beta = float(np.sqrt(1.0 - m_inf**2))
+
+    # --- B16: the far-field-boundary aux DOFs to pin (Dirichlet far field
+    # only). Empty on neumann/legacy -> everything below is bit-identical.
+    pin_aux = farfield_aux == "pin" and farfield in ("freestream", "vortex")
+    ff_aux_hosts = ff_aux_dofs = np.empty(0, dtype=np.int64)
+    if pin_aux:
+        ff_aux_hosts, ff_aux_dofs = farfield_aux_dofs(mesh, mvop.cm)
+        if np.intersect1d(ff_aux_dofs,
+                          mvop.cm.ext_dof_of_node[mvop.cm.te_nodes]).size:
+            raise RuntimeError(
+                "a TE aux DOF appeared on the far field -- the TE is a wall "
+                "feature and must never lie on the outer boundary")
 
     # --- far-field split (fixed across the solve) --------------------------
     if farfield == "neumann":
@@ -413,9 +441,23 @@ def solve_multivalued_newton(
         # domain makes full-freestream Dirichlet accurate.)
         ff_nodes = np.unique(mesh.boundary_faces["farfield"])
         ff_vals = freestream_phi(mesh.nodes[ff_nodes], alpha_deg, u_inf)
+        if pin_aux:
+            # B16: aux pinned to the SAME single-valued freestream phi as its
+            # host, i.e. jump -> 0 on the outflow ring. This is consistent with
+            # the freestream Dirichlet itself already suppressing circulation at
+            # the boundary (the 25-MAC domain makes that a controlled O(Gamma)
+            # ring error -- design_track_b.md §16; GB16.4 is its detector).
+            ff_nodes = np.concatenate([ff_nodes, ff_aux_dofs])
+            ff_vals = np.concatenate(
+                [ff_vals, freestream_phi(mesh.nodes[ff_aux_hosts],
+                                         alpha_deg, u_inf)])
         b_base = np.zeros(mvop.n_total)
     else:  # vortex: (re)built per step with the current gamma
         ff_nodes = np.unique(mesh.boundary_faces["farfield"])
+        if pin_aux:
+            # B16: aux enter the fixed Dirichlet set here; their VALUES are the
+            # other-branch potential, refreshed per step below with gamma.
+            ff_nodes = np.concatenate([ff_nodes, ff_aux_dofs])
         b_base = np.zeros(mvop.n_total)
         ff_vals = None
 
@@ -501,6 +543,19 @@ def solve_multivalued_newton(
                                                  vortex_center, beta)
             phi_ext[ff_nodes_v] = ff_vals
             dir_nodes = ff_nodes_v
+            if pin_aux:
+                # B16: the aux on the outflow hold the OTHER branch. The
+                # multivalued PG vortex potential jumps by the periodic +/-gamma
+                # across the sheet; the branch is set by the host's own side
+                # (cm.node_side in {+1,-1}, never 0), so aux = main - side*gamma
+                # keeps [phi] = side*(main - aux) = gamma on the ring -- the
+                # conforming lower_branch_mask analogue. Distinct from the B3
+                # negative result (which pinned BOTH sides to one branch and so
+                # drained the circulation); this preserves the jump.
+                host_vals = ff_vals[np.searchsorted(ff_nodes_v, ff_aux_hosts)]
+                phi_ext[ff_aux_dofs] = (
+                    host_vals - mvop.cm.node_side[ff_aux_hosts] * gamma)
+                dir_nodes = np.concatenate([ff_nodes_v, ff_aux_dofs])
         else:
             phi_ext[ff_nodes] = ff_vals
             dir_nodes = ff_nodes
@@ -766,8 +821,9 @@ def solve_multivalued_newton(
             if precond == "ilu":
                 M_pre = build_ilu_preconditioner(J_free)
             elif precond == "schur":
-                schur = SchurReducedSystem(J_free, free, mvop.n_main,
-                                           n_aux_expected=mvop.n_ext)
+                schur = SchurReducedSystem(
+                    J_free, free, mvop.n_main,
+                    n_aux_expected=mvop.n_ext - ff_aux_dofs.size)
                 if it % amg_rebuild_every == 0 or M_pre is None:
                     M_pre = main_block_preconditioner(
                         mvop, (up["rho_tilde"], lo["rho_tilde"]),

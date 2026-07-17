@@ -1,0 +1,11 @@
+gate,check,value,criterion,status,note
+GB16.4,coarse_lift_triangle,Newton-pin 0.2086 vs conforming 0.2089 (0.1%); Picard 0.1853,RECORDED (coarse): the CONVERGED Newton pin matches conforming to ~0.1%; the LS Picard is the under-resolved outlier here,PASS,
+GB16.1,coarse_diagnostic,max|R|=84.5; 8 outer rows; junk|jump|=53.4,reproduces the B9 churn: O(1) residual on the outer wake aux,PASS,
+GB16.1,coarse_neumann_unbounded,cold neumann max res 2.6e+08,neumann is unbounded on the wing-body (fuselage blockage),PASS,
+GB16.1,coarse_pin_cleans_jumps,outer |jump| 53.4 -> 5.3e-15,pin drives the outer junk jumps to ~0 (D8),PASS,
+GB16.1,coarse_cond_drop,cond1 9.1e+18 -> 8.7e+06,aux-block conditioning improves under the pin (D6),PASS,
+GB16.3,coarse_legacy_churns,legacy res 7.95e+00; lim 3690,legacy freestream Newton does NOT converge (churns),PASS,
+GB16.3,coarse_pin_converges,pin res 5.88e-14; lim 0; flr 3,pin reaches machine residual; 0 limited (BC layer fixed; RECORDED at coarse -- flr from B8/G1.6 junction; GB9.4),PASS,
+GB16.4,medium_lift_triangle,Newton-pin 0.1690 vs Picard 0.2165 (22%) / conforming 0.2173,OPEN: the medium Newton pin STALLS (res 7e-6) and disagrees with Picard==conforming ⇒ a non-convergence problem; unresolved (analysis deferred),XFAIL,
+GB16.3,medium_pin_clean,res 7.03e-06; lim 0; flr 0,RECORDED: pin Newton runs clean (0 lim/flr; no churn); plateaus at ~7e-6 (junction O(h); G1.6 -- not the far-field aux),PASS,
+GB16.3,medium_walltime,Newton 2172s vs Picard 1459s / lagged 205s,RECORDED: seed-dominated; NOT faster than Picard -- B16's value is convergence; not speed,PASS,

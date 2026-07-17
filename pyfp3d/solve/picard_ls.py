@@ -204,6 +204,38 @@ def _farfield_main(mesh, alpha_deg, gamma, u_inf, vortex_center, beta):
     return ff, vals
 
 
+def farfield_aux_dofs(mesh, cm):
+    """Far-field boundary nodes that carry a wake-jump aux DOF, and those aux
+    DOF ids (B16).
+
+    A wake level set has no outflow clip (cut_elements.py: the cut test only
+    requires the crossing to be downstream of the TE and within the span), so
+    the sheet reaches the far-field boundary and the outer nodes it crosses
+    each get an aux DOF. Those aux are governed only by a near-singular wake-LS
+    row on a giant outer tet; at a converged freestream Picard state they hold
+    garbage (measured B16/GB16.1 on the B9 wing-body: |jump| 22-53 vs the
+    physical Gamma ~ 0.06). The Picard fixed point tolerates it -- it solves
+    those rows to zero garbage-and-all -- but the Newton residual reads it as
+    an O(1) local inconsistency (8 neighbouring far-field MAIN rows |R| ~ 84),
+    which is exactly why the committed LS Newton recipes churn on the wing-body
+    (B9 recorded follow-up).
+
+    Under farfield in ("freestream", "vortex") the far-field MAIN DOFs are
+    Dirichlet; the matching move (B16 farfield_aux="pin", solve/newton_ls.py) is
+    to pin these aux to the branch value their host carries. Independent of
+    Gamma / Mach / geometry -- a pure structural constraint. Returns empty
+    arrays when the sheet does not reach the boundary.
+
+    Returns:
+        hosts: (k,) far-field node ids carrying an aux DOF (all < cm.n_main)
+        aux:   (k,) their aux DOF ids (all >= cm.n_main)
+    """
+    ff = np.unique(np.asarray(mesh.boundary_faces["farfield"], dtype=np.int64))
+    aux = cm.ext_dof_of_node[ff]
+    has = aux >= 0
+    return ff[has], aux[has]
+
+
 def _farfield_split(mesh, alpha_deg, u_inf):
     """Split the far-field boundary faces into inflow / outflow by the sign of
     the outward flux u_inf . n_hat (design_track_b.md section 5.4 option b,

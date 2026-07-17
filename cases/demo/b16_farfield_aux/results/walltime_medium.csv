@@ -1,0 +1,4 @@
+path,wall_s,note
+b9_picard_committed,1458.9,b9_summary.csv
+picard_lagged_fair,204.7,B13 lagged-LU arm
+newton_pin_b16,2172.4,conv=False res=7.0e-06 lim=0 flr=0

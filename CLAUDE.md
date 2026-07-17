@@ -17,9 +17,11 @@ resolve through one hop.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
-  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B15
-  level-set wake — **B9 ✓ CLOSED 2026-07-17 (wing-body cross-model); next phase
-  = user's call** — `track_v.md` V1–V4 viscous, designed-not-
+  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B16
+  level-set wake — **B16 ✓ CLOSED 2026-07-18 (LS Newton far-field aux pin —
+  churn FIXED at coarse; but GB16.4 XFAIL: the medium Newton-pin lift disagrees
+  22% with Picard/conforming ⇒ an UNRESOLVED non-convergence, open follow-up);
+  next phase = user's call** — `track_v.md` V1–V4 viscous, designed-not-
   started, `track_a.md` A1– verification & analysis, created 2026-07-15).
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
@@ -67,10 +69,10 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **442 passed + 20 skipped +
-   2 xfailed** (2026-07-17, B9 wing-body cross-model, +13/+1; 1084 s
-   @16 threads — the full lineage lives in [docs/overview.md](docs/overview.md),
-   do not re-grow it here). Skip
+3. Full suite: `pytest tests/` — current baseline **450 passed + 21 skipped +
+   2 xfailed** (2026-07-17, B16 far-field aux pin, +8/+1 =
+   `tests/test_b16_farfield_aux.py`; the full lineage lives in
+   [docs/overview.md](docs/overview.md), do not re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until
    `cases/meshes/onera_m6/generate_onera_m6.py` runs (~30 s); the wake-free
    families likewise (M3 medium ~40 s, M4 ~12 s); the heavy transonic/Newton

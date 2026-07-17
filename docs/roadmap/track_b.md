@@ -5,7 +5,7 @@
 > conventions and the track index live in [roadmap.md](../roadmap.md); the
 > human-readable status snapshot is [overview.md](../overview.md).
 
-## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10**; **B12 ✓ CLOSED 2026-07-14 — lagged-LU direct-reuse for LS Newton (M6 medium Newton 2.18× via 1 factorization vs 7), NEW appended after B11**; **B13 ✓ CLOSED 2026-07-14 — lagged-LU on the Picard outer loop (M6 medium lifting 6.55× 447.6→68.3 s, end-to-end ~3× ~330→112 s)**; **B14 ✓ CLOSED 2026-07-17 — Schur-eliminated-aux + AMG structural preconditioner (`precond="schur"`); the A1 precond bottleneck GONE (M6 medium M0.84 42.6% → 2.6%, ramp 1.43× / subsonic 2.08×), γ = the committed GB15.4; fine-scale route remains the unbuilt designed use-case**; **B15 ✓ CLOSED 2026-07-15 — LS Newton transonic ramp + N5 freeze-selection: the Picard shock plateau is GONE (M6 medium M0.84 2304.7 s bounded-stall → 657 s all-levels-converged, 3.5×; NACA coarse M0.80 5.6× and strict), plus FOUR errata proving the conforming N5 recipe is not mechanically portable**; **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved) — wing-body cross-model validation: LS (Picard) + conforming (NEW capability, Newton) AGREE to 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 fuselage-Cp error; LS Newton diverges on the wing-body = the `neumann` far-field blockage, not the solver** — B10 = curved wake shelved)
+## Track B — Level-set embedded wake (designed 2026-07-07; IN PROGRESS — B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ since 2026-07-12: coarse gate met + LS Newton delivered, medium closure open; **B8 ✓ CLOSED 2026-07-14 characterized-not-cured (user-arbitrated; both constraint-side cures measured negative; B9 unblocked)**; **B11 ✓ CLOSED 2026-07-14 — LS-path infrastructure: unified post-processing + GMRES/AMG scaling (the deferred §5.3 escape from the splu wall), NEW appended after B10**; **B12 ✓ CLOSED 2026-07-14 — lagged-LU direct-reuse for LS Newton (M6 medium Newton 2.18× via 1 factorization vs 7), NEW appended after B11**; **B13 ✓ CLOSED 2026-07-14 — lagged-LU on the Picard outer loop (M6 medium lifting 6.55× 447.6→68.3 s, end-to-end ~3× ~330→112 s)**; **B14 ✓ CLOSED 2026-07-17 — Schur-eliminated-aux + AMG structural preconditioner (`precond="schur"`); the A1 precond bottleneck GONE (M6 medium M0.84 42.6% → 2.6%, ramp 1.43× / subsonic 2.08×), γ = the committed GB15.4; fine-scale route remains the unbuilt designed use-case**; **B15 ✓ CLOSED 2026-07-15 — LS Newton transonic ramp + N5 freeze-selection: the Picard shock plateau is GONE (M6 medium M0.84 2304.7 s bounded-stall → 657 s all-levels-converged, 3.5×; NACA coarse M0.80 5.6× and strict), plus FOUR errata proving the conforming N5 recipe is not mechanically portable**; **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved) — wing-body cross-model validation: LS (Picard) + conforming (NEW capability, Newton) AGREE to 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 fuselage-Cp error; LS Newton diverges on the wing-body = the `neumann` far-field blockage, not the solver**; **B16 ✓ CLOSED 2026-07-18 (churn fix; lift-convergence OPEN) — LS Newton far-field BC generalisation: the wing-body churn is a near-singular far-field aux block (cond1 O(1e19), the 8 rows |R|≈84 reproduced), `farfield_aux="pin"` (default) drops it to 8.7e6 ⇒ freestream Newton reaches res 5.88e-14 / 0 limited at COARSE (lift matches conforming 0.1%) where legacy churns at 7.95; neumann byte-identical. ★★ BUT GB16.4 XFAIL — the MEDIUM Newton-pin STALLS at res 7e-6, lift 22% below Picard/conforming (which agree, B9's 0.4%); the {Newton,Picard,conforming} triangle does not close ⇒ UNRESOLVED non-convergence, open follow-up** — B10 = curved wake shelved)
 
 > **★ Track-B renumber 2026-07-12 (user-directed).** TWO renumbers landed the
 > same day. **(1)** A new **B4 — TE control-volume / implicit-Kutta
@@ -956,6 +956,133 @@ Working rules (DN1 §9–§10):
 ---
 
 
+### B16 — LS Newton far-field BC generalisation (far-field aux-DOF pin) ✓ CLOSED 2026-07-17 (NEW, user-directed; appended after B15, no renumber; executes the B9 recorded follow-up)
+
+**Why (the B9 recorded follow-up, now measured — not prose).** B9 shipped its
+LS leg on Picard because the LS Newton churns on the wing-body (medium Picard
+**1458.9 s** vs the conforming Newton's 52.4 s), and recorded the diagnostic —
+"`neumann` res→1e43, freestream Newton 8 far-field fluid rows |R|≈84" — as
+prose only ("Findings recorded in memory", commit 555cfd8), which violates
+session-discipline #3. B16 reproduces it as a committed artifact AND fixes it.
+
+**Root cause (GB16.1, measured; corrects the pre-registered proposal).** A wake
+level set has **no outflow clip** (`cut_elements.py`: a crossing need only be
+downstream of the TE and within the span), so the sheet reaches the far-field
+boundary and the outer nodes it crosses each carry an aux DOF governed only by a
+**near-singular wake-LS row on a giant outer tet**. At the converged freestream
+Picard state those aux hold garbage (coarse wing-body: |jump| **53.4** at x≥10
+vs the physical Γ̄ **0.0586**); the Picard fixed point tolerates it (it solves
+those rows to zero garbage-and-all), but the Newton residual reads it as an O(1)
+inconsistency — **exactly the 8 far-field MAIN rows, max|R| = 84.457** (reproduced
+to the digit). The aux-block conditioning is the single-number tell:
+`jaa_diagnostic` cond1 = **6.36e18** (legacy free-aux — ABOVE the GB14.1 1e14
+ceiling, i.e. genuinely singular) → **8.70e6** (pinned). ⚠ **The proposal's
+mechanism was wrong**: it attributed Picard's success to `closure="continuity"`
+(weld) vs Newton's `wake_ls`, but the lifting/transonic Picard uses `wake_ls`
+too (weld is only the Laplace seed) — both paths carry the same aux rows; the
+difference is that Picard's fixed point absorbs the near-singular rows and
+Newton's residual does not.
+
+**Fix = `farfield_aux="pin"` (default) on `solve_multivalued_newton`, mode-adaptive
+(user-arbitrated).** On a Dirichlet far field (freestream/vortex, where the
+far-field MAIN DOFs are already Dirichlet) the far-field-BOUNDARY aux enter the
+Dirichlet set at the branch value their host carries: freestream → the same
+single-valued φ∞ (jump→0, consistent with the freestream BC already suppressing
+circulation at a 25-MAC boundary); vortex → `main − side·γ` refreshed per step
+(jump→γ, the conforming `lower_branch_mask` analogue, side from
+`cm.node_side ∈ {±1}` — distinct from the B3 negative result, which pinned BOTH
+sides to one branch and drained the circulation). **`neumann` is byte-identical
+either way** (its outer aux ARE constrained by the wake-LS rows there, and every
+committed LS-Newton anchor uses neumann), so the default flip is vacuous on all
+committed evidence. New helper `farfield_aux_dofs(mesh, cm)` (`solve/picard_ls.py`).
+
+**Gates**
+
+- [x] **GB16.1 — diagnostic (evidence-debt repayment).** Committed script
+  reproduces the churn on the coarse wing-body Picard state: max|R[free]| =
+  **84.457**, 8 outer MAIN rows |R|>1 in the x∈[7,13] wake corridor, junk aux
+  |jump| **53.4** at x≥10 vs Γ̄ 0.0586, cond1 **6.36e18 → 8.70e6** under the pin.
+  D8: the pin drives the outer jumps to **5.3e-15** — and ★ cures the 4 INTERIOR
+  junk aux too (their wake-LS rows now anchor to clean Dirichlet data), so the
+  R2 "interior aux unpinned" risk did not materialize.
+- [x] **GB16.2 — wing-alone / neumann not perturbed.** naca coarse M0.7 neumann
+  is `np.array_equal(phi_ext)` pin vs legacy (test); the B12 anchor
+  (`onera_m6/medium` M0.5 neumann γ **0.06685284**) and the B15 ramp anchor
+  (`onera_m6_wakefree/medium` M0.84 γ **0.088338**, M_max 2.4938, the
+  freeze_max_clamped=8 / 3-clamped caveat unchanged) are the gated tier.
+- [x] **GB16.3 — wing-body freestream Newton converges (coarse ✓; medium
+  gated).** Coarse M0.5: legacy churns (res **7.95**, 3690 limited) → pin reaches
+  **res 5.88e-14, 0 limited** with the outer jumps at 5.3e-15. The BC layer is
+  the fix. ⚠ **HONEST LIMIT (pre-registered branch, band NOT moved):** the pin
+  state carries `n_flr=3`, so the strict `converged` flag (which needs 0 floored)
+  does not fire — but D5 places those 3 cells at the wing-fuselage junction as
+  the **B8 mixed-plain junk / G1.6 fuselage-Cp** class (M²_side 7.32 vs M²_main
+  0.29; max honest M²_main 1.273 at the junction), the SAME root as **GB9.4**'s
+  fuselage-lift xfail — a pre-existing issue orthogonal to the far-field BC fix,
+  not created by B16. Recorded, not chased (G1.6 fix routes are closed negatives).
+  ★ **And the coarse machine-converged lift is RIGHT:** cl_p(wing) **0.2086**
+  vs the conforming **0.2089** (0.1%) — a properly converged Newton-pin agrees
+  with the independent conforming path. (The medium is a different story — see
+  GB16.4 and the ★★ block: the medium Newton STALLS and its lift is 22% low.)
+- [ ] **GB16.4 — Newton-pin vs Picard vs conforming lift (XFAIL — the OPEN
+  non-convergence).** The lift triangle does NOT close consistently, and the
+  alignment FLIPS with resolution (all cl_p, wing): **coarse** the
+  machine-converged Newton-pin **0.2086** matches conforming **0.2089** (0.1%)
+  while LS Picard 0.1853 is the low outlier; **medium** the Newton-pin STALLS at
+  res 7e-6 with **0.1690** — 22% BELOW both LS Picard **0.2165** and conforming
+  **0.2173**, which agree (B9's 0.4% headline). ⇒ at least one path is NOT
+  converged (see the ★★ block below). XFAIL: this is the open state, not a pass.
+- [x] **GB16.5 — Schur/B14 compatible.** `SchurReducedSystem(...,
+  n_aux_expected=mvop.n_ext − ff_aux_dofs.size)`: the pinned aux leave a
+  contiguous free-aux tail; the split constructs and still fails loudly on the
+  un-adjusted (legacy) count. `pytest tests/test_b14_schur_ls.py` stays green.
+- [x] **GB16.6 — transonic wing-body stretch (RECORDED, gated).** wingbody
+  freestream + a B15-style ramp to M0.84; records target_reached / death level /
+  whether the death is the BC layer or the shock — no pass/fail.
+
+★★ **UNRESOLVED NON-CONVERGENCE (user-flagged 2026-07-18 — do NOT paper over).**
+The far-field aux pin definitively fixes the **churn** — a self-contained result
+on its own evidence (cond1 O(1e19)→8.7e6, res 84→**machine at coarse**, 0
+limited vs legacy's 3690, and the coarse converged lift matches conforming to
+0.1%). But comparing the LIFT across the three paths exposes a discrepancy the
+pin does NOT resolve, and it FLIPS with resolution:
+- **coarse:** the machine-converged Newton-pin (0.2086) ≈ conforming (0.2089);
+  LS Picard (0.1853) is the low outlier.
+- **medium:** LS Picard (0.2165) ≈ conforming (0.2173) — B9's headline — and the
+  Newton-pin (0.1690, STALLED at res 7e-6, not machine) is the low outlier, 22%
+  below.
+The {Newton-pin, Picard, conforming} triangle therefore does **not** close
+consistently ⇒ **at least one path is not converged.** Two live possibilities,
+neither ruled out: **(a)** the medium Newton-pin is simply non-converged (it
+stalls at 7e-6; a warm start from the *converged* B9 Picard state also failed to
+converge within ~10 min, so it is NOT merely a shallow cold seed); **(b)** the
+B9 medium LS-Picard≈conforming 0.4% agreement could itself be a non-converged
+coincidence (both stopping near, but not at, a truly converged state). The
+coarse evidence (converged Newton-pin ≈ conforming) favours (a), but does not
+settle it. **UNRESOLVED — the medium-convergence / lift-consistency problem is
+the open B16 follow-up; analysis deferred (user).** B16's churn fix stands; the
+"the LS Newton now matches the other paths" claim does **not** — do not make it.
+
+★ **New knob `farfield_aux` (default `"pin"`).** Defensible-as-default:
+freestream Newton was NEVER exercised before B9 (the `ff_vals=None` bug made it
+non-finite until 695baa0), vortex Newton has zero committed recipes, and neumann
+is byte-identical — so "default leaves every committed anchor bit-identical"
+holds vacuously. `"legacy"` is kept as the GB16.1 pathology reproduction switch.
+
+**Bit-identity:** `farfield="neumann"` and `farfield_aux="legacy"` are
+byte-identical to pre-B16 (locked: `test_neumann_bit_identical_pin_vs_legacy`,
+and the b12/b13/b14/b15 neumann suites all pass unchanged). `schur_ls.py` changed
+docstring/error text only (the assert body is preserved).
+Tests `tests/test_b16_farfield_aux.py` (9, incl. gated GB16.3).
+
+Working rules (DN1 §9–§10): the no-big-bang / dual-mesh / P8-sequencing block
+above (B15) applies unchanged — B16 touches only the LS Newton far-field wiring
+and one pure-query helper; the conforming path and the Picard drivers are
+byte-untouched.
+
+---
+
+
 ## Progress ledger
 
 ### Track B — level-set embedded wake
@@ -990,4 +1117,5 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
 | B13 | ✓ | 2026-07-14 | (NEW 2026-07-14, user-directed; appended after B12) **Lagged-LU on the Picard OUTER loop** — the post-B12 cost driver (one 17.5 s spsolve per outer; B11 lifting headline 447.6 s / 26 outers, Newton seed 263 s / 15). `solve_multivalued_lifting` gains `direct_refactor_every` (default 1 = bit-identical) + `direct_reuse_rtol` (**1e-10, NOT B12's 1e-8** — a Picard fixed point is pinned only by its 1e-6 lag tolerances, so an inexact reuse step SHIFTS the stopping point, measured |Δγ| 8e-8 at 1e-8; Newton's terminus is pinned by tol_residual regardless); transonic inherits via `**kwargs`; laplace excluded (single-shot). User goal arbitrated: medium-scale speed is the objective, fine optional ⇒ this outranks the structural preconditioner (B14). **GB13.1 ✓ + GB13.2 ✓ + GB13.3 ✓** — M6-medium lifting **447.6 s → 68.3 s (6.55×)**, 2 refactors vs 26 outers, γ bit-identical (|Δγ| 6.9e-13); end-to-end seed+Newton **~330 s → 111.9 s (~3×)**, seed 263→42 s. (1 GMRES stall = the designed safety-net refactor on an early large-density outer, not a divergence.) External-doc corrections recorded (Schur direction inverted in both external docs; 454.8 s = 26 outers not one splu). Evidence: `tests/test_b13_lagged_picard.py` (5); demo `cases/demo/b13_lagged_picard/` (6/6). |
 | B14 | ✓ | 2026-07-17 | (OPENED + CLOSED 2026-07-17, user-directed) **Schur-eliminated aux block + AMG(SPD Picard main block) — the structural preconditioner, BUILT.** `precond="schur"` on both LS drivers (`pyfp3d/solve/schur_ls.py::SchurReducedSystem`): per step/outer eliminate the SMALL aux thin-strip block exactly (`K = J_mm − J_ma·J_aa⁻¹·J_am`, `lu_aa = splu(J_aa)`, n_ext-sized — 1004/3701 dofs at M6 coarse/medium, split+splu **≤19 ms**), GMRES on the reduced main-free operator preconditioned by AMG on the SPD single-valued Picard block, **NO springs** — the B11 surrogate's jump≈0 bias (γ 0.0033 vs 0.139) is structurally absent, and the circulation mode survives. Shared by `solve_multivalued_newton` + `solve_multivalued_lifting` (transonic wrappers inherit via kwargs; `solve_multivalued_laplace` out of scope). A stalled reduced GMRES falls back to a full fused spsolve in the same step (`n_schur_fallback`) — **0 fallbacks anywhere in the campaign**. **GB14.1 ✓** J_aa factors on all 4 measured cases, cond1 5.1e8/8.2e9/6.5e6/**7.4e7** (finite; measured, not assumed). **GB14.2 ✓** 2.5D coarse lifting+Newton land on the spsolve γ to \|Δγ\| 4.2e-11/2.0e-12, 0 fallbacks — on the exact operator where the B11 surrogate stalled to γ 0.0033. **GB14.3 ✓** the pre-registered discriminating tier — 2.5D MEDIUM lifting, where ILU DIVERGED to γ=−136.99 (77 stalls) — schur converges to γ 0.14137632, \|Δγ\| 9.3e-10, "a real escape". **GB14.4 ✓** 3-D capability: M6 wake-free COARSE + MEDIUM × M0.5 lifting + M0.84 ramp all converge/target-reached, γ matches the lagged-LU arm to \|Δγ\| ≤ 1.5e-8 and the committed GB15.4 state exactly (γ **0.088338**, M_max **2.4938**). **GB14.5 ✓** default `precond=None` byte-identical, `n_schur_fallback` inert. ★ **TIMING (RECORDED, not gated — the design said medium-scale gain was uncertain; it landed on the winning side):** M6 medium M0.5 lifting **73.2 → 35.2 s = 2.08×** (precond 51.7% → 5.2%); M6 medium M0.84 ramp **671.2 → 469.3 s = 1.43×** (precond **42.6%/43.6% → 2.6%**, i.e. the A1 bottleneck is GONE — beats the user's <10% target). ★ **Honest limit:** at SMALL scale schur is SLOWER (2.5D coarse/medium and M6 coarse: the direct solve is already trivially cheap, the extra Krylov iters cost more than the tiny factorization) — the speedup appears only at M6-medium size and grows with it, so the **remaining designed value is the fine memory-bounded path (AMG O(n) + thin-strip LU, no full-size splu), out of scope here (user: coarse+medium)**. Fallbacks (block-triangular; Núñez additive) NOT needed. Evidence: `tests/test_b14_schur_ls.py` (9, incl. gated GB14.3); demo `cases/demo/b14_schur_precond/` (**7/7 incl. gated M6 coarse+medium**). |
 | B15 | ✓ | 2026-07-15 | (NEW 2026-07-15, user-directed; appended after B14, no renumber) **LS Newton transonic ramp + N5 freeze-selection — the Picard shock-position PLATEAU is removed.** Root cause measured: the LS transonic Picard's top Mach levels never converge and burn their full outer budget on the plateau (M6 medium M0.84: levels 0.80/0.84 each run all 200 outers) — that IS the 24.5/38.4 min. Newton has no such soft mode, but `newton_ls` could not ramp (`freeze=` was a reserved no-op; the 0-clamped gate blocks shock limiter cells; no Mach-ramp wrapper). Delivered: `MultivaluedOperator.newton_side_data(frozen=…)` + `freeze_side_state` (the `kernels/upwind.py` frozen apparatus reused UNMODIFIED — the per-side ops are already walk-mode with a side-masked graph ⇒ wiring, not new numerics); `LSNewtonSystem` (residual+Jacobian in ONE code path shared with the FD gate); `solve_multivalued_newton_transonic`. **GB15.1 ✓** FD rel **6.7e-9**, frozen sweep reproduces live density BITWISE at the freeze point. **GB15.2 ✓** the freeze cures a genuine **period-6 limit cycle** (NACA coarse M0.75: live stuck at 2.7e-7 with 0 lim/flr = clean assignment churn → frozen **22 steps to 8.5e-13**, 0 reverts, γ 0.218809 vs the live cycle's 0.218804 ⇒ it removes churn, it does NOT move the solution). **GB15.3 ✓** NACA coarse M0.80/α1.25 (B6 gate; conforming-Newton truth M_max 1.408): Picard 41.9 s → |R| 1.55e-5 with only **3/5 levels converged (not a solution)** vs Newton **7.5 s → 3.1e-12 strict (5.6×)**, M_max 1.3924 (−1.1% of truth); **+`intermediate_tol` 6.5 s with γ 0.212445 IDENTICAL to strict** (48→38 steps) ⇒ the loose-intermediate knob is FREE. **GB15.4 ✓** M6 medium M0.84 wake-free: committed Picard **2304.7 s (38.4 min)** on the 1e-5..1e-4 plateau → Newton ramp **657 s (11.0 min) = 3.51×, ALL 6 levels converged to ~1e-11**, freeze armed everywhere, 0 reverts; M_max 2.4938 vs Picard 2.4549 (1.6%), 3 clamped cells of 330k vs ≤3. ⇒ closes the deferred **B6-medium quantitative** + **B7-quantitative** items. ★ **HONEST LIMIT:** 5 of 6 levels accept via `assignment_cycle` — the FROZEN system converges to ~1e-11 and is accepted at the **assignment-discontinuity floor** (the N5 semantics the conforming path also uses); this is NOT a claim that the LIVE residual is <1e-10. 6–7 orders better than the Picard plateau, but 'live-strict' would be an over-claim. Also open (unchanged by B15): the LS-vs-conforming **discretization gap** (γ −7.4% of the same-mesh conforming-Newton truth at NACA coarse M0.80; B6 recorded ~13%) — B15 makes it measurable strict-to-strict for the first time, it does not close it. ★★ **FOUR ERRATA (the conforming N5 recipe is NOT mechanically portable — the B8 lesson again; all four forced out by measurement):** (1) the TE polyline must come from the AUTHORITATIVE geometry — hand-rolled x_te off by **2e-4** matches ZERO wall nodes ⇒ **0 TE nodes ⇒ no Kutta ⇒ 340k limited cells + NaN, passed SILENTLY** ⇒ both LS solvers now RAISE on `te_nodes == 0`; (2) **`freeze_tol` must sit ABOVE the CHURN FLOOR, which RISES with Mach** (<1e-6 @M0.60 → 8.6e-6 @M0.65 → **2.7e-4** @M0.70) — below it a discrete selection flip throws the residual back before the freeze can arm and the ramp DIES at M≈0.66 (**same law as 'tol_residual above the Picard plateau'**); (3) **residuals are NOT comparable across a SELECTION EPOCH** — the frozen phase drives `r_best` to 1.5e-11, a refresh legitimately returns it to the live scale (2.6e-3), and the fail-fast reads a 1e8× blow-up and kills a healthy freeze-refresh cycle ⇒ `r_best` reset on freeze/refresh/revert; (4) **the frozen clamp count is STALE BY CONSTRUCTION** (`n_floored` = `branch==3` at the freeze point, never falls) ⇒ gating on `n_flr==0` **refuses a 7.8e-14 machine-precision solution forever** ⇒ the **LIVE re-evaluation** is the arbiter. New knob **`freeze_max_clamped`** (default 0 = the conforming rule): a SINGLE floored cell of 330k otherwise blocks the freeze at ANY `freeze_tol` — **the P9/G9.1 wall** — yet the frozen sweep represents a clamped cell exactly (branch 3), so the precondition was stricter than the machinery needs; relaxed, the ramp completes **WITH** the clamped cells (⚠ errata 2026-07-15: they PERSIST — the converged M0.84 state carries 3 of 330k, and the `assignment_cycle`/`refresh_budget` accept routes no longer re-check the clamp count; see the corrections block in the B15 entry). Defaults byte-identical (`freeze_tol=None`). Evidence: `tests/test_b15_ls_newton_freeze.py` (12, incl. the errata lock); demo `cases/demo/b15_ls_newton_ramp/` (**19/19 incl. gated M6**). |
+| B16 | ✓ | 2026-07-17 | (NEW 2026-07-17, user-directed; appended after B15, no renumber; executes the B9 recorded follow-up) **LS Newton far-field BC generalisation — far-field aux-DOF pin.** Root cause (GB16.1, MEASURED — B9 had it as prose only): a wake level set has no outflow clip ⇒ the sheet reaches the far field and the outer nodes it crosses carry aux DOFs governed only by **near-singular wake-LS rows on giant outer tets**; at the freestream Picard state they hold garbage (coarse |jump| **53.4** at x≥10 vs Γ̄ 0.0586), which Picard's fixed point absorbs but the Newton residual reads as an O(1) inconsistency — **the 8 far-field MAIN rows, max\|R\| = 84.457** reproduced to the digit; aux-block cond1 **6.36e18** (legacy, ABOVE the 1e14 GB14.1 ceiling) **→ 8.70e6** (pin). ⚠ **The proposal's mechanism was wrong** (Picard lifting uses `wake_ls` too, not the weld — the difference is fixed-point absorption vs Newton residual, not the closure). **Fix = `farfield_aux="pin"` (default), mode-adaptive (user-arbitrated):** on a Dirichlet far field the far-field-boundary aux enter the Dirichlet set at the host's branch value (freestream → φ∞, jump→0; vortex → main−side·γ, jump→γ, the conforming `lower_branch_mask` analogue, NOT the B3 both-sides pin); `neumann` byte-identical. Helper `farfield_aux_dofs` (`solve/picard_ls.py`); Schur adapted (`n_aux_expected = n_ext − n_pinned`, assert kept). **GB16.1 ✓** (diagnostic + D8: pin drives outer jumps 53.4→**5.3e-15** and ★ cures the 4 INTERIOR junk aux too ⇒ R2 risk void). **GB16.2 ✓** neumann `array_equal` pin vs legacy; B12 γ 0.06685284 / B15 γ 0.088338 anchors gated. **GB16.3 coarse ✓** legacy churns (res **7.95**, 3690 limited) → pin **res 5.88e-14, 0 limited**, and the coarse converged lift matches conforming (cl_p 0.2086 vs 0.2089, 0.1%); ⚠ pin carries `n_flr=3` at the wing-fuselage junction = the **B8 mixed-plain / G1.6 fuselage-Cp** class (same root as **GB9.4**), orthogonal to the BC fix. **★★ GB16.4 XFAIL — the OPEN non-convergence (user-flagged):** the {Newton-pin, LS-Picard, conforming} lift triangle does NOT close and FLIPS with resolution — coarse: Newton-pin 0.2086 ≈ conforming 0.2089, Picard 0.1853 low; medium: Picard 0.2165 ≈ conforming 0.2173 (B9's headline), Newton-pin 0.1690 low (22%, STALLED at res 7e-6) ⇒ at least one path is not converged. Two live possibilities (neither ruled out): the medium Newton-pin is non-converged (a warm start from the converged Picard also failed to converge in ~10 min ⇒ not merely a shallow seed), OR the B9 LS-Picard≈conforming 0.4% was itself a non-converged coincidence. UNRESOLVED, analysis deferred; the churn fix stands on the coarse machine-converged evidence, the "Newton now matches the other paths" claim does NOT. **GB16.5 ✓** Schur split with pinned aux constructs + fails loudly on the legacy count; `test_b14` green. **GB16.6** transonic stretch RECORDED (gated). ★ New knob `farfield_aux` default `"pin"` — defensible-as-default (freestream Newton never exercised pre-B9, vortex Newton zero committed recipes, neumann byte-identical ⇒ "default leaves every committed anchor bit-identical" holds vacuously); `"legacy"` is the pathology reproduction switch. Evidence: `tests/test_b16_farfield_aux.py` (9, incl. gated GB16.3); demo `cases/demo/b16_farfield_aux/` (5/5 coarse PASS + gated medium). |
 

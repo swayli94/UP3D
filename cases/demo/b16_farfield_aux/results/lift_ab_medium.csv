@@ -1,0 +1,4 @@
+path,cl_p_wing,cl_kj_exposed,vs_picard_pct
+ls_newton_pin,0.1690,0.1713,21.9
+ls_picard_b9,0.2165,0.2175,0.0
+conforming_pressure_b9,0.2173,,

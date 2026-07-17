@@ -47,18 +47,22 @@ class SchurReducedSystem:
     """Exact elimination of the aux tail block of a free-reduced fused matrix.
 
     Constructed FRESH per Newton step / Picard outer (the TE-Kutta rows change
-    per linearization). Relies on the B3 load-bearing fact that aux DOFs
-    (global ids >= n_main) are NEVER Dirichlet, and that `free` is sorted
-    ascending -- so within A_free = A[free][:, free] the aux DOFs are the
-    contiguous tail and no permutation is needed.
+    per linearization). Relies on `free` being sorted ascending -- so within
+    A_free = A[free][:, free] the aux DOFs are the contiguous tail and no
+    permutation is needed. The aux tail is whatever aux DOFs remain FREE: B3
+    kept all aux free, and B16's farfield_aux="pin" removes only the handful of
+    far-field-boundary aux (still a contiguous tail, since they are the highest
+    ids in an already-sorted `free`); the caller passes the expected free-aux
+    count so a genuine mis-split still fails loudly.
 
     Args:
         A_free: the free-reduced fused matrix (main-free + aux, square).
         free: sorted free-DOF indices into the n_total numbering.
         n_main: mvop.n_main (aux DOFs are the ids >= n_main).
-        n_aux_expected: mvop.n_ext; a mismatch means an aux DOF became
-            Dirichlet somewhere upstream -- fail loudly, never silently
-            mis-split.
+        n_aux_expected: the number of aux DOFs the caller left FREE
+            (mvop.n_ext, minus any far-field aux pinned by B16). A mismatch
+            means an UNEXPECTED aux DOF became Dirichlet upstream -- fail
+            loudly, never silently mis-split.
     """
 
     def __init__(self, A_free: sp.spmatrix, free: np.ndarray, n_main: int,
@@ -69,8 +73,9 @@ class SchurReducedSystem:
         if n_aux_expected is not None and n_aux != int(n_aux_expected):
             raise ValueError(
                 f"Schur split expected {n_aux_expected} aux DOFs in the free "
-                f"set but found {n_aux}: an aux DOF appears in the Dirichlet "
-                "set (aux is never Dirichlet -- B3) or `free` is unsorted.")
+                f"set but found {n_aux}: an UNEXPECTED aux DOF entered the "
+                "Dirichlet set (only B16 far-field pins are allowed there, and "
+                "the caller accounts for those) or `free` is unsorted.")
         A = A_free.tocsr()
         self.n_mf = n_mf
         self.n_aux = n_aux

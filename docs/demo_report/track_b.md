@@ -1277,6 +1277,11 @@ inconsistency is a recorded follow-up (subsonic LS Newton for a blunt body),
 not a B9 blocker. The prior-track recipes are sound — they sit *beneath* the
 far-field BC, and the wing-body breaks the BC layer.
 
+> ★ **B16 (below) closed this follow-up** and corrected the framing: the "8 rows
+> |R|≈84" are not a bug in the never-exercised freestream path — they are the
+> Newton residual reading a **near-singular far-field aux block**, and pinning
+> those aux makes the freestream Newton converge (res 5.88e-14, 0 limited).
+
 ### GB9.4 XFAIL — the fuselage does NOT "carry no lift"
 
 The pre-registered band (|cl_fus| ≤ 0.05 cl_p_wing) FAILS: fuselage
@@ -1294,3 +1299,107 @@ Azimuthal Cp scatter (reference-free at α=0 — the exact solution is
 axisymmetric) median DECAYS 0.0036/0.0022/0.0010 but max GROWS
 0.042/0.096/0.117, concentrated at the nose/tail poles where R→0 — the G1.6
 error class, now quantified for the wing-body's fuselage resolution.
+
+
+## Track B / B16 — LS Newton far-field BC generalisation (far-field aux-DOF pin) (CLOSED 2026-07-17)
+
+Demo `cases/demo/b16_farfield_aux/` (coarse **5/5 PASS**; medium under
+`PYFP3D_TRANSONIC_GATES=1`). This demo repays B9's evidence debt: it reproduces,
+as a committed artifact, the LS-Newton churn B9 recorded only as prose, then
+shows the fix.
+
+### GB16.1 — the churn IS a near-singular far-field aux block (the diagnostic)
+
+On the coarse wing-body freestream Picard state (reusing B9's `ls_coarse.npz`),
+`LSNewtonSystem.residual` gives **max|R[free]| = 84.457** — and the big rows are
+exactly **8 far-field MAIN rows** in the outer wake corridor x∈[7,13] (the next
+row down is at the Picard tolerance, ~5e-4). Their cause is upstream: the wake
+sheet has no outflow clip, so it reaches the far field and the outer nodes it
+crosses carry aux DOFs whose only equation is a wake-LS row on a giant outer
+tet. Those aux hold garbage — the jump-vs-x census shows the 647 aux at x<8 all
+carry the physical circulation (|jump| ≤ 0.097, Γ̄ 0.0586) while the **8 aux at
+x≥10 carry |jump| up to 53.4**. The single-number tell is the aux-block
+conditioning: `jaa_diagnostic` cond1 = **6.36e18** (legacy free-aux — above the
+GB14.1 1e14 ceiling, i.e. genuinely singular) → **8.70e6** once the far-field
+aux are pinned (an `onenormest` estimate, run-varying O(1e19)→O(1e7); the
+12-order drop across the ceiling is the point, not the mantissa). Figures:
+`b16_residual_map_coarse.png` (|R| by row + the x–z
+projection flagging the 8 rows), `b16_jump_profile_coarse.png` (jump-vs-x before
+/after), `b16_ladder_coarse.png` (residual + cond1 bars). CSVs:
+`residual_rows_coarse.csv`, `jump_profile_coarse.csv`.
+
+⚠ **The pre-registered proposal's mechanism was wrong**, and the demo says so: it
+blamed Picard's `closure="continuity"` weld vs Newton's `wake_ls`, but the
+lifting Picard uses `wake_ls` too (the weld is only the Laplace seed). The
+difference is that Picard's fixed point absorbs the near-singular rows and
+Newton's residual does not — not the closure.
+
+### GB16.3 — the pin makes the freestream Newton converge (A/B)
+
+`b16_convergence_coarse.png` is the headline A/B on the coarse wing-body M0.5:
+
+| far field | result |
+|---|---|
+| `neumann` (cold) | **unbounded, res ~1e6–2.6e8** (the fuselage blockage; a cold solve is the faithful reproduction — seeding from the freestream Picard state would MASK it. B9's "1e43" was a longer run; the point is *unbounded*, not the exact magnitude) |
+| `freestream` legacy | churns: res **7.95**, **3690 limited**, 758 floored |
+| `freestream` pin | **res 5.88e-14, 0 limited**, outer jumps 53.4 → **5.3e-15** |
+
+★ Pinning the **4 far-field-boundary** aux also cured the **4 interior** junk aux
+(x 10–14): their wake-LS rows now anchor to clean Dirichlet data (D8;
+`b16_jump_profile` right panel). So the "pin only the boundary aux, leave the
+interior ones" risk did not materialize.
+
+⚠ **HONEST LIMIT (band NOT moved).** The pin state carries `n_flr=3`, so the
+strict `converged` flag (which demands 0 floored) does not fire. But the D5
+dual-read places those 3 cells at the **wing-fuselage junction** as the B8
+mixed-plain junk / G1.6 fuselage-Cp class — `element_mach2` reads M²_side **7.32**
+vs M²_main **0.29** there, and the max honest M²_main is 1.273 at the junction —
+the SAME root as GB9.4's fuselage-lift xfail. That is a pre-existing issue
+orthogonal to the far-field BC fix; B16 fixes the BC layer (the churn) and does
+not chase the junction floor (G1.6 fix routes are closed negatives).
+
+### GB16.4 — the lift triangle does NOT close: an UNRESOLVED non-convergence (user-flagged)
+
+`b16_spanwise_{level}.png` (Γ(z) + sectional cl(z)) and `b16_sections_{level}.png`
+(section Cp at η = 0.20/0.44/0.65/0.90, same extractor, wing wall) draw the
+Newton-pin vs LS-Picard distributions; `lift_ab_{level}.csv` records the scalar
+lift against the committed B9 conforming reference. The result is the phase's
+sharpest open question. cl_p(wing):
+
+| path | coarse | medium |
+|---|---|---|
+| conforming (pressure, B9) | 0.2089 | 0.2173 |
+| LS Picard (B9) | 0.1853 | 0.2165 |
+| **LS Newton pin (B16)** | **0.2086** | **0.1690** (res 7e-6, STALLED) |
+
+The alignment **flips with resolution**: at coarse the machine-converged
+Newton-pin matches conforming to **0.1%** and the LS Picard is the low outlier;
+at medium the LS Picard matches conforming to **0.4%** (B9's headline) and the
+Newton-pin — which stalls at res 7e-6, **not** machine — is the low outlier, 22%
+below. So the {Newton-pin, Picard, conforming} triangle does **not** close
+consistently ⇒ **at least one path is not converged.** Two possibilities, neither
+ruled out: **(a)** the medium Newton-pin is simply non-converged (a warm start
+from the *converged* B9 Picard state also failed to converge within ~10 min, so
+it is not merely a shallow cold seed); **(b)** the B9 medium LS-Picard≈conforming
+0.4% could itself be a non-converged coincidence. The coarse anchor
+(converged Newton-pin ≈ conforming) favours (a) but does not settle it.
+**UNRESOLVED — the open B16 follow-up, analysis deferred.** The churn fix stands
+on the coarse machine-converged evidence; the claim "the LS Newton now matches
+the other paths" does **not**, and this dossier does not make it.
+
+### Medium wall-clock (RECORDED) — the pin runs clean of the churn, but it is not a speed win
+
+`b16_walltime_medium.png` + `walltime_medium.csv`:
+
+| path | wall | note |
+|---|---|---|
+| B9 Picard (committed) | 1458.9 s | the B9 fallback (no lagged-LU) |
+| Picard + lagged-LU (fair arm) | **205 s** | the B13 speedup, not miscredited to B16 |
+| Newton pin (B16) | **2172 s** | res 7.03e-6, 0 limited, 0 floored |
+
+The medium pin removes the churn (0 limited *and* 0 floored — the coarse
+`n_flr=3` does not recur), but it does not converge (see GB16.4 above) and it is
+**slower** than Picard: the 35-outer Picard seed dominates the 2172 s, and the
+fair lagged-LU Picard arm is only 205 s. B16's value is emphatically not
+wall-clock; the "Newton ≪ Picard" hypothesis was measured FALSE and recorded as
+such.

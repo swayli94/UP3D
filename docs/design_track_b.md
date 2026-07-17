@@ -1290,3 +1290,80 @@ GB9.5（跨模型 medium <1%）：conf-pressure 0.2173/0.2188 vs LS-Picard 0.216
 两路，测试固化）✓ GB9.6（机身 Cp 守卫，RECORDED：方位角散布中位 0.0036/0.0022/0.0010 衰减、
 极大值 0.042/0.096/0.117 在鼻尾极点增长——G1.6 误差类）。**GB9.4 XFAIL**：机身升力 16-20%、
 随分辨率增长（LS 0.164→0.205）⇒ G1.6 机身 Cp 离散误差，非干净物理；带未事后移动（house rule）。
+
+> ★ §15.2 把"LS Newton 在翼身上发散"定位到远场 BC 层，并把外边界残差不一致列为 recorded
+> follow-up。**B16（§16）钉死并修复了它**：不是"从未被跑过的 freestream Newton 路径的 bug"，
+> 而是一个**近奇异的远场 aux 块**（尾迹片贯穿远场边界留下的、只受巨型外区单元上 wake-LS 行约束
+> 的 aux DOF）。见 §16。
+
+## 16. B16:LS Newton 远场 BC 通用化——远场 aux DOF 钉扎（2026-07-17，已关闭）
+
+**动机（B9 的 recorded follow-up）。** B9 因 LS Newton 在翼身上 churn 而把 LS 腿落在 Picard 上
+（medium Picard 1458.9 s vs conforming Newton 52.4 s），并把诊断（"neumann res→1e43，
+freestream Newton 8 个远场流体行 |R|≈84"）只记在散文里（违反 session-discipline #3）。B16 把它
+复现成 committed 工件并修复。
+
+### 16.1 根因（GB16.1，实测；修正了预注册提案的机理）
+
+尾迹水平集**没有出流裁剪**（`cut_elements.py`：一个交叉只需在 TE 下游且在展向范围内），所以
+sheet 抵达远场边界，被它切到的外区节点各持一个 aux DOF，而这些 aux **只受一个巨型外区单元上的
+wake-LS 行约束——该行近奇异**。在 freestream Picard 收敛态处，这些 aux 携带垃圾值
+（coarse 翼身：x≥10 处 |jump| **53.4** vs 物理 Γ̄ **0.0586**）；Picard 不动点把这些行连同垃圾
+一起解为零（自洽），但 Newton 残差把它读成 O(1) 不一致——**恰好是 8 个远场 MAIN 行，
+max|R| = 84.457**（逐位复现）。aux 块的条件数是单数字铁证：`jaa_diagnostic` cond1 =
+**6.36e18**（legacy 自由 aux——**高于 GB14.1 的 1e14 上限**，即真奇异）→ **8.70e6**（钉扎后）。
+
+⚠ **提案的机理是错的**：它把 Picard 的成功归于 `closure="continuity"`（weld）对 Newton 的
+`wake_ls`，但升力/跨声速 Picard **也用** `wake_ls`（weld 只在 Laplace 种子）——两路 aux 行相同，
+差别在于 Picard 不动点吸收近奇异行、Newton 残差不吸收，**不是 closure 的差别**。
+
+### 16.2 修复：`farfield_aux="pin"`（默认），按模式适配（用户裁决）
+
+在 Dirichlet 远场（freestream/vortex，远场 MAIN DOF 已是 Dirichlet）上，把远场**边界** aux 也
+放进 Dirichlet 集，值取其宿主节点所在支：
+
+- **freestream**：aux = 与宿主相同的单值 φ∞ ⇒ 环上 jump→0。这与 freestream BC 本身在 25-MAC
+  边界抹掉环量一致（O(Γ) 的环局部误差，与该 BC 的截断同级；GB16.4 是它的检测器）。
+- **vortex**：aux = `main − side·γ`，每步随 γ 刷新 ⇒ jump→γ。`side = cm.node_side ∈ {±1}`
+  （节点被 ε 移位后永不为 0），是 conforming `lower_branch_mask` 的类比。**与 B3 的负结果不同构**：
+  B3 把两侧都钉到一支（jump→0）抽干了环量；这里分侧、保 jump=γ。
+
+**`neumann` 逐位不变**（其外区 aux 本就受 wake-LS 行约束，且所有 committed LS-Newton 锚都用
+neumann），所以默认翻到 pin 对全部 committed 证据是空洞成立的。新 helper
+`farfield_aux_dofs(mesh, cm)`（`solve/picard_ls.py`，纯查询）。Schur（B14）适配：
+`n_aux_expected = mvop.n_ext − ff_aux_dofs.size`（钉掉的 aux 让自由 aux 仍是连续尾段，assert 保留
+fail-loudly）。
+
+### 16.3 gate 结果（GB16.1–16.6）
+
+- **GB16.1 ✓**（诊断 + D8）：max|R| 84.457、8 外区行、junk |jump| 53.4、cond1 6.36e18→8.70e6；
+  pin 把外区 jump 打到 **5.3e-15**，且 ★ **顺带治好了 4 个内部 junk aux**（它们的 wake-LS 行现在
+  锚定到干净 Dirichlet 数据）⇒ R2"内部 aux 未钉"风险作废。
+- **GB16.2 ✓**：neumann pin vs legacy `array_equal(phi_ext)`；B12 锚 γ 0.06685284 / B15 锚
+  γ 0.088338（门控）。
+- **GB16.3 coarse ✓**：legacy churn（res **7.95**、3690 limited）→ pin **res 5.88e-14、0 limited**。
+  ⚠ **诚实边界（预注册分支，带未移动）**：pin 态带 `n_flr=3`，strict `converged`（需 0 floored）
+  不触发——但 D5 把这 3 个单元定位在翼身交界处，是 **B8 mixed-plain junk / G1.6 机身 Cp** 类
+  （M²_side 7.32 vs M²_main 0.29；交界处 max 诚实 M²_main 1.273），与 **GB9.4** 机身升力 xfail
+  同根，是先于 B16 存在、与远场 BC 修复正交的问题，不追。
+- **GB16.4 XFAIL —— ★★ 未解决的非收敛问题（用户 2026-07-18 标记，不得掩盖）**。三路升力
+  {Newton-pin, LS-Picard, conforming} 的三角**不闭合**，且随分辨率**翻转**（cl_p，机翼）：
+  - **coarse**：机器收敛的 Newton-pin **0.2086** 与 conforming **0.2089** 吻合（0.1%），LS Picard
+    0.1853 是低离群；
+  - **medium**：LS Picard **0.2165** 与 conforming **0.2173** 吻合（B9 头条 0.4%），而 Newton-pin
+    **0.1690**（在 res 7e-6 **停滞**、未达机器精度）低 22%。
+  ⇒ **至少有一条路没收敛**。两种活的可能（均未排除）：(a) medium Newton-pin 就是没收敛（停在
+  7e-6；从收敛的 B9 Picard 态热启也在 ~10 min 内没收敛 ⇒ 不只是浅种子问题）；(b) B9 的 medium
+  LS-Picard≈conforming 0.4% 本身可能是非收敛的巧合（两者都停在接近但非真正收敛的态）。coarse 证据
+  （收敛的 Newton-pin ≈ conforming）**倾向 (a) 但不能定论**。**未解决——medium 收敛 / 升力一致性
+  是 B16 的 open follow-up，分析推迟（用户）。B16 的 churn 修复独立成立（凭 coarse 机器收敛证据）；
+  "LS Newton 现在与其他路一致" 这个断言不成立，不要写。**
+- ★ **墙钟（RECORDED）**：medium Newton **比 Picard 慢**——35-outer Picard 种子主导（2172 s），
+  公平 lagged-LU Picard 臂仅 **205 s**。B16 的价值不是墙钟。
+- **GB16.5 ✓**：Schur split 接受钉扎自由集、对 legacy 计数 fail-loudly；`test_b14` 全绿。
+- **GB16.6**（跨声速 stretch，RECORDED，门控）：wingbody freestream + B15 风格 ramp 到 M0.84，
+  记录 target_reached / 死亡级 / 死因是否 BC 层。
+
+证据：`tests/test_b16_farfield_aux.py`（9，含门控 GB16.3）；demo `cases/demo/b16_farfield_aux/`
+（coarse 5/5 PASS + 门控 medium）。求解器仅动 LS Newton 远场接线 + 一个纯查询 helper；conforming
+路与 Picard 驱动逐位不变。

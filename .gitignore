@@ -144,3 +144,6 @@ temp/
 
 # B9 wing-body demo solution caches (figures+CSVs are the committed evidence)
 cases/demo/b9_wingbody/results/*.npz
+
+# B16 far-field aux pin demo solution caches (figures+CSVs are the committed evidence)
+cases/demo/b16_farfield_aux/results/*.npz
