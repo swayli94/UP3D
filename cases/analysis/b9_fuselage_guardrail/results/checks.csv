@@ -1,0 +1,5 @@
+gate,name,value,criterion,status
+GB9.6,coarse_converged,True,solve converges,PASS
+GB9.6,medium_converged,True,solve converges,PASS
+GB9.6,fine_converged,True,solve converges,PASS
+GB9.6,azimuthal_scatter_recorded,coarse=0.0036; medium=0.0022; fine=0.0010,RECORDED (no pass/fail; caveat carried until P11/Option C),RECORDED

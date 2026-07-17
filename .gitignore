@@ -141,3 +141,6 @@ docs/references
 
 # Temporary files
 temp/
+
+# B9 wing-body demo solution caches (figures+CSVs are the committed evidence)
+cases/demo/b9_wingbody/results/*.npz

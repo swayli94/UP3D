@@ -1,0 +1,9 @@
+gate,check,value,criterion,status,note
+GB9.1,coarse_conforming_converged,probe 2 / pressure 4 steps,both Newton solves converge; 0 lim/flr,PASS,
+GB9.2,coarse_ls_converged,Picard 30 outer; res in cache,LS Picard converges (freestream),PASS,
+GB9.4,coarse_fuselage_lift,conf 0.166 / LS 0.164,RECORDED (coarse),PASS,
+GB9.5,coarse_cross_model,cl_p 12.8% cl_kj 8.7%,RECORDED (coarse),PASS,
+GB9.1,medium_conforming_converged,probe 5 / pressure 3 steps,both Newton solves converge; 0 lim/flr,PASS,
+GB9.2,medium_ls_converged,Picard 64 outer; res in cache,LS Picard converges (freestream),PASS,
+GB9.4,medium_fuselage_lift,conf 0.164 / LS 0.205,|cl_fus| <= 0.05 cl_p_wing,XFAIL,fuselage lift resolution/model-sensitive -> G1.6 fuselage-Cp error (GB9.6); band NOT moved
+GB9.5,medium_cross_model,cl_p 0.4% cl_kj 0.6%,conf-pressure vs LS < 1% (gated at medium),PASS,

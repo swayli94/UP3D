@@ -1,0 +1,4 @@
+level,h_body,n_tets,converged,azimuthal_scatter_med,azimuthal_scatter_max,selfconv_med_vs_fine,selfconv_max_vs_fine
+coarse,0.06,8014,True,0.00359,0.04231,0.00284,0.10963
+medium,0.03,55692,True,0.00218,0.09627,0.00056,0.02571
+fine,0.015,398459,True,0.00102,0.11709,nan,nan

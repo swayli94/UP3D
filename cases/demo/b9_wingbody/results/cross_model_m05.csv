@@ -1,0 +1,5 @@
+level,path,cl_p_wing,cl_kj_exposed,cl_p_fus
+coarse,conforming_pressure,0.2089,0.2117,0.0347
+coarse,level_set,0.1853,0.1948,0.0303
+medium,conforming_pressure,0.2173,0.2188,0.0356
+medium,level_set,0.2165,0.2175,0.0444
