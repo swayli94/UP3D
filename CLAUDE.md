@@ -18,7 +18,8 @@ resolve through one hop.
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
   (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B15
-  level-set wake — **B9 = NEXT** — `track_v.md` V1–V4 viscous, designed-not-
+  level-set wake — **B9 ✓ CLOSED 2026-07-17 (wing-body cross-model); next phase
+  = user's call** — `track_v.md` V1–V4 viscous, designed-not-
   started, `track_a.md` A1– verification & analysis, created 2026-07-15).
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
@@ -66,8 +67,8 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **429 passed + 19 skipped +
-   2 xfailed** (2026-07-17, B14 Schur+AMG preconditioner, +8/+1; 1043 s
+3. Full suite: `pytest tests/` — current baseline **442 passed + 20 skipped +
+   2 xfailed** (2026-07-17, B9 wing-body cross-model, +13/+1; 1084 s
    @16 threads — the full lineage lives in [docs/overview.md](docs/overview.md),
    do not re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until

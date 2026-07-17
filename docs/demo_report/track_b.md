@@ -1210,3 +1210,87 @@ fit in memory — remains the designed, unbuilt use-case**, out of scope here by
 user direction (coarse + medium only). The recorded fallbacks (block-triangular;
 Núñez additive assignment) were not needed: the aux block factored and GMRES
 converged on every case, with **0 spsolve fallbacks** across the whole campaign.
+
+## Track B / B9 — Wing-body cross-model validation (LS + conforming), M∞ 0.5 (CLOSED 2026-07-17, RE-SPEC'd user-approved)
+
+Demo `cases/demo/b9_wingbody/run_demo.py` (7 PASS + 1 XFAIL) + guardrail
+`cases/analysis/b9_fuselage_guardrail/run_guardrail.py`. Both wake models on
+the M2 ONERA M6 wing-body (coarse + medium, M∞ 0.5, α 3.06°), compared on the
+four things the phase was re-spec'd around.
+
+### The headline (GB9.5): the two wake models agree to 0.4% at medium
+
+| level | conf-pressure cl_p / cl_kj | level-set cl_p / cl_kj | cross-model |
+|---|---|---|---|
+| coarse | 0.2089 / 0.2117 | 0.1853 / 0.1948 | 12.8% / 8.7% (RECORDED) |
+| **medium** | **0.2173 / 0.2188** | **0.2165 / 0.2175** | **0.4% / 0.6%** (PASS < 1%) |
+
+Two independent wake models — different DOF space, different Kutta (conforming
+per-station Γ + P14 pressure estimator vs level-set implicit pressure-equality
+B4), different mesh families (`onera_m6_wingbody_conforming` vs
+`onera_m6_wingbody`) — land on the same wing-body lift at medium, the analogue
+of the wing-alone P14 cross-model (0.17%/0.36%). The coarse gap is pure
+resolution. Section Cp (`b9_sections_medium.png`) overlays pointwise at all four
+stations; spanwise Γ(z)/cl(z) (`b9_spanwise_*.png`) are smooth and monotone
+junction→tip on both paths. Same-extractor discipline throughout (A2/V14.6):
+`section_cp_curve`/`section_cp_curve_levelset` both walk the wing `wall` only;
+cl_KJ uses one exposed-span reducer (no root flat-extension) for both paths.
+
+### The conforming wing-body — the NEW capability (GB9.1)
+
+Until B9 the conforming method had no wing-body to run on (`cut_wake`
+ValueError'd on the wake-free family). `onera_m6_wingbody_mesh(embed_wake=True)`
+builds it. Three meshing walls, all measured:
+- **the fuselage is built as TWO π-revolves** (`fuselage.add_fuselage_solid_split`)
+  so the y=0 meridians are genuine seam edges. A single 2π revolve surface with
+  the wake waterline imprinted on its top meridian running to the degenerate
+  tail pole is UNMESHABLE — every 2D algorithm (1/2/5/6/9) fails "1D mesh not
+  forming a closed loop";
+- **the sheet passes through the body**, fragment-trims to exposed wing TE +
+  fuselage top waterline + aft z=0 symmetry ray + tip/downstream, then embeds.
+  The waterline duplicates via the EXISTING `cut_wake` boundary-edge rule (it
+  lies in fuselage triangles) — `cut_wake`, the wake Γ constraint and the P14
+  pressure Kutta are ALL unchanged;
+- **Netgen OFF for embed** (segfaults on the embedded-sheet geometry; its
+  sliver-ribbon target is structurally removed by embedding anyway).
+
+`embed_wake=False` stays bit-identical (n_tets 65621 exact). A generation-time
+`cut_wake` ingest gate is the crack detector (all free nodes must be at the tip
+z≈B_SEMI). Coarse 90099 tets / medium 679391. The P14 probe→pressure Newton
+converges fast at both levels (probe 2/5 + pressure 4/3 steps, 0 lim/flr).
+
+### ★ Why LS uses Picard, not Newton (user-questioned)
+
+The committed LS Newton recipes — lagged-LU, `precond="schur"` (B14), N5 freeze,
+the B15 Mach ramp — ALL diverge or churn on the subsonic wing-body. The
+diagnostic is decisive: at the converged Picard state the Newton residual is
+`max|R[te_aux]| = 1.8e-8` on the wake/Kutta rows (PERFECT) but `|R| ≈ 84` on
+8 of 14661 FLUID rows, all in the far-field/outer region. So the failure is
+**not** the wake model, the Kutta, or the linear solver (Schur/spsolve) — it is
+a localized inconsistency in the `farfield="freestream"` Newton path, which was
+never exercised: every committed LS Newton run uses `farfield="neumann"`, and
+the fuselage BLOCKAGE makes `neumann` unbounded (res → 1e43; wing-alone is fine
+because a thin wing barely displaces flow). LS Picard with `freestream`
+converges cleanly (res 3e-7). A `newton_ls.py` freestream bug (far-field
+Dirichlet values left `None`) was fixed in passing; the outer-boundary residual
+inconsistency is a recorded follow-up (subsonic LS Newton for a blunt body),
+not a B9 blocker. The prior-track recipes are sound — they sit *beneath* the
+far-field BC, and the wing-body breaks the BC layer.
+
+### GB9.4 XFAIL — the fuselage does NOT "carry no lift"
+
+The pre-registered band (|cl_fus| ≤ 0.05 cl_p_wing) FAILS: fuselage
+pressure-lift is 16% (conf) / 20% (LS) of the wing's at medium, and the LS value
+GROWS with refinement (0.164 → 0.205) while conforming stays flat. That
+resolution- and model-sensitivity is the signature of the G1.6 smooth-wall
+flat-facet natural-BC error on the fuselage, not clean physics. Per the house
+rule the band is NOT moved after the fact; it is recorded as XFAIL — the caveat
+every wing-body body-surface-pressure claim carries until P11/Option C.
+
+### GB9.6 RECORDED — the fuselage-Cp guardrail
+
+Isolated body of revolution (wing off), α=0, M0.5, h_body 0.060/0.030/0.015.
+Azimuthal Cp scatter (reference-free at α=0 — the exact solution is
+axisymmetric) median DECAYS 0.0036/0.0022/0.0010 but max GROWS
+0.042/0.096/0.117, concentrated at the nose/tail poles where R→0 — the G1.6
+error class, now quantified for the wing-body's fuselage resolution.

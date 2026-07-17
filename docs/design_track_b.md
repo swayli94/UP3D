@@ -1236,3 +1236,57 @@ M6 medium M0.70 上**一个**持久 floored 单元(330k 里的 1 个)会在**任
    `freeze_max_clamped` **只加在 LS 路径**(`newton.py` 仍是硬性 0-clamped 规则)。
    放松它能否解开 G9.1 的 conforming fine 网格,是一个**未经检验的假设**,不是结果。
    **B15 没有让 G9.1 复活。**
+
+## 15. B9:翼身组合体 conforming 嵌入尾迹拓扑 + LS 远场（2026-07-17，已关闭）
+
+B9 把两种尾迹模型都放到 M2 翼身几何上（M∞0.5、α3.06°、coarse+medium），量化对比。
+本节记录两件在此前 track 里没有遇到过的、翼身特有的技术结论。
+
+### 15.1 conforming 翼身嵌入尾迹网格（全新能力）
+
+在 B9 之前 conforming 方法在翼身上无网格可跑：`onera_m6_wingbody` 族无 `wake` 面组，
+`cut_wake` 直接 ValueError。§1.2 早就记录"尾迹-机身交界是嵌入片方法处理得最差的情形"，
+故 M2 走了 LS。B9 建了 conforming 变体 `onera_m6_wingbody_mesh(embed_wake=True)`：
+
+- **机身必须用两次 π-revolve 构造**（`fuselage.add_fuselage_solid_split`），使 y=0 的
+  两条母线成为真正的 seam 边。单个 2π 周期旋成面上，把尾迹片的顶部水线印痕（imprint）
+  一直延伸到尾锥退化极点，是**不可网格化**的——所有 2D 算法（1/2/5/6/9）都报
+  "1D mesh not forming a closed loop"。分成两片 π-revolve 后水线成为真实共享边、
+  两个半片非周期、可网格化。实体几何不变，只改表面拓扑，故 wake-free 路径仍用不分片的
+  `add_fuselage_solid`、逐位不变（n_tets 65621 精确）。
+- **尾迹片贯穿机身**（弦平面矩形 z_lo→tip、x_te→x_down、穿球），`occ.fragment` 对流体裁剪，
+  留下：外露机翼 TE + 机身顶部水线 + 机身后 z=0 对称面射线 + 翼尖/下游边。水线节点由
+  **既有 `cut_wake` 边界边规则**复制（它落在 `fuselage` 三角形上，与 wing-alone 对称面
+  根部边同机制）——`cut_wake`、Γ 约束、P14 压力 Kutta **全部零改动**。
+- **embed 路径 Netgen 关闭**（`OptimizeNetgen=0`）：它在嵌入片几何上会 segfault；而它在
+  wake-free 族上治的悬空 ribbon sliver，嵌入后已被结构性消除（片内边现在是真实网格边界）。
+
+生成期跑一次 `cut_wake` 作 ingest gate = 裂缝检测器（所有 free node 必须落在翼尖 z≈B_SEMI；
+一处缝合失败会把水线/后对称边变成 z<B_SEMI 的内部自由边）。coarse 90099 / medium 679391 tets。
+P14 探针→压力 Newton 在两级都快速收敛（探针 2/5 + 压力 4/3 步，0 lim/flr）。
+
+### 15.2 LS 翼身远场：freestream 而非 neumann，且 LS Newton 在此发散
+
+★ **翼身的机身阻塞使 `farfield="neumann"` 无界。** B7 wing-alone 用 López 的
+inlet-Dirichlet/outlet-Neumann 出流（§5.4 option b），薄机翼几乎不排开流体故适用；翼身的机身
+排开大量流体，出流的自由流通量平衡不再成立，Picard 与 Newton 都发散到 ~1e43。**修复 =
+`farfield="freestream"`（整个远场 Dirichlet 自由流）**，25-MAC 域（M2 re-spec）使其足够准。
+LS Picard freestream 干净收敛（res 3e-7）。
+
+★ **LS Newton 在亚声速翼身上发散，根因是远场 BC 层不是求解器。** committed 的 LS Newton 配方
+（lagged-LU / `precond="schur"` B14 / N5 freeze / B15 Mach ramp）在亚声速翼身上**全部**发散或
+churn。在 Picard 收敛态处求 Newton 残差的诊断是决定性的：wake/Kutta 行 `max|R[te_aux]|=1.8e-8`
+（完美），但 14661 个流体行里有 8 个（都在远场/外区）`|R|≈84`——是 `farfield="freestream"` 的
+**Newton 路径**里一处局部不一致（该路径从未被跑过：所有 committed LS Newton 都用 neumann）。
+顺带修了 `newton_ls.py` 的 freestream bug（远场 Dirichlet 值被留成 None）；外边界残差不一致
+列为 recorded follow-up（钝体的亚声速 LS Newton），非 B9 阻塞项。**结论：亚声速 LS 用已验证的
+Picard，conforming 用 Newton。** 前序 track 的求解器配方都对，只是它们位于远场 BC 之下，
+翼身破坏的是 BC 层本身。
+
+### 15.3 gate 结果
+
+GB9.5（跨模型 medium <1%）：conf-pressure 0.2173/0.2188 vs LS-Picard 0.2165/0.2175 =
+**0.4%/0.6%** ✓。GB9.1（conforming 收敛）✓ GB9.2（LS 收敛）✓ GB9.3（交界 TE-CV 仅机翼侧，
+两路，测试固化）✓ GB9.6（机身 Cp 守卫，RECORDED：方位角散布中位 0.0036/0.0022/0.0010 衰减、
+极大值 0.042/0.096/0.117 在鼻尾极点增长——G1.6 误差类）。**GB9.4 XFAIL**：机身升力 16-20%、
+随分辨率增长（LS 0.164→0.205）⇒ G1.6 机身 Cp 离散误差，非干净物理；带未事后移动（house rule）。

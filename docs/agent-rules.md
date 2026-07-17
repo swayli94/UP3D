@@ -1,22 +1,28 @@
 # pyFP3D Agent Rules
 
-Current phase: **P14 ✓ CLOSED 2026-07-17 (opened + closed same day,
-user-directed): probe-free conforming Kutta target — wall-adjacent-CV
-pressure-equality estimator (A2's routed fix). G14.1–G14.7 all ✓. Headline:
-the conforming path now MATCHES the level-set path** — M0.84 medium cl_p/cl_KJ
-agree to 0.15%/0.34% (cross-model V14.6), Γ(z) roughness 0.0970→0.0043 /
-0.0365→0.0024 (at/below the LS band), all-station TE Cp gap 0.2206→0.0040 /
-0.1585→0.0024, TE spike 0.1143→0.0533 (below LS). G14.7 was re-specced at close
-from the probe G8.2 locks to the level-set oracle (the +4.85% cl_KJ move is the
-finding, 69% of P9's 0.019 gap = Kutta-estimator bias). Demo
-`cases/demo/p14_pressure_kutta/` **28 PASS**; diagnostic
-`cases/analysis/p14_te_pressure_diag/` 20/20. **Next phase = B9 ◐, RE-SPEC'D
-+ OPENED 2026-07-17 (user-approved): wing-body cross-model validation — BOTH
-wake models (LS + conforming, the conforming wing-body being a NEW capability)
-with Newton at M∞ 0.5 / α 3.06° on M2 coarse+medium, comparing Γ(z)/cl(z),
-section Cp, convergence, and the A1 timing breakdown. Gates GB9.1–GB9.6
-pre-registered before any solve (track_b.md). Multi-element leg moved out,
-unscheduled.**
+Current phase: **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved): wing-body
+cross-model validation — BOTH wake models on the M2 wing-body (M∞0.5, α3.06°,
+coarse+medium).** ★ HEADLINE: the level-set (Picard) and conforming (NEW
+capability, P14 Newton) wing-body lifts AGREE to **cl_p 0.4% / cl_kj 0.6%** at
+medium (conf 0.2173/0.2188 vs LS 0.2165/0.2175; coarse 12.8% = resolution) —
+the wing-body analogue of P14's wing-alone cross-model. GB9.1/9.2/9.3/9.5 ✓,
+GB9.6 RECORDED, **GB9.4 XFAIL** (fuselage lift 16-20%, resolution/model-sensitive
+⇒ G1.6 fuselage-Cp error, band NOT moved). Demo `cases/demo/b9_wingbody/`
+7 PASS + 1 XFAIL; guardrail `cases/analysis/b9_fuselage_guardrail/`.
+- ★ **Conforming wing-body is the NEW capability** —
+  `onera_m6_wingbody_mesh(embed_wake=True)`: fuselage built as TWO π-revolves
+  (`add_fuselage_solid_split`, else the waterline-imprinted single revolve
+  surface is unmeshable), through-body sheet, Netgen OFF; `cut_wake` /
+  constraints / P14 pressure-Kutta ALL unchanged; embed_wake=False bit-identical.
+- ★ **LS uses PICARD, not Newton — measured (user-questioned).** The committed
+  LS Newton recipes (lagged-LU, `precond="schur"` B14, N5 freeze, B15 ramp) ALL
+  diverge/churn on the subsonic wing-body: the FAILURE IS THE FAR-FIELD BC, not
+  the solver. `neumann` is unbounded under the fuselage blockage (res 1e43);
+  the `freestream` Newton path (never exercised — all committed LS Newton use
+  neumann) is locally inconsistent (te_aux perfect 1.8e-8, 8 far-field fluid
+  rows |R|≈84). LS Picard + `freestream` converges cleanly (res 3e-7). A
+  `newton_ls.py` freestream Dirichlet bug was fixed in passing; the outer-row
+  residual inconsistency is a recorded follow-up. **Next phase = user's call.**
 
 **P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
@@ -112,17 +118,19 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   transonic NEGATIVE-open) · **P14 ✓ CLOSED 2026-07-17** (pressure-equality
   Kutta estimator, from A2 — S1 jitter + S2 TE Cp gap both gone, and the
   conforming path now matches level-set on lift; G14.1–G14.7 ✓).
-- **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
-  body re-spec'd 2026-07-16, solver leg = B9).
+- **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓; M2 solver leg CLOSED
+  by B9 2026-07-17 (both wake models run on the wing-body; the conforming leg
+  added a wake-embedded variant `onera_m6_wingbody_conforming/`).
 - **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B15 ✓ ·
   B6 ◐ (medium quantitative closed by GB15.4) · **B14 ✓ CLOSED 2026-07-17**
   (`precond="schur"` Schur-eliminated-aux + AMG(SPD Picard main block),
   `pyfp3d/solve/schur_ls.py`; the A1 precond bottleneck is GONE — M6 medium
   M0.84 42.6% → 2.6%, ramp 1.43× / subsonic 2.08×, γ = the committed GB15.4;
   ★ SLOWER at small scale, the fine memory-bounded route stays the unbuilt
-  designed use-case) · B10 shelved · **B9 ◐ RE-SPEC'D + OPENED 2026-07-17**
-  (wing-body cross-model validation, LS + conforming NEW capability, M0.5,
-  GB9.1–GB9.6 pre-registered).
+  designed use-case) · B10 shelved · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D)** —
+  wing-body cross-model: LS (Picard) + conforming (NEW capability, Newton)
+  agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6; LS Newton
+  diverges on the wing-body = the neumann far-field blockage, not the solver.
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -183,10 +191,11 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **429 passed + 19 skipped + 2 xfailed** (2026-07-17, B14 Schur+AMG,
-+8 passed / +1 skipped = `tests/test_b14_schur_ls.py`, the +1 skip = the gated
-GB14.3 medium-lifting escape; measured 1043.37 s @16 threads).
-Previous: 421 + 18 + 2 (2026-07-17, P14 tier 1+2, +15 =
+Baseline: **442 passed + 20 skipped + 2 xfailed** (2026-07-17, B9 wing-body,
++13 passed / +1 skipped = `tests/test_b9_wingbody_{conforming,ls}.py`
+(conforming 8 + 1 gated skip, LS 5), measured 1084.20 s @16 threads).
+Previous: 429 + 19 + 2 (2026-07-17, B14 Schur+AMG, +8/+1 =
+`tests/test_b14_schur_ls.py`; 1043.37 s @16 threads); 421 + 18 + 2 (P14 tier 1+2, +15 =
 `tests/test_p14_te_pressure.py`; 1015.17 s @8 threads); 406 (= the 399 M2
 number once A1's 7 tests landed), 973.59 s @8 threads, 2026-07-16; 396,
 988.73 s @16 threads, 2026-07-15; lineage in [overview.md](overview.md). After
