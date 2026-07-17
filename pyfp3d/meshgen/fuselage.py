@@ -191,3 +191,34 @@ def add_fuselage_solid(occ, p: FuselageParams, n_profile: int = 120) -> List[Tup
     rev = occ.revolve([(2, face)], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0 * math.pi)
     occ.remove([(2, face)], recursive=False)
     return [dt for dt in rev if dt[0] == 3]
+
+
+def add_fuselage_solid_split(occ, p: FuselageParams,
+                             n_profile: int = 120) -> List[Tuple[int, int]]:
+    """Body of revolution built as TWO pi-revolves (the meridian meridian in
+    the z >= 0 half-plane, +pi and -pi about the x-axis), fused into the same
+    solid as `add_fuselage_solid` -- but its skin is now split at the y = 0
+    meridians (the top z = +R waterline and the bottom z = -R) into
+    NON-PERIODIC patches.
+
+    Why the wing-body CONFORMING (embed_wake) path needs this and the wake-free
+    path does not: the embedded wake sheet's inboard boundary rides the TOP
+    waterline. On the single periodic revolve surface of `add_fuselage_solid`,
+    imprinting that meridian leaves the face periodic with an interior edge
+    running to the degenerate tail pole, and gmsh cannot mesh it ("1D mesh not
+    forming a closed loop", every 2D algorithm, measured 2026-07-17). Splitting
+    the revolve at y = 0 first makes the waterline a genuine SEAM edge the wake
+    sheet shares, and each half-patch is meshable. The solid geometry is
+    identical; only the surface topology differs, so the wake-free path keeps
+    using the un-split builder and stays bit-identical.
+    """
+    xs, rs = profile_points(p, n_profile)
+    pts = [occ.addPoint(float(x), 0.0, float(r)) for x, r in zip(xs, rs)]
+    spline = occ.addSpline(pts)
+    axis = occ.addLine(pts[-1], pts[0])
+    face = occ.addPlaneSurface([occ.addCurveLoop([spline, axis])])
+    rev1 = occ.revolve([(2, face)], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, math.pi)
+    face2 = occ.copy([(2, face)])
+    rev2 = occ.revolve(face2, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, -math.pi)
+    occ.remove([(2, face)], recursive=False)
+    return [dt for dt in rev1 + rev2 if dt[0] == 3]

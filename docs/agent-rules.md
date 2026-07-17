@@ -10,10 +10,13 @@ agree to 0.15%/0.34% (cross-model V14.6), Γ(z) roughness 0.0970→0.0043 /
 from the probe G8.2 locks to the level-set oracle (the +4.85% cl_KJ move is the
 finding, 69% of P9's 0.019 gap = Kutta-estimator bias). Demo
 `cases/demo/p14_pressure_kutta/` **28 PASS**; diagnostic
-`cases/analysis/p14_te_pressure_diag/` 20/20. **Next phase = user's call
-(B9 = the standing Track-B NEXT).** B9 (wing-body LS solve, M∞ 0.5,
-user-arbitrated 2026-07-14; B15 ✓ CLOSED 2026-07-15 — the M6-medium Picard
-plateau is gone, 38.4 → 11.0 min = 3.51×).
+`cases/analysis/p14_te_pressure_diag/` 20/20. **Next phase = B9 ◐, RE-SPEC'D
++ OPENED 2026-07-17 (user-approved): wing-body cross-model validation — BOTH
+wake models (LS + conforming, the conforming wing-body being a NEW capability)
+with Newton at M∞ 0.5 / α 3.06° on M2 coarse+medium, comparing Γ(z)/cl(z),
+section Cp, convergence, and the A1 timing breakdown. Gates GB9.1–GB9.6
+pre-registered before any solve (track_b.md). Multi-element leg moved out,
+unscheduled.**
 
 **P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
@@ -79,26 +82,28 @@ Wiring scope (user-arbitrated): coupled Newton + `solve_laplace_lifting` only �
   the same way. tip_taper + pressure raises NotImplementedError (the B8 blend
   is not re-derived).
 
-B9 scope guards (user-arbitrated): **subsonic M∞ 0.5 ONLY** (M0.84 excluded —
-the round-cap transonic fine is still a non-converged limit cycle, G13.3
-transonic NEGATIVE); mesh = the delivered M2 wing-body family
-(`cases/meshes/onera_m6_wingbody/`, wake-free, LS TE polyline endpoints exact)
-— **body + far field re-spec'd and regenerated 2026-07-16 (user-directed):
-5 root chords long, wing root chord centered on it, 2-diameter ellipsoid nose,
-skin graded to `h_body = 2 h_wall` away from the wing and radius-driven at the
-tips; `R_FAR = 25 MAC` (was 15 = the wing-alone convention) with h_far and every
-fixed refinement distance scaled with it, so the 2.78× domain is ~free. The wing
-is untouched (TE nodes bit-identical 76/150) — B9's Kutta stations do not move.
-Now 65,621 / 533,129 tets at BEST-EVER quality (min dihedral 19.5 / 11.0). ★ It
-needed `Mesh.OptimizeNetgen`: the wake sheet's inboard edge (z = 0.15) hangs
-over open fluid aft of the body and its corridor prints a fine ribbon down the
-symmetry plane ⇒ sliver LOTTERY (min dihedral 0.31/4.80/2.63 for h_far/h_wall
-120/160/200 — not monotone; the old family was just winning it). Regenerate
-before B9 — the `.msh` are gitignored, ~5 min for both levels**;
-**open verification item**: the B4 TE control volumes are wall-adjacent, so the
-innermost TE node's fan touches fuselage wall faces — verify the upper/lower CVs
-take only wing-side elements (`multivalued.py::_build_te_control_volumes`;
-recorded in Track M M2).
+B9 scope guards (user-arbitrated 2026-07-14; RE-SPEC'D 2026-07-17,
+user-approved): **subsonic M∞ 0.5 ONLY** (M0.84 excluded — the round-cap
+transonic fine is still a non-converged limit cycle, G13.3 transonic
+NEGATIVE); α 3.06° (the committed M6 subsonic convention). Meshes = the M2
+wing-body family (`cases/meshes/onera_m6_wingbody/`, wake-free, for the LS
+leg) **plus the NEW wake-embedded conforming variant**
+(`cases/meshes/onera_m6_wingbody_conforming/`) — coarse + medium only, both
+gitignored, regenerate before running (~5 min wake-free; conforming TBD).
+The 2026-07-16 body/far-field re-spec stands (5 root chords, wing centered,
+2-diameter ellipsoid nose, graded skin, R_FAR = 25 MAC, ★ needs
+`Mesh.OptimizeNetgen` — sliver lottery 0.31/4.80/2.63 without it; wing
+untouched, TE nodes bit-identical 76/150 so B9's Kutta stations do not move).
+**`wall_tag` stays `"wall"` on BOTH paths** — widening it to include
+`fuselage` would mint spurious Kutta stations along the sheet–body waterline.
+The old M2 open verification item (innermost TE node's wall-adjacent CV fan
+touches fuselage wall faces; the upper/lower CVs must take only wing-side
+elements — `multivalued.py::_build_te_control_volumes`, and the conforming
+analogue `te_pressure.py::TEControlVolumes`) is now **gate GB9.3**, both
+paths. Cross-model gate GB9.5 pre-registered at < 1% (medium, cl_p(wing) +
+exposed-span cl_KJ, same-extractor discipline); GB9.4 fuselage-no-lift ≤ 5%
+of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
+(RECORDED, no pass/fail).
 
 ## Track status (one line each; authority = docs/roadmap/*.md ledgers)
 
@@ -115,7 +120,9 @@ recorded in Track M M2).
   `pyfp3d/solve/schur_ls.py`; the A1 precond bottleneck is GONE — M6 medium
   M0.84 42.6% → 2.6%, ramp 1.43× / subsonic 2.08×, γ = the committed GB15.4;
   ★ SLOWER at small scale, the fine memory-bounded route stays the unbuilt
-  designed use-case) · B10 shelved · **B9 next**.
+  designed use-case) · B10 shelved · **B9 ◐ RE-SPEC'D + OPENED 2026-07-17**
+  (wing-body cross-model validation, LS + conforming NEW capability, M0.5,
+  GB9.1–GB9.6 pre-registered).
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·

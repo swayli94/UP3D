@@ -5,13 +5,30 @@ level-set (Track B) solver path (roadmap Track M / M2; solver leg = B9).
 
 Design choices (and why they differ from the plan sketch):
 
-  * Wake-free only. M2's roadmap note says the wake-fuselage junction is the
-    case a pre-embedded conforming sheet handles worst, and to schedule it
-    with Track B's embedded (level-set) wake, which removes the need to embed
-    a sheet at all. So this generator NEVER fragments/embeds a wake surface;
-    the wake lives only as the source of a corridor size field, exactly like
-    the M4 wake-free wing family (wing3d embed_wake=False). The solver builds
-    its wake from the analytic TE polyline via WakeLevelSet (see te_polyline).
+  * Wake-free by DEFAULT. M2's roadmap note says the wake-fuselage junction
+    is the case a pre-embedded conforming sheet handles worst, and to schedule
+    it with Track B's embedded (level-set) wake, which removes the need to
+    embed a sheet at all. So by default this generator never fragments/embeds
+    a wake surface; the wake lives only as the source of a corridor size
+    field, exactly like the M4 wake-free wing family (wing3d
+    embed_wake=False). The solver builds its wake from the analytic TE
+    polyline via WakeLevelSet (see te_polyline).
+
+  * embed_wake=True (B9 re-spec 2026-07-17, user-approved) additionally
+    delivers the CONFORMING variant for the same geometry: the sheet is
+    extended inboard to below the symmetry plane (z_lo, like wing3d) and
+    downstream through the far-field sphere, then fragment+embed'ed. The
+    fragment trims it automatically to: exposed wing TE (z in [r_f, B_SEMI])
+    -> fuselage waterline (the y = 0 top meridian, z = R(x), junction TE ->
+    tail tip) -> symmetry edge (z = 0 aft of the body) -> sphere arc ->
+    free tip edge. Aft of the body the sheet MUST reach the symmetry plane
+    (else the domain around body+wake is not simply connected and the branch
+    cut fails), and it MUST reach the sphere (constraints/dirichlet.py
+    prescribes branch-cut-multivalued far-field data; a sheet stopping short
+    reproduces the P5 branch-ray artifact). cut_wake needs NO changes: the
+    waterline edge lies in `fuselage` boundary triangles, so its nodes
+    duplicate under the same boundary-edge rule as the wing-alone symmetry
+    root edge, while TE/Kutta stations stay wing-only (wall∩wake).
 
   * Walls split into "wall" (wing skin) and "fuselage" (fuselage skin), both
     natural no-penetration walls. The split is not needed to SOLVE (both are
@@ -62,7 +79,12 @@ from pyfp3d.meshgen.wing3d import (
     _collect_3d,
     x_te,
 )
-from pyfp3d.meshgen.fuselage import FuselageParams, add_fuselage_solid, radius_at
+from pyfp3d.meshgen.fuselage import (
+    FuselageParams,
+    add_fuselage_solid,
+    add_fuselage_solid_split,
+    radius_at,
+)
 
 #: Far-field sphere radius, 2026-07-16 (user-directed; was 15 MAC = 9.69, the
 #: wing-ALONE convention inherited from wing3d). Once the body became 5 root
@@ -158,8 +180,16 @@ def onera_m6_wingbody_mesh(
     verbose: bool = False,
     tip_cap: str = "round",
     n_profile: int = 120,
+    embed_wake: bool = False,
 ) -> Mesh:
-    """Generate the ONERA M6 wing-body half-model volume mesh (wake-free).
+    """Generate the ONERA M6 wing-body half-model volume mesh.
+
+    Wake-free by default (the level-set / Track B form). embed_wake=True
+    produces the CONFORMING variant (B9 re-spec 2026-07-17): the wake sheet
+    is fragmented against the fluid and embedded, giving a "wake" boundary
+    group whose inboard boundary is the fuselage waterline + the symmetry
+    plane aft of the body, ready for mesh/wake_cut.py::cut_wake unchanged.
+    The default path is bit-identical to the pre-embed_wake generator.
 
     One parameter (h_wall) sets the level; the rest default to scales of it,
     matching the wing3d / M5 roundtip policy (no h_far clamp, so a
@@ -187,8 +217,9 @@ def onera_m6_wingbody_mesh(
 
     Returns:
         Mesh with boundary groups "wall" (wing skin), "fuselage"
-        (fuselage skin), "farfield", "symmetry". No "wake" group -- the wake
-        is carried by the level set from te_polyline(fuselage).
+        (fuselage skin), "farfield", "symmetry". Default: no "wake" group --
+        the wake is carried by the level set from te_polyline(fuselage).
+        embed_wake=True: plus the embedded interior "wake" group.
     """
     import gmsh
 
@@ -216,9 +247,9 @@ def onera_m6_wingbody_mesh(
     # Far-field sphere centered on the whole body (nose..tail), not just the
     # wing -- the fuselage now sets the fore/aft extent.
     xc = 0.5 * (p.x_nose_tip + max(x_te(B_SEMI), p.x_tail_tip))
-    # Downstream end of the wake sheet. The sheet is a SIZE-FIELD SOURCE only
-    # (never fragmented or embedded), so its extent is free -- and it must stop
-    # SHORT of the far-field sphere, which `xc + r_far + 0.5` did not.
+    # Downstream end of the wake sheet. WAKE-FREE default: the sheet is a
+    # SIZE-FIELD SOURCE only, so its extent is free -- and it must stop SHORT
+    # of the far-field sphere, which `xc + r_far + 0.5` did not.
     # Measured 2026-07-16: a sheet that pierces the sphere drags its corridor
     # (h_wake = 3 h_wall within ~1.2 of the sheet) onto the OUTFLOW BOUNDARY,
     # which put 0.087 m triangles on a sphere sized h_far = 6.0 and produced
@@ -227,7 +258,12 @@ def onera_m6_wingbody_mesh(
     # resolving a wake as it leaves a Dirichlet boundary. 0.8 r_far clears the
     # corridor by ~2.4 m and still leaves MORE downstream corridor (~16 MAC)
     # than the old 15-MAC sphere physically had room for.
-    x_down = xc + 0.8 * r_far
+    # EMBEDDED variant: the sheet MUST pierce the sphere (wing3d convention;
+    # the fragment trims it to the sphere) -- the far-field Dirichlet data is
+    # branch-cut-multivalued and needs duplicated wake nodes ON the sphere; a
+    # sheet stopping short is the P5 branch-ray artifact. The downstream-pole
+    # sliver cost recorded above is accepted and gated (Netgen is on).
+    x_down = xc + (r_far + 0.5 if embed_wake else 0.8 * r_far)
 
     gmsh.initialize()
     try:
@@ -246,7 +282,12 @@ def onera_m6_wingbody_mesh(
             wing_vols, _ = occ.fuse(wing_vols, _add_round_tip_cap(occ, tip))
 
         # --- fuse the fuselage on ------------------------------------------
-        fus_vols = add_fuselage_solid(occ, p, n_profile=n_profile)
+        # embed_wake needs the skin split at the y = 0 meridians so the wake
+        # sheet's waterline is a real seam edge (add_fuselage_solid_split);
+        # the wake-free path keeps the un-split builder (bit-identical).
+        fus_vols = (add_fuselage_solid_split(occ, p, n_profile=n_profile)
+                    if embed_wake else
+                    add_fuselage_solid(occ, p, n_profile=n_profile))
         body, _ = occ.fuse(wing_vols, fus_vols)
 
         # --- half-ball fluid domain, minus the wing-body -------------------
@@ -261,28 +302,83 @@ def onera_m6_wingbody_mesh(
         assert len(vols) == 1, f"expected one fluid volume, got {vols}"
         vol_tag = vols[0][1]
 
-        # --- wake sheet (size-field source only, never embedded) -----------
-        pa = occ.addPoint(x_te(z_junc), 0.0, z_junc)
-        pb = occ.addPoint(x_te(B_SEMI), 0.0, B_SEMI)     # tip TE corner
-        pc = occ.addPoint(x_down, 0.0, B_SEMI)
-        pd = occ.addPoint(x_down, 0.0, z_junc)
-        lines = [occ.addLine(pa, pb), occ.addLine(pb, pc),
-                 occ.addLine(pc, pd), occ.addLine(pd, pa)]
-        sheet = occ.addPlaneSurface([occ.addCurveLoop(lines)])
-        occ.synchronize()
+        # --- wake sheet -----------------------------------------------------
+        tol = 1e-3
+        if embed_wake:
+            # Conforming variant (B9). A rectangle in the chord plane y = 0,
+            # spanning z = [z_lo, tip] (z_lo below the symmetry plane, like
+            # wing3d) and x = [x_te(z), x_down] (LE collinear with the wing
+            # TE line, which is straight, so it stitches the exposed TE),
+            # PASSING THROUGH the body. occ.fragment trims it against the
+            # fluid to the exact in-fluid cut: exposed wing TE (junction ->
+            # tip) + the fuselage TOP WATERLINE (a real seam edge thanks to
+            # add_fuselage_solid_split) + the z = 0 symmetry ray aft of the
+            # body + the tip/downstream edges. The LE is pre-split at the
+            # junction TE point so a sheet vertex lands exactly on the fused
+            # body's junction-TE OCC vertex (d_junc < 1e-6).
+            pa = occ.addPoint(x_te(z_lo), 0.0, z_lo)
+            pj = occ.addPoint(x_te(z_junc), 0.0, z_junc)  # junction TE
+            pb = occ.addPoint(x_te(B_SEMI), 0.0, B_SEMI)  # tip TE corner
+            pc = occ.addPoint(x_down, 0.0, B_SEMI)
+            pd = occ.addPoint(x_down, 0.0, z_lo)
+            lines = [occ.addLine(pa, pj), occ.addLine(pj, pb),
+                     occ.addLine(pb, pc), occ.addLine(pc, pd),
+                     occ.addLine(pd, pa)]
+            sheet = occ.addPlaneSurface([occ.addCurveLoop(lines)])
+            occ.fragment(fluid, [(2, sheet)])
+            occ.synchronize()
+
+            # Drop sheet pieces trimmed OUTSIDE the fluid: below the symmetry
+            # plane, beyond the sphere, or inside the body. OCC bboxes are
+            # padded ~1e-5 and the thinnest real feature (a wing face's
+            # y-extent) is O(0.04 c), so 1e-3 separates a sheet piece from
+            # a real body/far surface.
+            for dim, tag in gmsh.model.getEntities(2):
+                bb = gmsh.model.getBoundingBox(dim, tag)
+                if (bb[4] - bb[1]) >= tol:
+                    continue                     # not a sheet piece
+                outside = (bb[2] < -tol or bb[3] > xc + r_far + tol
+                           or _sheet_piece_in_body(gmsh, tag, p))
+                if outside:
+                    occ.remove([(dim, tag)], recursive=True)
+            occ.synchronize()
+
+            # Re-query the volume: fragment/remove may renumber.
+            vols = gmsh.model.getEntities(3)
+            assert len(vols) == 1, f"expected one fluid volume, got {vols}"
+            vol_tag = vols[0][1]
+            corridor_tags: List[int] = []
+        else:
+            # Size-field source only, never embedded (the wake-free default).
+            pa = occ.addPoint(x_te(z_junc), 0.0, z_junc)
+            pb = occ.addPoint(x_te(B_SEMI), 0.0, B_SEMI)     # tip TE corner
+            pc = occ.addPoint(x_down, 0.0, B_SEMI)
+            pd = occ.addPoint(x_down, 0.0, z_junc)
+            lines = [occ.addLine(pa, pb), occ.addLine(pb, pc),
+                     occ.addLine(pc, pd), occ.addLine(pd, pa)]
+            sheet = occ.addPlaneSurface([occ.addCurveLoop(lines)])
+            occ.synchronize()
+            corridor_tags = [sheet]
 
         # --- classify boundary surfaces ------------------------------------
-        tol = 1e-3
         fus_tol = 5e-3          # spline vs piecewise-radius deviation margin
         groups: Dict[str, List[int]] = {"wall": [], "fuselage": [],
                                         "farfield": [], "symmetry": []}
+        if embed_wake:
+            groups["wake"] = []
+        corridor_set = set(corridor_tags)
         for dim, tag in gmsh.model.getEntities(2):
-            if tag == sheet:
+            if tag in corridor_set:
                 continue                       # size-field-only, not a group
             bb = gmsh.model.getBoundingBox(dim, tag)
             extent = max(bb[3] - bb[0], bb[4] - bb[1], bb[5] - bb[2])
             if (bb[5] - bb[2]) < tol and abs(bb[5]) < tol:
                 groups["symmetry"].append(tag)
+            elif embed_wake and (bb[4] - bb[1]) < tol:
+                # Thin-in-y = a surviving sheet piece (the wing skins are
+                # O(0.04 c) thick in y; the split fuselage quarter-shells are
+                # O(r_f); symmetry pieces were caught by thin-z above).
+                groups["wake"].append(tag)
             elif extent > 1.2 * r_far:
                 groups["farfield"].append(tag)
             elif _surface_on_fuselage(tag, p, fus_tol):
@@ -308,6 +404,15 @@ def onera_m6_wingbody_mesh(
         # Wing-fuselage junction curves (intersection of wing & fuselage
         # skins) -- refined so the junction is well resolved.
         junction_curves = _junction_curves(gmsh, groups, p, fus_tol)
+
+        if embed_wake:
+            # The fragment stitched the sheet's boundary curves into the
+            # fluid BRep (shared TE edge, waterline, symmetry/sphere trims)
+            # but the sheet stays free-standing; embedding makes the tet mesh
+            # conform to it (wake faces shared by exactly two tets --
+            # asserted by cut_wake at ingestion). M1 trap: fragment alone
+            # does NOT conform a sheet with an interior free edge (the tip).
+            gmsh.model.mesh.embed(2, groups["wake"], 3, vol_tag)
 
         # --- graded size fields (M0 policy: pure background field) ---------
         field = gmsh.model.mesh.field
@@ -398,8 +503,8 @@ def onera_m6_wingbody_mesh(
         # junction, so the transition needs no explicit blend region.
         _dist_threshold(surfs=groups["wall"], size_min=h_wall)
         _fuselage_field()
-        _dist_threshold(surfs=[sheet], size_min=h_wake,
-                        dist_min=0.05, dist_max=1.2 * grad)
+        _dist_threshold(surfs=(groups["wake"] if embed_wake else corridor_tags),
+                        size_min=h_wake, dist_min=0.05, dist_max=1.2 * grad)
         if edge_curves:
             _dist_threshold(curves=edge_curves, size_min=h_edge,
                             dist_min=0.02, dist_max=0.3 * grad, sampling=400)
@@ -435,16 +540,46 @@ def onera_m6_wingbody_mesh(
         # every boundary invariant in _wingbody_asserts are unchanged, which is
         # what makes it a mesh-quality knob and not a change of geometry.
         # NOT set in wing3d.py: the M1/M4/M5 families stay bit-identical.
-        gmsh.option.setNumber("Mesh.OptimizeNetgen", 1)
+        #
+        # embed_wake path: Netgen is OFF (the documented B9 fallback). Two
+        # reasons. (1) The pathology Netgen fixed on the wake-FREE family --
+        # the wake corridor's fine ribbon hanging over open fluid at
+        # z = z_junc, slivering the symmetry plane -- is STRUCTURALLY REMOVED
+        # by embedding: the sheet's inboard edge is now a real mesh boundary
+        # riding the fuselage waterline and the aft symmetry plane, not a
+        # size-field ghost over open fluid. (2) Netgen's re-tetting SEGFAULTS
+        # on this embedded-sheet + split-body geometry (measured 2026-07-17,
+        # SIGSEGV in generate(3) at the fine level); gmsh's own optimizer
+        # (Mesh.Optimize=1) is kept. Quality is gated by the generator's
+        # QUALITY_BOUNDS + the cut_wake ingest gate.
+        gmsh.option.setNumber("Mesh.OptimizeNetgen", 0 if embed_wake else 1)
 
         gmsh.model.mesh.generate(3)
 
         mesh = _collect_3d(groups, name=name)
         _wingbody_asserts(mesh, p, r_far=r_far, xc=xc, tol=1e-7 * r_far,
-                          tip_cap=tip_cap)
+                          tip_cap=tip_cap, embed_wake=embed_wake)
         return mesh
     finally:
         gmsh.finalize()
+
+
+def _sheet_piece_in_body(gmsh, tag: int, p: FuselageParams,
+                         n: int = 6) -> bool:
+    """True if 2D entity `tag` (a thin-in-y sheet piece) sits INSIDE the
+    fuselage: majority of a parametric sample grid has |z| < R(x). Kept fluid
+    pieces lie at z > R(x) (or beyond the body's x-range, where R = 0)."""
+    lo, hi = gmsh.model.getParametrizationBounds(2, tag)
+    us = np.linspace(lo[0], hi[0], n)
+    vs = np.linspace(lo[1], hi[1], n)
+    uv: List[float] = []
+    for u in us:
+        for v in vs:
+            uv.extend((float(u), float(v)))
+    xyz = np.asarray(gmsh.model.getValue(2, tag, uv)).reshape(-1, 3)
+    R = np.array([radius_at(p, float(x)) for x in xyz[:, 0]])
+    inside = np.abs(xyz[:, 2]) < R - 1e-4
+    return float(np.mean(inside)) > 0.5
 
 
 def _wing_edge_curves(gmsh, tol: float) -> List[int]:
@@ -484,15 +619,19 @@ def _junction_curves(gmsh, groups: Dict[str, List[int]], p: FuselageParams,
 
 
 def _wingbody_asserts(mesh: Mesh, p: FuselageParams, r_far: float, xc: float,
-                      tol: float, tip_cap: str) -> None:
+                      tol: float, tip_cap: str,
+                      embed_wake: bool = False) -> None:
     """Generation-time invariants for the wing-body mesh."""
     from pyfp3d.mesh.metrics import compute_tet_volumes
 
     vols = compute_tet_volumes(mesh.nodes, mesh.elements)
     assert vols.min() > 0.0, "non-positive tet volume"
 
-    assert "wake" not in mesh.boundary_faces, \
-        "wing-body mesh must be wake-free (level-set path)"
+    if not embed_wake:
+        assert "wake" not in mesh.boundary_faces, \
+            "wing-body mesh must be wake-free (level-set path)"
+    else:
+        _wingbody_wake_asserts(mesh, p, r_far=r_far, xc=xc)
 
     sym_nodes = np.unique(mesh.boundary_faces["symmetry"])
     assert np.abs(mesh.nodes[sym_nodes, 2]).max() < tol, \
@@ -540,3 +679,52 @@ def _wingbody_asserts(mesh: Mesh, p: FuselageParams, r_far: float, xc: float,
         apex = B_SEMI + TIP_CAP_RADIUS
         assert B_SEMI < z_wall_max <= apex + 1e-9, \
             f"rounded cap reaches z = {z_wall_max}, expected ({B_SEMI}, {apex}]"
+
+
+def _wingbody_wake_asserts(mesh: Mesh, p: FuselageParams, r_far: float,
+                           xc: float) -> None:
+    """Generation-time invariants specific to the EMBEDDED (conforming)
+    variant. Fires before cut_wake ever sees the mesh, so a bad fragment is
+    caught at the generator, with geometry still in scope."""
+    assert "wake" in mesh.boundary_faces, "embed_wake=True but no wake group"
+    wake_nodes = np.unique(mesh.boundary_faces["wake"])
+    wn = mesh.nodes[wake_nodes]
+
+    # Planar sheet in the chord plane.
+    assert np.abs(wn[:, 1]).max() < 1e-7, "wake nodes off the y = 0 plane"
+
+    # Both TE endpoints are shared wall∩wake nodes (exact vertices).
+    wall_nodes = set(np.unique(mesh.boundary_faces["wall"]).tolist())
+    shared = [n for n in wake_nodes.tolist() if n in wall_nodes]
+    assert len(shared) >= 2, "wake sheet does not touch the wing wall"
+    sh = mesh.nodes[shared]
+    z_junc = junction_z(p)
+    d_j = np.linalg.norm(sh - np.array([x_te(z_junc), 0.0, z_junc]),
+                         axis=1).min()
+    d_t = np.linalg.norm(sh - np.array([x_te(B_SEMI), 0.0, B_SEMI]),
+                         axis=1).min()
+    assert d_j < 1e-6, f"junction TE not a wall∩wake node (closest {d_j:.2e})"
+    assert d_t < 1e-6, f"tip TE corner not a wall∩wake node (closest {d_t:.2e})"
+
+    # The sheet's inboard boundary rides the fuselage waterline: wake nodes
+    # shared with the fuselage group, on the revolution surface.
+    fus_nodes = set(np.unique(mesh.boundary_faces["fuselage"]).tolist())
+    waterline = [n for n in wake_nodes.tolist() if n in fus_nodes]
+    assert waterline, "no wake∩fuselage (waterline) nodes -- sheet not stitched"
+    wl = mesh.nodes[waterline]
+    wlR = np.array([radius_at(p, float(x)) for x in wl[:, 0]])
+    assert np.abs(np.abs(wl[:, 2]) - wlR).max() < 0.01 * p.r_f + 3e-3, \
+        "waterline nodes off the revolution surface"
+
+    # Aft of the body the sheet reaches the symmetry plane (simple
+    # connectivity of the cut) ...
+    aft_sym = (wn[:, 2] < 1e-6) & (wn[:, 0] > p.x_tail_tip - 1e-6)
+    assert aft_sym.any(), \
+        "no wake nodes on the symmetry plane aft of the body -- cut leaves " \
+        "the domain multiply connected around body+wake"
+
+    # ... and downstream it reaches the far-field sphere (branch-cut
+    # Dirichlet data needs duplicated wake nodes ON the sphere).
+    r = np.linalg.norm(wn - np.array([xc, 0.0, 0.0]), axis=1)
+    assert r.max() > r_far - 1e-3 * r_far, \
+        "wake sheet stops short of the far-field sphere"

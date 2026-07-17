@@ -402,10 +402,22 @@ def solve_multivalued_newton(
         ff_nodes = _farfield_split(mesh, alpha_deg, u_inf)[3]      # inflow
         ff_vals = freestream_phi(mesh.nodes[ff_nodes], alpha_deg, u_inf)
         b_base = _neumann_outlet_rhs(mesh, alpha_deg, u_inf, mvop.n_total)
-    else:
+    elif farfield == "freestream":
+        # Dirichlet freestream on the WHOLE far field -- constant across the
+        # solve (no vortex), so build the values ONCE. (Previously left None
+        # here and only set for the vortex option, so a freestream Newton
+        # solve wrote `phi_ext[ff_nodes] = None` -> non-finite; the committed
+        # LS Newton runs all use neumann, so this path was never exercised.
+        # B9 wing-body needs it: the fuselage blockage makes the Lopez
+        # inlet-Dirichlet/outlet-Neumann outlet unbounded, and the 25-MAC
+        # domain makes full-freestream Dirichlet accurate.)
+        ff_nodes = np.unique(mesh.boundary_faces["farfield"])
+        ff_vals = freestream_phi(mesh.nodes[ff_nodes], alpha_deg, u_inf)
+        b_base = np.zeros(mvop.n_total)
+    else:  # vortex: (re)built per step with the current gamma
         ff_nodes = np.unique(mesh.boundary_faces["farfield"])
         b_base = np.zeros(mvop.n_total)
-        ff_vals = None  # (re)built per step for the vortex option
+        ff_vals = None
 
     # --- warm start (B15: the seed inherits the B13 lagged-LU, else it pays a
     # full factorization per outer -- ~11 min of pure seed at M6 medium) ------
