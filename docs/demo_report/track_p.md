@@ -1761,13 +1761,21 @@ NOT a same-mesh A/B; the LS state carries 1 limited / 2 floored cells (the B15
 the rigid planar wake / tip-edge singularity, P9/P13) is common to both by
 construction.
 
-### ★ G14.7 XFAIL — the lift moves, and the band was not moved to match
+### ★ G14.7 ✓ CLOSED — the lift moves onto the level-set answer (re-specced at close)
 
-Medium M0.84: cl_p **0.2776 (+4.92%)**, cl_KJ **0.2823 (+4.85%)** vs the G8.2
-locks 0.2646/0.2692 — outside the pre-registered 1–2% band. **Reported
-failing; the band stands as written.** The interpretation note in
-[roadmap/track_p.md](../roadmap/track_p.md) P14 was written and committed
-*before* these runs and fired exactly as anticipated:
+**How it closed.** The gate opened against the G8.2 **probe** locks; it XFAILed
+as written — cl_p **0.2776 (+4.92%)**, cl_KJ **0.2823 (+4.85%)** vs
+0.2646/0.2692, outside the pre-registered 1–2% band, **band NOT moved after the
+fact**. The interpretation note in [roadmap/track_p.md](../roadmap/track_p.md)
+P14, written and committed *before* these runs, fired exactly as anticipated
+(below), so the user arbitrated the recorded verdict: **accept the move as the
+finding and re-lock G14.7 against the level-set independent oracle.** Re-specced
+acceptance (demo `medium_m084_lift_vs_levelset`, PASS): conforming pressure vs
+level-set, cl_p **0.2776 vs 0.2772 (0.15%)**, cl_KJ **0.2823 vs 0.2813
+(0.34%)**, both **< 1%** — the modified conforming result matches an independent
+implementation that already used the correct Kutta form, so the computed result
+is judged reasonable. The move off the old probe locks is kept as recorded
+context (`medium_m084_move_off_probe_locks`). The mechanism, pre-registered:
 
 - The G8.2 locks are **probe-path** locks. Tier 1 had already measured that
   the swap MUST move the converged lift: the two closures agree pointwise only
@@ -1786,8 +1794,9 @@ failing; the band stands as written.** The interpretation note in
   2026-07-14 arbitration); not proof the pressure lift is *right* — it is one
   single-mesh medium number moving toward one inviscid reference. What it does
   establish: a measurable share of that gap was **Kutta-estimator bias**.
-- **User arbitration open:** accept the move as the finding (and re-lock G14.7
-  against pressure-path locks), or treat it as a defect to chase.
+- **Arbitrated (2026-07-17): closed as the finding.** G14.7 is re-locked
+  against the level-set oracle (< 1%, PASS above); the +4.85% is the corrected
+  lift, not a defect.
 
 ### Solver-recipe finding: seed the pressure Newton from the probe solution
 

@@ -18,8 +18,8 @@ G14.5,coarse_m084_discriminator,D = 1.80 (probe estimator was 7.33),D = O(1): ne
 G14.5,medium_m084_converged,12 steps final level; |R|=5.64e-15; lim/flr 0/0,pressure ramp converges; 0 limited/floored,PASS,
 G14.5,medium_m084_roughness_band,0.0024 (A2 probe baseline 0.0365),in/below the LS band [0.003; 0.009],PASS,
 G14.6,medium_m084_te_gap,all-station raw median 0.0024 (A2 probe all-station baseline 0.1585 = 67x),< 0.02 raw (fallback: <= 3x LS band = 0.027),PASS,
-G14.7,medium_m084_lift_locks,cl_p 0.2776 (+4.92%); cl_KJ 0.2823 (+4.85%),< 2% vs G8.2 PROBE locks 0.2646/0.2692,XFAIL,pre-registered: the swap moves lift by construction; verdict user-arbitrated
-G14.7,medium_m084_gap_direction,|cl_KJ - 0.288|: 0.0188 (probe lock) -> 0.0057 (pressure); 69% closed,RECORDED; not a gate: single-mesh medium number; NOT a grid-convergence claim (P9: the fine mesh is not a discrete solution),PASS,
+G14.7,medium_m084_lift_vs_levelset,cl_p 0.2776 vs LS 0.2772 (0.15%); cl_KJ 0.2823 vs LS 0.2813 (0.34%),< 1% vs the level-set oracle (re-specced from the probe G8.2 locks; V14.6 confirms live),PASS,
+G14.7,medium_m084_move_off_probe_locks,cl_p +4.92%; cl_KJ +4.85% vs G8.2 probe; |cl_KJ-0.288| 0.0188->0.0057 (69% closed),RECORDED; not a gate: the corrected lift; moving toward the inviscid reference; single-mesh medium; NOT a grid-convergence claim (P9: no fine discrete solution),PASS,
 V14.7,te_spike_vs_probe,raw mean 0.0533 vs A2's conforming-probe 0.1143 (2.1x),the spike DROPS -- refuting P14's own first claim that it is a wake-model-independent recovery artifact,PASS,
 V14.7,te_spike_vs_levelset,raw mean 0.0533 vs level-set 0.0743,at/below the level-set path (whose Kutta was already pressure-equality) -- the residual is the genuine shared P1 recovery floor,PASS,
 V14.7,te_spike_smoothing_inert,passes 0/1/2 -> 0.0533/0.0660/0.0626,RECORDED: P6 smoothing no longer helps (A2 measured 0.147->0.081 on the probe path) -- consistent with the Kutta-form component being gone; not the recovery one,PASS,

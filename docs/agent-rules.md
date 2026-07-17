@@ -1,14 +1,19 @@
 # pyFP3D Agent Rules
 
-Current phase: **P14 ◐ (opened + built 2026-07-17, user-directed): probe-free
-conforming Kutta target — wall-adjacent-CV pressure-equality estimator (A2's
-routed fix). Tier 1 (subsonic M0.5) G14.1–G14.3 ✓ · tier 2 (transonic M0.84)
-G14.5/G14.6 ✓ · G14.4 (inert-by-default) ticks at close · ★ G14.7 XFAIL
-AS WRITTEN ⇒ USER ARBITRATION OPEN (below). Demo
-`cases/demo/p14_pressure_kutta/` 20 PASS + 1 XFAIL; diagnostic
-`cases/analysis/p14_te_pressure_diag/` 20/20.** Track B's next phase remains
-**B9 (wing-body LS solve, M∞ 0.5)** (user-arbitrated 2026-07-14; B15 ✓ CLOSED
-2026-07-15 — the M6-medium Picard plateau is gone, 38.4 → 11.0 min = 3.51×).
+Current phase: **P14 ✓ CLOSED 2026-07-17 (opened + closed same day,
+user-directed): probe-free conforming Kutta target — wall-adjacent-CV
+pressure-equality estimator (A2's routed fix). G14.1–G14.7 all ✓. Headline:
+the conforming path now MATCHES the level-set path** — M0.84 medium cl_p/cl_KJ
+agree to 0.15%/0.34% (cross-model V14.6), Γ(z) roughness 0.0970→0.0043 /
+0.0365→0.0024 (at/below the LS band), all-station TE Cp gap 0.2206→0.0040 /
+0.1585→0.0024, TE spike 0.1143→0.0533 (below LS). G14.7 was re-specced at close
+from the probe G8.2 locks to the level-set oracle (the +4.85% cl_KJ move is the
+finding, 69% of P9's 0.019 gap = Kutta-estimator bias). Demo
+`cases/demo/p14_pressure_kutta/` **28 PASS**; diagnostic
+`cases/analysis/p14_te_pressure_diag/` 20/20. **Next phase = user's call
+(B9 = the standing Track-B NEXT).** B9 (wing-body LS solve, M∞ 0.5,
+user-arbitrated 2026-07-14; B15 ✓ CLOSED 2026-07-15 — the M6-medium Picard
+plateau is gone, 38.4 → 11.0 min = 3.51×).
 
 **P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
@@ -34,20 +39,21 @@ Wiring scope (user-arbitrated): coupled Newton + `solve_laplace_lifting` only �
   cross-model, NOT a same-mesh A/B; the LS state carries 1 lim/2 flr (B15
   caveat) vs 0/0; and "both agree" ≠ "both right" (a shared model error like
   the rigid planar wake is common to both by construction).
-- ★ **G14.7 XFAIL — the lift MOVES and the band was NOT moved to match.**
-  Medium M0.84 cl_p 0.2776 (+4.92%) / cl_KJ 0.2823 (+4.85%) vs the G8.2
-  **probe-path** locks. Mechanism measured in tier 1 and pre-registered BEFORE
-  the tier-2 runs: the closures agree pointwise to the probe's own O(h)
-  reading bias (cross-read 0.79% at medium M0.84 — a shifted closure, not a
-  wandered solution), which the Kutta map's b ≈ 0.93 amplifies 1/(1−b) ≈ 14×
-  into Γ. **Direction, RECORDED not a gate:** |cl_KJ − 0.288| 0.0188 → 0.0057,
-  **69% of P9's "0.019 gap" closed** — P9 could not see it (both its meshes
-  shared the estimator, so the bias was common mode to its Richardson).
-  **NOT** a grid-convergence claim (the M6 fine is not a discrete solution),
-  **NOT** a revival of "the 0.019 gap is resolution" (still *strongly
-  indicated, NOT earned*), **NOT** proof the pressure lift is right.
-  **User decides:** accept the move as the finding (re-lock G14.7 on
-  pressure-path locks) or treat it as a defect to chase.
+- ★ **G14.7 ✓ CLOSED — re-specced to the level-set oracle; the lift move is
+  the finding (user-arbitrated 2026-07-17).** The gate opened against the G8.2
+  **probe** locks; it XFAILed as written (band not moved after the fact,
+  cl_KJ +4.85%), and the pre-registered mechanism fired exactly: the closures
+  agree pointwise to the probe's own O(h) reading bias (cross-read 0.79% at
+  medium M0.84 — a shifted closure, not a wandered solution), which the Kutta
+  map's b ≈ 0.93 amplifies 1/(1−b) ≈ 14× into Γ, so the lift MUST move — and it
+  moves ONTO the level-set answer (0.15%/0.34%, V14.6). **User verdict: accept
+  the move, re-lock against the level-set oracle** (`< 1%`, PASS). Direction
+  recorded: |cl_KJ − 0.288| 0.0188 → 0.0057, **69% of P9's "0.019 gap" was
+  Kutta-estimator bias** — P9 could not see it (both its meshes shared the
+  estimator, common mode to its Richardson). Closing G14.7 asserts the two
+  paths AGREE, NOT that the M6 fine converges (it is not a discrete solution)
+  NOR that "the 0.019 gap is resolution" (still *strongly indicated, NOT
+  earned*).
 - ★ **CORRECTION (measured 2026-07-17, V14.7) — the TE Cp SPIKE drops too, and
   A2's S2 decomposition needs a nuance.** P14's own earlier write-ups asserted
   the spike was "untouched, a wake-model-independent P1 recovery artifact" —
@@ -98,9 +104,9 @@ recorded in Track M M2).
 
 - **Track P** ([track_p.md](roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
   xfail) · P10 ◐ (G10.1 open) · P11 conditional-not-opened · P13 ◐ (G13.3
-  transonic NEGATIVE-open) · **P14 ◐ OPENED 2026-07-17** (probe-free conforming
-  Kutta estimator, from A2 — fixes the Γ(z) jitter + TE Cp gap; not on the B9
-  path; two-tier gates, Stage-D GO).
+  transonic NEGATIVE-open) · **P14 ✓ CLOSED 2026-07-17** (pressure-equality
+  Kutta estimator, from A2 — S1 jitter + S2 TE Cp gap both gone, and the
+  conforming path now matches level-set on lift; G14.1–G14.7 ✓).
 - **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓ except M2 ◐ (mesh ✓,
   body re-spec'd 2026-07-16, solver leg = B9).
 - **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B15 ✓ ·

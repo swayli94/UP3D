@@ -13,7 +13,8 @@ Tier 2 (transonic M0.84 = the A2 regime, PYFP3D_TRANSONIC_GATES=1):
          fixed-Gamma discriminator D rerun on the NEW estimator (G14.5)
   V14.5  M6 medium  M0.84 Newton ramp (pressure): G14.5 roughness band,
          G14.6 TE-gap band (raw + smooth_passes=1 fallback clause),
-         G14.7 cl_p/cl_KJ vs the committed G8.2 locks (0.2646/0.2692)
+         G14.7 cl_p/cl_KJ vs the LEVEL-SET oracle (re-specced at close from
+         the probe G8.2 locks; the move off those locks is the finding)
   V14.6  cross-MODEL check: conforming-pressure vs the level-set path
          (A1's cached B15 LS Newton state), all three metrics on the SAME
          pipeline -- the LS path has always used pressure-equality Kutta,
@@ -491,35 +492,41 @@ if GATES:
                    gap_med < 0.02, xfail=not gap_med < 0.02,
                    note="fallback clause" if gap_med >= 0.02 else "")
         if level == "medium":
-            rel_p = abs(met["cl_p"] / LOCK_CL_P - 1)
-            rel_kj = abs(met["cl_kj"] / LOCK_CL_KJ - 1)
-            # XFAIL-as-written, per the interpretation note PRE-REGISTERED
-            # in roadmap/track_p.md BEFORE this run: the G8.2 locks are
-            # PROBE-path locks, and tier 1 already measured that the
-            # estimator swap MUST move the converged lift (the probe's O(h)
-            # reading bias, 1/(1-b) ~ 14x amplified). The band stands as
-            # written and is reported failing; the verdict (defect vs
-            # accuracy finding) is user-arbitrated -- see the direction
-            # check below.
-            checks.add("G14.7", "medium_m084_lift_locks",
-                       f"cl_p {met['cl_p']:.4f} ({100 * rel_p:+.2f}%), "
-                       f"cl_KJ {met['cl_kj']:.4f} ({100 * rel_kj:+.2f}%)",
-                       "< 2% vs G8.2 PROBE locks 0.2646/0.2692",
-                       rel_p < 0.02 and rel_kj < 0.02,
-                       xfail=True,
-                       note="pre-registered: the swap moves lift by "
-                            "construction; verdict user-arbitrated")
-            # the direction the pre-registered note flagged: does the move
-            # go TOWARD the Tranair/KRATOS reference (P9's 0.019 gap)?
+            # G14.7 RE-SPECCED at close (user-arbitrated 2026-07-17). The
+            # provisional band ("< 1-2% vs the G8.2 locks") rested on the
+            # premise that a Kutta ESTIMATOR swap should not move loading.
+            # Tiers 1-2 measured that premise wrong for a measured reason:
+            # the two closures agree pointwise to the probe's own O(h)
+            # reading bias (cross-read 0.79% at medium M0.84), which the
+            # Kutta map's b ~ 0.93 amplifies 1/(1-b) ~ 14x into the
+            # converged Gamma, so the lift MUST move -- and it moves ONTO
+            # the level-set answer (0.17%/0.36%, V14.6), an independent
+            # implementation that already used pressure-equality Kutta.
+            # User verdict: accept the move as the finding; re-lock G14.7
+            # against the LEVEL-SET oracle instead of the probe locks.
+            rel_p = abs(met["cl_p"] / LS_REF["cl_p"] - 1)
+            rel_kj = abs(met["cl_kj"] / LS_REF["cl_kj"] - 1)
+            checks.add("G14.7", "medium_m084_lift_vs_levelset",
+                       f"cl_p {met['cl_p']:.4f} vs LS {LS_REF['cl_p']:.4f} "
+                       f"({100 * rel_p:.2f}%), cl_KJ {met['cl_kj']:.4f} vs "
+                       f"LS {LS_REF['cl_kj']:.4f} ({100 * rel_kj:.2f}%)",
+                       "< 1% vs the level-set oracle (re-specced from the "
+                       "probe G8.2 locks; V14.6 confirms live)",
+                       rel_p < 0.01 and rel_kj < 0.01)
+            # RECORDED context: the move off the OLD probe locks, and the
+            # direction it went (toward the Tranair/KRATOS reference).
+            mv_p = met["cl_p"] / LOCK_CL_P - 1
+            mv_kj = met["cl_kj"] / LOCK_CL_KJ - 1
             gap_before = abs(TRANAIR_CL - LOCK_CL_KJ)
             gap_after = abs(TRANAIR_CL - met["cl_kj"])
-            checks.add("G14.7", "medium_m084_gap_direction",
-                       f"|cl_KJ - 0.288|: {gap_before:.4f} (probe lock) -> "
-                       f"{gap_after:.4f} (pressure), "
-                       f"{100 * (1 - gap_after / gap_before):.0f}% closed",
-                       "RECORDED, not a gate: single-mesh medium number, "
-                       "NOT a grid-convergence claim (P9: the fine mesh is "
-                       "not a discrete solution)", True)
+            checks.add("G14.7", "medium_m084_move_off_probe_locks",
+                       f"cl_p {100 * mv_p:+.2f}%, cl_KJ {100 * mv_kj:+.2f}% "
+                       f"vs G8.2 probe; |cl_KJ-0.288| {gap_before:.4f}->"
+                       f"{gap_after:.4f} ({100 * (1 - gap_after / gap_before):.0f}% closed)",
+                       "RECORDED, not a gate: the corrected lift, moving "
+                       "toward the inviscid reference; single-mesh medium, "
+                       "NOT a grid-convergence claim (P9: no fine discrete "
+                       "solution)", True)
 
         # fixed-Gamma discriminator rerun on the NEW estimator (coarse
         # always when gated; the A2 protocol: smooth Gamma in, warm

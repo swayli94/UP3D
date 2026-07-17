@@ -911,10 +911,11 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 2026-07-15 — docs/roadmap.md and docs/demo_report.md are now thin indexes).
 One-line summary: Track P — P0–P9 ✓ (P1: G1.6 open as a `strict=True` xfail
 awaiting its Option C re-spec, see "Known gaps" above; P11 is down to G1.6
-alone), P10 ◐, P13 ◐ (G13.3 transonic NEGATIVE-open), **P14 ◐ (2026-07-17:
-pressure-equality Kutta estimator built; G14.1–G14.6 ✓, ★ G14.7 XFAIL —
-the estimator swap moves cl_KJ +4.85% off the probe-path G8.2 locks and
-closes 69% of P9's 0.019 gap; USER ARBITRATION OPEN)**; Track M — M0–M5 ✓,
+alone), P10 ◐, P13 ◐ (G13.3 transonic NEGATIVE-open), **P14 ✓ CLOSED
+(2026-07-17, opened + closed same day): pressure-equality Kutta estimator;
+G14.1–G14.7 ✓; the conforming path now MATCHES level-set (cl_p/cl_KJ
+0.15%/0.34%), and the +4.85% cl_KJ move off the probe locks closed 69% of
+P9's 0.019 gap**; Track M — M0–M5 ✓,
 M2 ◐ (mesh ✓, solver leg = B9); Track B — B1–B8, B11–B13, B15 ✓, B6 ◐,
 **B9 (wing-body LS solve, M∞0.5) = NEXT**; Track V — designed, not started;
 Track A — A1, A2 ✓. Default suite: **421 passed + 18 skipped + 2 xfailed**
