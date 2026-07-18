@@ -1,0 +1,14 @@
+metric,value
+n_affected_elems,252
+volume_fraction_pct,0.18875395201859807
+d_rho_max,0.4473579184814491
+d_rho_mean,0.04558933580289887
+d_rho_volweighted,0.02596137424546731
+rel_rho_max_pct,45.26046054041339
+rel_rho_mean_pct,4.513894265643907
+d_q2_max,2.175388975601587
+q2_side_max,3.2228696831697072
+q2_main_max,1.3379289064787359
+n_elems_rel_gt_1pct,154
+n_elems_rel_gt_10pct,39
+seed_residual,1.9531820684513118e-07

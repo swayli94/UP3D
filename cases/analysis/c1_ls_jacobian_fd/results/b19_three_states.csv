@@ -1,0 +1,10 @@
+state,fix_applied,probe,n_dofs,rel_err,eps1e-6,eps1e-7,eps1e-8,eps_spread,reading
+pre_fix,none,targeted_aux,102,1.145684e-01,1.532189e-01,1.532189e-01,1.532189e-01,1.00,eps-INDEPENDENT => a real missing term (C1 CONFIRMED)
+pre_fix,none,control_aux,1509,6.327479e-10,,,,,clean
+pre_fix,none,global_free,12566,2.467864e-03,,,,,
+partial,index_split_only,targeted_aux,102,1.469676e-02,2.913917e-02,2.913917e-02,2.913918e-02,1.00,"8x better but STILL eps-independent => a SECOND missing term (gate held open, not rounded to a pass)"
+partial,index_split_only,control_aux,1509,6.327479e-10,,,,,clean
+partial,index_split_only,global_free,12566,4.164103e-04,,,,,
+post_fix,index_split+grad_row,targeted_aux,102,1.333699e-08,1.641e-09,2.107e-08,2.158e-07,131.52,eps-SENSITIVE (scales ~1/eps) => pure FD roundoff; the discriminator FLIPPED
+post_fix,index_split+grad_row,control_aux,1509,6.327479e-10,,,,,clean
+post_fix,index_split+grad_row,global_free,12566,8.490e-10,,,,,"was 2.47e-03 pre-fix"

@@ -78,6 +78,7 @@ class MultivaluedOperator:
         self._side_sets = None
         self._side_upw = None
         self._side_dof = None
+        self._side_read = None
         self.nu_max = 0.0
         self.n_nu_active = 0
         self.n_floored = 0
@@ -491,12 +492,51 @@ class MultivaluedOperator:
         self._nu_active = active
         return out[0], out[1]
 
+    def _side_readvecs(self):
+        """(read_upper, read_lower): each (n_tets, 4) int, the extended DOF
+        each element node's side FIELD READS -- i.e. `side_potentials`' own
+        per-node rule (a cut node takes its aux value on the opposite side),
+        applied to EVERY element rather than only to cut ones.
+
+        B19 / Leg A. This is the COLUMN map of the LS-Newton density
+        sensitivities, and it is NOT the same object as `_side_dofvecs`, which
+        is the ROW map (where a residual lands). The two coincide on cut
+        elements -- asserted below -- but diverge on **mixed-side plain**
+        elements: uncut tets whose nodes straddle the level set (beyond the
+        spanwise tip clip, or where the sheet extension passes upstream of the
+        TE). `mass_conservation_coo` scatters those onto MAIN dofs while
+        `newton_side_data` builds their gradient from the SIDE field, so their
+        residual genuinely depends on cut nodes' aux dofs. Using the row map
+        for the columns put that sensitivity on the wrong column and made J !=
+        dR/dphi there (measured: rel err 1.146e-01 on the affected probe
+        directions vs 6.33e-10 elsewhere, eps-independent across three decades
+        -- `cases/analysis/c1_ls_jacobian_fd/`). Quasi-2-D meshes have no such
+        elements, which is why B6's FD gate could never see it.
+        """
+        if self._side_read is None:
+            cm = self.cm
+            el = np.asarray(self.op.elements, dtype=np.int64)
+            ext = cm.ext_dof_of_node[el]          # -1 at non-cut nodes
+            side = cm.node_side[el]
+            has_aux = ext >= 0
+            ru = np.where((side == 1) | ~has_aux, el, ext)
+            rl = np.where((side == -1) | ~has_aux, el, ext)
+            # The equivalence that makes this a GENERALIZATION and not a new
+            # rule: on cut elements the read map already IS the scatter map.
+            if len(cm.cut_elems):
+                assert np.array_equal(ru[cm.cut_elems], cm.dofs_upper)
+                assert np.array_equal(rl[cm.cut_elems], cm.dofs_lower)
+            self._side_read = (ru, rl)
+        return self._side_read
+
     def _side_dofvecs(self):
         """(dof_upper, dof_lower): each (n_tets, 4) int, the extended-DOF
         vector of every element's UPPER / LOWER copy -- EXACTLY the DOF vectors
         `mass_conservation_coo` scatters with. Garbage rows where the element
         is not in that side's set (guard with `_side_element_sets`). The
-        per-side Newton Terms 2/3 (LS Newton) scatter onto these."""
+        per-side Newton Terms 2/3 (LS Newton) put their ROWS on these; their
+        COLUMNS come from `_side_readvecs` (B19 Leg A -- the two differ on
+        mixed-side plain elements)."""
         if self._side_dof is None:
             cm = self.cm
             el = np.asarray(self.op.elements, dtype=np.int64)
@@ -529,7 +569,7 @@ class MultivaluedOperator:
         mask, the side element mask and the side DOF vectors.
 
         Returns two dicts (upper, lower), each with keys:
-          rho_tilde, s_e, s_u, upstream, grad, lim_mask, keep, dofvec.
+          rho_tilde, s_e, s_u, upstream, grad, lim_mask, keep, dofvec, readvec.
         Also refreshes the nu/floor/limit monitors (own-side) as
         element_rho_tilde does.
 
@@ -549,6 +589,7 @@ class MultivaluedOperator:
 
         in_upper, in_lower = self._side_element_sets()
         du, dl = self._side_dofvecs()
+        ru, rl = self._side_readvecs()          # B19: the COLUMN map
         upw_u, upw_l = self._side_upwind()
         phi_up, phi_lo = self.side_potentials(phi_ext)
         fz_u, fz_l = (None, None) if frozen is None else frozen
@@ -556,9 +597,9 @@ class MultivaluedOperator:
         out = []
         nus, floored, limited = [], 0, 0
         active = np.zeros(self.op.n_tets, dtype=bool)
-        for phi_s, upw, keep, dofvec, fz in (
-                (phi_up, upw_u, in_upper, du, fz_u),
-                (phi_lo, upw_l, in_lower, dl, fz_l)):
+        for phi_s, upw, keep, dofvec, readvec, fz in (
+                (phi_up, upw_u, in_upper, du, ru, fz_u),
+                (phi_lo, upw_l, in_lower, dl, rl, fz_l)):
             grad, q2 = self.op.velocities(phi_s)
             q2n = q2 / u_inf**2
             q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
@@ -587,7 +628,22 @@ class MultivaluedOperator:
             active |= (upw.nu > 0.0) & keep
             out.append({"rho_tilde": rt, "s_e": s_e.copy(), "s_u": s_u.copy(),
                         "upstream": upstream, "grad": grad.copy(),
-                        "lim_mask": lim_mask, "keep": keep, "dofvec": dofvec})
+                        "lim_mask": lim_mask, "keep": keep, "dofvec": dofvec,
+                        "readvec": readvec,
+                        # B19 Leg A, second half: the gradient of the field the
+                        # SCATTER map reads. The residual of an element is
+                        #     rho_tilde(grad of the READ field) * V *
+                        #     (grad of the SCATTER field . B_a),
+                        # so the Jacobian's ROW factor must use this gradient
+                        # while its COLUMN factor uses `grad` (the side field's).
+                        # They coincide on cut elements -- phi_ext[dofs_upper]
+                        # IS phi_up over that element -- and differ exactly on
+                        # mixed-side plain elements, where the scatter map is
+                        # main. Using `grad` for both was the second missing
+                        # term (measured: the row/column index split alone left
+                        # 1.47e-02 of the original 1.15e-01).
+                        "grad_row": np.einsum(
+                            "ek,ekd->ed", phi_ext[dofvec], self.op.B)})
         nu_own = np.concatenate(nus) if len(nus) else np.zeros(0)
         self.nu_max = float(nu_own.max()) if nu_own.size else 0.0
         self.n_nu_active = int(np.count_nonzero(nu_own > 0.0))

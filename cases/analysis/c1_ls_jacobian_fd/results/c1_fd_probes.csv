@@ -1,7 +1,7 @@
 mesh,m_inf,n_nodes,n_tets,n_cut_elems,n_beyond_tip,n_mixed_side_plain,probe,n_dofs,rel_err
-onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux,102,1.145684e-01
+onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux,102,1.333699e-08
 onera_m6/coarse,0.7,11033,55531,4047,428,3378,control_aux,1509,6.327479e-10
-onera_m6/coarse,0.7,11033,55531,4047,428,3378,global_free,12566,2.467864e-03
-onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux_eps1e-06,102,1.532189e-01
-onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux_eps1e-07,102,1.532189e-01
-onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux_eps1e-08,102,1.532189e-01
+onera_m6/coarse,0.7,11033,55531,4047,428,3378,global_free,12566,8.490215e-10
+onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux_eps1e-06,102,1.640669e-09
+onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux_eps1e-07,102,2.107072e-08
+onera_m6/coarse,0.7,11033,55531,4047,428,3378,targeted_aux_eps1e-08,102,2.157852e-07

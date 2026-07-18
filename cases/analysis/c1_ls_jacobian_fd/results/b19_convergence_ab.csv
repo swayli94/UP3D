@@ -1,0 +1,4 @@
+tag,jacobian,mesh,m_inf,n_seed,n_newton_max,tol_residual,n_newton,converged,res_final,gamma,m_max,wall_s,n_limited,n_floored,note
+pre_fix,inexact (quasi-Newton),onera_m6/coarse,0.70,30,40,1e-8,40,False,3.707261e-07,0.07212068,1.134235,60.6,0,0,plateau = B15 upwind selection churn limit cycle
+post_fix,exact,onera_m6/coarse,0.70,30,40,1e-8,40,False,3.973387e-07,0.07212068,1.134235,62.8,0,0,"gamma identical to 8 dp, M_max to 6 dp; residuals differ only by limit-cycle phase at step 40"
+delta,,,,,,,0,unchanged,within one cycle period,0.00000000,0.000000,+3.6%,0,0,"NO convergence improvement; cost of exactness = the extra grad_row einsum. The binding constraint here is selection churn, which an exact derivative cannot touch."

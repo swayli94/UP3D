@@ -229,15 +229,27 @@ def main() -> int:
         sweep.append((eps, r))
         print(f"  eps={eps:.0e}: targeted rel err = {r:.3e}")
     spread = max(s[1] for s in sweep) / (min(s[1] for s in sweep) + 1e-30)
+    # READ THIS BOTH WAYS (B19): the SAME discriminator answers two different
+    # questions depending on the size of the error it is applied to.
+    #   large error + eps-INDEPENDENT -> a real missing Jacobian term
+    #   small error + eps-SENSITIVE   -> pure FD truncation/roundoff, i.e. the
+    #                                    Jacobian is exact and this is the floor
+    # Pre-B19 the sweep read 1.532e-01 at every eps (spread 1.00) = the bug.
+    # Post-B19 it reads 1.6e-09/2.1e-08/2.2e-07 (spread 131) = the noise floor.
+    # A flip from "independent" to "sensitive" IS the fix landing.
     print(f"  eps-independence: max/min = {spread:.2f} "
-          f"({'stable -> missing term' if spread < 3 else 'eps-sensitive -> suspect FD noise'})")
+          + ("(stable -> a real missing term, IF the error is large)"
+             if spread < 3 else
+             "(eps-sensitive -> FD roundoff; expected once J is exact)"))
 
     tgt = next(r["rel_err"] for r in rows if r["probe"] == "targeted_aux")
     ctl = next(r["rel_err"] for r in rows if r["probe"] == "control_aux")
     if tgt > 1e-6 and ctl < 1e-6:
-        verdict = "C1 CONFIRMED (localized to mixed-side plain elements)"
+        verdict = ("C1 PRESENT (localized to mixed-side plain elements) -- "
+                   "expected only on a tree WITHOUT the B19 Leg A fix")
     elif tgt < 1e-6 and ctl < 1e-6:
-        verdict = "C1 REFUTED on this mesh (Jacobian exact everywhere probed)"
+        verdict = ("JACOBIAN EXACT everywhere probed -- the B19 Leg A "
+                   "post-fix state (pre-fix this probe read 1.15e-01)")
     else:
         verdict = "INCONCLUSIVE (control also fails -- not the C1 mechanism)"
     print(f"\nVERDICT: {verdict}")

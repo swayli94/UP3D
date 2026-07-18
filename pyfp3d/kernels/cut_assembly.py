@@ -404,15 +404,26 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
     the EXTENDED DOFs (B6-Newton; design_track_b.md section 5.5).
 
     Term 2 (local): dR_a/dphi_b += 2 inv_u2 s_e V_e (gradphi_e.B_a)(gradphi_e.B_b)
-        rows/cols = the element's own side DOF vector.
+        rows = dofvec[e], cols = readvec[e].
     Term 3 (upstream): dR_a/dphi_k += 2 inv_u2 s_u V_e (gradphi_e.B_a)
-        (gradphi_u.B_u,k), rows = dofvec[e], cols = dofvec[u(e)] (SAME side --
+        (gradphi_u.B_u,k), rows = dofvec[e], cols = readvec[u(e)] (SAME side --
         the walk graph is side-restricted, so u(e) is in this side's set).
 
+    ROWS AND COLUMNS COME FROM DIFFERENT MAPS (B19 Leg A, from the A3/C1
+    finding). `dofvec` is where the element's residual LANDS (the
+    `mass_conservation_coo` scatter); `readvec` is which DOF the element's side
+    FIELD READS (`side_potentials`' per-node rule). They coincide on cut
+    elements -- which is why using one for both survived every 2.5-D gate --
+    but differ on **mixed-side plain** elements, which exist only in 3-D. There
+    the residual depends on cut nodes' aux DOFs through the side density while
+    the old code scattered that sensitivity onto a MAIN column, so J was not
+    dR/dphi (rel err 1.146e-01 on the affected directions vs 6.33e-10
+    elsewhere; `cases/analysis/c1_ls_jacobian_fd/`).
+
     `side` is a `MultivaluedOperator.newton_side_data` dict (s_e/s_u/upstream/
-    grad/lim_mask/keep/dofvec). Sensitivities are masked by lim_mask exactly as
-    P8 (flat clamp -> zero derivative on limited elements). Only elements in
-    this side's set (keep) with a nonzero sensitivity emit.
+    grad/lim_mask/keep/dofvec/readvec). Sensitivities are masked by lim_mask
+    exactly as P8 (flat clamp -> zero derivative on limited elements). Only
+    elements in this side's set (keep) with a nonzero sensitivity emit.
 
     This is the per-side, DOF-indirected analogue of
     PicardOperator.assemble_newton_jacobian's Term 2/3 -- vectorized over the
@@ -420,12 +431,23 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
     """
     B, V = op.B, op.V
     keep = side["keep"]
-    dof = side["dofvec"]
+    dof = side["dofvec"]                         # rows: where R lands
+    read = side.get("readvec")                   # cols: what the field reads
+    if read is None:                             # pre-B19 dicts
+        read = dof
     grad = side["grad"]
     lim = side["lim_mask"]
     inv_u2 = 1.0 / (u_inf * u_inf)
-    # gradphi_e . B_{e,a}  ->  (n_tets, 4)
-    gB = np.einsum("ed,ead->ea", grad, B)
+    # Two gradient factors, matching the two DOF maps (B19 Leg A). The element
+    # residual is rho_tilde(grad_READ) * V * (grad_SCATTER . B_a), so the ROW
+    # factor uses the scatter field's gradient and the COLUMN factor uses the
+    # read (side) field's. Identical on cut elements, different on mixed-side
+    # plain ones.
+    grad_row = side.get("grad_row")
+    if grad_row is None:                         # pre-B19 dicts
+        grad_row = grad
+    gB_row = np.einsum("ed,ead->ea", grad_row, B)     # rows (index a)
+    gB = np.einsum("ed,ead->ea", grad, B)             # cols (index b / k)
 
     s_e = side["s_e"] * lim                      # limiter flat clamp -> 0
     up = side["upstream"]
@@ -437,10 +459,9 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
     e2 = np.flatnonzero(keep & (s_e != 0.0))
     if len(e2):
         w2 = (2.0 * inv_u2) * s_e[e2] * V[e2]           # (m,)
-        blk = w2[:, None, None] * (gB[e2][:, :, None] * gB[e2][:, None, :])
-        d = dof[e2]                                      # (m,4)
-        rows_l.append(np.repeat(d, 4, axis=1).reshape(-1))
-        cols_l.append(np.tile(d, (1, 4)).reshape(-1))
+        blk = w2[:, None, None] * (gB_row[e2][:, :, None] * gB[e2][:, None, :])
+        rows_l.append(np.repeat(dof[e2], 4, axis=1).reshape(-1))
+        cols_l.append(np.tile(read[e2], (1, 4)).reshape(-1))
         data_l.append(blk.reshape(-1))
 
     # -- Term 3 -------------------------------------------------------------
@@ -449,9 +470,9 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
         u3 = up[e3]
         w3 = (2.0 * inv_u2) * s_u[e3] * V[e3]            # (m,)
         # (gradphi_e.B_e,a) outer (gradphi_u.B_u,k)
-        blk = w3[:, None, None] * (gB[e3][:, :, None] * gB[u3][:, None, :])
+        blk = w3[:, None, None] * (gB_row[e3][:, :, None] * gB[u3][:, None, :])
         de = dof[e3]                                     # rows: nodes of e
-        du = dof[u3]                                     # cols: nodes of u(e)
+        du = read[u3]                                    # cols: nodes of u(e)
         rows_l.append(np.repeat(de, 4, axis=1).reshape(-1))
         cols_l.append(np.tile(du, (1, 4)).reshape(-1))
         data_l.append(blk.reshape(-1))
