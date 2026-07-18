@@ -1661,8 +1661,44 @@ not M0.84** — different freestream, not a like-for-like number, so that FAIL i
 downstream of the reach failure, not an independent finding. **The real
 regression is one clause: the ramp no longer reaches M0.84 on this mesh.**
 
-- [ ] **GB20.7 — is the M6-medium stall a RECIPE mismatch or a real capability
-  loss? OPEN.** Evidence points at mismatch but does not prove it: **0/0 clamped
+- [x] **GB20.7 — ANSWERED: a REAL capability loss, not a recipe mismatch**
+  (`results/gb207_recipe_sweep.csv`, 2026-07-19). `freeze_tol` swept 1e-3 →
+  1e-6 on the committed M6-medium call:
+
+  | freeze_tol | m_final | levels | accept routes |
+  |---|---|---|---|
+  | 1e-3 (committed) | 0.6625 | 2/5 | assignment_cycle |
+  | 1e-4 | 0.6625 | 2/5 | assignment_cycle |
+  | **1e-5** | **0.6750** | **3/6** | + **tol** |
+  | 1e-6 | 0.6750 | 3/6 | + tol |
+
+  ★ **The hypothesis was directionally right and quantitatively insufficient.**
+  Lowering `freeze_tol` does help — the ceiling moves 0.6625 → 0.6750 and a
+  level starts converging on `tol` instead of escaping via `assignment_cycle`,
+  confirming 1e-3 was indeed calibrated above a churn floor that B20 lowered.
+  But the ceiling moves by 0.0125, not to 0.84. **The recipe was a contributor,
+  not the cause.**
+  **Honest bound:** only `freeze_tol` was varied (`dm`, `n_newton_max`,
+  `m_start` were not), so this is the evidence-based conclusion, not a proof
+  that no recipe can reach M0.84.
+
+  ★★ **Synthesis — the contamination was acting as an unintended stabiliser.**
+  The same pattern appears on the wing-body (GB20.5): with the contamination
+  removed the solver converges *beautifully* (0/0 clamps, |R| ~1e-13) but
+  cannot climb as far. Before B20 the M6-medium ramp reached M0.84 — into a
+  state whose M_max 2.45–2.49 sits ~25 % above the conforming reference
+  (**1.995**) and was only ever validated against the equally-contaminated LS
+  Picard. **The trade is real and should be stated as a trade:** the old code
+  went further into states we now have reason to distrust; the new code stops
+  earlier and what it produces is clean.
+
+  **Post-B20 level-set transonic envelope (M6 wake-free):** coarse **M0.84
+  converged** (an improvement — it was 0.7875 not-converged), medium **≈M0.675**
+  (was M0.84). ⇒ **GB15.4's "reaches M0.84" clause is now a NEGATIVE and
+  B14's "== the committed GB15.4 physics" clause is superseded**; both need a
+  re-spec against the new envelope (the G14.7 precedent: re-lock against what
+  is now the honest oracle). Left OPEN for the user rather than re-specced
+  unilaterally, since it redefines a committed capability claim. Evidence points at mismatch but does not prove it: **0/0 clamped
   at every level including the failed ones**, |R| 9.2e-14 where it converges,
   freeze armed every level with zero reverts, converged levels accepted via
   `assignment_cycle` (the intrinsic discretization floor). It is not diverging

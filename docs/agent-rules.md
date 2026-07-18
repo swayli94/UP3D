@@ -47,9 +47,22 @@ B9's cross-model headline (LS 0.2165/0.2175) did not move one digit.
 ★★ **The old number's validation was COMMON-MODE:** B15 compared M_max against
 the LS *Picard* (2.4549) — both LS solvers read the same contaminated density,
 so it never checked correctness; the conforming record is **1.995**. And the new
-1.5822 is at M0.6625, not M0.84 — not like-for-like. **GB20.7 OPEN:** recipe
-mismatch or real loss? 0/0 clamped everywhere, |R| 9.2e-14, freeze armed, zero
-reverts ⇒ points at mismatch (B18 precedent: freeze_tol 1e-6→1e-5), not proven.
+1.5822 is at M0.6625, not M0.84 — not like-for-like. ★★ **GB20.7 ANSWERED (2026-07-19): a REAL capability loss, not a recipe
+mismatch.** `freeze_tol` swept 1e-3→1e-6: the ceiling moves only 0.6625→**0.6750**
+(1e-5/1e-6, and a level starts converging on `tol` instead of escaping via
+`assignment_cycle`) — the hypothesis was directionally right, quantitatively
+insufficient. **Post-B20 LS transonic envelope (M6 wake-free): coarse M0.84
+converged (was 0.7875 not-converged), medium ≈M0.675 (was M0.84).**
+★ **Synthesis: the contamination was an unintended STABILISER** — same pattern
+as GB20.5's wing-body (converges beautifully, climbs less far). The old M0.84
+medium state carried M_max 2.45–2.49, ~25 % above the conforming reference
+**1.995**, and was validated only against the equally-contaminated LS Picard.
+**State it as a trade:** the old code went further into states we now distrust;
+the new code stops earlier and what it produces is clean (0/0 clamps, |R|~1e-13).
+⇒ **GB15.4's "reaches M0.84" is now a NEGATIVE and GB14.4's "== committed
+GB15.4 physics" is superseded** — both need a re-spec against the new envelope
+(G14.7 precedent), left OPEN for the user since it redefines a committed
+capability claim. Bound: only `freeze_tol` was varied.
 ★ **Demo-cache trap:** heavy demos reuse gitignored `results/*.npz` — delete the
 LS caches and verify zero `cached` lines, or a re-run is a no-op (it cost me one
 false "B7 unchanged" result). The junction pocket is NOT fixed by any of this
