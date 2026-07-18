@@ -1,6 +1,35 @@
 # pyFP3D Agent Rules
 
-Current phase: **B18 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
+Current phase: **A3 ✓ CLOSED 2026-07-18 (NEW, user-directed): response to the
+2026-07-17 independent Kimi inspection — docs consistency (17 findings) +
+cross-path hardening + the C1 Jacobian verification.** ★★ **HEADLINE: C1 is
+REAL and now verified — the LS Newton Jacobian is NOT the derivative of its
+residual on mixed-side plain elements** (ONERA M6 coarse M0.70: targeted probe
+‖Jv−FD‖/‖FD‖ = **1.146e-01** vs control **6.33e-10**, eight orders apart; and
+**eps-INDEPENDENT** — 1.532e-01 at eps 1e-6/1e-7/1e-8, max/min **1.00** across
+three decades ⇒ a missing term, NOT FD noise). The class is 3378 elements, not
+just the 428 beyond-tip ones. **Bounded consequence: R is untouched, so every
+converged LS state, γ, cl and gate number STANDS — what degrades is the
+convergence rate (the LS Newton is a quasi-Newton in 3-D).** B6's FD gate could
+not see it (quasi-2D has no such elements); B7/B15's M6 gates are convergence
+gates, not FD gates. **RECORDED, NOT FIXED** — the side-aware column-mapping fix
+is a shipped-kernel change that would move committed step-count trajectories ⇒
+its own phase, user's call. Evidence `cases/analysis/c1_ls_jacobian_fd/`.
+★ **Backported two B15-era LS fixes the review found un-backported for three
+phases** (C2 selection-epoch fail-fast scoping, C3 `freeze_max_reverts` disarm)
+to `solve/newton.py` — both dormant on every committed run. ★ **Reader hardened
+(C4/C5):** unnamed physical surface groups were SILENTLY dropped, whose chain
+ends at Γ(root) pinned to 0 with no error on an imported mesh; +3 tests,
+verified failing before the fix. ★ **T1: the B3 gate is now actually locked** —
+the test asserted 2% against a 0.3% gate; measured **0.1441%**, tightened.
+★ **NO `pyfp3d/` numerics change** — every edit is dormant-path, default-inert,
+or a measured no-op (C7b: 0 affected nodes on all six committed families).
+★ Close-out ritual extended to **five surfaces + a backport check**
+(CLAUDE.md step 5, disciplines #9/#10) — the audit's 17 findings were mostly
+close-out debt. Suite **463 + 21 + 2** (+3 reader). Response report:
+[inspection/20260718-response-to-kimi-inspection.md](inspection/20260718-response-to-kimi-inspection.md).
+
+**B18 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
 B17; executes the GB16.6 debt): wing-body transonic (M0.84) — conforming reaches
 it, level-set is junction-limited.** ★★ The wing-body transonic capability is
 **asymmetric, and that is the finding.** **Conforming** (Newton + pressure Kutta,
@@ -178,7 +207,7 @@ NEGATIVE); α 3.06° (the committed M6 subsonic convention). Meshes = the M2
 wing-body family (`cases/meshes/onera_m6_wingbody/`, wake-free, for the LS
 leg) **plus the NEW wake-embedded conforming variant**
 (`cases/meshes/onera_m6_wingbody_conforming/`) — coarse + medium only, both
-gitignored, regenerate before running (~5 min wake-free; conforming TBD).
+gitignored, regenerate before running (~4–5 min wake-free; conforming TBD).
 The 2026-07-16 body/far-field re-spec stands (5 root chords, wing centered,
 2-diameter ellipsoid nose, graded skin, R_FAR = 25 MAC, ★ needs
 `Mesh.OptimizeNetgen` — sliver lottery 0.31/4.80/2.63 without it; wing
@@ -208,7 +237,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   B6 ◐ (medium quantitative closed by GB15.4) · **B14 ✓ CLOSED 2026-07-17**
   (`precond="schur"` Schur-eliminated-aux + AMG(SPD Picard main block),
   `pyfp3d/solve/schur_ls.py`; the A1 precond bottleneck is GONE — M6 medium
-  M0.84 42.6% → 2.6%, ramp 1.43× / subsonic 2.08×, γ = the committed GB15.4;
+  M0.84 43.6% → 2.6% (same-session A/B; A1's earlier independent read was
+  42.6%), ramp 1.43× / subsonic 2.08×, γ = the committed GB15.4;
   ★ SLOWER at small scale, the fine memory-bounded route stays the unbuilt
   designed use-case) · B10 shelved · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D)** —
   wing-body cross-model: LS (Picard) + conforming (NEW capability, Newton)
@@ -292,11 +322,27 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    smoothing is a dead route; "the 0.019 gap is resolution" stays *strongly
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
+9. **Two paths ⇒ backport check** (A3, 2026-07-18, measured): a fix landing on
+   the conforming path or the level-set path must be explicitly checked against
+   the other, with the answer recorded in the phase entry. Two B15 LS
+   robustness fixes (selection-epoch fail-fast scoping, `freeze_max_reverts`
+   disarm) sat un-backported to `newton.py` for three phases until an external
+   review found them. Also: a test's bound must not be looser than the gate
+   text it claims to lock — B3's test asserted 2% against a 0.3% gate
+   (7×) until A3 measured 0.1441% and tightened it.
+10. **Close-out refresh is FIVE surfaces, not two** — track ledger,
+   agent-rules current-phase + baseline, overview.md, **PROJECT_STRUCTURE.md
+   (footer AND the directory trees)**, and the `cases/*/README.md` row. The
+   2026-07-17 audit found 17 consistency defects, most of them exactly the
+   last two surfaces. Full checklist in CLAUDE.md workflow step 5.
 
-Baseline: **460 passed + 21 skipped + 2 xfailed** (2026-07-18, B18 wing-body
+Baseline: **463 passed + 21 skipped + 2 xfailed** (2026-07-18, A3 inspection
+response, +3 passed = `tests/test_mesh_reader_roundtrip.py`'s unnamed-physical-
+group locks (2 repro + 1 inertness); **measured 1165.41 s @16 threads**).
+Previous: 460 + 21 + 2 (2026-07-18, B18 wing-body
 transonic, +4 passed = `tests/test_b18_wingbody_transonic.py` (4 ungated on the
-committed 2.5D NACA mesh; the wing-body transonic ramps live in the gated demo)).
-Previous: 456 + 21 + 2 (2026-07-18, B17 far-field pin_gamma, +6 passed =
+committed 2.5D NACA mesh; the wing-body transonic ramps live in the gated demo));
+456 + 21 + 2 (2026-07-18, B17 far-field pin_gamma, +6 passed =
 `tests/test_b17_farfield_pin_gamma.py`, 1097.11 s @16 threads);
 450 + 21 + 2 (2026-07-17, B16 far-field aux pin, +8 passed / +1 skipped
 = `tests/test_b16_farfield_aux.py`); 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =

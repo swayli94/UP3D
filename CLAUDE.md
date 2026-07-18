@@ -17,12 +17,15 @@ resolve through one hop.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
-  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B16
-  level-set wake — **B16 ✓ CLOSED 2026-07-18 (LS Newton far-field aux pin —
-  churn FIXED at coarse; but GB16.4 XFAIL: the medium Newton-pin lift disagrees
-  22% with Picard/conforming ⇒ an UNRESOLVED non-convergence, open follow-up);
-  next phase = user's call** — `track_v.md` V1–V4 viscous, designed-not-
-  started, `track_a.md` A1– verification & analysis, created 2026-07-15).
+  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B18
+  level-set wake — **B16/B17 far-field aux pin + `pin_gamma` (GB16.4 resolved:
+  it was a BC-modelling error, not a non-convergence) and B18 wing-body
+  transonic, all ✓ CLOSED 2026-07-18** — `track_v.md` V1–V4 viscous,
+  designed-not-started, `track_a.md` A1–A3 verification & analysis, created
+  2026-07-15; **A3 ✓ CLOSED 2026-07-18** = the response to the 2026-07-17
+  independent inspection, whose headline is that the level-set Newton's
+  Jacobian is NOT exact in 3-D (a quasi-Newton; converged answers unaffected,
+  see docs/inspection/). **Next phase = user's call.**)
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
   [docs/design_track_b.md](docs/design_track_b.md) (it supersedes DN1).
@@ -33,7 +36,7 @@ resolve through one hop.
 - [docs/demo_report.md](docs/demo_report.md) — **evidence dossier index** (per-
   phase directory table); the evidence sections live in
   **[docs/demo_report/](docs/demo_report/)** (`track_p.md`, `track_m.md`,
-  `track_b.md`): one self-checking demo per phase under `cases/demo/<phase>/`
+  `track_b.md`, `track_a.md`): one self-checking demo per phase under `cases/demo/<phase>/`
   with committed figures + measured gate numbers. When a phase closes, add its
   demo section to the matching track file and a row to the index.
   **A claim without a committed artifact is not evidence.** The 2026-07-13 audit
@@ -69,9 +72,10 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **460 passed + 21 skipped +
-   2 xfailed** (2026-07-18, B18 wing-body transonic, +4 =
-   `tests/test_b18_wingbody_transonic.py`, all ungated; the full lineage lives in
+3. Full suite: `pytest tests/` — current baseline **463 passed + 21 skipped +
+   2 xfailed** (2026-07-18, A3 inspection response, +3 =
+   `tests/test_mesh_reader_roundtrip.py`'s unnamed-physical-group locks;
+   measured 1165.41 s @16 threads; the full lineage lives in
    [docs/overview.md](docs/overview.md), do not re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until
    `cases/meshes/onera_m6/generate_onera_m6.py` runs (~30 s); the wake-free
@@ -80,10 +84,25 @@ resolve through one hop.
    dual-mesh + LS-Newton, B7 M6 3D) only run under `PYFP3D_TRANSONIC_GATES=1`
    and make up most of the skips. G8.3's CI reference is 301.66 s.
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
-5. When a gate closes: tick it in the phase's `docs/roadmap/track_*.md` entry,
-   update that file's progress ledger and the "Current phase" line in
-   docs/agent-rules.md (refresh docs/overview.md in passing), keep the commit
-   phase-scoped.
+5. **When a phase closes — the refresh checklist** (extended in A3 after the
+   2026-07-17 audit found 17 consistency defects, most of them close-out debt):
+   tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
+   **all five** surfaces, because each has gone stale at least once by being
+   "obvious enough to skip":
+   1. that track file's **progress ledger** (row + track-status line),
+   2. the **"Current phase"** block in docs/agent-rules.md **and its baseline line**,
+   3. **docs/overview.md** (status table + the regression-baseline lineage),
+   4. **PROJECT_STRUCTURE.md** — the footer one-liner AND any directory tree
+      the phase added files to (this is the one that silently rots),
+   5. the **`cases/demo/README.md` / `cases/analysis/README.md` row** for the
+      new demo or study.
+   Keep the commit phase-scoped.
+   ★ **Backport check.** This codebase has TWO wake paths (conforming
+   `newton.py` / level-set `newton_ls.py`, and their Picard twins). When a fix
+   lands on one, explicitly check whether the other needs it and record the
+   answer in the phase entry — "N/A because ..." is a fine answer, silence is
+   not. Two B15-era LS robustness fixes sat un-backported for three phases
+   until an external review found them (A3 / kimi C2, C3).
 6. **Cost caution — do not recompute expensive artifacts casually.** Some
    evidence is committed precisely because regenerating it is slow: the P4 heavy
    demo figures (`cases/demo/p4_transonic/run_demo.py` under

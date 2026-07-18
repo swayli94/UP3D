@@ -5,7 +5,7 @@
 > Scope, reproduce instructions and the honesty/evidence rule: see the
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
-## Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**)
+## Track B — level-set embedded wake (B1–B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; **B9 ✓ 2026-07-17** wing-body cross-model; B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**; **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic — all 2026-07-18**)
 
 **What the track replaces.** The conforming path represents the wake as a *mesh
 surface*: the sheet is embedded in the geometry, its nodes are duplicated by the
@@ -1019,9 +1019,14 @@ condition, whose same-mesh **conforming-Newton truth** is shock 0.658 / cl_p 0.4
 
 | method | wall | γ | \|R\| | levels converged | iterations |
 |---|---|---|---|---|---|
-| Picard | 44.0 s | 0.190374 | **1.55e-5** (stalled) | **3/5** | 962 outers |
-| Newton ramp | **8.1 s (5.4×)** | 0.212445 | **3.10e-12** | 5/5 | 48 steps |
-| Newton + `intermediate_tol` | **6.8 s (6.5×)** | **0.212445** | 3.10e-12 | 5/5 | **38 steps** |
+| Picard | 41.9 s | 0.190374 | **1.55e-5** (stalled) | **3/5** | 962 outers |
+| Newton ramp | **7.5 s (5.6×)** | 0.212445 | **3.10e-12** | 5/5 | 48 steps |
+| Newton + `intermediate_tol` | **6.5 s (6.5×)** | **0.212445** | 3.10e-12 | 5/5 | **38 steps** |
+
+*(Timings corrected in A3 to the committed `results/checks.csv` /
+`summary.csv` values. The 44.0/8.1/6.8 s figures this table used to carry were
+pre-CSV trial-run numbers — the same superseded set docs/agent-rules.md flags
+in the archive. The committed CSV is authoritative.)*
 
 - The **plateau is gone**: Picard's top two levels burn their budgets and it ends at
   1.55e-5 — *not a solution*. Newton reaches 3.1e-12, 0 limited / 0 floored.

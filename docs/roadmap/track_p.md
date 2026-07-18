@@ -412,7 +412,7 @@ adjacency, ν switch per design.md (3.2), ρ̃), Mach continuation in
 **Effort:** 3–5 sessions. **Risk:** medium — expect Picard stall tuning
 (design.md §12.4 mitigation ladder: raise C → lower ω → continuation).
 
-### P5 — 3D validation: ONERA M6 (CLOSED 2026-07-08; V6 < 1% deferred to P9 curved elements — G6.3 confirmed it is the sharp-edge P1 floor, not the sawtooth)
+### P5 — 3D validation: ONERA M6 (CLOSED 2026-07-08; V6 < 1% deferred to P9 curved elements — G6.3 confirmed it is the sharp-edge P1 floor, not the sawtooth) *(A3: "P9" here is the PRE-2026-07-11 numbering = today's **P11** curved elements; P13 later re-attributed V6 to the tip-cap geometry — doubly historical.)*
 **Gates** (status 2026-07-08 — closed after the second re-diagnosis; demo
 16/16 PASS, `cases/demo/p5_onera_m6/`):
 - [x] G5.1 = V5: M∞ = 0.84 α = 3.06°: λ-shock topology; section Cp at
@@ -510,7 +510,7 @@ gate* (the T3 scan showed the gate-failing amplitude was never the TE
 discretization; the residual tip-corner M ≈ 2.0 overshoot remains a real but
 bounded P6/curved-element accuracy item).
 
-**Deferred**: V6 < 1% → **P9** (curved wall elements). Re-measured under the P6
+**Deferred**: V6 < 1% → **P9** (curved wall elements) *(old numbering = today's **P11**; superseded by P13's re-attribution)*. Re-measured under the P6
 recovery smoothing (G6.3, 2026-07-08): the sawtooth is *not* the cause — V6
 *worsens* 2.40% → 3.35% with smoothing (the ±sawtooth cancels in the surface
 integral; smoothing smears the LE peak), so the entire V6 floor is the
@@ -582,7 +582,7 @@ slope-reversal points, so the monotone shock is excluded).
       CL_KJ = **2.40% → 3.35% → 3.88%** (CL_p 0.2419→0.2396→0.2383, CL_KJ
       0.2479) — smoothing moves CL_p slightly *further below* CL_KJ because it
       smears the LE suction peak; the ±sawtooth largely cancels in the integral.
-      So the whole V6 floor is the sharp-TE/LE P1 wall gradient → **P9** (curved
+      So the whole V6 floor is the sharp-TE/LE P1 wall gradient → **P9** (curved *(A3: "P9" here is the PRE-2026-07-11 numbering = today's **P11** curved elements; P13 later re-attributed V6 to the tip-cap geometry — doubly historical.)*
       elements); V6<1% stays deferred there. **Consequence:** `smooth_passes>0`
       is for the reported **Cp curve** (removes the sawtooth); for the **force
       integral** keep `smooth_passes=0` (raw CL_p is closer to the trustworthy
@@ -745,7 +745,7 @@ internal note where it conflicts).**
 - **Expected cost (López §4.7):** subsonic 5–10 Newton iters total; transonic
   4–9 per load step; ONERA M6 ≈ 12 × 5–9 ≈ 60–110 total (vs ~10⁴ Picard today).
   CL reference for M6 is 0.288 (KRATOS = Tranair, Table 4.15) — UP3D's current
-  0.245 is a separate sharp-TE/P1 accuracy gap tracked via V6 → P9 (curved
+  0.245 is a separate sharp-TE/P1 accuracy gap tracked via V6 → P9 (curved *(A3: "P9" here is the PRE-2026-07-11 numbering = today's **P11** curved elements; P13 later re-attributed V6 to the tip-cap geometry — doubly historical.)*
   elements), not a Newton target.
 
 **Sub-phase order** (Newton needs the P7 flux first; N0 optional):

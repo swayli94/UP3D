@@ -113,6 +113,15 @@ A2_SPIKE = {"conf_newton_medium": 0.1143, "ls_newton_medium": 0.0743}
 # LS Newton medium M0.84 (B15/A1 cache) re-measured through THIS demo's
 # all-station sweep -- see the cross-model leg, which recomputes it live.
 LS_REF = {"cl_p": 0.2772, "cl_kj": 0.2813, "rough": 0.0033}
+# PROVENANCE (A3 2026-07-18, kimi docs-review finding 6): these are ROUNDED
+# 4-decimal constants, so the G14.7 row below reports the cross-model agreement
+# as 0.15%/0.34%, while the V14.6 row recomputes it against the A1 cache's
+# FULL-PRECISION LS values and reports 0.17%/0.36%. Both pairs are in the
+# committed checks.csv and both circulate in the docs. They are the SAME
+# measurement -- the ~0.02pp difference is reference rounding, immaterial to
+# the "< 1%" conclusion. Quote 0.17%/0.36% as the full-precision value.
+# Deliberately NOT switched to a CSV read: that would move the committed
+# checks.csv numbers and force a re-run of this heavy demo for no physics.
 
 # subsonic M6 Newton kwargs (the N6 lagged-LU mode; no ramp needed at M0.5)
 M6_NEWTON_KW = dict(farfield_spanwise_gamma=True, precond="direct",

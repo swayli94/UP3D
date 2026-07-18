@@ -62,7 +62,11 @@ drivers, plus a controlled 2×2 benchmark that measures where the wall clock goe
   concurrent Track-M session re-spec'd the M2 body later the same day (+2
   tests, 396 → **398**) and recorded the post-A1 number as **405** = 398 + 7,
   which agrees with this run. If the suite reports 405, that is both changes
-  landed, not a regression.
+  landed, not a regression. *(A3 erratum 2026-07-18: this reconciliation was
+  correct WHEN WRITTEN — at the 15-MAC M2 body, +2 tests. The same-day
+  far-field enlargement added one more lock, so the final same-day account is
+  **+3 → 399 → 406**, which is what overview.md's lineage and every later
+  baseline build on. Trust the lineage, not this line.)*
 - [x] **GA1.3 — the four methods agree, so the comparison is meaningful.** On
   the shared wake-embedded mesh at M0.5 (matched vortex far field) the cl_KJ /
   Γ spread across the four methods is < 2%, and all runs converge. Without this
@@ -238,6 +242,7 @@ committed T-series operation; **written, not yet run** — user-arbitrated).
 - Scaffold session (2026-07-16) = design + zero-solve legs; the gated
   intervention + closure followed 2026-07-16/17 on user direction. **B9
   remains NEXT** — A2 is an analysis interlude, not a queue change.
+  *(Historical arbitration record: B9 duly closed 2026-07-17.)*
 - No new from-scratch solves anywhere in A2; interventions are warm-start
   fixed-Γ only (coarse mandatory, medium behind `PYFP3D_A2_MEDIUM=1`).
 - Dead routes stay closed: Γ_smooth is a *diagnostic input* under the T3/E
@@ -246,17 +251,151 @@ committed T-series operation; **written, not yet run** — user-arbitrated).
 - States = the M6 wing family (P5/B7/A1 caches). Wing-body is B9 scope;
   P13 round-tip states can join at closure if needed.
 
+### A3 — Response to the 2026-07-17 independent inspection: docs consistency + cross-path hardening ✓ CLOSED 2026-07-18 (opened same day, user-directed)
+
+**Trigger.** Kimi Code CLI filed three independent audits on 2026-07-17
+(`docs/inspection/`): a documentation-consistency review (17 findings), a code
+review (C1–C7, T1/T2, P1/P2 + minors), and a roadmap/plan assessment. Every
+finding was re-verified against the current tree on 2026-07-18 before any edit;
+**all of them still stood** (only overview.md's baseline had been fixed in
+passing by B16–B18). User arbitration: do all three layers, as a Track A phase.
+
+**Scope guard.** A3 is a HARDENING phase: no converged result on any committed
+mesh may move. Every code change is either dormant-path (fail-fast / disarm),
+byte-inert by default (a new kwarg, a gamma default), or a loud guard that is a
+no-op on committed data — each verified as such, not assumed.
+
+- [x] **GA3.1 — documentation consistency: all 17 findings dispositioned.**
+  Fixed: PROJECT_STRUCTURE footer (stale "B9 = NEXT", missing B14/B16–B18,
+  baseline 421→463) + its four directory trees (meshgen/`fuselage.py`,
+  `wingbody.py`, solve/`timing.py`, five missing mesh families, the dead
+  `cases/test_*.py` line dropped, demo/tests trees re-pointed at their
+  authoritative listings); **M2 closed** in track_m (title, solver-leg
+  checkbox, ledger) matching agent-rules/track_b; overview snapshot date;
+  GB15.3 timings → the committed CSV truth **41.9 / 7.5 (5.6×) / 6.5 s**
+  (demo_report; the dated analysis snapshot got an erratum instead of a
+  rewrite); a real **"Known gaps"** heading in PROJECT_STRUCTURE so CLAUDE.md,
+  design.md §5.1.2 and four internal pointers resolve; four stale
+  P9-means-curved-elements references annotated; renumber counts 2→3 per
+  track; `track_a` added to three doc maps; four stale headers/ledger lines;
+  both `cases/*/README.md` tables completed (13 + 3 missing directories);
+  GA1.2's superseded 398/405 reconciliation erratum'd to the final 399/406;
+  "42.6% → 2.6%" → **43.6% → 2.6%** with A1's independent 42.6% named
+  separately; `docs/references/` marked gitignored; M2 regen cost unified;
+  hard-coded `/home/lrz/code/UP3D` de-personalized.
+  **Two deliberate deviations, both cost-discipline:** (a) the V14.6 dual pair
+  (0.17/0.36 vs 0.15/0.34) is documented at its source rather than
+  "fixed" — switching `p14/run_demo.py`'s rounded `LS_REF` to a CSV read would
+  move the committed `checks.csv` and force a re-run of a heavy demo for a
+  0.02pp rounding difference; (b) the dated `docs/analysis/` snapshot keeps its
+  original prose plus an erratum, per the "dated snapshots are not maintained
+  documents" rule.
+- [x] **GA3.2 — C2/C3 backported to the conforming Newton** (`solve/newton.py`).
+  C2: `r_level_best` is now reset at all three SELECTION-EPOCH boundaries
+  (freeze-arm, revert, refresh), mirroring `newton_ls.py`'s B15 fix. Frozen and
+  live residuals are not comparable — carrying the frozen best (~1e-11) across
+  a refresh makes the fail-fast read a spurious 1e8× blow-up and kill a healthy
+  freeze cycle. C3: new `freeze_max_reverts=3` + a `freeze_armed` flag —
+  permanent disarm after repeated diverging freezes ("a freeze may only ever
+  help; it can never cost convergence"). `n_freeze_reverts` was already counted
+  and reported but never read. Both paths are DORMANT on every committed run
+  (no conforming level has ever reverted more than twice, and the 2.5D floors
+  sit below the 1e-3 absolute fail-fast floor) ⇒ suite unchanged. Flows through
+  `solve_newton_transonic` via the existing `newton_kw` dict — no plumbing.
+- [x] **GA3.3 — mesh reader hardened (C4/C5) + 3 tests.** C4 (**the dangerous
+  one, silent**): a `.msh` naming only SOME physical surface groups dropped the
+  unnamed groups' triangles entirely; for an imported mesh with wall/wake named
+  but symmetry not, the chain is: symmetry triangles vanish →
+  `wake_cut._sheet_free_edge_nodes` reads the sheet's symmetry edge as an
+  interior free edge → root station not duplicated → **Γ(root) silently pinned
+  to 0**, wrong aerodynamics with no error. Now every tag present in the file
+  survives, unnamed ones under `surface_<id>`. C5: physical volume tags with no
+  `$PhysicalNames` crashed `Mesh.validate()` ("Tag out of range") on legal
+  input; `tag_names` is now padded with `volume_<i>` placeholders. Both
+  reproduced on synthetic `.msh` and **verified to FAIL before the fix**
+  (`git stash` A/B); a third test locks inertness on the committed
+  sphere-shell. All in-repo meshes name everything ⇒ latent traps, not live
+  bugs, which is exactly why they needed tests.
+- [x] **GA3.4 — guards and small fixes.** C7a: `CutElementMap` now asserts
+  every TE node owns an aux DOF (silently writing `reroute[-1]` redirected the
+  LAST aux DOF's mass row onto a TE main row and left that DOF equation-less);
+  ★ **scoped to `n_ext_dofs > 0` after the B1 suite caught it firing on a
+  legitimate degenerate synthetic case** (a lone TE-fan tet with no cut
+  elements at all — no multivalued system exists there). C7b: TE nodes are
+  forced into the eps side-shift, closing the 1e-3·h (TE detection) vs 1e-6·h
+  (side shift) window in which a TE node could be classed "−" and have its
+  UPPER value used as the LOWER reference; **measured 0 nodes in that window on
+  all six committed families ⇒ bit-identical**. C6: the far-field wake-master
+  branch test drops its exact-float `dy == 0.0` (mask membership already
+  implies cut membership; the generators only guarantee |y| < 1e-7·r_far, so a
+  master at y=1e-9 took the wrong branch and was off by one full Γ). P1: `gamma`
+  threaded through the conforming `section_cp_curve`/`wall_cp_curve`/
+  `_wall_section_points` so `unified.section_cp` no longer silently applies
+  γ=1.4 on one branch and the caller's γ on the other — the comparability
+  contract `unified` exists for. T2 (`validate_coloring` return dropped, a
+  no-op assert), F0 (the load-flaky 10% wall-clock bound → 20%, and the suite's
+  only CWD-relative mesh path anchored to REPO_ROOT), plus the `surface_ls`
+  "x/c" docstring that returns raw x.
+- [x] **GA3.5 — T1: the B3 gate is now actually locked.** `test_b3_lifting`
+  asserted 2% where design_track_b's B3 gate says **0.3%** (7× looser ⇒ the
+  gate's semantics were not locked by any test). Measured 2026-07-18:
+  **0.1441%** (embedded 0.141376 vs wake-free 0.141580). Tightened to the
+  gate's 0.3% (~2× margin) and gate text ↔ test now cite each other.
+- [x] **GA3.6 — C1 VERIFIED AND CONFIRMED ★ (the phase's one real finding).**
+  `cases/analysis/c1_ls_jacobian_fd/run_check.py` — B6's FD gate's 3-D twin,
+  reusing its harness verbatim so it measures the SHIPPED Newton system.
+  **On ONERA M6 coarse at M0.70 the LS Newton Jacobian is NOT the derivative
+  of its residual on mixed-side plain elements:**
+
+  | probe | n DOFs | ‖Jv − FD‖/‖FD‖ |
+  |---|---|---|
+  | targeted (aux of cut nodes touching a mixed-side plain element) | 102 | **1.146e-01** |
+  | control (all other aux) | 1509 | **6.33e-10** |
+  | global free (= B6's own direction) | 12566 | 2.47e-03 |
+
+  Eight orders of magnitude apart ⇒ the defect is exactly where C1 predicted
+  and nowhere else. ★ **Adversarial discriminator (added after the first run,
+  because "FD noise / a perturbation flipping upwind branches" is the obvious
+  alternative explanation): the targeted error is eps-INDEPENDENT — 1.532e-01
+  at eps = 1e-6, 1e-7 AND 1e-8, max/min = 1.00 across three decades.** FD
+  non-smoothness cannot do that; a missing Jacobian term does. ★ The affected
+  class is **not** just the beyond-tip strip: 3378 mixed-side plain elements vs
+  428 beyond-tip. **Consequence (bounded, honest): the LS Newton degrades to a
+  QUASI-Newton on 3-D meshes — R is untouched, so every converged LS state,
+  every committed γ/cl and every gate number stands; what is affected is the
+  convergence RATE and step count.** Why no gate saw it: B6's FD gate runs on
+  the quasi-2D mesh, which structurally has no such elements, and the B15/B7 M6
+  gates are convergence gates, not FD gates.
+  **RECORDED, NOT FIXED** — the fix (side-aware column mapping) is a change to
+  a shipped kernel that would move committed step-count trajectories, so it is
+  the user's call as its own phase. Caveat recorded: measured at a seeded
+  (|R| 4.8) state, which is legitimate for an FD identity that must hold at
+  EVERY state, but a converged-state repeat is the natural follow-up.
+
+**Suite:** 460 + 3 (reader) = **463 passed + 21 skipped + 2 xfailed**, **measured 1165.41 s @16 threads** (not inferred).
+**No `pyfp3d/` numerics change**: every edit is dormant-path, default-inert, or
+a measured no-op on committed data.
+
 ## Progress ledger
 
 ### Track A — verification & analysis
 
-Track status: **◐ IN PROGRESS** — created 2026-07-15. A1 ✓ CLOSED 2026-07-16
+Track status: **◐ IN PROGRESS** — created 2026-07-15. **A3 ✓ CLOSED
+2026-07-18** (GA3.1–GA3.6; response to the 2026-07-17 independent Kimi
+inspection — 17 docs findings dispositioned, C2/C3 backported to the conforming
+Newton, reader C4/C5 hardened, C6/C7/P1/T1/T2/F0 fixed, and **C1 VERIFIED AND
+CONFIRMED**: the LS Newton Jacobian mismatches its residual on mixed-side plain
+elements, RECORDED not fixed). A1 ✓ CLOSED 2026-07-16
 (GA1.1–GA1.5 all PASS). **A2 ✓ CLOSED 2026-07-17** (GA2.1–GA2.5; S1 = a
 Kutta-probe measurement-operator artifact, D=7.33/25.70 coarse/medium; S2 =
 potential-jump Kutta form error + P1 recovery artifact; fix routed to new
-**P14**). B9 stays NEXT.
+**P14**). **A3 ◐ OPENED 2026-07-18** — response to the 2026-07-17 independent
+inspection (docs/inspection/): documentation consistency + cross-path
+hardening + the C1 Jacobian verification experiment. *(The "B9 stays NEXT"
+that stood here is superseded: B9 closed 2026-07-17.)*
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
+| A3 | ✓ | 2026-07-18 | **Response to the 2026-07-17 independent Kimi inspection** (`docs/inspection/`, three audits: 17 docs-consistency findings, a code review C1–C7/T1/T2/P1/P2, a plan assessment). All findings re-verified against the current tree first — **all still stood**. **★ HEADLINE — C1 CONFIRMED by the verification the audit itself asked for.** `cases/analysis/c1_ls_jacobian_fd/run_check.py` (B6's FD gate's 3-D twin, reusing its harness verbatim), ONERA M6 coarse M0.70: targeted probe (aux DOFs of cut nodes touching a mixed-side plain element) ‖Jv−FD‖/‖FD‖ = **1.146e-01** vs control aux **6.33e-10** — eight orders apart, exactly where C1 predicted. ★ **Adversarial discriminator against the obvious alternative (FD noise / branch flipping): the error is eps-INDEPENDENT — 1.532e-01 at eps 1e-6, 1e-7 AND 1e-8, max/min = 1.00 across three decades** ⇒ a missing term, not non-smoothness. Class is **3378** mixed-side plain elements (vs 428 beyond-tip) — bigger than the audit's framing. **Bounded consequence: R is untouched ⇒ every converged LS state, γ, cl, M_max and gate number STANDS; what degrades is the convergence RATE — the LS Newton is a quasi-Newton in 3-D.** No gate could see it (B6's FD gate is quasi-2D, which structurally has no such elements; B7/B15's M6 gates are convergence gates). **RECORDED, NOT FIXED** — side-aware column mapping is a shipped-kernel change that would move committed step-count trajectories ⇒ its own phase, user's call. Caveat: measured at a seeded \|R\|=4.8 state (legitimate — the FD identity must hold at every state — but a converged-state repeat is the follow-up). **★ C2/C3 backported** to `solve/newton.py` (selection-epoch `r_level_best` reset at freeze-arm/revert/refresh; `freeze_max_reverts=3` permanent disarm) — both B15-era LS fixes that sat un-backported for three phases; dormant on every committed run. **★ Reader C4/C5** — C4 was the SILENT one: naming only some physical surface groups dropped the rest, and for an imported mesh the chain ends at **Γ(root) pinned to 0 with no error**; +3 tests, the two repro tests verified FAILING before the fix. **C6** (far-field master branch no longer depends on bit-exact `dy == 0.0`), **C7a** (TE-node aux-DOF assert; ★ scoped to `n_ext_dofs > 0` after the B1 suite caught the first version firing on a legitimate degenerate synthetic case), **C7b** (TE nodes forced into the eps shift — **measured 0 affected nodes on all six committed families**), **P1** (`gamma` threaded through the conforming section-Cp chain), **T2**, **F0** (10%→20% on the load-flaky timing bound + REPO_ROOT anchoring). **T1: the B3 gate is now actually locked** — test asserted 2% against a 0.3% gate text; measured **0.1441%**, tightened to 0.3%, gate ↔ test cross-cited. **Docs: 17/17 dispositioned** (15 fixed; 2 fixed-by-documenting — the V14.6 dual pair 0.17/0.36 vs 0.15/0.34 is rounding provenance, and switching p14's `LS_REF` to a CSV read would move committed evidence for 0.02pp; the dated analysis snapshot got an erratum not a rewrite). Includes the one authority-level contradiction (M2 solver leg ◐ vs CLOSED). **Process: close-out ritual extended to FIVE surfaces + a backport check** (CLAUDE.md step 5; agent-rules disciplines #9/#10) — the audit's findings were mostly close-out debt, concentrated in exactly the two surfaces the old two-item ritual omitted. **NO `pyfp3d/` numerics change.** Suite **463 + 21 + 2** (+3 reader). Response report: `docs/inspection/20260718-response-to-kimi-inspection.md`. |
 | A2 | ✓ | 2026-07-17 | TE/Kutta fidelity attribution: conforming Γ(z) jitter (S1) + TE Cp jump (S2), conforming vs level-set. `cases/analysis/a2_te_kutta_fidelity/` (`_metrics.py` + `run_a2.py` zero-solve ~90 s + `run_a2_interventions.py` gated), figures `a2_jitter/decay/te_gap/spike/intervention.png` + CSVs + checks.csv (22 passed) + checks_interventions.csv (4 passed). No `pyfp3d/` edits; suite untouched. **Findings (all in committed CSVs):** **S1 SETTLED — the Γ(z) jitter is a measurement-operator artifact of the per-station probe-difference Kutta target estimator, NOT flow content and NOT unclosed stations.** Proof chain: closure |F|/max|Γ| ≤ 0.6% (not H2); wall Δφ jitter 0.02–0.07× the station-Γ jitter at x/c=0.92 (confined to the TE-adjacent enforcement layer); **decisive fixed-Γ discriminator D = roughness(probe targets read back on φ(Γ_smooth)) / roughness(Γ_smooth) = 7.33 (coarse) / 25.70 (medium)** — feeding a smooth Γ back-produces essentially the cached jitter (0.0921≈0.0970, 0.0361≈0.0390), controls exact (max dev 0.00). B7 roughness reproduced digit-for-digit; medium contrast conforming 0.0390/0.0365 vs LS 0.0033 (11–12×). **S2 DECOMPOSED:** dominant = potential-jump Kutta form error (conforming-only), SAME-estimator TE gap conforming 0.318/0.228 vs LS 0.009/0.002 (34×/133×), sweep median 0.221/0.175 = P13's prose 0.14–0.22 now measured; secondary = P1 last-point recovery artifact present on BOTH paths (conf coarse spike 0.147→0.081 over 0→2 P6 passes; LS 0.086–0.107). The 2.5-D `a1_cp.png` (S2 present, S1 absent — one Kutta station) confirms the two are distinct mechanisms. **Routing:** S1/S2 fix (probe-free wall-adjacent-CV pressure-equality Kutta estimator) → new **P14** (designed-not-started); A2 implements nothing. |
 | A1 | ✓ | 2026-07-16 | Solver bottleneck study. Instrumentation `pyfp3d/solve/timing.py` + additive edits to the four drivers and four ramp wrappers (canonical `timings` schema, `step_records`, per-solve linear-algebra counts, per-level `wall_s`/`timings`/`timings_total`). Benchmark `cases/analysis/a1_solver_bottleneck/` (`run_a1.py` ungated 2.5-D ~5 min, `run_a1_m6.py` gated 3-D ~52 min cold). Tests `tests/test_a1_instrumentation.py` (7); suite 403+18+2. **Headline finding (mesh-scale dependent — quote WITH the mesh): in 3-D (M6 medium M0.84) BOTH Newton methods are PRECONDITIONER dominated (39.5% conforming / 42.6% LS, even with B12/B13 lagged LU; conforming Newton is 76.3% linear algebra), while the Picard warm-start seed — the 2.5-D headline at 71%/85% — falls to 13.7%/20.2%. The 2.5-D "the seed is the cost" result is a small-problem artifact and is NOT the lever in 3-D; it is measured support for B14 (Schur+AMG) aiming at the right target.** BOTH Picard methods are linear-solve dominated in both dimensions (61.2% in 3-D), and conforming Picard runs >1 linear solve per outer (2.33 — the inner Kutta secant on the frozen matrix), an overhead the LS implicit Kutta does not carry. GA1.5 reproduces G8.2/B15 digit for digit and **found 4 harness defects in the process** (stale 250 s anchor; LS legs not on the committed M6 recipes; 2.5-D `cl_KJ` written for a 3-D wing; 3-D figures clobbering the 2.5-D ones) — see the corrections block above. |

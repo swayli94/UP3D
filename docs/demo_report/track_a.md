@@ -4,7 +4,7 @@
 > honesty/evidence rule: see the [demo_report.md](../demo_report.md) index.
 > Roadmap gates: [roadmap/track_a.md](../roadmap/track_a.md).
 
-## Track A — verification & analysis (A1 ◐, opened 2026-07-15)
+## Track A — verification & analysis (A1 ✓ 2026-07-16, A2 ✓ 2026-07-17, A3 ✓ 2026-07-18)
 
 **What the track is.** Cross-cutting *measurement* of the machinery the other
 tracks built — profiling, method A/B, cost accounting — not new physics. A1 is
@@ -23,6 +23,93 @@ cap** (`NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16`): GA1.5
 compares wall clock against anchors measured at 16 threads, so a different thread
 count measures SMT, not harness fidelity. Figures are namespaced `a1_*` (2.5-D)
 vs `a1_m6_*` (3-D) — both legs share `results/`.
+
+## Track A / A3 — is the level-set Newton Jacobian exact in 3-D? (`cases/analysis/c1_ls_jacobian_fd/`, 2026-07-18)
+
+**Why this exists.** The 2026-07-17 independent Kimi code review
+(`docs/inspection/20260717-2348-code-review.md`, finding C1) argued that
+`newton_terms23_side_coo` mis-maps its columns on **mixed-side plain
+elements** — uncut tets whose four nodes straddle the wake level set. Those
+exist only in 3-D. `mass_conservation_coo` assembles them with the SIDE-field
+density, so the residual depends on the aux DOFs of cut nodes through
+`side_potentials`, while Terms 2/3 scatter every sensitivity to MAIN columns.
+The review filed it as *suspected*, explicitly unconfirmed, with a suggested
+verification. **This is that verification.**
+
+It could not be caught by an existing gate: B6's FD gate
+(`test_b6_newton.py::test_newton_jacobian_fd`) runs on the quasi-2D NACA mesh,
+which structurally has no mixed-side plain elements, and B7/B15's M6 gates are
+*convergence* gates, not FD gates. The script is therefore B6's gate's 3-D
+twin: it reuses `_build` and `_assemble_R_J` **verbatim** — so it measures the
+shipped Newton system, not a re-implementation — and changes only the mesh
+(ONERA M6 coarse, M∞ 0.70, an active supersonic pocket so Terms 2/3 are live)
+and the probe directions.
+
+**The element class is not empty, and it is bigger than the review framed it:**
+3378 mixed-side plain elements (vs 428 beyond-tip) out of 55,531 tets; 102 of
+the 1611 aux DOFs touch one.
+
+### GA3.6 — the measurement
+
+Central-difference JVP check, `‖J·v − (R(φ+εv) − R(φ−εv))/2ε‖ / ‖FD‖`, on the
+free rows (`results/c1_fd_probes.csv`):
+
+| probe direction | n DOFs | rel err |
+|---|---|---|
+| **targeted** — aux DOFs of cut nodes touching a mixed-side plain element | 102 | **1.146e-01** |
+| **control** — every other aux DOF | 1509 | **6.33e-10** |
+| global free (B6's own probe direction) | 12566 | 2.47e-03 |
+
+Eight orders of magnitude apart. The Jacobian is exact everywhere the review
+said it would be exact, and wrong exactly where it said it would be wrong.
+
+### The discriminator that makes this a verdict
+
+A large FD residual has an obvious innocent explanation: **non-smoothness** —
+the perturbation flipping upwind branch/selection assignments, which no
+Jacobian can track. That would be FD noise, not a missing term. The two are
+separable: a missing Jacobian term produces an **ε-independent** relative
+error, non-smoothness does not.
+
+| ε | 1e-6 | 1e-7 | 1e-8 |
+|---|---|---|---|
+| targeted rel err | 1.532e-01 | 1.532e-01 | 1.532e-01 |
+
+**max/min = 1.00 across three decades.** It is a missing term. (The control
+probe staying at 6e-10 under the same ε independently rules out a global
+smoothness problem.)
+
+### What this does and does not overturn
+
+**Does not:** a Jacobian error does not touch the residual R, so **every
+converged level-set state, every committed γ / cl_p / cl_KJ / M_max and every
+Track-B gate number stands.** Nothing in B6, B7, B14, B15, B16, B17, B18 or
+B9's cross-model agreement is invalidated.
+
+**Does:** the honest description of the capability. On 3-D meshes the
+"exact-Jacobian LS Newton" is a **quasi**-Newton — it converges, but its rate
+and step counts are not what an exact Newton would give, and the B15/B7 step
+counts should be read with that in mind. This is also a plausible contributor
+to the junction churn those phases record, though nothing here demonstrates
+that link.
+
+**Honest caveats.** (1) Measured at a seeded state (|R|∞ = 4.8), not a
+converged one. This is legitimate — the FD identity must hold at *every* state,
+so a mismatch anywhere is a real defect — but the *magnitude* at a converged
+state is unmeasured, and a converged-state repeat is the natural follow-up.
+(2) One mesh, one level, one Mach.
+
+**Status: RECORDED, NOT FIXED.** The fix (per-node side-aware column mapping,
+or using the main-field density for these elements) changes a shipped kernel.
+R would be unchanged, so converged answers would not move — but committed
+step-count trajectories would. That is a phase of its own, and the decision is
+the user's.
+
+**Reproduce:** `python cases/analysis/c1_ls_jacobian_fd/run_check.py` (~4 min;
+regenerate the gitignored M6 coarse mesh first if absent). Exit code 0 =
+measured; the verdict string is in `results/verdict.txt`.
+
+---
 
 ## Track A / A1 — solver bottleneck study (`cases/analysis/a1_solver_bottleneck/`, 2026-07-15)
 

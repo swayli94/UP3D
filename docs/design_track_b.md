@@ -372,7 +372,7 @@ medium 升力上发散（γ=−137,77 stalls）、在 M6 medium 上 `factor_fail
   需 A_mm⁻¹ 的作用 = 每次应用一趟 AMG 内循环,不可取）。Núñez 叠加式行分配（改
   离散、罚权标定）降为三级后备——**实测未触发**（aux 块全部可分解、GMRES 全部
   收敛）。★ **实测（roadmap §B14）:** 诊断先行 J_aa cond1 5.1e8–8.2e9 有限;
-  M6 medium M0.84 precond 42.6%→2.6%、ramp 1.43×、亚声速 2.08×,γ = 已提交
+  M6 medium M0.84 precond 43.6%→2.6%（同会话 A/B；A1 早前独立测得 42.6%）、ramp 1.43×、亚声速 2.08×,γ = 已提交
   GB15.4;但**小规模反而更慢**（直接解已够便宜,多出的 Krylov 迭代不划算）——
   加速只在 M6-medium 及以上出现,故**真正的独占价值——fine 内存受限路线（AMG
   O(n) + 薄带 LU,无法进内存的全尺寸 splu 消失）——仍是未建的设计用例**（本轮用户
@@ -437,6 +437,24 @@ B 路径 Newton 的结构**更简单**：
 论文表 4.9（含尾迹 LS 块的 Newton 二次收敛,残差 4e-3→4e-9）是该结构可达
 二次收敛的直接先例。**排序护栏不变**：B 路径 Newton 是 post-B6 的再推导,
 不与 conforming Newton 并行设计。
+
+> ★★ **已实测的实现缺陷（A3，2026-07-18；kimi 审查 C1 → `cases/analysis/c1_ls_jacobian_fd/`）。**
+> 上面第三条"Terms 1–3 经 DOF 间接层复用"在 **3-D 上不成立**：存在一类
+> **mixed-side plain 元素**——未被切割、但四个节点跨越尾迹 level set（越过展向
+> clip 的翼尖外元素，以及尾迹面延伸在 TE 上游穿过的元素）。
+> `mass_conservation_coo` 用**侧场**密度把它们装配到 **main** DOF 上，于是残差
+> 经 `side_potentials` 依赖切割节点的 **aux** DOF；而 `newton_terms23_side_coo`
+> 把全部灵敏度散射到 **main** 列 ⇒ 该类元素上 **J ≠ dR/dφ**。
+> 实测（M6 coarse M0.70）：targeted 探针 ‖Jv−FD‖/‖FD‖ = **1.146e-01**，
+> control 探针 **6.33e-10**，差 8 个数量级；且**与 eps 无关**（1e-6/1e-7/1e-8
+> 恒为 1.532e-01，max/min = 1.00）⇒ 缺项，而非 FD 非光滑。该类元素 **3378 个**
+> （翼尖外仅 428 个）。
+> **后果有界**：R 未被触及 ⇒ 所有已收敛 LS 状态与 gate 数字不变；受影响的是
+> **收敛速率**——3-D 下 LS Newton 实为 **quasi-Newton**。B6 的 FD gate 看不到它
+> （quasi-2D 网格结构上没有这类元素），B7/B15 的 M6 gate 是收敛 gate 不是 FD gate。
+> **记录，未修**：修法（逐节点 side-aware 列映射，或对这类元素改用 main 场密度，
+> 与 `element_mach2` 的 "main" 读法一致）是已发布内核改动，会移动已提交的步数
+> 轨迹 ⇒ 单独立项、用户裁决。
 
 ### 5.6 后处理与验证钩子
 
@@ -748,6 +766,10 @@ M0.5（V3）：Γ 与 conforming 同网格差 0.3%（coarse）/ 0.6%（medium）
 cl_KJ = 0.2828（medium）落入参考区间 **[PG 0.2788, KT 0.2919]** ✓。
 **无尾迹网格 M3**（无 `wake` tag、一般位置切割——工作流真实形态）：
 Γ 与嵌入网格相差 0.3%，medium 的 cl 同样落入区间 ✓。
+*（A3 2026-07-18：本条 0.3% 判据此前只写在文档里，
+`tests/test_b3_lifting.py::test_wakefree_matches_embedded` 断言的却是 2%，
+宽 7 倍 ⇒ gate 语义未被测试锁住（kimi 审查 T1）。已实测 **0.1441%**
+（embedded 0.141376 vs wake-free 0.141580）并把测试收紧到 0.3%，两者现互相引用。）*
 
 **接口**：`solve_multivalued_lifting(..., te_kutta="pressure")`（默认）；
 `te_kutta="mass"` 保留旧行为供 before/after 对照。实现见

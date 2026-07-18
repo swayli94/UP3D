@@ -35,6 +35,16 @@ pyfp3d/                    # Main package
 │   │                       #   ✓ [M3/Track B] embed_wake=False + a size-field-ONLY ±6° corridor
 │   │                       #   fan -> the wake-free family (nothing in the topology knows the
 │   │                       #   wake exists; default True keeps the M0 path untouched)
+│   ├── fuselage.py       # ✓ [M2] simplified axisymmetric fuselage as ONE splined body of
+│   │                       #   revolution (fusing primitives leaves C0 seams = spurious edges);
+│   │                       #   rule-driven 5*C_ROOT length, 2-diameter ellipsoid nose, graded
+│   │                       #   skin with a local-RADIUS-driven tip law (a revolve facets at h/R);
+│   │                       #   add_fuselage_solid_split = the TWO-pi-revolve variant B9's
+│   │                       #   conforming wing-body needs (the single revolve is unmeshable once
+│   │                       #   the waterline is imprinted)
+│   ├── wingbody.py       # ✓ [M2] wing + fuselage fused into a half model; wake-free for the
+│   │                       #   level-set path, and (B9) a wake-embedded conforming variant;
+│   │                       #   wing3d.py byte-untouched -> M1/M4/M5 stay bit-identical
 │   └── wing3d.py         # ✓ [M1] ONERA M6 half wing: OCC two-section ruled loft (exact
 │                           #   straight taper, sharp foilmod TE), spherical far field
 │                           #   15 MAC, chord-plane wake sheet swept from the TE --
@@ -228,6 +238,9 @@ pyfp3d/                    # Main package
 │   │                       #   operator (measured) — Laplace-only. transonic inherits via **kwargs.
 │   │                       #   ✓ [B13] direct_refactor_every lagged-LU on the outer loop;
 │   │                       #   ✓ [B14] precond="schur" (the structural escape, schur_ls.py)
+│   ├── timing.py         # ✓ [A1] the canonical timings schema shared by all four nonlinear
+│   │                       #   drivers (seed/assembly/precond/linsolve/residual/kutta/other/wall)
+│   │                       #   + step_records; new_timings/snapshot/step_delta helpers
 │   ├── schur_ls.py       # ✓ [Track B/B14] SchurReducedSystem + main_block_preconditioner +
 │   │                       #   jaa_diagnostic: exact per-step elimination of the aux thin-strip
 │   │                       #   block (lu_aa = splu(J_aa), n_ext-sized, ms) + GMRES on the reduced
@@ -332,6 +345,15 @@ cases/                     # Test cases and reference data
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
+│   ├── onera_m6_wingbody/          # ✓ [M2] wing-body half model, WAKE-FREE (level-set path);
+│   │                       #   coarse/medium, .msh gitignored (~4-5 min regen), stats CSVs +
+│   │                       #   inspection PNG committed
+│   ├── onera_m6_wingbody_conforming/  # ✓ [B9] the same body with the wake sheet EMBEDDED
+│   │                       #   (conforming path; Netgen OFF -- it segfaults on this geometry)
+│   ├── cessna/           # legacy git-tracked surface asset (referenced by
+│   │                       #   tests/test_p2_wake_cut.py); not part of any gate ladder
+│   ├── nl7301_2element_2.5d/  # legacy git-tracked two-element asset; no active gate
+│   ├── zeroebwb/         # legacy git-tracked BWB asset; no active gate
 │   ├── onera_m6/         # ✓ [M1] ONERA M6 swept/tapered half wing + embedded wake sheet
 │   │                       #   (generate_onera_m6.py, one parameter h_wall, 2x ladder:
 │   │                       #   coarse 55.5k / medium 350.7k / fine 2513k tets; .msh files
@@ -388,9 +410,12 @@ cases/                     # Test cases and reference data
 │   ├── p4_transonic/       # G4.1-G4.3: subcritical bitwise no-op, upwind-reach evidence,
 │   │                       #   coarse M0.80 shock quality vs reference band (10 checks)
 │   ├── m0_meshgen/         # mesh gallery, hard-rule-7 topology matrix, cylinder convergence
-│   └── m1_wing_mesh/       # M6 wing+wake gallery, tip cut planes, ingestion/station/free-edge
-│                           #   semantics, quality ladder, freestream-on-cut-mesh (13 checks)
-└── test_*.py             # [Deprecated] Integration tests (use tests/ now)
+│   ├── m1_wing_mesh/       # M6 wing+wake gallery, tip cut planes, ingestion/station/free-edge
+│   │                       #   semantics, quality ladder, freestream-on-cut-mesh (13 checks)
+│   └── ...                 # one directory per closed phase thereafter: p5-p10, p13, p14,
+│                           #   m5, m6, b3-b9, b11-b18 (32 total). This tree is NOT the
+│                           #   authoritative list -- cases/demo/README.md carries the full
+│                           #   table with runtimes, and it is the one to update on close-out.
 
 tests/                     # Unit and gate tests
 ├── conftest.py           # ✓ Pytest fixtures: artifacts_dir (persistent, PYFP3D_ARTIFACTS_DIR
@@ -462,6 +487,12 @@ tests/                     # Unit and gate tests
                                       #   Γ/Γ* = F(1−b)/(1−F·b) with the P2 Kutta slope b≈0.93
                                       #   (F=0.8 ⇒ 0.21×, not 0.8× — the trap that makes r_c
                                       #   have to stay small)
+
+(This tree covers P0–P13 only. The suite has **60 test files** as of
+2026-07-18: also test_p14_te_pressure, test_a1_instrumentation,
+test_m2_wingbody, test_m5_round_tip, test_b1..test_b18 and the mesh/post
+unit files. `ls tests/test_*.py` is the authoritative list — do not read a
+missing entry here as a missing test.)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap
@@ -565,6 +596,14 @@ file lives at the repo root).
   quadratics.)
 - **tests/test_laplace_cg_iterations.py** — Gate G1.2 (formerly G1.3; CG+AMG mesh-independence) ✓ — iterations
   8→11→14 across an 8×/level node-count increase (n=8,16,32 cube), comfortably under a 2× cap.
+
+## Known gaps
+
+*(This is the section CLAUDE.md, `docs/design.md` §5.1.2 and the four "see
+'Known gaps'" pointers above all refer to. It carries the one long-standing
+open defect — G1.6 — with its ruled-out fix routes, so nobody re-proposes
+them. Added as a named heading in A3: the references had been pointing at an
+unnamed block since the P1 renumbering.)*
 
 **G1.6 (formerly G1.2; incompressible sphere Cp) is still open** — `tests/test_laplace_sphere.py::test_sphere_cp_medium_mesh`
 is a `strict=True` xfail against the real <2% criterion, not a loosened threshold:
@@ -832,7 +871,7 @@ are kept on purpose so the committed paths stay stable — that gate is now **B5
 
 ### 1. Install dependencies
 ```bash
-cd /home/lrz/code/UP3D
+cd <repo-root>   # e.g. ~/code/UP3D
 pip install -e ".[dev]"
 ```
 
@@ -904,7 +943,7 @@ G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1
 
 ---
 
-**Last updated:** 2026-07-17  
+**Last updated:** 2026-07-18  
 **Status:** per-track status lives in [docs/overview.md](docs/overview.md)
 (human-readable snapshot) and the per-track trackers
 [docs/roadmap/](docs/roadmap/) (authoritative; docs were split by track
@@ -915,10 +954,13 @@ alone), P10 ◐, P13 ◐ (G13.3 transonic NEGATIVE-open), **P14 ✓ CLOSED
 (2026-07-17, opened + closed same day): pressure-equality Kutta estimator;
 G14.1–G14.7 ✓; the conforming path now MATCHES level-set (cl_p/cl_KJ
 0.15%/0.34%), and the +4.85% cl_KJ move off the probe locks closed 69% of
-P9's 0.019 gap**; Track M — M0–M5 ✓,
-M2 ◐ (mesh ✓, solver leg = B9); Track B — B1–B8, B11–B13, B15 ✓, B6 ◐,
-**B9 (wing-body LS solve, M∞0.5) = NEXT**; Track V — designed, not started;
-Track A — A1, A2 ✓. Default suite: **421 passed + 18 skipped + 2 xfailed**
-(measured 1015.17 s @8 threads, 2026-07-17; heavy transonic/Newton gates
-behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests skip unless the
-gitignored M6 meshes are regenerated (~30 s).
+P9's 0.019 gap**; Track M — M0–M5 ✓ (M2 ✓ — its solver leg was closed by B9
+on 2026-07-17, both wake models now run on the wing-body); Track B —
+B1–B9, B11–B18 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
+`pin_gamma`, B18 wing-body transonic**, all 2026-07-18); Track V — designed,
+not started; Track A — A1, A2 ✓, **A3 ◐** (response to the 2026-07-17
+independent inspection: docs consistency + cross-path hardening, see
+[docs/inspection/](docs/inspection/)). Next phase = the user's call.
+Default suite: **463 passed + 21 skipped + 2 xfailed** (2026-07-18, measured 1165.41 s @16 threads; heavy
+transonic/Newton gates behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests
+skip unless the gitignored M6 meshes are regenerated (~30 s).

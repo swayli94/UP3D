@@ -299,6 +299,15 @@ of the TE station they emanate from — the wake mesh preprocessor must build
 this station→wake-line map. Convergence monitor: ‖ΔΓ‖∞ alongside the residual
 norm.
 
+> **Implementation note (A3 2026-07-18, kimi code review).** The shipped
+> `mesh/wake_cut.py::node_station` assigns each wake node the Γ of its
+> NEAREST-z station — piecewise CONSTANT, not the piecewise linear specified
+> above. The two coincide exactly on layered/extruded sheets (every wake node
+> sits at a station's z, which is every committed quasi-2D family), and differ
+> by O(Δz) on a fully unstructured M1/M2 sheet — the same order as the P1
+> interpolation error the sheet already carries, hence not a defect worth
+> changing blind. Recorded so the spec and the code do not silently disagree.
+
 **(4.4) is the LEGACY (probe) estimator since P14 (2026-07-17).** A2 measured
 its two defects: the single-node probe sampling *manufactures* the spanwise
 Γ(z) jitter (fixed-Γ discriminator D = 7.33/25.70), and equal *potential*
