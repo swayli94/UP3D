@@ -1,7 +1,33 @@
 # pyFP3D Agent Rules
 
-Current phase: **B17 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
-B16; resolves GB16.4): the far-field aux pin must carry jump=γ, not 0.** ★★
+Current phase: **B18 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
+B17; executes the GB16.6 debt): wing-body transonic (M0.84) — conforming reaches
+it, level-set is junction-limited.** ★★ The wing-body transonic capability is
+**asymmetric, and that is the finding.** **Conforming** (Newton + pressure Kutta,
+Mach continuation) IS the wing-body transonic path: coarse reaches **M0.84 (cl_p
+0.2617)**, medium reaches **M0.79 strict (cl_p 0.2579)** with a clean transonic
+rise cl_p(M) = **0.2173/0.2321/0.2579** at M0.50/0.65/0.79 (medium M0.80+ stalls —
+NOT slivers, the medium mesh is clean; a sharper shock/junction interaction,
+recorded not chased; ★ the conforming wing-body medium ramp needs `freeze_tol`
+raised to the wing-body churn floor 1e-6→1e-5, the B17 lesson). **Level-set** (B15
+freeze-ramp + B17 pin_gamma) does NOT reach transonic on the wing-body: the
+wing-fuselage junction spurious supersonic pocket (**G1.6/GB9.4/B8 mixed-plain**,
+M²≈1.27 already at M0.5) **WORSENS with refinement** — coarse ceiling ~M0.575
+(Mmax 1.44), medium dies at the FIRST transonic level ~M0.5 (Mmax artifact 3.96,
+nlim 43/nflr 40); the direct analogue of GB9.4's fuselage-lift-grows-with-
+refinement, a closed-negative discretization error (discipline #8), characterized
+not chased. ⇒ **no common transonic Mach at medium** (LS can't leave 0.5), so the
+trustworthy cross-model stays **M0.5 (2.6%)**; a coarse M0.60 transonic
+cross-model was skipped (LS coarse ceiling 0.575 < 0.60). GB18.1 PASS + GB18.2–5
+RECORDED. ★ **repays the GB16.6 evidence debt** (spec'd RECORDED but never
+implemented; B18 executes it as a negative). ★ **NO `pyfp3d/` numerics change** —
+pure demo/tests/docs on existing `solve_newton_transonic` +
+`solve_multivalued_newton_transonic`. fine excluded (G13.3). Tests
+`tests/test_b18_wingbody_transonic.py` (4, ungated); demo
+`cases/demo/b18_wingbody_transonic/` (7 gates: 1 PASS + 6 RECORDED).
+
+**B17 ✓ CLOSED 2026-07-18 (resolves GB16.4): the far-field aux pin must carry
+jump=γ, not 0.** ★★
 HEADLINE: **GB16.4 was NOT a non-convergence — it was a BC-modelling error in
 B16's freestream pin.** B16 pinned the outflow wake jump to **0**, which REMOVES
 the circulation the wake physically carries out (medium cl_p 0.2165→0.1690, a
@@ -200,7 +226,13 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   `farfield_aux="pin_gamma"` (jump→γ, new default on both solvers) closes the
   triangle MONOTONE to conforming (coarse 0.2087, medium 0.2117 Picard / 0.2115
   Newton); acts only on freestream, inert on vortex/neumann; vortex brackets from
-  +2.5%; B9 coarse-12.8% erratum'd as far-field contamination.
+  +2.5%; B9 coarse-12.8% erratum'd as far-field contamination · **B18 ✓ CLOSED
+  2026-07-18 (NEW, executes the GB16.6 debt)** — wing-body transonic M0.84:
+  CONFORMING reaches it (coarse M0.84 0.2617, medium M0.79 0.2579, clean cl(M)
+  rise 0.2173/0.2321/0.2579), LEVEL-SET junction-limited (coarse ~M0.575, medium
+  dies ~M0.5 — the G1.6/GB9.4 junction pocket WORSENS with refinement, Mmax
+  1.4→4.0, closed-negative); no common transonic Mach at medium ⇒ cross-model
+  stays M0.5 (2.6%); GB18.1 PASS + GB18.2–5 RECORDED; no `pyfp3d/` change.
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -261,10 +293,12 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    indicated, NOT earned* (2026-07-14 wording arbitration); B15 did NOT revive
    G9.1.
 
-Baseline: **456 passed + 21 skipped + 2 xfailed** (2026-07-18, B17 far-field
-pin_gamma, +6 passed = `tests/test_b17_farfield_pin_gamma.py` (6 ungated on the
-committed 2.5D NACA mesh); 1097.11 s @16 threads).
-Previous: 450 + 21 + 2 (2026-07-17, B16 far-field aux pin, +8 passed / +1 skipped
+Baseline: **460 passed + 21 skipped + 2 xfailed** (2026-07-18, B18 wing-body
+transonic, +4 passed = `tests/test_b18_wingbody_transonic.py` (4 ungated on the
+committed 2.5D NACA mesh; the wing-body transonic ramps live in the gated demo)).
+Previous: 456 + 21 + 2 (2026-07-18, B17 far-field pin_gamma, +6 passed =
+`tests/test_b17_farfield_pin_gamma.py`, 1097.11 s @16 threads);
+450 + 21 + 2 (2026-07-17, B16 far-field aux pin, +8 passed / +1 skipped
 = `tests/test_b16_farfield_aux.py`); 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =
 `tests/test_b9_wingbody_{conforming,ls}.py`, 1084.20 s @16 threads);
 429 + 19 + 2 (2026-07-17, B14 Schur+AMG, +8/+1 =

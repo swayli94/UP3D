@@ -150,3 +150,6 @@ cases/demo/b16_farfield_aux/results/*.npz
 
 # B17 far-field aux pin_gamma demo solution caches (figures+CSVs are the committed evidence)
 cases/demo/b17_farfield_pin_gamma/results/*.npz
+
+# B18 wing-body transonic demo solution caches (figures+CSVs are the committed evidence)
+cases/demo/b18_wingbody_transonic/results/*.npz

@@ -1488,3 +1488,59 @@ the residual gap — it **brackets** conforming from the other side (medium **+2
 vs pin_gamma's −2.6%) and its free far-field aux **churn at coarse** (res 3.2,
 |jump|=71, would need its own pin). The 2–3% is far-field truncation; **freestream
 pin_gamma stays the recommended BC** (clean at both resolutions).
+
+## B18 — Wing-body transonic (M0.84): conforming reaches it, level-set is junction-limited
+
+Demo `cases/demo/b18_wingbody_transonic/` (7 gated gates: 1 PASS + 6 RECORDED).
+No `pyfp3d/` numerics change — a pure evidence phase on the existing conforming
+`solve_newton_transonic` and level-set `solve_multivalued_newton_transonic`.
+
+### GB18.1 (PASS) — conforming IS the wing-body transonic path (`cl_vs_mach.csv`, `b18_cl_vs_mach.png`)
+
+| M∞ | resolution | cl_p (wing) |
+|---|---|---|
+| 0.50 | medium | 0.2173 (B9 anchor) |
+| 0.65 | medium | 0.2321 |
+| 0.79 | medium | **0.2579** (strict, res 2.2e-14) |
+| 0.84 | coarse | **0.2617** (proof-of-concept, Mmax 2.15) |
+
+conforming reaches **M0.84 at coarse** and **M0.79 strict at medium**, with a
+clean monotone transonic lift rise. Medium **M0.80+ stalls** (res ~2e-6, 0 clamp)
+— NOT slivers (the medium mesh is clean, `min_dihedral 9.75°`, 0 tets < 5°; the
+coarse mesh has 27 slivers yet reaches 0.84), a sharper shock/junction
+interaction; recorded, not chased. ★ Recipe: the conforming wing-body medium ramp
+needs `freeze_tol` raised to the wing-body churn floor (1e-6 → 1e-5, the B17
+lesson) or it stalls at M0.80 with the wing-alone recipe. `b18_sections_conf_medium.png`
+shows the M0.79 medium section Cp (the transonic shock).
+
+### GB18.2/18.4 (RECORDED) — level-set is junction-limited, and it worsens with refinement (`b18_ceiling.png`)
+
+The LS freeze-ramp (freestream + pin_gamma) does NOT reach transonic on the
+wing-body. The wing-fuselage junction carries a spurious supersonic pocket (the
+**G1.6/GB9.4/B8 mixed-plain** class, M²≈1.27 already at M0.5) that **worsens with
+refinement**:
+
+| resolution | LS transonic ceiling | Mmax at death |
+|---|---|---|
+| coarse | ~M0.575 | 1.44 |
+| medium | ~M0.50 (dies at the first level) | 3.96 (artifact) |
+
+This is the direct analogue of GB9.4's "LS fuselage lift GROWS 0.164→0.205 with
+refinement" — a closed-negative discretization error (session-discipline #8),
+characterized here, not chased. **This repays the GB16.6 evidence debt** (that
+gate was spec'd "RECORDED" but never implemented; B18 executes it, and the answer
+is that the LS ramp dies at the junction, NOT at the BC layer or a wing shock).
+
+### GB18.3 (RECORDED) — the medium transonic cross-model is blocked by the LS junction
+
+Because LS cannot leave M0.5 at medium, there is **no common transonic Mach** for
+a medium cross-model. The only trustworthy cross-model stays **M0.5 medium**
+(B9/B17: conforming 0.2173 vs level-set 0.2117 = **2.6%**). A coarse M0.60
+transonic cross-model point was targeted but SKIPPED (LS coarse ceiling 0.575 <
+0.60) — recorded honestly rather than forced.
+
+### GB18.5 (RECORDED) — fuselage lift persists into transonic
+
+At the medium transonic top (M0.79), the fuselage carries `cl_fus` = 16% of the
+wing cl_p — the G1.6 flat-facet natural-BC error (GB9.4 class) does not improve in
+transonic flow.

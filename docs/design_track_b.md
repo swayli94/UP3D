@@ -1436,3 +1436,46 @@ committed 数字；B16 的 jump=0 数字用 explicit `"pin"` 复现。`"pin"`（
 证据：`tests/test_b17_farfield_pin_gamma.py`（6，ungated）；demo `cases/demo/b17_farfield_pin_gamma/`
 （Part 1–2 coarse ungated + Part 3 medium 门控）。求解器仅动 `newton_ls.py`/`picard_ls.py` 的 freestream
 远场 aux 接线（vortex/neumann/conforming 路逐位不变）。
+
+
+## 18. B18：翼身组合体跨声速 M0.84——conforming 到、level-set 交界受限（2026-07-18，已关闭）
+
+**翼身跨声速能力是不对称的，这个不对称本身就是结论。** 亚声速 M0.5 翼身已由 B9/B17 闭合；
+往上推 Mach：
+
+### 18.1 conforming = 翼身跨声速路（交付）
+
+`solve_newton_transonic`（Newton + 压力 Kutta + Mach 续接）：
+- **coarse 到 M0.84**：cl_p **0.2617**，Mmax 2.15，严格 res 2.8e-12。proof-of-concept（欠解析）。
+- **medium 到 M0.79 严格**：cl_p **0.2579**，res 2.2e-14；干净跨声速升力曲线
+  cl_p(M) = **0.2173 / 0.2321 / 0.2579** @ M0.50/0.65/0.79。
+- **medium M0.80+ 停滞**（res ~2e-6，0 clamp）：**不是 sliver**——medium 网格干净
+  （min_dihedral 9.75°、0 tets<5°），coarse 有 27 个 sliver 却到 0.84；是更细网格解出的更锐
+  激波/交界相互作用。记录，不追。
+- ★ **配方**：conforming 翼身 medium ramp 需把 `freeze_tol` 抬到翼身 churn 地板
+  （1e-6→1e-5，B17 教训），否则用 wing-alone 配方卡在 M0.80。
+
+### 18.2 level-set 交界受限（characterized-negative）
+
+`solve_multivalued_newton_transonic`（B15 freeze-ramp + B17 pin_gamma）**不能**在翼身上跨声速：
+翼身交界的虚假超声速袋（**G1.6/GB9.4/B8 mixed-plain** 类，M0.5 就已 M²≈1.27）**随加密恶化**：
+- coarse 天花板 **M0.575**（Mmax 1.44）；
+- medium 死在第一个跨声速级 ~**M0.5**（Mmax 伪影 3.96，nlim 43/nflr 40）。
+
+这与 GB9.4"LS 机身升力随加密 0.164→0.205 增长"同向。**closed-negative 离散误差**（纪律 #8），
+表征不追。
+
+### 18.3 后果：medium 无共同跨声速 Mach
+
+LS 到不了 medium 跨声速 ⇒ 可信跨模型只在 **M0.5**（B9/B17：conf 0.2173 vs LS 0.2117 = 2.6%）。
+coarse M0.60 跨声速跨模型点被跳过（LS coarse 天花板 0.575 < 0.60）——如实记录。
+
+### 18.4 gate + 证据
+
+GB18.1 PASS（conforming 跨声速）；GB18.2/3/4/5 RECORDED（LS 天花板；跨模型 M0.5-only；交界随
+加密恶化 coarse Mmax 1.4→medium 4.0；机身升力 16% @M0.79）。★ **偿还 GB16.6 证据债**（spec'd
+RECORDED 却从未实现；B18 执行为负结果）。★ **零 pyfp3d/ 数值改动**——纯 demo/tests/docs，用
+现有 conforming/LS 续接器。fine 排除（G13.3 negative + LS 无 fine 逃逸）。
+
+证据：`tests/test_b18_wingbody_transonic.py`（4，ungated）；demo
+`cases/demo/b18_wingbody_transonic/`（7 gate：1 PASS + 6 RECORDED）。
