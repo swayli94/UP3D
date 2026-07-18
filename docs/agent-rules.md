@@ -1,6 +1,37 @@
 # pyFP3D Agent Rules
 
-Current phase: **B19 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes the
+Current phase: **B20 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes B19 Leg
+B): mixed-side plain elements can now take their density from the MAIN field,
+and the Leg B hypothesis is answered — as a SPLIT.** New `plain_density` knob on
+`MultivaluedOperator`: `"side"` (**default, bit-identical to every committed
+result**) / `"main"`. ★ **The reporting layer had already made this call** —
+`element_mach2` has defaulted to `mixed_plain="main"` since 2026-07-14 — so B20
+makes the ASSEMBLY agree with the DIAGNOSTIC. ★★ **A workspace-aliasing bug was
+caught by measuring an unexpected result, not explaining it:**
+`PicardOperator.velocities` returns VIEWS into a shared buffer, so recomputing
+the main gradient inside the density path overwrote the caller's side values in
+place — quasi-2D "moved" 0.77, subsonic Γ TRIPLED, the Jacobian degraded: all
+ONE bug (2940 elements clobbered vs the 129 in the mask), fixed with `.copy()`.
+*Accepting the plausible "Γ tripled ⇒ Leg B has a big effect" story would have
+recorded an aliasing bug as a physics finding.* **GB20.1 ✓** quasi-2D
+bit-identical, M6 R moves on 164 of ~12k rows. **GB20.2 ✓** the Jacobian stays
+EXACT under main (8.07e-09 / 6.29e-10) — Leg A ∘ Leg B compose. **GB20.3 ✓**
+2.5-D subsonic Γ **+0.0000 %** (the class is 3-D only ⇒ every committed
+quasi-2D lock untouched). **GB20.4 ✓** M6 coarse ramp→M0.84: side **m 0.7875
+NOT converged** vs main **M0.84 CONVERGED**. ★★ **GB20.5 RECORDED — the
+hypothesis SPLITS.** B18 medium wing-body @M0.5: side res 6.8e-5 / **82
+clamped** / Mmax 3.920 (a CLAMPED non-converged number) vs main **res 1.1e-13 /
+6 clamped** / Mmax 5.220 (a genuine converged solution). ⇒ the **CONVERGENCE**
+pathology was largely the contamination (churn/clamps cured), but the junction
+**POCKET is REAL** and B19's literal hypothesis is **REFUTED** — removing the
+contamination UNCLAMPED it, revealing a genuine M≈5.2 spike at subsonic
+freestream = the **G1.6/GB9.4 faceted-geometry** error. Main still cannot pass
+M0.5. **Do not repeat "the pocket is mixed-plain contamination" — measured
+false.** ★ **NOT ADOPTED**: flipping the default re-bases every 3-D committed LS
+number (hours of compute) and does not fix the junction geometry; dossier in the
+B20 entry, decision is the user's. Suite **465+22+2** unchanged.
+
+**B19 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes the
 A3/GA3.6 C1 finding as TWO deliberately separated legs): the level-set Newton
 Jacobian is now EXACT in 3-D, and the residual's own asymmetry is measured and
 routed.** ★★ **Leg A was TWO defects, not one.** (1) **DOF maps** — Terms 2/3

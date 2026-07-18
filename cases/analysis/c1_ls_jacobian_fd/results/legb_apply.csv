@@ -1,0 +1,11 @@
+metric,value
+quasi2d_mixed_plain,129
+quasi2d_aux_reading,0
+quasi2d_R_delta,0.0
+m6_mixed_plain,3378
+m6_aux_reading,252
+m6_R_delta_max,0.04159745641899626
+m6_rows_moved,164
+m6_rows_moved_stray,4
+m6_main_jac_targeted,8.072782345565743e-09
+m6_main_jac_control,6.292226498931249e-10

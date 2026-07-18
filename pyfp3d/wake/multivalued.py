@@ -55,7 +55,7 @@ class MultivaluedOperator:
     """
 
     def __init__(self, nodes: np.ndarray, elements: np.ndarray, cm,
-                 levelset=None, span_blend=None):
+                 levelset=None, span_blend=None, plain_density="side"):
         self.op = PicardOperator(nodes, elements)
         self.nodes = np.ascontiguousarray(nodes, dtype=np.float64)
         self.cm = cm
@@ -79,6 +79,20 @@ class MultivaluedOperator:
         self._side_upw = None
         self._side_dof = None
         self._side_read = None
+        self._mixed_plain = None
+        # B20 (executes B19 Leg B): where a MIXED-SIDE PLAIN element's density
+        # is read. "side" (default) = the historical behaviour, bit-identical
+        # to every committed level-set result -- the side field substitutes aux
+        # (other-side) values at the element's cut-shared nodes and so
+        # manufactures a spurious velocity there (GB19.6: q^2 3.22 vs a true
+        # 1.34, 45% density error). "main" reads the single-valued main field
+        # the element's assembly actually scatters onto -- consistent with
+        # element_mach2's own mixed_plain="main" DEFAULT (the diagnostic already
+        # reads main; this makes the density agree). No-op on single-side plain
+        # elements and on quasi-2D meshes (no such class).
+        if plain_density not in ("side", "main"):
+            raise ValueError(f"plain_density={plain_density!r} unknown")
+        self.plain_density = plain_density
         self.nu_max = 0.0
         self.n_nu_active = 0
         self.n_floored = 0
@@ -473,6 +487,7 @@ class MultivaluedOperator:
         for phi_s, upw, keep in ((phi_up, upw_u, in_upper),
                                  (phi_lo, upw_l, in_lower)):
             grad, q2 = self.op.velocities(phi_s)
+            grad, q2 = self._apply_main_density(phi_ext, grad, q2)  # B20
             q2n = q2 / u_inf**2
             q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
             limited += int(np.count_nonzero((q2l != q2n) & keep))
@@ -491,6 +506,45 @@ class MultivaluedOperator:
         self.n_limited = limited
         self._nu_active = active
         return out[0], out[1]
+
+    def _mixed_plain_mask(self):
+        """(n_tets,) bool: uncut elements whose four nodes straddle the level
+        set (beyond the tip clip, or where the sheet extension passes upstream
+        of the TE). Their assembly is single-valued on main dofs, but the side
+        field substitutes aux values at their cut-shared nodes -- the B20 class.
+        Same definition as element_mach2's `fix` mask."""
+        if self._mixed_plain is None:
+            cm = self.cm
+            el = np.asarray(self.op.elements, dtype=np.int64)
+            special = np.zeros(len(el), dtype=bool)
+            special[cm.cut_elems] = True
+            special[cm.te_lower_elems] = True
+            side_e = cm.node_side[el]
+            self._mixed_plain = (
+                ~special & (side_e.min(axis=1) != side_e.max(axis=1)))
+        return self._mixed_plain
+
+    def _apply_main_density(self, phi_ext, grad, q2):
+        """B20 `plain_density="main"`: overwrite the mixed-side plain elements'
+        gradient and q^2 with the MAIN-field ones (the single-valued field their
+        assembly actually uses), in place. No-op in "side" mode or where the
+        class is empty. Mutates the passed arrays (fresh from `velocities`)."""
+        if self.plain_density != "main":
+            return grad, q2
+        mask = self._mixed_plain_mask()
+        if not mask.any():
+            return grad, q2
+        # `velocities` returns VIEWS into a shared workspace buffer ("consume
+        # before the next call"), and the incoming grad/q2 ARE that buffer.
+        # Detach them first, or the velocities(main) call below overwrites the
+        # caller's side values in place (measured: it clobbered all 2940
+        # elements, not the 129 in the mask, tripling subsonic Gamma).
+        grad = grad.copy()
+        q2 = q2.copy()
+        grad_m, q2_m = self.op.velocities(self.main_potential(phi_ext))
+        grad[mask] = grad_m[mask]
+        q2[mask] = q2_m[mask]
+        return grad, q2
 
     def _side_readvecs(self):
         """(read_upper, read_lower): each (n_tets, 4) int, the extended DOF
@@ -521,6 +575,14 @@ class MultivaluedOperator:
             has_aux = ext >= 0
             ru = np.where((side == 1) | ~has_aux, el, ext)
             rl = np.where((side == -1) | ~has_aux, el, ext)
+            if self.plain_density == "main":
+                # B20: under main-field density the mixed-side plain elements'
+                # density (hence residual) depends on their MAIN dofs, not aux,
+                # so the Jacobian column returns to main -- keeping J = dR/dphi
+                # (Leg A composed with Leg B). No-op in "side" mode.
+                mp = self._mixed_plain_mask()
+                ru[mp] = el[mp]
+                rl[mp] = el[mp]
             # The equivalence that makes this a GENERALIZATION and not a new
             # rule: on cut elements the read map already IS the scatter map.
             if len(cm.cut_elems):
@@ -601,6 +663,7 @@ class MultivaluedOperator:
                 (phi_up, upw_u, in_upper, du, ru, fz_u),
                 (phi_lo, upw_l, in_lower, dl, rl, fz_l)):
             grad, q2 = self.op.velocities(phi_s)
+            grad, q2 = self._apply_main_density(phi_ext, grad, q2)  # B20
             q2n = q2 / u_inf**2
             q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
             lim_mask = (q2l == q2n)          # limiter INACTIVE (P8 convention)
@@ -705,9 +768,11 @@ class MultivaluedOperator:
         from pyfp3d.physics.isentropic import density_field
 
         phi_up, phi_lo = self.side_potentials(phi_ext)
-        _, q2u = self.op.velocities(phi_up)
+        gu, q2u = self.op.velocities(phi_up)
+        _, q2u = self._apply_main_density(phi_ext, gu, q2u)         # B20
         rho_up = density_field(q2u / u_inf**2, m_inf, gamma_air).copy()
-        _, q2l = self.op.velocities(phi_lo)
+        gl, q2l = self.op.velocities(phi_lo)
+        _, q2l = self._apply_main_density(phi_ext, gl, q2l)         # B20
         rho_lo = density_field(q2l / u_inf**2, m_inf, gamma_air).copy()
         return rho_up, rho_lo
 

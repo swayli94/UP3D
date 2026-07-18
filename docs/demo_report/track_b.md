@@ -509,6 +509,70 @@ gitignored P5 solution cache. Tests: `tests/test_b7_onera_m6.py` (6 fast + 5 gat
 
 ---
 
+## Track B / B20 — mixed-side plain elements: main-field density (`cases/analysis/c1_ls_jacobian_fd/`, 2026-07-18)
+
+Executes B19 Leg B. A **plain** element is uncut and single-valued, yet the
+assembly read its density from a **side** field that substitutes AUX (other-side
+of the wake) values at its cut-shared nodes — manufacturing a spurious
+supersonic state (GB19.6: q² 3.22 where the main field reads 1.34, 45 % density
+error on 252 elements). B20 adds `plain_density` on `MultivaluedOperator`:
+`"side"` (default, bit-identical to every committed result) or `"main"`.
+
+★ **The reporting layer had already made this call**: `element_mach2` has
+defaulted to `mixed_plain="main"` since 2026-07-14. B20 makes the assembly
+agree with the diagnostic instead of contradicting it.
+
+### A workspace-aliasing bug, caught by measuring an unexpected result
+
+The first implementation reported quasi-2-D moving by 0.77 (expected: nothing),
+subsonic Γ tripling, and a degraded Jacobian. All three were **one bug**:
+`PicardOperator.velocities` returns *views into a shared buffer* ("consume
+before the next call"), and recomputing the main-field gradient inside the
+density path **overwrote the caller's side values in place** — 2940 elements
+changed instead of the 129 in the mask. Detaching with `.copy()` fixed it.
+
+★ *Had the "Γ tripled ⇒ Leg B has a big effect" story been accepted, a pure
+aliasing bug would have been recorded as a physics finding.* Measure the
+anomaly; do not explain it.
+
+### Results (all post-fix)
+
+| gate | side (today) | main (Leg B) |
+|---|---|---|
+| GB20.1b quasi-2-D residual | — | **bit-identical (0.000e+00)** |
+| GB20.1 M6 rows moved | — | 164 of ~12k (4 via Term-3 upstream) |
+| GB20.2 Jacobian (targeted / control) | — | **8.07e-09 / 6.29e-10 — exact** |
+| GB20.3 2.5-D subsonic Γ | 0.088144 | **0.088144 (+0.0000 %)** |
+| GB20.4 M6 coarse ramp → M0.84 | m 0.7875, **not converged** | **M0.84, converged** (γ 0.0780→0.0848) |
+| GB20.5 B18 wing-body @M0.5 | res 6.8e-5, **82 clamped**, Mmax 3.920 | **res 1.1e-13, 6 clamped**, Mmax 5.220 |
+| GB20.6 suite (default off) | 465+22+2 | unchanged |
+
+### GB20.5 — the hypothesis SPLITS, and that is the finding
+
+The naive read ("Mmax 3.92 → 5.22, +33 %, worse") is **wrong**: the side state
+is not converged — it churns at 6.8e-5 with 82 cells on the limiter/floor, so
+3.92 is a clamped, propped-up number. The main state converges to **machine
+precision with 6 clamped cells** — a genuine discrete solution.
+
+- ★ **The CONVERGENCE pathology WAS largely the contamination.** B18's "dies at
+  M0.5, 42/40 clamped, churns" is substantially cured: res 6.8e-5 → 1.1e-13,
+  clamps 82 → 6.
+- ★ **The junction POCKET is REAL — B19's literal hypothesis is REFUTED.**
+  Removing the contamination *unclamped* the pocket, revealing a genuine
+  converged M≈5.2 spike at a subsonic freestream: the G1.6/GB9.4 faceted-
+  geometry error, not the mixed-plain density. Main still cannot pass M0.5.
+
+**Do not repeat "the pocket is mixed-plain contamination" — measured false.**
+
+**Not adopted here.** Flipping the default re-bases every 3-D committed
+level-set number (hours of heavy compute); the dossier is in the B20 roadmap
+entry and the decision is the user's.
+
+**Reproduce:** `run_legb_apply.py` (fast), `run_legb_beforeafter.py
+subsonic|transonic`, `run_legb_b18.py` (heavy, ~26 min).
+
+---
+
 ## Track B / B19 Leg A — the LS Newton Jacobian is now exact in 3-D (`cases/analysis/c1_ls_jacobian_fd/`, 2026-07-18)
 
 **What was wrong.** On **mixed-side plain** elements — uncut tets whose nodes

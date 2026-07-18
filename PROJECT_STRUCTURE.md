@@ -956,7 +956,7 @@ G14.1–G14.7 ✓; the conforming path now MATCHES level-set (cl_p/cl_KJ
 0.15%/0.34%), and the +4.85% cl_KJ move off the probe locks closed 69% of
 P9's 0.019 gap**; Track M — M0–M5 ✓ (M2 ✓ — its solver leg was closed by B9
 on 2026-07-17, both wake models now run on the wing-body); Track B —
-B1–B9, B11–B19 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
+B1–B9, B11–B20 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
 `pin_gamma`, B18 wing-body transonic**, all 2026-07-18); Track V — designed,
 not started; Track A — A1, A2 ✓, **A3 ◐** (response to the 2026-07-17
 independent inspection: docs consistency + cross-path hardening, see
