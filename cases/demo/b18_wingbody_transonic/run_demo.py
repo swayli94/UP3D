@@ -272,8 +272,12 @@ def run_medium(coarse):
         checks.add("GB18.4", "junction_worsens_with_refinement",
                    f"LS ceiling coarse {lsc['m_final']} (Mmax {lsc['mmax']:.1f}) -> "
                    f"medium {lsm['m_final']} (Mmax {lsm['mmax']:.1f})",
-                   "RECORDED: the wing-fuselage-junction spurious pocket (mixed_plain "
-                   "aux artifact) grows with refinement -- same sign as GB9.4", True)
+                   "RECORDED: the wing-fuselage-junction pocket grows with refinement "
+                   "-- same sign as GB9.4. ATTRIBUTION CORRECTED by B20/GB20.5: it is "
+                   "NOT the mixed_plain aux artifact (B18's original guess). Removing "
+                   "that contamination made this case CONVERGE (res 6.8e-5 -> 1.1e-13, "
+                   "clamps 82 -> 6) and UNCLAMPED the pocket, revealing a genuine "
+                   "M~5.2 -- i.e. the G1.6 faceted-geometry error", True)
 
     # GB18.3 cross-model: M0.5 medium (trustworthy) + coarse transonic point
     d_conf_05 = abs(CL_M05["conforming"]["medium"] - CL_M05["level_set"]["medium"]) / CL_M05["conforming"]["medium"] * 100

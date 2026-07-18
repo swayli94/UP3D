@@ -14,6 +14,22 @@ Three checks, none of which need a full solve:
 Run: python cases/analysis/c1_ls_jacobian_fd/run_legb_apply.py
 """
 
+# ---------------------------------------------------------------------------
+# HISTORICAL (B20 close-out, 2026-07-18). This script performed a side-vs-main
+# A/B through the `plain_density` knob on MultivaluedOperator. That knob was
+# REMOVED when the main-field density was made permanent and non-optional
+# (user-arbitrated): there is no longer a "side" mode to compare against, by
+# design. The measurements it produced are committed in results/legb_*.csv and
+# are the evidence; to re-run the A/B itself, check out commit 5369a84, where
+# the knob still existed. The standing (non-historical) check that the Jacobian
+# remains exact under the permanent fix lives in tests/test_b19_jacobian_3d.py.
+# ---------------------------------------------------------------------------
+raise SystemExit(
+    "HISTORICAL: the plain_density knob this A/B toggles was removed when B20 "
+    "was made permanent. Committed evidence: results/legb_*.csv. To reproduce "
+    "the A/B, check out commit 5369a84.")
+
+
 from __future__ import annotations
 
 import csv

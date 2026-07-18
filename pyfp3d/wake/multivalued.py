@@ -55,7 +55,7 @@ class MultivaluedOperator:
     """
 
     def __init__(self, nodes: np.ndarray, elements: np.ndarray, cm,
-                 levelset=None, span_blend=None, plain_density="side"):
+                 levelset=None, span_blend=None):
         self.op = PicardOperator(nodes, elements)
         self.nodes = np.ascontiguousarray(nodes, dtype=np.float64)
         self.cm = cm
@@ -80,19 +80,6 @@ class MultivaluedOperator:
         self._side_dof = None
         self._side_read = None
         self._mixed_plain = None
-        # B20 (executes B19 Leg B): where a MIXED-SIDE PLAIN element's density
-        # is read. "side" (default) = the historical behaviour, bit-identical
-        # to every committed level-set result -- the side field substitutes aux
-        # (other-side) values at the element's cut-shared nodes and so
-        # manufactures a spurious velocity there (GB19.6: q^2 3.22 vs a true
-        # 1.34, 45% density error). "main" reads the single-valued main field
-        # the element's assembly actually scatters onto -- consistent with
-        # element_mach2's own mixed_plain="main" DEFAULT (the diagnostic already
-        # reads main; this makes the density agree). No-op on single-side plain
-        # elements and on quasi-2D meshes (no such class).
-        if plain_density not in ("side", "main"):
-            raise ValueError(f"plain_density={plain_density!r} unknown")
-        self.plain_density = plain_density
         self.nu_max = 0.0
         self.n_nu_active = 0
         self.n_floored = 0
@@ -525,12 +512,28 @@ class MultivaluedOperator:
         return self._mixed_plain
 
     def _apply_main_density(self, phi_ext, grad, q2):
-        """B20 `plain_density="main"`: overwrite the mixed-side plain elements'
-        gradient and q^2 with the MAIN-field ones (the single-valued field their
-        assembly actually uses), in place. No-op in "side" mode or where the
-        class is empty. Mutates the passed arrays (fresh from `velocities`)."""
-        if self.plain_density != "main":
-            return grad, q2
+        """B20: a MIXED-SIDE PLAIN element reads its gradient and q^2 from the
+        MAIN (single-valued) field -- the field its own assembly scatters onto.
+
+        ★ This is NOT optional and has no switch (user-arbitrated 2026-07-18).
+        The element is UNCUT, so no wake jump passes through it and its flow is
+        continuous; but `side_potentials` substitutes AUX (other-side-of-the-
+        wake) values at its cut-shared nodes. Reading the density from that
+        field while the stiffness is contracted with the MAIN field makes the
+        element internally inconsistent -- one equation built from two different
+        velocity fields -- which is indefensible regardless of which branch one
+        argues is "physically right". Measured consequence (GB19.6): a spurious
+        supersonic state, q^2 3.2229 where the main field reads 1.3379, up to
+        45.3% density error on the 252 affected elements.
+
+        The reporting layer reached this conclusion first: `element_mach2` has
+        defaulted to `mixed_plain="main"` since 2026-07-14 (B8). This makes the
+        ASSEMBLY agree with the DIAGNOSTIC instead of contradicting it.
+
+        Inert where the class is empty -- every quasi-2D mesh (measured: 129
+        mixed-side plain elements, 0 of them touching a cut node, residual
+        bit-identical) and every single-side plain element.
+        """
         mask = self._mixed_plain_mask()
         if not mask.any():
             return grad, q2
@@ -575,14 +578,13 @@ class MultivaluedOperator:
             has_aux = ext >= 0
             ru = np.where((side == 1) | ~has_aux, el, ext)
             rl = np.where((side == -1) | ~has_aux, el, ext)
-            if self.plain_density == "main":
-                # B20: under main-field density the mixed-side plain elements'
-                # density (hence residual) depends on their MAIN dofs, not aux,
-                # so the Jacobian column returns to main -- keeping J = dR/dphi
-                # (Leg A composed with Leg B). No-op in "side" mode.
-                mp = self._mixed_plain_mask()
-                ru[mp] = el[mp]
-                rl[mp] = el[mp]
+            # B20: a mixed-side plain element's density is read from the MAIN
+            # field, so its residual depends on MAIN dofs, not aux -- the
+            # Jacobian column returns to main, keeping J = dR/dphi (B19 Leg A
+            # composed with B20). Verified: targeted FD probe 8.07e-09.
+            mp = self._mixed_plain_mask()
+            ru[mp] = el[mp]
+            rl[mp] = el[mp]
             # The equivalence that makes this a GENERALIZATION and not a new
             # rule: on cut elements the read map already IS the scatter map.
             if len(cm.cut_elems):

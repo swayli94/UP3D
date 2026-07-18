@@ -27,9 +27,33 @@ pathology was largely the contamination (churn/clamps cured), but the junction
 contamination UNCLAMPED it, revealing a genuine M≈5.2 spike at subsonic
 freestream = the **G1.6/GB9.4 faceted-geometry** error. Main still cannot pass
 M0.5. **Do not repeat "the pocket is mixed-plain contamination" — measured
-false.** ★ **NOT ADOPTED**: flipping the default re-bases every 3-D committed LS
-number (hours of compute) and does not fix the junction geometry; dossier in the
-B20 entry, decision is the user's. Suite **465+22+2** unchanged.
+false.** ★★ **ADOPTED PERMANENTLY — the knob is REMOVED (user-arbitrated
+2026-07-18).** It existed only to make the A/B measurable; leaving an internal
+inconsistency behind a switch would mean shipping a defect as an option. The
+decisive argument needs no physics: the element's stiffness is contracted with
+the MAIN field while its density came from a DIFFERENT one — **one equation,
+two velocity fields** — in an element no wake jump even passes through.
+**Accepted cost, now PAID and measured (2026-07-19 re-baseline):** suite
+**465+22+2 unchanged** and gated 3-D LS **67/67 green** — *no test lock breaks*;
+★ the 3-D numbers are not locked by tests at all, they live in demo evidence
+(open process gap). Every moved number went B20's way — B7 M_max 1.453→**1.392**
+and tip Γ −0.0003→**−0.0000**; B16 legacy limited **3690→11**, pin floored
+**3→0** (those 3 were recorded as "B8/G1.6 class, not chased" — they were this
+contamination), medium clamps 42/40→**0/0**; B18 wing-body residual
+6.8e-5→**1.1e-13**; M6 coarse ramp 0.7875-not-converged→**M0.84 converged**.
+B9's cross-model headline (LS 0.2165/0.2175) did not move one digit.
+★ **ONE regression: M6 medium M0.84** — the ramp reaches **M0.6625 (2/5)**,
+γ 0.088338→0.071909 (B15 17/20, B14 5/7; every failure traces to this one case).
+★★ **The old number's validation was COMMON-MODE:** B15 compared M_max against
+the LS *Picard* (2.4549) — both LS solvers read the same contaminated density,
+so it never checked correctness; the conforming record is **1.995**. And the new
+1.5822 is at M0.6625, not M0.84 — not like-for-like. **GB20.7 OPEN:** recipe
+mismatch or real loss? 0/0 clamped everywhere, |R| 9.2e-14, freeze armed, zero
+reverts ⇒ points at mismatch (B18 precedent: freeze_tol 1e-6→1e-5), not proven.
+★ **Demo-cache trap:** heavy demos reuse gitignored `results/*.npz` — delete the
+LS caches and verify zero `cached` lines, or a re-run is a no-op (it cost me one
+false "B7 unchanged" result). The junction pocket is NOT fixed by any of this
+(G1.6).
 
 **B19 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes the
 A3/GA3.6 C1 finding as TWO deliberately separated legs): the level-set Newton

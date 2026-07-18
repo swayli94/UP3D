@@ -1477,18 +1477,28 @@ density belongs to the single-valued main field. The side-field substitution
 only ever made sense for cut elements (which are genuinely two-valued and
 assembled twice).
 
-**Architecture (default-inert, the house pattern).** A `plain_density` knob on
-`MultivaluedOperator`: `"side"` (default, **bit-identical to every committed
-level-set result**) or `"main"` (the fix). It acts only on the mixed-side plain
-class; on single-side plain elements the side field already equals the main
-field (their other-side nodes are not cut nodes, so `side_potentials`
-substitutes nothing), so `"main"` is a no-op there. Threaded through the three
-density sites (`element_rho_tilde` Picard-transonic, `newton_side_data` Newton,
-`element_densities` Picard-subsonic) and Leg A's `_side_readvecs` (under
-`"main"` a plain element's density depends on main dofs, so its Jacobian column
-returns to main). **Default off ⇒ suite and all committed gates untouched;**
-adoption (flipping the default, which re-bases every committed LS number) is a
-SEPARATE user decision after the evidence below.
+**Architecture — ★★ PERMANENT AND NON-OPTIONAL (user-arbitrated 2026-07-18).**
+The fix was first built as a default-off `plain_density` knob so it could be
+measured against the old behaviour (that A/B is the evidence below). **On the
+strength of that evidence the user directed that it be hard-coded: no switch,
+no default, no fallback.** The knob is REMOVED; mixed-side plain elements read
+the main field unconditionally, at all three density sites
+(`element_rho_tilde`, `newton_side_data`, `element_densities`) and in Leg A's
+`_side_readvecs`.
+
+**Why it is not a preference.** The decisive argument needs no physics: the
+element's stiffness is contracted with the MAIN field (it scatters onto main
+DOFs) while its density came from a DIFFERENT field — **one equation built from
+two velocity fields, internally inconsistent**, regardless of which branch one
+argues is "physically right". It is also uncut, so no jump passes through it.
+And the reporting layer had already ruled the same way: `element_mach2` has
+defaulted to `mixed_plain="main"` since 2026-07-14. B20 makes the ASSEMBLY
+agree with the DIAGNOSTIC.
+
+**Consequence, accepted with the decision:** the pre-B20 3-D level-set numbers
+were solutions to a discretization carrying a known internal inconsistency.
+They are re-based here; the old values stay traceable in git and in the
+before/after CSVs.
 
 - [x] **GB20.1 ✓ localized** (`results/legb_apply.csv`). Quasi-2-D NACA:
   `"main"` ≡ `"side"` **bit-identical (max|ΔR| = 0.000e+00)** — its 129
@@ -1593,6 +1603,76 @@ SEPARATE user decision after the evidence below.
     reference to say which is closer to truth; "converges to the target" is an
     objective improvement, "more accurate" is NOT claimed.
 
+#### B20 re-baseline of the committed 3-D level-set evidence (2026-07-19)
+
+Making the fix permanent re-bases the 3-D level-set numbers. **Scope, measured
+rather than assumed:** the default suite is **465+22+2 unchanged** and the
+gated 3-D LS tests are **67/67 green** — *no test lock breaks at all*.
+
+★ **Why the suite could not see it, and that is itself a gap:** the 3-D numbers
+are not locked by tests, they live in demo evidence. B15's tests, for instance,
+run entirely on the 2.5-D NACA mesh (which B20 provably cannot touch), while
+its M6-medium γ = 0.088338 is a *demo* number no test asserts. Same shape as
+B19's blind spot, one layer out: **a change that moves 3-D level-set physics
+raises no alarm in the suite.** Recorded as an open process gap.
+
+★ **Demo-cache trap (cost me one false "regenerated" result):** the heavy demos
+cache solves to gitignored `results/*.npz` and a plain re-run silently REUSES
+them. B7's first "re-run" reported 35 passed with one punctuation diff — it was
+`[M1] cached / [M4] cached`. Correct procedure: **delete the level-set `.npz`
+first, then verify the log contains zero `cached` lines.** Conforming caches
+may legitimately stay (B20 cannot touch that path).
+
+**What actually moved.**
+
+*Unchanged:* all 2.5-D; the whole conforming path; **B9's cross-model headline
+(LS cl_p 0.2165 / cl_kj 0.2175 — not one digit)**; B17's triangle
+(0.2115→0.2114); the gate verdicts of B9, B16, B17, B18.
+
+*Improved — every one in the direction B20 predicts:*
+
+| | before | after |
+|---|---|---|
+| B7 M6 M0.84 M_max | 1.453 | **1.392** |
+| B7 tip Γ(z)→0 | −0.0003 | **−0.0000** |
+| B16 coarse legacy limited cells | **3690** | **11** |
+| B16 coarse pin floored cells | 3 | **0** |
+| B16 medium pin clamps | 42/40 churn | **0/0** |
+| B18 wing-body medium residual | 6.8e-5 | **1.1e-13** |
+| M6 coarse ramp → M0.84 | 0.7875, not converged | **0.84, converged** |
+
+★ B16's `flr 3 → 0` is worth naming: those three floored cells were recorded in
+B16 as "the B8/G1.6 junction class, orthogonal to the BC fix, not chased". They
+were this contamination.
+
+*Regressed — ONE case:* **M6 medium M0.84** (B15's committed recipe; B14 fails
+with it because it asserts the same GB15.4 physics). The ramp reaches
+**M0.6625 (2/5 levels)** where it used to reach M0.84; γ 0.088338 → 0.071909.
+B15 now scores 17/20, B14 5/7, and **every failing check in both traces to this
+one case**.
+
+★★ **A finding that changes how the old number reads.** B15's gate compared
+M_max against `PICARD_M6 = dict(..., m_max=2.4549)` — the LS **Picard**. Both
+LS solvers read the same contaminated density, so **that check was common-mode:
+it verified the two LS solvers agreed with each other, never that M_max was
+right.** The conforming record on M6 medium is **1.995**; the old LS 2.45–2.49
+sat well above it. Separately, the new M_max 1.5822 is measured at **M0.6625,
+not M0.84** — different freestream, not a like-for-like number, so that FAIL is
+downstream of the reach failure, not an independent finding. **The real
+regression is one clause: the ramp no longer reaches M0.84 on this mesh.**
+
+- [ ] **GB20.7 — is the M6-medium stall a RECIPE mismatch or a real capability
+  loss? OPEN.** Evidence points at mismatch but does not prove it: **0/0 clamped
+  at every level including the failed ones**, |R| 9.2e-14 where it converges,
+  freeze armed every level with zero reverts, converged levels accepted via
+  `assignment_cycle` (the intrinsic discretization floor). It is not diverging
+  and not being clamped — it simply cannot climb on the now-clean field, and
+  B15's recipe was calibrated against the contaminated one (B18 has the
+  precedent: the wing-body needed `freeze_tol` 1e-6→1e-5). **Decider:** a
+  targeted recalibration (raise `freeze_tol`, adjust `dm`). Reaching M0.84
+  again ⇒ mismatch; failing under every reasonable recipe ⇒ a real capability
+  loss the user must weigh against the gains above.
+
 ★ **Backport check (the A3 rule):** the conforming path has no side/aux DOFs
 and no mixed-side plain class, so there is nothing to backport — recorded, not
 skipped.
@@ -1618,7 +1698,7 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
 | Phase | Status | Closed on | Notes |
 |-------|--------|-----------|-------|
-| B20 | ✓ | 2026-07-18 | **Mixed-side plain elements can now take their density from the MAIN field (`plain_density="main"`), and the B19 Leg B hypothesis is answered — as a SPLIT.** Executes GB19.6. New knob on `MultivaluedOperator`: `"side"` (default, **bit-identical to every committed result**) / `"main"`; threaded through the three density sites + Leg A's `_side_readvecs`. ★ **The reporting layer had already made this call** — `element_mach2` defaults to `mixed_plain="main"` since 2026-07-14 — so B20 makes the ASSEMBLY agree with the DIAGNOSTIC instead of contradicting it. ★★ **A workspace-aliasing bug was caught by measuring an unexpected result:** `PicardOperator.velocities` returns VIEWS into a shared buffer, so recomputing the main gradient inside the density path overwrote the caller's side values in place — quasi-2D "moved" 0.77, subsonic Γ tripled, the Jacobian degraded, all ONE bug (2940 elements clobbered vs the 129 in the mask). `.copy()` fixed it. *Accepting the plausible "Γ tripled ⇒ big effect" story would have recorded an aliasing bug as a physics finding.* **GB20.1 ✓** quasi-2D bit-identical (0.000e+00), M6 R moves on 164 of ~12k rows. **GB20.2 ✓** Jacobian stays EXACT under main (targeted 8.07e-09 / control 6.29e-10) — Leg A ∘ Leg B compose. **GB20.3 ✓** 2.5-D subsonic Γ 0.088144 → 0.088144 (**+0.0000 %**): the class is 3-D only, so every committed quasi-2D lock is untouched. **GB20.4 ✓** M6 coarse ramp→M0.84: side **m 0.7875 NOT converged** vs main **M0.84 CONVERGED** (γ 0.0780→0.0848). **GB20.5 ✓ RECORDED — the hypothesis SPLITS.** B18 medium wing-body @M0.5: side res 6.8e-5 with **82 clamped** cells, Mmax 3.920 (a CLAMPED, non-converged number) vs main **res 1.1e-13 with 6 clamped**, Mmax 5.220 (a genuine converged solution). ⇒ ★ **the CONVERGENCE pathology was largely the contamination** (churn/clamps substantially cured), but ★ **the junction POCKET is REAL and B19's literal hypothesis is REFUTED** — removing the contamination UNCLAMPED the pocket, revealing a genuine M≈5.2 spike at subsonic freestream = the G1.6/GB9.4 faceted-geometry error, not the mixed-plain density. Main still cannot pass M0.5. **Do not repeat "the pocket is mixed-plain contamination" — measured false.** **GB20.6 ✓** suite **465+22+2** unchanged (default off). ★ **NOT ADOPTED** — flipping the default re-bases every 3-D committed LS number (hours of heavy compute) and does NOT fix the junction geometry; the adoption dossier (case for, cost, and what it does not buy) is in the B20 entry and the decision is the user's. Evidence `cases/analysis/c1_ls_jacobian_fd/` (`run_legb_apply.py`, `run_legb_beforeafter.py`, `run_legb_b18.py`, `legb_*.csv`). |
+| B20 | ✓ | 2026-07-18 | **Mixed-side plain elements now read their density from the MAIN field — PERMANENTLY, with no switch (user-arbitrated).** Executes GB19.6. ★★ **Why it is not optional:** the element's stiffness is contracted with the MAIN field (it scatters onto main DOFs) while its density came from a DIFFERENT field — **one equation built from two velocity fields, internally inconsistent** — and the element is UNCUT, so no wake jump passes through it at all. That argument needs no physics and admits no "preference" reading. ★ **The reporting layer had already ruled the same way** — `element_mach2` has defaulted to `mixed_plain="main"` since 2026-07-14 — so B20 makes the ASSEMBLY agree with the DIAGNOSTIC. The fix was first built as a default-off `plain_density` knob purely to measure the A/B below; on that evidence the user directed it be hard-coded and the knob REMOVED. ★★ **A workspace-aliasing bug was caught by measuring an unexpected result:** `PicardOperator.velocities` returns VIEWS into a shared buffer, so recomputing the main gradient inside the density path overwrote the caller's side values in place — quasi-2D "moved" 0.77, subsonic Γ tripled, the Jacobian degraded: all ONE bug (2940 elements clobbered vs the 129 in the mask), fixed with `.copy()`. *Accepting the plausible "Γ tripled ⇒ big effect" story would have recorded an aliasing bug as a physics finding.* **GB20.1 ✓** quasi-2D bit-identical (0.000e+00), M6 R moves on 164 of ~12k rows. **GB20.2 ✓** the Jacobian stays EXACT (targeted 8.07e-09 / control 6.29e-10; the gated 3-D FD gate passes 3/3 post-permanence) — B19 Leg A ∘ B20 compose. **GB20.3 ✓** 2.5-D subsonic Γ 0.088144 → 0.088144 (**+0.0000 %**): the class is 3-D only, so every committed quasi-2D lock is untouched. **GB20.4 ✓** M6 coarse ramp→M0.84: old **m 0.7875 NOT converged** → new **M0.84 CONVERGED** (γ 0.0780→0.0848; "converges to target" is the objective gain, "more accurate" is NOT claimed — no independent reference). **GB20.5 ✓ RECORDED — the hypothesis SPLITS.** B18 medium wing-body @M0.5: old res 6.8e-5 / **82 clamped** / Mmax 3.920 (a CLAMPED, NON-converged number) → new **res 1.1e-13 / 6 clamped** / Mmax 5.220 (a genuine converged solution). ⇒ ★ the **CONVERGENCE** pathology was largely this contamination (B18's churn/clamping substantially cured), but ★ the junction **POCKET is REAL** and B19's literal hypothesis is **REFUTED** — removing the contamination UNCLAMPED it, revealing a genuine M≈5.2 spike at subsonic freestream = the **G1.6/GB9.4 faceted-geometry** error, not the mixed-plain density. It still cannot pass M0.5. **Do not repeat "the pocket is mixed-plain contamination" — measured false.** **Accepted cost:** the pre-B20 3-D level-set numbers were solutions to a discretization carrying a known internal inconsistency and are re-based; old values stay traceable in git and in the before/after CSVs. The three A/B scripts are marked HISTORICAL (the knob they toggle is gone; reproduce at commit 5369a84); the standing Jacobian check is `tests/test_b19_jacobian_3d.py`. Evidence `cases/analysis/c1_ls_jacobian_fd/results/legb_*.csv`. |
 | B19 | ✓ | 2026-07-18 | **The LS-Newton Jacobian is now exact in 3-D (Leg A), and the residual's own asymmetry is measured and routed (Leg B).** Executes the A3/GA3.6 C1 finding; opened + closed same day, user-directed, two deliberately separated legs. **★ Leg A was TWO defects, not one.** (1) **DOF maps**: Terms 2/3 used the mass-conservation SCATTER map for both rows and columns, but the columns must follow `side_potentials`' per-node READ map — they coincide on cut elements (asserted: `readvec` reproduces `dofs_upper`/`dofs_lower`) and diverge on mixed-side plain elements, a 3-D-only class. (2) **Gradient factors, the same duality one level down**: the residual is `rho_tilde(grad of the READ field) * V * (grad of the SCATTER field . B_a)`, so the ROW factor must use `grad_row` while the COLUMN factor keeps the side gradient; the code used the side gradient for both. ★ Fixing (1) alone left the probe at **1.4697e-02** — 8× better but **still ε-independent** ⇒ recorded PARTIAL instead of rounded into a pass, which is what forced (2) out. ★ A column-wise FD localization plus a block isolation (`\|FD23−J23\| ≡ \|FD23−J2\|` exactly ⇒ Term 3 contributes nothing there) found (2) — **the first reading of the row classification had pointed at Term 3 and was wrong**; acting on it would have put a new bug into correct code. **GB19.1 ✓** targeted probe **1.145684e-01 → 1.333699e-08**, control 6.327479e-10 unchanged, global-free 2.47e-03 → 8.49e-10; ★★ **the ε discriminator FLIPPED** — pre-fix 1.532e-01 at every ε (spread 1.00 = a missing term), post-fix 1.6e-09/2.1e-08/2.2e-07 (spread 131.5, ~1/ε = pure FD roundoff): an ε-independent error became ε-sensitive, the transition a real fix must produce and one no tolerance-loosening can fake. **GB19.2 ✓** `max\|ΔR\| = **0.000e+00**` bit-identical on a 3-D mesh, verified by `git stash` A/B after EACH fix ⇒ no converged level-set result can move; asserted, not inferred. **GB19.4 ✓ RECORDED NEGATIVE — the fix buys NO convergence**: pre/post 40 steps, not converged, γ **0.07212068** identical to 8 dp, M_max **1.134235** to 6 dp, same plateau (residuals differ only by limit-cycle phase), **+3.6 % wall** for the extra einsum. The plateau is the **B15 selection-churn limit cycle** (0 limited/0 floored, clean period) and an exact derivative cannot fix a discontinuous selection — **the phase must not be credited with a convergence improvement**; what it buys is correctness (a Newton method rather than a quasi-Newton). **GB19.5 ✓** `tests/test_b19_jacobian_3d.py` (+3: gated 3-D FD gate + 2 structural locks) closes the blind spot that let this live through B6–B18; ★★ **ERRATUM: the blind spot was mis-stated** by the C1 write-up AND by this author's first test — quasi-2-D has **129** mixed-side plain elements, not zero; what it has zero of is the subset that can READ an aux (**0 of 129 touch a cut node**), which is the real invariant. **GB19.6 ✓ (Leg B) — the residual's asymmetry is NOT benign.** Zero-change probe: only **252** elements (**0.1888 %** of volume) actually read an aux, but there max\|ρ_side − ρ_main\| = **0.4474 (45.3 %)**, 154/39 of 252 differ >1 %/>10 %, and decisively **the SIDE field reads q² up to 3.2229 (M≈1.80, at the M_cap limiter) where the MAIN field reads 1.3379** — a **spurious supersonic state** that the artificial-density switch then acts on, i.e. the contamination reaches the solver's density, not just a diagnostic. ★ Third bite from one element class (B8's ×5 `element_mach2` metric artifact → A3/B19 Jacobian → now the residual). ★ **HYPOTHESIS, not a result:** a candidate contributor to B18's refinement-worsening wing-body pocket (M_max artifact 3.96); measured on wing-alone M6, no causal link shown; named test = rerun B18 medium LS with main-field density and see if 3.96 moves. **NOT adopted** — changing the density source changes R and moves every converged answer ⇒ its own phase. Evidence `cases/analysis/c1_ls_jacobian_fd/` (`run_check.py`, `run_legb_probe.py`, `b19_three_states.csv`, `b19_convergence_ab.csv`, `legb_density_gap.csv`, `c1_fd_probes{,_prefix}.csv`). |
 | B1 | ✓ | 2026-07-11 | **B1 delivery (2026-07-11):** `pyfp3d/wake/levelset.py` (TE-**polyline** ruled straight wake per design_track_b.md D9, per-segment frames, `update_direction()` re-aims the wake without touching the mesh) + `pyfp3d/wake/cut_elements.py` (ε side-shift relative to local edge length (D4), **downstream-crossing test** excluding the ahead-of-LE sign-change region, TE-node flagging, below-TE fan recorded as `te_lower_elems` for B2's López-fig-3.6c aux assignment, per-node ext DOFs, López eq. 3.33–3.34 `dofs_upper`/`dofs_lower` tables); imported by nothing in the shipped solver paths. Gate evidence (`tests/test_b1_cut_elements.py`, **34 passed**, the FULL dual-mesh matrix — 2.5D M0/M3 coarse+medium AND 3D M1/M4 ONERA M6): M0 embedded — every conforming sheet node ε-shifted "+" (the D4 stress test at scale), census cross-validated EXACTLY against `cut_wake` (`cut_elems ∪ te_lower_elems` == the minus-side element star, element-by-element), TE nodes == `wc.te_nodes`; M3 wake-free — generic cuts, gap-free corridor TE→far field at α=0 AND re-aimed to α=4° **on the same mesh**; M1/M4 ONERA M6 — census a strict **superset** of the conforming minus-star (0 missing, +2.9% tip-edge straddlers: expected, since in an embedded method the sheet's tip EDGE need not conform), spanwise clip verified. ★ **Two 3D-only mechanisms found and fixed here** (both invisible on quasi-2D meshes): (1) the swept TE span axis is NOT perpendicular to the wake direction ⇒ q must come from the **oblique (v, d̂, n̂) frame** — an orthogonal projection leaks the downstream distance into the spanwise coordinate and wrongly clipped ~60% of the true M6 cut set (measured, fixed, regression-pinned); (2) the **spanwise clip** (crossings must satisfy 0 ≤ q ≤ span_length) is mandatory — without it the level set cuts the wake-plane extension beyond the tip, i.e. P5's far-field branch-ray artifact re-created (the conforming path gets the same semantics from its free-edge rule, Γ(tip)=0). Suite **218+8+2** (was 184+8+2; +34, some of which skip when the gitignored wake-free meshes aren't generated locally); conforming solver paths byte-untouched; all runs at the 8-thread cap alongside the in-flight P9 fine demo. |
 | B2 | ✓ | 2026-07-11 | **B2 delivery (2026-07-11):** multivalued (CutFEM-style) FE assembly. `pyfp3d/kernels/cut_assembly.py` (`multivalued_redirection_coo` + `continuity_closure_coo`) + `pyfp3d/wake/multivalued.py::MultivaluedOperator` (extended n_total = n_main + n_ext DOF assembly, TE-jump/Γ extraction) + `pyfp3d/solve/picard_ls.py::solve_multivalued_laplace` (non-lifting direct-LU driver, parallel to the conforming path). **Key simplification (design_track_b.md §2.5/D6):** a cut element is the same P1 element matrix assembled twice with B1's `dofs_upper`/`dofs_lower`; expressed as a sparse redirection of the single-valued matrix — only the entries whose two nodes are on OPPOSITE sides move their column main(b)→aux(b), everything else byte-identical to `PicardOperator.assemble_matrix()`. Aux rows carry the B2 continuity ("weld") closure aux_k = main_j, so the extended system reduces EXACTLY to the single-valued one (`test_extended_matrix_folds_to_stiffness`: fold recovers the stiffness matrix to 1e-13). Extended matrix is nonsymmetric ⇒ `spsolve`; GMRES+AMG deferred to B3+ scaling (design_track_b.md §5.3). Gate (`tests/test_b2_multivalued.py`, **17 passed**, coarse+medium both 2.5D families + 3D M6 coarse both families; medium/M6 skip in CI where gitignored): V0 freestream **0.0** (2.5D, α=0/4°) / **1e-14** (3D M6) < 1e−12; V1 MMS slope **1.94** ≥ 1.9 (generic-position cube cut); Laplace α=0 ⇒ TE jump = 0, cl_KJ = 0, main φ == single-valued oracle to **3e-11**. Suite **235+8+2** (was 218+8+2; +17, some medium/M6 skip in CI — the B2 commit message's "229" was measured before the medium parametrization was added, corrected 2026-07-12); conforming solver paths byte-untouched; 8-thread cap. Next = B3 (implicit Kutta: g₁+g₂ wake LS replaces the weld). |

@@ -564,9 +564,23 @@ precision with 6 clamped cells** — a genuine discrete solution.
 
 **Do not repeat "the pocket is mixed-plain contamination" — measured false.**
 
-**Not adopted here.** Flipping the default re-bases every 3-D committed
-level-set number (hours of heavy compute); the dossier is in the B20 roadmap
-entry and the decision is the user's.
+### Adopted permanently — the switch is gone
+
+★★ **User-arbitrated 2026-07-18: hard-code it, no switch, no default option.**
+The knob existed only to make the A/B above measurable; on that evidence it was
+removed. The reasoning, recorded: with the side reading established as an
+*internal inconsistency* — one equation built from two velocity fields, in an
+element no wake jump even passes through — leaving it behind a switch would
+mean knowingly shipping a defect as an option.
+
+**Accepted cost:** the pre-B20 3-D level-set numbers were solutions to a
+discretization carrying that inconsistency, and are re-based. 2.5-D is
+untouched (+0.0000 %, measured). The junction pocket is NOT fixed by this
+(GB20.5 — it is real, G1.6-class geometry). Old values stay traceable in git
+and in the before/after CSVs; the three A/B scripts are marked HISTORICAL (the
+knob they toggle no longer exists — reproduce at commit 5369a84), and the
+standing correctness check is `tests/test_b19_jacobian_3d.py`, which passes
+3/3 gated after permanence.
 
 **Reproduce:** `run_legb_apply.py` (fast), `run_legb_beforeafter.py
 subsonic|transonic`, `run_legb_b18.py` (heavy, ~26 min).

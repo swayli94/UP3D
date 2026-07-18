@@ -285,7 +285,10 @@ if GATED and M6_WF.exists():
     per_level_clamped = ", ".join(
         "M{:.2f}:{}/{}".format(l["m_inf"], l["n_limited"], l["n_floored"])
         for l in lv)
-    accept_routes = sorted({l["accept_reason"] for l in lv})
+    # A level that did NOT converge has accept_reason None, which cannot be
+    # sorted against the str reasons (TypeError). That case never arose while
+    # every level converged; it does once a ramp stalls (B20 re-baseline).
+    accept_routes = sorted({l["accept_reason"] or "not-converged" for l in lv})
     check("...HONEST: the converged state CARRIES clamped cells (semantics "
           "relaxed by freeze_max_clamped>0, NOT a 0-clamped solution)",
           True,

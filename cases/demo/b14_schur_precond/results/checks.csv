@@ -1,8 +1,8 @@
 gate,check,value,criterion,status,note
 GB14.1,J_aa factors on every measured case; cond1 finite,naca 2.5D coarse: 5.108e+08; naca 2.5D medium: 8.247e+09; M6 wake-free coarse: 6.477e+06; M6 wake-free medium: 7.404e+07,splu succeeds; cond1 < 1e14,PASS,
 GB14.2,coarse lifting: schur == spsolve gamma; no fallback,|dgamma|=4.25e-11,< 1e-8; 0 stalls/fallbacks,PASS,the B11 surrogate stalled HERE to gamma 0.0033 vs 0.139
-GB14.2,coarse Newton M0.7: schur == spsolve gamma,|dgamma|=2.04e-12,< 1e-8; 0 stalls/fallbacks,PASS,supersonic pocket: Terms 2/3 invisible to the Term-1 AMG
+GB14.2,coarse Newton M0.7: schur == spsolve gamma,|dgamma|=4.71e-12,< 1e-8; 0 stalls/fallbacks,PASS,supersonic pocket: Terms 2/3 invisible to the Term-1 AMG
 GB14.3,2.5D medium lifting: schur CONVERGES where ILU diverged,gamma=0.14137632; |dgamma|=9.27e-10,converged; < 1e-8 vs spsolve; 0 stalls/fallbacks,PASS,ILU committed: gamma=-136.99 77 stalls (b11_ls_infra/solver_ab.csv)
-GB14.4,M6 coarse: schur solves M0.5 AND the M0.84 ramp,sub |dgamma|=4.10e-07; ramp |dgamma|=3.04e-13,converged + target_reached; |dgamma| <= 1e-4 vs lagged,PASS,
-GB14.4,M6 medium: schur solves M0.5 AND the M0.84 ramp,sub |dgamma|=1.47e-08; ramp |dgamma|=2.15e-13,converged + target_reached; |dgamma| <= 1e-4 vs lagged,PASS,
-GB14.4,M6 medium M0.84 schur state == the committed GB15.4 physics,gamma=0.088338; M_max=2.4938,within 1% of gamma 0.088338; M_max 2.4938,PASS,
+GB14.4,M6 coarse: schur solves M0.5 AND the M0.84 ramp,sub |dgamma|=4.10e-07; ramp |dgamma|=6.40e-14,converged + target_reached; |dgamma| <= 1e-4 vs lagged,PASS,
+GB14.4,M6 medium: schur solves M0.5 AND the M0.84 ramp,sub |dgamma|=3.12e-08; ramp |dgamma|=3.77e-13,converged + target_reached; |dgamma| <= 1e-4 vs lagged,FAIL,
+GB14.4,M6 medium M0.84 schur state == the committed GB15.4 physics,gamma=0.071909; M_max=1.5822,within 1% of gamma 0.088338; M_max 2.4938,FAIL,
