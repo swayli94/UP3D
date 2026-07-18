@@ -1,6 +1,48 @@
 # pyFP3D Agent Rules
 
-Current phase: **A3 ✓ CLOSED 2026-07-18 (NEW, user-directed): response to the
+Current phase: **B19 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes the
+A3/GA3.6 C1 finding as TWO deliberately separated legs): the level-set Newton
+Jacobian is now EXACT in 3-D, and the residual's own asymmetry is measured and
+routed.** ★★ **Leg A was TWO defects, not one.** (1) **DOF maps** — Terms 2/3
+used the mass-conservation SCATTER map for rows AND columns, but columns must
+follow `side_potentials`' per-node READ map (they coincide on cut elements —
+`readvec` reproduces `dofs_upper`/`dofs_lower`, asserted — and diverge on
+mixed-side plain elements, a 3-D-only class). (2) **Gradient factors, the same
+duality one level down** — the residual is `ρ̃(grad of the READ field)·V·(grad
+of the SCATTER field · B_a)`, so the ROW factor needs `grad_row` while the
+COLUMN factor keeps the side gradient; the code used the side gradient for both.
+★ **Fixing (1) alone left 1.4697e-02 — 8× better but STILL ε-independent ⇒
+recorded PARTIAL rather than rounded into a pass, which is what forced (2)
+out.** ★ A block isolation (`|FD23−J23| ≡ |FD23−J2|` exactly ⇒ Term 3 emits
+nothing there) found (2) — **the first reading of the row classification pointed
+at Term 3 and was WRONG**; acting on that inference would have put a new bug
+into correct code. **GB19.1 ✓ targeted probe 1.145684e-01 → 1.333699e-08**
+(control 6.33e-10 unchanged); ★★ **the ε discriminator FLIPPED** — pre-fix
+1.532e-01 at every ε (spread 1.00 = missing term), post-fix 1.6e-09/2.1e-08/
+2.2e-07 (spread 131.5, ~1/ε = FD roundoff). **GB19.2 ✓ max|ΔR| = 0.000e+00**
+bit-identical, `git stash` A/B after EACH fix ⇒ no converged LS result moves.
+★ **GB19.4 ✓ RECORDED NEGATIVE — NO convergence gain**: γ 0.07212068 identical
+to 8 dp, M_max 1.134235 to 6 dp, same 40 steps, same plateau, **+3.6 % wall**.
+The plateau is the **B15 selection-churn limit cycle** and an exact derivative
+cannot fix a discontinuous selection ⇒ **B19 must NOT be credited with a
+convergence improvement**; it buys correctness (a Newton, not a quasi-Newton).
+**GB19.5 ✓** `tests/test_b19_jacobian_3d.py` (+3) closes the blind spot;
+★★ **ERRATUM — the blind spot was mis-stated** by C1 and by my own first test:
+quasi-2-D has **129** mixed-side plain elements, not zero; it has **0** that
+READ an aux (0 of 129 touch a cut node) — that is the real invariant.
+★★ **GB19.6 (Leg B) — the residual asymmetry is NOT benign.** Only **252**
+elements (**0.19 %** of volume) read an aux, but there max|ρ_side − ρ_main| =
+**0.4474 (45.3 %)** and **the SIDE field reads q² 3.2229 (M≈1.80, at the M_cap
+limiter) where the MAIN field reads 1.3379** — a **spurious supersonic state**
+the artificial-density switch then acts on, so the contamination reaches the
+solver's density, not just a diagnostic. Third bite from one element class
+(B8 metric ×5 → Jacobian → residual). **HYPOTHESIS not result:** candidate
+contributor to B18's refinement-worsening wing-body pocket (M_max 3.96);
+wing-alone measurement, no causal link; named test recorded. **NOT adopted** —
+changing the density source changes R ⇒ its own phase. Evidence
+`cases/analysis/c1_ls_jacobian_fd/`.
+
+**A3 ✓ CLOSED 2026-07-18 (NEW, user-directed): response to the
 2026-07-17 independent Kimi inspection — docs consistency (17 findings) +
 cross-path hardening + the C1 Jacobian verification.** ★★ **HEADLINE: C1 is
 REAL and now verified — the LS Newton Jacobian is NOT the derivative of its
@@ -336,10 +378,12 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    2026-07-17 audit found 17 consistency defects, most of them exactly the
    last two surfaces. Full checklist in CLAUDE.md workflow step 5.
 
-Baseline: **463 passed + 21 skipped + 2 xfailed** (2026-07-18, A3 inspection
-response, +3 passed = `tests/test_mesh_reader_roundtrip.py`'s unnamed-physical-
-group locks (2 repro + 1 inertness); **measured 1165.41 s @16 threads**).
-Previous: 460 + 21 + 2 (2026-07-18, B18 wing-body
+Baseline: **465 passed + 22 skipped + 2 xfailed** (2026-07-18, B19 LS-Newton
+Jacobian exactness, +2 passed / +1 skipped = `tests/test_b19_jacobian_3d.py`
+(2 structural locks + 1 gated 3-D FD gate); **measured 1101.50 s @16 threads**).
+Previous: 463 + 21 + 2 (2026-07-18, A3 inspection response, +3 passed =
+`tests/test_mesh_reader_roundtrip.py`'s unnamed-physical-group locks);
+460 + 21 + 2 (2026-07-18, B18 wing-body
 transonic, +4 passed = `tests/test_b18_wingbody_transonic.py` (4 ungated on the
 committed 2.5D NACA mesh; the wing-body transonic ramps live in the gated demo));
 456 + 21 + 2 (2026-07-18, B17 far-field pin_gamma, +6 passed =

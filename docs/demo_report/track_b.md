@@ -5,7 +5,7 @@
 > Scope, reproduce instructions and the honesty/evidence rule: see the
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
-## Track B — level-set embedded wake (B1–B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; **B9 ✓ 2026-07-17** wing-body cross-model; B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**; **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic — all 2026-07-18**)
+## Track B — level-set embedded wake (B1–B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; **B9 ✓ 2026-07-17** wing-body cross-model; B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**; **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic, B19 LS-Newton Jacobian exactness — all 2026-07-18**)
 
 **What the track replaces.** The conforming path represents the wake as a *mesh
 surface*: the sheet is embedded in the geometry, its nodes are duplicated by the
@@ -506,6 +506,167 @@ deferred LS Newton. (4) Coarse only.
 shock line, forward migration toward the tip), `farfield_decision.png` (the table above).
 `p5_gamma_baseline.csv` is committed alongside so the A/B curve reproduces without the
 gitignored P5 solution cache. Tests: `tests/test_b7_onera_m6.py` (6 fast + 5 gated).
+
+---
+
+## Track B / B19 Leg A — the LS Newton Jacobian is now exact in 3-D (`cases/analysis/c1_ls_jacobian_fd/`, 2026-07-18)
+
+**What was wrong.** On **mixed-side plain** elements — uncut tets whose nodes
+straddle the wake level set, a 3-D-only class — the assembled Jacobian was not
+the derivative of the assembled residual. A3/GA3.6 measured it
+(1.146e-01 on the affected probe directions vs 6.33e-10 elsewhere,
+ε-independent); B19 Leg A fixes it.
+
+### It was TWO defects, and the second was only found by refusing to round
+
+**Defect 1 — the DOF maps.** One element carries two different maps and Terms
+2/3 used one for both roles:
+
+| role | map | for a plain element |
+|---|---|---|
+| ROW — where the residual lands | `mass_conservation_coo`'s scatter (`dofvec`) | main |
+| COLUMN — what the side field reads | `side_potentials`' per-node rule (`readvec`) | **aux at cut nodes** |
+
+They coincide on cut elements — `readvec` reproduces `dofs_upper`/`dofs_lower`
+there exactly, which is asserted in `_side_readvecs` and locked by a test — so
+the conflation survived every 2.5-D gate.
+
+**Defect 2 — the GRADIENT factors, same duality one level down.** Fixing the
+indices alone left the probe at **1.4697e-02** (8× better) and **still
+ε-independent** ⇒ still a missing term. Recording that as PARTIAL instead of
+rounding an 8× improvement into a pass is what forced the second defect out.
+
+A column-wise FD localization, then a block isolation rebuilding Terms 2 and 3
+separately, showed `|FD23 − J23| ≡ |FD23 − J2|` **exactly** on most affected
+columns ⇒ Term 3 contributes nothing there (those elements are subsonic,
+s_u = 0) ⇒ the error was in **Term 2**. ★ *The first reading of the row
+classification had pointed at Term 3; it was wrong, and only the isolation
+experiment corrected it. Acting on that inference would have put a new bug into
+correct code.*
+
+The mechanism: an element's residual is
+
+    R_a(e) = rho_tilde( grad of the READ field ) * V_e * ( grad of the SCATTER
+             field . B_a )
+
+— density from the side field, but the `K @ phi` it weights contracts the field
+the SCATTER map reads. Terms 2/3 used the side gradient for **both** factors.
+Fix: the row factor uses `grad_row` (gradient over `phi_ext[dofvec]`), the
+column factor keeps the side gradient. Identical on cut elements, different on
+exactly the broken class.
+
+### GB19.1 — the discriminator flipped, which is the real proof
+
+| probe | pre-fix | index split only | both fixes |
+|---|---|---|---|
+| targeted (102 aux dofs) | **1.145684e-01** | 1.469676e-02 | **1.333699e-08** |
+| control (1509 aux dofs) | 6.327479e-10 | 6.327479e-10 | 6.327479e-10 |
+| global free | 2.467864e-03 | 4.164103e-04 | 8.490e-10 |
+
+ε sweep on the targeted probe:
+
+| | ε=1e-6 | ε=1e-7 | ε=1e-8 | spread | reading |
+|---|---|---|---|---|---|
+| pre-fix | 1.532e-01 | 1.532e-01 | 1.532e-01 | **1.00** | ε-INDEPENDENT ⇒ a real missing term |
+| both fixes | 1.641e-09 | 2.107e-08 | 2.158e-07 | **131.5** | ε-SENSITIVE (~1/ε) ⇒ pure FD roundoff |
+
+**The same discriminator that convicted the code now acquits it.** An
+ε-independent error became an ε-sensitive one — the transition a real fix must
+produce, and one that loosening a tolerance cannot fake. Ledger:
+`results/b19_three_states.csv`.
+
+### GB19.2 — R is bit-identical, so nothing converged can move
+
+`max|R_after − R_before| = **0.000e+00**` on a 3-D mesh at a fixed φ, measured
+across a `git stash` A/B **after each of the two fixes**. This is what licenses
+"no committed level-set result changes"; it is asserted, not inferred.
+
+### GB19.4 — and it bought no convergence. That is the honest result.
+
+| | steps | converged | residual | γ | M_max | wall |
+|---|---|---|---|---|---|---|
+| pre-fix (J wrong) | 40 | False | 3.707261e-07 | 0.07212068 | 1.134235 | 60.6 s |
+| post-fix (J exact) | 40 | False | 3.973387e-07 | **0.07212068** | **1.134235** | 62.8 s |
+
+γ identical to 8 decimals, M_max to 6, same step count, same plateau — the two
+residuals differ only by which phase of the limit cycle step 40 lands on. Cost
+of exactness: **+3.6 % wall** (the extra `grad_row` einsum).
+
+★ **The plateau is the B15 upwind selection churn limit cycle** (0 limited / 0
+floored, clean period), and **an exact derivative cannot fix a discontinuous
+selection.** So B19 must not be credited with a convergence improvement: what
+it buys is *correctness* — the driver is a Newton method rather than a
+quasi-Newton, so its behaviour is analysable and future work rests on a true
+Jacobian. Whether that pays off anywhere is unmeasured and deliberately not
+claimed. Data: `results/b19_convergence_ab.csv`.
+
+### GB19.5 — and the blind spot itself is closed, with its statement corrected
+
+`tests/test_b19_jacobian_3d.py` adds the 3-D FD gate (heavy part gated) plus two
+cheap structural locks. ★★ **ERRATUM:** the C1 write-up (and this author's
+first version of the test) said quasi-2-D "has no mixed-side plain elements".
+**It has 129.** What it has **zero** of is the subset that can reach an aux DOF
+— **0 of those 129 touch a cut node**. Only an element whose side field
+actually READS an aux value can mis-scatter, so that is the real invariant, and
+it is what the test asserts. The coarser claim was wrong in fact while
+accidentally right in conclusion. Corrected rather than left standing.
+
+**Reproduce:** `python cases/analysis/c1_ls_jacobian_fd/run_check.py` (~4 min).
+
+---
+
+## Track B / B19 Leg B — is the residual we have the residual we want? (GB19.6, 2026-07-18)
+
+Leg A made the Jacobian exact **for the current residual**. Leg B asks whether
+that residual is right, and answers with a measurement rather than an aesthetic
+argument. **Nothing was changed** — `run_legb_probe.py` is a zero-change probe.
+
+**The asymmetry.** For a mixed-side plain element the current residual takes its
+**stiffness from the main field** (it is scattered on main DOFs) but its
+**density from the side field** (which substitutes AUX values — the flow on the
+*other* side of the wake — at cut nodes). Two velocity fields for one uncut
+element, and nothing on record says that was deliberate.
+
+**Scope, measured first.** Of 3378 mixed-side plain elements only **252 actually
+read an aux DOF**: **0.1888 % of domain volume**. A small gap in a thin strip
+would have argued for leaving R alone.
+
+**The gap is not small** (M6 coarse, M0.70, Picard-400 state |R| 1.95e-07;
+`results/legb_density_gap.csv`):
+
+| metric | value |
+|---|---|
+| max \|ρ_side − ρ_main\| | **0.4474** (**45.3 %** relative) |
+| mean relative gap | 4.51 % |
+| elements differing > 1 % / > 10 % | **154 / 39** of 252 |
+| **max q² read by the SIDE field** | **3.2229** (M ≈ 1.80 — at the M_cap limiter) |
+| **max q² read by the MAIN field** | **1.3379** (M ≈ 1.16) |
+
+★★ **The last two rows are the finding: on these elements the side field
+manufactures a spurious supersonic state where the main field is barely
+transonic.** The artificial-density switch then fires on that fictitious q², so
+the contamination reaches the **solver's own density**, not merely a
+diagnostic.
+
+★ **Third bite from one element class.** B8 measured the same contamination as
+a ×5 metric artifact in `element_mach2`; A3/B19 Leg A found it in the Jacobian;
+this finds it in the residual's density.
+
+★ **HYPOTHESIS — explicitly not a result.** B18 recorded a level-set wing-body
+spurious supersonic pocket that **worsens with refinement** (M² ≈ 1.27 at M0.5
+coarse; M_max artifact 3.96 at medium), closed-negative as a discretization
+error. Spurious side-field supersonic states in this strip are a *candidate*
+contributor with the right qualitative signature — more elements straddle as h
+falls. **Measured on the wing-alone M6, not the wing-body; no causal link
+shown.** Named test: rerun the B18 medium LS case with the main-field density on
+this class and see whether M_max 3.96 moves. Do not repeat this as a result.
+
+**Routing: NOT adopted.** Changing the density source changes R, so it moves
+every converged level-set answer — a discretization change needing its own
+phase with before/after on the committed cases (γ, cl_p, M_max, shock, and the
+B18 pocket). Leg B's deliverable is the measured case for opening it.
+
+**Reproduce:** `python cases/analysis/c1_ls_jacobian_fd/run_legb_probe.py`.
 
 ---
 
