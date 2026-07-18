@@ -99,5 +99,86 @@ class TestMeshReaderRoundTrip:
         assert mesh2.boundary_faces  # non-empty
 
 
+_NODES_TET = """$MeshFormat
+2.2 0 8
+$EndMeshFormat
+{names}$Nodes
+4
+1 0 0 0
+2 1 0 0
+3 0 1 0
+4 0 0 1
+$EndNodes
+$Elements
+5
+1 2 2 1 1 1 2 3
+2 2 2 7 7 1 2 4
+3 2 2 7 7 1 3 4
+4 2 2 1 1 2 3 4
+5 4 2 {vol_tag} 1 1 2 3 4
+$EndElements
+"""
+
+
+def _write_msh(path, *, names: str, vol_tag: int = 1):
+    path.write_text(_NODES_TET.format(names=names, vol_tag=vol_tag))
+    return path
+
+
+class TestUnnamedPhysicalGroups:
+    """A3 / kimi code review C4 + C5: a .msh may legally carry physical tags
+    that `$PhysicalNames` does not name. Both halves of the reader used to
+    mishandle that -- the surface half SILENTLY, which is the dangerous one.
+    All in-repo meshes name everything, so these are latent traps that only
+    an imported mesh would hit; they are locked here on synthetic input."""
+
+    def test_unnamed_surface_group_is_kept_not_dropped(self, tmp_path):
+        """C4: naming only SOME surface groups used to drop the unnamed
+        ones' triangles entirely (the `all_triangles` fallback fires only
+        when there is no physical data at all). The silent consequence
+        chain for an external mesh with wall/wake named but symmetry not:
+        the symmetry triangles vanish, `wake_cut._sheet_free_edge_nodes`
+        then reads the sheet's symmetry edge as an interior free edge, the
+        root station is not duplicated, and Gamma(root) is pinned to 0 --
+        wrong aerodynamics with no error anywhere."""
+        names = ('$PhysicalNames\n1\n2 1 "wall"\n$EndPhysicalNames\n')
+        path = _write_msh(tmp_path / "partly_named.msh", names=names)
+
+        mesh = read_mesh(path)
+
+        assert "wall" in mesh.boundary_faces
+        assert len(mesh.boundary_faces["wall"]) == 2
+        # the unnamed tag-7 triangles survive under a placeholder name
+        assert "surface_7" in mesh.boundary_faces, (
+            f"unnamed physical surface group dropped: "
+            f"{sorted(mesh.boundary_faces)}")
+        assert len(mesh.boundary_faces["surface_7"]) == 2
+        n_kept = sum(len(f) for f in mesh.boundary_faces.values())
+        assert n_kept == 4, f"{n_kept}/4 triangles survived the read"
+
+    def test_unnamed_volume_tag_does_not_crash_validate(self, tmp_path):
+        """C5: physical VOLUME tags with no `$PhysicalNames` left
+        element_tags as raw ids (e.g. 5) while tag_names stayed ["bulk"],
+        so Mesh.validate()'s `element_tags < len(tag_names)` raised
+        'Tag out of range' -- a crash on legal input."""
+        path = _write_msh(tmp_path / "unnamed_volume.msh", names="",
+                          vol_tag=5)
+
+        mesh = read_mesh(path)          # used to raise AssertionError
+
+        assert int(mesh.element_tags.max()) < len(mesh.tag_names)
+        assert mesh.tag_names[5] == "volume_5"
+        # no surface names at all -> the legacy whole-boundary fallback
+        assert set(mesh.boundary_faces) == {"all_triangles"}
+
+    def test_fully_named_mesh_is_unchanged(self, sphere_coarse_path):
+        """The C4/C5 handling must be inert on every committed mesh: they
+        name all their groups, so nothing may be renamed or added."""
+        mesh = read_mesh(sphere_coarse_path)
+        assert set(mesh.boundary_faces) == {"wall", "farfield"}
+        assert mesh.tag_names == ["bulk"] or all(
+            not n.startswith("volume_") for n in mesh.tag_names)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-xvs"])

@@ -451,6 +451,7 @@ def solve_newton_lifting(
     accept_on_stall: bool = False,
     freeze_tol: Optional[float] = None,
     freeze_refresh_max: int = 2,
+    freeze_max_reverts: int = 3,
     workspace: Optional[NewtonWorkspace] = None,
     tip_taper: Optional[np.ndarray] = None,
     kutta_estimator: str = "probe",
@@ -529,6 +530,13 @@ def solve_newton_lifting(
     refreshed from the fresh state (up to `freeze_refresh_max` times --
     active-set iteration) and the best result reported. None = off
     (bit-identical to the pre-freeze driver).
+
+    `freeze_max_reverts` (A3, backported from newton_ls.py's B15 net): a
+    freeze that keeps diverging is worse than no freeze, so after this many
+    reverts the freeze is DISARMED for the rest of the level and the live
+    path finishes it. The freeze may only ever help; it can never cost
+    convergence. Inert on every committed conforming run (no level has ever
+    reverted more than twice).
 
     `kutta_estimator` (P14): "probe" (default, bit-identical) or
     "pressure" -- the wall-adjacent-CV pressure-equality Kutta residual
@@ -636,6 +644,7 @@ def solve_newton_lifting(
     freeze_cooldown = 0
     n_freeze_reverts = 0
     r_level_best = np.inf
+    freeze_armed = freeze_tol is not None
 
     # A1: each record carries the state ON ENTRY to a Newton step plus the
     # cost OF that step, so it is closed once the step has been taken (the
@@ -706,6 +715,19 @@ def solve_newton_lifting(
                 freeze_point = None
                 freeze_cooldown = 5
                 n_freeze_reverts += 1
+                # A3 (C2, backported from newton_ls.py): r_level_best is
+                # scoped to the CURRENT SELECTION EPOCH. Frozen-phase and
+                # live-phase residuals are not comparable -- the frozen
+                # system descends to ~1e-11, and reverting/refreshing
+                # legitimately returns the residual to the live scale. Carry
+                # the frozen best across that boundary and the fail-fast
+                # below reads a spurious 1e8x "blow-up" and kills a healthy
+                # freeze cycle (measured on the LS path, M6 medium M0.65).
+                r_level_best = np.inf
+                # A3 (C3): a freeze that keeps diverging is worse than no
+                # freeze -- disarm permanently and let the live path finish.
+                if n_freeze_reverts >= freeze_max_reverts:
+                    freeze_armed = False
                 if verbose:
                     print("  [freeze reverted: frozen path diverged]")
                 t0 = time.perf_counter()
@@ -739,7 +761,7 @@ def solve_newton_lifting(
             and r_norm < 1e-3
             and r_norm > 0.25 * min(residual_history[-7:-1])
             and r_norm < 2.0 * min(residual_history[-7:-1]))
-        if (frozen is None and freeze_tol is not None
+        if (frozen is None and freeze_armed and freeze_tol is not None
                 and freeze_cooldown == 0
                 and m_inf > 0.0 and (r_norm < freeze_tol or live_stalled)
                 and state["n_limited"] == 0 and state["n_floored"] == 0):
@@ -747,6 +769,7 @@ def solve_newton_lifting(
                 state["grad"], state["q2l"], state["rho"], m_inf,
                 upwind_c, m_crit, ws.gamma_air, rho_floor)
             freeze_point = (phi_free.copy(), gamma.copy(), r_norm)
+            r_level_best = np.inf      # new selection epoch (A3/C2)
             # the frozen flux equals the live flux AT the freeze state, so
             # (R_free, F, state) stay valid for this iteration
         accept = None
@@ -807,6 +830,7 @@ def solve_newton_lifting(
             frozen = (up_new, br_new)
             freeze_point = (phi_free.copy(), gamma.copy(),
                             residual_unfrozen)
+            r_level_best = np.inf      # new selection epoch (A3/C2)
             R_free, F, state = R_live, F_live, state_live
             merit = float(R_free @ R_free + F @ F)
             continue

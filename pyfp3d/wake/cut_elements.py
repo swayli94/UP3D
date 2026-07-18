@@ -136,6 +136,14 @@ class CutElementMap:
         # eps side-shift: on-surface nodes go "+" (deterministic).
         eps = eps_rel * h_node
         shift_mask = np.abs(s_raw) < eps
+        # A3 (C7b): TE detection uses te_tol_rel*h (1e-3) but the side shift
+        # uses eps_rel*h (1e-6), so a TE node landing in the gap between them
+        # on the "-" side would be classed lower, and ext_dof_of_node[t] --
+        # the UPPER value by construction -- would then be used as the LOWER
+        # TE reference, inverting Lopez fig. 3.6c / D11. TE nodes are on the
+        # sheet by definition, so shift them deterministically to "+" too.
+        # No-op on every committed mesh (their TE nodes have s_raw exactly 0).
+        shift_mask |= te_mask
         s = s_raw.copy()
         s[shift_mask] = eps[shift_mask]
         self.s = s
@@ -210,6 +218,22 @@ class CutElementMap:
         self.ext_dof_of_node[cut_nodes] = self.n_main + np.arange(
             self.n_ext_dofs, dtype=np.int64
         )
+
+        # A3 (C7): every TE node MUST own an aux DOF. If one is not a node of
+        # any cut element, `MultivaluedOperator`'s pressure-Kutta reroute
+        # writes reroute[-1] -- silently redirecting the LAST aux DOF's
+        # mass-conservation row onto a TE main row and leaving that aux DOF
+        # with no equation at all, and te_kutta_coo emits row = -1 triplets.
+        # B1's gate locks this invariant on the committed meshes; assert it
+        # here so a new mesh fails loudly at construction instead of
+        # producing a quietly wrong system.
+        # Scoped to meshes that actually carry a wake: with no cut elements
+        # there are no aux DOFs at all and no multivalued system is built
+        # (the degenerate classification-only case, e.g. a lone TE-fan tet).
+        if len(self.te_nodes) > 0 and self.n_ext_dofs > 0:
+            assert (self.ext_dof_of_node[self.te_nodes] >= 0).all(), (
+                "TE node without an aux DOF: some TE node is not a node of "
+                "any cut element (wake sheet does not reach the TE?)")
 
         # Lopez eqs. 3.33-3.34: upper copy = main at "+", aux at "-".
         cut_conn = el[self.cut_elems]

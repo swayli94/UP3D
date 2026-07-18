@@ -75,7 +75,9 @@ def wall_cp_levelset(mesh, mvop, phi_ext, m_inf: float = 0.0,
         smooth_passes: opt-in G6.1-style gradient smoothing (0 = bit-identical)
 
     Returns:
-        dict: x (triangle-centroid x/c), cp, upper (bool mask, n_y > 0),
+        dict: x (triangle-centroid x, ABSOLUTE -- not normalized by chord;
+        it coincides with x/c only on the chord=1, LE=0 families, which is
+        every committed case. A3 doc fix), cp, upper (bool mask, n_y > 0),
         area, n_out (outward unit normals), q2 (surface speed^2 / u_inf^2)
     """
     wall = mesh.boundary_faces["wall"]

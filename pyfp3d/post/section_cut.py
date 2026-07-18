@@ -20,6 +20,8 @@ from typing import Dict, Optional
 
 import numpy as np
 
+from pyfp3d.physics.isentropic import GAMMA
+
 
 class SectionData:
     """A z = const section: 2D points, triangulation, and restricted fields."""
@@ -224,7 +226,7 @@ def _section_curve_dict(xs: np.ndarray, cps: np.ndarray, sides: np.ndarray,
 
 def _wall_section_points(mesh, phi, z: float, u_inf: float,
                          upper_hint, wall_tag: str, m_inf: float,
-                         smooth_passes: int = 0):
+                         smooth_passes: int = 0, gamma: float = GAMMA):
     """Triangle-wise plane cut of the wall at z = const (design.md Sec 9).
 
     Each wall triangle crossed by the plane contributes one point at its
@@ -263,7 +265,7 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
 
     idx, mids = _wall_plane_crossings(mesh.nodes, wall, z)
     xs = mids[:, 0]
-    cps = _cp_from_q2(q2[idx], m_inf)
+    cps = _cp_from_q2(q2[idx], m_inf, gamma)
     # Geometric side hint (conforming path): per-row np.dot preserves the
     # original summation order -- do NOT vectorize to `mids @ hint`.
     sides = np.array([float(np.dot(m, hint)) > 0.0 for m in mids], dtype=bool)
@@ -273,7 +275,8 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
 def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
                   upper_hint=(0.0, 1.0, 0.0), wall_tag: str = "wall",
                   chord: float = 1.0, x_le: float = 0.0,
-                  m_inf: float = 0.0, smooth_passes: int = 0) -> Dict[str, np.ndarray]:
+                  m_inf: float = 0.0, smooth_passes: int = 0,
+                  gamma: float = GAMMA) -> Dict[str, np.ndarray]:
     """Sectional wall Cp(x/c) at z = const, split into upper/lower curves.
 
     Triangle-wise plane cut (see `_wall_section_points`): fully general in z,
@@ -287,7 +290,8 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
         dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
     """
     xs, cps, sides = _wall_section_points(
-        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes)
+        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes,
+        gamma)
     xs = (xs - x_le) / chord
     iu = np.argsort(xs[sides])
     il = np.argsort(xs[~sides])
@@ -368,7 +372,8 @@ def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
                      u_inf: float = 1.0, m_inf: float = 0.0,
                      wall_tag: str = "wall", upper_hint=(0.0, 1.0, 0.0),
                      min_points_per_side: int = 5,
-                     smooth_passes: int = 0) -> Dict[str, np.ndarray]:
+                     smooth_passes: int = 0,
+                     gamma: float = GAMMA) -> Dict[str, np.ndarray]:
     """Sectional wall Cp(x/c) at a spanwise station of a 3D wing (roadmap P5).
 
     Thin wrapper over the general `wall_cp_curve` cut that (a) resolves the
@@ -396,7 +401,8 @@ def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
     """
     z = _resolve_station(eta, z, b_semi)
     xs, cps, sides = _wall_section_points(
-        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes)
+        mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes,
+        gamma)
     return _section_curve_dict(xs, cps, sides, z, b_semi, min_points_per_side)
 
 

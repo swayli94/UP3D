@@ -119,7 +119,7 @@ def section_cp(mesh, *, phi: Optional[np.ndarray] = None, mvop=None,
     if phi is not None:
         return section_cp_curve(
             mesh, phi, eta=eta, z=z, b_semi=b_semi, u_inf=u_inf, m_inf=m_inf,
-            wall_tag=wall_tag, upper_hint=upper_hint,
+            gamma=gamma, wall_tag=wall_tag, upper_hint=upper_hint,
             min_points_per_side=min_points_per_side, smooth_passes=smooth_passes)
     return section_cp_curve_levelset(
         mesh, mvop, phi_ext, eta=eta, z=z, b_semi=b_semi, u_inf=u_inf,

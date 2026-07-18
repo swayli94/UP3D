@@ -144,10 +144,22 @@ def read_mesh(filepath: Path | str, verbose: bool = False) -> Mesh:
             }
 
         if surface_tags is not None and surface_name_by_tag:
-            for tag_id, name in surface_name_by_tag.items():
+            # A3 (C4): iterate the tags PRESENT IN THE FILE, not just the
+            # named ones. A .msh that names only some surface groups used to
+            # drop the unnamed groups' triangles entirely -- silently, and
+            # with a long consequence chain (a lost symmetry plane makes
+            # wake_cut read the sheet's symmetry edge as an interior free
+            # edge, so the root station is not duplicated and Gamma(root) is
+            # pinned to 0: wrong aerodynamics, no error). Unnamed groups now
+            # get a placeholder name and survive; a caller that asks for
+            # "symmetry" still gets a KeyError rather than empty physics.
+            for tag_id in np.unique(surface_tags):
                 mask = surface_tags == tag_id
-                if np.any(mask):
-                    boundary_faces_dict[name] = triangles[mask]
+                if not np.any(mask):
+                    continue
+                name = surface_name_by_tag.get(int(tag_id),
+                                               f"surface_{int(tag_id)}")
+                boundary_faces_dict[name] = triangles[mask]
         else:
             boundary_faces_dict["all_triangles"] = triangles
     
@@ -172,6 +184,17 @@ def read_mesh(filepath: Path | str, verbose: bool = False) -> Mesh:
             for name, tag_id in volume_entries:
                 if tag_id < len(tag_names):
                     tag_names[tag_id] = name
+    # A3 (C5): a legal .msh may carry physical VOLUME tags without naming
+    # them (no $PhysicalNames, or names only for surfaces). element_tags is
+    # then the raw tag ids while tag_names is still the default ["bulk"], and
+    # Mesh.validate()'s `element_tags < len(tag_names)` raised "Tag out of
+    # range" -- a crash on legal input. Pad with placeholder names so the
+    # index invariant holds; the meshes that DO name their volumes are
+    # untouched (the loop above already sized tag_names to max(tag)+1).
+    if len(element_tags) > 0 and int(element_tags.max()) >= len(tag_names):
+        padded = [f"volume_{i}" for i in range(int(element_tags.max()) + 1)]
+        padded[:len(tag_names)] = tag_names
+        tag_names = padded
     
     # Create output mesh
     mesh = Mesh()

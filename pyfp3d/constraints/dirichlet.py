@@ -64,10 +64,12 @@ def vortex_phi_2d(
             expression broadcasts elementwise; see farfield_dirichlet's
             `spanwise_gamma`)
         center: vortex location (x_v, y_v), default quarter chord
-        lower_branch_mask: boolean mask of points that sit EXACTLY ON the
-            cut (y == y_v, x > x_v -- e.g. wake master nodes) and belong to
-            the lower (-) side: they get theta_w = 2 pi instead of 0.
-            Points off the cut never need it (theta_w is continuous there).
+        lower_branch_mask: boolean mask of points that sit ON the cut
+            (x > x_v -- e.g. wake master nodes, whose cut membership is
+            topological) and belong to the lower (-) side: they get
+            theta_w = 2 pi instead of 0. Points off the cut never need it
+            (theta_w is continuous there), so the mask is the whole test --
+            no geometric y == 0 comparison is made (A3/C6).
         beta: Prandtl-Glauert factor sqrt(1 - M_inf^2); 1.0 = incompressible
 
     Returns:
@@ -78,7 +80,17 @@ def vortex_phi_2d(
     theta = np.arctan2(beta * dy, dx)     # (-pi, pi], cut on -x half-axis
     theta_w = np.where(theta < 0.0, theta + 2.0 * np.pi, theta)  # [0, 2 pi)
     if lower_branch_mask is not None:
-        on_cut = (dy == 0.0) & (dx > 0.0) & lower_branch_mask
+        # A3 (C6): membership in the mask already asserts "on the cut" -- the
+        # caller passes exactly the wake MASTER nodes, whose cut membership is
+        # topological (wake_cut), not geometric. The old extra `dy == 0.0`
+        # test made the branch depend on the y coordinate being bit-exactly
+        # zero, while the mesh generators only guarantee |y| < 1e-7*r_far
+        # (sphere-sheet intersection nodes come from an OCC intersection). A
+        # master at y = +1e-9 silently escaped and took the UPPER branch, so
+        # its Dirichlet datum -- and the eliminated slave = master + Gamma --
+        # were off by one full Gamma. Committed meshes have y exactly 0, so
+        # this is bit-identical on them.
+        on_cut = (dx > 0.0) & lower_branch_mask
         theta_w = np.where(on_cut, 2.0 * np.pi, theta_w)
     return -(gamma_total / (2.0 * np.pi)) * theta_w
 

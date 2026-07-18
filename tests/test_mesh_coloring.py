@@ -56,8 +56,8 @@ class TestElementColoring:
         elements = create_simple_tet_chain()
         colors, n_colors = greedy_coloring(elements)
         
-        validate_coloring(elements, colors)
-        
+        assert validate_coloring(elements, colors), "Coloring is invalid"
+
         # Chain of 3 tets sharing nodes should need at least 2 colors
         assert n_colors >= 2, f"Chain coloring used {n_colors} color(s), expected ≥2"
     

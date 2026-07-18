@@ -121,7 +121,14 @@ class TestWakeFreeAgreesWithEmbedded:
         assert "wake" not in m3.boundary_faces
         g0 = _solve_b(m0, M_INF)["gamma"]
         g3 = _solve_b(m3, M_INF)["gamma"]
-        assert abs(g3 - g0) / g0 < 0.02, f"embedded {g0:.4f} vs free {g3:.4f}"
+        # design_track_b.md's B3 gate criterion is 0.3%; this test asserted 2%
+        # (7x looser), so the gate's semantics were not actually locked
+        # (kimi code review T1). Measured 2026-07-18: 0.1441%
+        # (0.141376 embedded vs 0.141580 wake-free). Locked at the GATE's
+        # 0.3%, which the measurement clears with ~2x margin.
+        assert abs(g3 - g0) / g0 < 0.003, (
+            f"embedded {g0:.6f} vs free {g3:.6f} "
+            f"({abs(g3 - g0) / g0 * 100:.4f}%, B3 gate criterion 0.3%)")
 
 
 class TestGammaEmerges:
