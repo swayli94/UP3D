@@ -2,4 +2,4 @@ case,level,n_main_free,n_aux,cond1_est,factor_ok,split_factor_ms
 naca 2.5D,coarse,5518,1004,5.108e+08,1,1.5
 naca 2.5D,medium,20712,1992,8.247e+09,1,3.2
 M6 wake-free,coarse,9742,1033,6.477e+06,1,4.2
-M6 wake-free,medium,58987,3701,7.404e+07,1,19.6
+M6 wake-free,medium,58987,3701,7.404e+07,1,19.8

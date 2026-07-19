@@ -1333,9 +1333,13 @@ selection on the UNPATCHED side field (Kimi-inspection N1), so every armed
 freeze locked a selection the live system would not make. With the capture
 aligned, the committed recipe reaches **M0.84 again**: γ **0.088343** (pre-B20
 0.088338), M_max **2.4818**, res 9.0e-14, clamps 0/1, **515 s** — cleaner and
-faster than the pre-B20 state. The numbers in this section are the pre-B20
-record; the current baseline is B21's
-(`cases/analysis/c1_ls_jacobian_fd/results/n1_freeze_fix_sweep.csv`).
+faster than the pre-B20 state. The numbers in the section above are the
+pre-B20 record; the CURRENT committed record is the **B22-refreshed demo
+(2026-07-19, 20/20 PASS)**: γ 0.088343, M_max 2.4818, res 9.048e-14, 0 lim/1
+flr, freeze armed 6/6 levels with 0 reverts, **511 s = 4.51×** vs the
+committed Picard 2304.7 s, level M0.60 accepted via `tol` and the rest via
+`assignment_cycle` (this `summary.csv` / `checks.csv`; cross-checked
+bit-consistent with `n1_freeze_fix_sweep.csv`).
 
 ### ★★ Four errata — porting the conforming N5 recipe is NOT mechanical
 
@@ -1889,3 +1893,35 @@ small numeric re-baseline (γ 0.088338→0.088343; B15/B14 demo refresh =
 recorded follow-up). Test lock:
 `tests/test_b15_ls_newton_freeze.py::test_freeze_capture_matches_live_density_3d`
 (gated, premise-asserted, verified FAILING with the fix stashed).
+
+## B22 — Evidence refresh + 3-D LS anchor locks + re-baseline process rule (closed 2026-07-19)
+
+Executes B21's recorded follow-up and the 2026-07-19 inspection's N3/§2/§5
+items. No `pyfp3d/` change.
+
+- **GB22.1 — B15 demo refreshed, 20/20 PASS** (LS npz caches deleted, zero
+  `cached` lines): the refreshed `summary.csv`/`checks.csv` above are now the
+  committed record — M6 medium γ 0.088343, M_max 2.4818, |R| 9.048e-14,
+  0 lim/1 flr, 6/6 levels (M0.60 via `tol`), freeze armed 6/6 with 0 reverts,
+  511 s = 4.51× vs the committed Picard. Bit-consistent with B21's
+  `n1_freeze_fix_sweep.csv`.
+- **GB22.2 — B14 demo refreshed, 7/7 PASS**: medium ramp lagged 505 s vs
+  schur **345 s = 1.47×**, precond share 45.8 % → **1.8 %**, γ 0.088343 both
+  arms (|Δγ| 8.6e-13), 0 fallbacks; GB14.4 anchor constants re-pinned to the
+  B21 state. ★ The M6 COARSE ramp also moved under B21: γ 0.0848 (GB20.4-era)
+  → **0.084931**, M_max **1.3684** — the freeze-capture patch touches every
+  3-D freeze-armed ramp.
+- **GB22.3 — the N3 gap is closed**: `tests/test_b22_ls_3d_anchors.py`
+  (2 gated) re-solves the committed coarse (~35 s) and medium (~9 min) ramps
+  and asserts absolute anchors (m_final, per-level convergence, |R|, clamp
+  counts, γ rtol 1e-4, M_max rtol 1e-3). Rationale for the bands: measured
+  same-machine determinism (the demo reproduced the sweep's γ and |R| to the
+  printed digit; the two sweep variants differed 5.5e-6 relative in γ).
+- **GB22.4 — process**: CLAUDE.md workflow step 5 gained the re-baseline
+  erratum checklist (grep the moved values, correct or annotate every
+  old-section quote in the same commit); agent-rules discipline #11.
+- **GB22.5 (RECORDED)** — `docs/analysis/next_phase_priorities_2026-07-19.md`
+  recommends **P11 first** (G1.6 now owns three refinement-worsening wounds
+  and the wing-body line has no numerical suspects left), LS fine second,
+  Track V after P11 (V1 ladder parallelizable), plus a cheap M_max
+  same-family cross-check. Decision = user.

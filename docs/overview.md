@@ -11,7 +11,20 @@
 四条 track：求解器主线（P）与网格线（M）基本关闭，level-set 尾迹线（B）是当前
 工作面。
 
-**最新：B21 已关闭（2026-07-19；执行 Kimi 第二轮审查的 N1 发现）——
+**最新：B22 已关闭（2026-07-19；执行 B21 的 recorded follow-up + Kimi N3/§2/§5）——
+B21 态证据全面刷新 + 3-D LS 数字首次上测试锁。** B15 demo **20/20**（B20 时代
+17/20；缓存删净、零 `cached` 行）、B14 demo **7/7**（曾 5/7；medium schur
+1.47×、precond →1.8%）；★ coarse ramp 也被 B21 移动（γ 0.0848→**0.084931**，
+如实披露）。★★ **N3 缺口关闭**：`tests/test_b22_ls_3d_anchors.py`（+2 gated）
+重解 committed coarse/medium ramp 并绝对断言 m_final/γ/M_max/钳位——两天内两次
+re-baseline 套件全绿的"无报警"状态到此为止。★ re-baseline 勘误清单入流程
+（CLAUDE.md 步骤 5 + 纪律 #11）。★ 下一相位分析
+（`analysis/next_phase_priorities_2026-07-19.md`）：**推荐 P11 优先**（G1.6
+现在拥有三个随加密恶化的伤口、翼身线上数值嫌疑已清空），LS fine 第二，
+Track V 置于 P11 后（V1 阶梯可并行）；M_max 2.4818-vs-1.995 是跨网格族比较、
+不得引作缺陷。**下一相位 = 用户裁决。**
+
+**B21 已关闭（2026-07-19；执行 Kimi 第二轮审查的 N1 发现）——
 `freeze_side_state` 漏打 B20 补丁（在未打补丁的 side 场上捕获冻结选择，3-D 下
 与 live 系统不一致，实测 83+9 个元素选择不同），补齐后 **M6 medium M0.84 ramp
 能力恢复**：committed recipe 重新到 M0.84（γ 0.088343、res 9.0e-14、clamps 0/1、
@@ -157,7 +170,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 |-------|------|----------------|
 | **P — 求解器**（[roadmap/track_p.md](roadmap/track_p.md)） | P0–P9 ✓（P1 仅 G1.6 以 strict xfail 挂起）；P10 ◐（G10.2/G10.3 ✓）；P13 ◐（G13.1 ✓、G13.2 conforming ✓、G13.3 亚声速 Richardson ✓ p=2.31） | G10.1（非升力 Newton 入口，无顺序约束）；G13.3 **跨声速阴性开放**（圆帽 fine 的 ramp 死于 M=0.75，site=尖 tip TE）；P11 条件性未开（仅剩 G1.6 理由）；P12 backlog；**P14 ✓ 2026-07-17 关闭（用户指示，当日开+关）**：壁面邻接 CV 压力相等 Kutta 估计器（A2 路由的修复），G14.1–G14.7 ✓、demo 28 PASS。**头条：修改后的 conforming 结果与 level-set 相同、计算结果合理**——S1/S2 一次换掉：M0.84 Γ(z) roughness 0.0970→**0.0043**（coarse）/ 0.0365→**0.0024**（medium，均达/优于 LS 带），全站 raw TE Cp gap 0.2206→**0.0040** / 0.1585→**0.0024**（**55×/67×**，走 G14.6 **主条款**，回退未动用；★ 首版误引 A2 的 *section 末点* 数 0.318/0.228 报成 80×/95×，当日据用户提问勘误——A2 有两套 TE gap 度量，须引用自己实际跑的那套）。**★ 跨模型对照（V14.6，`cross_model_medium_m084.csv`）= 本相位最强证据**：LS 路径**一直**用压力相等 Kutta（B4），故若升力位移真是 Kutta *形式*，压力路径必须落到 LS 的答案上——它做到了：medium M0.84 conforming-pressure **0.2776/0.2823** vs level-set **0.2772/0.2813**，**差 0.17%/0.36%**（探针路径当年比 LS **低 4.5%/4.3%**），而且是不同尾迹模型、不同 DOF 空间、**不同网格族**（`onera_m6_wakefree`）。⇒ 长期存在的 conforming-vs-LS 升力分歧**就是** Kutta 形式误差，已消除。保留告诫：跨模型非同网格 A/B；LS 态带 1 lim/2 flr（B15 caveat）而压力态 0/0；"两者一致"≠"两者都对"（刚性平面尾迹等共有模型误差对两者是共模）。**★ G14.7 ✓ 关闭——开相位时锚探针 G8.2 锁、XFAIL 且不改带，用户裁决后改锚 level-set oracle**：medium M0.84 压力路径 cl_p/cl_KJ 0.2776/0.2823 vs LS 0.2772/0.2813 = **0.15%/0.34%**（<1% 通过）。相对旧探针锁的 +4.85% 位移是**发现**：机理在一级已测并在二级跑前**预注册**（两闭合逐点只差探针自身 O(h) 读数偏差，cross-read medium 0.79%；Kutta 映射 b≈0.93 把它 1/(1−b)≈14× 放大进 Γ），\|cl_KJ−0.288\| 0.0188→0.0057，**P9 那 0.019 gap 有 69% 是 Kutta 估计器偏差**（P9 看不见它：两套网格共用同一估计器，对其 Richardson 是共模）。关闭 G14.7 断言的是**两路一致**，**非**网格收敛（M6 fine 不是离散解）、**非**"0.019 是分辨率"翻案（仍 *strongly indicated, NOT earned*）。★ **自我更正（V14.7 实测 2026-07-17）**：先前各版都断言 TE Cp **spike** 不会被 P14 触及（"两路共有的 P1 恢复伪影"）——那是从 A2 归因**推**的，没测。实测 medium M0.84 raw：探针 **0.1143** → 压力 **0.0533**（2.1×），且**低于 LS 的 0.0743**。A2 对的部分：确有共有残余（~0.05 = 真正的恢复地板）；需修正的部分：conforming 相对 LS 的**超出量**也是 Kutta 形式误差（Kutta 错⇒TE 流场真的错，末点偏离趋势有物理原因，共模度量分不开）。旁证：P6 平滑在压力路径上不再有效（0.0533→0.0660→0.0626；A2 在探针路径上测的是 0.147→0.081）。**教训：别把上一相位的归因当结论带进新测量——去测。** 诚实记录：判别器 D=7.33→**1.80**（落在 A2 的 inconclusive 区，非 O(1)）|
 | **M — 网格**（[roadmap/track_m.md](roadmap/track_m.md)） | M0、M1(+M1b 自相似阶梯)、M2、M3、M4、M5（圆顶翼尖盖）✓ | **M2 ✓（求解腿由 B9 于 2026-07-17 关闭；台账勘误 2026-07-19——A3 曾称已改而 ledger 行仍 ◐）**：翼身网格 2026-07-13 交付；**机身+远场 2026-07-16 按用户指示重定规格并重生成**（5 倍翼根弦长、机翼居中、2 倍直径椭球机鼻、蒙皮 h_body=2h_wall + 两端按半径加密；**R_FAR 15→25 MAC**；★需 `Mesh.OptimizeNetgen` 治 sliver 抽签）；遗留验证项（交界最内 TE 节点 CV fan）在 track_m 记录 |
-| **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） | B1–B5、B7、B8（characterized-not-cured）、B9、B11–B21 ✓；B6 ◐（coarse gate ✓；medium 定量项由 GB15.4 补上，B21 恢复） | **B16 ✓ 关闭 2026-07-17（用户指示，追加于 B15 之后；执行 B9 的 recorded follow-up）**：LS Newton 远场 BC 通用化——远场 aux DOF 钉扎。★ 翼身 LS-Newton churn 根因 = 近奇异远场 aux 块（尾迹片贯穿远场边界的 aux DOF 只受巨型外区单元的 wake-LS 行约束）：8 个远场 MAIN 行 max\|R\|=**84.457** 逐位复现，cond1 **9.1e18→8.70e6**（勘误 2026-07-19：旧文 6.36e18 是 CSV 前预跑值）。`farfield_aux="pin"`（默认，按模式适配）使 **coarse** 翼身 freestream Newton 达 **res 5.88e-14、0 limited**（升力≈conforming 0.1%），legacy churn 7.95/3690 limited；neumann 逐位不变。★★ **GB16.4 由 B17 解决（2026-07-18）**：不是非收敛，是 freestream pin 的 BC 建模错误（jump=0 杀出流环量）。⚠ 提案机理被自我修正（Picard 升力也用 wake_ls，差别在不动点吸收非 closure）。 · **B17 ✓ 关闭 2026-07-18（用户指示；解决 GB16.4）**：远场 pin 必须携带 jump=γ 而非 0——B16 的 jump=0 抹掉出流尾迹环量（medium −22%）；独立 Picard-pin 收敛到 Newton-pin "停滞" 的同一 0.169（两求解器同 BC 一致，非停滞）。`farfield_aux="pin_gamma"`（jump→γ，两求解器新默认）三角单调闭合向 conforming（coarse 0.2087、medium 0.2117 Picard/0.2114 Newton——pre-B20 0.2115）；仅作用 freestream、vortex/neumann 惰性；vortex 从 +2.5% bracket；B9 coarse-12.8% erratum 为远场污染。GB17.1–17.4 ✓、17.5/17.6 RECORDED；demo `cases/demo/b17_farfield_pin_gamma/`、tests `test_b17_farfield_pin_gamma.py`(6)。**B18 ✓ 关闭 2026-07-18（用户指示；执行 GB16.6 债）**：翼身跨声速 M0.84——conforming 到（coarse 0.2617、medium M0.79 0.2579、cl(M) 升 0.2173/0.2321/0.2579）、level-set 交界受限（close-out coarse ~M0.575、medium 死 ~M0.5；B20 重基线：coarse ~M0.55/Mmax 1.31、medium Mmax 5.22 真实未钳，袋=G1.6 几何而非 mixed-plain——GB20.5 勘误，closed-negative）；medium 无共同跨声速 Mach ⇒ 跨模型只留 M0.5（2.6%）+ coarse M0.6 点（0.2%，重基线工件）；GB18.1 PASS+18.2–5 RECORDED；零 pyfp3d/ 改动。**B19 ✓ 关闭 2026-07-18**：LS-Newton Jacobian 3-D 精确化（两处缺项；探针 1.146e-01→1.33e-08、ε 判别翻转；R 逐位不变、无收敛收益——GB19.4 阴性）；Leg B 测得 mixed-plain 侧场密度污染（虚假超声速 q² 3.22 vs 1.34）→ 路由 B20。**B20 ✓ 关闭 2026-07-18、永久采纳（用户裁决，开关移除）、重基线 2026-07-19**：mixed-plain 密度改读 main 场；所有移动数字向好，唯一回退 = M6 medium ramp（GB20.7 曾定谳"真实能力损失"）。**B21 ✓ 关闭 2026-07-19（执行 Kimi/N1）**：`freeze_side_state` 漏打 B20 补丁——修复后 **M6 medium M0.84 恢复**（γ 0.088343、res 9e-14、515 s），GB20.7 翻案；3-D freeze 捕获一致性测试锁落地。**B9 ✓ 关闭 2026-07-17（重定规格）**：翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6。B10 搁置 |
+| **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） | B1–B5、B7、B8（characterized-not-cured）、B9、B11–B22 ✓；B6 ◐（coarse gate ✓；medium 定量项由 GB15.4 补上，B21 恢复、B22 上锁） | **B16 ✓ 关闭 2026-07-17（用户指示，追加于 B15 之后；执行 B9 的 recorded follow-up）**：LS Newton 远场 BC 通用化——远场 aux DOF 钉扎。★ 翼身 LS-Newton churn 根因 = 近奇异远场 aux 块（尾迹片贯穿远场边界的 aux DOF 只受巨型外区单元的 wake-LS 行约束）：8 个远场 MAIN 行 max\|R\|=**84.457** 逐位复现，cond1 **9.1e18→8.70e6**（勘误 2026-07-19：旧文 6.36e18 是 CSV 前预跑值）。`farfield_aux="pin"`（默认，按模式适配）使 **coarse** 翼身 freestream Newton 达 **res 5.88e-14、0 limited**（升力≈conforming 0.1%），legacy churn 7.95/3690 limited；neumann 逐位不变。★★ **GB16.4 由 B17 解决（2026-07-18）**：不是非收敛，是 freestream pin 的 BC 建模错误（jump=0 杀出流环量）。⚠ 提案机理被自我修正（Picard 升力也用 wake_ls，差别在不动点吸收非 closure）。 · **B17 ✓ 关闭 2026-07-18（用户指示；解决 GB16.4）**：远场 pin 必须携带 jump=γ 而非 0——B16 的 jump=0 抹掉出流尾迹环量（medium −22%）；独立 Picard-pin 收敛到 Newton-pin "停滞" 的同一 0.169（两求解器同 BC 一致，非停滞）。`farfield_aux="pin_gamma"`（jump→γ，两求解器新默认）三角单调闭合向 conforming（coarse 0.2087、medium 0.2117 Picard/0.2114 Newton——pre-B20 0.2115）；仅作用 freestream、vortex/neumann 惰性；vortex 从 +2.5% bracket；B9 coarse-12.8% erratum 为远场污染。GB17.1–17.4 ✓、17.5/17.6 RECORDED；demo `cases/demo/b17_farfield_pin_gamma/`、tests `test_b17_farfield_pin_gamma.py`(6)。**B18 ✓ 关闭 2026-07-18（用户指示；执行 GB16.6 债）**：翼身跨声速 M0.84——conforming 到（coarse 0.2617、medium M0.79 0.2579、cl(M) 升 0.2173/0.2321/0.2579）、level-set 交界受限（close-out coarse ~M0.575、medium 死 ~M0.5；B20 重基线：coarse ~M0.55/Mmax 1.31、medium Mmax 5.22 真实未钳，袋=G1.6 几何而非 mixed-plain——GB20.5 勘误，closed-negative）；medium 无共同跨声速 Mach ⇒ 跨模型只留 M0.5（2.6%）+ coarse M0.6 点（0.2%，重基线工件）；GB18.1 PASS+18.2–5 RECORDED；零 pyfp3d/ 改动。**B19 ✓ 关闭 2026-07-18**：LS-Newton Jacobian 3-D 精确化（两处缺项；探针 1.146e-01→1.33e-08、ε 判别翻转；R 逐位不变、无收敛收益——GB19.4 阴性）；Leg B 测得 mixed-plain 侧场密度污染（虚假超声速 q² 3.22 vs 1.34）→ 路由 B20。**B20 ✓ 关闭 2026-07-18、永久采纳（用户裁决，开关移除）、重基线 2026-07-19**：mixed-plain 密度改读 main 场；所有移动数字向好，唯一回退 = M6 medium ramp（GB20.7 曾定谳"真实能力损失"）。**B21 ✓ 关闭 2026-07-19（执行 Kimi/N1）**：`freeze_side_state` 漏打 B20 补丁——修复后 **M6 medium M0.84 恢复**（γ 0.088343、res 9e-14、515 s），GB20.7 翻案；3-D freeze 捕获一致性测试锁落地。**B22 ✓ 关闭 2026-07-19（执行 B21 follow-up + Kimi N3/§2/§5）**：B15 demo 20/20 + B14 7/7 刷新（coarse ramp γ 0.084931 披露）；**N3 关闭**——gated 绝对锚锁 `test_b22_ls_3d_anchors.py`；re-baseline 勘误清单入流程；下一相位分析推荐 P11（用户裁决）。**B9 ✓ 关闭 2026-07-17（重定规格）**：翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6。B10 搁置 |
 | **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） | 设计完整（Drela IBL3 + transpiration BC），零实现 | V1 依赖 P6（已满足），预算等同一个 Track-P 阶段 |
 | **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） | 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：四求解器统一计时插桩 + conforming×level-set × Picard×Newton 耗时基准） | **A2 ✓ 2026-07-17 关闭**（TE/Kutta 保真度归因，GA2.1–GA2.5）：**S1 定谳**——conforming Γ(z) 逐站抖动是逐站探针差势跳 Kutta target **估计器**的测量伪影（fixed-Γ 判别量 D=7.33/25.70 coarse/medium，把抖动从光滑场里重新生出来；闭合残差 ≤0.6% 排除"未闭合"、抖动局域于 TE 邻层 0.02–0.07× 排除"流场"），**非流场内容**；**S2 分解**——TE Cp 突跳=势跳 Kutta 形式误差（conforming 独有,同估计器 34×/133× vs LS）+ P1 末点恢复伪影（两路共有）；2.5-D `a1_cp.png`（有 S2 无 S1）证明两者是不同机制。修复路由至 **P14**（无 `pyfp3d/` 改动）；工作目录 `cases/analysis/`（区别于 `cases/demo/`）。★A1 结论：3-D 下两条 Newton 路径都是 **precond（LU 分解）受限**（~40% 墙钟，lagged LU 已开），2.5-D 的"seed 是成本"**不外推**——引用主导相位必须带网格。**A3 ✓ 2026-07-18 关闭**（GA3.1–GA3.6：响应 Kimi 独立审查）：★★ **C1 证实**——LS Newton Jacobian 在 mixed-side plain 元素上≠dR/dφ（targeted 1.146e-01 vs control 6.33e-10，且 eps 无关 max/min=1.00）⇒ 3-D 下是 quasi-Newton；**R 未动 ⇒ 所有已收敛状态与 gate 数字成立**；记录不修，修复单独立项。C2/C3 回移 conforming Newton、reader C4/C5（静默丢面组 ⇒ Γ(root) 静默为 0）、C6/C7/P1/T1/T2/F0；文档 17 项全部处置；close-out 扩为五面 + backport check；零 pyfp3d/ 数值改动 |
 
@@ -181,7 +194,9 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **465 passed + 23 skipped + 2 xfailed**（2026-07-19 B21 freeze 捕获对齐：
+现基线 **465 passed + 25 skipped + 2 xfailed**（2026-07-19 B22 3-D LS 锚锁：
++2 skipped = gated `tests/test_b22_ls_3d_anchors.py`；实测 1127.38 s @16 线程）。
+上一档 465+23+2（2026-07-19 B21 freeze 捕获对齐：
 +1 skipped = `tests/test_b15_ls_newton_freeze.py` 的 gated 3-D 捕获一致性锁；
 实测 1105.87 s @16 线程）。
 上一档 465+22+2（2026-07-18 B19 LS-Newton Jacobian 精确化：
@@ -211,8 +226,10 @@ Track A **尚未提交**的 7 个 A1 测试（`tests/test_a1_instrumentation.py`
 4 ungated；翼身跨声速 ramp 在门控 demo；执行 GB16.6 债）**
 → 463+21+2（A3 审查响应，2026-07-18：+3 reader 锁）→ 465+22+2（B19，2026-07-18：
 +2/+1 = `test_b19_jacobian_3d.py`；B20 重基线 2026-07-19 复测不变）
-→ **465+23+2（B21 freeze 捕获对齐，2026-07-19：+1 skipped = gated 3-D 捕获锁；
-实测 1105.87 s @16 线程）**。
+→ 465+23+2（B21 freeze 捕获对齐，2026-07-19：+1 skipped = gated 3-D 捕获锁；
+1105.87 s @16 线程）
+→ **465+25+2（B22 3-D LS 锚锁，2026-07-19：+2 skipped = gated
+`test_b22_ls_3d_anchors.py`；实测 1127.38 s @16 线程）**。
 
 ## 长期挂起项（勿反复重提）
 
@@ -232,12 +249,12 @@ Track A **尚未提交**的 7 个 A1 测试（`tests/test_a1_instrumentation.py`
 - 后掠 TE Kutta 探针跨站共享（P5 记录）；`element_densities` mixed-plain junk
   权重修复（B8 backlog 记录未排期）；B14 ✓（2026-07-17 建成，`precond="schur"`）——
   剩余未建 = fine 内存受限路线（AMG O(n) + 薄带 LU，无全尺寸 splu）。
-- **N3 流程缺口（B20 记录、Kimi 2026-07-19 复确认、B21 后仍开放）**：3-D LS 核心
-  数字（M6 ramp 的 m_final/γ/M_max/钳位计数）不受任何测试锁定——重基线移动它们时
-  套件不报警（B15 的测试全在 2.5-D）。建议给核心数字加 gated 锁；B21 只锁了
-  freeze 捕获不变式这一条。另：B15/B14 demo 需按 B21 数字刷新（recorded
-  follow-up）；M6 medium M_max 2.48 仍只有 LS-vs-LS 共模验证（conforming 记录
-  1.995，不同网格族——开放跨模型问题）。
+- **N3 流程缺口 ✓ 已由 B22 关闭（2026-07-19）**：3-D LS 核心数字（M6 coarse/medium
+  ramp 的 m_final/γ/M_max/钳位）现由 `tests/test_b22_ls_3d_anchors.py` 的 gated
+  绝对锚锁重解+断言——下一次无声 re-baseline 会使套件报警；B15/B14 demo 已按
+  B21 数字刷新（20/20、7/7）。仍开放：M6 medium M_max 2.4818 只有 LS-vs-LS 共模
+  验证（conforming 记录 1.995 是**跨网格族**比较，勿引作缺陷；同族核对 = 便宜
+  A-track 小项，见 analysis/next_phase_priorities_2026-07-19.md §4）。
 
 
 > **V14.6 的两组数字（A3 2026-07-18 溯源注）**：跨模型一致性同时以 **0.17%/0.36%**（对 A1 缓存的 LS 全精度值，V14.6 行）和 **0.15%/0.34%**（对 `run_demo.py` 中四位小数的 `LS_REF` 常量，G14.7 行）出现，两者都在已提交的 `checks.csv` 里。**这是同一次测量**，~0.02pp 之差是参照值舍入，对 "< 1%" 结论无影响；引用时以全精度的 **0.17%/0.36%** 为准。

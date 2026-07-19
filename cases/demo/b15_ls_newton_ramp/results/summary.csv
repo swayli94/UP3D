@@ -1,13 +1,14 @@
 part,case,method,wall_s,n_iter,residual,converged,gamma,m_max,clamped
 GB15.2,NACA coarse M0.75,live,,60,2.840e-07,0,0.218804,1.3421,
 GB15.2,NACA coarse M0.75,frozen,,22,1.165e-12,1,0.218809,1.3420,
-GB15.3,NACA coarse M0.80 a1.25,picard,41.7,962,1.552e-05,0,0.190374,1.3820,
-GB15.3,NACA coarse M0.80 a1.25,newton,7.7,48,3.101e-12,1,0.212445,1.3924,
+GB15.3,NACA coarse M0.80 a1.25,picard,41.6,962,1.552e-05,0,0.190374,1.3820,
+GB15.3,NACA coarse M0.80 a1.25,newton,7.8,48,3.101e-12,1,0.212445,1.3924,
 GB15.3,NACA coarse M0.80 a1.25,newton+interm_tol,6.6,38,3.101e-12,1,0.212445,1.3924,
-GB15.4,  level M0.6000,newton (assignment_cycle),,5,1.100e-13,1,0.069381,1.3887,0/0
-GB15.4,  level M0.6500,newton (assignment_cycle),,7,5.549e-12,1,0.071347,1.5443,0/0
-GB15.4,  level M0.7000,newton (None),,80,9.126e-14,0,0.073809,1.7049,0/0
-GB15.4,  level M0.6750,newton (None),,80,8.327e-14,0,0.072504,1.6218,0/0
-GB15.4,  level M0.6625,newton (None),,80,9.204e-14,0,0.071909,1.5822,0/0
+GB15.4,  level M0.6000,newton (tol),,3,1.430e-13,1,0.069381,1.3885,0/0
+GB15.4,  level M0.6500,newton (assignment_cycle),,7,5.549e-12,1,0.071347,1.5441,0/0
+GB15.4,  level M0.7000,newton (assignment_cycle),,10,1.017e-13,1,0.073809,1.7062,0/0
+GB15.4,  level M0.7500,newton (assignment_cycle),,12,8.361e-11,1,0.077018,1.9017,0/0
+GB15.4,  level M0.8000,newton (assignment_cycle),,9,4.454e-11,1,0.081594,2.1672,0/0
+GB15.4,  level M0.8400,newton (assignment_cycle),,14,9.048e-14,1,0.088343,2.4818,0/1
 GB15.4,M6 medium M0.84 wake-free,picard (committed),2304.7,,1e-5..1e-4 (plateau),0,,2.4549,
-GB15.4,M6 medium M0.84 wake-free,newton ramp,1328.6,252,9.204e-14,0,0.071909,1.5822,
+GB15.4,M6 medium M0.84 wake-free,newton ramp,510.7,55,9.048e-14,1,0.088343,2.4818,

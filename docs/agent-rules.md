@@ -1,6 +1,33 @@
 # pyFP3D Agent Rules
 
-Current phase: **B21 ✓ CLOSED 2026-07-19 (NEW; executes the 2026-07-19 Kimi
+Current phase: **B22 ✓ CLOSED 2026-07-19 (NEW; executes B21's recorded
+follow-up + the Kimi-inspection N3/§2/§5 items; no `pyfp3d/` change): the
+B21-state evidence is refreshed and the 3-D LS numbers are finally
+test-locked.** ★ **GB22.1** B15 demo **20/20** (was 17/20 under B20; caches
+deleted, zero `cached` lines): medium γ 0.088343 / M_max 2.4818 / |R|
+9.048e-14 / 0 lim/1 flr / 6/6 levels / **511 s = 4.51×** vs the committed
+Picard — bit-consistent with `n1_freeze_fix_sweep.csv`. ★ **GB22.2** B14 demo
+**7/7** (was 5/7): medium lagged 505 s vs schur **345 s = 1.47×**, precond →
+**1.8 %**, γ 0.088343 both arms; anchors re-pinned; ★ the M6 COARSE ramp also
+moved under B21 (γ 0.0848 → **0.084931**, M_max 1.3684) — the freeze-capture
+patch touches every 3-D freeze-armed ramp; ⚠ B14's demo_report index row had
+been missing since close-out (found + added). ★★ **GB22.3 — N3 CLOSED**:
+`tests/test_b22_ls_3d_anchors.py` (+2 gated) RE-SOLVES the committed M6
+coarse (~35 s) + medium (~9 min) ramps and asserts m_final/γ/M_max/clamps
+absolutely (γ rtol 1e-4 = 20× the measured run-to-run spread, four orders
+below a B20-sized move) — the alarm that did not exist when the suite stayed
+green through two re-baselines in two days. ★ **GB22.4** the re-baseline
+erratum checklist is now process (CLAUDE.md workflow step 5 ★ clause +
+discipline #11). ★ **GB22.5 RECORDED** — next-phase priority analysis
+(`docs/analysis/next_phase_priorities_2026-07-19.md`): **P11 first** (G1.6
+owns three refinement-worsening wounds; the wing-body line has no numerical
+suspects left after B20/B21), LS fine second (B14-ready, but no blocked
+question needs it), Track V after P11 (V1 2.5-D ladder parallelizable), plus
+a cheap M_max same-family cross-check (2.4818-vs-1.995 is currently a
+cross-FAMILY comparison — do not quote it as a defect). **Next phase =
+user's call.**
+
+**B21 ✓ CLOSED 2026-07-19 (NEW; executes the 2026-07-19 Kimi
 second-round inspection's N1 finding + the D1–D10 doc-errata wave):
 `freeze_side_state` was the ONE consumer of the side q²/ρ path the B20 patch
 missed** — it captured the frozen (upstream, branch) selection on the
@@ -36,8 +63,8 @@ relabeled B17-not-B16; B17 medium Newton **0.2114**; B16 post-B20 number
 shifts disclosed; demo_report B19/B20/B21 rows + design_track_b **§19–§21**
 so the numerics spec describes the SHIPPED discretization; M2 ledger ✓;
 track_a A3 header + P2-backlog pointer; PROJECT_STRUCTURE tree +
-`cases/analysis/`; N4 stale comments). Open process gap N3 stands: 3-D LS
-numbers still have no ungated test locks.
+`cases/analysis/`; N4 stale comments). The N3 process gap (3-D LS numbers
+unlocked) was closed the same day by B22's gated anchor locks (above).
 
 **B20 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes B19 Leg
 B): mixed-side plain elements can now take their density from the MAIN field,
@@ -430,7 +457,11 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   the apparent M6-medium regression was B20's own patch gap (resolved by B21)
   · **B21 ✓ CLOSED 2026-07-19** — N1 freeze-capture alignment RESTORES the
   M6-medium M0.84 ramp (γ 0.088343, res 9e-14, 515 s); GB20.7 overturned;
-  3-D capture lock added (verified failing pre-fix).
+  3-D capture lock added (verified failing pre-fix) · **B22 ✓ CLOSED
+  2026-07-19** — B15 demo 20/20 + B14 7/7 refreshed on the B21 state (coarse
+  ramp γ 0.084931 disclosed); **N3 closed** via gated absolute anchor locks
+  (`test_b22_ls_3d_anchors.py`); re-baseline erratum checklist = process;
+  next-phase analysis recommends P11 (user's call).
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -503,12 +534,21 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    (footer AND the directory trees)**, and the `cases/*/README.md` row. The
    2026-07-17 audit found 17 consistency defects, most of them exactly the
    last two surfaces. Full checklist in CLAUDE.md workflow step 5.
+11. **A re-baseline needs an erratum checklist, not just new evidence** (B22,
+   from the 2026-07-19 inspection — its D1/D2/D7/D8 stale-doc findings were
+   all products of this gap). When regenerated evidence moves committed
+   numbers, grep the moved values across docs/ and correct or annotate EVERY
+   old-section quote in the same commit; the five-surface ritual only covers
+   new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **465 passed + 23 skipped + 2 xfailed** (2026-07-19, B21
+Baseline: **465 passed + 25 skipped + 2 xfailed** (2026-07-19, B22 3-D LS
+anchor locks, +2 skipped = the gated `tests/test_b22_ls_3d_anchors.py`;
+**measured 1127.38 s @16 threads**).
+Previous: 465 + 23 + 2 (2026-07-19, B21
 freeze-capture alignment, +1 skipped = the gated 3-D freeze-capture lock
 `test_freeze_capture_matches_live_density_3d` in
-`tests/test_b15_ls_newton_freeze.py`; **measured 1105.87 s @16 threads**).
-Previous: 465 + 22 + 2 (2026-07-18, B19 LS-Newton
+`tests/test_b15_ls_newton_freeze.py`; measured 1105.87 s @16 threads);
+465 + 22 + 2 (2026-07-18, B19 LS-Newton
 Jacobian exactness, +2 passed / +1 skipped = `tests/test_b19_jacobian_3d.py`
 (2 structural locks + 1 gated 3-D FD gate); measured 1101.50 s @16 threads);
 463 + 21 + 2 (2026-07-18, A3 inspection response, +3 passed =

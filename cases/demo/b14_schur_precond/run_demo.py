@@ -94,9 +94,13 @@ M6_SUB, M6_TRANS = 0.5, 0.84
 
 # Committed context numbers -- quoted, never re-derived here.
 ILU_MEDIUM_GAMMA = -136.99      # B11 solver_ab.csv: the divergence B14 escapes
-GB15_GAMMA = 0.088338           # committed M6 medium M0.84 Newton-ramp state
-GB15_MMAX = 2.4938              # (cases/demo/b15_ls_newton_ramp/summary.csv)
-GB15_WALL = 657.4               # its committed wall clock (different session)
+# B21 re-baseline (2026-07-19): the committed GB15.4 state is now the post-N1
+# freeze-capture-fix one (n1_freeze_fix_sweep.csv; pre-B20 values were
+# gamma 0.088338 / M_max 2.4938 / 657.4 s -- the B20-era stall at M0.6625 was
+# B20's own patch gap, overturned by B21).
+GB15_GAMMA = 0.088343           # committed M6 medium M0.84 Newton-ramp state
+GB15_MMAX = 2.4818              # (c1_ls_jacobian_fd/results/n1_freeze_fix_sweep.csv)
+GB15_WALL = 515.3               # its committed wall clock (different session)
 A1_PRECOND_PCT = 42.6           # A1: LS Newton M6 medium M0.84 precond share
 
 checks = CheckList("B14 -- Schur+AMG structural preconditioner")

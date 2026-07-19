@@ -74,10 +74,10 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **465 passed + 23 skipped +
-   2 xfailed** (2026-07-19, B21 freeze-capture alignment, +1 skipped = the
-   gated 3-D freeze-capture lock in `tests/test_b15_ls_newton_freeze.py`;
-   measured 1105.87 s @16 threads;
+3. Full suite: `pytest tests/` — current baseline **465 passed + 25 skipped +
+   2 xfailed** (2026-07-19, B22 3-D LS anchor locks, +2 skipped = the gated
+   `tests/test_b22_ls_3d_anchors.py`;
+   measured 1127.38 s @16 threads;
    the full lineage lives in [docs/overview.md](docs/overview.md), do not
    re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until
@@ -106,6 +106,15 @@ resolve through one hop.
    answer in the phase entry — "N/A because ..." is a fine answer, silence is
    not. Two B15-era LS robustness fixes sat un-backported for three phases
    until an external review found them (A3 / kimi C2, C3).
+   ★ **Re-baseline erratum checklist** (added by B22 after the 2026-07-19
+   inspection: its D1/D2/D7/D8 findings were ALL products of this rule not
+   existing). The five-surface list governs NEW sections; it does not catch
+   OLD sections quoting numbers a re-baseline just superseded. So any commit
+   that regenerates committed evidence must carry, in the phase entry, a
+   checklist of every doc location that quotes the old numbers (grep the
+   moved values — e.g. `grep -rn "0.2115\|2.4938" docs/`), each one either
+   corrected in place or annotated "(pre-X value; superseded, see Y)". A
+   number left standing silently is a future audit finding.
 6. **Cost caution — do not recompute expensive artifacts casually.** Some
    evidence is committed precisely because regenerating it is slow: the P4 heavy
    demo figures (`cases/demo/p4_transonic/run_demo.py` under

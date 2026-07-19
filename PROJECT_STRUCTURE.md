@@ -497,11 +497,11 @@ tests/                     # Unit and gate tests
                                       #   (F=0.8 ⇒ 0.21×, not 0.8× — the trap that makes r_c
                                       #   have to stay small)
 
-(This tree covers P0–P13 only. The suite has **61 test files** as of
+(This tree covers P0–P13 only. The suite has **62 test files** as of
 2026-07-19: also test_p14_te_pressure, test_a1_instrumentation,
-test_m2_wingbody, test_m5_round_tip, test_b1..test_b19 and the mesh/post
-unit files. `ls tests/test_*.py` is the authoritative list — do not read a
-missing entry here as a missing test.)
+test_m2_wingbody, test_m5_round_tip, test_b1..test_b19, test_b22_ls_3d_anchors
+and the mesh/post unit files. `ls tests/test_*.py` is the authoritative list —
+do not read a missing entry here as a missing test.)
 
 artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.1/                 # Volume conservation heatmap
@@ -965,18 +965,21 @@ G14.1–G14.7 ✓; the conforming path now MATCHES level-set (cl_p/cl_KJ
 0.15%/0.34%), and the +4.85% cl_KJ move off the probe locks closed 69% of
 P9's 0.019 gap**; Track M — M0–M5 ✓ (M2 ✓ — its solver leg was closed by B9
 on 2026-07-17, both wake models now run on the wing-body); Track B —
-B1–B9, B11–B21 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
+B1–B9, B11–B22 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
 `pin_gamma`, B18 wing-body transonic, B19 LS-Jacobian exactness**, all
 2026-07-18; **B20 mixed-plain main-field density ADOPTED PERMANENTLY +
 re-baselined, B21 N1 freeze-capture fix restoring the M6-medium M0.84 ramp —
-GB20.7's "real capability loss" verdict overturned**, 2026-07-19); Track V —
+GB20.7's "real capability loss" verdict overturned — and B22 evidence
+refresh (B15 demo 20/20, B14 7/7) + gated 3-D anchor locks closing the N3
+gap**, 2026-07-19); Track V —
 designed, not started; Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18** (response
 to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **465 passed + 23 skipped + 2 xfailed** (2026-07-19, B21;
-measured 1105.87 s @16 threads; heavy
+Default suite: **465 passed + 25 skipped + 2 xfailed** (2026-07-19, B22;
+measured 1127.38 s @16 threads; heavy
 transonic/Newton gates behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests
-skip unless the gitignored M6 meshes are regenerated (~30 s); the +1 skipped
-is B21's gated 3-D freeze-capture lock.
+skip unless the gitignored M6 meshes are regenerated (~30 s); the newest
+skips are B21's gated freeze-capture lock (+1) and B22's gated 3-D anchor
+locks (+2).
