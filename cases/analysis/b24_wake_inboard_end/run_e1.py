@@ -6,6 +6,11 @@ Legs (LS Picard M0.5, freestream+pin_gamma, the b23 recipe):
                   caches, loaded read-only, measured with the SAME code.
   B1 (treatment): te_polyline(extend="waterline") -- the sheet's inboard
                   free edge pushed to the far field.
+  B3 (fallback):  same, lifted off the skin by delta (radial "cone") --
+                  the pre-registered R1 mitigation. Executed after E1 v2
+                  showed B1 kills the junction pocket but ignites a
+                  stronger tail-strip release spike (M 5.6-78 at
+                  x~2.44-2.48, z~r_tail; medium a=3.06 non-converged).
 
 Pre-registered criteria:
   E1: B corridor Mmax <= 1.3 AND corridor n_sup = 0 (pocket GONE), or the
@@ -35,13 +40,17 @@ from wb24 import (ALPHA_REF, BW_LADDER, LS_MESH_DIR, M_INF, OUT, X_TAIL,
 #: contamination source from the extension); alpha=1 skipped (D1 showed the
 #: transition already).
 LEGS = {"A": {"medium": [0.0, 2.0, ALPHA_REF], "coarse": [0.0, ALPHA_REF]},
-        "B1": {"medium": [0.0, 2.0, ALPHA_REF], "coarse": [0.0, ALPHA_REF]}}
+        "B1": {"medium": [0.0, 2.0, ALPHA_REF], "coarse": [0.0, ALPHA_REF]},
+        "B3": {"medium": [0.0, 2.0, ALPHA_REF], "coarse": [0.0, ALPHA_REF]}}
+
+#: B3 cone lift per level (pre-registered fallback values).
+DELTA = {"B3": {"medium": 0.03, "coarse": 0.06}}
 
 
 def main():
     only = sys.argv[1:] or None
     rows = []
-    for side in ("A", "B1"):
+    for side in ("A", "B1", "B3"):
         for level, alphas in LEGS[side].items():
             if only and f"{side}_{level}" not in only and side not in only:
                 continue
@@ -49,7 +58,9 @@ def main():
             print(f"=== E1 {side} {level}: {len(mesh.elements)} tets, "
                   f"alphas={alphas} ===", flush=True)
             for a in alphas:
-                rec, mvop, wls = solve_side(mesh, level, side, a)
+                rec, mvop, wls = solve_side(mesh, level, side, a,
+                                            delta=DELTA.get(side, {}).get(
+                                                level, 0.0))
                 m = measure_e1(mesh, mvop, wls, rec["phi_ext"], a, level)
                 rows.append(dict(side=side, level=level, alpha=a,
                                  converged=rec["conv"], n_outer=rec["n"],
@@ -100,9 +111,9 @@ def _write_w2(rows):
 
 def _write_fig(rows):
     fig, ax = plt.subplots(2, 2, figsize=(13, 9))
-    style = {"A": ("o", "--"), "B1": ("s", "-")}
+    style = {"A": ("o", "--"), "B1": ("s", "-"), "B3": ("^", "-.")}
     for level, col in (("coarse", "tab:blue"), ("medium", "tab:red")):
-        for side in ("A", "B1"):
+        for side in ("A", "B1", "B3"):
             rr = sorted((r for r in rows
                          if r["level"] == level and r["side"] == side),
                         key=lambda r: r["alpha"])
