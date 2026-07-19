@@ -1,6 +1,48 @@
 # pyFP3D Agent Rules
 
-Current phase: **B22 ✓ CLOSED 2026-07-19 (NEW; executes B21's recorded
+Current phase: **P11 ✓ CLOSED 2026-07-19 (NEWEST; user-directed, opened +
+closed same day; the sphere leg of the curved-wall-element route): the DP1
+curved-element route is a measured NEGATIVE, and G1.6 is RE-ATTRIBUTED.**
+★★ **G11.1 NOT MET**: a *verified* curved wall-adjacent layer
+(`pyfp3d/solve/curved_wall.py` — tet10 geometry via `closest_point_normal`
+midpoint projection, mapped-P1 field, ΔA delta assembly; opt-in
+`stiffness_delta` on `solve_laplace`, default bit-identical; planar null test
+ΔA ≡ 0 bitwise, quadrature = P1 reference to 1.3e-15) moves the medium sphere
+only **11.56% → 11.33%** = the G1.4 boundary-data oracle ceiling. The
+pre-registered risk FIRED and is the mechanism: mapped-P1 on quadratic
+geometry loses linear reproduction at **O(h)** (measured 0.138 max coarse) —
+the same order as the O(h) facet-normal error it removes. New dead route: do
+not re-propose superparametric (mapped-P1) curved wall elements. ★★ **G11.2
+negative + premise REFUTED — the re-attribution headline**: the committed
+sweep script replicates the P1-era φ order collapse exactly (flat
+**0.88/0.56/0.42**; curved 0.80/0.50/0.39 — curving restores nothing), and
+the controls show the collapse was never geometric: a structured icosphere
+shell with the SAME flat facets converges at order **1.67/1.98** (2.14% max
+Cp at h≈0.036), and at fixed h_min=0.03 refining ONLY the far mesh drops
+wall-φ error **3.17×** (argmax r=1.53 → wall; order restored to **1.89**) —
+the collapse is the **fixed-bulk-mesh pollution floor** of a single-variable
+h_min sweep. ⇒ **the medium mesh's 11.6% ≈ the intrinsic P1-field max-norm
+capability at h=0.08** (structured control ≈11% there); geometric-crime share
+≈0.2 pp; recovery ≈0.2–0.5 pp (unchanged). The 2%-max-at-medium bar demands
+O(h²) wall velocity at h=0.08 — beyond ANY P1-field method on ANY mesh.
+**G1.6's strict xfail STAYS**; PROJECT_STRUCTURE "Known gaps" + the G1.6 row
+carry the erratum. ★ **Route fork recorded (= user's call)**: (a) Option C
+re-spec with a measured PASSING form (all-scales-refined order ≥1.8 + mean-Cp
+< 1% at h_min 0.03 — measured 1.89–1.98 / 0.60%); (b) isoparametric P2 wall
+layer (the only route to the literal criterion); (c) accept as a permanent
+recorded limitation. ★ **Wing-body caveat**: the "three wounds, one G1.6 root
+cause" table (next_phase_priorities) lost its sphere anchor — GB9.4/GB20.5
+worsen-with-refinement is qualitatively different behaviour and needs its own
+discriminator before "G1.6 class" is quoted again. ★ Backport check: N/A —
+opt-in Laplace path only, `newton.py`/`newton_ls.py` untouched. Evidence:
+demo `cases/demo/p11_curved_walls/` (14 PASS + 2 XFAIL, ~4 min warm; sweep
+meshes gitignored, ~8 min first run), tests `tests/test_p11_curved_walls.py`
+(8, ungated), sweep/control CSVs committed. **Next phase = user's call**
+(the G1.6 route fork above, or the standing LS-fine / Track-V ordering from
+the priorities analysis — whose sphere-anchor caveat is now annotated in
+place).
+
+**B22 ✓ CLOSED 2026-07-19 (executes B21's recorded
 follow-up + the Kimi-inspection N3/§2/§5 items; no `pyfp3d/` change): the
 B21-state evidence is refreshed and the 3-D LS numbers are finally
 test-locked.** ★ **GB22.1** B15 demo **20/20** (was 17/20 under B20; caches
@@ -410,7 +452,10 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
 ## Track status (one line each; authority = docs/roadmap/*.md ledgers)
 
 - **Track P** ([track_p.md](roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
-  xfail) · P10 ◐ (G10.1 open) · P11 conditional-not-opened · P13 ◐ (G13.3
+  xfail, root cause RE-ATTRIBUTED by P11) · P10 ◐ (G10.1 open) · **P11 ✓
+  CLOSED 2026-07-19** (curved wall elements measured NEGATIVE; G1.6 =
+  intrinsic P1 capability at h=0.08, not the wall crime; route fork = user's
+  call — see the current-phase block) · P13 ◐ (G13.3
   transonic NEGATIVE-open) · **P14 ✓ CLOSED 2026-07-17** (pressure-equality
   Kutta estimator, from A2 — S1 jitter + S2 TE Cp gap both gone, and the
   conforming path now matches level-set on lift; G14.1–G14.7 ✓).
@@ -541,10 +586,13 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **465 passed + 25 skipped + 2 xfailed** (2026-07-19, B22 3-D LS
+Baseline: **473 passed + 25 skipped + 2 xfailed** (2026-07-19, P11 curved
+walls, +8 passed = the ungated `tests/test_p11_curved_walls.py`;
+**measured 1124.94 s @16 threads**).
+Previous: 465 + 25 + 2 (2026-07-19, B22 3-D LS
 anchor locks, +2 skipped = the gated `tests/test_b22_ls_3d_anchors.py`;
-**measured 1127.38 s @16 threads**).
-Previous: 465 + 23 + 2 (2026-07-19, B21
+measured 1127.38 s @16 threads);
+465 + 23 + 2 (2026-07-19, B21
 freeze-capture alignment, +1 skipped = the gated 3-D freeze-capture lock
 `test_freeze_capture_matches_live_density_3d` in
 `tests/test_b15_ls_newton_freeze.py`; measured 1105.87 s @16 threads);

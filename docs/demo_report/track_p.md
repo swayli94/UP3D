@@ -83,7 +83,10 @@ stagnation at the poles, suction band at the equator (measured wall speed
 
 The G1.6 gap (11.6% max wall Cp vs 2% gate) is *root-caused, not mysterious*:
 the natural BC is satisfied on flat polyhedral facets instead of the true
-curved sphere (variational crime). The oracle experiment reproduces the
+curved sphere (variational crime) *(P11 erratum 2026-07-19: this mechanism
+is OVERTURNED by measurement — see §P11 below; the oracle numbers next are
+correct and were, in hindsight, the first evidence the geometric share is
+tiny)*. The oracle experiment reproduces the
 recorded ceiling exactly (uncorrected 0.1156 → t-form 0.1164 / full-flux
 0.1133): even feeding the *exact analytic gradient* into a boundary-data
 correction moves the error by only 0.23 percentage points, because on
@@ -1827,3 +1830,67 @@ at a rough Picard-5 seed, so σ-freeze records the flip count
 (`kutta_sigma_sign_flips`) instead of raising — σ is merit weighting only (it
 cancels in the elimination, `test_newton_pressure_sigma_independence`), and the
 per-step exact D carries the true signs.
+
+---
+
+## P11 — Curved wall-adjacent elements: the measured negative, and the re-attribution of G1.6 (`cases/demo/p11_curved_walls/`, 14 PASS + 2 XFAIL, 2026-07-19)
+
+Opened and closed the same day (user-directed; the sphere leg only — sharp
+edges and the wing-body/compressible path stay out per design.md §4.1 and the
+§P11 scope). Delivered code: `pyfp3d/solve/curved_wall.py` (tet10-style
+quadratic geometry on every tet containing a wall edge, via
+`closest_point_normal` midpoint projection; mapped-P1 field; the element
+stiffness re-integrated by quadrature and applied as a sparse delta
+`A_curved = A_P1 + ΔA`) and an opt-in `stiffness_delta` argument on
+`solve_laplace` (default `None` = bit-identical legacy path). Locks:
+`tests/test_p11_curved_walls.py` (8).
+
+**The machinery is verified before the verdict is trusted (G11.3/G11.4).**
+Flat-geometry quadrature equals the independent P1 reference assembly to
+1.3e-15; a planar wall with a planar projection produces ΔA ≡ 0 *bitwise*
+(curved and flat share one code path — this null test also caught, on its
+first run, that this codebase guarantees no tet orientation, so the Jacobian
+guard is sign-aware); deg2-vs-deg3 quadrature moves max Cp error by 5.5e-9;
+the curved layer measurably removes the chordal sliver volume (coarse 0.0603,
+medium 0.0098) with O(h²) midpoint offsets (1.63e-2 / 2.35e-3).
+
+**G11.1 — NOT MET (XFAIL, recorded negative).** Medium sphere max |Cp err|:
+flat 0.1156 → curved **0.1133** — the same value as the G1.4 exact-data
+boundary-flux oracle ceiling, and 5.7× the 2% gate. The pre-registered
+superparametric risk is the mechanism, premise-locked in the tests: the
+mapped-P1 basis on quadratic geometry fails to reproduce u = x with gradient
+deviation **0.138 max** (coarse) — O(h), the same order as the O(h)
+facet-normal error the curving removes. `g11_1_ab.csv`,
+`g11_1_meridian_ab.png` (the flat and curved point clouds overlap).
+
+**G11.2 — negative as pre-registered, and its premise is refuted.** The clean
+h_min sweep (0.08/0.05/0.03/0.02, other parameters fixed) now exists as a
+committed script and replicates the P1-era evidence *exactly*: flat wall-φ
+orders **0.88 / 0.56 / 0.42**. The curved layer does not restore them
+(0.80 / 0.50 / 0.39). What does: **E6** — an icosphere-extruded structured
+shell with the SAME flat-facet wall converges at **1.67 / 1.98** and reaches
+**2.14% max Cp at h≈0.036** (993k nodes); **E8** — at fixed h_min = 0.03,
+refining ONLY the far mesh (h_max 3.0 → 1.0) drops wall φ error **3.17×**
+(6.47e-3 → 2.04e-3), moves its argmax from **r = 1.53** (the coarsening
+transition zone) back to the wall, and restores order **1.89** between medium
+and the far-refined mesh — with zero curved elements. The "decreasing
+convergence order" that anchored the variational-crime attribution was the
+fixed-bulk-mesh pollution floor of a single-variable sweep.
+`g11_2_sweep.csv`, `e6_ico_control.csv`, `e8_bulk_floor.csv`,
+`p11_negative_and_reattribution.png`.
+
+**Headline.** Two independent geometric fixes (exact-data flux correction,
+curved elements) agree the wall geometric crime is worth ≈0.2 pp of the
+medium mesh's 11.6%; the structured control interpolates to ≈11% at h = 0.08.
+**The medium sphere error is the intrinsic P1-field max-norm capability at
+that resolution.** The 2%-max-at-medium criterion demands O(h²)-accurate wall
+velocity at h = 0.08 — beyond any P1-field method on any mesh. G1.6's strict
+xfail stays; the close-out route fork (Option C re-spec with a measured
+passing form — all-scales-refined order ≥ 1.8, mean Cp < 1% at h_min 0.03
+(measured 1.89–1.98 and 0.60%) — vs an isoparametric P2 wall layer vs
+accepting the limitation) is the user's call. The wing-body "G1.6-class"
+attribution (GB9.4/GB20.5) lost its sphere anchor and needs its own
+discriminator before being quoted again.
+
+Runtime: ~231 s warm (16 threads); first run regenerates the gitignored sweep
+meshes `cases/meshes/sphere_shell/{h05,h03,h02,h03_far10}.msh` (~8 min).

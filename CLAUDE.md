@@ -22,7 +22,10 @@ resolve through one hop.
   transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
   mixed-plain main-field density ADOPTED PERMANENTLY + re-baselined and B21
   N1 freeze-capture fix (restores the M6-medium M0.84 ramp; GB20.7's
-  "capability loss" verdict overturned), both ✓ CLOSED 2026-07-19** —
+  "capability loss" verdict overturned), both ✓ CLOSED 2026-07-19; **P11
+  curved wall elements ✓ CLOSED 2026-07-19 in track_p — measured NEGATIVE,
+  G1.6 re-attributed to intrinsic P1 capability at h=0.08 (not the wall
+  variational crime), route fork = user's call** —
   `track_v.md` V1–V4 viscous, designed-not-started, `track_a.md` A1–A3
   verification & analysis; **A3 ✓ CLOSED 2026-07-18** = the response to the
   2026-07-17 independent inspection (docs/inspection/; the 2026-07-19
@@ -74,10 +77,10 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **465 passed + 25 skipped +
-   2 xfailed** (2026-07-19, B22 3-D LS anchor locks, +2 skipped = the gated
-   `tests/test_b22_ls_3d_anchors.py`;
-   measured 1127.38 s @16 threads;
+3. Full suite: `pytest tests/` — current baseline **473 passed + 25 skipped +
+   2 xfailed** (2026-07-19, P11 curved walls, +8 passed = the ungated
+   `tests/test_p11_curved_walls.py`;
+   measured 1124.94 s @16 threads;
    the full lineage lives in [docs/overview.md](docs/overview.md), do not
    re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until

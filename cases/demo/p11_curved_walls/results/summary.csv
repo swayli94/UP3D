@@ -1,0 +1,8 @@
+metric,value
+medium_cp_max_flat,0.1156
+medium_cp_max_curved,see g11_1_ab.csv
+g14_oracle_ceiling_2026_07_06,0.1133
+flat_sweep_phi_orders,[0.88 0.56 0.42]
+curved_sweep_phi_orders,[0.8  0.5  0.39]
+ico_phi_orders,[1.67 1.98]
+runtime_s,231

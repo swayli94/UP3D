@@ -513,6 +513,13 @@ level, no mesh motion, δ* = 0 bit-identical to the inviscid path (design: DN2
 
 ### 5.1 Boundary-flux correction for the wall geometric error (G1.6 candidate fix routes; gates G1.3–G1.5 + DP1)
 
+> **P11 erratum (2026-07-19, measured — §5.1.3 outcome + PROJECT_STRUCTURE.md
+> "Known gaps" P11 block):** the variational-crime root-cause below is
+> OVERTURNED — the crime's share of the medium-mesh error is ≈0.2 pp; the
+> 11.6% is the intrinsic P1-field max-norm capability at h=0.08, and the
+> sub-first-order sweep signature was a fixed-bulk-mesh floor artifact.
+> §§5.1–5.1.2 are kept verbatim as the design record of their day.
+
 Context (gate G1.6, formerly G1.2, incompressible sphere): the medium-mesh Cp error is ~11.6%
 against a <2% target, root-caused (see PROJECT_STRUCTURE.md "Known gaps") to a
 geometric/variational inconsistency, not to the surface gradient recovery. After
@@ -702,7 +709,10 @@ pass; but with O(h²) gap thickness its payoff is expected second-order-small.
 The accuracy route is curved/isoparametric wall elements as a
 separately-scoped effort — **now the P9 phase** (G9.1 sphere-Cp < 2%; it also
 owns the residual V6 < 1% floor, G9.2), and gate G1.6 is to be redefined per
-Option C.
+Option C. *(Executed 2026-07-19 as phase P11 — measured NEGATIVE, and the
+sphere's "domain perturbation" attribution above is superseded by the §5.1.3
+outcome: the dominant term is plain P1 approximation, the domain term is
+≈0.2 pp.)*
 
 **Option B (escalation if Option A falls short — per §5.1.2 now optional
 pre-study material only): Gap-SBM gap correction.**
@@ -731,6 +741,74 @@ geometric model error out of the code-correctness verification. This conforms to
 the §10 validation-ladder principle of not confounding model error with code
 error. This option does not improve physical accuracy; it only adjusts the
 verification yardstick.
+
+#### 5.1.3 P11 implementation design: curved wall-adjacent elements (2026-07-19)
+
+The DP1 "> 5%" branch's curved-element route, opened as phase P11 (roadmap
+track_p.md §P11; scope = the sphere/Laplace leg first, per
+docs/analysis/next_phase_priorities_2026-07-19.md). Design chosen to make the
+smallest change that moves the *integration domain* — the thing G1.3/G1.4
+proved is actually wrong — while leaving DOFs, sparsity, SPD-ness and every
+committed solver path untouched:
+
+- **Geometry: quadratic (tet10-style) maps on the wall-adjacent layer only.**
+  Collect the edges of the wall triangulation; project each such edge's
+  midpoint onto the true surface through the existing replaceable
+  `closest_point_normal(x)` callback (§5.1, `solve/wall_correction.py` —
+  analytic for sphere/cylinder). Every tet containing ≥ 1 wall edge becomes a
+  *curved* element: its 10-node geometric map uses the projected midpoints on
+  wall edges and straight midpoints elsewhere. Any tet sharing a projected
+  edge contains a wall edge by construction, so shared faces get identical
+  quadratic geometry from both sides — the curved layer is geometrically
+  conforming, no gaps or overlaps. Vertices are body-fitted already; the
+  midpoint offset is O(h²) (≈ h²/8R on a sphere), so the domain error drops
+  from O(h²) to O(h³) and — the actual G1.6 mechanism — the wall-normal error
+  from O(h) to O(h²).
+- **Field: mapped P1 (superparametric).** The scalar φ keeps 4 vertex DOFs per
+  tet; on curved elements the basis is the reference-linear functions composed
+  with the quadratic map. Element stiffness by quadrature,
+  K_ij = Σ_q w_q (J⁻ᵀĝ_i)·(J⁻ᵀĝ_j) |det J(ξ_q)|, with ĝ_i the constant
+  reference gradients and J the (linear-in-ξ) Jacobian of the quadratic map;
+  default rule = the 4-point degree-2 tet rule, cross-checked against the
+  5-point degree-3 rule (G11.4). det J > 0 asserted at every quadrature point.
+- **Assembly: a sparse delta on the standard matrix.** A_curved = A_P1 + ΔA,
+  ΔA = Σ_curved (K_quadrature − K_flat), same 4×4 node blocks ⇒ the CSR
+  pattern is a subset of A_P1's, the sum stays symmetric and (with Dirichlet
+  rows) SPD, and the CG+AMG solve path is reused unchanged. Exposed as an
+  opt-in `stiffness_delta` argument on `solve_laplace` (mirroring
+  `body_source_rhs`); the default path — and therefore every committed result
+  and the V0 freestream gate — is bit-identical.
+- **Pre-registered risk — superparametric consistency.** The mapped-P1 space
+  on a curved element no longer contains physical linear polynomials exactly
+  (only up to the O(h²) map perturbation); freestream exactness inside the
+  curved layer degrades from machine-zero to O(h²). This is confined to the
+  opt-in path (V0 configs are wall-free). If it dominates — discriminator =
+  gate G11.2's φ-convergence-order sweep plus the flat-projection null test
+  G11.3 (planar `closest_point_normal` ⇒ ΔA ≡ 0 bitwise) — the recorded
+  fallback is an isoparametric P2 wall layer (new midside DOFs), which is its
+  own decision point, not a silent escalation.
+- **Out of scope here** (recorded, not forgotten): sharp geometric edges
+  (§4.1 — curved elements cannot regularize them, Track M owns those); the
+  compressible/transonic assembly path and the Kutta/wake ↔ curved-element
+  coupling (the wing-body/fuselage application of the same class, its own
+  phase after the sphere leg lands).
+
+**OUTCOME (measured 2026-07-19, P11 close-out — full record roadmap
+track_p.md §P11; evidence `cases/demo/p11_curved_walls/`).** The route is a
+recorded **NEGATIVE** and the pre-registered risk was the mechanism: the
+mapped-P1 gradient-consistency error is **O(h)** (linear reproduction
+deviation 0.138 max on the coarse sphere), the same order as the facet-normal
+error the curving removes, so medium-sphere Cp moves only 11.56% → 11.33% —
+identical to the G1.4 boundary-data oracle ceiling. The controls
+re-attributed G1.6 itself: a structured shell with the same flat facets
+converges at wall-φ order ~2 (E6), and the h_min-sweep order collapse is the
+fixed-bulk-mesh pollution floor (E8: far-mesh-only refinement at h_min=0.03
+drops wall φ error 3.17×, order 1.89 restored). The 2%-max-at-medium
+criterion demands O(h²)-accurate wall velocity at h = 0.08 — beyond any
+P1-field method on any mesh; the recorded fork (Option C re-spec with a
+measured passing form / isoparametric P2 wall layer / accept the limitation)
+is the user's call. Do not re-propose superparametric (mapped-P1) curved
+elements.
 
 ---
 
@@ -1035,7 +1113,10 @@ ONERA M6 coarse the V6 consistency |CL_p − CL_KJ|/CL_KJ *worsens* with smoothi
 (2.40 % → 3.35 % → 3.88 % for `smooth_passes` 0/1/2): the ±sawtooth largely
 cancels in the surface integral, and the averaging instead smears the true LE
 suction peak, moving CL_p ~1 % further below the trustworthy CL_KJ. So the whole
-V6 floor is the sharp-TE/LE P1 wall gradient (→ P9 curved elements), not the
+V6 floor is the sharp-TE/LE P1 wall gradient (→ P9 curved elements — a stale
+pointer kept for the record: sharp edges are outside curved elements' reach
+per §4.1, P13 re-attributed the M6 tail to tip-cap geometry, and P11
+closed the curved-element route 2026-07-19 as a measured negative), not the
 sawtooth. Recommendation: `smooth_passes > 0` for the reported Cp curve;
 `smooth_passes = 0` for `wall_force_coefficients` (the param stays, opt-in, but
 raw loads are more accurate).

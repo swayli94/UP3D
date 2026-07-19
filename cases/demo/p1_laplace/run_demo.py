@@ -12,12 +12,17 @@ What this shows, per docs/roadmap.md P1 and docs/demo_report.md:
   4. Physical plausibility: the 3D sphere flow field (speed + Cp slice)
      has the right stagnation points, suction band, and fore-aft symmetry.
   5. G1.6 (OPEN, strict xfail in tests): wall Cp vs the analytic
-     1 - (9/4)sin^2(theta); the ~11-12% max error is the root-caused
-     curved-wall variational crime, NOT an unknown bug.
+     1 - (9/4)sin^2(theta); the ~11-12% max error is root-caused, NOT an
+     unknown bug. [P11 erratum 2026-07-19: originally attributed to the
+     curved-wall variational crime; measured wrong -- it is the intrinsic
+     P1-field capability at h=0.08 (crime share ~0.2 pp), see
+     cases/demo/p11_curved_walls/ and PROJECT_STRUCTURE "Known gaps".]
   6. G1.4 oracle negative result (evidence for DP1): even with the EXACT
      analytic gradient fed into the Option A boundary-data correction,
      the Cp error barely moves -- boundary-data corrections are ruled
-     out; the sanctioned route is Option C + curved elements.
+     out; the sanctioned route was Option C + curved elements (the
+     curved-element route was executed by P11 2026-07-19: NEGATIVE,
+     consistently with this oracle's ceiling).
 
 Standalone + self-checking:  python cases/demo/p1_laplace/run_demo.py
 Outputs: cases/demo/p1_laplace/results/{*.png, summary.csv, checks.csv}

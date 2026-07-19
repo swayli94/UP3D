@@ -2,9 +2,13 @@
 Track B / B9 gate GB9.6 (RECORDED, no pass/fail): the fuselage surface-Cp
 discretization-error guardrail.
 
-The fuselage is exactly the smooth-body geometry class where the flat-facet
-natural-BC "variational crime" bites (G1.6: sphere Cp 11.6% at medium,
-saturating ~3.6% under h-refinement). The wing lift gates were exonerated
+The fuselage is exactly the smooth-body geometry class where the G1.6
+wall-Cp error class bites (sphere Cp 11.6% at medium, saturating ~3.6%
+under h-refinement). [P11 erratum 2026-07-19: G1.6's "flat-facet
+variational crime" mechanism is overturned -- the sphere error is intrinsic
+P1 resolution capability + a bulk-mesh sweep floor; this guardrail's
+MEASUREMENTS stand, but read its growth-with-refinement against the P11
+re-attribution before citing a mechanism.] The wing lift gates were exonerated
 only because lift is circulation-dominated -- an argument that does NOT
 cover body SURFACE pressures. So before any B9 wing-body surface-Cp is
 read, this quantifies the error on an ISOLATED body of revolution (the M2

@@ -1,0 +1,3 @@
+level,n_nodes,cp_max_flat,cp_max_curved,cp_max_curved_deg3,cp_mean_flat,cp_mean_curved,n_curved_tets,max_offset
+coarse,3378,0.2305,0.2035,0.2035,0.0746,0.0603,1571,1.632e-02
+medium,16793,0.1156,0.1133,0.1133,0.0237,0.0218,9154,2.349e-03

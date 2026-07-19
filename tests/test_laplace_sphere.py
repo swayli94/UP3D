@@ -18,30 +18,53 @@ with the older linear-only recovery) and only reaches ~4% even at h_min=0.02
 remaining gap is not simply "refine the mesh more," and is left open rather
 than papered over with a loosened threshold.
 
-Root cause (see PROJECT_STRUCTURE.md "Known gaps" for the full investigation
-and evidence): NOT the surface recovery scheme -- an oracle test that feeds
+Root cause -- ERRATUM 2026-07-19 (phase P11; see PROJECT_STRUCTURE.md "Known
+gaps" P11 block and roadmap track_p.md Sec P11 for the measurements): the
+paragraph below was this file's original attribution; its "variational
+crime dominates" mechanism is OVERTURNED by measurement. What P11 found:
+a verified curved wall-adjacent layer (solve/curved_wall.py) moves the
+medium error only 11.56% -> 11.33% (= the G1.4 boundary-data oracle
+ceiling -- the geometric crime is worth ~0.2 pp); the sub-first-order
+"signature" (orders 0.88/0.56/0.42) is the fixed-bulk-mesh pollution floor
+of a sweep that shrinks h_min while h_max stays 3.0 (refining ONLY the far
+mesh at h_min=0.03 drops the wall phi error 3.17x and restores order 1.89);
+and a structured icosphere shell with the SAME flat facets converges at
+~2nd order. The 11.6% is essentially the intrinsic P1-field max-norm
+capability at h=0.08. The gate stays open; the recorded route fork (Option
+C re-spec / isoparametric P2 wall layer / accept) is the user's call.
+
+Original (superseded) attribution, kept for the record: NOT the surface
+recovery scheme -- an oracle test that feeds
 the *exact* analytic potential through the recovery step with no FEM solve at
 all shows the recovery operator's own bias is a small fraction (well under a
 tenth) of the total error at every mesh level tested, for both the linear and
-quadratic recovery schemes. NOT under-resolved bulk mesh either -- tightening
-the far-field mesh at fixed h_min helps a little then plateaus. The dominant
-error source is the volume PDE solve's own accuracy next to the wall: the
+quadratic recovery schemes [STANDS]. NOT under-resolved bulk mesh either --
+tightening
+the far-field mesh at fixed h_min helps a little then plateaus [SUPERSEDED:
+that measurement stopped at ~4% max Cp because the MAX-norm is resolution-
+limited at the wall; the wall-phi floor it left behind IS the bulk mesh,
+per P11/E8]. The dominant
+error source is the volume PDE solve's own accuracy next to the wall [STANDS]:
+the
 natural (zero-flux) BC is satisfied on the flat polyhedral wall-facet
 approximation, not the true curved sphere, a geometric/variational-crime
 inconsistency that pollutes the whole domain through ellipticity and shows up
 as sub-first-order convergence (order ~0.4-0.9, decreasing as h shrinks) of
-the raw nodal potential itself, not just its recovered gradient. A first
+the raw nodal potential itself, not just its recovered gradient [OVERTURNED,
+see the erratum above]. A first
 attempt at a direct fix (a Nitsche/penalty term weakly forcing each
 wall-adjacent tet's own volumetric gradient toward zero along the true
 surface normal) was tried and rejected: it made the error *worse* with
 increasing penalty strength, because a P1 tet spanning from the wall inward
 necessarily has a nonzero radial gradient component representing the
 interior falloff of tangential velocity -- that's correct FEM behavior, not a
-BC violation, so penalizing it fights the physically-correct solution. Closing
+BC violation, so penalizing it fights the physically-correct solution
+[STANDS]. Closing
 this gate for real looks like it needs genuine curved/isoparametric boundary
-elements (curving the wall-adjacent tets' geometric mapping to match the true
-surface) rather than a post-processing or penalty patch; that is a
-substantially larger, separately-scoped effort, not attempted here.
+elements [EXECUTED by P11 2026-07-19: measured NEGATIVE -- superparametric
+mapped-P1 curving swaps one O(h) error for another; an isoparametric P2
+layer (field order raised) is the only remaining route to the literal
+criterion].
 
 The xfail below tracks the *actual* gate criterion so it turns into a hard
 failure (strict=True) the day someone fixes the underlying accuracy issue and
@@ -98,9 +121,11 @@ class TestSphereCp:
         strict=True,
         reason=(
             "Known open gap: max Cp error on the medium mesh is ~11.6% (quadratic "
-            "surface recovery), not <2%. Root cause is the volume PDE solve's "
-            "accuracy at the flat-faceted wall, not the recovery scheme -- see "
-            "module docstring and PROJECT_STRUCTURE.md 'Known gaps'."
+            "surface recovery), not <2%. P11 (2026-07-19) re-attribution: this is "
+            "the intrinsic P1-field max-norm capability at h=0.08 (curved wall "
+            "elements measured a ~0.2 pp geometric share; the 2% bar needs an "
+            "isoparametric P2 wall layer or the Option C gate re-spec) -- see "
+            "module docstring erratum and PROJECT_STRUCTURE.md 'Known gaps'."
         ),
     )
     def test_sphere_cp_medium_mesh(self, mesh_dir):

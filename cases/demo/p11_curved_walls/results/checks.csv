@@ -1,0 +1,17 @@
+gate,check,value,criterion,status,note
+G11.3,planar wall + planar projection -> dA,0.0e+00,== 0 exactly (bitwise),PASS,
+G11.4,coarse: max midpoint offset (O(h^2)),1.63e-02,recorded,PASS,
+G11.4,coarse: chordal sliver volume removed,0.0603,> 0 (domain moved onto the sphere),PASS,
+G11.4,medium: max midpoint offset (O(h^2)),2.35e-03,recorded,PASS,
+G11.4,medium: chordal sliver volume removed,0.0098,> 0 (domain moved onto the sphere),PASS,
+G11.4,coarse: quadrature A/B |deg2 - deg3| on max Cp err,5.8e-07,< 1e-4 (recorded),PASS,
+G11.4,medium: quadrature A/B |deg2 - deg3| on max Cp err,5.5e-09,< 1e-4 (recorded),PASS,
+G11.1,medium curved max |Cp err|,0.1133,< 0.02 (the G1.6 criterion),XFAIL,NOT MET; equals the G1.4 oracle ceiling 0.1133 -- superparametric O(h) consistency replaces the O(h) normal error
+G11.1,curved-vs-flat medium gain,0.0023,recorded (~0.002 = the geometric-crime share),PASS,
+G11.2,flat phi_w orders replicate the P1-era evidence,[0.88 0.56 0.42],== 0.88/0.56/0.42 (+-0.05),PASS,the root-cause sweep now exists as a committed script
+G11.2,curved phi_w per-pair orders,[0.8  0.5  0.39],>= 1.5 each (pre-registered),XFAIL,NEGATIVE: curving does not restore the order -- the collapse is not geometric (see E6/E8)
+E6,structured shell phi_w orders (flat facets!),[1.67 1.98],>= 1.6 each,PASS,the same 'variational crime'; ~2nd order anyway => the crime is not what limits the gmsh family
+E6,structured shell max Cp at h~0.027,0.0214,recorded (~2.1% -- P1 intrinsic capability),PASS,
+E8,phi_w drop from far-mesh-only refinement,3.17x,>= 2x (the sweep floor is bulk pollution),PASS,
+E8,h03 phi-err argmax radius (h_max=3.0),1.53,> 1.2 (transition zone; not the wall),PASS,
+E8,order medium -> far-refined h03,1.89,>= 1.6 (2nd order restored WITHOUT curved elements),PASS,

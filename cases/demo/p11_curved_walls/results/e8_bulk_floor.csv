@@ -1,0 +1,3 @@
+mesh,n_nodes,phi_err_wall_max,phi_err_argmax_radius,cp_max,cp_mean
+h03 (h_max=3.0),178956,6.465204e-03,1.53,0.0558,0.0121
+h03_far10 (h_max=1.0),304688,2.039133e-03,1.00,0.0390,0.0060

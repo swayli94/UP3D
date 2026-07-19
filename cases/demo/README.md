@@ -25,6 +25,7 @@ default); runtimes below are the default (light) path.
 | `p8_capability/` | P8 capability assessment (not a gate; 36/36) | `python cases/demo/p8_capability/run_demo.py` | heavy |
 | `p9_grid_discrimination/` | P9 grid convergence / accuracy-gap discrimination (G9.1–G9.3) | `python cases/demo/p9_grid_discrimination/run_demo.py` | heavy |
 | `p10_newton_usability/` | P10 continuation usability (G10.2/G10.3) | `python cases/demo/p10_newton_usability/run_demo.py` | heavy |
+| `p11_curved_walls/` | **P11** curved wall elements: measured NEGATIVE + G1.6 re-attribution (14 PASS + 2 XFAIL) | `python cases/demo/p11_curved_walls/run_demo.py` | ~4 min warm; +~8 min first run (regenerates the gitignored sphere sweep meshes) |
 | `p13_tip_edge_singularity/` | **P13** tip / wake-edge singularity — see the four scripts below | (below) | (below) |
 | `b3_levelset_lifting/` | Track B B3 lifting solve, implicit Kutta | `python cases/demo/b3_levelset_lifting/run_demo.py` | ~1 min |
 | `b4p5_farfield/` | Track B **B5** far-field A/B (dir name kept from the old numbering) | `python cases/demo/b4p5_farfield/run_demo.py` | ~2 min |

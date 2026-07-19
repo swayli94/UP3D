@@ -29,6 +29,7 @@ def solve_laplace(
     dirichlet_nodes: np.ndarray,
     dirichlet_values: np.ndarray,
     body_source_rhs: Optional[np.ndarray] = None,
+    stiffness_delta=None,
     rtol: float = 1e-10,
     maxiter: int = 500,
 ) -> Dict[str, object]:
@@ -45,6 +46,10 @@ def solve_laplace(
             load vector, or a wall-flux boundary correction
             (solve/wall_correction.py); the physical full-potential equation
             itself has no volumetric source term
+        stiffness_delta: optional sparse (n_nodes, n_nodes) symmetric delta
+            added to the P1 stiffness matrix -- the P11 curved wall-adjacent
+            element correction (solve/curved_wall.py, design.md Sec 5.1.3).
+            None (the default) is the bit-identical legacy path.
         rtol, maxiter: CG convergence controls (see solve.linear.solve_cg_amg)
 
     Returns:
@@ -52,6 +57,8 @@ def solve_laplace(
     """
     n_nodes = len(nodes)
     A = assemble_stiffness_matrix(nodes, elements)
+    if stiffness_delta is not None:
+        A = (A + stiffness_delta).tocsr()
     b = np.zeros(n_nodes, dtype=np.float64) if body_source_rhs is None else np.asarray(
         body_source_rhs, dtype=np.float64
     )
@@ -67,6 +74,8 @@ def solve_laplace(
     # quantity that never vanishes and isn't part of the system actually
     # being solved (that row is overridden by the prescribed value instead).
     residual_full = b - assemble_residual(nodes, elements, phi)
+    if stiffness_delta is not None:
+        residual_full -= stiffness_delta @ phi
     residual_norm = float(np.max(np.abs(residual_full[free])))
 
     return {

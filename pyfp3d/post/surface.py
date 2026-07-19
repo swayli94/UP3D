@@ -610,9 +610,11 @@ def wall_tangential_gradient_quadratic(
     percent off the *total* gate-G1.6 pipeline error (e.g. ~12.0% down to
     ~11.6% on the medium mesh), because the recovery step was never the
     dominant error source: the dominant source is the volume PDE solve's own
-    accuracy next to the curved-but-flat-faceted wall (a geometric/
-    variational-crime consistency error from imposing the natural BC on the
-    polyhedral wall approximation instead of the true curved surface), which
+    accuracy next to the wall (P11 erratum 2026-07-19: originally described
+    here as the flat-facet natural-BC variational crime; measured wrong --
+    curving the wall layer moves the error only 11.56% -> 11.33%, and the
+    dominant term is plain P1 approximation at that resolution, see
+    PROJECT_STRUCTURE "Known gaps" P11 block), which
     this function cannot fix since it only ever sees the already-computed
     nodal phi values, not the operator that produced them.
 

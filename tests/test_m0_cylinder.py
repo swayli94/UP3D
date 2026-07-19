@@ -13,9 +13,11 @@ feeds the existing P1 solver correctly, complementing the lifting NACA0012
 mesh which is the actual M0 deliverable (tests/test_m0_naca0012.py).
 
 Accuracy expectations are calibrated, not aspirational: the wall is a
-flat-faceted approximation of the true circle, i.e. the same curved-wall
-variational crime already root-caused on the G1.6 sphere (see
-PROJECT_STRUCTURE.md "Known gaps"), so wall Cp converges at ~O(h):
+flat-faceted approximation of the true circle (attribution history: first
+called "the same variational crime as the G1.6 sphere"; G1.3 then measured
+the cylinder as ~76% recovery-dominated; P11 (2026-07-19) finally overturned
+the crime mechanism on the sphere itself -- see PROJECT_STRUCTURE.md "Known
+gaps"), and wall Cp converges at ~O(h):
 measured max |Cp err| ~ 0.091 (coarse) -> 0.045 (medium) with quadratic
 surface recovery. Thresholds below assert those measured levels with
 margin, plus monotone improvement under refinement.

@@ -153,3 +153,11 @@ cases/demo/b17_farfield_pin_gamma/results/*.npz
 
 # B18 wing-body transonic demo solution caches (figures+CSVs are the committed evidence)
 cases/demo/b18_wingbody_transonic/results/*.npz
+
+# P11 sphere-shell sweep meshes (local caches; the demo regenerates them,
+# ~8 min: python cases/demo/p11_curved_walls/run_demo.py). coarse/medium.msh
+# stay committed.
+cases/meshes/sphere_shell/h05.msh
+cases/meshes/sphere_shell/h03.msh
+cases/meshes/sphere_shell/h02.msh
+cases/meshes/sphere_shell/h03_far10.msh
