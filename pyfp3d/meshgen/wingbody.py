@@ -630,6 +630,15 @@ def _fillet_junction(gmsh, occ, body, p: FuselageParams,
     INSIDE the body. 6 tools, fused in batches of 3 (a ~60-tool single BOP
     silently merges nothing -- measured).
 
+    STATUS 2026-07-19: geometry-side fuse succeeds, but the smoke mesh
+    (canonical D4 case, h_wall = 0.04, rho = 0.045) put gmsh into a
+    pathological state (> 15 min, RSS runaway past 4 GB where the unfilleted
+    h04 mesh is 46k tets in seconds) -- the fused fairing leaves sliver
+    surfaces that the surface mesher cannot close. Recorded LOW-COST
+    INFEASIBLE per the D3 pre-registered fallback; the parameter stays as
+    the documented dead end (default None keeps the default path
+    bit-identical).
+
     Returns (new_body_dimtags, (n,3) junction-line points) -- the points
     feed the Ball-field strip that keeps the blend resolved (the
     crease-edge refinement field has no edge to hang on once the corner is
