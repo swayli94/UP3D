@@ -1,10 +1,50 @@
 # pyFP3D Agent Rules
 
-Current phase: **B20 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes B19 Leg
+Current phase: **B21 ✓ CLOSED 2026-07-19 (NEW; executes the 2026-07-19 Kimi
+second-round inspection's N1 finding + the D1–D10 doc-errata wave):
+`freeze_side_state` was the ONE consumer of the side q²/ρ path the B20 patch
+missed** — it captured the frozen (upstream, branch) selection on the
+UNPATCHED side field while `newton_side_data` runs `_apply_main_density`
+first, so on 3-D meshes every armed freeze locked a selection the live system
+would not make (probe: **83 upstream + 9 branch** differences at M6 coarse
+seeded M0.70, all aux-touching mixed-plain;
+`docs/inspection/20260719-n1-freeze-probe.py`). ★★ **The one-line fix RESTORES
+the M6-medium M0.84 ramp**: the committed recipe reaches **M0.84** with γ
+**0.088343** (pre-B20 0.088338), M_max 2.4818, res 9.0e-14, **0 lim/1 flr**,
+**515 s** (pre-B20 657 s / 3 clamped) — faster AND cleaner, and freeze_tol
+1e-3/1e-5 agree to 5e-7 (`n1_freeze_fix_sweep.csv`). ⇒ **GB20.7's "real
+capability loss" verdict is OVERTURNED** — the loss was B20's own patch gap,
+not the fix's intrinsic cost — and the "contamination was an unintended
+stabiliser" synthesis is RETIRED. Key mechanism fact: pre-B20 the capture and
+the live sweep were CONSISTENTLY unpatched; **B20's partial patch CREATED the
+inconsistency**; GB20.7's freeze_tol sweep could not see it in principle (it
+varies WHEN the freeze arms, N1 is WHAT it captures — the Kimi §8.3 point).
+**GB15.4's capability clause STANDS** with a small numeric re-baseline
+(B15/B14 demo refresh = recorded follow-up; post-B21 LS envelope: M6 coarse
+AND medium reach M0.84). ★ Test lock
+`test_b15_ls_newton_freeze.py::test_freeze_capture_matches_live_density_3d`
+(gated, premise-asserted, **verified FAILING pre-fix**) — the 2.5-D bitwise
+lock is structurally blind here (0 aux-touching mixed-plain in quasi-2-D).
+★ **Fourth bite from the mixed-plain class** (B8 diagnostic → B19 Jacobian →
+GB19.6 residual → B21 freeze capture) ⇒ design_track_b.md §21 standing rule:
+**every consumer of the side-field q²/ρ must explicitly decide and record its
+density source.** ★ Same commit wave: the Kimi D1–D10 doc errata (B18
+junction-pocket attribution corrected to G1.6 across all faces; B15 success
+narrative bracketed by the two-reversal erratum trail; ledger/status
+contradictions; cond1 **9.1e18** not 6.36e18; the 42/40 re-baseline row
+relabeled B17-not-B16; B17 medium Newton **0.2114**; B16 post-B20 number
+shifts disclosed; demo_report B19/B20/B21 rows + design_track_b **§19–§21**
+so the numerics spec describes the SHIPPED discretization; M2 ledger ✓;
+track_a A3 header + P2-backlog pointer; PROJECT_STRUCTURE tree +
+`cases/analysis/`; N4 stale comments). Open process gap N3 stands: 3-D LS
+numbers still have no ungated test locks.
+
+**B20 ✓ CLOSED 2026-07-18 (NEW, user-directed; executes B19 Leg
 B): mixed-side plain elements can now take their density from the MAIN field,
-and the Leg B hypothesis is answered — as a SPLIT.** New `plain_density` knob on
-`MultivaluedOperator`: `"side"` (**default, bit-identical to every committed
-result**) / `"main"`. ★ **The reporting layer had already made this call** —
+and the Leg B hypothesis is answered — as a SPLIT.** A TEMPORARY `plain_density`
+knob (`"side"` = the old behaviour / `"main"`) was built solely to make the A/B
+below measurable, and was **REMOVED on adoption** (★★ block below) — `main` is
+now hard-coded. ★ **The reporting layer had already made this call** —
 `element_mach2` has defaulted to `mixed_plain="main"` since 2026-07-14 — so B20
 makes the ASSEMBLY agree with the DIAGNOSTIC. ★★ **A workspace-aliasing bug was
 caught by measuring an unexpected result, not explaining it:**
@@ -39,7 +79,10 @@ two velocity fields** — in an element no wake jump even passes through.
 (open process gap). Every moved number went B20's way — B7 M_max 1.453→**1.392**
 and tip Γ −0.0003→**−0.0000**; B16 legacy limited **3690→11**, pin floored
 **3→0** (those 3 were recorded as "B8/G1.6 class, not chased" — they were this
-contamination), medium clamps 42/40→**0/0**; B18 wing-body residual
+contamination); B17 pin_gamma medium clamps 42/40→**0/0** (⚠ erratum
+2026-07-19: earlier drafts mislabeled this row "B16 medium pin" — B16's own
+medium pin was already 0/0 pre-B20) and its Newton cl_p 0.2115→**0.2114**;
+B18 wing-body residual
 6.8e-5→**1.1e-13**; M6 coarse ramp 0.7875-not-converged→**M0.84 converged**.
 B9's cross-model headline (LS 0.2165/0.2175) did not move one digit.
 ★ **ONE regression: M6 medium M0.84** — the ramp reaches **M0.6625 (2/5)**,
@@ -47,22 +90,18 @@ B9's cross-model headline (LS 0.2165/0.2175) did not move one digit.
 ★★ **The old number's validation was COMMON-MODE:** B15 compared M_max against
 the LS *Picard* (2.4549) — both LS solvers read the same contaminated density,
 so it never checked correctness; the conforming record is **1.995**. And the new
-1.5822 is at M0.6625, not M0.84 — not like-for-like. ★★ **GB20.7 ANSWERED (2026-07-19): a REAL capability loss, not a recipe
-mismatch.** `freeze_tol` swept 1e-3→1e-6: the ceiling moves only 0.6625→**0.6750**
-(1e-5/1e-6, and a level starts converging on `tol` instead of escaping via
-`assignment_cycle`) — the hypothesis was directionally right, quantitatively
-insufficient. **Post-B20 LS transonic envelope (M6 wake-free): coarse M0.84
-converged (was 0.7875 not-converged), medium ≈M0.675 (was M0.84).**
-★ **Synthesis: the contamination was an unintended STABILISER** — same pattern
-as GB20.5's wing-body (converges beautifully, climbs less far). The old M0.84
-medium state carried M_max 2.45–2.49, ~25 % above the conforming reference
-**1.995**, and was validated only against the equally-contaminated LS Picard.
-**State it as a trade:** the old code went further into states we now distrust;
-the new code stops earlier and what it produces is clean (0/0 clamps, |R|~1e-13).
-⇒ **GB15.4's "reaches M0.84" is now a NEGATIVE and GB14.4's "== committed
-GB15.4 physics" is superseded** — both need a re-spec against the new envelope
-(G14.7 precedent), left OPEN for the user since it redefines a committed
-capability claim. Bound: only `freeze_tol` was varied.
+1.5822 is at M0.6625, not M0.84 — not like-for-like. ★★ **GB20.7 ANSWERED (2026-07-19) — and OVERTURNED BY B21 the same day (see
+the current-phase block above).** The sweep itself stands: `freeze_tol`
+1e-3→1e-6 moved the ceiling only 0.6625→**0.6750** ⇒ freeze_tol was a
+contributor, not the cause. But its "REAL capability loss" verdict, the
+"contamination was an unintended STABILISER" synthesis, and the "GB15.4 is now
+a NEGATIVE / GB14.4 superseded ⇒ re-spec = user's call" consequence are all
+**RETIRED**: the actual mechanism was N1 (the un-patched freeze capture),
+which the freeze_tol axis cannot see in principle, and fixing it restores
+M0.84 outright. What survives: the old M_max 2.45–2.49 was validated only
+COMMON-MODE against the equally-contaminated LS Picard (conforming record
+**1.995**, different mesh family — still an open cross-model question, B21's
+2.4818 does not close it).
 ★ **Demo-cache trap:** heavy demos reuse gitignored `results/*.npz` — delete the
 LS caches and verify zero `cached` lines, or a re-run is a no-op (it cost me one
 false "B7 unchanged" result). The junction pocket is NOT fixed by any of this
@@ -150,14 +189,19 @@ NOT slivers, the medium mesh is clean; a sharper shock/junction interaction,
 recorded not chased; ★ the conforming wing-body medium ramp needs `freeze_tol`
 raised to the wing-body churn floor 1e-6→1e-5, the B17 lesson). **Level-set** (B15
 freeze-ramp + B17 pin_gamma) does NOT reach transonic on the wing-body: the
-wing-fuselage junction spurious supersonic pocket (**G1.6/GB9.4/B8 mixed-plain**,
-M²≈1.27 already at M0.5) **WORSENS with refinement** — coarse ceiling ~M0.575
-(Mmax 1.44), medium dies at the FIRST transonic level ~M0.5 (Mmax artifact 3.96,
+wing-fuselage junction spurious supersonic pocket (M²≈1.27 already at M0.5)
+**WORSENS with refinement** — at close-out coarse ceiling ~M0.575 (Mmax 1.44),
+medium dies at the FIRST transonic level ~M0.5 (Mmax artifact 3.96,
 nlim 43/nflr 40); the direct analogue of GB9.4's fuselage-lift-grows-with-
 refinement, a closed-negative discretization error (discipline #8), characterized
-not chased. ⇒ **no common transonic Mach at medium** (LS can't leave 0.5), so the
-trustworthy cross-model stays **M0.5 (2.6%)**; a coarse M0.60 transonic
-cross-model was skipped (LS coarse ceiling 0.575 < 0.60). GB18.1 PASS + GB18.2–5
+not chased. ★★ **Erratum by B20/GB20.5 (2026-07-19): the "B8 mixed-plain"
+attribution is measured FALSE** — the pocket is the **G1.6 faceted-geometry**
+error (removing the contamination converged the medium case res 6.8e-5→1.1e-13
+and unclamped a GENUINE Mmax 5.22; the 3.96 was a clamped artifact); post-B20
+coarse ceiling **~M0.55 (Mmax 1.31)**. ⇒ **no common transonic Mach at medium**
+(LS can't leave 0.5), so the trustworthy cross-model stays **M0.5 (2.6%)**; the
+coarse M0.60 cross-model, originally skipped, EXISTS in the re-baselined
+artifact (conf 0.2178 vs LS 0.2174 = 0.2%). GB18.1 PASS + GB18.2–5
 RECORDED. ★ **repays the GB16.6 evidence debt** (spec'd RECORDED but never
 implemented; B18 executes it as a negative). ★ **NO `pyfp3d/` numerics change** —
 pure demo/tests/docs on existing `solve_newton_transonic` +
@@ -180,16 +224,19 @@ genuine BC-determined state, NOT a Newton stall. Fix = `farfield_aux="pin_gamma"
 (aux = host φ∞ − side·γ, jump→γ, refreshed with the live γ — the new default on
 **both** solvers): the triangle closes MONOTONE to conforming (cl_p wing) —
 coarse conf 0.2089 / legacy 0.1853 / pin0 0.2086 / **pin_gamma 0.2087**; medium
-conf 0.2173 / legacy 0.2165 / pin0 0.1690 / **pin_gamma 0.2117 (Picard) = 0.2115
-(Newton)**, both solvers agreeing 0.1%. GB17.1–17.4 ✓, GB17.5/17.6 RECORDED;
+conf 0.2173 / legacy 0.2165 / pin0 0.1690 / **pin_gamma 0.2117 (Picard) = 0.2114
+(Newton; 0.2115 pre-B20)**, both solvers agreeing 0.1%. GB17.1–17.4 ✓,
+GB17.5/17.6 RECORDED;
 demo `cases/demo/b17_farfield_pin_gamma/` (3 coarse PASS + gated medium), tests
 `tests/test_b17_farfield_pin_gamma.py` (6).
 - ★ **B16 conflated two orthogonal issues:** the far-field near-singular
   **conditioning** (the pin cures it, jump value irrelevant — cond1 O(1e19)→8.7e6
-  either way) and the outflow **circulation** (needs jump=γ). A third, pre-existing
-  issue — the wing-fuselage-junction churn (medium Newton-pin_gamma still carries
-  nlim 42/nflr 40, res 5.5e-5, the **G1.6/GB9.4** class) — survives but limits only
-  the residual floor, not the lift (γ stable 0.06420, cl_p 0.2115 correct).
+  either way) and the outflow **circulation** (needs jump=γ). A third issue at
+  close-out — the wing-fuselage-junction churn (medium Newton-pin_gamma carried
+  nlim 42/nflr 40, res 5.5e-5) — limited only the residual floor, not the lift
+  (γ stable 0.06420). ★ Post-B20 erratum (2026-07-19): that churn WAS the
+  mixed-plain contamination — the re-baselined trajectory converges to
+  |R| ~1e-13, γ 0.064201, cl_p 0.2114, clamps gone (GB20.5).
 - ★ **Post-processing is NOT the cause (user's suspicion checked, GB17.2):** cl_p
   (surface-pressure integral) and cl_KJ (circulation integral) move together
   (~22% both) ⇒ a real flow-state change. The "section Cp looks aligned yet cl_p
@@ -369,10 +416,21 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   +2.5%; B9 coarse-12.8% erratum'd as far-field contamination · **B18 ✓ CLOSED
   2026-07-18 (NEW, executes the GB16.6 debt)** — wing-body transonic M0.84:
   CONFORMING reaches it (coarse M0.84 0.2617, medium M0.79 0.2579, clean cl(M)
-  rise 0.2173/0.2321/0.2579), LEVEL-SET junction-limited (coarse ~M0.575, medium
-  dies ~M0.5 — the G1.6/GB9.4 junction pocket WORSENS with refinement, Mmax
-  1.4→4.0, closed-negative); no common transonic Mach at medium ⇒ cross-model
-  stays M0.5 (2.6%); GB18.1 PASS + GB18.2–5 RECORDED; no `pyfp3d/` change.
+  rise 0.2173/0.2321/0.2579), LEVEL-SET junction-limited (post-B20: coarse
+  ~M0.55/Mmax 1.31, medium dies ~M0.5 with a GENUINE unclamped Mmax 5.22 —
+  the junction pocket WORSENS with refinement; GB20.5 corrected the
+  attribution to the G1.6/GB9.4 faceted geometry, NOT mixed-plain,
+  closed-negative); no common transonic Mach at medium ⇒ cross-model stays
+  M0.5 (2.6%) + a post-B20 coarse M0.6 point (0.2%); GB18.1 PASS + GB18.2–5
+  RECORDED; no `pyfp3d/` change · **B19 ✓ CLOSED 2026-07-18** — LS-Newton
+  Jacobian EXACT in 3-D (probe 1.146e-01→1.33e-08, ε-discriminator flipped; R
+  bit-identical, NO convergence gain; Leg B routed the mixed-plain density
+  contamination to B20) · **B20 ✓ CLOSED 2026-07-18, ADOPTED PERMANENTLY
+  (knob removed), re-baselined 2026-07-19** — mixed-plain main-field density;
+  the apparent M6-medium regression was B20's own patch gap (resolved by B21)
+  · **B21 ✓ CLOSED 2026-07-19** — N1 freeze-capture alignment RESTORES the
+  M6-medium M0.84 ramp (γ 0.088343, res 9e-14, 515 s); GB20.7 overturned;
+  3-D capture lock added (verified failing pre-fix).
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
@@ -446,10 +504,14 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    2026-07-17 audit found 17 consistency defects, most of them exactly the
    last two surfaces. Full checklist in CLAUDE.md workflow step 5.
 
-Baseline: **465 passed + 22 skipped + 2 xfailed** (2026-07-18, B19 LS-Newton
+Baseline: **465 passed + 23 skipped + 2 xfailed** (2026-07-19, B21
+freeze-capture alignment, +1 skipped = the gated 3-D freeze-capture lock
+`test_freeze_capture_matches_live_density_3d` in
+`tests/test_b15_ls_newton_freeze.py`; **measured 1105.87 s @16 threads**).
+Previous: 465 + 22 + 2 (2026-07-18, B19 LS-Newton
 Jacobian exactness, +2 passed / +1 skipped = `tests/test_b19_jacobian_3d.py`
-(2 structural locks + 1 gated 3-D FD gate); **measured 1101.50 s @16 threads**).
-Previous: 463 + 21 + 2 (2026-07-18, A3 inspection response, +3 passed =
+(2 structural locks + 1 gated 3-D FD gate); measured 1101.50 s @16 threads);
+463 + 21 + 2 (2026-07-18, A3 inspection response, +3 passed =
 `tests/test_mesh_reader_roundtrip.py`'s unnamed-physical-group locks);
 460 + 21 + 2 (2026-07-18, B18 wing-body
 transonic, +4 passed = `tests/test_b18_wingbody_transonic.py` (4 ungated on the

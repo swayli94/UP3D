@@ -1092,7 +1092,11 @@ second — otherwise model error and code error are confounded.
    split nodes robustly (TE seam, tip edge, wake–far-field intersection) will
    consume real effort. Mitigate: build `wake_cut.py` against a trivially
    simple extruded-airfoil mesh first; write topological asserts (each wake
-   face has exactly one ⁺ and one ⁻ element; TE nodes not duplicated).
+   face has exactly one ⁺ and one ⁻ element). ⚠ **Erratum (P2, 2026-07-06;
+   doc fixed 2026-07-19): TE nodes ARE duplicated** — the original "TE nodes
+   not duplicated" spec was re-specced with divergence evidence during P2
+   (the single-valued TE is quantitatively wrong; Kutta needs the secant with
+   b≈0.93). See §4 and the P2 phase entry.
 2. **FP non-uniqueness** (M∞ ≈ 0.82–0.85, low α, conventional airfoils):
    continuation direction can select different branches. Document; always ramp
    Mach upward from a subcritical converged state.

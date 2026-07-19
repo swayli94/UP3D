@@ -17,15 +17,17 @@ resolve through one hop.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
-  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B18
-  level-set wake — **B16/B17 far-field aux pin + `pin_gamma` (GB16.4 resolved:
-  it was a BC-modelling error, not a non-convergence) and B18 wing-body
-  transonic, all ✓ CLOSED 2026-07-18** — `track_v.md` V1–V4 viscous,
-  designed-not-started, `track_a.md` A1–A3 verification & analysis, created
-  2026-07-15; **A3 ✓ CLOSED 2026-07-18** = the response to the 2026-07-17
-  independent inspection, whose headline is that the level-set Newton's
-  Jacobian is NOT exact in 3-D (a quasi-Newton; converged answers unaffected,
-  see docs/inspection/). **Next phase = user's call.**)
+  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B21
+  level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
+  transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
+  mixed-plain main-field density ADOPTED PERMANENTLY + re-baselined and B21
+  N1 freeze-capture fix (restores the M6-medium M0.84 ramp; GB20.7's
+  "capability loss" verdict overturned), both ✓ CLOSED 2026-07-19** —
+  `track_v.md` V1–V4 viscous, designed-not-started, `track_a.md` A1–A3
+  verification & analysis; **A3 ✓ CLOSED 2026-07-18** = the response to the
+  2026-07-17 independent inspection (docs/inspection/; the 2026-07-19
+  second-round inspection's N1/D1–D10 findings were executed by B21 + the
+  errata wave). **Next phase = user's call.**)
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
   [docs/design_track_b.md](docs/design_track_b.md) (it supersedes DN1).
@@ -72,9 +74,10 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **465 passed + 22 skipped +
-   2 xfailed** (2026-07-18, B19 LS-Newton Jacobian exactness, +2 passed / +1
-   skipped = `tests/test_b19_jacobian_3d.py`; measured 1101.50 s @16 threads;
+3. Full suite: `pytest tests/` — current baseline **465 passed + 23 skipped +
+   2 xfailed** (2026-07-19, B21 freeze-capture alignment, +1 skipped = the
+   gated 3-D freeze-capture lock in `tests/test_b15_ls_newton_freeze.py`;
+   measured 1105.87 s @16 threads;
    the full lineage lives in [docs/overview.md](docs/overview.md), do not
    re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until
