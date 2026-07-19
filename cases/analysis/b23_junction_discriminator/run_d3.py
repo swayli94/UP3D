@@ -11,7 +11,7 @@ the LE/TE cusps -- recorded in the wingbody.py docstring). A fairing that
 kills the maximum => the crease itself was the cause AND a physically
 legitimate mitigation exists (real aircraft have fairings).
 
-Run:  python cases/analysis/wb_junction_discriminator/run_d3.py [--mesh-only]
+Run:  python cases/analysis/b23_junction_discriminator/run_d3.py [--mesh-only]
 Artifacts: meshes/d3_*.msh (gitignored), results/d3_summary.csv,
            results/d3_fillet.png
 """

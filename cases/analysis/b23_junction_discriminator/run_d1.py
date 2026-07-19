@@ -7,7 +7,7 @@ is it already there at alpha = 0 (pure geometry)?
   * pocket appears/grows with alpha       -> lift/wake/Kutta-coupled
   * self-check: cl_fus(alpha=0) ~ 0 (symmetry)
 
-Run:  python cases/analysis/wb_junction_discriminator/run_d1.py
+Run:  python cases/analysis/b23_junction_discriminator/run_d1.py
 Artifacts: results/d1_summary.csv, results/d1_topk_*.csv, results/d1_alpha.png
 """
 

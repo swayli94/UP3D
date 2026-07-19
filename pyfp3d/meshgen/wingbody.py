@@ -221,7 +221,7 @@ def onera_m6_wingbody_mesh(
                 fillet fails on the LE/TE cusps). A Ball-field strip at the
                 sampled junction line keeps the blend resolved at h_junction.
                 Wake-free path only (embed_wake is rejected). D3 leg of
-                cases/analysis/wb_junction_discriminator.
+                cases/analysis/b23_junction_discriminator.
 
     Returns:
         Mesh with boundary groups "wall" (wing skin), "fuselage"

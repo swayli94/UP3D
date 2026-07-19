@@ -14,7 +14,7 @@ Pre-registered branch-2 evidence (lift/wake-coupled): a pocket sitting at
 s ~ 0, q ~ 0, d > 0 lives on the wake's inboard free edge AFT of the body --
 NOT on the wing-fuselage wall crease (x in [0, 0.806]).
 
-Run:  python cases/analysis/wb_junction_discriminator/run_d5_localize.py
+Run:  python cases/analysis/b23_junction_discriminator/run_d5_localize.py
 Artifacts: results/d5_localize.csv, results/d5_pocket_map.png
 """
 

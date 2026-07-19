@@ -161,5 +161,5 @@ cases/meshes/sphere_shell/h05.msh
 cases/meshes/sphere_shell/h03.msh
 cases/meshes/sphere_shell/h02.msh
 cases/meshes/sphere_shell/h03_far10.msh
-cases/analysis/wb_junction_discriminator/results/*.npz
-cases/analysis/wb_junction_discriminator/meshes/*.msh
+cases/analysis/b23_junction_discriminator/results/*.npz
+cases/analysis/b23_junction_discriminator/meshes/*.msh

@@ -13,6 +13,11 @@
 | **W1** LS 翼身交界虚假超声速袋 | B20：medium M0.5 Mmax 5.22 genuine | 恶化（coarse 1.31 → medium 5.22） |
 | **W2** 机身虚假升力 | GB9.4 XFAIL：conf 0.16 / LS 0.20 of wing cl_p | LS 增长（0.164 → 0.205） |
 
+> **口径注记**：B20 锚 5.22 来自 B18 的 Newton freeze-ramp 轨迹（末态 6 个被钳），
+> 本 campaign D1 同状态（medium M0.5 α=3.06 pin_gamma）用直接 Picard 测得
+> **14.66**（`element_mach2` 全场 max，converged，104 超声速元）。同型同根
+> （M≫1 真实袋），峰值对求解路径/钳位历史敏感；判别结论不受口径影响。
+
 P11 close-out 要求：交界 = 折痕几何 ≠ 光滑壁面片化，禁止直接沿用"G1.6 类"标签，
 先做专属判别实验。P11 已测死路线（mapped-P1 + 曲面几何 = GLM 路线 B）不复查。
 

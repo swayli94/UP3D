@@ -17,7 +17,7 @@ the discrete max should grow ~ h^(-1/3) (x1.26 per halving) -- the
 character, not a discretization bug. A filleted corner (bounded solution)
 must instead saturate. The fitted log-log slope is recorded as evidence.
 
-Run:  python cases/analysis/wb_junction_discriminator/run_d4.py [--mesh-only]
+Run:  python cases/analysis/b23_junction_discriminator/run_d4.py [--mesh-only]
 Artifacts: meshes/d4_*.msh (gitignored), results/d4_meshes.csv,
            results/d4_summary.csv, results/d4_crease.png
 """

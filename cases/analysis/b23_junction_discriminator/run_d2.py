@@ -11,7 +11,7 @@ Only h_junction varies; every other size law stays at the medium family's
 (self-similar policy). The baseline medium (h_junction = 0.0075) mesh already
 exists in cases/meshes/onera_m6_wingbody/ and anchors the ladder.
 
-Run:  python cases/analysis/wb_junction_discriminator/run_d2.py [--mesh-only]
+Run:  python cases/analysis/b23_junction_discriminator/run_d2.py [--mesh-only]
 Artifacts: meshes/junc_*.msh (gitignored), results/d2_summary.csv,
            results/d2_meshes.csv, results/d2_junction.png
 """
