@@ -33,6 +33,7 @@ The field is noise-broken first -- separable fields on a prism-split mesh park
 whole slabs exactly ON the tie (the P7 trap).
 """
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -396,3 +397,67 @@ def test_freeze_max_clamped_relaxes_the_convergence_semantics():
         assert "n_limited == 0" not in seg, (
             f"the {route} route now re-checks clamps: either the M6 recipe "
             "must be re-validated, or this retraction lock is stale")
+
+
+# ---------------------------------------------------------------------------
+# B21 (N1, Kimi inspection 2026-07-19) -- the 3-D freeze-capture consistency
+# lock. The 2.5-D bitwise test above is structurally BLIND to this defect:
+# quasi-2-D mixed-side plain elements never touch a cut node, so the B20
+# main-density patch is a bitwise no-op there. On 3-D meshes `freeze_side_state`
+# originally missed the B20 patch and captured its (upstream, branch) selection
+# on the UNPATCHED side field -- 83 upstream + 9 branch differences from the
+# live system on this exact state -- which silently broke the B15 frozen Newton
+# finish: the actual mechanism behind the M6-medium ramp stall GB20.7 had
+# called "a real capability loss" (overturned by B21).
+# ---------------------------------------------------------------------------
+
+M1_DIR = REPO_ROOT / "cases" / "meshes" / "onera_m6"
+GATES = os.environ.get("PYFP3D_TRANSONIC_GATES", "0") == "1"
+ALPHA_3D, B_SEMI, M_3D = 3.06, 1.1963, 0.70
+
+
+@pytest.mark.skipif(not GATES, reason="heavy 3-D gate (PYFP3D_TRANSONIC_GATES=1)")
+def test_freeze_capture_matches_live_density_3d():
+    """B21/N1: the freeze capture must run on the SAME (B20 main-density
+    patched) q2l/rho path `newton_side_data` uses, so the frozen selection IS
+    the live selection at the freeze point -- on a 3-D mesh where the class
+    can actually read an aux."""
+    from pyfp3d.meshgen.wing3d import x_te
+    from pyfp3d.solve.picard_ls import solve_multivalued_transonic
+
+    path = M1_DIR / "coarse.msh"
+    if not path.exists():
+        pytest.skip(f"{path} not generated (gitignored)")
+    mesh = read_mesh(path)
+    a = np.radians(ALPHA_3D)
+    te = np.array([[x_te(0.0), 0.0, 0.0], [x_te(B_SEMI), 0.0, B_SEMI]])
+    wls = WakeLevelSet(te, direction=(np.cos(a), np.sin(a), 0.0))
+    cm = CutElementMap(mesh.nodes, mesh.elements, wls,
+                       wall_nodes=np.unique(mesh.boundary_faces["wall"]))
+    mvop = MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
+
+    seed = solve_multivalued_transonic(mvop, mesh, M_3D, alpha_deg=ALPHA_3D,
+                                       farfield="freestream", n_outer_level=200)
+    phi = seed["phi_ext"]
+
+    # Premise asserts (the B19 lesson: a test that cannot see the defect must
+    # fail loudly, not pass vacuously): the state must contain aux-touching
+    # mixed-side plain elements AND a supersonic pocket.
+    el = np.asarray(mesh.elements, dtype=np.int64)
+    aux_touch = (mvop._mixed_plain_mask()
+                 & (cm.ext_dof_of_node[el] >= 0).any(axis=1))
+    assert int(aux_touch.sum()) > 0, "no aux-touching mixed-plain: vacuous"
+
+    live_u, live_l = mvop.newton_side_data(phi, M_3D, UPWIND_C, M_CRIT)
+    assert mvop.nu_max > 0.0, "no supersonic pocket: vacuous"
+
+    frozen = mvop.freeze_side_state(phi, M_3D, UPWIND_C, M_CRIT)
+    fz_u, fz_l = mvop.newton_side_data(phi, M_3D, UPWIND_C, M_CRIT,
+                                       frozen=frozen)
+    for live, fz in ((live_u, fz_u), (live_l, fz_l)):
+        keep = live["keep"]
+        # the frozen capture IS the live walk's selection (pre-N1-fix: 83
+        # upstream + 9 branch entries differed here)...
+        assert np.array_equal(live["upstream"][keep], fz["upstream"][keep])
+        # ...and the frozen sweep reproduces the live density bitwise.
+        assert np.array_equal(live["rho_tilde"][keep], fz["rho_tilde"][keep])

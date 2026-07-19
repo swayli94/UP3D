@@ -558,17 +558,22 @@ class MultivaluedOperator:
         B19 / Leg A. This is the COLUMN map of the LS-Newton density
         sensitivities, and it is NOT the same object as `_side_dofvecs`, which
         is the ROW map (where a residual lands). The two coincide on cut
-        elements -- asserted below -- but diverge on **mixed-side plain**
-        elements: uncut tets whose nodes straddle the level set (beyond the
-        spanwise tip clip, or where the sheet extension passes upstream of the
-        TE). `mass_conservation_coo` scatters those onto MAIN dofs while
-        `newton_side_data` builds their gradient from the SIDE field, so their
-        residual genuinely depends on cut nodes' aux dofs. Using the row map
-        for the columns put that sensitivity on the wrong column and made J !=
-        dR/dphi there (measured: rel err 1.146e-01 on the affected probe
-        directions vs 6.33e-10 elsewhere, eps-independent across three decades
-        -- `cases/analysis/c1_ls_jacobian_fd/`). Quasi-2-D meshes have no such
-        elements, which is why B6's FD gate could never see it.
+        elements -- asserted below. PRE-B20 they diverged on **mixed-side
+        plain** elements: uncut tets whose nodes straddle the level set
+        (beyond the spanwise tip clip, or where the sheet extension passes
+        upstream of the TE). `mass_conservation_coo` scatters those onto MAIN
+        dofs while the side field then read cut nodes' aux dofs, so their
+        residual depended on aux dofs; using the row map for the columns put
+        that sensitivity on the wrong column and made J != dR/dphi there
+        (measured: rel err 1.146e-01 on the affected probe directions vs
+        6.33e-10 elsewhere, eps-independent across three decades --
+        `cases/analysis/c1_ls_jacobian_fd/`). Since B20 their density reads
+        the MAIN field (patch below), so the maps coincide there too and the
+        aux dependence is gone -- the split is kept because it encodes the
+        invariant (columns follow the READ field), not a coincidence.
+        Quasi-2-D meshes have 129 such elements but 0 touching a cut node
+        (B19 erratum -- the real invariant), which is why B6's FD gate could
+        never see the defect.
         """
         if self._side_read is None:
             cm = self.cm
@@ -728,8 +733,13 @@ class MultivaluedOperator:
         Returns (frozen_upper, frozen_lower), each a tuple (upstream, branch)
         of COPIES (they must survive subsequent live sweeps). Pass the pair
         straight back as `newton_side_data(frozen=...)`. The state is captured
-        at the SAME q2l/rho `newton_side_data` computes, so the frozen sweep
-        reproduces the live density bitwise at the freeze point.
+        at the SAME q2l/rho `newton_side_data` computes -- INCLUDING the B20
+        main-density substitution on mixed-side plain elements -- so the frozen
+        sweep reproduces the live density bitwise at the freeze point. (N1,
+        Kimi inspection 2026-07-19: the capture originally missed the B20
+        patch, so on 3-D meshes it froze a selection the live system would not
+        make -- measured 83 upstream + 9 branch differences on M6 coarse at a
+        seeded M0.70 state, all on aux-touching mixed-plain elements.)
         """
         from pyfp3d.physics.isentropic import density_field, limit_q2_field
 
@@ -738,6 +748,7 @@ class MultivaluedOperator:
         frozen = []
         for phi_s, upw in ((phi_up, upw_u), (phi_lo, upw_l)):
             grad, q2 = self.op.velocities(phi_s)
+            grad, q2 = self._apply_main_density(phi_ext, grad, q2)  # B20 (N1)
             q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
             rho = density_field(q2l, m_inf, gamma_air)
             up_sel, branch = upw.freeze_upwind_state(

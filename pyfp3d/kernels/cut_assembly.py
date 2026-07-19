@@ -414,11 +414,14 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
     `mass_conservation_coo` scatter); `readvec` is which DOF the element's side
     FIELD READS (`side_potentials`' per-node rule). They coincide on cut
     elements -- which is why using one for both survived every 2.5-D gate --
-    but differ on **mixed-side plain** elements, which exist only in 3-D. There
-    the residual depends on cut nodes' aux DOFs through the side density while
-    the old code scattered that sensitivity onto a MAIN column, so J was not
-    dR/dphi (rel err 1.146e-01 on the affected directions vs 6.33e-10
-    elsewhere; `cases/analysis/c1_ls_jacobian_fd/`).
+    and PRE-B20 they differed on **mixed-side plain** elements (aux-touching
+    ones exist only in 3-D): there the residual depended on cut nodes' aux
+    DOFs through the side density while the old code scattered that
+    sensitivity onto a MAIN column, so J was not dR/dphi (rel err 1.146e-01 on
+    the affected directions vs 6.33e-10 elsewhere;
+    `cases/analysis/c1_ls_jacobian_fd/`). Since B20 those elements read their
+    density from the MAIN field, so the maps agree there too; the split stays
+    because it encodes the invariant (columns follow the READ field).
 
     `side` is a `MultivaluedOperator.newton_side_data` dict (s_e/s_u/upstream/
     grad/lim_mask/keep/dofvec/readvec). Sensitivities are masked by lim_mask
@@ -441,8 +444,8 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
     # Two gradient factors, matching the two DOF maps (B19 Leg A). The element
     # residual is rho_tilde(grad_READ) * V * (grad_SCATTER . B_a), so the ROW
     # factor uses the scatter field's gradient and the COLUMN factor uses the
-    # read (side) field's. Identical on cut elements, different on mixed-side
-    # plain ones.
+    # read (side) field's. Identical on cut elements; they differed on
+    # mixed-side plain ones pre-B20 (since B20 both read main there).
     grad_row = side.get("grad_row")
     if grad_row is None:                         # pre-B19 dicts
         grad_row = grad

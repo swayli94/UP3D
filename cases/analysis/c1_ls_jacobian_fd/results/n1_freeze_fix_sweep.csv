@@ -1,0 +1,3 @@
+freeze_tol,reached,m_final,levels_converged,gamma,m_max,res,n_lim,n_flr,accept,wall_s
+0.001,True,0.84,6/6,0.08834263690920753,2.4818380494881502,9.048317650695026e-14,0,1,assignment_cycle;tol,515.3
+1e-05,True,0.84,6/6,0.08834312023223347,2.4818434022254103,7.849276784099857e-14,0,1,assignment_cycle;tol,540.0

@@ -367,6 +367,10 @@ def validate_physics_bounds(rho, q, M, Cp, M_inf, gamma=GAMMA):
         raise ValueError(f"Negative density detected: min={np.min(rho)}")
     if np.any(q < -1e-12):
         raise ValueError(f"Negative speed detected: min={np.min(q)}")
+    # BACKLOG (A3/P2, Kimi audit 2026-07-17): this q>2.0 raise contradicts a
+    # legal limiter-capped field (M_cap=3.0 admits q~2.28); only caller is a
+    # subsonic test, so it is left as-is until physics monitoring is wired into
+    # the transonic path. Recorded in the A3 response doc + track_a ledger.
     if np.any(q > 2.0):
         raise ValueError(f"Excessive speed detected: max={np.max(q)} (should be ~1.0–1.4)")
     if np.any(M > 5.0):

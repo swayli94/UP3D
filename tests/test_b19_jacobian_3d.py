@@ -3,12 +3,14 @@ Track B / B19: the LS-Newton Jacobian is exact on MIXED-SIDE PLAIN elements.
 
 Why this file exists at all is the point. `tests/test_b6_newton.py` already
 carries an exact-Jacobian FD gate -- but it runs on the quasi-2D NACA mesh,
-which **structurally cannot contain** the element class that was broken:
-uncut tets whose four nodes straddle the wake level set (beyond the spanwise
-tip clip, or where the sheet extension passes upstream of the TE). Those exist
-only in 3-D. So a real Jacobian defect lived through B6, B7, B12-B18 and every
-M6 convergence gate, and was found by an external code review (2026-07-17 C1),
-not by the suite.
+where the broken element class is INERT: it has 129 mixed-side plain elements
+(uncut tets whose four nodes straddle the wake level set, beyond the spanwise
+tip clip or where the sheet extension passes upstream of the TE) but 0 of them
+touch a cut node -- the B19 erratum; the real invariant is "no mixed-plain
+element READS an aux", not "the class is empty". AUX-TOUCHING mixed-plain
+elements exist only in 3-D. So a real Jacobian defect lived through B6, B7,
+B12-B18 and every M6 convergence gate, and was found by an external code
+review (2026-07-17 C1), not by the suite.
 
 The defect: `mass_conservation_coo` scatters a plain element onto MAIN dofs,
 while `newton_side_data` builds its gradient -- hence its density, hence the
