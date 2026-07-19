@@ -141,6 +141,39 @@ class TestSyntheticClassification:
         s2, _, _ = wls.evaluate(np.array([[2.0, 0.05, 1.5]]))
         assert s2[0] < 0
 
+    def test_panel_selection_prefers_on_sheet_foot(self):
+        """B24 corner-theft REGRESSION: on a kinked TE (wing + inboard
+        waterline extension), panel selection must charge the downstream
+        shortfall min(0, d)^2 of a behind-the-edge (t < 0) foot. The
+        extension panel's ruled PLANE extends backward below the wing
+        wake near the corner; a below-wake node sitting ON the wing
+        panel's physical sheet must not be stolen by that closer plane
+        (its perpendicular foot there lies at d < 0 -- the sheet is not
+        there). Measured on the B24 wing-body corner at alpha = 2: the
+        theft orphaned the corner TE nodes (no d > 0 crossing left, so
+        no cut element -- the A3 aux-DOF invariant blew up)."""
+        # wing panel (0.8,0,0.15) -> (1.0,0,0.85); inboard extension
+        # (2.0,-0.0042,0.15) -> (0.8,0,0.15) with the B24 0.2-deg tilt.
+        te = np.array([[2.0, -0.0042, 0.15], [0.8, 0.0, 0.15],
+                       [1.0, 0.0, 0.85]])
+        a = np.radians(2.0)
+        wls = WakeLevelSet(te, direction=(np.cos(a), np.sin(a), 0.0))
+        ext_len = float(np.hypot(1.2, 0.0042))
+        # below the wing wake, just outboard of the corner, downstream of
+        # the TE: the extension plane (z = 0.15 curtain) passes closer
+        # than the wing sheet, but only BEHIND the extension's own edge.
+        pt = np.array([[0.8532, -0.0063, 0.1553]])
+        s, d, q = wls.evaluate(pt)
+        assert d[0] > 0.0, "stolen by the extension's backward plane"
+        assert s[0] < 0.0, "must read below the wing wake"
+        assert q[0] > ext_len, "must be owned by the WING panel"
+        # the same segment must drive surface_normals (Track B g1):
+        n = wls.surface_normals(pt)
+        assert n[0, 1] > 0.9, "wing panel normal is ~ +y, not the curtain's"
+        # a genuinely upstream point keeps d < 0 (fallback intact)
+        _, d_up, _ = wls.evaluate(np.array([[0.5, 0.001, 0.5]]))
+        assert d_up[0] < 0.0
+
     def test_swept_te_span_coordinate_is_oblique(self):
         """REGRESSION PIN: on a SWEPT TE the span axis is not
         perpendicular to the wake direction, so q must come from the

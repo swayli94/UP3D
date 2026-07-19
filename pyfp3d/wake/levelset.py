@@ -138,7 +138,16 @@ class WakeLevelSet:
         uses |s| plus the out-of-panel spanwise excess, so a multi-segment
         (curved/kinked) TE works per panel while u stays unclamped -- which
         is what lets q report the beyond-the-tip excess instead of
-        saturating at the tip.
+        saturating at the tip. It ALSO charges the downstream shortfall
+        min(0, d)^2 of a behind-the-edge foot: a panel's ruled surface only
+        exists for d >= 0, so a point whose perpendicular lands at d < 0 is
+        really nearest to that panel's TE EDGE, not to its sheet -- without
+        the charge, the backward plane of a kinked (multi-segment) TE
+        steals points that sit on a neighbouring panel's physical sheet
+        (B24 corner-theft: at alpha > 0 the inboard extension's plane
+        dips below the wing wake behind the edge and orphans the corner
+        TE nodes' cut elements). Inert on a single-segment TE (argmin
+        over one panel) and whenever the winning foot is on the sheet.
         """
         x = np.atleast_2d(np.asarray(points, dtype=np.float64))
         n_pts = len(x)
@@ -150,7 +159,8 @@ class WakeLevelSet:
         s_all = np.einsum("pns,ns->pn", rel, self._seg_n)      # (n, nseg)
 
         excess = np.maximum(0.0, np.maximum(-u, u - 1.0)) * self._seg_len
-        dist2 = s_all**2 + excess**2
+        back = np.minimum(0.0, d_all)
+        dist2 = s_all**2 + excess**2 + back**2
         best = np.argmin(dist2, axis=1)                        # (n,)
         idx = np.arange(n_pts)
         s = s_all[idx, best]
@@ -172,7 +182,9 @@ class WakeLevelSet:
         b1 = np.einsum("pns,ns->pn", rel, self._seg_v)
         b2 = rel @ self._d_hat
         u = (b1 - self._a12 * b2) / self._det
+        d_all = (self._seg_len2 * b2 - self._a12 * b1) / self._det
         s_all = np.einsum("pns,ns->pn", rel, self._seg_n)
         excess = np.maximum(0.0, np.maximum(-u, u - 1.0)) * self._seg_len
-        best = np.argmin(s_all**2 + excess**2, axis=1)
+        back = np.minimum(0.0, d_all)
+        best = np.argmin(s_all**2 + excess**2 + back**2, axis=1)
         return self._seg_n[best]
