@@ -22,8 +22,9 @@
    落在 aux-touching mixed-plain 类上），它是开放项 **GB20.7 的头号机制候选**
    ——一行可修，判别实验便宜。
 2. **基线独立复跑吻合**：`465 passed + 22 skipped + 2 xfailed`（1179.17 s
-   @16 线程），与文档逐字一致。门控套件（`PYFP3D_TRANSONIC_GATES=1`）复跑
-   结果见 §7 补记。
+   @16 线程），与文档逐字一致。门控测试（`PYFP3D_TRANSONIC_GATES=1`，12 个
+   门控文件）独立复跑 **85 passed 全绿**（§7）——同时实测确认 3-D LS 数字
+   无测试锁的 N3 缺口在门控全开下依然存在。
 3. **文档：B19/B20 新写的内容与提交 CSV 精确一致（抽查约 40 个数字全部对
    上）；但 B20 re-baseline 之后，B15–B18 的回顾性章节普遍未勘误**——新旧两套
    数字并存于同一文档集，GB20.7 这个开放项在 7 个文档面中只披露了 2 个。
@@ -341,6 +342,21 @@ GB17.2 "~22%" vs CSV 20.1%/19.4%（参照基不同）。
 - 门控套件（`PYFP3D_TRANSONIC_GATES=1`）复跑结果见 §7。
 - 未修改 `pyfp3d/`、`tests/` 或任何 docs（本报告除外）。
 
-## 7. 补记（门控套件复跑）
+## 7. 补记（门控套件复跑，2026-07-19 09:40 CST）
 
-（`PYFP3D_TRANSONIC_GATES=1` 全套件复跑在本报告撰写时进行中；结果出来后补记于此。）
+`PYFP3D_TRANSONIC_GATES=1` 下，对**全部 12 个含门控测试的文件**独立复跑：
+`test_p4_transonic / p5_onera_m6 / p8_newton / p8_jacobian / b6_newton /
+b6_transonic / b11_linear_ls / b14_schur_ls / b16_farfield_aux /
+b17_farfield_pin_gamma / b18_wingbody_transonic / b19_jacobian_3d` ——
+**85 passed in 4910.55 s（1:21:50），全绿**。这独立证实了 B20 re-baseline
+提交声明的"no test lock breaks at all"：包括 b14 的 medium A/B 门控在内，
+没有任何测试锁定被 re-baseline 打破。
+
+同时这也实测确认了 **N3 缺口本身**：b14 门控 A/B 比较的是同一代码下的两条
+求解路径（都停在 M0.6625，彼此一致），而 B15/B14 demo 的 17/20、5/7 FAIL
+只存在于 committed CSV——**套件在门控全开的最大配置下依然看不见这次 3-D LS
+数字回退**，3-D LS 数字无测试锁的缺口是真实且当前存在的。
+
+（附注：首次全套件门控复跑在 2 小时上限被杀——与 Claude 在 UP3D 的自身
+测试存在 CPU 争用；改为只跑门控文件后完成。Claude 声称的"67/67 gated 3-D
+LS 测试绿"与本结果相容：本运行的 85 含各文件 ungated 测试。）
