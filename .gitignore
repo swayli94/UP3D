@@ -163,3 +163,4 @@ cases/meshes/sphere_shell/h02.msh
 cases/meshes/sphere_shell/h03_far10.msh
 cases/analysis/b23_junction_discriminator/results/*.npz
 cases/analysis/b23_junction_discriminator/meshes/*.msh
+cases/analysis/b24_wake_inboard_end/results/*.npz

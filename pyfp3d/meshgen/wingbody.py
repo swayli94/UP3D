@@ -128,15 +128,80 @@ def junction_z(p: FuselageParams) -> float:
     return p.r_f
 
 
-def te_polyline(p: FuselageParams) -> np.ndarray:
+def te_polyline(p: FuselageParams, extend: Optional[str] = None,
+                delta: float = 0.0, x_far: Optional[float] = None,
+                n_waterline: int = 64, tilt_deg: float = 0.2) -> np.ndarray:
     """Analytic TE polyline for WakeLevelSet: from the wing-fuselage junction
     (z = r_f) out to the tip TE corner (z = B_SEMI), in the chord plane y = 0.
+
+    extend=None (default, bit-identical): the 2-point junction->tip line; the
+    sheet's inboard free edge is the ray from the junction TE point -- the
+    B23-attributed source of the wing-body junction pocket.
+
+    extend="waterline" (B24): prepend the INBOARD continuation, ordered from
+    the far-field end so q = 0 (and with it the inboard free edge) sits out
+    of the near field:
+
+        (x_far, 0, r_tail+d) -> (x_tail_start, 0, r_tail+d)
+        -> along the body waterline (x, 0, R(x)+d) UP to the junction TE
+        -> junction -> tip (the default 2 points).
+
+    This is the level-set analogue of the CONFORMING sheet, which has always
+    run junction TE -> fuselage waterline -> symmetry edge -> sphere
+    (embed_wake=True; the conf path carries no junction pocket). The strip
+    stays at z = r_tail + delta aft of the body (NOT z = 0): the level-set
+    path has no branch-cut simply-connectedness constraint, and z = r_tail
+    keeps the sheet off the symmetry plane.
+
+    delta > 0 lifts the extension off the skin (the B3 "cone" fallback; the
+    B1 sheet grazes the body with quadratic lift-off). delta is tapered
+    linearly to 0 over the first 10% of the waterline next to the junction
+    so the extended polyline stays continuous with the wing TE.
+
+    x_far is REQUIRED when extend is set (pass the mesh far-field x extent);
+    n_waterline sets the waterline sampling (finer than h_body on any
+    committed level). The sheet stays OUTSIDE the body by construction:
+    a waterline point (x, 0, R(x)) sheds (x+t cos a, t sin a, R(x)) with
+    radius sqrt(R(x)^2 + t^2 sin^2 a) >= R(x) >= R(x+t cos a).
+
+    tilt_deg (B24 R5 fix): the extension is sloped DOWNWARD in y by
+    tan(tilt_deg) * (x - x_te(junction)), so no extension segment is ever
+    exactly parallel to the wake direction d = (cos a, 0, sin a). Without
+    it, alpha = 0 puts the whole y = 0 extension exactly parallel to d and
+    WakeLevelSet.update_direction rejects the degenerate TE segment. The
+    slope is tiny: sin(0.2 deg) = 3.5e-3 keeps the 2x2 side-system solve
+    at cond ~ 8e4 (eps error ~1e-11 << the 1e-6*h reclassification tol),
+    and the displacement at the body (<= 2.8e-3) is far under h_body.
+    The tilt only ADDS to the radius sqrt(y^2+z^2), so the outside-body
+    invariant above is untouched. y = 0 exactly at the junction, so the
+    polyline stays continuous with the wing TE.
     """
     z0 = junction_z(p)
-    return np.array([
+    wing = np.array([
         [x_te(z0), 0.0, z0],
         [x_te(B_SEMI), 0.0, B_SEMI],
     ])
+    if extend is None:
+        return wing
+    if extend != "waterline":
+        raise ValueError(f"extend={extend!r} unknown (None|'waterline')")
+    if x_far is None:
+        raise ValueError("x_far is required when extend is set "
+                         "(pass the mesh far-field x extent)")
+    x_j = float(x_te(z0))
+    x_rt = float(p.x_tail_start)
+    if not (x_j < x_rt < x_far):
+        raise ValueError(f"expect x_te(junction) < x_tail_start < x_far, got "
+                         f"{x_j} < {x_rt} < {x_far}")
+    blend = 0.1 * (x_rt - x_j)
+    xs = np.linspace(x_rt, x_j, n_waterline)          # far -> junction
+    taper = np.minimum(1.0, (xs - x_j) / blend)       # delta -> 0 at junction
+    zs = np.array([radius_at(p, float(x)) for x in xs]) + delta * taper
+    slope = -math.tan(math.radians(tilt_deg))
+    ys_ext = slope * (xs - x_j)                        # 0 at junction, < 0 aft
+    waterline = np.column_stack([xs, ys_ext, zs])
+    strip = np.array([[x_far, slope * (x_far - x_j), float(zs[0])]])
+    return np.vstack([strip, waterline, wing[1:]])
 
 
 def _surface_on_fuselage(tag: int, p: FuselageParams, tol: float,
