@@ -1,6 +1,57 @@
 # pyFP3D Agent Rules
 
-Current phase: **P11 ✓ CLOSED 2026-07-19 (NEWEST; user-directed, opened +
+Current phase: **B27 ✓ CLOSED 2026-07-20 (NEWEST; stacked on the unpushed
+B25/B26 chain; B18 demo refresh + Track B doc close-out; no `pyfp3d/` change):
+the pocket-healed level-set reaches the SAME ceiling site as conforming — the
+"LS junction-limited (closed-negative)" B18 story is RETIRED.** ★ **GB27.1
+PASS** — the conforming legs BIT-reproduce the committed B18 anchors (cl_p
+0.2617/0.2173/0.2321/0.2579, cross 0.2178, M_max 2.15): B21/B22 were inert on
+the conforming path. ★ **GB27.2 PASS** — the LS A/C ceiling legs BIT-reproduce
+the committed B26 anchors (C coarse reached 0.84; C medium m_last 0.7625 dies
+0.775 (b); A medium m_last 0.50 dies 0.5125 (a); A coarse m_last 0.82):
+336/336 rows bit-identical in
+`cases/analysis/b27_b18_demo_refresh/results/g27_consistency.csv`. ★ **GB27.3 —
+cross-model UPGRADED**: M0.5 (2.6%, B9/B17) + **M0.65 medium 2.4% PASS (≤5%)**
++ M0.75 medium 2.5% RECORDED — all gaps in the ~2.5% B17 cl_p/cl_kj convention
+band; new conf medium 0.75 point (cl_p 0.2483, monotone cl(M)). ★
+GB27.4/27.5 RECORDED — GB18.4 re-answered (pocket = B23 inboard free-edge
+singularity, healed by B25's `inboard_clip`; the residual limiter = wing-tip
+P13 + high-M Newton, same class as conforming's) and GB18.5 refreshed (C-side
+cl_fus 0.0781, out-band 0.0565 ≈ ×2 the A side → P11/curved-wall input); the
+A-side-vs-B18-anchor divergence is the **B21/B22 freeze-capture effect**
+(erratum carried in the demo docstring). Demo 8/8 PASS on a ~1 h 39 min full
+re-solve (no caches). ★ the pre-B27 `b18_sections_conf_medium.png` was
+silently EMPTY (`section_cp_curve` tuple→dict API drift, swallowed by
+`except: pass`) — fixed in the refresh. Evidence:
+`cases/demo/b18_wingbody_transonic/results/` +
+`cases/analysis/b27_b18_demo_refresh/` (PRE_REGISTRATION.md / VERDICT.md /
+g27_consistency.csv); Track-B narrative re-based in
+[design_track_b.md](design_track_b.md) §22 (+ §18 erratum pointer). **Next
+phase = user's call** — recommended candidate: **(b)-class ceiling
+attribution** (LS+clip medium 0.775 vs conforming medium 0.80+: same
+mechanism? if yes the spend moves to the Newton robustness both paths share);
+the LS wing-body full-envelope evaluation is now OPEN (conforming demoted to
+cross-validation; Track-V sheet-topology prerequisites all in place); cl_fus
+out-band ×2 → P11 watch item.
+
+**B26 ✓ CLOSED 2026-07-20 (B26-A; the pocket-healed LS transonic ceiling
+re-measurement; no `pyfp3d/` change): the junction pocket WAS the LS wing-body
+transonic ceiling limiter.** Same code, same mesh, same frozen B18 recipe —
+the only variable is `inboard_clip` (B25's conforming-topology inboard sheet):
+medium ceiling **0.50 → 0.7625**, coarse **0.82 → 0.84 (reached)**; the C
+side's death class flips from (a) pocket-rejection to **(b) high-M Newton
+stall** (dying peak at the wing TIP z≈1.20 = the P13 class; junction corridor
+corrM ≤1.10 clean). ★ **T1 independent finding**: the A-side re-run diverges
+from the committed B18 anchors (died 0.50/0.55) — that is the **B21/B22
+freeze-capture fix**, not physics drift (A medium 0.50 now CONVERGES with the
+same 3/3 clamps and the same Mmax 5.22; the pocket's true kill line on the A
+medium side is 0.55, Mmax 13.1 > freeze_max_clamped=8). ★ watch item: C-side
+cl_fus ≈ 0.076–0.078 ≈ ×2 the A side, the excess in the out-band component
+(0.057–0.068) → P11/curved-wall input. Evidence:
+`cases/analysis/b26_ls_transonic_ceiling/` (g1_summary.csv / g1_levels.csv /
+g1_peaks.csv / g1_ceiling.png + VERDICT.md).
+
+**P11 ✓ CLOSED 2026-07-19 (user-directed, opened +
 closed same day; the sphere leg of the curved-wall-element route): the DP1
 curved-element route is a measured NEGATIVE, and G1.6 is RE-ATTRIBUTED.**
 ★★ **G11.1 NOT MET**: a *verified* curved wall-adjacent layer
@@ -495,7 +546,10 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   attribution to the G1.6/GB9.4 faceted geometry, NOT mixed-plain,
   closed-negative); no common transonic Mach at medium ⇒ cross-model stays
   M0.5 (2.6%) + a post-B20 coarse M0.6 point (0.2%); GB18.1 PASS + GB18.2–5
-  RECORDED; no `pyfp3d/` change · **B19 ✓ CLOSED 2026-07-18** — LS-Newton
+  RECORDED; no `pyfp3d/` change — ★★ **ERRATUM 2026-07-20: the
+  "junction-limited (closed-negative)" story is RETIRED (pocket = B23 free-edge
+  singularity, healed by B25's `inboard_clip`; LS ceiling now co-located with
+  conforming) — see B26/B27** · **B19 ✓ CLOSED 2026-07-18** — LS-Newton
   Jacobian EXACT in 3-D (probe 1.146e-01→1.33e-08, ε-discriminator flipped; R
   bit-identical, NO convergence gain; Leg B routed the mixed-plain density
   contamination to B20) · **B20 ✓ CLOSED 2026-07-18, ADOPTED PERMANENTLY
@@ -507,7 +561,16 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   2026-07-19** — B15 demo 20/20 + B14 7/7 refreshed on the B21 state (coarse
   ramp γ 0.084931 disclosed); **N3 closed** via gated absolute anchor locks
   (`test_b22_ls_3d_anchors.py`); re-baseline erratum checklist = process;
-  next-phase analysis recommends P11 (user's call).
+  next-phase analysis recommends P11 (user's call) · **B26 ✓ CLOSED
+  2026-07-20 (B26-A)** — the junction pocket WAS the LS wing-body transonic
+  ceiling limiter: healed by B25's `inboard_clip`; medium 0.50→0.7625, coarse
+  0.82→0.84 reached; death class flips (a)→(b) (wing-tip P13; corridor
+  clean); T1: the A-side anchor divergence = the B21/B22 freeze-capture
+  effect · **B27 ✓ CLOSED 2026-07-20** — B18 demo refresh: LS+clip reaches
+  the conforming ceiling site (GB27.1/27.2 bit-consistency 336/336;
+  cross-model upgraded M0.5 + M0.65 2.4% PASS + M0.75 2.5%); the
+  "junction-limited" story RETIRED; next = (b)-class ceiling attribution
+  (user's call).
 - **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·

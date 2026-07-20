@@ -283,12 +283,16 @@ def fig_sections_medium(mc, level="medium", m=0.79):
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.6))
     for ax, eta in zip(axes, (0.44, 0.65, 0.90)):
         try:
-            xc, cp = section_cp_curve(mc, phi, eta=eta, b_semi=B_SEMI, m_inf=m)
-            ax.plot(xc, cp, "-", color=S1_BLUE, lw=1.2)
+            d = section_cp_curve(mc, phi, eta=eta, b_semi=B_SEMI, m_inf=m)
+            ax.plot(d["x_upper"], d["cp_upper"], "-", color=S1_BLUE, lw=1.2,
+                    label="upper")
+            ax.plot(d["x_lower"], d["cp_lower"], "-", color=S2_AQUA, lw=1.2,
+                    label="lower")
         except Exception:
             pass
         ax.invert_yaxis(); ax.set_title(f"η={eta}"); ax.set_xlabel("x/c")
     axes[0].set_ylabel("Cp")
+    axes[0].legend(fontsize=8)
     fig.suptitle(f"B18 conforming M{m} medium section Cp (transonic shock)")
     finish(fig, OUT, "b18_sections_conf_medium.png")
 
