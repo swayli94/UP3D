@@ -30,11 +30,15 @@ independently of any mesh file.
 
 from pathlib import Path
 
+import math
+
 import numpy as np
 import pytest
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
+from pyfp3d.meshgen.fuselage import (FuselageParams, make_inboard_clip,
+                                     radius_at)
 from pyfp3d.meshgen.wing3d import B_SEMI, x_te
 from pyfp3d.wake import CutElementMap, WakeLevelSet
 
@@ -140,6 +144,39 @@ class TestSyntheticClassification:
         # even though its absolute y is positive.
         s2, _, _ = wls.evaluate(np.array([[2.0, 0.05, 1.5]]))
         assert s2[0] < 0
+
+    def test_panel_selection_prefers_on_sheet_foot(self):
+        """B24 corner-theft REGRESSION: on a kinked TE (wing + inboard
+        waterline extension), panel selection must charge the downstream
+        shortfall min(0, d)^2 of a behind-the-edge (t < 0) foot. The
+        extension panel's ruled PLANE extends backward below the wing
+        wake near the corner; a below-wake node sitting ON the wing
+        panel's physical sheet must not be stolen by that closer plane
+        (its perpendicular foot there lies at d < 0 -- the sheet is not
+        there). Measured on the B24 wing-body corner at alpha = 2: the
+        theft orphaned the corner TE nodes (no d > 0 crossing left, so
+        no cut element -- the A3 aux-DOF invariant blew up)."""
+        # wing panel (0.8,0,0.15) -> (1.0,0,0.85); inboard extension
+        # (2.0,-0.0042,0.15) -> (0.8,0,0.15) with the B24 0.2-deg tilt.
+        te = np.array([[2.0, -0.0042, 0.15], [0.8, 0.0, 0.15],
+                       [1.0, 0.0, 0.85]])
+        a = np.radians(2.0)
+        wls = WakeLevelSet(te, direction=(np.cos(a), np.sin(a), 0.0))
+        ext_len = float(np.hypot(1.2, 0.0042))
+        # below the wing wake, just outboard of the corner, downstream of
+        # the TE: the extension plane (z = 0.15 curtain) passes closer
+        # than the wing sheet, but only BEHIND the extension's own edge.
+        pt = np.array([[0.8532, -0.0063, 0.1553]])
+        s, d, q = wls.evaluate(pt)
+        assert d[0] > 0.0, "stolen by the extension's backward plane"
+        assert s[0] < 0.0, "must read below the wing wake"
+        assert q[0] > ext_len, "must be owned by the WING panel"
+        # the same segment must drive surface_normals (Track B g1):
+        n = wls.surface_normals(pt)
+        assert n[0, 1] > 0.9, "wing panel normal is ~ +y, not the curtain's"
+        # a genuinely upstream point keeps d < 0 (fallback intact)
+        _, d_up, _ = wls.evaluate(np.array([[0.5, 0.001, 0.5]]))
+        assert d_up[0] < 0.0
 
     def test_swept_te_span_coordinate_is_oblique(self):
         """REGRESSION PIN: on a SWEPT TE the span axis is not
@@ -468,3 +505,105 @@ class TestM6WakeFree:
                             wall_nodes=wall)
         assert set(cm0.cut_elems) != set(cm3.cut_elems)
         assert len(set(cm0.cut_elems) & set(cm3.cut_elems)) > 0
+
+
+# ---------------------------------------------------------------------------
+# B25 inboard fragment clip (cases/analysis/b25_inboard_fragment_clip):
+# the q >= 0 junction-station clip replaced by the conforming sheet's
+# fragment topology -- the sheet runs inboard until it hits the fuselage
+# surface (trace = waterline -> tail tip, ON the wall) or, aft of the body,
+# the z = 0 symmetry plane (a domain boundary). Synthetic strips only; the
+# solve-side evidence is the F1 harness.
+# ---------------------------------------------------------------------------
+
+class TestInboardFragmentClip:
+    FUS = FuselageParams()
+
+    def _levelset_through(self, c):
+        """2-point wing-body TE (junction -> tip) at the alpha whose sheet
+        passes exactly through the target crossing point c. Self-checks:
+        c is on the sheet, downstream of the TE, and INBOARD of the
+        junction (q < 0 -- the region where the two clips differ)."""
+        x_c, y_c, z_c = c
+        dx = x_c - x_te(z_c)
+        assert dx > 0.0, "target crossing must be downstream of the TE"
+        alpha = math.atan2(y_c, dx)
+        te = np.array([[x_te(self.FUS.r_f), 0.0, self.FUS.r_f],
+                       [x_te(B_SEMI), 0.0, B_SEMI]])
+        wls = WakeLevelSet(te, direction=(np.cos(alpha), np.sin(alpha), 0.0))
+        s, d, q = wls.evaluate(np.asarray(c, dtype=float).reshape(1, 3))
+        assert abs(s[0]) < 1e-12 and d[0] > 0.0 and q[0] < 0.0
+        return wls
+
+    def _strip_tet(self, wls, c, delta=1e-3, off=2e-3):
+        """One tet straddling the sheet at c: a single '-' node and three
+        '+' nodes, so the three s = 0 crossings land within ~off/2 of c."""
+        c = np.asarray(c, dtype=float)
+        n = wls.surface_normals(c.reshape(1, 3))[0]
+        d_hat = wls.direction
+        span = np.cross(d_hat, n)          # in-plane spanwise axis (unit)
+        a = c - delta * n
+        b = c + delta * n
+        nodes = np.array([a, b + off * d_hat, b + off * span,
+                          b - off * d_hat])
+        return nodes, np.array([[0, 1, 2, 3]])
+
+    def test_default_none_is_bit_identical(self):
+        """inboard_clip=None (explicit or omitted) is the legacy q >= 0
+        path, unchanged."""
+        c = (1.2, 0.7 * self.FUS.r_f, 0.8 * self.FUS.r_f)
+        wls = self._levelset_through(c)
+        nodes, elements = self._strip_tet(wls, c)
+        cm_def = CutElementMap(nodes, elements, wls)
+        cm_none = CutElementMap(nodes, elements, wls, inboard_clip=None)
+        assert cm_def.summary() == cm_none.summary()
+        assert np.array_equal(cm_def.cut_elems, cm_none.cut_elems)
+        assert np.array_equal(cm_def.node_side, cm_none.node_side)
+        assert np.array_equal(cm_def.ext_dof_of_node,
+                              cm_none.ext_dof_of_node)
+        assert np.array_equal(cm_def.dofs_upper, cm_none.dofs_upper)
+        assert np.array_equal(cm_def.dofs_lower, cm_none.dofs_lower)
+
+    def test_rejects_inside_body(self):
+        """A crossing with y^2 + z^2 < R(x)^2 (inside the fuselage) is NOT
+        on the sheet -- the sheet ends AT the body surface."""
+        c = (1.2, 0.02, 0.10)                # hypot = 0.102 < r_f = 0.15
+        clip = make_inboard_clip(self.FUS)
+        assert not clip(np.array([c]))[0]
+        wls = self._levelset_through(c)
+        nodes, elements = self._strip_tet(wls, c)
+        cm = CutElementMap(nodes, elements, wls, inboard_clip=clip)
+        assert len(cm.cut_elems) == 0
+        assert cm.n_ext_dofs == 0
+
+    def test_accepts_beside_body(self):
+        """A crossing OUTSIDE the body (hypot(y, z) >= R(x)) but inboard of
+        the junction station (q < 0) IS on the sheet -- the new behaviour:
+        the legacy q >= 0 clip rejects it, the fragment clip cuts it."""
+        c = (1.2, 0.7 * self.FUS.r_f, 0.8 * self.FUS.r_f)
+        assert np.hypot(c[1], c[2]) >= radius_at(self.FUS, c[0])
+        clip = make_inboard_clip(self.FUS)
+        assert clip(np.array([c]))[0]
+        wls = self._levelset_through(c)
+        nodes, elements = self._strip_tet(wls, c)
+        cm = CutElementMap(nodes, elements, wls, inboard_clip=clip)
+        assert list(cm.cut_elems) == [0]
+        cm_legacy = CutElementMap(nodes, elements, wls)
+        assert len(cm_legacy.cut_elems) == 0     # q < 0: legacy rejects
+
+    def test_aft_of_body_reaches_symmetry_plane(self):
+        """Aft of x_tail_tip the sheet runs to the z = 0 symmetry plane:
+        z >= 0 accepted, z < 0 rejected."""
+        x_aft = float(self.FUS.x_tail_tip) + 0.5
+        clip = make_inboard_clip(self.FUS)
+        c_up = (x_aft, 0.05, 0.01)
+        c_lo = (x_aft, 0.05, -0.01)
+        assert clip(np.array([c_up]))[0] and not clip(np.array([c_lo]))[0]
+        wls_up = self._levelset_through(c_up)
+        nodes, elements = self._strip_tet(wls_up, c_up)
+        cm = CutElementMap(nodes, elements, wls_up, inboard_clip=clip)
+        assert list(cm.cut_elems) == [0]
+        wls_lo = self._levelset_through(c_lo)
+        nodes, elements = self._strip_tet(wls_lo, c_lo)
+        cm = CutElementMap(nodes, elements, wls_lo, inboard_clip=clip)
+        assert len(cm.cut_elems) == 0

@@ -1464,6 +1464,13 @@ committed 数字；B16 的 jump=0 数字用 explicit `"pin"` 复现。`"pin"`（
 
 ## 18. B18：翼身组合体跨声速 M0.84——conforming 到、level-set 交界受限（2026-07-18，已关闭）
 
+> **★★ Erratum 指针（2026-07-20，B26/B27）**：本节"level-set 交界受限
+> （closed-negative，G1.6/GB9.4 刻面几何）"的核心叙事**已被推翻**——袋的根因是
+> B23 inboard 自由边奇点（非刻面几何），`inboard_clip`（B25）可愈，愈后 LS 天花板
+> 与 conforming **同址**（coarse 0.84 reached、medium 0.7625；B26-A），demo 已于
+> B27 重述（8/8 PASS）。见 **§22**。本节保留为历史记录；§18.1 的 conforming 数字
+> 依然成立（B27 逐位复现）。
+
 **翼身跨声速能力是不对称的，这个不对称本身就是结论。** 亚声速 M0.5 翼身已由 B9/B17 闭合；
 往上推 Mach：
 
@@ -1552,3 +1559,58 @@ committed recipe 重回 **M0.84**（γ 0.088343、res 9.0e-14、clamps 0/1、515
 q²/ρ 消费者都必须显式决定并记录其密度来源**（同类第四次咬人：B8 诊断 → B19
 Jacobian → GB19.6 残差 → B21 freeze 捕获）。测试锁：3-D 冻结≡live 逐位
 （`tests/test_b15_ls_newton_freeze.py` 的 3-D gated 变体）。
+
+## 22. B26/B27：袋愈后 LS 翼身跨声速天花板重测 + B18 demo 刷新（2026-07-20，已关闭）
+
+**结论：交界袋是 LS 翼身跨声速天花板的限制器；袋愈后 LS 天花板与 conforming 同址。**
+
+### 22.1 机制链（B23 → B25 → B26）
+
+- B23（判别实验）：交界虚假超声速袋 = 尾迹片 **inboard 自由边奇点**——默认
+  `q>=0` 裁切把片停在交界站位，自由边留在流体内部（违反 Helmholtz：涡线必须
+  止于壁面或离开域）。
+- B25：`CutElementMap(inboard_clip=make_inboard_clip(FUS))` 把 inboard 裁切换成
+  **conforming 片拓扑**（片延伸至壁面/对称面），袋愈（走廊 corrM 14.66→0.63）。
+  零库侵入：默认路径逐位不变，clip 为可选参数。
+- B26（判定实验，A/C 同码对照，B18 配方逐字冻结）：唯一变量 = inboard_clip →
+  **medium 天花板 0.50 → 0.7625，coarse 0.82 → 0.84（reached）**；C 侧死因从
+  (a) 类袋拒级变为 **(b) 类高 M Newton 停滞**（峰在翼尖 z≈1.20，P13 类；
+  交界走廊 corrM ≤1.10 干净）。⇒ LS 天花板与 conforming 同址（coarse 0.84 =
+  conforming coarse；medium 0.7625 ≈ conforming 0.79），残余限制器同类。
+
+### 22.2 B18 天花板叙事勘误（本节取代 §18.2 的 closed-negative 归因）
+
+- §18.2 的"交界受限 = G1.6/GB9.4 刻面几何误差、随加密恶化、closed-negative"
+  链**已被推翻**：袋根因 = 自由边奇点（B23），可愈（B25），愈后天花板与
+  conforming 同址（B26-A）。G1.6 刻面误差**退居 cl_fus（机身虚假升力）嫌疑**
+  （GB9.4 类；C 侧 out-band 分量 ×2 → P11/曲面壁元路线输入）。
+- ★ **B18 committed 锚与 A 侧复测的背离 = B21/B22 freeze-capture 修复效应**
+  （B26 T1 独立发现）：A medium 锚 = 死 0.50（3/3、Mmax 5.22、res 1.1e-13 紧
+  却被拒）；现码 = **0.50 收敛**（同 3/3、同 Mmax 5.22）——修复后的 freeze 能
+  捕获这 3/3 个单元。袋真实杀伤线在 A medium 是 **0.55**（Mmax 13.1 >
+  freeze_max_clamped=8），A coarse 在 0.84 才显影（条带袋 M3.28 q≈0 卡 Newton）。
+
+### 22.3 B27（交付刷新）：demo 门面重述 + 跨模型升档
+
+- B18 demo 全量重跑（~1 h 39 min，零库改动，前置 b1/b2/m2/v0 86/86 绿）：
+  conforming 腿**逐位**复现 committed 锚（GB27.1 PASS——B21/B22 对 conforming
+  惰性成立）；LS A/C 腿**逐位**复现 B26 committed（GB27.2 PASS——summary 36 项
+  + levels 292 项 bit-identical）。一致性证据
+  `cases/analysis/b27_b18_demo_refresh/results/g27_consistency.csv`（336/336）。
+- **跨模型升档**：B26 前 medium 无共同跨声速 Mach（LS 离不开 0.5）；现在
+  M0.5（2.6%，B9/B17）+ **M0.65（2.4%，PASS ≤5%）** + M0.75（2.5%，RECORDED）
+  ——gap 全 Mach 平整于 ~2.5% = B17 cl_p↔cl_kj 口径差带，非物理分歧。新增
+  conf medium 0.75 点（cl_p **0.2483**，cl(M) 单调 0.2173/0.2321/0.2483/0.2579）。
+- LS+clip cl(M)：medium 0.2117(锚)/0.2266/0.2421/0.2475（0.775 濒死近收敛态）
+  + coarse 0.2542 @0.84 reached。coarse 0.60 cross 的 LS 侧换 C 口径：
+  0.2133（gap 2.1%，under-resolved）；旧 A 侧 0.2% 行退役（袋污染态恰好贴近
+  conforming 的巧合）。
+- demo 证据：`cases/demo/b18_wingbody_transonic/results/`（checks.csv **8/8
+  PASS**：GB18.1/18.2/18.3(M0.65) PASS + GB18.3(M0.75)/18.4/18.5 RECORDED）。
+  ★ 顺带修复：`b18_sections_conf_medium.png` 在旧 committed demo 里就是空图
+  （`section_cp_curve` tuple→dict API 漂移被 `except: pass` 静默吞掉），现为
+  上下翼面两条 Cp 曲线。
+- **出口**：LS 翼身全包线评估开题（conforming 退居交叉验证；Track V 片拓扑
+  前置就位）；**(b) 类天花板归因**为下一 phase 候选（LS+clip medium 0.775 与
+  conforming medium 0.80+ 若同机制 = 翼尖 P13 + 激波系 lim/flr 振荡，投入转向
+  两路径共享的 Newton 鲁棒性）；cl_fus out-band ×2 → P11 监视项。

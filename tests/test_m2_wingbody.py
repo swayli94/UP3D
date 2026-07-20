@@ -148,6 +148,55 @@ def test_te_polyline_runs_from_the_junction_to_the_tip():
     assert math.isclose(te[1, 0], x_te(B_SEMI), rel_tol=1e-12)
 
 
+def test_te_polyline_waterline_extension():
+    """B24: extend="waterline" prepends the inboard continuation (far-field
+    strip -> tail -> body waterline -> junction), pushing the sheet's inboard
+    free edge out of the near field. Default stays bit-identical (above)."""
+    p = FuselageParams()
+    x_far = 16.0
+    te = te_polyline(p, extend="waterline", x_far=x_far)
+    z0 = junction_z(p)
+    # q = 0 at the far-field end, on the z = r_tail strip
+    assert math.isclose(te[0, 0], x_far, rel_tol=1e-12)
+    assert math.isclose(te[0, 2], p.r_tail, rel_tol=1e-12)
+    # B24 R5: the extension tilts DOWN in y (slope -tan(0.2 deg)) so no
+    # extension segment is ever exactly parallel to d = (1,0,0) at alpha = 0
+    x_j = x_te(z0)
+    wing_pts = te[-1:]
+    junction = te[-2]
+    ext = te[:-2]                                        # strip + waterline
+    assert (ext[:, 0] > x_j).all()
+    assert (ext[:, 1] < 0.0).all()
+    assert (np.diff(ext[:, 1]) > 0.0).all()              # y rises toward junction
+    assert math.isclose(junction[1], 0.0, abs_tol=1e-15)
+    assert (wing_pts[:, 1] == 0.0).all()
+    # continuous through the tail: the strip z meets the waterline's first z
+    assert math.isclose(te[0, 2], te[1, 2], rel_tol=1e-12)
+    # monotone downstream -> upstream: x decreases to the junction station,
+    # waterline z follows R(x), and the LAST waterline point IS the junction
+    wl = te[:-1]                                       # strip + waterline
+    assert (np.diff(wl[:, 0]) < 0.0).all()
+    for x, z in wl[1:, [0, 2]]:
+        assert math.isclose(z, radius_at(p, float(x)), abs_tol=1e-12)
+    assert math.isclose(wl[-1, 0], x_te(z0), rel_tol=1e-12)
+    assert math.isclose(wl[-1, 2], z0, rel_tol=1e-12)
+    # and it still ends at the tip TE corner
+    assert math.isclose(te[-1, 2], B_SEMI, rel_tol=1e-12)
+    assert math.isclose(te[-1, 0], x_te(B_SEMI), rel_tol=1e-12)
+    # no degenerate consecutive segments (the WakeLevelSet guard)
+    seg = np.diff(te, axis=0)
+    assert (np.einsum("ij,ij->i", seg, seg) > 0.0).all()
+    # delta ("cone") lifts the extension but tapers to 0 at the junction
+    te3 = te_polyline(p, extend="waterline", delta=0.03, x_far=x_far)
+    assert te3[0, 2] > te[0, 2]
+    assert math.isclose(te3[-2, 2], z0, rel_tol=1e-12)
+    assert math.isclose(te3[-1, 2], B_SEMI, rel_tol=1e-12)
+    # x_far is required under extend
+    import pytest
+    with pytest.raises(ValueError):
+        te_polyline(p, extend="waterline")
+
+
 # --------------------------------------------------------------------------
 # Mesh gates
 # --------------------------------------------------------------------------

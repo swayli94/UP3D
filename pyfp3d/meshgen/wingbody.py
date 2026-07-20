@@ -128,15 +128,80 @@ def junction_z(p: FuselageParams) -> float:
     return p.r_f
 
 
-def te_polyline(p: FuselageParams) -> np.ndarray:
+def te_polyline(p: FuselageParams, extend: Optional[str] = None,
+                delta: float = 0.0, x_far: Optional[float] = None,
+                n_waterline: int = 64, tilt_deg: float = 0.2) -> np.ndarray:
     """Analytic TE polyline for WakeLevelSet: from the wing-fuselage junction
     (z = r_f) out to the tip TE corner (z = B_SEMI), in the chord plane y = 0.
+
+    extend=None (default, bit-identical): the 2-point junction->tip line; the
+    sheet's inboard free edge is the ray from the junction TE point -- the
+    B23-attributed source of the wing-body junction pocket.
+
+    extend="waterline" (B24): prepend the INBOARD continuation, ordered from
+    the far-field end so q = 0 (and with it the inboard free edge) sits out
+    of the near field:
+
+        (x_far, 0, r_tail+d) -> (x_tail_start, 0, r_tail+d)
+        -> along the body waterline (x, 0, R(x)+d) UP to the junction TE
+        -> junction -> tip (the default 2 points).
+
+    This is the level-set analogue of the CONFORMING sheet, which has always
+    run junction TE -> fuselage waterline -> symmetry edge -> sphere
+    (embed_wake=True; the conf path carries no junction pocket). The strip
+    stays at z = r_tail + delta aft of the body (NOT z = 0): the level-set
+    path has no branch-cut simply-connectedness constraint, and z = r_tail
+    keeps the sheet off the symmetry plane.
+
+    delta > 0 lifts the extension off the skin (the B3 "cone" fallback; the
+    B1 sheet grazes the body with quadratic lift-off). delta is tapered
+    linearly to 0 over the first 10% of the waterline next to the junction
+    so the extended polyline stays continuous with the wing TE.
+
+    x_far is REQUIRED when extend is set (pass the mesh far-field x extent);
+    n_waterline sets the waterline sampling (finer than h_body on any
+    committed level). The sheet stays OUTSIDE the body by construction:
+    a waterline point (x, 0, R(x)) sheds (x+t cos a, t sin a, R(x)) with
+    radius sqrt(R(x)^2 + t^2 sin^2 a) >= R(x) >= R(x+t cos a).
+
+    tilt_deg (B24 R5 fix): the extension is sloped DOWNWARD in y by
+    tan(tilt_deg) * (x - x_te(junction)), so no extension segment is ever
+    exactly parallel to the wake direction d = (cos a, 0, sin a). Without
+    it, alpha = 0 puts the whole y = 0 extension exactly parallel to d and
+    WakeLevelSet.update_direction rejects the degenerate TE segment. The
+    slope is tiny: sin(0.2 deg) = 3.5e-3 keeps the 2x2 side-system solve
+    at cond ~ 8e4 (eps error ~1e-11 << the 1e-6*h reclassification tol),
+    and the displacement at the body (<= 2.8e-3) is far under h_body.
+    The tilt only ADDS to the radius sqrt(y^2+z^2), so the outside-body
+    invariant above is untouched. y = 0 exactly at the junction, so the
+    polyline stays continuous with the wing TE.
     """
     z0 = junction_z(p)
-    return np.array([
+    wing = np.array([
         [x_te(z0), 0.0, z0],
         [x_te(B_SEMI), 0.0, B_SEMI],
     ])
+    if extend is None:
+        return wing
+    if extend != "waterline":
+        raise ValueError(f"extend={extend!r} unknown (None|'waterline')")
+    if x_far is None:
+        raise ValueError("x_far is required when extend is set "
+                         "(pass the mesh far-field x extent)")
+    x_j = float(x_te(z0))
+    x_rt = float(p.x_tail_start)
+    if not (x_j < x_rt < x_far):
+        raise ValueError(f"expect x_te(junction) < x_tail_start < x_far, got "
+                         f"{x_j} < {x_rt} < {x_far}")
+    blend = 0.1 * (x_rt - x_j)
+    xs = np.linspace(x_rt, x_j, n_waterline)          # far -> junction
+    taper = np.minimum(1.0, (xs - x_j) / blend)       # delta -> 0 at junction
+    zs = np.array([radius_at(p, float(x)) for x in xs]) + delta * taper
+    slope = -math.tan(math.radians(tilt_deg))
+    ys_ext = slope * (xs - x_j)                        # 0 at junction, < 0 aft
+    waterline = np.column_stack([xs, ys_ext, zs])
+    strip = np.array([[x_far, slope * (x_far - x_j), float(zs[0])]])
+    return np.vstack([strip, waterline, wing[1:]])
 
 
 def _surface_on_fuselage(tag: int, p: FuselageParams, tol: float,
@@ -181,6 +246,7 @@ def onera_m6_wingbody_mesh(
     tip_cap: str = "round",
     n_profile: int = 120,
     embed_wake: bool = False,
+    junction_fillet: Optional[float] = None,
 ) -> Mesh:
     """Generate the ONERA M6 wing-body half-model volume mesh.
 
@@ -214,6 +280,13 @@ def onera_m6_wingbody_mesh(
                 over the nose / afterbody length
         tip_cap: "round" (default, M5) or "flat"
         n_profile: fuselage meridian spline sample count
+        junction_fillet: None (default, bit-identical) or a fairing RADIUS:
+                the wing-fuselage reentrant corner is filled by a sphere-pipe
+                fairing (ersatz tangent blend, _fillet_junction -- OCC's own
+                fillet fails on the LE/TE cusps). A Ball-field strip at the
+                sampled junction line keeps the blend resolved at h_junction.
+                Wake-free path only (embed_wake is rejected). D3 leg of
+                cases/analysis/b23_junction_discriminator.
 
     Returns:
         Mesh with boundary groups "wall" (wing skin), "fuselage"
@@ -225,6 +298,12 @@ def onera_m6_wingbody_mesh(
 
     if tip_cap not in TIP_CAPS:
         raise ValueError(f"tip_cap must be one of {TIP_CAPS}, got {tip_cap!r}")
+    if junction_fillet is not None:
+        if junction_fillet <= 0.0:
+            raise ValueError("junction_fillet must be > 0 (a radius)")
+        if embed_wake:
+            raise ValueError("junction_fillet is supported on the wake-free "
+                             "path only (D3 discriminator leg)")
     p = fuselage if fuselage is not None else FuselageParams()
     if h_far is None:
         # NO clamp (M1b defect); self-similar. 200, not 120: scaled with R_FAR.
@@ -289,6 +368,17 @@ def onera_m6_wingbody_mesh(
                     if embed_wake else
                     add_fuselage_solid(occ, p, n_profile=n_profile))
         body, _ = occ.fuse(wing_vols, fus_vols)
+
+        # --- optional junction fillet (D3 discriminator leg) ----------------
+        # Fillet the wing-fuselage intersection edges of the fused BODY solid,
+        # before the fluid cut. junction_pts = the sampled pre-fillet junction
+        # line, reused below as Ball-field centers so the blend stays resolved
+        # at h_junction (the _junction_curves field finds no edge afterwards).
+        junction_pts: Optional[np.ndarray] = None
+        if junction_fillet is not None:
+            body, junction_pts = _fillet_junction(gmsh, occ, body, p,
+                                                  radius=junction_fillet)
+            occ.synchronize()
 
         # --- half-ball fluid domain, minus the wing-body -------------------
         ball = occ.addSphere(xc, 0.0, 0.0, r_far)
@@ -514,6 +604,25 @@ def onera_m6_wingbody_mesh(
         if junction_curves:
             _dist_threshold(curves=junction_curves, size_min=h_junction,
                             dist_min=0.02, dist_max=0.3 * grad, sampling=400)
+        if junction_pts is not None and len(junction_pts):
+            # D3 fillet leg: the crease is gone, so the junction-curve field
+            # above found nothing. Keep the BLEND resolved with a chain of
+            # Ball fields along the sampled pre-fillet junction line: VIn =
+            # h_junction on the blend, ramping to h_wall over ~2 radii.
+            balls: List[int] = []
+            for pt in junction_pts:
+                fb = field.add("Ball")
+                field.setNumber(fb, "XCenter", float(pt[0]))
+                field.setNumber(fb, "YCenter", float(pt[1]))
+                field.setNumber(fb, "ZCenter", float(pt[2]))
+                field.setNumber(fb, "Radius", 1.5 * junction_fillet)
+                field.setNumber(fb, "Thickness", 2.0 * junction_fillet)
+                field.setNumber(fb, "VIn", h_junction)
+                field.setNumber(fb, "VOut", h_wall)
+                balls.append(fb)
+            f_balls = field.add("Min")
+            field.setNumbers(f_balls, "FieldsList", balls)
+            thresholds.append(f_balls)
 
         f_min = field.add("Min")
         field.setNumbers(f_min, "FieldsList", thresholds)
@@ -558,10 +667,105 @@ def onera_m6_wingbody_mesh(
 
         mesh = _collect_3d(groups, name=name)
         _wingbody_asserts(mesh, p, r_far=r_far, xc=xc, tol=1e-7 * r_far,
-                          tip_cap=tip_cap, embed_wake=embed_wake)
+                          tip_cap=tip_cap, embed_wake=embed_wake,
+                          filleted=junction_fillet is not None)
         return mesh
     finally:
         gmsh.finalize()
+
+
+def _fillet_junction(gmsh, occ, body, p: FuselageParams,
+                     radius: float, n_sample: int = 30,
+                     fus_tol: float = 5e-3):
+    """Fair the wing-fuselage reentrant corner with a straight CONE fairing
+    pair (D3 discriminator leg).
+
+    Why not occ.fillet / sphere-pipe / addPipe -- all measured failing or
+    intractable 2026-07-19: OCC's blend dies on the LE/TE cusps ("Could not
+    compute fillet", r = 0.02..0.05); a 60-sphere chain needs > 15 min of
+    batched BOPs; addPipe loses the curve to OCC renumbering ("Unknown
+    OpenCASCADE wire"). What works cheaply: TWO straight cone trains along
+    the junction line. On the constant-radius section the junction is
+    nearly straight, so a tube of radius `radius` centered at
+    (y = +/-radius, z = r_f + radius) is tangent to BOTH the wing plane
+    (y = 0) and the fuselage cylinder (sqrt(y^2+z^2) = r_f) -- an ersatz
+    fairing, not a true fillet (the wing skin has thickness and the
+    junction y wanders by O(0.04)), which is all the "kill the crease" A/B
+    needs. Each side is taper-cone / cylinder / taper-cone so the ends die
+    INSIDE the body. 6 tools, fused in batches of 3 (a ~60-tool single BOP
+    silently merges nothing -- measured).
+
+    STATUS 2026-07-19: geometry-side fuse succeeds, but the smoke mesh
+    (canonical D4 case, h_wall = 0.04, rho = 0.045) put gmsh into a
+    pathological state (> 15 min, RSS runaway past 4 GB where the unfilleted
+    h04 mesh is 46k tets in seconds) -- the fused fairing leaves sliver
+    surfaces that the surface mesher cannot close. Recorded LOW-COST
+    INFEASIBLE per the D3 pre-registered fallback; the parameter stays as
+    the documented dead end (default None keeps the default path
+    bit-identical).
+
+    Returns (new_body_dimtags, (n,3) junction-line points) -- the points
+    feed the Ball-field strip that keeps the blend resolved (the
+    crease-edge refinement field has no edge to hang on once the corner is
+    filled).
+    """
+    occ.synchronize()
+    vols3 = gmsh.model.getEntities(3)
+    assert len(vols3) == 1, f"expected one body volume, got {vols3}"
+    vol_tag = vols3[0][1]
+    fus_faces = set()
+    for dim, tag in gmsh.model.getEntities(2):
+        if _surface_on_fuselage(tag, p, fus_tol):
+            fus_faces.add(tag)
+    jcurves: List[int] = []
+    for dim, tag in gmsh.model.getEntities(1):
+        up, _ = gmsh.model.getAdjacencies(1, tag)
+        up = list(up)
+        if not up:
+            continue
+        has_fus = any(f in fus_faces for f in up)
+        has_other = any(f not in fus_faces for f in up)
+        if has_fus and has_other:
+            jcurves.append(tag)
+    if not jcurves:
+        raise RuntimeError("junction_fillet: no wing-fuselage junction edges "
+                           "found on the fused body")
+    pts: List[np.ndarray] = []
+    for t in jcurves:
+        lo, hi = gmsh.model.getParametrizationBounds(1, t)
+        us = np.linspace(lo[0], hi[0], n_sample)
+        uv: List[float] = []
+        for u in us:
+            uv.append(float(u))
+        xyz = np.asarray(gmsh.model.getValue(1, t, uv)).reshape(-1, 3)
+        pts.append(xyz)
+    sampled = np.vstack(pts)
+
+    # straight cone-train fairing along the junction chord extent
+    x0 = float(sampled[:, 0].min()) - 0.02     # just fore of the LE cusp
+    x1 = float(sampled[:, 0].max()) + 0.02     # just aft of the TE cusp
+    taper = 0.12
+    rho = radius
+    z_c = p.r_f + rho
+    tools: List[Tuple[int, int]] = []
+    for sgn in (+1.0, -1.0):
+        y_c = sgn * rho
+        tools.append((3, occ.addCone(x0 - taper, y_c, z_c, taper, 0.0, 0.0,
+                                     0.004, rho)))
+        tools.append((3, occ.addCylinder(x0, y_c, z_c, x1 - x0, 0.0, 0.0,
+                                         rho)))
+        tools.append((3, occ.addCone(x1, y_c, z_c, taper, 0.0, 0.0,
+                                     rho, 0.004)))
+    vol = (3, vol_tag)
+    for i in range(0, len(tools), 3):
+        out, _ = occ.fuse([vol], tools[i:i + 3])
+        vols_out = [dt for dt in out if dt[0] == 3]
+        if len(vols_out) != 1:
+            raise RuntimeError(
+                f"junction_fillet: fairing batch {i // 3} produced "
+                f"{len(vols_out)} volumes (expected 1)")
+        vol = vols_out[0]
+    return [vol], sampled
 
 
 def _sheet_piece_in_body(gmsh, tag: int, p: FuselageParams,
@@ -620,8 +824,12 @@ def _junction_curves(gmsh, groups: Dict[str, List[int]], p: FuselageParams,
 
 def _wingbody_asserts(mesh: Mesh, p: FuselageParams, r_far: float, xc: float,
                       tol: float, tip_cap: str,
-                      embed_wake: bool = False) -> None:
-    """Generation-time invariants for the wing-body mesh."""
+                      embed_wake: bool = False,
+                      filleted: bool = False) -> None:
+    """Generation-time invariants for the wing-body mesh. `filleted` = the D3
+    junction-fillet variant: the exact junction-TE vertex check is dropped
+    (the blend legitimately moves the TE/skin meeting point off the analytic
+    crease point by O(fillet radius)); every other invariant still applies."""
     from pyfp3d.mesh.metrics import compute_tet_volumes
 
     vols = compute_tet_volumes(mesh.nodes, mesh.elements)
@@ -663,10 +871,13 @@ def _wingbody_asserts(mesh: Mesh, p: FuselageParams, r_far: float, xc: float,
     # real wall node, not merely a nearby one (measured 1.5e-9 at coarse and
     # medium alike). The level-set wake's inboard end therefore lands on the
     # wall exactly, the way the tip TE corner does at the other end.
+    # D3 fillet variant: the blend moves the TE/skin meeting point off the
+    # analytic crease point by O(fillet radius) -- checked as a NEARBY node
+    # instead of an exact vertex.
     z_junc = junction_z(p)
     te_junc = np.array([x_te(z_junc), 0.0, z_junc])
     d_junc = np.linalg.norm(mesh.nodes[wall_nodes] - te_junc, axis=1).min()
-    assert d_junc < 1e-6, \
+    assert d_junc < (0.05 if filleted else 1e-6), \
         (f"no wall node at the junction TE {te_junc} (closest {d_junc:.2e}); "
          "the wake polyline inboard end is unresolved")
 

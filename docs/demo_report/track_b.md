@@ -6,10 +6,17 @@
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
 ## Track B — level-set embedded wake
-- (B1–B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; **B9 ✓ 2026-07-17** wing-body cross-model; B11–B15 ✓ incl.
-  **B14 Schur+AMG 2026-07-17**; **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic, B19 LS-Newton Jacobian
-  exactness — all 2026-07-18**; **B20 mixed-plain main-field density ADOPTED + re-baselined 2026-07-19**;
-  **B21 N1 freeze-capture fix 2026-07-19 — restores the M6-medium M0.84 ramp**)
+
+- (B1–B5 ✓ B7 ✓, closed 2026-07-11/12
+- B6 ◐
+- **B9 ✓ 2026-07-17** wing-body cross-model
+- B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**
+- **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic, B19 LS-Newton Jacobian exactness — all 2026-07-18**
+- **B20 mixed-plain main-field density ADOPTED + re-baselined 2026-07-19**
+- **B21 N1 freeze-capture fix + B22 evidence refresh/3-D anchor locks 2026-07-19 — restores + locks the M6-medium M0.84 ramp**
+- **B23 junction discriminator + B24 inboard-end extension (route closed) + B25 inboard fragment clip (pocket HEALED) 2026-07-19**
+- **B26 LS ceiling re-measured (co-located with conforming) + B27 B18 demo refresh 2026-07-20 —
+  the B18 "junction-limited" story is RETIRED, see the B18 section's erratum pointer**)
 
 **What the track replaces.** The conforming path represents the wake as a *mesh
 surface*: the sheet is embedded in the geometry, its nodes are duplicated by the
@@ -1759,7 +1766,22 @@ pin_gamma stays the recommended BC** (clean at both resolutions).
 
 ## B18 — Wing-body transonic (M0.84): conforming reaches it, level-set is junction-limited
 
-Demo `cases/demo/b18_wingbody_transonic/` (7 gated gates: 1 PASS + 6 RECORDED).
+> ★★★ **ERRATUM POINTER (2026-07-20, B23–B27).** The "level-set is
+> junction-limited" headline of this section is **RETIRED**: B23 attributed
+> the pocket to the wake inboard FREE-EDGE singularity (lift/wake-coupled,
+> not faceted geometry), B24 closed the waterline-extension route, B25's
+> `inboard_clip` healed the pocket (medium α=3.06 corrM 14.66 → 0.63), B26
+> re-measured the post-cure LS ceiling (**medium 0.50 → 0.7625, coarse
+> 0.82 → 0.84 reached** — co-located with conforming), and B27 refreshed
+> the demo itself: `checks.csv` is now **8/8 PASS** and the cross-model
+> extends to **M0.65 (2.4 % PASS) / M0.75 (2.5 % RECORDED)**. Read this
+> section as the HISTORICAL record; the live story is design_track_b.md §22
+> and the B23–B27 sections at the end of this file. The conforming legs
+> (GB18.1) stand untouched — bit-reproduced by B27/GB27.1.
+
+Demo `cases/demo/b18_wingbody_transonic/` (7 gated gates at the 2026-07-18
+close-out: 1 PASS + 6 RECORDED — **superseded 2026-07-20 by the B27 refresh:
+checks.csv 8/8 PASS**, see the erratum pointer above).
 No `pyfp3d/` numerics change — a pure evidence phase on the existing conforming
 `solve_newton_transonic` and level-set `solve_multivalued_newton_transonic`.
 
@@ -1929,3 +1951,124 @@ items. No `pyfp3d/` change.
   and the wing-body line has no numerical suspects left), LS fine second,
   Track V after P11 (V1 ladder parallelizable), plus a cheap M_max
   same-family cross-check. Decision = user.
+
+## B23 — Wing-body junction discriminator: the pocket is the wake inboard free-edge singularity (closed 2026-07-19)
+
+Pre-registered analysis campaign `cases/analysis/b23_junction_discriminator/`
+(PRE_REGISTRATION + VERDICT + committed `results/*.csv|png`). No `pyfp3d/`
+change. Executes the P11 close-out junction-discrimination requirement.
+
+- **D1 α-sweep (LS Picard M0.5, freestream+pin_gamma): the pocket is
+  lift/wake-coupled, NOT geometric.** α=0 is clean at BOTH levels (medium
+  Mmax 0.66 / coarse 0.64, cl_fus ≈ 0 self-check, no pocket); the pocket
+  appears with α and grows superlinearly — medium α=3.06 corrM **14.66**,
+  104 supersonic elements, peak BEHIND the fuselage (x=2.13, z≈z_junc);
+  coarse same-type (1.14). Pre-registered branch 2.
+- **Attribution:** the wake sheet's inboard boundary ends at the junction
+  station (q≥0) instead of reaching the fuselage surface — the P13-class
+  free-edge singularity transplanted from the (handled) wing tip to the
+  (unhandled) inboard end. W2 (fuselage spurious lift) characterized in the
+  same campaign. Routes: (b)-1 waterline extension → B24; (b)-2 P13
+  free-edge treatment rescoped inboard → realized as B25.
+
+## B24 — Wake inboard-end waterline extension: route CLOSED, negative (closed 2026-07-19)
+
+Pre-registered E1 `cases/analysis/b24_wake_inboard_end/` (`e1_summary.csv`,
+`e1_w2.csv`, `e1_pocket.png`). No `pyfp3d/` change.
+
+- **The free-edge hypothesis is re-confirmed** — the pocket FOLLOWS the free
+  edge: B1 (flush waterline) moves the peak past x_tail on every probed leg
+  (medium α=2.0: 1.71@1.57 → 5.58@2.48).
+- **But both extension variants trade the singularity for equal-or-worse
+  forms:** B1 medium α=3.06 corrM **78.56 NON-converged** (solver killed);
+  B3 (offset-cone δ) migrates the pocket back into the near field on all
+  legs (9.97–16.64 @ x≈2.15–2.32).
+- **Decision-tree exit 3: "extension-class insufficient" — (b)-1 CLOSED**;
+  fall back to B23 (b)-2 → B25.
+
+## B25 — Inboard fragment clip: the junction pocket HEALED (C-A) (closed 2026-07-19)
+
+Pre-registered F1 (v2.1) `cases/analysis/b25_inboard_fragment_clip/`
+(`f1_summary.csv`, `f1_pocket.png`, `w2_conf.csv`). **Library change:**
+`meshgen/fuselage.py:make_inboard_clip` builds the clip polygon;
+`wake/cut_elements.py:122,190-204` consumes it — the sheet's inboard
+boundary moves from "junction station q≥0" to the fuselage surface /
+symmetry plane (= the conforming fragment topology). **Default None ⇒
+bit-identical** (every A side below is the default path). Tests
+`tests/test_b1_cut_elements.py::TestInboardFragmentClip` (4) + M2/B1 locks.
+
+- **Primary criteria all decisive (medium α=3.06):** corridor corrM
+  **14.66 → 0.63** (threshold ≤ 1.3), corridor n_sup **88 → 0**, cl_p
+  **+0.38 %** (0.2117 → 0.2125, within [A, oracle 0.2173]), |Δγ| +0.37 %,
+  root te_jump profile 0.28 %, α=0 inert (|Δcl_p| ≈ 0, peak 0.62@x=1.79
+  side-identical), 56 outer ≤ 1.5×A, no singular/clamped rows, strip-jump
+  metric 1.16×γ, sliver min dihedral 11.0° / p05 37.3°. α=2 legs same-type.
+- **One secondary guardrail recorded non-blocking:** out-of-band fuselage
+  lift carryover +135 % (0.0214 → 0.0504) exceeds the literal 20 % band;
+  the same-code oracle attributes it to the flat-vs-tilted sheet MODEL
+  difference, not topology failure — P11/curved-wall watch item.
+- **Evidence chain closed:** B23 attribution → B24 follows-the-edge → B25
+  legal home.
+
+## B26 — Post-cure LS transonic ceiling re-measured: the pocket WAS the limiter (B26-A) (closed 2026-07-20)
+
+Pre-registered G1 `cases/analysis/b26_ls_transonic_ceiling/` (`g1_summary.csv`,
+`g1_levels.csv`, `g1_peaks.csv`, `g1_ceiling.png`). No `pyfp3d/` change;
+same-code A/C (default vs `inboard_clip`), the B18 recipe frozen verbatim,
+honest-stop ramp, ~69 min total solve.
+
+| leg | m_last converged | dies at | class | peak |
+|---|---|---|---|---|
+| A coarse | 0.82 | 0.84 | (b)+dm | junction strip M3.28 (q≈0) |
+| **C coarse** | **0.84 REACHED** | — | — | wing tip M14.3 (P13-class) |
+| A medium | 0.50 | 0.5125 | **(a)+dm** | junction strip M6.17 + face M3.53 |
+| **C medium** | **0.7625** | 0.775 | (b)+dm | wing tip M4.18 @ z=1.20 |
+
+- **Ceiling lift:** C medium climbs five loose rungs (0.55–0.75, all 0–1
+  clamp) past the B18 death point 0.50 + 0.7625 strict (res 2.6e-11); C
+  coarse reaches 0.84 strict (res 6.9e-11, freeze catches 6/1).
+- **Death-cause flip (a) → (b):** the pre-cure medium died of (a)-class
+  pocket rejection (0.55 loose res 1.1e-13 but 8/3 > freeze_max_clamped=8);
+  post-cure BOTH levels die of (b)-class high-M Newton stall with the peak
+  at the WING TIP (P13-class, corridor corrM 1.07 clean) — the same class
+  as the conforming medium 0.80+ stall, no longer the junction.
+- **cl_p same-trend vs conforming anchors:** C coarse 0.2542@0.84 vs conf
+  0.2617@0.84; C medium near-death 0.2475@0.775 vs conf 0.2579@0.79 — 2–4 %
+  low = the B17 LS cl_p↔cl_kj convention gap; monotone transonic rise
+  0.1289@0.50 → 0.1491@0.7625 (+16 %).
+
+## B27 — B18 demo refresh: LS legs resurrected, checks.csv 8/8 PASS (closed 2026-07-20)
+
+Pre-registered GB27.1–27.5 `cases/analysis/b27_b18_demo_refresh/` +
+refreshed `cases/demo/b18_wingbody_transonic/results/`. No `pyfp3d/` change;
+full re-solve from no cache (~1 h 39 min, T2 budget). **The B18 demo façade
+moves from "LS junction-limited (closed-negative)" to "post-cure LS ceiling
+co-located with conforming" (coarse 0.84 = 0.84; medium 0.7625 ≈ 0.79).**
+
+- **GB27.1 (PASS)** — conforming legs bit-reproduce the committed B18
+  anchors (0.2173/0.2321/0.2579/0.2617 + cross 0.2178 + Mmax 2.15 + reached
+  flags): B21/B22 inert on the conforming path, zero T1 drift.
+- **GB27.2 (PASS)** — LS A/C ceiling legs bit-reproduce B26 committed:
+  `g27_consistency.csv` **336/336 bit-identical** (36 summary + 292 level
+  items), zero T5 drift.
+- **GB27.3 (0.65 PASS / 0.75 RECORDED)** — the transonic cross-model NOW
+  EXISTS: M0.65 conf 0.2321 vs LS+clip 0.2266 = **2.4 % ≤ 5 % PASS**; M0.75
+  conf 0.2483 vs LS+clip 0.2421 = **2.5 %** (RECORDED, no-threshold). The
+  gap is **flat across Mach** — M0.5 2.6 / M0.65 2.4 / M0.75 2.5 % — one
+  ~2.5 % B17 convention band, not physics.
+- **GB27.4 (RECORDED)** — GB18.4 re-answered in-demo (pocket = B23 inboard
+  free-edge singularity, cured C-side; residual limiter = wing-tip P13 +
+  high-M Newton, peaks from B26 committed); GB18.5 refreshed (conf cl_fus
+  0.0423 = 16 % @0.79 live; C-side new-ceiling cl_fus 0.0781 / out-band
+  0.0565 ≈ ×2 → P11 watch item).
+- **GB27.5 (RECORDED)** — T1 erratum in the demo docstring: the A-side
+  re-test climbing past the B18 committed anchors (dies 0.50/0.55) is the
+  **B21/B22 freeze-capture repair effect**, not physics drift; the pocket's
+  true kill line A medium = 0.55 (Mmax 13.1 > freeze_max_clamped=8).
+- **Independent observations:** (1) coarse 0.60 cross — cured C-side 0.2133
+  (gap **2.1 %**) retires the old A-side 0.2 % row (a pocket-contaminated
+  coincidence); (2) `b18_sections_conf_medium.png` had been silently empty
+  since an earlier `section_cp_curve` API drift — fixed here (upper+lower
+  curves), NOT a B21/B22 regression; (3) conf medium **0.75 NEW point
+  0.2483** strict (res 8.3e-11), cl(M) monotone 0.2173/0.2321/0.2483/0.2579,
+  the 0.80+ stall narrative unchanged.

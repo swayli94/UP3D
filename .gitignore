@@ -88,71 +88,21 @@ cases/meshes/naca0012_2.5d/fine.msh
 cases/meshes/naca0012_wakefree_2.5d/medium.msh
 cases/meshes/naca0012_wakefree_2.5d/fine.msh
 
-# P5 demo solution caches (regenerable; figures+CSVs are the committed evidence)
-cases/demo/p5_onera_m6/results/*.npz
+# Result *.npz commit policy (user directive 2026-07-19): commit only SMALL
+# npz NEWLY COMPUTED on the kimi branch itself (currently: b25 f1_*). npz
+# belonging to main-line cases (b23/b24 analysis caches, demo caches) are
+# NOT committed -- the user syncs them across worktrees manually. Heavy demo
+# field dumps (p13/b8 per-element Mach fields, up to ~125 MB each) must
+# never be committed: >100 MB breaks the GitHub push limit.
 
-# P9 demo solution caches (same semantics: the fine M6 Newton solve is the
-# expensive run-once artifact; figures+CSVs are the committed evidence)
-cases/demo/p9_grid_discrimination/results/*.npz
+cases/demo/*/results/*.npz
 
-# B6 demo solution caches (the transonic level-set trajectories; figures+CSVs
-# are the committed evidence)
-cases/demo/b6_transonic/results/*.npz
-
-# B7 demo solution caches (the M6 3D level-set solves + the far-field study;
-# figures+CSVs are the committed evidence)
-cases/demo/b7_onera_m6/results/*.npz
-
-# tip-edge singularity demo: per-element Mach fields (the subsonic M0.5 probe;
-# figure+CSVs are the committed evidence, ~20 min to regenerate)
-cases/demo/p13_tip_edge_singularity/results/*.npz
-
-# B8 level-set tip-taper demo: per-element Mach fields (M6 coarse+medium, M0.5;
-# figure+CSVs are the committed evidence, ~45 min to regenerate — medium LS is
-# ~8 min/solve, sparse-direct LU on the ~67k-dof extended system)
-cases/demo/b8_tip_taper_ls/results/*.npz
-
-# B15 LS-Newton-ramp solution cache (the committed evidence is the
-# PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1, ~11 min for the M6
-# medium M0.84 ramp)
-cases/demo/b15_ls_newton_ramp/results/*.npz
-
-# A1 (Track A) solver-bottleneck 3-D leg solution caches (the committed
-# evidence is the PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1, ~1 h
-# for the M6 medium M0.84 four-method run)
-cases/analysis/a1_solver_bottleneck/results/*.npz
-
-# A2 (Track A) TE-Kutta fidelity derived caches (level-set operator products;
-# run_a2.py rebuilds them in ~1 min when absent -- PNG/CSV are the evidence)
-cases/analysis/a2_te_kutta_fidelity/results/*.npz
-
-# P14 pressure-Kutta demo tier-2 solution caches (committed evidence is the
-# PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1 -- the M6 medium M0.84
-# pressure ramp is minutes on top of its probe M0.70 seed solve)
-cases/demo/p14_pressure_kutta/results/*.npz
-
-# B14 Schur+AMG demo M6-medium A/B solution caches (committed evidence is the
-# PNG/CSV; regenerate with PYFP3D_TRANSONIC_GATES=1, ~30-45 min for the two
-# M0.84 ramp arms + two M0.5 lifting arms)
-cases/demo/b14_schur_precond/results/*.npz
 
 # Reference papers
 docs/references
 
 # Temporary files
 temp/
-
-# B9 wing-body demo solution caches (figures+CSVs are the committed evidence)
-cases/demo/b9_wingbody/results/*.npz
-
-# B16 far-field aux pin demo solution caches (figures+CSVs are the committed evidence)
-cases/demo/b16_farfield_aux/results/*.npz
-
-# B17 far-field aux pin_gamma demo solution caches (figures+CSVs are the committed evidence)
-cases/demo/b17_farfield_pin_gamma/results/*.npz
-
-# B18 wing-body transonic demo solution caches (figures+CSVs are the committed evidence)
-cases/demo/b18_wingbody_transonic/results/*.npz
 
 # P11 sphere-shell sweep meshes (local caches; the demo regenerates them,
 # ~8 min: python cases/demo/p11_curved_walls/run_demo.py). coarse/medium.msh
@@ -161,3 +111,4 @@ cases/meshes/sphere_shell/h05.msh
 cases/meshes/sphere_shell/h03.msh
 cases/meshes/sphere_shell/h02.msh
 cases/meshes/sphere_shell/h03_far10.msh
+cases/analysis/b23_junction_discriminator/meshes/*.msh

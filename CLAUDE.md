@@ -17,12 +17,20 @@ resolve through one hop.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
-  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B21
+  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B27
   level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
   transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
   mixed-plain main-field density ADOPTED PERMANENTLY + re-baselined and B21
   N1 freeze-capture fix (restores the M6-medium M0.84 ramp; GB20.7's
-  "capability loss" verdict overturned), both ✓ CLOSED 2026-07-19; **P11
+  "capability loss" verdict overturned), both ✓ CLOSED 2026-07-19; B23
+  junction discriminator (the pocket = the wake inboard free-edge
+  singularity), B24 waterline-extension route closed (negative) and B25
+  `inboard_clip` CURES the pocket (corrM 14.66→0.63, default None
+  bit-identical), all ✓ CLOSED 2026-07-19; B26 post-cure LS ceiling
+  re-measured = the conforming site (medium 0.7625 / coarse 0.84 reached)
+  and B27 B18 demo refresh (checks 8/8 PASS, 336/336 bit-identical;
+  transonic cross-model M0.65 2.4% PASS / M0.75 2.5%), both ✓ CLOSED
+  2026-07-20 — the B18 "junction-limited" story is RETIRED; **P11
   curved wall elements ✓ CLOSED 2026-07-19 in track_p — measured NEGATIVE,
   G1.6 re-attributed to intrinsic P1 capability at h=0.08 (not the wall
   variational crime), route fork = user's call** —
@@ -77,10 +85,12 @@ resolve through one hop.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **473 passed + 25 skipped +
-   2 xfailed** (2026-07-19, P11 curved walls, +8 passed = the ungated
-   `tests/test_p11_curved_walls.py`;
-   measured 1124.94 s @16 threads;
+3. Full suite: `pytest tests/` — current baseline **479 passed + 25 skipped +
+   2 xfailed** (2026-07-20, B25 inboard fragment clip, +6 passed =
+   `tests/test_b1_cut_elements.py::TestInboardFragmentClip` (4) + the same
+   file's foot-preference lock (1) + `tests/test_m2_wingbody.py`'s
+   waterline-extension lock (1);
+   measured 1100.63 s @16 threads;
    the full lineage lives in [docs/overview.md](docs/overview.md), do not
    re-grow it here). Skip
    semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until

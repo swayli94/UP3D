@@ -1,5 +1,11 @@
-mach,path,resolution,cl_p
-0.5,conforming,medium,0.2173
-0.65,conforming,medium,0.2321
-0.79,conforming,medium,0.2579
-0.84,conforming,coarse,0.2617
+mach,path,resolution,cl_p,note
+0.5,conforming,medium,0.2173,B9 anchor
+0.65,conforming,medium,0.2321,
+0.75,conforming,medium,0.2483,NEW in B27
+0.79,conforming,medium,0.2579,strict ceiling
+0.84,conforming,coarse,0.2617,proof-of-concept
+0.5,level_set+clip,medium,0.2117,B17 anchor
+0.65,level_set+clip,medium,0.2266,directed ramp; strict final
+0.75,level_set+clip,medium,0.2421,directed ramp; strict final
+0.7625,level_set+clip,medium,0.2475,ceiling m_last=0.7625; cl_p at the 0.775 near-converged state (res ~2e-6)
+0.84,level_set+clip,coarse,0.2542,reached

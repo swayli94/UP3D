@@ -41,7 +41,8 @@ pyfp3d/                    # Main package
 │   │                       #   skin with a local-RADIUS-driven tip law (a revolve facets at h/R);
 │   │                       #   add_fuselage_solid_split = the TWO-pi-revolve variant B9's
 │   │                       #   conforming wing-body needs (the single revolve is unmeshable once
-│   │                       #   the waterline is imprinted)
+│   │                       #   the waterline is imprinted); ✓ [B25] make_inboard_clip builds the
+│   │                       #   inboard-fragment clip polygon (fuselage surface / symmetry plane)
 │   ├── wingbody.py       # ✓ [M2] wing + fuselage fused into a half model; wake-free for the
 │   │                       #   level-set path, and (B9) a wake-embedded conforming variant;
 │   │                       #   wing3d.py byte-untouched -> M1/M4/M5 stay bit-identical
@@ -170,7 +171,9 @@ pyfp3d/                    # Main package
 │   │                       #   ε shift otherwise manufactures spurious cuts there and Γ
 │   │                       #   overshoots ~45%); ★ SPANWISE CLIP 0 ≤ q ≤ span_length ⇒ Γ(tip)=0
 │   │                       #   DISCRETELY (the LS analogue of the conforming free-edge rule);
-│   │                       #   beyond_tip_elems = the wake-PLANE crossings the clip rejects
+│   │                       #   beyond_tip_elems = the wake-PLANE crossings the clip rejects;
+│   │                       #   ✓ [B25] inboard_clip = the wing-body inboard-fragment clip (the
+│   │                       #   junction-pocket cure; default None bit-identical)
 │   └── multivalued.py    # ✓ [B2–B6] MultivaluedOperator: extended-DOF assembly on the cut
 │                           #   mesh (assemble_matrix with closure="continuity"|"wake_ls"),
 │                           #   te_jump (= Γ per TE station), side_potentials / main_potential,
@@ -429,6 +432,11 @@ cases/                     # Test cases and reference data
 │   ├── a1_solver_bottleneck/   # [A1] 4-driver timing benchmark
 │   ├── a2_te_kutta_fidelity/   # [A2] TE/Kutta fidelity attribution
 │   ├── b9_fuselage_guardrail/  # [B9/GB9.6] fuselage-Cp guardrail
+│   ├── b23_junction_discriminator/  # [B23] junction pocket = wake inboard free-edge singularity
+│   ├── b24_wake_inboard_end/   # [B24] waterline-extension route CLOSED (negative)
+│   ├── b25_inboard_fragment_clip/   # [B25] inboard_clip heals the junction pocket (14.66→0.63)
+│   ├── b26_ls_transonic_ceiling/    # [B26] post-cure LS ceiling: medium 0.7625 / coarse 0.84
+│   ├── b27_b18_demo_refresh/ # [B27] B18 demo refresh 8/8 PASS + 336/336 bit-identical
 │   ├── c1_ls_jacobian_fd/      # [A3/B19/B20/B21] LS-Jacobian FD probes, Leg-B density
 │   │                           #   gap, GB20.7 recipe sweep + B21 N1 freeze-capture sweep
 │   └── p14_te_pressure_diag/   # [P14] TE pressure-Kutta diagnostics
@@ -1024,21 +1032,27 @@ G14.1–G14.7 ✓; the conforming path now MATCHES level-set (cl_p/cl_KJ
 0.15%/0.34%), and the +4.85% cl_KJ move off the probe locks closed 69% of
 P9's 0.019 gap**; Track M — M0–M5 ✓ (M2 ✓ — its solver leg was closed by B9
 on 2026-07-17, both wake models now run on the wing-body); Track B —
-B1–B9, B11–B22 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
+B1–B9, B11–B27 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
 `pin_gamma`, B18 wing-body transonic, B19 LS-Jacobian exactness**, all
 2026-07-18; **B20 mixed-plain main-field density ADOPTED PERMANENTLY +
 re-baselined, B21 N1 freeze-capture fix restoring the M6-medium M0.84 ramp —
 GB20.7's "real capability loss" verdict overturned — and B22 evidence
 refresh (B15 demo 20/20, B14 7/7) + gated 3-D anchor locks closing the N3
-gap**, 2026-07-19); Track V —
+gap**, 2026-07-19; **B23 junction discriminator (pocket = wake inboard
+free-edge singularity, NOT faceted geometry) + B24 waterline extension
+(route closed) + B25 `inboard_clip` — the junction pocket HEALED**,
+2026-07-19; **B26 (pocket-healed LS ceiling = the conforming ceiling site:
+coarse 0.84 reached / medium 0.7625) + B27 B18 demo refresh, 8/8 PASS — the
+B18 "LS junction-limited" story RETIRED**, 2026-07-20); Track V —
 designed, not started; Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18** (response
 to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **473 passed + 25 skipped + 2 xfailed** (2026-07-19, P11
-curved walls, +8 passed = `test_p11_curved_walls.py`;
-measured 1124.94 s @16 threads; heavy
+Default suite: **479 passed + 25 skipped + 2 xfailed** (2026-07-20, B25
+inboard fragment clip, +6 passed = `test_b1_cut_elements.py::TestInboardFragmentClip`
+(4) + foot-preference lock (1) + `test_m2_wingbody.py` waterline-extension lock (1);
+measured 1100.63 s @16 threads; heavy
 transonic/Newton gates behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests
 skip unless the gitignored M6 meshes are regenerated (~30 s); the newest
 skips are B21's gated freeze-capture lock (+1) and B22's gated 3-D anchor

@@ -66,6 +66,23 @@ Scope guards (DN2 §9, DN6 §13–14):
   curved elements" under the old IDs). Viscosity moves CL *down* from the
   (accurate) inviscid value toward experiment — do not book the 0.245→0.288
   recovery to Track V.
+  > **★ Erratum 2026-07-20 (numbers superseded; the CONCLUSION stands,
+  > stronger):** the 0.245 figure is pre-P14 — the current converged inviscid M6
+  > M0.84 values are **cl_KJ 0.2823 (medium, P14 pressure-Kutta)** and
+  > **0.2866 (fine, P13 tapered, = 99.5 % of the 0.288 reference)**; the
+  > "sharp-TE/LE P1 floor → P11" attribution is superseded twice (P13
+  > re-attributed the V6 tail to the tip-cap geometry; **P11 curved elements
+  > measured NEGATIVE 2026-07-19**); and P9's discrimination was answered by
+  > **P14/G14.7: 69 % of the 0.019 gap was Kutta-estimator bias**, not
+  > resolution and not wall geometry. Net: the remaining inviscid gap to the FP
+  > reference is ≈ 0.5 %, so the inviscid baseline Track V starts from is far
+  > cleaner than when this guard was written — the ~0.02 delta to experiment
+  > (≈ 0.26–0.27) is now genuinely viscous-dominated. See
+  > [docs/inspection/20260720-2015-wingbody-trackv-review.md](../inspection/20260720-2015-wingbody-trackv-review.md)
+  > §3. Also note (same review §1.2): DN6 §8.3's claim of a wall-term
+  > placeholder in `kernels/residual.py` has **no code counterpart** (pure
+  > volume assembly); the transpiration assembly is new work, with
+  > `solve/wall_correction.py` as the structural template.
 - V1 is parallelizable with P7/P8 (depends only on P6), but it is a large,
   self-contained solver effort (6-equation nonlinear surface FE + closures);
   budget it like a Track-P phase, not a side task.
@@ -83,7 +100,12 @@ mildly-shocked flow, not massive or shock-induced separation. **VII does not
 close the inviscid-discretization CL gap** — viscosity moves CL *down* toward
 experiment (≈ 0.26–0.27 on M6), so the 0.245-vs-0.288 gap belongs to P9
 (discriminating how much of it is resolution) and P11 (curved walls), never to
-Track V.
+Track V. **★ Erratum 2026-07-20 (numbers superseded; the conclusion stands,
+stronger):** the 0.245 figure is pre-P14 — the converged inviscid M6 M0.84
+values are now **cl_KJ 0.2823 (medium, P14)** / **0.2866 (fine, P13)**; P9's
+discrimination was answered by P14/G14.7 (69 % of the old gap = Kutta-estimator
+bias) and **P11 measured NEGATIVE** — see the scope-guard erratum above and
+[docs/inspection/20260720-2015-wingbody-trackv-review.md](../inspection/20260720-2015-wingbody-trackv-review.md) §3.
 
 - V1 — ☐ — IBL3 solver + loose coupling (`viscous/ibl3.py`, `transpiration.py`, `coupling.py`;
   wall-Neumann blowing source in `kernels/residual.py`; wake-sheet mass source in `constraints/wake.py`).
