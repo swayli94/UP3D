@@ -1524,7 +1524,11 @@ coincidence landing near conforming; the row is superseded.
   the wing-tip P13 class + high-M Newton, per B26 committed peaks.**
 - [~] **GB18.5 — fuselage lift at the medium transonic top (RECORDED).** cl_fus
   16% of wing cl_p at M0.79 — the G1.6 flat-facet natural-BC error persists into
-  transonic (GB9.4 class).
+  transonic (GB9.4 class). **B29 re-anchor (2026-07-20):** the G1.6 reading is
+  retired (B28: carryover + sheet-position sensitivity); the LIVE flat C-side
+  decomposition at the 0.7875 ceiling state is cl_fus **0.0382** (band −0.0006 /
+  out-band 0.0388 / poles 0.0007) vs conf 0.0423 @0.79 — the B26 tilted
+  0.0781/0.0565 "×2" value is superseded.
 
 ★ **No `pyfp3d/` numerics change** — B18 is a pure demo/tests/docs phase using the
 existing conforming `solve_newton_transonic` and LS `solve_multivalued_newton_transonic`
@@ -2276,7 +2280,9 @@ refreshed `cases/demo/b18_wingbody_transonic/` (checks.csv **8/8 PASS**).
   P13 + high-M Newton, peaks quoted from B26 committed); GB18.5 refreshed
   (conf cl_fus 0.0423 = 16 % @0.79 live; C-side new-ceiling cl_fus 0.0781
   / out-band 0.0565 ≈ ×2 → P11 watch item — **CLOSED by B28 (2026-07-20):
-  wake-sheet position sensitivity, not a lesion**).
+  wake-sheet position sensitivity, not a lesion; B29 supersedes the quoted
+  values: production flat sheet, live C-side cl_fus 0.0382 / out-band
+  0.0388 @0.7875 vs conf 0.0423 @0.79**).
 - [~] **GB27.5 (RECORDED):** the T1 erratum is in the demo docstring —
   the A-side re-test climbing past the B18 committed anchors (dies
   0.50/0.55) is the **B21/B22 freeze-capture repair effect**, not physics
@@ -2331,6 +2337,16 @@ byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
 wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
 blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
+- B29 — ✓ — 2026-07-20 — **Flat-fragment adopted as the wing-body LS PRODUCTION config** (user-adjudicated, B28 VERDICT §6;
+  same-branch continuation; no `pyfp3d/` change). B18 demo LS production side C = B25 clip + B28 flat sheet
+  (`sheet_direction=(1,0,0)`; NEW `ls_flat_*` caches, the B26 tilted `ls_C_*` stale; side A tilted kept as the historical
+  pocket comparison; conforming legs bit-reproduce). M0.5 LS anchors re-pinned 0.2087/0.2117 → **0.2115/0.2184** (the re-run
+  B9 demo). Flat C side re-solved: coarse 0.84 reached (cl_p 0.2551); **medium ceiling 0.7625 → 0.775** (dies 0.7875, cls a+dm;
+  live dying peak M3.98 @ wing TIP z=1.20 — GB18.4's C side now measured live, P13 class confirmed); cross-model gaps
+  **2.6→0.5 % (M0.5), 2.4→1.1 % (M0.65, PASS ≤5 %), 2.5→1.1 % (M0.75)**; coarse 0.60 1.7 %. **GB18.5 live flat decomposition:
+  cl_fus 0.0382 (band −0.0006, out 0.0388, poles 0.0007) @0.7875 vs conf 0.0423 @0.79** — the B26 tilted "×2 out-band"
+  reading (0.0781/0.0565) retired per B28 (position sensitivity). Demo **8/8 PASS**; `test_b9_wingbody_ls` switched to the
+  production wiring (flat+clip, 5/5 green).
 - B28 — ✓ — 2026-07-20 — **cl_fus decoupling + GB9.4 RE-SPEC — the "fuselage spurious lift" label retired** (executes B23 §(c);
   pre-registered `cases/analysis/b28_cl_fus_flat_sheet/`). New `WakeLevelSet(sheet_direction=...)` knob decouples sheet GEOMETRY
   drag-out from physics convection (default None bit-identical; `TestSheetDirection` 4 + b1/m2/v0 73 green). Decisive leg
@@ -2340,7 +2356,8 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
   coarse RECORDED + full band/out/poles decomposition; old ≤5% band retired by erratum. B9 demo LS leg switched to flat-fragment
   (legacy farfield kept), re-run **8/8 PASS** — GB9.4 medium gap **7.0%**, GB9.5 un-flipped (cl_p 0.5%/cl_kj 0.3%),
   cl_fus/wing LS 0.205→0.176; LS Picard 59/73 outer converged (220 budget). B26's "C-side out-band ×2" watch item CLOSED;
-  M2 wiring suspicion excluded. Flat-fragment as PRODUCTION config for B18/GB18.5/GB27.4 left to the user.
+  M2 wiring suspicion excluded. Flat-fragment as PRODUCTION config for B18/GB18.5/GB27.4 left to the user — **adjudicated same
+  day → B29 (production adoption, 8/8 PASS)**.
 - B27 — ✓ — 2026-07-20 — **B18 demo refresh — LS legs resurrected, checks.csv 8/8 PASS** (no `pyfp3d/` change;
   full re-solve ~1 h 39 min). **GB27.1 ✓** conforming legs bit-reproduce the committed B18 anchors (B21/B22 inert on conforming).
   **GB27.2 ✓** LS A/C legs bit-reproduce B26 committed (`g27_consistency.csv` **336/336 bit-identical**).

@@ -1,15 +1,22 @@
 """
-Track B / B18 -- transonic (M0.84) ONERA M6 wing-body, REFRESHED by B27
-(2026-07-20): the level-set path now reaches the SAME ceiling site as the
-conforming path.
+Track B / B18 -- transonic (M0.84) ONERA M6 wing-body, REFRESHED by B29
+(2026-07-20): the level-set PRODUCTION side is now the B28 flat fragment
+(inboard clip + sheet geometry dragged flat at y=0).
 
-The B18 baseline said "conforming reaches it, LS is junction-limited" (a
-spurious wing-fuselage junction supersonic pocket, closed-negative). B25/B26
-changed the verdict: the pocket is the B23 inboard free-edge singularity of
-the wake sheet, and clipping the sheet to the conforming fragment topology
-(``CutElementMap(inboard_clip=make_inboard_clip(FUS))``, B25) heals it. This
-demo re-runs the full envelope in the post-B21/B22 state and tells the new
-story:
+Historical layers: the B18 baseline said "conforming reaches it, LS is
+junction-limited" (a spurious wing-fuselage junction supersonic pocket,
+closed-negative). B25/B26/B27 changed the verdict: the pocket is the B23
+inboard free-edge singularity of the wake sheet, and clipping the sheet to
+the conforming fragment topology (``CutElementMap(inboard_clip=
+make_inboard_clip(FUS))``) heals it, co-locating the LS ceiling with the
+conforming one. B28 then proved the residual cross-model fuselage-lift gap
+is wake-sheet POSITION sensitivity (not an error): dragging the LS sheet
+GEOMETRY flat at y=0 (``WakeLevelSet(sheet_direction=(1,0,0))``) while the
+physics convects with the flow makes the out-band cl_fus agree with the
+conforming oracle to 7.25%. B29 adopts that flat fragment as the production
+LS configuration here (user-adjudicated, B28 VERDICT section 6) and
+re-solves the C side; the conforming legs and the side-A historical
+comparison are untouched (committed caches bit-reproduce).
 
   * CONFORMING (Newton + pressure Kutta, Mach continuation) -- the reference
     path, unchanged: coarse reaches M0.84 (cl_p 0.2617); medium reaches M0.79
@@ -24,42 +31,43 @@ story:
     that difference is the B21/B22 freeze-capture fix (the B26 T1 finding),
     not physics drift -- the pocket's true kill line on the A medium side is
     0.55 (Mmax 13.1 > freeze_max_clamped=8).
-  * LEVEL-SET + inboard clip (side C): coarse REACHES M0.84; medium reaches
-    M0.7625 and dies at 0.775, class (b) high-M Newton stall with the peak at
-    the wing TIP (P13 class; the junction corridor stays clean). The LS
-    ceiling is now CO-LOCATED with the conforming ceiling (coarse 0.84 =
-    conforming coarse; medium 0.7625 ~= conforming 0.79) and limited by the
-    same mechanism class. The junction pocket WAS the ceiling limiter
-    (B26-A).
-  * CROSS-MODEL upgraded: before B26 there was no common transonic Mach at
-    medium (the LS could not leave 0.5). Now: M0.5 (2.6%, B9/B17) + M0.65
-    (gated <= 5%) + M0.75 (recorded, shock-sensitive) at medium, plus the
-    coarse M0.60 point (under-resolved).
+  * LEVEL-SET production (side C = B25 inboard clip + B28 FLAT sheet): the
+    sheet geometry is dragged along +x at y=0 while the physics convects
+    with the flow -- the cross-model-consistent configuration (B28-F1).
+    The M0.5 subsonic anchors move to the re-run B9 demo values
+    (0.2115 / 0.2184), tightening the M0.5 cross-model gap 2.6% -> 0.5%.
+  * CROSS-MODEL: M0.5 (0.5%, B9/B28) + M0.65 (gated <= 5%) + M0.75
+    (recorded, shock-sensitive) at medium, plus the coarse M0.60 point
+    (under-resolved).
 
 Gates:
   GB18.1 (PASS)      conforming transonic reaches M0.84 (coarse) / M0.79
                      (medium), strict; the monotone cl(M) rise incl. 0.75.
   GB18.2 (PASS)      LS ceiling A vs C: C coarse reaches 0.84 while A dies
-                     below it; C medium climbs past 0.70 (0.7625) while A
-                     dies at/below 0.55. The pocket was the limiter.
+                     below it; C medium climbs past 0.70 while A dies
+                     at/below 0.55. The pocket was the limiter.
   GB18.3 (PASS/REC)  cross-model: M0.65 medium |cl_p gap| <= 5% is a REAL
-                     gate; M0.5 anchor (2.6%), M0.75 medium and the coarse
+                     gate; M0.5 anchor (0.5%), M0.75 medium and the coarse
                      M0.60 point are recorded.
-  GB18.4 (RECORDED)  pocket attribution, citing the committed B26 evidence
-                     (cases/analysis/b26_ls_transonic_ceiling/results/
-                     g1_summary.csv + g1_peaks.csv): the A-side dying peak
-                     sits in the junction strip (x ~ 2.1-2.25, q ~ 0, next to
-                     the fuselage), the C-side dying peak sits at the wing
-                     TIP (z ~ 1.20, P13 class); the junction corridor stays
-                     clean (corrM ~ 1.07).
+  GB18.4 (RECORDED)  pocket attribution: the A side cites the committed B26
+                     evidence (cases/analysis/b26_ls_transonic_ceiling/
+                     results/g1_summary.csv + g1_peaks.csv -- the A-side
+                     dying peak sits in the junction strip x ~ 2.1-2.25,
+                     q ~ 0, next to the fuselage); the C-side dying peak is
+                     measured LIVE on the flat sheet (expected: the wing TIP,
+                     P13 class). The flat-side junction corridor at M0.5 was
+                     measured clean in B28 (corrM 0.64, n_sup 0).
   GB18.5 (RECORDED)  fuselage lift: the conforming cl_fus at the medium
-                     transonic top (live) + the C-side new-ceiling cl_fus
-                     0.078 with out-band 0.057 (citing the committed B26
-                     g1_summary.csv) -- the x2 out-band excess is P11 /
-                     curved-wall input.
+                     transonic top (live) + the LIVE flat C-side ceiling
+                     decomposition (pocket band / out-band / polar caps, the
+                     B23 W2 definitions). The B26 tilted-sheet "x2 out-band"
+                     reading (P11 watch item) is RETIRED by B28: sheet
+                     position sensitivity, not a lesion.
 
 All solves are gated (PYFP3D_TRANSONIC_GATES=1) + cached to gitignored
-results/*.npz. Meshes gitignored -> a level whose mesh is absent is skipped.
+results/*.npz (the flat C side uses NEW ls_flat_* caches; the B26 tilted
+ls_C_* caches are stale and unused). Meshes gitignored -> a level whose
+mesh is absent is skipped.
 """
 
 import json
@@ -82,9 +90,10 @@ from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.meshgen.fuselage import FuselageParams, make_inboard_clip
 from pyfp3d.meshgen.wing3d import B_SEMI
-from pyfp3d.meshgen.wingbody import te_polyline
+from pyfp3d.meshgen.wingbody import junction_z, te_polyline
 from pyfp3d.post.section_cut import section_cp_curve
-from pyfp3d.post.surface import planform_area
+from pyfp3d.post.surface import _cp_from_q2, _pressure_force, planform_area
+from pyfp3d.post.surface_ls import _d11_wall_state
 from pyfp3d.post.unified import wall_forces
 from pyfp3d.solve.continuation import mach_schedule
 from pyfp3d.solve.newton import solve_newton_lifting, solve_newton_transonic
@@ -97,11 +106,13 @@ GATED = os.environ.get("PYFP3D_TRANSONIC_GATES", "0") == "1"
 
 ALPHA = 3.06
 FUS = FuselageParams()
+Z_JUNC = junction_z(FUS)
 LS_DIR = REPO_ROOT / "cases/meshes/onera_m6_wingbody"
 CONF_DIR = REPO_ROOT / "cases/meshes/onera_m6_wingbody_conforming"
-# committed M0.5 subsonic anchors (B9 conforming pressure / B17 LS pin_gamma)
+# committed M0.5 subsonic anchors (B9 conforming pressure / B28 flat-fragment
+# LS -- the re-run B9 demo; supersedes the B17 tilted-sheet 0.2087/0.2117)
 CL_M05 = {"conforming": {"coarse": 0.2089, "medium": 0.2173},
-          "level_set":  {"coarse": 0.2087, "medium": 0.2117}}
+          "level_set":  {"coarse": 0.2115, "medium": 0.2184}}
 
 # conforming Mach-continuation recipe (P14 NEWTON_M6_RECIPE, freeze_tol raised to
 # the wing-body churn floor per B17; probe-seeded pressure Kutta)
@@ -117,8 +128,8 @@ LS_RAMP_KW = dict(farfield="freestream", farfield_aux="pin_gamma", freeze_tol=1e
                   direct_refactor_every=1000, n_newton_max=80)
 DM = 0.05
 
-checks = CheckList("B18 wing-body transonic, B27 refresh: LS+clip reaches the "
-                   "conforming ceiling site (pocket healed)")
+checks = CheckList("B18 wing-body transonic, B29 refresh: LS production = "
+                   "flat-fragment (inboard clip + flat sheet)")
 
 
 # -------------------------------------------------------------------- builders
@@ -129,18 +140,49 @@ def conf_mesh(level):
 
 def ls_mesh(level, clip=False):
     """LS mesh + multivalued operator. clip=False = the B18 default (side A,
-    q>=0 inboard clip, the junction pocket); clip=True = the B25 inboard
-    fragment clip (side C, conforming sheet topology, pocket healed)."""
+    q>=0 inboard clip, the junction pocket; tilted sheet -- the historical
+    comparison side). clip=True = the PRODUCTION side C (B29): the B25
+    inboard fragment clip + the B28 flat sheet (geometry dragged along +x
+    at y=0, physics convecting with the flow)."""
     p = LS_DIR / f"{level}.msh"
     if not p.exists():
         return None, None
     mesh = read_mesh(str(p))
     a = np.radians(ALPHA)
-    wls = WakeLevelSet(te_polyline(FUS), direction=(np.cos(a), np.sin(a), 0.0))
+    wls = WakeLevelSet(te_polyline(FUS), direction=(np.cos(a), np.sin(a), 0.0),
+                       sheet_direction=(1.0, 0.0, 0.0) if clip else None)
     cm = CutElementMap(mesh.nodes, mesh.elements, wls,
                        wall_nodes=np.unique(mesh.boundary_faces["wall"]),
                        inboard_clip=make_inboard_clip(FUS) if clip else None)
     return mesh, MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
+
+
+# ------------------------------------------------------ fuselage decomposition
+# (GB18.5, B29): the B23 W2 definitions -- pocket band |z - Z_JUNC| < 0.06 &
+# x > 1.0 / outside / polar caps (0.10); same core as wall_forces.
+X_BAND0, BW, POLE_MARGIN = 1.0, 0.06, 0.10
+
+
+def fuselage_parts(mesh, mvop, phi_ext, s_ref, m_inf):
+    """cl_fus split into pocket-band / out-band / polar-cap contributions on
+    the LS side (the `_d11_wall_state` + `_cp_from_q2` + `_pressure_force`
+    core, B23 W2; the mvop selects the sheet sides)."""
+    wall = np.asarray(mesh.boundary_faces["fuselage"], dtype=np.int64)
+    q2, _, area, n_out = _d11_wall_state(mesh, mvop, phi_ext, wall, 1.0)
+    cp = _cp_from_q2(q2, m_inf, 1.4)
+    cents = mesh.nodes[wall].mean(axis=1)
+
+    def cl_of(mask):
+        _, cl, _ = _pressure_force(cp[mask], area[mask], n_out[mask],
+                                   s_ref, ALPHA)
+        return float(cl)
+
+    band = (np.abs(cents[:, 2] - Z_JUNC) < BW) & (cents[:, 0] > X_BAND0)
+    x_nose = FUS.x_center - FUS.length / 2.0
+    x_tail = FUS.x_center + FUS.length / 2.0
+    pole = (cents[:, 0] < x_nose + POLE_MARGIN) | \
+           (cents[:, 0] > x_tail - POLE_MARGIN)
+    return dict(band=cl_of(band), out=cl_of(~band), poles=cl_of(pole))
 
 
 # -------------------------------------------------------------------- solves
@@ -191,11 +233,13 @@ def _classify(reached, last_level, n_halvings):
 
 def ls_ramp(side, level, mesh, mvop, m_target, m_start):
     """LS freeze-ramp to m_target (the B18/B26 recipe, frozen verbatim).
-    side = "A" (default clip, pocket) or "C" (inboard fragment clip).
-    Returns dict with the honest ceiling fields + the slimmed per-level
-    records (for the B27 consistency diff vs the committed B26 g1_levels).
-    Cached."""
-    cache = OUT / f"ls_{side}_{level}_{str(m_target).replace('.','')}.npz"
+    side = "A" (default clip, pocket, tilted sheet -- historical) or "C"
+    (PRODUCTION: inboard fragment clip + flat sheet, B29). Returns dict with
+    the honest ceiling fields + the slimmed per-level records (for the
+    consistency diff vs the committed g1_levels). Cached -- the flat C side
+    uses NEW ls_flat_* caches (the B26 tilted ls_C_* ones are stale)."""
+    tag = "flat" if side == "C" else side
+    cache = OUT / f"ls_{tag}_{level}_{str(m_target).replace('.','')}.npz"
     s_ref = planform_area(mesh.nodes, mesh.boundary_faces["wall"])
     if cache.exists():
         d = np.load(cache, allow_pickle=True)
@@ -233,28 +277,28 @@ def fig_cl_vs_mach(conf_pts, ls_pts, conf_coarse_084, ls_coarse_084, ls_ceiling_
     m, cl = zip(*sorted(conf_pts))
     ax.plot(m, cl, "o-", color=S1_BLUE, lw=1.8, ms=7, label="conforming (medium)")
     lm, lcl = zip(*sorted(ls_pts))
-    ax.plot(lm, lcl, "s-", color=S2_AQUA, lw=1.8, ms=7, label="level-set + inboard clip (medium)")
+    ax.plot(lm, lcl, "s-", color=S2_AQUA, lw=1.8, ms=7, label="level-set flat-fragment (medium)")
     ax.plot([0.84], [conf_coarse_084], "D", color=S3_YELLOW, ms=9,
             label="conforming M0.84 (coarse)")
     ax.plot([0.84], [ls_coarse_084], "D", color=S2_AQUA, ms=9, mfc="none", mew=2,
-            label="level-set + clip M0.84 (coarse)")
+            label="level-set flat-frag M0.84 (coarse)")
     mx, mcl = ls_ceiling_med
     ax.plot([mx], [mcl], "s", color=S2_AQUA, ms=10, mfc="none", mew=2.2,
-            label="LS+clip medium ceiling 0.7625 (cl_p @0.775 state)")
+            label=f"LS flat-frag medium ceiling {mx:.4g} (cl_p at the dying state)")
     for mx, lbl in a_deaths:
         ax.plot([mx], [0.18], "x", color=CRITICAL, ms=10, mew=2.2)
         ax.annotate(lbl, (mx, 0.18), textcoords="offset points", xytext=(4, 8),
                     fontsize=8, color=CRITICAL)
     ax.set_ylim(0.16, 0.30)
     ax.set_xlabel("M∞"); ax.set_ylabel("cl_p (wing)")
-    ax.set_title("B18/B27 wing-body cl(M): pocket-healed LS climbs to the conforming ceiling")
+    ax.set_title("B18/B29 wing-body cl(M): pocket-healed flat-frag LS climbs to the conforming ceiling")
     ax.legend(fontsize=8)
     finish(fig, OUT, "b18_cl_vs_mach.png")
 
 
 def fig_ceiling(a_coarse, c_coarse, a_medium, c_medium):
     fig, ax = plt.subplots(figsize=(7.2, 4.0))
-    labels = ["conforming", "level-set\nA (no clip)", "level-set\nC (+clip)"]
+    labels = ["conforming", "level-set\nA (no clip)", "level-set\nC (flat frag)"]
     xs = np.arange(3)
     w = 0.36
     vals_coarse = [0.84, a_coarse, c_coarse]
@@ -268,8 +312,8 @@ def fig_ceiling(a_coarse, c_coarse, a_medium, c_medium):
     ax.axhline(0.84, ls=":", color=MUTED, lw=1)
     ax.set_xticks(xs); ax.set_xticklabels(labels)
     ax.set_ylabel("highest converged M∞"); ax.set_ylim(0.45, 0.9)
-    ax.set_title("B18/B27 transonic ceiling: the pocket was the limiter -- "
-                 "LS+clip reaches the conforming site")
+    ax.set_title("B18/B29 transonic ceiling: the pocket was the limiter -- "
+                 "flat-frag LS reaches the conforming site")
     ax.legend(fontsize=8)
     finish(fig, OUT, "b18_ceiling.png")
 
@@ -300,8 +344,8 @@ def fig_sections_medium(mc, level="medium", m=0.79):
 # -------------------------------------------------------------------- parts
 def run_coarse():
     """GB18.1-coarse (conforming M0.84 proof-of-concept) + the LS A/C coarse
-    ceiling probe (= B26 G1 coarse legs) + the coarse transonic cross-model
-    point. All gated (heavy)."""
+    ceiling probe (= B26 G1 coarse legs, C now on the flat sheet) + the
+    coarse transonic cross-model point. All gated (heavy)."""
     mc, wc = conf_mesh("coarse")
     mesh_a, mvop_a = ls_mesh("coarse", clip=False)
     mesh_c, mvop_c = ls_mesh("coarse", clip=True)
@@ -315,7 +359,7 @@ def run_coarse():
                f"reached={r84} cl_p={clp84:.4f} (M_max {mmax84:.2f})",
                "conforming Mach-ramp reaches M0.84 at coarse (proof-of-concept; "
                "under-resolved)", r84)
-    # LS coarse ceiling probe, A (default clip = pocket) vs C (fragment clip)
+    # LS coarse ceiling probe, A (default clip = pocket) vs C (flat fragment)
     ls_a = ls_ramp("A", "coarse", mesh_a, mvop_a, 0.84, 0.50)
     ls_c = ls_ramp("C", "coarse", mesh_c, mvop_c, 0.84, 0.50)
     checks.add("GB18.2", "ls_coarse_ceiling_A_vs_C",
@@ -327,7 +371,7 @@ def run_coarse():
                bool(ls_c["reached"]) and ls_a["m_last"] < 0.84)
     # coarse transonic cross-model point at a fixed safe common Mach (0.60):
     # both paths reach it at coarse (under-resolved); the LS side is the
-    # pocket-healed C side now.
+    # production flat-fragment C side (B29).
     mx = 0.60
     conf_cx = conf_ramp("coarse", mc, wc, mx, 0.50)[0]
     ls_res = ls_ramp("C", "coarse", mesh_c, mvop_c, mx, 0.50)
@@ -359,37 +403,37 @@ def run_medium(coarse):
                "monotone transonic rise incl. the new M0.75 point",
                r79 and r75 and clp79 > clp75 > clp65 > CL_M05["conforming"]["medium"])
 
-    # LS medium ceiling probe, A vs C (= B26 G1 medium legs, frozen recipe)
+    # LS medium ceiling probe, A vs C (B26 G1 legs recipe, C now flat-sheet)
     ls_a = ls_ramp("A", "medium", mesh_a, mvop_a, 0.84, 0.50)
     ls_c = ls_ramp("C", "medium", mesh_c, mvop_c, 0.84, 0.50)
     checks.add("GB18.2", "ls_medium_ceiling_A_vs_C",
                f"A: m_last={ls_a['m_last']:.4g} dies {ls_a['m_final']} ({ls_a['cls']}, "
                f"Mmax {ls_a['mmax']:.2f}); C: m_last={ls_c['m_last']:.4g} dies "
                f"{ls_c['m_final']:.4g} ({ls_c['cls']})",
-               "C medium climbs past 0.70 (0.7625) while A dies at/below 0.55 "
+               "C medium climbs past 0.70 while A dies at/below 0.55 "
                "(class (a): the pocket erupts at 0.55, Mmax 13.1 > "
                "freeze_max_clamped=8) -- the pocket was the medium ceiling limiter",
                ls_c["m_last"] >= 0.70 and ls_a["m_last"] <= 0.55)
 
-    # cross-model transonic legs at medium (NEW in B27): the LS+clip side
-    # uses DIRECTED ramps (strict final level) at 0.65 and 0.75.
+    # cross-model transonic legs at medium: the LS flat-frag side uses
+    # DIRECTED ramps (strict final level) at 0.65 and 0.75.
     ls_c65 = ls_ramp("C", "medium", mesh_c, mvop_c, 0.65, 0.50)
     ls_c75 = ls_ramp("C", "medium", mesh_c, mvop_c, 0.75, 0.50)
     gap65 = abs(ls_c65["clp"] - clp65) / clp65 * 100
     gap75 = abs(ls_c75["clp"] - clp75) / clp75 * 100
     d_conf_05 = abs(CL_M05["conforming"]["medium"] - CL_M05["level_set"]["medium"]) / CL_M05["conforming"]["medium"] * 100
     checks.add("GB18.3", "cross_model_medium_M065",
-               f"conf {clp65:.4f} vs LS+clip {ls_c65['clp']:.4f} -> |gap| {gap65:.1f}%",
-               "PASS gate: |cl_p gap| <= 5% at M0.65 medium (the B9/B17 M0.5 "
-               "2.6% reference, relaxed for transonic)", gap65 <= 5.0)
+               f"conf {clp65:.4f} vs LS flat-frag {ls_c65['clp']:.4f} -> |gap| {gap65:.1f}%",
+               "PASS gate: |cl_p gap| <= 5% at M0.65 medium (the B9/B28 M0.5 "
+               "0.5% reference, relaxed for transonic)", gap65 <= 5.0)
     checks.add("GB18.3", "cross_model_medium_M075",
-               f"conf {clp75:.4f} vs LS+clip {ls_c75['clp']:.4f} -> |gap| {gap75:.1f}%",
+               f"conf {clp75:.4f} vs LS flat-frag {ls_c75['clp']:.4f} -> |gap| {gap75:.1f}%",
                "RECORDED: M0.75 medium cross-model (shock-sensitive; no "
                "threshold)", True)
 
-    # cross_model.csv: M0.5 anchor + coarse 0.60 + the new medium points
+    # cross_model.csv: M0.5 anchor + coarse 0.60 + the medium points
     rows = [(0.50, "medium", f"{CL_M05['conforming']['medium']}", f"{CL_M05['level_set']['medium']}",
-             f"{d_conf_05:.1f}", "trustworthy (B9/B17)")]
+             f"{d_conf_05:.1f}", "trustworthy (B9/B28 flat-fragment)")]
     if coarse and coarse["conf_cx"] is not None and coarse["ls_cx"] is not None:
         mx = coarse["mx"]
         dconf = coarse["conf_cx"] - CL_M05["conforming"]["coarse"]
@@ -399,35 +443,50 @@ def run_medium(coarse):
                      f"{abs(coarse['conf_cx']-coarse['ls_cx'])/coarse['conf_cx']*100:.1f}",
                      f"transonic; increment {inc:.0f}%; under-resolved"))
     rows.append((0.65, "medium", f"{clp65:.4f}", f"{ls_c65['clp']:.4f}",
-                 f"{gap65:.1f}", "NEW in B27; gated <=5%"))
+                 f"{gap65:.1f}", "gated <=5%"))
     rows.append((0.75, "medium", f"{clp75:.4f}", f"{ls_c75['clp']:.4f}",
-                 f"{gap75:.1f}", "NEW in B27; recorded (shock-sensitive)"))
+                 f"{gap75:.1f}", "recorded (shock-sensitive)"))
     write_csv(OUT, "cross_model.csv", "mach,resolution,conf,ls,gap_pct,note", rows)
 
-    # GB18.4 pocket attribution -- cites the committed B26 evidence (the demo
-    # does not re-run the b23 topk machine; pre-reg metric 3).
+    # GB18.4 pocket attribution -- the A side cites the committed B26
+    # evidence (the demo does not re-run the b23 topk machine); the C-side
+    # dying peak is measured LIVE on the flat sheet (B29).
+    d = np.load(OUT / "ls_flat_medium_084.npz", allow_pickle=True)
+    m2 = mvop_c.element_mach2(d["phi_ext"], float(d["m_final"]), 1.4, 1.0)
+    i = int(np.argmax(m2))
+    ctr = mesh_c.nodes[mesh_c.elements[i]].mean(axis=0)
+    site = ("wing TIP (P13 class)" if ctr[2] > 0.8 * B_SEMI else
+            "junction strip" if ctr[0] > X_BAND0 else "mid-wing")
     checks.add("GB18.4", "pocket_attribution",
-               "A dying peak M6.17 @ junction strip x=2.12 (q~0; +M3.53 ON the "
-               "junction, dist_fus=0.005) vs C dying peak M4.18 @ wing TIP z=1.197; "
-               "corridor corrM 1.07 clean",
+               f"A dying peak M6.17 @ junction strip x=2.12 (q~0; +M3.53 ON the "
+               f"junction, dist_fus=0.005; committed B26 g1_peaks.csv) vs C(flat) "
+               f"dying peak M{np.sqrt(m2[i]):.2f} @ {site} (x={ctr[0]:.2f}, "
+               f"z={ctr[2]:.2f})",
                "RECORDED: the pocket = the B23 inboard free-edge singularity, "
                "healed on the C side; the residual limiter is the wing-tip P13 "
                "class + high-M Newton -- same class as the conforming stall. "
-               "Source: committed cases/analysis/b26_ls_transonic_ceiling/"
-               "results/g1_summary.csv + g1_peaks.csv", True)
+               "Flat-side junction corridor at M0.5 measured clean in B28 "
+               "(corrM 0.64, n_sup 0). A-side source: committed "
+               "cases/analysis/b26_ls_transonic_ceiling/results/g1_summary.csv "
+               "+ g1_peaks.csv", True)
 
     # GB18.5 fuselage lift: live conforming value at the medium transonic top
-    # + the committed B26 C-side new-ceiling decomposition.
+    # + the LIVE flat C-side ceiling decomposition (B29; the B26 tilted-sheet
+    # "x2 out-band" reading is retired by B28 = sheet-position sensitivity).
     cl_fus = float(wall_forces(mc, phi=np.load(OUT / "conf_medium_079.npz")["phi"],
                                alpha_deg=ALPHA, s_ref=s_ref, m_inf=m79, wall_tag="fuselage")["cl"])
+    parts = fuselage_parts(mesh_c, mvop_c, d["phi_ext"], s_ref, float(d["m_final"]))
     checks.add("GB18.5", "fuselage_lift",
                f"conf cl_fus {cl_fus:.4f} = {abs(cl_fus)/clp79*100:.0f}% of wing cl_p "
-               f"{clp79:.4f} @M0.79; LS+clip C medium cl_fus 0.0781 (band 0.0216, "
-               f"out-band 0.0565) @0.775 ceiling state",
-               "RECORDED: fuselage carries spurious lift (G1.6 flat-facet "
-               "natural-BC error, GB9.4 class). The C-side out-band component "
-               "is ~x2 the A side -- P11/curved-wall input. C-side source: "
-               "committed B26 g1_summary.csv", True)
+               f"{clp79:.4f} @M0.79; LS flat-frag C medium cl_fus "
+               f"{parts['band']+parts['out']:.4f} (band {parts['band']:.4f}, "
+               f"out-band {parts['out']:.4f}, poles {parts['poles']:.4f}) "
+               f"@{float(d['m_final']):.4g} ceiling state",
+               "RECORDED: fuselage lift = physical carryover + wake-sheet "
+               "POSITION sensitivity (B28), NOT the G1.6 error; the B26 "
+               "tilted-sheet 'x2 out-band' reading (P11 watch item) is "
+               "retired. The GB9.4 gate lives in the B9 demo (out-band "
+               "cross-model <= 15%)", True)
 
     # artifacts
     write_csv(OUT, "cl_vs_mach.csv", "mach,path,resolution,cl_p,note",
@@ -437,12 +496,12 @@ def run_medium(coarse):
                (0.79, "conforming", "medium", f"{clp79:.4f}", "strict ceiling"),
                (0.84, "conforming", "coarse", f"{coarse['clp84']:.4f}" if coarse else "n/a",
                 "proof-of-concept"),
-               (0.50, "level_set+clip", "medium", f"{CL_M05['level_set']['medium']}", "B17 anchor"),
-               (0.65, "level_set+clip", "medium", f"{ls_c65['clp']:.4f}", "directed ramp; strict final"),
-               (0.75, "level_set+clip", "medium", f"{ls_c75['clp']:.4f}", "directed ramp; strict final"),
-               (0.7625, "level_set+clip", "medium", f"{ls_c['clp']:.4f}",
-                "ceiling m_last=0.7625; cl_p at the 0.775 near-converged state (res ~2e-6)"),
-               (0.84, "level_set+clip", "coarse",
+               (0.50, "level_set+flatfrag", "medium", f"{CL_M05['level_set']['medium']}", "B28 flat anchor"),
+               (0.65, "level_set+flatfrag", "medium", f"{ls_c65['clp']:.4f}", "directed ramp; strict final"),
+               (0.75, "level_set+flatfrag", "medium", f"{ls_c75['clp']:.4f}", "directed ramp; strict final"),
+               (f"{ls_c['m_last']:.4g}", "level_set+flatfrag", "medium", f"{ls_c['clp']:.4f}",
+                f"ceiling m_last={ls_c['m_last']:.4g}; cl_p at the {ls_c['m_final']:.4g} dying state"),
+               (0.84, "level_set+flatfrag", "coarse",
                 f"{coarse['ls_c']['clp']:.4f}" if coarse else "n/a", "reached")])
     ls_pts = [(0.50, CL_M05["level_set"]["medium"]),
               (0.65, ls_c65["clp"]), (0.75, ls_c75["clp"])]
@@ -451,7 +510,7 @@ def run_medium(coarse):
         a_deaths.append((coarse["ls_a"]["m_final"], f"A dies {coarse['ls_a']['m_final']:.4g}"))
     fig_cl_vs_mach(conf_pts, ls_pts, coarse["clp84"] if coarse else 0.2617,
                    coarse["ls_c"]["clp"] if coarse else 0.2542,
-                   (0.7625, ls_c["clp"]), a_deaths)
+                   (ls_c["m_last"], ls_c["clp"]), a_deaths)
     fig_ceiling(coarse["ls_a"]["m_last"] if coarse else 0.82,
                 coarse["ls_c"]["m_last"] if coarse else 0.84,
                 ls_a["m_last"], ls_c["m_last"])
@@ -465,13 +524,16 @@ def main():
               "Set PYFP3D_TRANSONIC_GATES=1 to run.")
         # a tiny ungated wiring check: both transonic drivers present (the
         # conforming target is `m_inf`, the level-set target is `m_target`)
-        # and the B25 inboard clip is importable.
+        # and the B25 inboard clip + the B28 sheet_direction knob are
+        # importable.
         import inspect
         assert "m_inf" in inspect.signature(solve_newton_transonic).parameters
         assert "m_target" in inspect.signature(solve_multivalued_newton_transonic).parameters
+        assert "sheet_direction" in inspect.signature(WakeLevelSet.__init__).parameters
         clip = make_inboard_clip(FUS)
         assert callable(clip)
-        print("[wiring ok] both transonic drivers + the inboard clip present")
+        print("[wiring ok] both transonic drivers + the inboard clip + the "
+              "flat-sheet knob present")
         sys.exit(0)
     coarse = run_coarse()
     run_medium(coarse)

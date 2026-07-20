@@ -1,6 +1,24 @@
 # pyFP3D Agent Rules
 
-Current phase: **B27 ✓ CLOSED 2026-07-20 (NEWEST; stacked on the unpushed
+Current phase: **B29 ✓ CLOSED 2026-07-20 (NEWEST; same branch as B28; no
+`pyfp3d/` change): flat-fragment adopted as the wing-body LS PRODUCTION
+config (user-adjudicated, B28 VERDICT §6).** B18 demo LS side C = B25 clip +
+B28 flat sheet (`sheet_direction=(1,0,0)`; NEW `ls_flat_*` caches, the B26
+tilted `ls_C_*` stale; side A tilted kept as the historical pocket
+comparison; conforming legs bit-reproduce). M0.5 LS anchors re-pinned
+0.2087/0.2117 → **0.2115/0.2184**. Flat C side: coarse 0.84 reached (cl_p
+0.2551); **medium ceiling 0.7625 → 0.775** (dies 0.7875, cls a+dm; live
+dying peak M3.98 @ wing TIP z=1.20 — GB18.4's C side now measured live);
+cross-model gaps **2.6→0.5 % (M0.5), 2.4→1.1 % (M0.65 PASS ≤5 %), 2.5→1.1 %
+(M0.75)**. **GB18.5 live flat decomposition: cl_fus 0.0382 (band −0.0006 /
+out 0.0388 / poles 0.0007) @0.7875 vs conf 0.0423 @0.79** — the B26 tilted
+"×2 out-band" reading (P11 watch item) retired per B28 (position
+sensitivity, not a lesion). checks.csv **8/8 PASS**;
+`tests/test_b9_wingbody_ls.py` switched to the production wiring (flat+clip,
+5/5). Evidence: `cases/demo/b18_wingbody_transonic/results/` (B29-refresh
+checks.csv / cross_model.csv / cl_vs_mach.csv / PNGs).
+
+**B27 ✓ CLOSED 2026-07-20 (stacked on the unpushed
 B25/B26 chain; B18 demo refresh + Track B doc close-out; no `pyfp3d/` change):
 the pocket-healed level-set reaches the SAME ceiling site as conforming — the
 "LS junction-limited (closed-negative)" B18 story is RETIRED.** ★ **GB27.1

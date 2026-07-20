@@ -1860,6 +1860,14 @@ At the medium transonic top (M0.79), the fuselage carries `cl_fus` = 16% of the
 wing cl_p — the G1.6 flat-facet natural-BC error (GB9.4 class) does not improve in
 transonic flow.
 
+> **B29 erratum (2026-07-20):** the "G1.6 error persists" reading is retired
+> (B28: physical carryover + wake-sheet POSITION sensitivity, not an error).
+> With the production flat fragment the LIVE C-side decomposition at the
+> 0.7875 ceiling state is cl_fus **0.0382** (band −0.0006 / out-band 0.0388 /
+> poles 0.0007) vs the conforming 0.0423 @M0.79 — and the B26 tilted-sheet
+> "×2 out-band" value (0.0781 / 0.0565, the P11 watch item) is superseded.
+> The GB9.4 gate lives in the B9 demo (out-band cross-model ≤ 15%).
+
 ---
 
 ## B19 — LS-Newton Jacobian exactness on mixed-side plain elements (closed 2026-07-18)
@@ -2076,7 +2084,9 @@ co-located with conforming" (coarse 0.84 = 0.84; medium 0.7625 ≈ 0.79).**
   free-edge singularity, cured C-side; residual limiter = wing-tip P13 +
   high-M Newton, peaks from B26 committed); GB18.5 refreshed (conf cl_fus
   0.0423 = 16 % @0.79 live; C-side new-ceiling cl_fus 0.0781 / out-band
-  0.0565 ≈ ×2 → P11 watch item).
+  0.0565 ≈ ×2 → P11 watch item — **closed by B28 (position sensitivity);
+  B29 supersedes the values: production flat sheet, live C-side cl_fus
+  0.0382 / out-band 0.0388 @0.7875**).
 - **GB27.5 (RECORDED)** — T1 erratum in the demo docstring: the A-side
   re-test climbing past the B18 committed anchors (dies 0.50/0.55) is the
   **B21/B22 freeze-capture repair effect**, not physics drift; the pocket's
@@ -2088,3 +2098,11 @@ co-located with conforming" (coarse 0.84 = 0.84; medium 0.7625 ≈ 0.79).**
   curves), NOT a B21/B22 regression; (3) conf medium **0.75 NEW point
   0.2483** strict (res 8.3e-11), cl(M) monotone 0.2173/0.2321/0.2483/0.2579,
   the 0.80+ stall narrative unchanged.
+
+**B29 follow-up (2026-07-20, user-adjudicated B28 VERDICT §6):** the
+flat-fragment becomes the wing-body LS PRODUCTION config — B18 side C =
+clip + flat sheet, re-solved: medium ceiling 0.7625 → **0.775**, cross-model
+gaps **2.6→0.5 / 2.4→1.1 / 2.5→1.1 %** (M0.5/0.65/0.75), GB18.5 live flat
+cl_fus **0.0382** @0.7875 vs conf 0.0423 (the ×2 out-band reading retired);
+M0.5 LS anchors re-pinned 0.2115/0.2184; checks.csv 8/8 PASS. See the B29
+row in `docs/roadmap/track_b.md`.

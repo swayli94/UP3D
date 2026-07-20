@@ -9,7 +9,8 @@ specifically needs:
 
   * wiring at the B9 incidence alpha=3.06 (the committed M6 subsonic
     convention), TE-node count locked (aim-independent) and the cut census
-    RECORDED (aim-dependent);
+    RECORDED (aim-dependent) -- built in the B28/B29 PRODUCTION
+    configuration (flat sheet + inboard clip, same as the demo LS legs);
   * GB9.3: the junction TE node's B4 control-volume fans take ONLY wing-side
     elements. wall_nodes = the wing 'wall' group only, so the innermost TE
     node (which sits at the junction, its element fan touching fuselage wall
@@ -30,7 +31,7 @@ import numpy as np
 import pytest
 
 from pyfp3d.mesh.reader import read_mesh
-from pyfp3d.meshgen.fuselage import FuselageParams
+from pyfp3d.meshgen.fuselage import FuselageParams, make_inboard_clip
 from pyfp3d.meshgen.wingbody import junction_z, te_polyline
 from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet
 
@@ -55,8 +56,12 @@ def _require(level: str) -> Path:
 
 def _levelset(alpha_deg: float = ALPHA) -> WakeLevelSet:
     a = np.radians(alpha_deg)
+    # the B28/B29 production configuration: the sheet GEOMETRY is dragged
+    # flat at y=0 while the physics convects with the flow (the B9/B18 demo
+    # LS legs post-B28)
     return WakeLevelSet(te_polyline(FUSELAGE),
-                        direction=(np.cos(a), np.sin(a), 0.0))
+                        direction=(np.cos(a), np.sin(a), 0.0),
+                        sheet_direction=(1.0, 0.0, 0.0))
 
 
 def _setup(level: str, wall_groups=("wall",)):
@@ -64,7 +69,8 @@ def _setup(level: str, wall_groups=("wall",)):
     wls = _levelset()
     wall_nodes = np.unique(np.concatenate(
         [mesh.boundary_faces[g] for g in wall_groups]))
-    cm = CutElementMap(mesh.nodes, mesh.elements, wls, wall_nodes=wall_nodes)
+    cm = CutElementMap(mesh.nodes, mesh.elements, wls, wall_nodes=wall_nodes,
+                       inboard_clip=make_inboard_clip(FUSELAGE))
     mvop = MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
     return mesh, cm, mvop
 

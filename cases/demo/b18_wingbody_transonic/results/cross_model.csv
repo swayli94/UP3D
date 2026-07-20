@@ -1,5 +1,5 @@
 mach,resolution,conf,ls,gap_pct,note
-0.5,medium,0.2173,0.2117,2.6,trustworthy (B9/B17)
-0.6,coarse,0.2178,0.2133,2.1,transonic; increment 49%; under-resolved
-0.65,medium,0.2321,0.2266,2.4,NEW in B27; gated <=5%
-0.75,medium,0.2483,0.2421,2.5,NEW in B27; recorded (shock-sensitive)
+0.5,medium,0.2173,0.2184,0.5,trustworthy (B9/B28 flat-fragment)
+0.6,coarse,0.2178,0.2141,1.7,transonic; increment 70%; under-resolved
+0.65,medium,0.2321,0.2296,1.1,gated <=5%
+0.75,medium,0.2483,0.2456,1.1,recorded (shock-sensitive)
