@@ -95,6 +95,9 @@ cases/meshes/naca0012_wakefree_2.5d/fine.msh
 # field dumps (p13/b8 per-element Mach fields, up to ~125 MB each) must
 # never be committed: >100 MB breaks the GitHub push limit.
 
+cases/demo/*/results/*.npz
+
+
 # Reference papers
 docs/references
 
