@@ -30,13 +30,26 @@ refutation below shows Γ, not h, is the lever.
 
 ## Tests (T1–T4) — all reproducible from the local solution cache + mesh
 
-| # | Test | Result | Reads on the hypotheses |
-|---|---|---|---|
-| **T1** | straddle census: any tet with both a master and a slave wake node? (cache-only) | **0** of 350 718 (and 0/55 531 coarse) | Rules out "Γ jump compressed into one P1 cell". Cut topology clean. |
-| **T2** | fixed-Γ (cached Γ) warm-start re-solve, omega_rho 1.0 vs 0.5, 1500 iters (medium) | omega_rho=0.5 cut the eval drho ~4× (0.18→0.047) but the defect band stayed **bit-identical** (M_max 3.099, 18 cells, 8/4 floored/limited). coarse: cached is already an exact fixed point. | **Refutes H3** (under-convergence / frozen transient): better density convergence at the *same* Γ does nothing. The defect is a genuine fixed point of that Γ. |
-| **T3** | single-station scan: cached Γ everywhere but **st133 (z/b 0.801)** set to {0.050, 0.059(=its own Kutta target), 0.065}, fixed-Γ warm-start, omega_rho=0.5 | band M_max **3.099 → 2.574 → 1.155 → 1.188**; band M>2 cells **18 → 2 → 0 → 0**; floored/limited **8/4 → 1/1 → 0/1 → 0/1**; monotone in Γ₁₃₃ | **Decisive. Confirms H7, refutes H1.** Same mesh/h/TE-elements — only ONE station's Γ changed — collapses the cluster. A 1/h discretization singularity cannot depend on the circulation value. |
-| **T3b** | set ALL stations to their cached-measured Kutta targets (changes only st133: 0.0431→0.0592), fixed-Γ warm-start | wing M>2 **18 → 1**, floored **8 → 0**, max\|F\| 0.016 → 0.0028 | The targets read off the (hot) cached state are already ~right; only station 133's circulation lagged. 165/166 stations were already correct. |
-| **T4** | **full fix** warm-start: far-field taper ON + st133 = target | M_max **5.204 → 2.048**, floored/limited **8/4 → 0/0**, wing M>2 **18 → 1**, far-field M>2 **8 → 0** | Both clusters heal together; `physical` gate passes. The 1 residual wing cell (M≈2.0, tip TE corner) is the mild bounded H1 contribution, within the gate; it clears as Γ₁₃₃ iterates to its self-consistent ~0.063. |
+- **T1** — straddle census: any tet with both a master and a slave wake node? (cache-only) —
+  **0** of 350 718 (and 0/55 531 coarse) — Rules out "Γ jump compressed into one P1 cell". Cut topology clean.
+- **T2** — fixed-Γ (cached Γ) warm-start re-solve, omega_rho 1.0 vs 0.5, 1500 iters (medium) —
+  omega_rho=0.5 cut the eval drho ~4× (0.18→0.047) but the defect band stayed **bit-identical** (M_max 3.099, 18 cells,
+  8/4 floored/limited). coarse: cached is already an exact fixed point. —
+  **Refutes H3** (under-convergence / frozen transient): better density convergence at the *same* Γ does nothing.
+  The defect is a genuine fixed point of that Γ.
+- **T3** — single-station scan: cached Γ everywhere but **st133 (z/b 0.801)** set to {0.050, 0.059(=its own Kutta target),
+  0.065}, fixed-Γ warm-start, omega_rho=0.5 — band M_max **3.099 → 2.574 → 1.155 → 1.188**;
+  band M>2 cells **18 → 2 → 0 → 0**; floored/limited **8/4 → 1/1 → 0/1 → 0/1**; monotone in Γ₁₃₃ — **Decisive.
+  Confirms H7, refutes H1.** Same mesh/h/TE-elements — only ONE station's Γ changed — collapses the cluster.
+  A 1/h discretization singularity cannot depend on the circulation value.
+- **T3b** — set ALL stations to their cached-measured Kutta targets (changes only st133:
+  0.0431→0.0592), fixed-Γ warm-start — wing M>2 **18 → 1**, floored **8 → 0**, max\|F\| 0.016 → 0.0028 —
+  The targets read off the (hot) cached state are already ~right; only station 133's circulation lagged.
+  165/166 stations were already correct.
+- **T4** — **full fix** warm-start: far-field taper ON + st133 = target —
+  M_max **5.204 → 2.048**, floored/limited **8/4 → 0/0**, wing M>2 **18 → 1**, far-field M>2 **8 → 0** —
+  Both clusters heal together; `physical` gate passes. The 1 residual wing cell (M≈2.0, tip TE corner) is the mild bounded
+  H1 contribution, within the gate; it clears as Γ₁₃₃ iterates to its self-consistent ~0.063.
 
 ## Root cause (mechanism)
 

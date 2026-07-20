@@ -40,21 +40,34 @@ the source instead. Recorded as a deliberate deviation, not an oversight.
 
 ## A. Code review — disposition
 
-| ID | Verdict | Disposition |
-|---|---|---|
-| **C1** LS Newton Term 2/3 column mapping | **CONFIRMED** | **Verified, RECORDED, not fixed** — see below. Fix is a shipped-kernel change ⇒ its own phase, user's call. |
-| **C2** conforming fail-fast crosses selection epochs | valid | **FIXED** — `r_level_best` reset at freeze-arm / revert / refresh (`solve/newton.py`), mirroring the LS fix. |
-| **C3** no `freeze_max_reverts` disarm on conforming | valid | **FIXED** — `freeze_max_reverts=3` + `freeze_armed` flag. |
-| **C4** reader drops unnamed physical surface groups | valid, **the dangerous one** | **FIXED** + 2 tests (verified failing before the fix). Its consequence chain was **re-derived in the code, not transcribed**: `wake_cut._sheet_free_edge_nodes` classifies a sheet boundary edge as *interior/free* iff it is not an edge of any OTHER `boundary_faces` group (`wake_cut.py:164-173`) — so a dropped symmetry group does make the sheet's root edge read as free, leaving those nodes single-valued and Γ(root) = 0. (P14's lesson: do not carry another analysis's attribution into your own record as if you had measured it.) |
-| **C5** reader crashes on unnamed physical volume tags | valid | **FIXED** — placeholder `volume_<i>` padding. |
-| **C6** far-field master branch uses `dy == 0.0` | valid | **FIXED** — mask membership is the whole test now. |
-| **C7a** no guard when a TE node has no aux DOF | valid | **FIXED** — assert at construction, scoped (see the honest note below). |
-| **C7b** TE detect 1e-3·h vs side-shift 1e-6·h | valid | **FIXED** — TE nodes forced into the shift; **measured 0 affected nodes on all six committed families**. |
-| **T1** B3 test 2% vs gate 0.3% | valid | **FIXED** — measured 0.1441%, tightened to the gate's 0.3%; gate text and test now cite each other. |
-| **T2** dropped `validate_coloring` return | valid | **FIXED**. |
-| **P1** `unified.section_cp` drops `gamma` on the conforming branch | valid | **FIXED** — `gamma` threaded through, default 1.4 ⇒ byte-inert. |
-| **P2** vacuum-floor Cp saturation + `validate_physics_bounds` q>2.0 | valid, dormant | **BACKLOG** — the q-limit genuinely contradicts a legal limiter-capped field (q≈2.28 vs the 2.0 raise), but its only caller is a subsonic test. Fixing it blind risks changing what "invalid" means mid-phase; it belongs with whoever wires physics monitoring into the transonic path. |
-| **F0** A1 timing assert flaky at 10% | valid | **FIXED** — bound 10%→20% (schema/accounting asserts stay hard); the suite's only CWD-relative mesh path anchored to REPO_ROOT. |
+- **C1** LS Newton Term 2/3 column mapping — **CONFIRMED** — **Verified, RECORDED, not fixed** — see below.
+  Fix is a shipped-kernel change ⇒ its own phase, user's call.
+- **C2** conforming fail-fast crosses selection epochs — valid — **FIXED** —
+  `r_level_best` reset at freeze-arm / revert / refresh (`solve/newton.py`), mirroring the LS fix.
+- **C3** no `freeze_max_reverts` disarm on conforming — valid — **FIXED** — `freeze_max_reverts=3` + `freeze_armed` flag.
+- **C4** reader drops unnamed physical surface groups — valid, **the dangerous one** —
+  **FIXED** + 2 tests (verified failing before the fix). Its consequence chain was **re-derived in the code, not
+  transcribed**: `wake_cut._sheet_free_edge_nodes` classifies a sheet boundary edge as *interior/free* iff it is not an
+  edge of any OTHER `boundary_faces` group (`wake_cut.py:164-173`) —
+  so a dropped symmetry group does make the sheet's root edge read as free, leaving those nodes single-valued and Γ(root)
+  = 0. (P14's lesson: do not carry another analysis's attribution into your own record as if you had measured it.)
+- **C5** reader crashes on unnamed physical volume tags — valid — **FIXED** — placeholder `volume_<i>` padding.
+- **C6** far-field master branch uses `dy == 0.0` — valid — **FIXED** — mask membership is the whole test now.
+- **C7a** no guard when a TE node has no aux DOF — valid — **FIXED** —
+  assert at construction, scoped (see the honest note below).
+- **C7b** TE detect 1e-3·h vs side-shift 1e-6·h — valid — **FIXED** — TE nodes forced into the shift;
+  **measured 0 affected nodes on all six committed families**.
+- **T1** B3 test 2% vs gate 0.3% — valid — **FIXED** — measured 0.1441%, tightened to the gate's 0.3%;
+  gate text and test now cite each other.
+- **T2** dropped `validate_coloring` return — valid — **FIXED**.
+- **P1** `unified.section_cp` drops `gamma` on the conforming branch — valid — **FIXED** —
+  `gamma` threaded through, default 1.4 ⇒ byte-inert.
+- **P2** vacuum-floor Cp saturation + `validate_physics_bounds` q>2.0 — valid, dormant — **BACKLOG** —
+  the q-limit genuinely contradicts a legal limiter-capped field (q≈2.28 vs the 2.0 raise), but its only caller is a
+  subsonic test. Fixing it blind risks changing what "invalid" means mid-phase;
+  it belongs with whoever wires physics monitoring into the transonic path.
+- **F0** A1 timing assert flaky at 10% — valid — **FIXED** — bound 10%→20% (schema/accounting asserts stay hard);
+  the suite's only CWD-relative mesh path anchored to REPO_ROOT.
 
 **Minors accepted into backlog, with reasons** (all recorded, none silently
 dropped): frozen-sweep ν monitor not strictly "BITWISE"; dead/duplicate code

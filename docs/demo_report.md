@@ -26,53 +26,177 @@ re-open/re-close lives in §P4's addenda; B8 closed as characterized-NOT-cured;
 G13.3-transonic is recorded as NEGATIVE. **A claim without a committed artifact
 is not evidence** (the 2026-07-13 audit rule).
 
-| Phase | Demo | Checks | Verdict | Report section in |
-|---|---|---|---|---|
-| P0 mesh infrastructure | `cases/demo/p0_infrastructure/` | 4 PASS | closed, reproduced | [track_p](demo_report/track_p.md) |
-| P1 Laplace solver | `cases/demo/p1_laplace/` | 9 PASS + 1 XFAIL (G1.6) | closed gates reproduced; G1.6 open by design | [track_p](demo_report/track_p.md) |
-| P2 wake cut + Kutta | `cases/demo/p2_kutta_lifting/` | 11 PASS | closed, reproduced | [track_p](demo_report/track_p.md) |
-| M0 quasi-2D meshing | `cases/demo/m0_meshgen/` | 6 PASS | closed, reproduced | [track_m](demo_report/track_m.md) |
-| P3 subsonic compressible | `cases/demo/p3_subsonic/` | 14 PASS | closed, reproduced | [track_p](demo_report/track_p.md) |
-| P4 transonic artificial density | `cases/demo/p4_transonic/` | 10 PASS | closed, reproduced (re-closed 2026-07-07; Picard-quality per the 2026-07-11 erratum) | [track_p](demo_report/track_p.md) |
-| M1 swept-wing meshing (ONERA M6) | `cases/demo/m1_wing_mesh/` | 13 PASS | closed, reproduced (M1b self-similar ladder 2026-07-13) | [track_m](demo_report/track_m.md) |
-| P5 3D validation (ONERA M6) | `cases/demo/p5_onera_m6/` | 16 PASS | closed 2026-07-08 (V6 < 1% deferred; see P13 for its O(h) closure trend) | [track_p](demo_report/track_p.md) |
-| P6 surface-pressure recovery | `cases/demo/p6_surface_recovery/` | 6 PASS (incl. gated M6) | closed 2026-07-08 (sawtooth = recovery artifact) | [track_p](demo_report/track_p.md) |
-| P7 differentiable walk flux | `cases/demo/p7_diff_flux/` | 7 PASS (incl. gated converged-field) | closed 2026-07-10 (FD 3–5e-10) | [track_p](demo_report/track_p.md) |
-| P8 fully-coupled Newton | `cases/demo/p8_newton/` | 15 PASS (parts 2–3 gated) | closed 2026-07-11 (G8.1 + G8.2 + G8.3) | [track_p](demo_report/track_p.md) |
-| P8 capability assessment | `cases/demo/p8_capability/` | 36 PASS (full matrix gated) | **evaluation demo, not a gate** (2026-07-11) | [track_p](demo_report/track_p.md) |
-| P10 (partial) G10.2 continuation tolerance | `cases/demo/p10_newton_usability/` | split A/B verdict | G10.2 + G10.3 closed 2026-07-11; phase stays open (G10.1) | [track_p](demo_report/track_p.md) |
-| P9 grid-convergence & accuracy-gap discrimination | `cases/demo/p9_grid_discrimination/` | 11 PASS + 3 XFAIL | closed 2026-07-11 | [track_p](demo_report/track_p.md) |
-| **Track B** B1 cut-element identification | `tests/test_b1_cut_elements.py` (test-only) | 34 PASS | closed 2026-07-11 | [track_b](demo_report/track_b.md) |
-| **Track B** B2 multivalued assembly | `tests/test_b2_multivalued.py` (test-only) | 17 PASS | closed 2026-07-11 | [track_b](demo_report/track_b.md) |
-| **Track B** B3 + B4 lifting + TE Kutta | `cases/demo/b3_levelset_lifting/` | 13 demo PASS (+6, +8 tests) | closed 2026-07-12 | [track_b](demo_report/track_b.md) |
-| **Track B** B5 far-field A/B | `cases/demo/b4p5_farfield/` | 9 demo PASS (+10 tests) | closed 2026-07-12 | [track_b](demo_report/track_b.md) |
-| **Track B** B6 transonic (level-set) + LS Newton | `cases/demo/b6_transonic/` | 14 demo PASS (+9, +2 tests; +2, +2 Newton) | ◐ coarse gate ✓ 2026-07-12; the medium quantitative item closed by B15/GB15.4 | [track_b](demo_report/track_b.md) |
-| **Track B** B7 ONERA M6 3D gate | `cases/demo/b7_onera_m6/` | 35 PASS | closed 2026-07-12 (M_max re-read 2026-07-14: honest main-field 1.392) | [track_b](demo_report/track_b.md) |
-| P13 G13.1 tip/wake-edge characterization | `cases/demo/p13_tip_edge_singularity/` | 10 PASS | closed 2026-07-13 (1/√r, dΓ/dz-driven) | [track_p](demo_report/track_p.md) |
-| P13 G13.2 spanwise loading taper | `run_taper_probe.py` + `run_taper_physics.py` | PASS | conforming fix closed 2026-07-13 | [track_p](demo_report/track_p.md) |
-| P13 G13.3 ladder + third singularity | `run_g133_ladder.py` | 5/5 | flat-cap wall edge located (p=+0.32) → M5 | [track_p](demo_report/track_p.md) |
-| **Track M** M5 rounded tip cap | `cases/demo/m5_round_tip/` | 9/9 | closed 2026-07-13 (seam crease O(h)) | [track_m](demo_report/track_m.md) |
-| P13 G13.3 subsonic Richardson | `run_g133_roundtip.py` | 9/9 | earned 2026-07-13: p=2.31, cl_KJ(h→0)=0.2050 | [track_p](demo_report/track_p.md) |
-| P13 G13.3 transonic | `run_g133_roundtip_transonic.py` + `_locate.py` | 5/5 | **NEGATIVE** 2026-07-13/14: round fine never reaches M0.84 (sharp tip-TE, amplified) | [track_p](demo_report/track_p.md) |
-| **Track B** B8 tip-edge desingularization | `cases/demo/b8_tip_taper_ls/` + re-spec demos | 12/12 + 8/8 | closed 2026-07-14 **characterized-not-cured** (metric artifact + both cures negative) | [track_b](demo_report/track_b.md) |
-| **Track B** B11 LS infrastructure | `cases/demo/b11_ls_infra/` | PASS | closed 2026-07-14 (unified post + ILU escape; AMG stalls on lifting) | [track_b](demo_report/track_b.md) |
-| **Track B** B12 + B13 lagged-LU | `cases/demo/b12_lagged_lu/` + `b13_lagged_picard/` | 6/6 + 6/6 | closed 2026-07-14 (Newton 2.18×; lifting 6.55×) | [track_b](demo_report/track_b.md) |
-| M6 medium LS workflow | `cases/demo/m6_medium_ls_workflow/` | 10/10 | demo, not a gate (2026-07-15): sub+transonic at conforming-comparable cost | [track_b](demo_report/track_b.md) |
-| **Track B** B15 LS Newton ramp + freeze | `cases/demo/b15_ls_newton_ramp/` | 19/19 at close-out; 17/20 under the first B20 re-baseline; **20/20 refreshed by B22 after the B21 fix (2026-07-19)** | closed 2026-07-15 (plateau gone; four errata). ★ Erratum trail: the post-B20 stall (GB20.7 "real capability loss") was actually the B21/N1 freeze-capture patch gap — the refreshed committed record is γ **0.088343**, M_max **2.4818**, res 9.0e-14, 0 lim/1 flr, freeze armed 6/6 levels with 0 reverts, **511 s = 4.51×** vs the committed Picard; see the B21/B22 sections | [track_b](demo_report/track_b.md) |
-| **Track B** B14 Schur-eliminated aux + AMG structural preconditioner | `cases/demo/b14_schur_precond/` | 7/7 incl. gated M6 coarse+medium; 5/7 under the first B20 re-baseline; **7/7 refreshed by B22 (2026-07-19)** | closed 2026-07-17 (`precond="schur"`, the A1 precond bottleneck gone). B22-refreshed post-B21 numbers: medium ramp lagged 505 s vs schur **345 s = 1.47×**, precond share 45.8% → **1.8%**, γ **0.088343** both arms (\|Δγ\| 8.6e-13), 0 fallbacks; anchor constants re-pinned to the B21 state (γ 0.088343 / M_max 2.4818). ⚠ this index row was MISSING from B14's close-out until B22 added it (the D9 close-out-debt class) | [track_b](demo_report/track_b.md) |
-| **Track A** A1 solver bottleneck study | `cases/analysis/a1_solver_bottleneck/` | 11/11 (2.5-D) + 4/4 (gated 3-D) | closed 2026-07-16: GA1.1–GA1.5; 3-D Newton is precond-bound (the 2.5-D seed headline does not transfer); GA1.5 reproduces G8.2/B15 digit-for-digit and found 4 harness defects | [track_a](demo_report/track_a.md) |
-| **Track A** A2 TE/Kutta fidelity | `cases/analysis/a2_te_kutta_fidelity/` | 22/22 (zero-solve) + 4/4 (gated intervention) | closed 2026-07-17: GA2.1–GA2.5; S1 Γ(z) jitter = a probe-difference Kutta-target measurement artifact (fixed-Γ discriminator D=7.33/25.70 coarse/medium), not flow content; S2 TE Cp jump = potential-jump Kutta form error (34×/133× vs level-set) + P1 recovery artifact; fix routed to P14 (no `pyfp3d/` edits) | [track_a](demo_report/track_a.md) |
-| **Track A** A3 inspection response / C1 Jacobian check | `cases/analysis/c1_ls_jacobian_fd/` | 3 probes + a 3-decade eps sweep (measurement, not pass/fail) | closed 2026-07-18: GA3.1–GA3.6; ★★ **C1 CONFIRMED** — the LS Newton Jacobian is not dR/dφ on mixed-side plain elements (targeted 1.146e-01 vs control 6.33e-10, and **eps-independent**: 1.532e-01 at 1e-6/1e-7/1e-8, max/min 1.00 ⇒ a missing term, not FD noise) ⇒ **quasi**-Newton in 3-D; R untouched so every converged state and gate number stands. RECORDED not fixed. Plus C2/C3 backported, reader C4/C5, C6/C7/P1/T1/T2/F0, 17/17 docs findings | [track_a](demo_report/track_a.md) |
-| **Track B** B9 wing-body cross-model | `cases/demo/b9_wingbody/` (+ guardrail `cases/analysis/b9_fuselage_guardrail/`) | 7 PASS + 1 XFAIL | closed 2026-07-17 (RE-SPEC'D, user-approved): LS (Picard) + conforming (NEW capability, Newton) on the M2 wing-body, M0.5 coarse+medium. ★ the two wake models AGREE to **cl_p 0.4% / cl_kj 0.6%** at medium (conf 0.2173/0.2188 vs LS 0.2165/0.2175, GB9.5 PASS; coarse 12.8% = resolution) — the wing-body analogue of P14's cross-model. GB9.1/9.2/9.3 ✓; **GB9.4 XFAIL** (fuselage lift 16-20%, resolution/model-sensitive ⇒ G1.6 fuselage-Cp error, band NOT moved); GB9.6 RECORDED (azimuthal Cp scatter median 0.0036/0.0022/0.0010, max grows at the poles). ★ LS uses PICARD: the committed LS Newton recipes all diverge on the wing-body — `neumann` is unbounded under the fuselage blockage (te_aux perfect 1.8e-8, 8 far-field fluid rows |R|≈84 in the never-exercised freestream-Newton path) | [track_b](demo_report/track_b.md) |
-| **Track B** B16 LS Newton far-field aux pin | `cases/demo/b16_farfield_aux/` | 9 PASS + 1 XFAIL | closed 2026-07-18 (churn fix; lift-convergence OPEN) (NEW, user-directed; executes the B9 recorded follow-up): the wing-body LS-Newton churn is a **near-singular far-field aux block** — a wake sheet with no outflow clip leaves the outer nodes it crosses on near-singular wake-LS rows; at the freestream Picard state they hold garbage (|jump| **53.4** at x≥10 vs Γ̄ 0.0586), which Picard absorbs but Newton reads as the **8 far-field MAIN rows max\|R\|=84.457** (aux-block cond1 **O(1e19)→8.70e6** pinned). `farfield_aux="pin"` (default, mode-adaptive) ⇒ **coarse** freestream Newton **res 5.88e-14, 0 limited** (lift matches conforming 0.1%) where legacy churns at **7.95**/3690 limited. ★★ **GB16.4 XFAIL — UNRESOLVED non-convergence (user-flagged):** the {Newton-pin, LS-Picard, conforming} lift triangle does NOT close and flips with resolution — medium Newton-pin **0.1690** STALLS at res 7e-6, 22% below the Picard≈conforming pair (0.2165/0.2173, B9's 0.4%) ⇒ at least one path is not converged (medium Newton-pin non-converged, or B9's LS-Picard≈conforming a non-converged coincidence); analysis deferred. ⚠ the proposal's weld-vs-wake_ls mechanism was self-corrected. neumann byte-identical. **★ GB16.4 RESOLVED by B17 (below).** | [track_b](demo_report/track_b.md) |
-| **Track B** B17 far-field aux pin_gamma (resolves GB16.4) | `cases/demo/b17_farfield_pin_gamma/` | 3 coarse PASS + gated medium | closed 2026-07-18 (NEW, user-directed; executes the GB16.4 open follow-up): **GB16.4 was a BC-modelling error, not a non-convergence.** B16's freestream pin forced the outflow wake jump to **0**, removing the circulation the wake physically carries out (−22% at medium; the coarse "match" was a jump=0/legacy-garbage cancellation). **Decisive:** an independent Picard-pin converges cleanly (res 7.5e-8) to the SAME medium **0.1691** the Newton-pin "stalls" at (0.1690) ⇒ both solvers agree per-BC. Fix = `farfield_aux="pin_gamma"` (aux=host φ∞−side·γ, jump→γ, the new default on both solvers): triangle closes MONOTONE to conforming — coarse **0.2087**, medium **0.2117** (Picard)/**0.2115** (Newton; **0.2114** post-B20, and the medium Newton trajectory now converges to \|R\|~1e-13 — the junction churn was the B20 mixed-plain contamination), both agree 0.1%. GB17.1 ring jump 53→0→γ + **B9 coarse-12.8%-was-contamination erratum**; GB17.2 cl_p≡cl_KJ move together (not a post artifact; plotted sectional cl is Γ-based); GB17.6 vortex brackets from +2.5% (does not close the gap). ★ the far-field conditioning, the outflow circulation, and the junction churn are three orthogonal issues B16 conflated | [track_b](demo_report/track_b.md) |
-| **Track B** B18 wing-body transonic (M0.84) | `cases/demo/b18_wingbody_transonic/` | 7 gates (1 PASS + 6 RECORDED) | closed 2026-07-18 (NEW, user-directed; executes the GB16.6 debt): **the wing-body transonic capability is asymmetric, and that is the finding.** **Conforming** (Newton + pressure Kutta, Mach continuation) IS the transonic path: coarse **M0.84 cl_p 0.2617**, medium **M0.79 cl_p 0.2579** strict, clean cl(M) rise 0.2173/0.2321/0.2579 @ M0.50/0.65/0.79 (medium M0.80+ stalls — NOT slivers, a sharper shock/junction interaction). **Level-set** (B15 ramp + B17 pin_gamma) does NOT reach transonic on the wing-body: the wing-fuselage junction spurious supersonic pocket WORSENS with refinement — close-out coarse ~M0.575, medium dies ~M0.5; post-B20 re-baseline coarse **~M0.55 (Mmax 1.31)**, medium ~M0.5 with a **GENUINE unclamped Mmax 5.22** (★ attribution erratum by GB20.5: the pocket is the **G1.6/GB9.4 faceted-geometry** error, NOT "B8 mixed-plain" as originally guessed; the old Mmax 3.96 was a clamped artifact) — closed-negative, characterized not chased (discipline #8), the GB9.4 analogue. ⇒ no common transonic Mach at medium so cross-model stays M0.5 (2.6%); ★ the coarse M0.6 point, originally skipped, exists in the re-baselined artifact (0.2178 vs 0.2174 = 0.2%). GB18.1 PASS + GB18.2–5 RECORDED. ★ repays the GB16.6 evidence debt (spec'd RECORDED, never implemented). ★ no pyfp3d/ numerics change | [track_b](demo_report/track_b.md) |
-| **Track B** B19 LS-Newton Jacobian exactness (3-D) | `cases/analysis/c1_ls_jacobian_fd/` | GB19.1–19.6 ✓ (GB19.4 recorded NEGATIVE) | closed 2026-07-18: TWO Leg-A defects (DOF column maps + gradient factors), targeted probe **1.146e-01 → 1.33e-08** with the ε-discriminator flipped (ε-independent → ~1/ε); R bit-identical (`git stash` A/B per fix) so no converged result moves; GB19.4: NO convergence gain (+3.6% wall) — the plateau is B15 selection churn; Leg B/GB19.6 measured the mixed-plain side-density contamination (spurious supersonic q² 3.2229 vs 1.3379, 45.3% ρ error on 252 elements) and routed it to B20 | [track_b](demo_report/track_b.md) |
-| **Track B** B20 mixed-plain main-field density (adopted permanently) | `cases/analysis/c1_ls_jacobian_fd/` + re-baselined B7/B9/B15/B16/B17/B18 demo CSVs | GB20.1–20.6 ✓, GB20.7 answered 2026-07-19 (superseded by B21 same day) | closed 2026-07-18, knob removed (user-arbitrated), re-baselined 2026-07-19: every moved 3-D number went B20's way (B7 M_max 1.453→1.392; B16 legacy limited 3690→11; B18 wing-body res 6.8e-5→1.1e-13; M6 coarse ramp 0.7875-stall→M0.84 converged) EXCEPT the M6-medium ramp, which stalled at M0.6625 — GB20.7 called it "a real capability loss (freeze_tol axis)"; **B21 then found the true mechanism: the stall was B20's own patch gap in `freeze_side_state` (N1), and fixing it restores M0.84** | [track_b](demo_report/track_b.md) |
-| **Track B** B21 freeze-capture alignment (N1) | `cases/analysis/c1_ls_jacobian_fd/` (`run_n1_freeze_capture.py`, `n1_freeze_fix_sweep.csv`) | GB21.1–21.3 ✓ | closed 2026-07-19 (executes the 2026-07-19 Kimi-inspection N1 finding): `freeze_side_state` captured the frozen selection on the UNPATCHED side field — the one B20 consumer the patch missed (probe: 83+9 selection differences vs live, all aux-touching mixed-plain). One-line fix ⇒ the committed M6-medium recipe reaches **M0.84 again** (γ **0.088343**, M_max 2.4818, res 9.0e-14, 0 lim/1 flr, **515 s** — faster and cleaner than pre-B20's 657 s/3 clamped), freeze_tol-insensitive across 1e-3/1e-5. **GB20.7 overturned**; "contamination was a stabiliser" retired; GB15.4 capability clause stands (small numeric re-baseline; B15/B14 demo refresh = recorded follow-up). 3-D capture lock in `test_b15_ls_newton_freeze.py`, verified failing pre-fix | [track_b](demo_report/track_b.md) |
-| **Track B** B22 evidence refresh + 3-D anchor locks + re-baseline process rule | refreshed `cases/demo/b15_ls_newton_ramp/` + `cases/demo/b14_schur_precond/`; locks `tests/test_b22_ls_3d_anchors.py` | B15 demo **20/20**, B14 demo **7/7**; 2 gated anchor tests | closed 2026-07-19 (executes B21's recorded follow-up + the Kimi N3 finding + the §2 process recommendation): LS npz caches deleted, zero `cached` lines, both demos re-solved green on the B21 state (medium γ 0.088343 / M_max 2.4818 / 511 s; coarse ramp γ 0.084931 / M_max 1.3684); **the N3 gap is closed** — gated anchor locks now re-solve the committed M6 coarse+medium ramps and assert m_final/γ/M_max/clamps absolutely, so the next silent re-baseline fails the suite; CLAUDE.md workflow step 5 + agent-rules discipline #11 gained the re-baseline erratum checklist; next-phase priority analysis in `docs/analysis/next_phase_priorities_2026-07-19.md` (recommends P11) | [track_b](demo_report/track_b.md) |
-| **P11** curved wall-adjacent elements (sphere leg) | `cases/demo/p11_curved_walls/` | 14 PASS + 2 XFAIL (G11.1/G11.2 recorded negatives) | 2026-07-19 CLOSED (opened + closed same day, user-directed): the DP1 curved-element route measured **NEGATIVE** — a verified curved wall layer (planar null test ΔA ≡ 0 bitwise; quadrature = P1 reference to 1.3e-15; deg2/deg3 A/B 5.5e-9) moves medium sphere Cp only **11.56%→11.33%** (= the G1.4 oracle ceiling); the pre-registered superparametric risk fired (mapped-P1 linear-reproduction deviation **O(h)**, max 0.138 coarse). ★★ **G1.6 re-attributed**: the h_min sweep's order collapse (0.88/0.56/0.42, replicated exactly by the committed script) is the **fixed-bulk-mesh pollution floor** (E8: far-mesh-only refinement at h_min=0.03 → φ_wall 3.17× lower, argmax r=1.53→wall, order 1.89); a structured icosphere shell with the SAME flat facets converges at order 1.67/1.98 and hits 2.14% max Cp at h≈0.036 ⇒ medium's 11.6% ≈ **intrinsic P1-field capability at h=0.08** (geometric-crime share ≈0.2 pp). G1.6 xfail stays; route fork (Option C re-spec with measured passing form / isoparametric P2 layer / accept) = user's call | [track_p](demo_report/track_p.md) |
-| **P14** pressure-equality Kutta estimator | `cases/demo/p14_pressure_kutta/` (+ diagnostic `cases/analysis/p14_te_pressure_diag/` 20/20) | 28 PASS incl. gated M0.84 | 2026-07-17 CLOSED (opened + closed same day): A2's fix built and confirmed — S1+S2 both gone in one estimator swap — M0.84 Γ(z) roughness 0.0970→**0.0043** / 0.0365→**0.0024** (at/below the LS band), all-station raw TE Cp gap 0.2206→**0.0040** / 0.1585→**0.0024** (55×/67×; a same-day erratum corrected the first write-up's wrong-metric 0.318/0.228 baseline — A2 measured the gap two ways). ★ **Cross-model (V14.6)**: conforming-pressure 0.2776/0.2823 vs level-set 0.2772/0.2813 — the two independent wake models agree to **0.17%/0.36%** where the probe path was 4.5%/4.3% below LS ⇒ the conforming-vs-LS lift disagreement *was* the Kutta form. ★ **G14.7 ✓ re-specced at close** (user-arbitrated): the estimator swap moves cl_KJ +4.85% off the *probe-path* G8.2 locks and ONTO the level-set oracle (0.15%/0.34%), closing **69% of P9's 0.019 gap** — the move is the finding, re-locked against level-set. Discriminator D 7.33→**1.80** (A2's inconclusive zone, recorded not rounded). ★ **V14.7 self-correction**: the TE Cp *spike* was asserted untouched (A2's "shared recovery artifact") — **measured false**: 0.1143→**0.0533**, below level-set's 0.0743; the conforming excess over LS was Kutta-form error too, with a ~0.05 shared recovery floor remaining | [track_p](demo_report/track_p.md) |
+- P0 mesh infrastructure — `cases/demo/p0_infrastructure/` — 4 PASS — closed, reproduced — [track_p](demo_report/track_p.md)
+- P1 Laplace solver — `cases/demo/p1_laplace/` — 9 PASS + 1 XFAIL (G1.6) — closed gates reproduced; G1.6 open by design —
+  [track_p](demo_report/track_p.md)
+- P2 wake cut + Kutta — `cases/demo/p2_kutta_lifting/` — 11 PASS — closed, reproduced — [track_p](demo_report/track_p.md)
+- M0 quasi-2D meshing — `cases/demo/m0_meshgen/` — 6 PASS — closed, reproduced — [track_m](demo_report/track_m.md)
+- P3 subsonic compressible — `cases/demo/p3_subsonic/` — 14 PASS — closed, reproduced — [track_p](demo_report/track_p.md)
+- P4 transonic artificial density — `cases/demo/p4_transonic/` — 10 PASS — closed, reproduced (re-closed 2026-07-07;
+  Picard-quality per the 2026-07-11 erratum) — [track_p](demo_report/track_p.md)
+- M1 swept-wing meshing (ONERA M6) — `cases/demo/m1_wing_mesh/` — 13 PASS — closed, reproduced (M1b self-similar ladder 2026-07-13) —
+  [track_m](demo_report/track_m.md)
+- P5 3D validation (ONERA M6) — `cases/demo/p5_onera_m6/` — 16 PASS — closed 2026-07-08 (V6 < 1% deferred;
+  see P13 for its O(h) closure trend) — [track_p](demo_report/track_p.md)
+- P6 surface-pressure recovery — `cases/demo/p6_surface_recovery/` — 6 PASS (incl. gated M6) — closed 2026-07-08 (sawtooth = recovery
+  artifact) — [track_p](demo_report/track_p.md)
+- P7 differentiable walk flux — `cases/demo/p7_diff_flux/` — 7 PASS (incl. gated converged-field) — closed 2026-07-10 (FD 3–5e-10) —
+  [track_p](demo_report/track_p.md)
+- P8 fully-coupled Newton — `cases/demo/p8_newton/` — 15 PASS (parts 2–3 gated) — closed 2026-07-11 (G8.1 + G8.2 + G8.3) —
+  [track_p](demo_report/track_p.md)
+- P8 capability assessment — `cases/demo/p8_capability/` — 36 PASS (full matrix gated) — **evaluation demo, not a gate** (2026-07-11) —
+  [track_p](demo_report/track_p.md)
+- P10 (partial) G10.2 continuation tolerance — `cases/demo/p10_newton_usability/` — split A/B verdict — G10.2 + G10.3 closed 2026-07-11;
+  phase stays open (G10.1) — [track_p](demo_report/track_p.md)
+- P9 grid-convergence & accuracy-gap discrimination — `cases/demo/p9_grid_discrimination/` — 11 PASS + 3 XFAIL — closed 2026-07-11 —
+  [track_p](demo_report/track_p.md)
+- **Track B** B1 cut-element identification — `tests/test_b1_cut_elements.py` (test-only) — 34 PASS — closed 2026-07-11 —
+  [track_b](demo_report/track_b.md)
+- **Track B** B2 multivalued assembly — `tests/test_b2_multivalued.py` (test-only) — 17 PASS — closed 2026-07-11 —
+  [track_b](demo_report/track_b.md)
+- **Track B** B3 + B4 lifting + TE Kutta — `cases/demo/b3_levelset_lifting/` — 13 demo PASS (+6, +8 tests) — closed 2026-07-12 —
+  [track_b](demo_report/track_b.md)
+- **Track B** B5 far-field A/B — `cases/demo/b4p5_farfield/` — 9 demo PASS (+10 tests) — closed 2026-07-12 —
+  [track_b](demo_report/track_b.md)
+- **Track B** B6 transonic (level-set) + LS Newton — `cases/demo/b6_transonic/` — 14 demo PASS (+9, +2 tests; +2, +2 Newton) —
+  ◐ coarse gate ✓ 2026-07-12; the medium quantitative item closed by B15/GB15.4 — [track_b](demo_report/track_b.md)
+- **Track B** B7 ONERA M6 3D gate — `cases/demo/b7_onera_m6/` — 35 PASS — closed 2026-07-12 (M_max re-read 2026-07-14:
+  honest main-field 1.392) — [track_b](demo_report/track_b.md)
+- P13 G13.1 tip/wake-edge characterization — `cases/demo/p13_tip_edge_singularity/` — 10 PASS — closed 2026-07-13 (1/√r, dΓ/dz-driven) —
+  [track_p](demo_report/track_p.md)
+- P13 G13.2 spanwise loading taper — `run_taper_probe.py` + `run_taper_physics.py` — PASS — conforming fix closed 2026-07-13 —
+  [track_p](demo_report/track_p.md)
+- P13 G13.3 ladder + third singularity — `run_g133_ladder.py` — 5/5 — flat-cap wall edge located (p=+0.32) → M5 —
+  [track_p](demo_report/track_p.md)
+- **Track M** M5 rounded tip cap — `cases/demo/m5_round_tip/` — 9/9 — closed 2026-07-13 (seam crease O(h)) —
+  [track_m](demo_report/track_m.md)
+- P13 G13.3 subsonic Richardson — `run_g133_roundtip.py` — 9/9 — earned 2026-07-13: p=2.31, cl_KJ(h→0)=0.2050 —
+  [track_p](demo_report/track_p.md)
+- P13 G13.3 transonic — `run_g133_roundtip_transonic.py` + `_locate.py` — 5/5 — **NEGATIVE** 2026-07-13/14:
+  round fine never reaches M0.84 (sharp tip-TE, amplified) — [track_p](demo_report/track_p.md)
+- **Track B** B8 tip-edge desingularization — `cases/demo/b8_tip_taper_ls/` + re-spec demos — 12/12 + 8/8 —
+  closed 2026-07-14 **characterized-not-cured** (metric artifact + both cures negative) — [track_b](demo_report/track_b.md)
+- **Track B** B11 LS infrastructure — `cases/demo/b11_ls_infra/` — PASS — closed 2026-07-14 (unified post + ILU escape;
+  AMG stalls on lifting) — [track_b](demo_report/track_b.md)
+- **Track B** B12 + B13 lagged-LU — `cases/demo/b12_lagged_lu/` + `b13_lagged_picard/` — 6/6 + 6/6 — closed 2026-07-14 (Newton 2.18×;
+  lifting 6.55×) — [track_b](demo_report/track_b.md)
+- M6 medium LS workflow — `cases/demo/m6_medium_ls_workflow/` — 10/10 — demo, not a gate (2026-07-15):
+  sub+transonic at conforming-comparable cost — [track_b](demo_report/track_b.md)
+- **Track B** B15 LS Newton ramp + freeze — `cases/demo/b15_ls_newton_ramp/` — 19/19 at close-out; 17/20 under the first B20 re-baseline;
+  **20/20 refreshed by B22 after the B21 fix (2026-07-19)** — closed 2026-07-15 (plateau gone; four errata). ★ Erratum trail:
+  the post-B20 stall (GB20.7 "real capability loss") was actually the B21/N1 freeze-capture patch gap —
+  the refreshed committed record is γ **0.088343**, M_max **2.4818**, res 9.0e-14, 0 lim/1 flr, freeze armed 6/6 levels with 0 reverts,
+  **511 s = 4.51×** vs the committed Picard; see the B21/B22 sections — [track_b](demo_report/track_b.md)
+- **Track B** B14 Schur-eliminated aux + AMG structural preconditioner — `cases/demo/b14_schur_precond/` — 7/7 incl. gated M6 coarse+medium;
+  5/7 under the first B20 re-baseline; **7/7 refreshed by B22 (2026-07-19)** — closed 2026-07-17 (`precond="schur"`, the A1 precond
+  bottleneck gone). B22-refreshed post-B21 numbers: medium ramp lagged 505 s vs schur **345 s = 1.47×**, precond share 45.8% → **1.8%**, γ
+  **0.088343** both arms (\|Δγ\| 8.6e-13), 0 fallbacks; anchor constants re-pinned to the B21 state (γ 0.088343 / M_max 2.4818).
+  ⚠ this index row was MISSING from B14's close-out until B22 added it (the D9 close-out-debt class) — [track_b](demo_report/track_b.md)
+- **Track A** A1 solver bottleneck study — `cases/analysis/a1_solver_bottleneck/` — 11/11 (2.5-D) + 4/4 (gated 3-D) — closed 2026-07-16:
+  GA1.1–GA1.5; 3-D Newton is precond-bound (the 2.5-D seed headline does not transfer); GA1.5 reproduces G8.2/B15 digit-for-digit and found
+  4 harness defects — [track_a](demo_report/track_a.md)
+- **Track A** A2 TE/Kutta fidelity — `cases/analysis/a2_te_kutta_fidelity/` — 22/22 (zero-solve) + 4/4 (gated intervention) —
+  closed 2026-07-17: GA2.1–GA2.5; S1 Γ(z) jitter = a probe-difference Kutta-target measurement artifact (fixed-Γ discriminator D=7.33/25.70
+  coarse/medium), not flow content; S2 TE Cp jump = potential-jump Kutta form error (34×/133× vs level-set) + P1 recovery artifact;
+  fix routed to P14 (no `pyfp3d/` edits) — [track_a](demo_report/track_a.md)
+- **Track A** A3 inspection response / C1 Jacobian check — `cases/analysis/c1_ls_jacobian_fd/` —
+  3 probes + a 3-decade eps sweep (measurement, not pass/fail) — closed 2026-07-18: GA3.1–GA3.6; ★★ **C1 CONFIRMED** —
+  the LS Newton Jacobian is not dR/dφ on mixed-side plain elements (targeted 1.146e-01 vs control 6.33e-10, and **eps-independent**:
+  1.532e-01 at 1e-6/1e-7/1e-8, max/min 1.00 ⇒ a missing term, not FD noise) ⇒ **quasi**-Newton in 3-D;
+  R untouched so every converged state and gate number stands. RECORDED not fixed. Plus C2/C3 backported, reader C4/C5, C6/C7/P1/T1/T2/F0,
+  17/17 docs findings — [track_a](demo_report/track_a.md)
+- **Track B** B9 wing-body cross-model — `cases/demo/b9_wingbody/` (+ guardrail `cases/analysis/b9_fuselage_guardrail/`) —
+  7 PASS + 1 XFAIL — closed 2026-07-17 (RE-SPEC'D, user-approved): LS (Picard) + conforming (NEW capability, Newton) on the M2 wing-body,
+  M0.5 coarse+medium. ★ the two wake models AGREE to **cl_p 0.4% / cl_kj 0.6%** at medium (conf 0.2173/0.2188 vs LS 0.2165/0.2175, GB9.5
+  PASS; coarse 12.8% = resolution) — the wing-body analogue of P14's cross-model. GB9.1/9.2/9.3 ✓;
+  **GB9.4 XFAIL** (fuselage lift 16-20%, resolution/model-sensitive ⇒ G1.6 fuselage-Cp error, band NOT moved);
+  GB9.6 RECORDED (azimuthal Cp scatter median 0.0036/0.0022/0.0010, max grows at the poles). ★ LS uses PICARD:
+  the committed LS Newton recipes all diverge on the wing-body — `neumann` is unbounded under the fuselage blockage (te_aux perfect 1.8e-8,
+  8 far-field fluid rows |R|≈84 in the never-exercised freestream-Newton path) — [track_b](demo_report/track_b.md)
+- **Track B** B16 LS Newton far-field aux pin — `cases/demo/b16_farfield_aux/` — 9 PASS + 1 XFAIL — closed 2026-07-18 (churn fix;
+  lift-convergence OPEN) (NEW, user-directed; executes the B9 recorded follow-up): the wing-body LS-Newton churn is a **near-singular
+  far-field aux block** — a wake sheet with no outflow clip leaves the outer nodes it crosses on near-singular wake-LS rows;
+  at the freestream Picard state they hold garbage (|jump| **53.4** at x≥10 vs Γ̄ 0.0586), which Picard absorbs but Newton reads as the **8
+  far-field MAIN rows max\|R\|=84.457** (aux-block cond1 **O(1e19)→8.70e6** pinned). `farfield_aux="pin"` (default, mode-adaptive) ⇒
+  **coarse** freestream Newton **res 5.88e-14, 0 limited** (lift matches conforming 0.1%) where legacy churns at **7.95**/3690 limited.
+  ★★ **GB16.4 XFAIL — UNRESOLVED non-convergence (user-flagged):** the {Newton-pin, LS-Picard, conforming} lift triangle does NOT close and
+  flips with resolution — medium Newton-pin **0.1690** STALLS at res 7e-6, 22% below the Picard≈conforming pair (0.2165/0.2173, B9's 0.4%) ⇒
+  at least one path is not converged (medium Newton-pin non-converged, or B9's LS-Picard≈conforming a non-converged coincidence);
+  analysis deferred. ⚠ the proposal's weld-vs-wake_ls mechanism was self-corrected. neumann byte-identical.
+  **★ GB16.4 RESOLVED by B17 (below).** — [track_b](demo_report/track_b.md)
+- **Track B** B17 far-field aux pin_gamma (resolves GB16.4) — `cases/demo/b17_farfield_pin_gamma/` — 3 coarse PASS + gated medium —
+  closed 2026-07-18 (NEW, user-directed; executes the GB16.4 open follow-up): **GB16.4 was a BC-modelling error, not a non-convergence.**
+  B16's freestream pin forced the outflow wake jump to **0**, removing the circulation the wake physically carries out (−22% at medium;
+  the coarse "match" was a jump=0/legacy-garbage cancellation). **Decisive:** an independent Picard-pin converges cleanly (res 7.5e-8) to
+  the SAME medium **0.1691** the Newton-pin "stalls" at (0.1690) ⇒ both solvers agree per-BC. Fix = `farfield_aux="pin_gamma"` (aux=host
+  φ∞−side·γ, jump→γ, the new default on both solvers): triangle closes MONOTONE to conforming —
+  coarse **0.2087**, medium **0.2117** (Picard)/**0.2115** (Newton; **0.2114** post-B20, and the medium Newton trajectory now converges to
+  \|R\|~1e-13 — the junction churn was the B20 mixed-plain contamination), both agree 0.1%. GB17.1 ring jump 53→0→γ + **B9
+  coarse-12.8%-was-contamination erratum**; GB17.2 cl_p≡cl_KJ move together (not a post artifact; plotted sectional cl is Γ-based);
+  GB17.6 vortex brackets from +2.5% (does not close the gap). ★ the far-field conditioning, the outflow circulation, and the junction churn
+  are three orthogonal issues B16 conflated — [track_b](demo_report/track_b.md)
+- **Track B** B18 wing-body transonic (M0.84) — `cases/demo/b18_wingbody_transonic/` — 7 gates (1 PASS + 6 RECORDED) —
+  closed 2026-07-18 (NEW, user-directed; executes the GB16.6 debt): **the wing-body transonic capability is asymmetric, and that is the
+  finding.** **Conforming** (Newton + pressure Kutta, Mach continuation) IS the transonic path:
+  coarse **M0.84 cl_p 0.2617**, medium **M0.79 cl_p 0.2579** strict, clean cl(M) rise 0.2173/0.2321/0.2579 @ M0.50/0.65/0.79 (medium M0.80+
+  stalls — NOT slivers, a sharper shock/junction interaction). **Level-set** (B15 ramp + B17 pin_gamma) does NOT reach transonic on the
+  wing-body: the wing-fuselage junction spurious supersonic pocket WORSENS with refinement — close-out coarse ~M0.575, medium dies ~M0.5;
+  post-B20 re-baseline coarse **~M0.55 (Mmax 1.31)**, medium ~M0.5 with a **GENUINE unclamped Mmax 5.22** (★ attribution erratum by GB20.5:
+  the pocket is the **G1.6/GB9.4 faceted-geometry** error, NOT "B8 mixed-plain" as originally guessed;
+  the old Mmax 3.96 was a clamped artifact) — closed-negative, characterized not chased (discipline #8), the GB9.4 analogue.
+  ⇒ no common transonic Mach at medium so cross-model stays M0.5 (2.6%); ★ the coarse M0.6 point, originally skipped, exists in the
+  re-baselined artifact (0.2178 vs 0.2174 = 0.2%). GB18.1 PASS + GB18.2–5 RECORDED. ★ repays the GB16.6 evidence debt (spec'd RECORDED,
+  never implemented). ★ no pyfp3d/ numerics change — [track_b](demo_report/track_b.md)
+- **Track B** B19 LS-Newton Jacobian exactness (3-D) — `cases/analysis/c1_ls_jacobian_fd/` — GB19.1–19.6 ✓ (GB19.4 recorded NEGATIVE) —
+  closed 2026-07-18: TWO Leg-A defects (DOF column maps + gradient factors), targeted probe **1.146e-01 → 1.33e-08** with the
+  ε-discriminator flipped (ε-independent → ~1/ε); R bit-identical (`git stash` A/B per fix) so no converged result moves; GB19.4:
+  NO convergence gain (+3.6% wall) — the plateau is B15 selection churn; Leg B/GB19.6 measured the mixed-plain side-density contamination
+  (spurious supersonic q² 3.2229 vs 1.3379, 45.3% ρ error on 252 elements) and routed it to B20 — [track_b](demo_report/track_b.md)
+- **Track B** B20 mixed-plain main-field density (adopted permanently) — `cases/analysis/c1_ls_jacobian_fd/` + re-baselined
+  B7/B9/B15/B16/B17/B18 demo CSVs — GB20.1–20.6 ✓, GB20.7 answered 2026-07-19 (superseded by B21 same day) —
+  closed 2026-07-18, knob removed (user-arbitrated), re-baselined 2026-07-19: every moved 3-D number went B20's way (B7 M_max 1.453→1.392;
+  B16 legacy limited 3690→11; B18 wing-body res 6.8e-5→1.1e-13; M6 coarse ramp 0.7875-stall→M0.84 converged) EXCEPT the M6-medium ramp,
+  which stalled at M0.6625 — GB20.7 called it "a real capability loss (freeze_tol axis)"; **B21 then found the true mechanism:
+  the stall was B20's own patch gap in `freeze_side_state` (N1), and fixing it restores M0.84** — [track_b](demo_report/track_b.md)
+- **Track B** B21 freeze-capture alignment (N1) — `cases/analysis/c1_ls_jacobian_fd/` (`run_n1_freeze_capture.py`,
+  `n1_freeze_fix_sweep.csv`) — GB21.1–21.3 ✓ — closed 2026-07-19 (executes the 2026-07-19 Kimi-inspection N1 finding):
+  `freeze_side_state` captured the frozen selection on the UNPATCHED side field — the one B20 consumer the patch missed (probe:
+  83+9 selection differences vs live, all aux-touching mixed-plain). One-line fix ⇒ the committed M6-medium recipe reaches **M0.84 again**
+  (γ **0.088343**, M_max 2.4818, res 9.0e-14, 0 lim/1 flr, **515 s** — faster and cleaner than pre-B20's 657 s/3 clamped),
+  freeze_tol-insensitive across 1e-3/1e-5. **GB20.7 overturned**; "contamination was a stabiliser" retired;
+  GB15.4 capability clause stands (small numeric re-baseline; B15/B14 demo refresh = recorded follow-up).
+  3-D capture lock in `test_b15_ls_newton_freeze.py`, verified failing pre-fix — [track_b](demo_report/track_b.md)
+- **Track B** B22 evidence refresh + 3-D anchor locks + re-baseline process rule — refreshed `cases/demo/b15_ls_newton_ramp/` +
+  `cases/demo/b14_schur_precond/`; locks `tests/test_b22_ls_3d_anchors.py` — B15 demo **20/20**, B14 demo **7/7**; 2 gated anchor tests —
+  closed 2026-07-19 (executes B21's recorded follow-up + the Kimi N3 finding + the §2 process recommendation):
+  LS npz caches deleted, zero `cached` lines, both demos re-solved green on the B21 state (medium γ 0.088343 / M_max 2.4818 / 511 s;
+  coarse ramp γ 0.084931 / M_max 1.3684); **the N3 gap is closed** — gated anchor locks now re-solve the committed M6 coarse+medium ramps
+  and assert m_final/γ/M_max/clamps absolutely, so the next silent re-baseline fails the suite;
+  CLAUDE.md workflow step 5 + agent-rules discipline #11 gained the re-baseline erratum checklist;
+  next-phase priority analysis in `docs/analysis/next_phase_priorities_2026-07-19.md` (recommends P11) — [track_b](demo_report/track_b.md)
+- **P11** curved wall-adjacent elements (sphere leg) — `cases/demo/p11_curved_walls/` — 14 PASS + 2 XFAIL (G11.1/G11.2 recorded negatives) —
+  2026-07-19 CLOSED (opened + closed same day, user-directed): the DP1 curved-element route measured **NEGATIVE** —
+  a verified curved wall layer (planar null test ΔA ≡ 0 bitwise; quadrature = P1 reference to 1.3e-15;
+  deg2/deg3 A/B 5.5e-9) moves medium sphere Cp only **11.56%→11.33%** (= the G1.4 oracle ceiling);
+  the pre-registered superparametric risk fired (mapped-P1 linear-reproduction deviation **O(h)**, max 0.138 coarse).
+  ★★ **G1.6 re-attributed**: the h_min sweep's order collapse (0.88/0.56/0.42, replicated exactly by the committed script) is the
+  **fixed-bulk-mesh pollution floor** (E8: far-mesh-only refinement at h_min=0.03 → φ_wall 3.17× lower, argmax r=1.53→wall, order 1.89);
+  a structured icosphere shell with the SAME flat facets converges at order 1.67/1.98 and hits 2.14% max Cp at h≈0.036 ⇒ medium's 11.6% ≈
+  **intrinsic P1-field capability at h=0.08** (geometric-crime share ≈0.2 pp). G1.6 xfail stays;
+  route fork (Option C re-spec with measured passing form / isoparametric P2 layer / accept) = user's call —
+  [track_p](demo_report/track_p.md)
+- **P14** pressure-equality Kutta estimator — `cases/demo/p14_pressure_kutta/` (+ diagnostic `cases/analysis/p14_te_pressure_diag/` 20/20) —
+  28 PASS incl. gated M0.84 — 2026-07-17 CLOSED (opened + closed same day): A2's fix built and confirmed —
+  S1+S2 both gone in one estimator swap — M0.84 Γ(z) roughness 0.0970→**0.0043** / 0.0365→**0.0024** (at/below the LS band), all-station raw
+  TE Cp gap 0.2206→**0.0040** / 0.1585→**0.0024** (55×/67×; a same-day erratum corrected the first write-up's wrong-metric 0.318/0.228
+  baseline — A2 measured the gap two ways). ★ **Cross-model (V14.6)**: conforming-pressure 0.2776/0.2823 vs level-set 0.2772/0.2813 —
+  the two independent wake models agree to **0.17%/0.36%** where the probe path was 4.5%/4.3% below LS ⇒ the conforming-vs-LS lift
+  disagreement *was* the Kutta form. ★ **G14.7 ✓ re-specced at close** (user-arbitrated): the estimator swap moves cl_KJ +4.85% off the
+  *probe-path* G8.2 locks and ONTO the level-set oracle (0.15%/0.34%), closing **69% of P9's 0.019 gap** —
+  the move is the finding, re-locked against level-set. Discriminator D 7.33→**1.80** (A2's inconclusive zone, recorded not rounded).
+  ★ **V14.7 self-correction**: the TE Cp *spike* was asserted untouched (A2's "shared recovery artifact") — **measured false**:
+  0.1143→**0.0533**, below level-set's 0.0743; the conforming excess over LS was Kutta-form error too, with a ~0.05 shared recovery floor
+  remaining — [track_p](demo_report/track_p.md)
 
 > Track-P renumber (2026-07-08, then 2026-07-11 ×2): P6 = surface recovery;
 > P7 = differentiable flux (Newton prereq); P8 = fully-coupled Newton;
