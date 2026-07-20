@@ -301,7 +301,13 @@ close-out debt. Suite **463 + 21 + 2** (+3 reader). Response report:
 
 **B18 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
 B17; executes the GB16.6 debt): wing-body transonic (M0.84) — conforming reaches
-it, level-set is junction-limited.** ★★ The wing-body transonic capability is
+it, level-set is junction-limited.** ★★★ **ERRATUM 2026-07-20 (B23–B27): the
+"junction-limited (closed-negative)" story is RETIRED — the pocket = the B23
+inboard free-edge singularity, healed by B25's `inboard_clip`; the post-cure LS
+ceiling is co-located with conforming (B26: medium 0.7625 / coarse 0.84
+reached) and the demo is refreshed to 8/8 PASS (B27, 336/336 bit-identical;
+cross-model M0.65 2.4% PASS / M0.75 2.5%). The conforming legs below stand —
+bit-reproduced by B27.** ★★ The wing-body transonic capability is
 **asymmetric, and that is the finding.** **Conforming** (Newton + pressure Kutta,
 Mach continuation) IS the wing-body transonic path: coarse reaches **M0.84 (cl_p
 0.2617)**, medium reaches **M0.79 strict (cl_p 0.2579)** with a clean transonic
@@ -328,7 +334,9 @@ implemented; B18 executes it as a negative). ★ **NO `pyfp3d/` numerics change*
 pure demo/tests/docs on existing `solve_newton_transonic` +
 `solve_multivalued_newton_transonic`. fine excluded (G13.3). Tests
 `tests/test_b18_wingbody_transonic.py` (4, ungated); demo
-`cases/demo/b18_wingbody_transonic/` (7 gates: 1 PASS + 6 RECORDED).
+`cases/demo/b18_wingbody_transonic/` (7 gates at the 2026-07-18 close-out:
+1 PASS + 6 RECORDED — **superseded 2026-07-20 by the B27 refresh: checks.csv
+8/8 PASS**, see the erratum above).
 
 **B17 ✓ CLOSED 2026-07-18 (resolves GB16.4): the far-field aux pin must carry
 jump=γ, not 0.** ★★
@@ -561,7 +569,17 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   2026-07-19** — B15 demo 20/20 + B14 7/7 refreshed on the B21 state (coarse
   ramp γ 0.084931 disclosed); **N3 closed** via gated absolute anchor locks
   (`test_b22_ls_3d_anchors.py`); re-baseline erratum checklist = process;
-  next-phase analysis recommends P11 (user's call) · **B26 ✓ CLOSED
+  next-phase analysis recommends P11 (user's call) · **B23 ✓ CLOSED
+  2026-07-19** — junction discriminator: the pocket is lift/wake-coupled
+  (α=0 clean at both levels, grows superlinearly with α), attribution = the
+  wake inboard FREE-EDGE singularity (NOT G1.6 faceting); P11 close-out
+  input · **B24 ✓ CLOSED 2026-07-19 (negative)** — the pocket follows the
+  free edge, but the waterline-extension variants trade the singularity for
+  equal-or-worse forms (B1 corrM 78.56 non-converged); the (b)-1 route is
+  CLOSED · **B25 ✓ CLOSED 2026-07-19 (the cure)** — `inboard_clip` moves
+  the sheet's inboard boundary to the fuselage surface / symmetry plane (=
+  conforming fragment topology): medium α=3.06 junction pocket corrM
+  **14.66→0.63**, guardrails clean; default None bit-identical · **B26 ✓ CLOSED
   2026-07-20 (B26-A)** — the junction pocket WAS the LS wing-body transonic
   ceiling limiter: healed by B25's `inboard_clip`; medium 0.50→0.7625, coarse
   0.82→0.84 reached; death class flips (a)→(b) (wing-tip P13; corridor
@@ -650,10 +668,14 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **473 passed + 25 skipped + 2 xfailed** (2026-07-19, P11 curved
+Baseline: **479 passed + 25 skipped + 2 xfailed** (2026-07-20, B25 inboard
+fragment clip, +6 passed = `tests/test_b1_cut_elements.py::TestInboardFragmentClip`
+(4) + the same file's foot-preference lock (1) + `tests/test_m2_wingbody.py`'s
+waterline-extension lock (1); **measured 1100.63 s @16 threads**).
+Previous: 473 + 25 + 2 (2026-07-19, P11 curved
 walls, +8 passed = the ungated `tests/test_p11_curved_walls.py`;
-**measured 1124.94 s @16 threads**).
-Previous: 465 + 25 + 2 (2026-07-19, B22 3-D LS
+measured 1124.94 s @16 threads);
+465 + 25 + 2 (2026-07-19, B22 3-D LS
 anchor locks, +2 skipped = the gated `tests/test_b22_ls_3d_anchors.py`;
 measured 1127.38 s @16 threads);
 465 + 23 + 2 (2026-07-19, B21

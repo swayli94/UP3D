@@ -40,7 +40,7 @@ default); runtimes below are the default (light) path.
 | `b15_ls_newton_ramp/` | Track B **B15** LS Newton freeze-ramp (the strict transonic LS route) | `python cases/demo/b15_ls_newton_ramp/run_demo.py` | heavy |
 | `b16_farfield_aux/` | Track B **B16** far-field aux pin — the LS-Newton churn fix (9 PASS + 1 XFAIL, resolved by B17) | `python cases/demo/b16_farfield_aux/run_demo.py` | heavy |
 | `b17_farfield_pin_gamma/` | Track B **B17** `farfield_aux="pin_gamma"` (jump=γ; 3 coarse PASS + gated medium) | `python cases/demo/b17_farfield_pin_gamma/run_demo.py` | heavy |
-| `b18_wingbody_transonic/` | Track B **B18** wing-body transonic M0.84 (1 PASS + 6 RECORDED) | `python cases/demo/b18_wingbody_transonic/run_demo.py` | heavy |
+| `b18_wingbody_transonic/` | Track B **B18** wing-body transonic M0.84 — **B27 refresh 2026-07-20: 8 gates PASS** (conforming coarse M0.84 / medium M0.79; LS+`inboard_clip` reaches the SAME ceiling site: coarse 0.84 / medium 0.7625; cross-model M0.65 2.4% PASS + M0.75 2.5%) | `python cases/demo/b18_wingbody_transonic/run_demo.py` | heavy |
 | `m5_round_tip/` | Track M **M5** round tip cap (9/9) | `python cases/demo/m5_round_tip/run_demo.py` | ~2 min |
 | `m6_medium_ls_workflow/` | Track M/B M6 medium level-set workflow | `python cases/demo/m6_medium_ls_workflow/run_demo.py` | heavy |
 | `p14_pressure_kutta/` | **P14** pressure-equality Kutta estimator (28 checks) | `python cases/demo/p14_pressure_kutta/run_demo.py` | heavy |
