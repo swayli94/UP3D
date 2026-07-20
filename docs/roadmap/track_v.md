@@ -85,9 +85,15 @@ experiment (≈ 0.26–0.27 on M6), so the 0.245-vs-0.288 gap belongs to P9
 (discriminating how much of it is resolution) and P11 (curved walls), never to
 Track V.
 
-| Phase | Status | Closed on | Notes |
-|-------|--------|-----------|-------|
-| V1 | ☐ | | IBL3 solver + loose coupling (`viscous/ibl3.py`, `transpiration.py`, `coupling.py`; wall-Neumann blowing source in `kernels/residual.py`; wake-sheet mass source in `constraints/wake.py`). Depends only on **P6 ✓** (the smoothed wall gradient is the IBL edge-velocity input) and is parallelizable with P7/P8 — but it is a Track-P-sized effort (6-equation nonlinear surface FE + closures), not a side task. Gates GV1.1–GV1.3. |
-| V2 | ☐ (optional) | | Quasi-simultaneous coupling (Hilbert-integral potential surrogate, `viscous/hilbert.py`). Skip if V1's loose loop converges fast enough. Gate GV2.1. |
-| V3 | ☐ | | Tight coupling: augmented (φ, Γ, δ, A, B, Ψ, C_τ1, C_τ2) Newton on top of the **P8** Jacobian machinery; GMRES + block preconditioning (AMG potential / ILU BL). Gates GV3.1–GV3.3 — including the direction check: M6 CL moves **down** from the converged inviscid value toward experiment ≈ 0.26–0.27. |
-| V4 | ☐ | | Wake-sheet IBL correction — a continuation of V1, NOT an independent phase (same 6 equations + wake closure relations; reserve the wake unknowns in V1's data layout). Straight wake + mass-transpiration relaxation, no geometric relaxation. |
+- V1 — ☐ — IBL3 solver + loose coupling (`viscous/ibl3.py`, `transpiration.py`, `coupling.py`;
+  wall-Neumann blowing source in `kernels/residual.py`; wake-sheet mass source in `constraints/wake.py`).
+  Depends only on **P6 ✓** (the smoothed wall gradient is the IBL edge-velocity input) and is parallelizable with P7/P8 —
+  but it is a Track-P-sized effort (6-equation nonlinear surface FE + closures), not a side task. Gates GV1.1–GV1.3.
+- V2 — ☐ (optional) — Quasi-simultaneous coupling (Hilbert-integral potential surrogate, `viscous/hilbert.py`).
+  Skip if V1's loose loop converges fast enough. Gate GV2.1.
+- V3 — ☐ — Tight coupling: augmented (φ, Γ, δ, A, B, Ψ, C_τ1, C_τ2) Newton on top of the **P8** Jacobian machinery;
+  GMRES + block preconditioning (AMG potential / ILU BL). Gates GV3.1–GV3.3 — including the direction check:
+  M6 CL moves **down** from the converged inviscid value toward experiment ≈ 0.26–0.27.
+- V4 — ☐ — Wake-sheet IBL correction — a continuation of V1, NOT an independent phase (same 6 equations + wake closure
+  relations; reserve the wake unknowns in V1's data layout). Straight wake + mass-transpiration relaxation, no geometric
+  relaxation.
