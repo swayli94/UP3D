@@ -152,6 +152,47 @@ def radius_at(p: FuselageParams, x: float) -> float:
     return math.sqrt(max(0.0, p.r_tail ** 2 - dx ** 2))
 
 
+def make_inboard_clip(p: FuselageParams):
+    """B25 inboard fragment clip for ``CutElementMap(inboard_clip=...)``.
+
+    Replaces the legacy inboard clip (q >= 0: the sheet stops at the
+    wing-fuselage junction station, leaving a free edge inside the fluid --
+    the B23 junction-pocket singularity) by the CONFORMING sheet's fragment
+    topology (meshgen/wingbody.py): the wake sheet extends inboard until it
+    hits a wall or a domain boundary, so no free edge remains in the fluid
+    (Helmholtz: every vortex line ends on a surface or leaves the domain):
+
+        x <= x_tail_tip : y^2 + z^2 >= R(x)^2   -- outside the body; the
+                          trace is the waterline -> tail cone -> tail tip,
+                          ON the wall (at alpha > 0 the tilted sheet's trace
+                          rides the y > 0 side of the meridian)
+        x >  x_tail_tip : z >= 0                -- aft of the body the sheet
+                          reaches the symmetry plane (a domain boundary)
+
+    radius_at returns R = 0 outside [x_nose_tip, x_tail_tip], so the body
+    branch alone would accept EVERYTHING aft of the tail tip (including
+    z < 0); the symmetry branch is what terminates the sheet there.
+
+    Scoped to the analytic body of revolution (radius_at); a general (e.g.
+    NURBS) geometry is NOT covered (pre-registration S4).
+
+    Returns:
+        callable(points (..., 3)) -> bool ndarray (...): True = the s = 0
+        crossing is on the sheet. Vectorized over the leading axes.
+    """
+    x_tip = float(p.x_tail_tip)
+
+    def inboard_ok(points: np.ndarray) -> np.ndarray:
+        pts = np.asarray(points, dtype=np.float64)
+        x, y, z = pts[..., 0], pts[..., 1], pts[..., 2]
+        r = np.array([radius_at(p, float(xx)) for xx in x.flat],
+                     dtype=np.float64).reshape(x.shape)
+        outside_body = (y * y + z * z) >= r * r
+        return np.where(x <= x_tip, outside_body, z >= 0.0)
+
+    return inboard_ok
+
+
 def profile_x(p: FuselageParams, n: int = 120) -> np.ndarray:
     """Meridian x sample stations for the profile spline.
 

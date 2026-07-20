@@ -23,7 +23,11 @@ WakeLevelSet, classify:
     ended (Gamma(tip) = 0 -- the conforming path's free-edge rule; without
     it a swept-wing level set cuts the whole plane extension beyond the
     tip, i.e. P5's far-field branch-ray artifact re-created). Both tests
-    are inert on the quasi-2D meshes.
+    are inert on the quasi-2D meshes. The INBOARD end of the extent test
+    (q >= 0) can be replaced by a caller-supplied `inboard_clip` (B25:
+    the conforming sheet's fragment topology -- the sheet runs inboard
+    until it hits the fuselage surface / the symmetry plane, so no free
+    edge remains inside the fluid).
   - te_lower_elems: NOT cut, but contain a TE node with all their other
     nodes on the "-" side -- the below-TE fan whose TE reference must use
     the aux DOF in B2 (Lopez fig. 3.6c); recorded here so assembly never
@@ -78,6 +82,15 @@ class CutElementMap:
             |s|,|d| test alone is already sharp, this makes it airtight).
         eps_rel: on-surface shift threshold relative to local edge length.
         te_tol_rel: TE-node detection threshold relative to local edge length.
+        inboard_clip: optional callable replacing the INBOARD spanwise clip
+            (q >= 0) in the on-sheet test; None (default) keeps the legacy
+            q >= 0 test BIT-IDENTICAL. When given, it is called with the
+            s = 0 crossing points, shape (n_candidates, 6, 3) (one row per
+            sign-changing tet edge), and must return a boolean
+            (n_candidates, 6) mask: True = the crossing is on the sheet.
+            The downstream (d > 0) and tip (q <= span_length) tests are
+            unaffected. (B25: meshgen.fuselage.make_inboard_clip trims the
+            sheet against the fuselage surface / symmetry plane.)
 
     Attributes (all set in __init__):
         s_raw, d, q: (n_nodes,) level-set offset / downstream coordinate /
@@ -106,6 +119,7 @@ class CutElementMap:
         wall_nodes: Optional[np.ndarray] = None,
         eps_rel: float = 1e-6,
         te_tol_rel: float = 1e-3,
+        inboard_clip=None,
     ):
         nodes = np.asarray(nodes, dtype=np.float64)
         el = np.asarray(elements, dtype=np.int64)
@@ -171,12 +185,27 @@ class CutElementMap:
         on_sheet = (
             crossing
             & (d_cross > 0.0)
-            & (q_cross >= 0.0)
             & (q_cross <= self.span_length)
         )
+        if inboard_clip is None:
+            # Legacy inboard clip: the sheet starts at the q = 0 TE end.
+            on_sheet = on_sheet & (q_cross >= 0.0)
+        else:
+            # Caller-supplied inboard clip (B25 fragment topology),
+            # evaluated at the s = 0 crossing POINTS.
+            xyz_e = nodes[el[cand]]                     # (n_cand, 4, 3)
+            pi = xyz_e[:, _TET_EDGES[:, 0], :]
+            pj = xyz_e[:, _TET_EDGES[:, 1], :]
+            p_cross = pi + t[:, :, None] * (pj - pi)
+            inb = np.asarray(inboard_clip(p_cross), dtype=bool)
+            assert inb.shape == crossing.shape, (
+                f"inboard_clip returned {inb.shape}, expected "
+                f"{crossing.shape}")
+            on_sheet = on_sheet & inb
         self.cut_elems = cand[on_sheet.any(axis=1)]
         # Candidates rejected purely by the spanwise clip (the beyond-tip
-        # wake-plane extension): reported, not cut.
+        # wake-plane extension): reported, not cut. With an inboard_clip
+        # this set also collects the inboard-rejected elements.
         downstream = crossing & (d_cross > 0.0)
         self.beyond_tip_elems = cand[
             downstream.any(axis=1) & ~on_sheet.any(axis=1)
