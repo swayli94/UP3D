@@ -413,7 +413,10 @@ validation** — the level-set (Picard) and conforming (NEW capability, P14
 Newton) wing-body lifts AGREE to **cl_p 0.4% / cl_kj 0.6%** at medium (conf
 0.2173/0.2188 vs LS 0.2165/0.2175; coarse 12.8% = resolution). GB9.1/9.2/9.3/9.5
 ✓, GB9.6 RECORDED, **GB9.4 XFAIL** (fuselage lift 16-20% ⇒ G1.6 fuselage-Cp
-error, band NOT moved). Demo `cases/demo/b9_wingbody/` 7 PASS + 1 XFAIL. The B9
+error, band NOT moved) — **corrected by B28 (2026-07-20)**: cl_fus = physical
+carryover + wake-sheet POSITION sensitivity, NOT the G1.6 error; GB9.4
+re-spec'd per B23 §(c) to out-band cross-model ≤ 15% and PASSES at 7.0%
+(medium), demo now 8/8. Demo `cases/demo/b9_wingbody/` 7 PASS + 1 XFAIL → **8 PASS post-B28**. The B9
 LS-Newton follow-up ("neumann res 1e43; freestream Newton 8 rows |R|≈84") is now
 **closed by B16** — the freestream Newton path works with the aux pin.
 - ★ **Conforming wing-body is the NEW capability** —
@@ -531,7 +534,9 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   ★ SLOWER at small scale, the fine memory-bounded route stays the unbuilt
   designed use-case) · B10 shelved · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D)** —
   wing-body cross-model: LS (Picard) + conforming (NEW capability, Newton)
-  agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6; LS Newton
+  agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 (**B28
+  2026-07-20 corrects**: sheet-position sensitivity not an error; gate
+  re-spec'd out-band cross-model ≤15%, medium 7.0% PASS, demo 8/8); LS Newton
   diverges on the wing-body = the neumann far-field blockage, not the solver ·
   **B16 ✓ CLOSED 2026-07-18 (churn fix; GB16.4 resolved by B17)** (NEW, executes
   the B9 follow-up) — the wing-body LS-Newton churn is a near-singular far-field

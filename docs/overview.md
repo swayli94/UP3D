@@ -236,7 +236,8 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   **B25 ✓ 关闭 2026-07-19（治愈 C-A）**：`inboard_clip`（`meshgen/fuselage.py:make_inboard_clip` + `wake/cut_elements.py`）把片内侧边界移到机身面/对称面 
   = conforming fragment 拓扑——medium α=3.06 走廊 corrM **14.66→0.63**、n_sup 88→0、cl_p +0.38%（∈[A, oracle]），全物理护栏干净；默认 None 逐位不变；
   次级护栏带外 cl_fus +135% 经 oracle 归因 flat-vs-tilted 片模型差，记录不阻塞 → P11 监视。**B9 ✓ 关闭 2026-07-17（重定规格）**：
-  翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6。B10 搁置
+  翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6（**B28 2026-07-20 更正**：cl_fus=尾流片位置敏感性，
+  非 G1.6 误差；gate 重设为带外跨模型一致 ≤15%，medium 差 7.0% PASS，demo 8/8）。B10 搁置
 - **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC），零实现 — V1 依赖 P6（已满足），
   预算等同一个 Track-P 阶段
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：

@@ -607,3 +607,85 @@ class TestInboardFragmentClip:
         nodes, elements = self._strip_tet(wls_lo, c_lo)
         cm = CutElementMap(nodes, elements, wls_lo, inboard_clip=clip)
         assert len(cm.cut_elems) == 0
+
+
+# ---------------------------------------------------------------------------
+# B28: WakeLevelSet sheet_direction -- the GEOMETRIC ruling direction split
+# from the physical (convection) direction. Default None = ruled along
+# ``direction`` (bit-identical); the knob exists for the cl_fus flat-vs-
+# tilted decoupling leg (cases/analysis/b28_cl_fus_flat_sheet).
+# ---------------------------------------------------------------------------
+
+class TestSheetDirection:
+
+    def test_default_none_is_bit_identical(self):
+        """sheet_direction=None (explicit or omitted) is the legacy path,
+        unchanged; an explicit sheet_direction == direction is bit-
+        identical too (same normalized vector through the same code)."""
+        te = np.array([[1.0, 0.0, 0.0], [1.2, 0.2, 1.0]])
+        d = (np.cos(0.3), np.sin(0.3), 0.0)
+        pts = np.array([[2.0, 0.1, 0.5], [1.1, -0.05, 0.2], [3.0, 0.4, 1.2]])
+        ref = WakeLevelSet(te, direction=d)
+        none = WakeLevelSet(te, direction=d, sheet_direction=None)
+        same = WakeLevelSet(te, direction=d, sheet_direction=np.asarray(d))
+        for other in (none, same):
+            for a, b in zip(ref.evaluate(pts), other.evaluate(pts)):
+                assert np.array_equal(a, b)
+            assert np.array_equal(ref.surface_normals(pts),
+                                  other.surface_normals(pts))
+            assert np.array_equal(ref.direction, other.direction)
+            assert ref.span_length == other.span_length
+        assert none.sheet_direction is None
+        assert np.array_equal(same.sheet_direction, np.asarray(d))
+
+    def test_flat_sheet_keeps_physical_convection_direction(self):
+        """The B28 semantics: with a TE in the y = 0 plane and
+        sheet_direction = +x, the sheet IS the y = 0 plane (s = y,
+        normals = +-y) while .direction keeps the tilted freestream aim
+        (the u_hat wake_ls_coo consumes)."""
+        a = 0.3
+        d = np.array([np.cos(a), np.sin(a), 0.0])
+        te = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 1.0]])
+        wls = WakeLevelSet(te, direction=d, sheet_direction=(1.0, 0.0, 0.0))
+        s, dd, q = wls.evaluate(np.array([[2.0, 0.1, 0.5],
+                                          [2.0, -0.1, 0.5]]))
+        assert s[0] == pytest.approx(0.1, abs=1e-15)
+        assert s[1] == pytest.approx(-0.1, abs=1e-15)
+        assert dd[0] == pytest.approx(1.0, abs=1e-15)   # along +x from TE
+        assert q[0] == pytest.approx(0.5, abs=1e-15)
+        n = wls.surface_normals(np.array([[2.0, 0.1, 0.5]]))
+        assert n[0, 1] == pytest.approx(1.0, abs=1e-15)
+        assert np.allclose(wls.direction, d)            # physical aim kept
+        # the same point is NOT on the tilted sheet: the decoupling is real
+        tilted = WakeLevelSet(te, direction=d)
+        s_t, _, _ = tilted.evaluate(np.array([[2.0, 0.1, 0.5]]))
+        assert abs(s_t[0] - s[0]) > 1e-3
+
+    def test_update_direction_reaims_physics_only(self):
+        """An alpha re-aim moves the convection direction but leaves the
+        flat sheet's s-field untouched."""
+        te = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 1.0]])
+        wls = WakeLevelSet(te, direction=(1.0, 0.0, 0.0),
+                           sheet_direction=(1.0, 0.0, 0.0))
+        pts = np.array([[2.0, 0.1, 0.5], [2.5, -0.2, 0.7]])
+        s0, d0, q0 = wls.evaluate(pts)
+        wls.update_direction((np.cos(0.3), np.sin(0.3), 0.0))
+        s1, d1, q1 = wls.evaluate(pts)
+        assert np.array_equal(s0, s1) and np.array_equal(d0, d1) \
+            and np.array_equal(q0, q1)
+        assert np.allclose(wls.direction,
+                           (np.cos(0.3), np.sin(0.3), 0.0))
+
+    def test_sheet_direction_validation(self):
+        te = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 1.0]])
+        with pytest.raises(ValueError, match="nonzero"):
+            WakeLevelSet(te, direction=(1.0, 0.0, 0.0),
+                         sheet_direction=(0.0, 0.0, 0.0))
+        with pytest.raises(ValueError, match="\\(3,\\)"):
+            WakeLevelSet(te, direction=(1.0, 0.0, 0.0),
+                         sheet_direction=(1.0, 0.0))
+        # sheet direction (near-)parallel to the TE segment hits the same
+        # guard as a parallel physical direction
+        with pytest.raises(ValueError, match="parallel"):
+            WakeLevelSet(te, direction=(1.0, 0.0, 0.0),
+                         sheet_direction=(0.0, 0.0, 1.0))

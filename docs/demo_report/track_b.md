@@ -1571,6 +1571,22 @@ flat-facet natural-BC error on the fuselage, not clean physics. Per the house
 rule the band is NOT moved after the fact; it is recorded as XFAIL — the caveat
 every wing-body body-surface-pressure claim carries until P11/Option C.
 
+> **B28 erratum (2026-07-20):** the "G1.6 error" attribution above is measured
+> FALSE. The pre-registered flat-fragment decoupling
+> (`cases/analysis/b28_cl_fus_flat_sheet/`) isolates the wake-sheet geometry:
+> with the LS sheet dragged flat at y=0 (`sheet_direction` knob, default
+> bit-identical), out-band cl_fus is 0.0326 vs the conforming oracle 0.0351
+> (**7.25% ≤ 15% TOL**); the flow-aligned sheet gives 0.0504 (35.3%). The
+> fuselage lift is physical carryover (~10% of cl_p, refinement-flat) plus
+> wake-sheet POSITION sensitivity — not a discretization error. GB9.4 is
+> re-spec'd per B23 §(c): hard gate (medium) |conf_out − LS_out| ≤
+> 0.15·|conf_out|, coarse RECORDED, plus a recorded band/out/poles
+> decomposition; the old ≤5% band is retired. The demo LS leg now runs the
+> flat fragment and the re-run is **8/8 PASS** — medium out-band gap
+> **7.0%**, GB9.5 un-flipped (cl_p 0.5% / cl_kj 0.3%), cl_fus/wing LS
+> 0.205 → 0.176. B26's "C-side out-band ×2" watch item is closed (position
+> sensitivity, not a lesion).
+
 ### GB9.6 RECORDED — the fuselage-Cp guardrail
 
 Isolated body of revolution (wing off), α=0, M0.5, h_body 0.060/0.030/0.015.

@@ -60,6 +60,16 @@ class WakeLevelSet:
         extent: optional downstream length of the sheet (None = to infinity;
             the far field truncates it physically). Recorded for consumers;
             evaluation itself does not clip.
+        sheet_direction: (3,) optional GEOMETRIC ruling direction of the
+            sheet, when it differs from the physical (convection) direction
+            (B28: the conforming-style flat sheet at the TE plane while the
+            jump convection ``u_hat`` in wake_ls_coo keeps the freestream
+            aim). None (default) = ruled along ``direction`` -- bit-
+            identical. When given, ``direction`` remains the PHYSICAL
+            direction reported by the ``direction`` property; only the
+            s-field, the surface normals and the Gram data (i.e. the cut
+            classification and the least-squares normal term) are built
+            from ``sheet_direction``.
     """
 
     def __init__(
@@ -68,6 +78,7 @@ class WakeLevelSet:
         direction: np.ndarray,
         span_hint: Tuple[float, float, float] = (0.0, 0.0, 1.0),
         extent: Optional[float] = None,
+        sheet_direction: Optional[np.ndarray] = None,
     ):
         pts = np.atleast_2d(np.asarray(te_points, dtype=np.float64))
         if pts.shape[1] != 3:
@@ -79,6 +90,13 @@ class WakeLevelSet:
             pts = np.vstack([pts[0] - 1e3 * span, pts[0] + 1e3 * span])
         self.te_points = pts
         self.extent = extent
+        if sheet_direction is not None:
+            sheet_direction = np.asarray(sheet_direction, dtype=np.float64)
+            if sheet_direction.shape != (3,):
+                raise ValueError("sheet_direction must be (3,)")
+            if np.linalg.norm(sheet_direction) == 0.0:
+                raise ValueError("sheet_direction must be nonzero")
+        self._sheet_direction = sheet_direction
         self._seg_a = pts[:-1]                       # (nseg, 3)
         self._seg_v = pts[1:] - pts[:-1]             # (nseg, 3)
         seg_len2 = np.einsum("ij,ij->i", self._seg_v, self._seg_v)
@@ -90,12 +108,19 @@ class WakeLevelSet:
         self._seg_q0 = np.concatenate([[0.0], np.cumsum(self._seg_len)[:-1]])
         self.span_length = float(self._seg_len.sum())
         self._d_hat = np.empty(3)
+        self._g_hat = np.empty(3)
         self._seg_n = np.empty_like(self._seg_v)
         self.update_direction(direction)
 
     @property
     def direction(self) -> np.ndarray:
         return self._d_hat.copy()
+
+    @property
+    def sheet_direction(self) -> Optional[np.ndarray]:
+        """The geometric ruling direction (None = ruled along ``direction``)."""
+        return (None if self._sheet_direction is None
+                else self._sheet_direction.copy())
 
     def update_direction(self, new_direction: np.ndarray) -> None:
         """Re-aim the ruled surface (alpha change); mesh untouched."""
@@ -104,18 +129,26 @@ class WakeLevelSet:
         if nrm == 0.0:
             raise ValueError("direction must be nonzero")
         self._d_hat = d / nrm
-        # Per-segment upper normal: unit(t_span x d_hat).
-        n = np.cross(self._seg_v, self._d_hat[None, :])
+        # Geometric ruling direction: the sheet frame, normals and Gram data
+        # are built from it; self._d_hat stays the PHYSICAL direction (the
+        # u_hat convection aim consumed by wake_ls_coo).
+        if self._sheet_direction is None:
+            g = self._d_hat
+        else:
+            g = self._sheet_direction / np.linalg.norm(self._sheet_direction)
+        self._g_hat = g
+        # Per-segment upper normal: unit(t_span x g).
+        n = np.cross(self._seg_v, g[None, :])
         n_norm = np.linalg.norm(n, axis=1)
         if np.any(n_norm < 1e-12 * np.sqrt(self._seg_len2)):
             raise ValueError("wake direction (near-)parallel to a TE segment")
         self._seg_n = n / n_norm[:, None]
-        # Gram data of the OBLIQUE in-plane basis (v, d_hat). On a SWEPT
+        # Gram data of the OBLIQUE in-plane basis (v, g). On a SWEPT
         # TE the span direction is not perpendicular to the wake direction,
         # so an orthogonal projection would leak the downstream distance
         # into the spanwise coordinate (measured: it pushes far-downstream
         # points past the tip and clips ~60% of the real M6 cut set).
-        self._a12 = self._seg_v @ self._d_hat            # v . d_hat
+        self._a12 = self._seg_v @ g                         # v . g
         self._det = self._seg_len2 - self._a12**2        # > 0 (guarded above)
 
     def evaluate(
@@ -130,8 +163,10 @@ class WakeLevelSet:
            the wing tip, or inboard of the root).
 
         Each point is decomposed in the panel's OBLIQUE ruled-surface frame
-        (v_span, d_hat, n_hat): x - a = u*v + d*d_hat + s*n_hat, solved as
-        a 2x2 system in the (v, d_hat) plane (n_hat is orthogonal to both).
+        (v_span, g_hat, n_hat): x - a = u*v + d*g_hat + s*n_hat, solved as
+        a 2x2 system in the (v, g_hat) plane (n_hat is orthogonal to both;
+        g_hat = the ruling direction -- ``sheet_direction`` when given, else
+        the physical ``direction``).
         An orthogonal projection onto v would be wrong on a SWEPT TE, where
         v is not perpendicular to the wake direction: the downstream
         distance would leak into the spanwise coordinate. Panel selection
@@ -153,7 +188,7 @@ class WakeLevelSet:
         n_pts = len(x)
         rel = x[:, None, :] - self._seg_a[None, :, :]          # (n, nseg, 3)
         b1 = np.einsum("pns,ns->pn", rel, self._seg_v)         # rel . v
-        b2 = rel @ self._d_hat                                 # rel . d_hat
+        b2 = rel @ self._g_hat                                 # rel . g_hat
         u = (b1 - self._a12 * b2) / self._det                  # span fraction
         d_all = (self._seg_len2 * b2 - self._a12 * b1) / self._det
         s_all = np.einsum("pns,ns->pn", rel, self._seg_n)      # (n, nseg)
@@ -180,7 +215,7 @@ class WakeLevelSet:
         x = np.atleast_2d(np.asarray(points, dtype=np.float64))
         rel = x[:, None, :] - self._seg_a[None, :, :]          # (n, nseg, 3)
         b1 = np.einsum("pns,ns->pn", rel, self._seg_v)
-        b2 = rel @ self._d_hat
+        b2 = rel @ self._g_hat
         u = (b1 - self._a12 * b2) / self._det
         d_all = (self._seg_len2 * b2 - self._a12 * b1) / self._det
         s_all = np.einsum("pns,ns->pn", rel, self._seg_n)

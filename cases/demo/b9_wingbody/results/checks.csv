@@ -1,9 +1,9 @@
 gate,check,value,criterion,status,note
 GB9.1,coarse_conforming_converged,probe 2 / pressure 4 steps,both Newton solves converge; 0 lim/flr,PASS,
-GB9.2,coarse_ls_converged,Picard 27 outer; res in cache,LS Picard converges (freestream),PASS,
-GB9.4,coarse_fuselage_lift,conf 0.166 / LS 0.155,RECORDED (coarse),PASS,
-GB9.5,coarse_cross_model,cl_p 3.7% cl_kj 2.9%,RECORDED (coarse),PASS,
+GB9.2,coarse_ls_converged,Picard 73 outer; res in cache,LS Picard converges (freestream),PASS,
+GB9.4,coarse_fuselage_lift,out-band conf 0.0346 / LS 0.0380 (gap 10.0%); band 0.0002 / 0.0017; total 0.0347 / 0.0397,RECORDED (coarse),PASS,
+GB9.5,coarse_cross_model,cl_p 1.2% cl_kj 0.7%,RECORDED (coarse),PASS,
 GB9.1,medium_conforming_converged,probe 5 / pressure 3 steps,both Newton solves converge; 0 lim/flr,PASS,
-GB9.2,medium_ls_converged,Picard 65 outer; res in cache,LS Picard converges (freestream),PASS,
-GB9.4,medium_fuselage_lift,conf 0.164 / LS 0.187,|cl_fus| <= 0.05 cl_p_wing,XFAIL,fuselage lift resolution/model-sensitive -> G1.6 fuselage-Cp error (GB9.6); band NOT moved
-GB9.5,medium_cross_model,cl_p 0.4% cl_kj 0.6%,conf-pressure vs LS < 1% (gated at medium),PASS,
+GB9.2,medium_ls_converged,Picard 59 outer; res in cache,LS Picard converges (freestream),PASS,
+GB9.4,medium_fuselage_lift,out-band conf 0.0351 / LS 0.0376 (gap 7.0%); band 0.0005 / 0.0008; total 0.0356 / 0.0384,|conf_out - LS_out| <= 15% |conf_out| (B28 re-spec),PASS,<=5%-of-wing premise retired (physical carryover; B23); tilted-sheet out-band deviation = position sensitivity (B28-F1)
+GB9.5,medium_cross_model,cl_p 0.5% cl_kj 0.3%,conf-pressure vs LS < 1% (gated at medium),PASS,

@@ -89,7 +89,7 @@ cases/meshes/naca0012_wakefree_2.5d/medium.msh
 cases/meshes/naca0012_wakefree_2.5d/fine.msh
 
 # Result *.npz commit policy (user directive 2026-07-19): commit only SMALL
-# npz NEWLY COMPUTED on the kimi branch itself (currently: b25 f1_*). npz
+# npz NEWLY COMPUTED on the kimi branch itself (currently: b25 f1_*, b28 f2_*). npz
 # belonging to main-line cases (b23/b24 analysis caches, demo caches) are
 # NOT committed -- the user syncs them across worktrees manually. Heavy demo
 # field dumps (p13/b8 per-element Mach fields, up to ~125 MB each) must

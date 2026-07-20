@@ -60,7 +60,9 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   steps, +3.6 % wall — the plateau is the B15 churn limit cycle, which an exact derivative cannot fix).
   Leg B measured the residual's own asymmetry: the side field manufactures a **spurious supersonic state** (q² 3.22 vs 1.34) on 252
   elements ⇒ routed to a new phase, NOT adopted · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved): wing-body cross-model validation —
-  LS (Picard) + conforming (NEW capability, Newton) agree to 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 error;
+  LS (Picard) + conforming (NEW capability, Newton) agree to 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 error
+  (**corrected by B28 2026-07-20**: wake-sheet POSITION sensitivity, not an error — gate re-spec'd to out-band cross-model ≤15%,
+  medium gap 7.0% PASS, demo 8/8);
   LS Newton diverges = neumann blockage not the solver**
 - **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10, zero implementation
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
