@@ -5,7 +5,18 @@
 > Scope, reproduce instructions and the honesty/evidence rule: see the
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
 
-## Track B — level-set embedded wake (B1–B5 ✓ B7 ✓, closed 2026-07-11/12; B6 ◐; **B9 ✓ 2026-07-17** wing-body cross-model; B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**; **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic, B19 LS-Newton Jacobian exactness — all 2026-07-18**; **B20 mixed-plain main-field density ADOPTED + re-baselined 2026-07-19**; **B21 N1 freeze-capture fix + B22 evidence refresh/3-D anchor locks 2026-07-19 — restores + locks the M6-medium M0.84 ramp**; **B23 junction discriminator + B24 inboard-end extension (route closed) + B25 inboard fragment clip (pocket HEALED) 2026-07-19**; **B26 LS ceiling re-measured (co-located with conforming) + B27 B18 demo refresh 2026-07-20 — the B18 "junction-limited" story is RETIRED, see the B18 section's erratum pointer**)
+## Track B — level-set embedded wake
+
+- (B1–B5 ✓ B7 ✓, closed 2026-07-11/12
+- B6 ◐
+- **B9 ✓ 2026-07-17** wing-body cross-model
+- B11–B15 ✓ incl. **B14 Schur+AMG 2026-07-17**
+- **B16/B17 far-field aux pin + pin_gamma, B18 wing-body transonic, B19 LS-Newton Jacobian exactness — all 2026-07-18**
+- **B20 mixed-plain main-field density ADOPTED + re-baselined 2026-07-19**
+- **B21 N1 freeze-capture fix + B22 evidence refresh/3-D anchor locks 2026-07-19 — restores + locks the M6-medium M0.84 ramp**
+- **B23 junction discriminator + B24 inboard-end extension (route closed) + B25 inboard fragment clip (pocket HEALED) 2026-07-19**
+- **B26 LS ceiling re-measured (co-located with conforming) + B27 B18 demo refresh 2026-07-20 —
+  the B18 "junction-limited" story is RETIRED, see the B18 section's erratum pointer**)
 
 **What the track replaces.** The conforming path represents the wake as a *mesh
 surface*: the sheet is embedded in the geometry, its nodes are duplicated by the

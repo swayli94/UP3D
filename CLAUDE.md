@@ -105,13 +105,15 @@ resolve through one hop.
    tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
    **all five** surfaces, because each has gone stale at least once by being
    "obvious enough to skip":
-   1. that track file's **progress ledger** (row + track-status line),
+   1. that track file's **progress ledger** (bullet entry + track-status line;
+      the track ledgers are wrapped bullet lists, not pipe tables, since
+      2026-07-20 — append new phases as bullets),
    2. the **"Current phase"** block in docs/agent-rules.md **and its baseline line**,
-   3. **docs/overview.md** (status table + the regression-baseline lineage),
+   3. **docs/overview.md** (status bullet list + the regression-baseline lineage),
    4. **PROJECT_STRUCTURE.md** — the footer one-liner AND any directory tree
       the phase added files to (this is the one that silently rots),
-   5. the **`cases/demo/README.md` / `cases/analysis/README.md` row** for the
-      new demo or study.
+   5. the **`cases/demo/README.md` table row / `cases/analysis/README.md` bullet**
+      for the new demo or study.
    Keep the commit phase-scoped.
    ★ **Backport check.** This codebase has TWO wake paths (conforming
    `newton.py` / level-set `newton_ls.py`, and their Picard twins). When a fix

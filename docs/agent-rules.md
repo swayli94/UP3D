@@ -660,7 +660,10 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    agent-rules current-phase + baseline, overview.md, **PROJECT_STRUCTURE.md
    (footer AND the directory trees)**, and the `cases/*/README.md` row. The
    2026-07-17 audit found 17 consistency defects, most of them exactly the
-   last two surfaces. Full checklist in CLAUDE.md workflow step 5.
+   last two surfaces. Full checklist in CLAUDE.md workflow step 5. Format
+   note: the track ledgers and the roadmap.md / overview.md status blocks are
+   wrapped bullet lists, not pipe tables (converted 2026-07-20 for
+   readability) — append bullets and keep physical lines ≤ ~140 chars.
 11. **A re-baseline needs an erratum checklist, not just new evidence** (B22,
    from the 2026-07-19 inspection — its D1/D2/D7/D8 stale-doc findings were
    all products of this gap). When regenerated evidence moves committed
