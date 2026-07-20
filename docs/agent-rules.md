@@ -171,7 +171,8 @@ M0.84 outright. What survives: the old M_max 2.45–2.49 was validated only
 COMMON-MODE against the equally-contaminated LS Picard (conforming record
 **1.995**, different mesh family — still an open cross-model question, B21's
 2.4818 does not close it).
-★ **Demo-cache trap:** heavy demos reuse gitignored `results/*.npz` — delete the
+★ **Demo-cache trap:** heavy demos reuse cached `results/*.npz` (committed or
+not — since 2026-07-19 analysis-chain npz are committable) — delete the
 LS caches and verify zero `cached` lines, or a re-run is a no-op (it cost me one
 false "B7 unchanged" result). The junction pocket is NOT fixed by any of this
 (G1.6).
