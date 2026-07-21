@@ -691,7 +691,15 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   per-step refresh rolled back (ill-posed), ① conforming tip_taper adopted:
   wing-body medium ceiling M0.79 → **M0.84 reached** (cl_p 0.2738, 0 clamps),
   cl_p cost ≈ −1.3%, demo 8/8.
-- **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
+- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ◐ OPENED 2026-07-22** —
+  gates re-spec'd at opening against the B32/A4 state (GV1.1 standalone IBL3 vs
+  analytic, GV1.2 transpiration exactness + ṁ=0 bit-identity, GV1.3 NACA0012
+  vs committed XFOIL with the A4 input band quoted, GV1.4 loose loop ≤ 10,
+  GV1.5 fuselage body-of-revolution smoke = the only fuselage-alone item);
+  V2 optional (skip wired to GV1.4); V3 entry = GV3.0 M6 subsonic
+  loose-coupling bridge (RECORDED, first live 3-D crossflow exercise); V3/V4
+  after V1, wing-body VII deferred until the LS-side tip cure. No
+  implementation yet.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
   **A2 ✓** (CLOSED 2026-07-17, GA2.1–GA2.5; TE/Kutta fidelity attribution —

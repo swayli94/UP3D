@@ -254,8 +254,11 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   次级护栏带外 cl_fus +135% 经 oracle 归因 flat-vs-tilted 片模型差，记录不阻塞 → P11 监视。**B9 ✓ 关闭 2026-07-17（重定规格）**：
   翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6（**B28 2026-07-20 更正**：cl_fus=尾流片位置敏感性，
   非 G1.6 误差；gate 重设为带外跨模型一致 ≤15%，medium 差 7.0% PASS，demo 8/8）。B10 搁置
-- **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC），零实现 — V1 依赖 P6（已满足），
-  预算等同一个 Track-P 阶段
+- **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC）；**V1 ◐ 2026-07-22 开题**
+  （gate 按 B32/A4 现状重定规格：GV1.1 独立 IBL3 解析对标 · GV1.2 transpiration 精确性 + ṁ=0 逐位 · GV1.3 NACA0012 对
+  committed XFOIL（引 A4 输入误差带）· GV1.4 松耦合 ≤10 次 · GV1.5 机身旋成体冒烟（唯一机身-alone 项，无交界/尾迹）；
+  V2 可选；V3 入口 = GV3.0 M6 亚声速松耦合桥（RECORDED，crossflow 首次 3-D 实测）；翼身 VII 延后至 LS 侧翼尖 cure）—
+  依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，尚无实现
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
   四求解器统一计时插桩 + conforming×level-set × Picard×Newton 耗时基准） — **A2 ✓ 2026-07-17 关闭**（TE/Kutta 保真度归因，GA2.1–GA2.5）：**S1 定谳**——
   conforming Γ(z) 逐站抖动是逐站探针差势跳 Kutta target **估计器**的测量伪影（fixed-Γ 判别量 D=7.33/25.70 coarse/medium，把抖动从光滑场里重新生出来；闭合残差 ≤0.6% 排除"未闭合"、
