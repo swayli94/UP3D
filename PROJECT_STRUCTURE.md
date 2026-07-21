@@ -173,7 +173,10 @@ pyfp3d/                    # Main package
 │   │                       #   DISCRETELY (the LS analogue of the conforming free-edge rule);
 │   │                       #   beyond_tip_elems = the wake-PLANE crossings the clip rejects;
 │   │                       #   ✓ [B25] inboard_clip = the wing-body inboard-fragment clip (the
-│   │                       #   junction-pocket cure; default None bit-identical)
+│   │                       #   junction-pocket cure; default None bit-identical);
+│   │                       #   ⊘ [B31] outboard_fringe (LS wing-tip C-class candidates C1/C3) —
+│   │                       #   MEASURED NEGATIVE by GB31.3 (C1 inboard backflow −19.5% / C3 coarse
+│   │                       #   divergence); retained default 0.0 = bit-identical, evidence machine
 │   └── multivalued.py    # ✓ [B2–B6] MultivaluedOperator: extended-DOF assembly on the cut
 │                           #   mesh (assemble_matrix with closure="continuity"|"wake_ls"),
 │                           #   te_jump (= Γ per TE station), side_potentials / main_potential,
@@ -437,6 +440,14 @@ cases/                     # Test cases and reference data
 │   ├── b25_inboard_fragment_clip/   # [B25] inboard_clip heals the junction pocket (14.66→0.63)
 │   ├── b26_ls_transonic_ceiling/    # [B26] post-cure LS ceiling: medium 0.7625 / coarse 0.84
 │   ├── b27_b18_demo_refresh/ # [B27] B18 demo refresh 8/8 PASS + 336/336 bit-identical
+│   ├── b28_cl_fus_flat_sheet/ # [B28] cl_fus flat-fragment decoupling + GB9.4 re-spec
+│   │                           #   (the "fuselage spurious lift" label retired; b9 demo 8/8)
+│   ├── b30_transonic_ceiling/ # [B30] (b)-class ceiling attribution = SAME both paths
+│   │                           #   (wing-tip P13 free-edge singularity + high-M Newton)
+│   ├── b31_tip_termination/   # [B31] C-class wing-tip cure: conforming pressure+taper
+│   │                           #   cures the 0.83 dying level; LS-side C1/C3 closed negative
+│   ├── b32_tip_taper_adoption/ # [B32] conforming tip_taper adopted (medium ceiling 0.79→0.84);
+│   │                           #   ② weld-sign per-step refresh rolled back (ill-posed)
 │   ├── c1_ls_jacobian_fd/      # [A3/B19/B20/B21] LS-Jacobian FD probes, Leg-B density
 │   │                           #   gap, GB20.7 recipe sweep + B21 N1 freeze-capture sweep
 │   └── p14_te_pressure_diag/   # [P14] TE pressure-Kutta diagnostics
@@ -779,13 +790,17 @@ full record: docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curved_walls/`;
   (`test_laplace_sphere.py` strict xfail unchanged). Fell: "the dominant error is the
   flat-facet natural-BC variational crime" and "closing G1.6 needs curved/isoparametric
   elements".
-- **Open route fork (user's call, recorded in §P11):** Option C re-spec with a measured
-  passing form (order ≥1.8 on an all-scales-refined family + mean-Cp < 1% at h_min 0.03 —
-  measured 1.89–1.98 and 0.60%) / an isoparametric P2 wall layer (field order raised — the only
-  route to the literal 2%-max-at-medium, which demands O(h²) wall velocity at h=0.08, beyond
-  any P1-field method on any mesh) / accept as a permanent recorded limitation. The wing-body
-  "G1.6-class" cross-attribution (GB9.4/GB20.5) lost its sphere anchor and needs its own
-  discriminator before being quoted again.
+- **Route fork RESOLVED 2026-07-22 (user-directed): (a) Option C re-spec ADOPTED.** The active
+  G1.6 gate is now the achievable, measured criterion asserted PASSING by
+  `tests/test_laplace_sphere.py::TestG16Respec` (reads P11's committed sweep, no re-solve):
+  **all-scales-refined φ_w order ≥ 1.8** (E6 icosphere s4→s5 = 1.98; E8 far-refinement = 1.89)
+  **+ mean Cp < 1% at h_min 0.03** (E8 h03_far10 = 0.60%). The literal 2%-max-at-medium
+  `test_sphere_cp_medium_mesh` **STAYS a strict xfail = the recorded P1 limitation** (it demands
+  O(h²) wall velocity at h=0.08, beyond any P1-field method on any mesh). Unchosen routes on
+  record: (b) isoparametric P2 wall layer (new midside DOFs, field order raised — the only route
+  to the LITERAL criterion, and the one that would also tighten Track V's u_e input band, A4);
+  (c) accept as a permanent recorded limitation. The wing-body "G1.6-class" cross-attribution
+  (GB9.4/GB20.5) lost its sphere anchor and needs its own discriminator before being quoted again.
 
 ### ✓ M0 mesh-side items delivered (2026-07-06)
 
@@ -929,10 +944,11 @@ are kept on purpose so the committed paths stay stable — that gate is now **B5
   wing–body) are the open Track B gates (Track-B renumber 2026-07-13: new B8 inserted,
   old B8 multi-wake → B9, old B9 curved wake → B10);
   **B6** (transonic level-set) stays ◐ open on its medium quantitative closure.
-- **G1.6 re-spec per Option C** — still the open P1 item: draft the geometry-consistent-reference
-  acceptance criterion (design.md §5.1 Option C), comparing against a high-accuracy reference on
-  the *same polyhedral domain* (BEM or ultra-fine), separating geometric model error from code
-  error. See "Known gaps": h-refinement, recovery tweaks, Nitsche and boundary-data corrections
+- **G1.6 re-spec per Option C — DONE 2026-07-22 (user-directed):** the achievable, measured
+  acceptance criterion (all-scales-refined φ_w order ≥1.8 + mean Cp <1% at h_min 0.03, on P11's
+  E6/E8 committed sweep — the geometry-consistent all-scales reference) is asserted PASSING by
+  `tests/test_laplace_sphere.py::TestG16Respec`; the literal 2%-max xfail stays = recorded P1
+  limit. See "Known gaps": h-refinement, recovery tweaks, Nitsche and boundary-data corrections
   are all **ruled out with evidence** — do not re-propose them.
 - ~~G1.3/G1.4 oracle experiments~~ — DONE 2026-07-06 with negative results (see the G1.3+G1.4
   section above); DP1 decided the "> 5%" branch.
@@ -991,15 +1007,18 @@ Critical speed q*² = 0.923077 where M = 1.0:
 
 P0 (mesh I/O, metrics, coloring, VTK writer, gates G0.1–G0.4) is done. G1.1 and G1.2 (formerly
 G1.3) are done; G1.3 and G1.4 completed 2026-07-06 with negative results and DP1 took the
-"> 5%" branch (see above). To close P1, G1.6 remains, pending its Option C re-spec:
+"> 5%" branch (see above). **G1.6 Option C re-spec DONE 2026-07-22 (user-directed): the active
+gate is the achievable measured criterion (`TestG16Respec` PASS); the literal 2%-max stays xfail
+= recorded P1 limit.** Historical planning notes below kept for the record:
 
 1. ~~**Run the G1.3 cylinder oracle pre-study and the G1.4 sphere oracle experiment, then follow
    the DP1 decision point**~~ — DONE 2026-07-06, negative result: the Option A ceiling is
    ≈ 11.3% (medium sphere) because on body-fitted meshes the boundary-data defect it corrects is
    (near-)zero — see the "G1.3 + G1.4 completed" section above and design.md §5.1.2. DP1 took
-   the "> 5%" branch. The new open item: **draft the G1.6 Option C acceptance re-spec**
-   (geometry-consistent reference on the same polyhedral domain); the curved/isoparametric-
-   element effort for physical accuracy is separately scoped.
+   the "> 5%" branch. ~~The new open item: **draft the G1.6 Option C acceptance re-spec**
+   (geometry-consistent reference on the same polyhedral domain)~~ — DONE 2026-07-22
+   (`TestG16Respec`, all-scales order ≥1.8 + mean-Cp <1% at h_min 0.03); the curved/isoparametric-
+   element effort for physical accuracy is separately scoped (P11 measured superparametric NEGATIVE).
 
 2. ~~**Create test meshes** (M0, parallel track)~~ — DONE 2026-07-06 (single-layer re-spec
    targets ~15k/60k/240k tets, not the older 30k/150k/700k): `pyfp3d/meshgen/` +
@@ -1025,14 +1044,15 @@ root cause RE-ATTRIBUTED by P11, see "Known gaps"), P10 ◐, **P11 ✓ CLOSED
 (2026-07-19, opened + closed same day): curved wall elements measured
 NEGATIVE (medium 11.56%→11.33% = the oracle ceiling; superparametric O(h)
 risk fired); G1.6 = intrinsic P1 capability at h=0.08, the order collapse was
-a confounded-sweep bulk floor; route fork (Option C re-spec / P2 wall layer /
-accept) = user's call**, P13 ◐ (G13.3 transonic NEGATIVE-open), **P14 ✓ CLOSED
+a confounded-sweep bulk floor; **route fork RESOLVED 2026-07-22 — Option C
+re-spec ADOPTED** (achievable criterion `TestG16Respec` PASS; literal 2%-max
+stays xfail = recorded P1 limit)**, P13 ◐ (G13.3 transonic NEGATIVE-open), **P14 ✓ CLOSED
 (2026-07-17, opened + closed same day): pressure-equality Kutta estimator;
 G14.1–G14.7 ✓; the conforming path now MATCHES level-set (cl_p/cl_KJ
 0.15%/0.34%), and the +4.85% cl_KJ move off the probe locks closed 69% of
 P9's 0.019 gap**; Track M — M0–M5 ✓ (M2 ✓ — its solver leg was closed by B9
 on 2026-07-17, both wake models now run on the wing-body); Track B —
-B1–B9, B11–B27 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
+B1–B9, B11–B32 ✓, B6 ◐, B10 shelved (**B16/B17 far-field aux pin +
 `pin_gamma`, B18 wing-body transonic, B19 LS-Jacobian exactness**, all
 2026-07-18; **B20 mixed-plain main-field density ADOPTED PERMANENTLY +
 re-baselined, B21 N1 freeze-capture fix restoring the M6-medium M0.84 ramp —
@@ -1043,17 +1063,27 @@ free-edge singularity, NOT faceted geometry) + B24 waterline extension
 (route closed) + B25 `inboard_clip` — the junction pocket HEALED**,
 2026-07-19; **B26 (pocket-healed LS ceiling = the conforming ceiling site:
 coarse 0.84 reached / medium 0.7625) + B27 B18 demo refresh, 8/8 PASS — the
-B18 "LS junction-limited" story RETIRED**, 2026-07-20); Track V —
-designed, not started; Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18** (response
+B18 "LS junction-limited" story RETIRED**, 2026-07-20; **B28 cl_fus decoupling
++ GB9.4 re-spec + B29 flat-fragment adopted as the wing-body LS production
+config**, 2026-07-20; **B30 (b)-class ceiling attribution (SAME mechanism both
+paths = wing-tip P13 free-edge singularity + high-M Newton) + B31 C-class
+wing-tip cure (conforming pressure+taper CURES it; LS-side closed negative) +
+B32 conforming tip_taper adopted — wing-body medium ceiling M0.79 → M0.84
+reached**, 2026-07-21/22); Track V —
+designed, not started; Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18**, **A4
+RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
+prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
+`cases/analysis/a4_ue_error_band/`) (A3 = response
 to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **479 passed + 25 skipped + 2 xfailed** (2026-07-20, B25
-inboard fragment clip, +6 passed = `test_b1_cut_elements.py::TestInboardFragmentClip`
-(4) + foot-preference lock (1) + `test_m2_wingbody.py` waterline-extension lock (1);
-measured 1100.63 s @16 threads; heavy
+Default suite: **519 passed + 25 skipped + 2 xfailed** (2026-07-22, B28–B32
+close-out + G1.6 Option C re-spec; full-suite measured 516 @1223.39 s, + the 3
+`test_laplace_sphere.py::TestG16Respec` asserts = 519. The 516 = +37 vs the
+B25 479 = B28 cut-from-fragment locks (`test_b1_cut_elements.py`, +4) + B31
+`test_b31_pressure_taper.py` (13) + `test_b31_tip_fringe.py` (19) + a
+`test_p14_te_pressure.py` lock (1); B29/B30/B32 added no tests; heavy
 transonic/Newton gates behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests
-skip unless the gitignored M6 meshes are regenerated (~30 s); the newest
-skips are B21's gated freeze-capture lock (+1) and B22's gated 3-D anchor
-locks (+2).
+skip unless the gitignored M6 meshes are regenerated (~30 s); the gated
+skips include B21's freeze-capture lock and B22's 3-D anchor locks.

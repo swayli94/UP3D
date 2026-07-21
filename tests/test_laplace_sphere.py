@@ -30,8 +30,13 @@ of a sweep that shrinks h_min while h_max stays 3.0 (refining ONLY the far
 mesh at h_min=0.03 drops the wall phi error 3.17x and restores order 1.89);
 and a structured icosphere shell with the SAME flat facets converges at
 ~2nd order. The 11.6% is essentially the intrinsic P1-field max-norm
-capability at h=0.08. The gate stays open; the recorded route fork (Option
-C re-spec / isoparametric P2 wall layer / accept) is the user's call.
+capability at h=0.08. Route fork RESOLVED 2026-07-22 (user-directed): (a)
+Option C re-spec ADOPTED -- the active G1.6 gate is now the achievable,
+measured criterion (all-scales-refined order >= 1.8 + mean Cp < 1% at
+h_min 0.03; see class TestG16Respec below, which PASSES on P11's committed
+sweep). The literal 2%-max-at-medium xfail below STAYS as the recorded P1
+limitation (it is beyond any P1-field method; the isoparametric-P2 route (b)
+was not taken). See PROJECT_STRUCTURE 'Known gaps' + roadmap track_p G1.6.
 
 Original (superseded) attribution, kept for the record: NOT the surface
 recovery scheme -- an oracle test that feeds
@@ -120,12 +125,13 @@ class TestSphereCp:
     @pytest.mark.xfail(
         strict=True,
         reason=(
-            "Known open gap: max Cp error on the medium mesh is ~11.6% (quadratic "
-            "surface recovery), not <2%. P11 (2026-07-19) re-attribution: this is "
-            "the intrinsic P1-field max-norm capability at h=0.08 (curved wall "
-            "elements measured a ~0.2 pp geometric share; the 2% bar needs an "
-            "isoparametric P2 wall layer or the Option C gate re-spec) -- see "
-            "module docstring erratum and PROJECT_STRUCTURE.md 'Known gaps'."
+            "Recorded P1 limitation (NOT the active G1.6 gate since the 2026-07-22 "
+            "Option C re-spec -- see TestG16Respec, which PASSES). The literal "
+            "'max Cp < 2% at the medium mesh' is ~11.6% (quadratic recovery); P11 "
+            "(2026-07-19) proved it is the intrinsic P1-field max-norm capability "
+            "at h=0.08 (geometric share ~0.2 pp), beyond any P1-field method (the "
+            "literal 2% needs an isoparametric P2 wall layer, route (b), not taken)"
+            " -- see module docstring + PROJECT_STRUCTURE.md 'Known gaps'."
         ),
     )
     def test_sphere_cp_medium_mesh(self, mesh_dir):
@@ -191,6 +197,77 @@ class TestSphereCpArtifacts:
             f.write(f"gate_target,0.02\n")
             f.write(f"gate_status,OPEN (see test_sphere_cp_medium_mesh xfail)\n")
         assert csv_file.exists()
+
+
+def _read_p11_csv(name):
+    """Load a committed P11 sweep CSV (rows as dicts). The .msh are gitignored
+    but these CSVs ARE the committed evidence (CLAUDE.md rule 3)."""
+    import csv as _csv
+    from pathlib import Path
+
+    path = (Path(__file__).resolve().parent.parent
+            / "cases" / "demo" / "p11_curved_walls" / "results" / name)
+    if not path.exists():
+        pytest.skip(f"P11 evidence {name} absent; regenerate via "
+                    f"cases/demo/p11_curved_walls/run_demo.py")
+    with open(path) as f:
+        return list(_csv.DictReader(f))
+
+
+class TestG16Respec:
+    """G1.6 gate RE-SPEC (Option C, P11 route fork adopted 2026-07-22,
+    user-directed).
+
+    The literal '2% max Cp at the medium mesh' criterion is beyond ANY
+    P1-field method (P11: it needs O(h^2) wall velocity at h=0.08) -- that
+    remains recorded as a P1 limitation by the strict xfail above. The
+    ACTIVE, ACHIEVABLE G1.6 gate this class defines, measured PASSING in
+    P11's committed sweep, is: on an ALL-SCALES-refined family (h_min AND
+    h_far scaling together, not the single-variable h_min sweep whose order
+    collapse is the fixed-bulk-mesh pollution floor) the wall recovery
+    converges at order >= 1.8 and reaches mean Cp < 1% at h_min = 0.03.
+
+    Evidence (committed, no re-solve): cases/demo/p11_curved_walls/results/
+    {e8_bulk_floor.csv, e6_ico_control.csv}.
+    """
+
+    def test_allscales_mean_cp_below_one_percent(self):
+        """Option C criterion 1: all-scales-refined mean Cp < 1% at h_min 0.03
+        (measured 0.60% -- the E8 h03_far10 mesh, h_min 0.03 AND h_max 1.0)."""
+        rows = _read_p11_csv("e8_bulk_floor.csv")
+        far = next(r for r in rows if r["mesh"].startswith("h03_far10"))
+        cp_mean = float(far["cp_mean"])
+        assert cp_mean < 0.01, (
+            f"all-scales mean Cp {cp_mean:.4f} >= 1% (re-spec criterion)")
+        # corroboration: refining ONLY the far mesh at fixed h_min=0.03 drops
+        # the wall-phi error >= 2x -- the single-variable sweep's order
+        # collapse was bulk-mesh pollution, not a wall/geometry error.
+        h03 = next(r for r in rows if r["mesh"].startswith("h03 "))
+        drop = float(h03["phi_err_wall_max"]) / float(far["phi_err_wall_max"])
+        assert drop >= 2.0, f"far-only refinement drop {drop:.2f}x < 2x"
+
+    def test_allscales_order_at_least_1p8(self):
+        """Option C criterion 2: the all-scales-refined recovery order -> >= 1.8
+        (asymptotic pair). Measured on the structured icosphere control with the
+        SAME flat facets (s4->s5, clean 2x ratio): 1.98."""
+        rows = _read_p11_csv("e6_ico_control.csv")
+        by_level = {r["level"]: r for r in rows}
+        s4, s5 = by_level["s4"], by_level["s5"]
+        h_ratio = float(s4["h_wall_median"]) / float(s5["h_wall_median"])
+        err_ratio = (float(s4["phi_err_wall_max"])
+                     / float(s5["phi_err_wall_max"]))
+        order = np.log(err_ratio) / np.log(h_ratio)
+        assert order >= 1.8, (
+            f"asymptotic wall-phi order {order:.2f} < 1.8 (re-spec criterion)")
+
+    def test_intrinsic_p1_capability_recorded(self):
+        """Recorded: the structured control reaches ~2% max Cp at h~0.036
+        (s5) -- the intrinsic P1-field max-norm capability the literal 2%
+        criterion runs into. This is a floor, not a bug (documents WHY the
+        literal gate is xfail)."""
+        rows = _read_p11_csv("e6_ico_control.csv")
+        s5 = next(r for r in rows if r["level"] == "s5")
+        assert float(s5["cp_max"]) < 0.03  # ~2.14% at h~0.036
 
 
 if __name__ == "__main__":

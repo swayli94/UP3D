@@ -114,7 +114,10 @@ class MultivaluedOperator:
         # r_blend instead of jumping to zero across one element.
         # span_blend=None (every existing path) -> bit-identical.
         #
-        # B31 candidate C1 (GB31.3) outboard faded fringe: when the map
+        # B31 candidate C1 (GB31.3) outboard faded fringe -- ⊘ MEASURED
+        # NEGATIVE (LS wing-tip C-class closed negative: C1 inboard backflow
+        # -19.5%; kept default-inert as evidence machinery, do not re-propose
+        # without new evidence): when the map
         # carries an outboard_fringe, the sheet's free end has moved w
         # OUTBOARD of the tip and the taper's z_tip moves with it, so
         # w_j = tip_taper_factors(q_j, span_length + fringe, form, r_blend)

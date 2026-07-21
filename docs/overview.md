@@ -1,6 +1,6 @@
 # pyFP3D 总览（快照 + 文档地图）
 
-> **快照日期：2026-07-19。** 本文件是给人读的高层总览，**不是**权威进度源：
+> **快照日期：2026-07-22（B28–B32 收尾）。** 本文件是给人读的高层总览，**不是**权威进度源：
 > 阶段/gate 状态以 [roadmap.md](roadmap.md)（track 索引）+ [roadmap/](roadmap/)
 > 各 track 文件（含各自的进度台账）为准；当前阶段以 [agent-rules.md](agent-rules.md)
 > 为准；证据在 [demo_report.md](demo_report.md) 索引 + [demo_report/](demo_report/)。
@@ -11,7 +11,17 @@
 四条 track：求解器主线（P）与网格线（M）基本关闭，level-set 尾迹线（B）是当前
 工作面。
 
-**最新：P11 已关闭（2026-07-19，用户指示当日开+关；sphere 腿）——曲面壁元路线
+**最新（2026-07-22）：B30/B31/B32 关闭——翼身跨声速能力实质推进。** conforming 翼身
+跨声速 **medium 天花板 M0.79 → M0.84 达成**（B31 翼尖片终止奇点 cure + B32 生产采纳
+tip_taper；cl_p 0.2738、0 钳制、代价 ≈ −1.3%）；(b) 类天花板归因（B30：两路径同机制 =
+翼尖 P13 自由边奇点 + 高 M Newton，非某尾迹模型的袋）；LS 侧 C-class 实测阴性关闭
+（B31 C1/C3，`outboard_fringe` 保留 default-inert）；B32 ② weld-sign per-step refresh
+回滚（ill-posed switching）。B28（cl_fus 解耦 + GB9.4 重定规格，"机身虚假升力"标签退役）
++ B29（flat-fragment 升格翼身 LS 生产配置）于 2026-07-20 关闭。B31 新增的 Newton
+Gamma-pin 行 blend 已 FD 验证（`test_blend_jacobian_fd_phi/_gamma`）。审计报告见
+[inspection/20260722-0335-b28-b32-audit-pre-trackv.md](inspection/20260722-0335-b28-b32-audit-pre-trackv.md)。
+
+**P11 已关闭（2026-07-19，用户指示当日开+关；sphere 腿）——曲面壁元路线
 实测阴性，且 G1.6 被重归因。** ★★ 头条：经验证的曲面壁邻层（tet10 几何 + mapped-P1
 场 + ΔA 增量装配，`pyfp3d/solve/curved_wall.py`，默认逐位不变）只把 medium 球
 Cp 误差移动 **11.56%→11.33%**（= G1.4 边界数据 oracle 天花板）——预注册风险触发：
@@ -188,7 +198,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 - **P — 求解器**（[roadmap/track_p.md](roadmap/track_p.md)） — P0–P9 ✓（P1 仅 G1.6 以 strict xfail 挂起）；P10 ◐（G10.2/G10.3 ✓）；P13 ◐（G13.1 ✓、
   G13.2 conforming ✓、G13.3 亚声速 Richardson ✓ p=2.31） — G10.1（非升力 Newton 入口，无顺序约束）；G13.3 **跨声速阴性开放**（圆帽 fine 的 ramp 死于 M=0.75，
   site=尖 tip TE）；**P11 ✓ 2026-07-19 关闭（用户指示当日开+关；sphere 腿）**——G11.1 未达（曲面层 11.56%→11.33% = oracle 天花板；superparametric O(h) 风险触发）、
-  G11.2 阴性+前提被驳（阶坍塌=固定中远场地板，E8 3.17×/1.89 阶；结构化壳平坦面片 ~2 阶）⇒ **G1.6 重归因为 P1 固有能力**，路线三岔口=用户裁决；P12 backlog；
+  G11.2 阴性+前提被驳（阶坍塌=固定中远场地板，E8 3.17×/1.89 阶；结构化壳平坦面片 ~2 阶）⇒ **G1.6 重归因为 P1 固有能力**，路线三岔口 **2026-07-22 裁决：Option C 重定规格 ADOPTED**（`TestG16Respec` PASS；字面 2%-max 保留 xfail）；P12 backlog；
   **P14 ✓ 2026-07-17 关闭（用户指示，当日开+关）**：壁面邻接 CV 压力相等 Kutta 估计器（A2 路由的修复），G14.1–G14.7 ✓、demo 28 PASS。**头条：
   修改后的 conforming 结果与 level-set 相同、计算结果合理**——S1/S2 一次换掉：M0.84 Γ(z) roughness 0.0970→**0.0043**（coarse）/ 0.0365→**0.0024**（medium，
   均达/优于 LS 带），全站 raw TE Cp gap 0.2206→**0.0040** / 0.1585→**0.0024**（**55×/67×**，走 G14.6 **主条款**，回退未动用；
@@ -208,7 +218,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 - **M — 网格**（[roadmap/track_m.md](roadmap/track_m.md)） — M0、M1(+M1b 自相似阶梯)、M2、M3、M4、M5（圆顶翼尖盖）✓ — **M2 ✓（求解腿由 B9 于 2026-07-17 关闭；
   台账勘误 2026-07-19——A3 曾称已改而 ledger 行仍 ◐）**：翼身网格 2026-07-13 交付；**机身+远场 2026-07-16 按用户指示重定规格并重生成**（5 倍翼根弦长、机翼居中、2 倍直径椭球机鼻、
   蒙皮 h_body=2h_wall + 两端按半径加密；**R_FAR 15→25 MAC**；★需 `Mesh.OptimizeNetgen` 治 sliver 抽签）；遗留验证项（交界最内 TE 节点 CV fan）在 track_m 记录
-- **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） — B1–B5、B7、B8（characterized-not-cured）、B9、B11–B29 ✓；
+- **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） — B1–B5、B7、B8（characterized-not-cured）、B9、B11–B32 ✓；
   B6 ◐（coarse gate ✓；medium 定量项由 GB15.4 补上，B21 恢复、B22 上锁） — **B16 ✓ 关闭 2026-07-17（用户指示，追加于 B15 之后；执行 B9 的 recorded follow-up）**：
   LS Newton 远场 BC 通用化——远场 aux DOF 钉扎。★ 翼身 LS-Newton churn 根因 = 近奇异远场 aux 块（尾迹片贯穿远场边界的 aux DOF 只受巨型外区单元的 wake-LS 行约束）：
   8 个远场 MAIN 行 max\|R\|=**84.457** 逐位复现，cond1 **9.1e18→8.70e6**（勘误 2026-07-19：旧文 6.36e18 是 CSV 前预跑值）。`farfield_aux="pin"`（默认，
@@ -277,10 +287,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **479 passed + 25 skipped + 2 xfailed**（2026-07-20 B25 inboard
-fragment clip：+6 passed = `tests/test_b1_cut_elements.py::TestInboardFragmentClip`
-（4）+ 同文件 foot-preference 锁（1）+ `tests/test_m2_wingbody.py` 水线延伸锁（1）；
-实测 1100.63 s @16 线程）。
+现基线 **519 passed + 25 skipped + 2 xfailed**（2026-07-22 B28–B32 收尾 **+ G1.6
+Option C 重定规格**：全套件实测 516 @1223.39 s，+ 3 条 `test_laplace_sphere.py::TestG16Respec`
+断言（读 P11 已提交 sweep CSV、无交互）= 519。516 明细：B28–B32 收尾：
++37 passed vs B25 的 479 = B28 cut-from-fragment 锁（`test_b1_cut_elements.py`，+4）
++ B31 `test_b31_pressure_taper.py`（13）+ `test_b31_tip_fringe.py`（19）
++ `test_p14_te_pressure.py` 锁（1）；B29/B30/B32 未加测试；实测 1223.39 s @16 线程）。
+上一档 479+25+2（2026-07-20 B25 inboard fragment clip：+6 passed =
+`test_b1_cut_elements.py::TestInboardFragmentClip`（4）+ 同文件 foot-preference 锁（1）
++ `test_m2_wingbody.py` 水线延伸锁（1）；实测 1100.63 s @16 线程）。
 上一档 473+25+2（2026-07-19 P11 曲面壁元：+8 passed = ungated
 `tests/test_p11_curved_walls.py`；实测 1124.94 s @16 线程）。
 上一档 465+25+2（2026-07-19 B22 3-D LS 锚锁：
@@ -331,10 +346,13 @@ Track A **尚未提交**的 7 个 A1 测试（`tests/test_a1_instrumentation.py`
   重归因**——旧说"平坦面片壁的自然边界条件（变分罪）"被实测推翻（罪的份额
   ≈0.2pp；11.6% ≈ P1 场在 h=0.08 的固有能力；阶坍塌是混淆扫掠的中远场地板）。
   仍然成立：恢复非主导、Nitsche 死、边界数据修正无可修正、h 加密（同族）贵而不达。
-  新增死路：mapped-P1（superparametric）曲面壁元。在案路线三岔口（P11 close-out，
-  用户裁决）：Option C 重定规格（实测可通过形式：全尺度同步加密族阶 ≥1.8 +
-  h_min 0.03 mean-Cp <1%）/ isoparametric P2 壁层（唯一能触及字面 2%-max@medium
-  的路线）/ 接受为长期边界。
+  新增死路：mapped-P1（superparametric）曲面壁元。★★ **路线三岔口已于 2026-07-22
+  裁决（用户指示）：(a) Option C 重定规格 ADOPTED**——G1.6 活跃 gate 改为可达实测标准
+  （全尺度加密族 φ_w 阶 ≥1.8 + h_min 0.03 mean-Cp <1%；E6/E8 实测 1.98/1.89 + 0.60%），
+  由 `test_laplace_sphere.py::TestG16Respec` 读 P11 已提交 sweep 断言 **PASS**；字面
+  2%-max@medium xfail **保留 = 记录的 P1 边界**（需 O(h²) 壁速 @h=0.08，超任何 P1 场方法）。
+  未取路线：(b) isoparametric P2 壁层（唯一触及字面标准，且会收紧 Track V 的 u_e 输入带 A4）
+  / (c) 接受为长期边界。
 - **V6 <1%**：已定性为随加密消失的真 O(h) 地板（6.30%→3.29%→**1.41%**，P13 实测），
   fine 上已逼近目标；非 P11 问题。
 - **G13.3 跨声速 / M0.84 Richardson**：两种几何皆未挣得（平帽序列非渐近；圆帽无

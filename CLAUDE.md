@@ -17,7 +17,7 @@ resolve through one hop.
 - [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
   gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
-  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B27
+  (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B32
   level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
   transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
   mixed-plain main-field density ADOPTED PERMANENTLY + re-baselined and B21
@@ -30,7 +30,18 @@ resolve through one hop.
   re-measured = the conforming site (medium 0.7625 / coarse 0.84 reached)
   and B27 B18 demo refresh (checks 8/8 PASS, 336/336 bit-identical;
   transonic cross-model M0.65 2.4% PASS / M0.75 2.5%), both ✓ CLOSED
-  2026-07-20 — the B18 "junction-limited" story is RETIRED; **P11
+  2026-07-20 — the B18 "junction-limited" story is RETIRED; B28 cl_fus
+  decoupling + GB9.4 re-spec (the "fuselage spurious lift" label retired;
+  out-band cross-model ≤15%, medium 7.0% PASS) and B29 flat-fragment adopted
+  as the wing-body LS production config, both ✓ CLOSED 2026-07-20; B30
+  (b)-class ceiling attribution (conforming stall and LS+clip death = the
+  SAME wing-tip P13 free-edge singularity + high-M Newton, not a wake-model
+  pocket) ✓ CLOSED 2026-07-21; B31 C-class wing-tip cure (production
+  pressure+taper cures the conforming 0.83 dying level via the FD-verified
+  Gamma-pin row blend; LS-side C-class closed negative) and B32 conforming
+  tip_taper adopted (wing-body medium ceiling M0.79 → **M0.84 reached**,
+  cl_p 0.2738, 0 clamps; weld-sign per-step refresh rolled back as
+  ill-posed), both ✓ CLOSED 2026-07-22; **P11
   curved wall elements ✓ CLOSED 2026-07-19 in track_p — measured NEGATIVE,
   G1.6 re-attributed to intrinsic P1 capability at h=0.08 (not the wall
   variational crime), route fork = user's call** —

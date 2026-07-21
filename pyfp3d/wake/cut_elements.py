@@ -91,7 +91,14 @@ class CutElementMap:
             The downstream (d > 0) and tip (q <= span_length) tests are
             unaffected. (B25: meshgen.fuselage.make_inboard_clip trims the
             sheet against the fuselage surface / symmetry plane.)
-        outboard_fringe: optional OUTBOARD extension of the spanwise clip
+        outboard_fringe: optional OUTBOARD extension of the spanwise clip.
+            ⊘ MEASURED NEGATIVE (GB31.3, 2026-07-22): both the faded-fringe
+            (C1) and the no-clip sentinel (C3) forms were closed negative as
+            an LS wing-tip C-class cure -- C1 gives an inboard backflow
+            -19.5%, C3 diverges on the coarse mesh (the sheet reaches q~14).
+            RETAINED default 0.0 = bit-identical (evidence machinery; see
+            cases/analysis/b31_tip_termination/VERDICT.md); do NOT re-propose
+            as a tip cure without new evidence. Mechanics below:
             (B31 candidate C1, GB31.3): the tip test becomes
             q_cross <= span_length + outboard_fringe, so the sheet
             continues a fringe width w past the tip and -- paired with
