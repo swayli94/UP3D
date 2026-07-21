@@ -1,0 +1,17 @@
+leg,clamp,region,count,peak_mach,pk_x,pk_y,pk_z
+LS,limited,tip_box,5,3.983667706019492,1.1394925183472542,-0.000279218252739972,1.1979763453618406
+LS,limited,corridor,0,,,,
+LS,limited,near_fus,0,,,,
+LS,limited,field,0,,,,
+LS,floored,tip_box,1,1.0035634448139952,1.1317694440793422,-0.002084389397850332,1.1988950259187932
+LS,floored,corridor,0,,,,
+LS,floored,near_fus,0,,,,
+LS,floored,field,0,,,,
+CONF,limited,tip_box,0,,,,
+CONF,limited,corridor,0,,,,
+CONF,limited,near_fus,0,,,,
+CONF,limited,field,0,,,,
+CONF,floored,tip_box,2,1.1139793239477105,1.1435153931009234,0.002579649183083288,1.1976098953622831
+CONF,floored,corridor,0,,,,
+CONF,floored,near_fus,0,,,,
+CONF,floored,field,0,,,,

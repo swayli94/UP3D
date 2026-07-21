@@ -52,6 +52,17 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `results/g27_consistency.csv`); cross-model upgraded to M0.65 (2.4% PASS) + M0.75 (2.5%); refreshed demo evidence lands in
   `cases/demo/b18_wingbody_transonic/results/` (checks.csv **8/8 PASS**) — (regeneration =
   `cases/demo/b18_wingbody_transonic/run_demo.py`, gated) — heavy (~1 h 39 min full re-solve)
+- `b28_cl_fus_flat_sheet/` — B28 cl_fus out-band flat-vs-tilted decoupling + GB9.4 re-spec (decisive leg: flat-fragment
+  out-band cl_fus 0.0326 vs conforming oracle 0.0351 = 7.25% <= 15% TOL ⇒ **F1: sheet-POSITION sensitivity, not an error**;
+  the "fuselage spurious lift" label retired; verdict + pre-registration in the dir) —
+  `python cases/analysis/b28_cl_fus_flat_sheet/run_f2.py` — medium (~40 min)
+- `b30_transonic_ceiling/` — B30 (b)-class wing-body transonic ceiling attribution + López dissipation lever
+  (GB30.1 anchor PASS 4/4 / GB30.2 dying-level clamp census: both paths 100% tip-localized O(10) ⇒ **B30-SAME** /
+  GB30.3 `upwind_c=2.0` climb + `[1.8,1.6]` staging ⇒ **LS L1-◐ (one rung, elevated dissipation only) / CONF L1-✗
+  (true Newton stall)** ⇒ dissipation NOT the constraint; **C-class tip cure named next candidate**, user's call;
+  verdict + pre-registration in the dir, zero `pyfp3d/` change) —
+  `python cases/analysis/b30_transonic_ceiling/run_g1.py` · `.../run_g2.py` · `.../run_g3.py` — all solves cached,
+  census/CSV/PNG regenerate in minutes
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and

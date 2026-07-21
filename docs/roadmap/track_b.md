@@ -2302,6 +2302,41 @@ refreshed `cases/demo/b18_wingbody_transonic/` (checks.csv **8/8 PASS**).
   are all in place (B25 §7).
 - ★ **No `pyfp3d/` numerics change** — demo/tests/docs phase.
 
+### B30 — Wing-body (b)-class transonic ceiling attribution + the López dissipation lever ✓ CLOSED 2026-07-21 (VERDICT: **B30-SAME; LS L1-◐ / CONF L1-✗** — same tip mechanism, dissipation NOT the constraint; C-class tip cure named, user's call)
+
+**Trigger.** B26 VERDICT §6.2's named next-phase candidate ("is the (b)-class
+high-M Newton stall the SAME mechanism as the conforming medium 0.80+
+stall?") + the 2026-07-20 review's §1.4/§2.2 (unadjudicated) — **user
+adjudicated 2026-07-21**: baseline re-anchor → attribution census → the
+cheap López lever → only then decide on a C-class cure. Pre-registration:
+`cases/analysis/b30_transonic_ceiling/PRE_REGISTRATION.md`.
+
+- [x] **GB30.1 (baseline anchor, cache-only) — PASS 4/4:** the committed B29
+  demo caches reproduce the checks.csv anchors (LS flat C medium m_last 0.775
+  dies 0.7875 a+dm; conforming medium 0.79 strict cl_p 0.2579) and load as
+  GB30.2 warm-start seeds (`results/g1_anchor.csv`).
+- [x] **GB30.2 (attribution census, 2 dying-level strict solves) — PASS →
+  B30-SAME:** both paths' dying-level clamps live 100 % in the tip box
+  (LS 5 lim + 1 flr @ 0.7875, peak M 3.98 z=1.198; CONF 0 lim + 2 flr
+  @ 0.83, z=1.197), corridor clean (corrM 1.12/1.16), totals O(10);
+  self-checks pass (LS exact; CONF converged-state 0/0 + dying-level
+  bookkeeping drift ≤ 2 — pre-reg erratum). LS counts FROZEN (range 0,
+  stuck active set at res 1e-13), CONF flr toggles 1–2 (true Newton stall
+  at res 8e-6). **T2 fired: CONF strict chain converges 0.80→0.82 — the
+  "M0.80+ stall" is cascade-path dependent, not a hard ceiling.**
+- [x] **GB30.3 (López dissipation lever, zero library change) — LS L1-◐ /
+  CONF L1-✗:** LS climbs one rung at `upwind_c=2.0` (0.7875 freeze-captured,
+  6 tip floors ≤ 8 window; cl_p cost −0.16 %, Mmax 3.98→2.66) but 0.80
+  dies (2+7 = 9 > 8 window) and the 1.6 staging dies (4+5 = 9) — elevated
+  dissipation only, cost table to the user; CONF 0.83 unmoved at c=2.0
+  (0 limited, residual WORSE 8e-6 → 1.4e-4 — true Newton stall, not the
+  clamp window). Verdict: dissipation is not the binding constraint on
+  either path; **the C-class tip cure becomes the named next candidate**.
+- Routed exits (NOT this phase, user arbitration): C-class sheet-termination
+  re-spec (the B8 legacy), limiter active-set hysteresis (library change),
+  freeze_max_clamped re-spec, LS line-search port.
+- ★ **No `pyfp3d/` change in scope** — analysis + recipe-knob phase.
+
 ## Progress ledger
 
 ### Track B — level-set embedded wake
@@ -2326,8 +2361,8 @@ fix). — design 2026-07-07; B10 shelved 2026-07-10;
 numerics spec [design_track_b.md](../design_track_b.md) (supersedes DN1) + gate
 re-arbitration 2026-07-11; **B1 CLOSED 2026-07-11**, with M3/M4 delivered the
 same day; next = B2 *(that opening timeline is HISTORICAL — the live status is
-the ledger table below and the track line in agent-rules.md; as of 2026-07-20
-B1–B9 and B11–B27 are closed, B6 ◐, B10 shelved)*. Purpose is user-arbitrated as **mesh/geometry workflow
+the ledger table below and the track line in agent-rules.md; as of 2026-07-21
+B1–B9 and B11–B30 are closed, B6 ◐, B10 shelved)*. Purpose is user-arbitrated as **mesh/geometry workflow
 capability, not solver speed** (the kill-the-Γ-secant efficiency motivation is
 obsolete post-P8 Newton), so the efficiency criteria in the B-gates are
 non-regression guards only. Coexistence strategy: a parallel `solve/picard_ls.py`
@@ -2337,6 +2372,13 @@ byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
 wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
 blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
+- B30 — ✓ — 2026-07-21 — **(b)-class wing-body transonic ceiling attribution + López dissipation lever** (user-adjudicated
+  2026-07-21; executes B26 VERDICT §6.2 + the review §1.4 row; pre-registered + VERDICT `cases/analysis/b30_transonic_ceiling/`).
+  **B30-SAME**: both paths' dying-level clamps 100 % tip-localized, O(10) — same mechanism (tip P13 + high-M Newton). **Lever:
+  LS L1-◐** (c=2.0 buys one rung 0.775→0.7875 freeze-captured; 0.80 dies 9 > 8 window; 1.6 staging dies — elevated dissipation
+  only, cl_p cost −0.16 %) / **CONF L1-✗** (0.83 unmoved at c=2.0, residual worse — true Newton stall). T2 finding: CONF strict
+  chain converges 0.80→0.82, "M0.80+ stall" is cascade-path dependent. **C-class tip cure named next candidate; demo anchors
+  unchanged;** freeze-gate re-spec / line-search port routed out, user's call.
 - B29 — ✓ — 2026-07-20 — **Flat-fragment adopted as the wing-body LS PRODUCTION config** (user-adjudicated, B28 VERDICT §6;
   same-branch continuation; no `pyfp3d/` change). B18 demo LS production side C = B25 clip + B28 flat sheet
   (`sheet_direction=(1,0,0)`; NEW `ls_flat_*` caches, the B26 tilted `ls_C_*` stale; side A tilted kept as the historical
