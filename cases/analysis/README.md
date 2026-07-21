@@ -52,6 +52,34 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `results/g27_consistency.csv`); cross-model upgraded to M0.65 (2.4% PASS) + M0.75 (2.5%); refreshed demo evidence lands in
   `cases/demo/b18_wingbody_transonic/results/` (checks.csv **8/8 PASS**) — (regeneration =
   `cases/demo/b18_wingbody_transonic/run_demo.py`, gated) — heavy (~1 h 39 min full re-solve)
+- `b28_cl_fus_flat_sheet/` — B28 cl_fus out-band flat-vs-tilted decoupling + GB9.4 re-spec (decisive leg: flat-fragment
+  out-band cl_fus 0.0326 vs conforming oracle 0.0351 = 7.25% <= 15% TOL ⇒ **F1: sheet-POSITION sensitivity, not an error**;
+  the "fuselage spurious lift" label retired; verdict + pre-registration in the dir) —
+  `python cases/analysis/b28_cl_fus_flat_sheet/run_f2.py` — medium (~40 min)
+- `b32_tip_taper_adoption/` — B32 ② weld-sign freeze fix + ① conforming taper production adoption (user-adjudicated from
+  the B31 verdict) — **GB32.1 ✗ ROLLED BACK**: per-step weld-sign refresh turns the fixed system into a state-dependent
+  switching system (ill-posed — healthy 0.82 seed diverged; B31 frozen semantics restored bit-identical; the 0.84
+  fresh-seed hazard is handled by the F2 healthy-seed pattern) / **GB32.2 ✓ ADOPTED**: b18 CONF legs on tip_taper
+  (vanish_smooth 0.05·b_semi), conforming medium 0.50–0.79 strict re-solved 0 clamps, **ceiling climb 0.79 → 0.84
+  REACHED** (cl_p 0.2738, 0 clamps), demo checks 8/8 PASS, cl_p cost ≈ −1.3 % in the F3 band
+  (`results/g2_adoption_cost.csv`), cross-model gaps improved to 0.3 % (M0.65) / 0.2 % (M0.75) / GB32.3 VERDICT in dir —
+  `python cases/analysis/b32_tip_taper_adoption/run_g1.py` · `.../run_g2.py` — solves cached, CSV/PNG regenerate in minutes
+- `b31_tip_termination/` — B31 C-class wing-tip cure (sheet-termination re-spec) + LS step-semantics companion
+  (GB31.1 tip atlas PASS: all 8 dying-level clamps = cap_wall at the sheet tip edge / GB31.2a taper factorial
+  ⇒ **taper is the cause** (0.83 die→cure pair, 0 clamps) / GB31.2b production pressure+taper port ⇒ **✓
+  dying level 0.83 cured, 0.84 converged from a healthy seed** (chain-seed failure diagnosed as the fixable
+  weld-sign freeze hazard, F2 probe; cl_p cost −3.00% flagged) / GB31.3 LS ladder **C1 ✗ (inboard backflow
+  −19.5%) / C3 ✗ (coarse divergence) ⇒ LS-side C-class closed (negative)**, remaining route B10 roll-up /
+  GB31.4 step-semantics closed; verdict + pre-registration in the dir, library changes default-off
+  bit-identical) — `python cases/analysis/b31_tip_termination/run_g1.py` · `.../run_g2.py` · `.../run_g2b.py` ·
+  `.../run_g2c.py` · `.../run_g3.py` — all solves cached, CSV/PNG regenerate in minutes
+- `b30_transonic_ceiling/` — B30 (b)-class wing-body transonic ceiling attribution + López dissipation lever
+  (GB30.1 anchor PASS 4/4 / GB30.2 dying-level clamp census: both paths 100% tip-localized O(10) ⇒ **B30-SAME** /
+  GB30.3 `upwind_c=2.0` climb + `[1.8,1.6]` staging ⇒ **LS L1-◐ (one rung, elevated dissipation only) / CONF L1-✗
+  (true Newton stall)** ⇒ dissipation NOT the constraint; **C-class tip cure named next candidate**, user's call;
+  verdict + pre-registration in the dir, zero `pyfp3d/` change) —
+  `python cases/analysis/b30_transonic_ceiling/run_g1.py` · `.../run_g2.py` · `.../run_g3.py` — all solves cached,
+  census/CSV/PNG regenerate in minutes
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and

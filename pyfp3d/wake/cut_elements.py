@@ -91,6 +91,32 @@ class CutElementMap:
             The downstream (d > 0) and tip (q <= span_length) tests are
             unaffected. (B25: meshgen.fuselage.make_inboard_clip trims the
             sheet against the fuselage surface / symmetry plane.)
+        outboard_fringe: optional OUTBOARD extension of the spanwise clip
+            (B31 candidate C1, GB31.3): the tip test becomes
+            q_cross <= span_length + outboard_fringe, so the sheet
+            continues a fringe width w past the tip and -- paired with
+            MultivaluedOperator's span_blend fade -- ends there at a
+            pure-weld edge instead of as a Heaviside at the tip. The aux
+            rows are upwind-convective along +x, so welding OUTBOARD of
+            the tip cannot re-level the inboard lifting solution (the
+            mechanical distinction from the B8 inboard span_blend dead
+            end, which welded the lifting sheet and cost 20% of the
+            lift). 0.0 (default) keeps the legacy clip BIT-IDENTICAL;
+            beyond_tip_elems then reports the elements rejected by the
+            EXTENDED clip (the still-further-outboard plane extension).
+            SENTINEL outboard_fringe = np.inf (B31 candidate C3): the tip
+            test is DROPPED entirely (the downstream d > 0 and inboard
+            tests stay), so the sheet never ends in the fluid -- the
+            B25 "no free edge inside the domain" analogue at the tip.
+            Geometry note: the B28 production sheet is the FLAT y = 0
+            plane ruled along +x, so removing the clip extends the SAME
+            plane outboard to the far field (the q parameterization
+            slants along the TE sweep; the surface is y = 0 regardless).
+            This is NOT the conforming model, which deliberately keeps a
+            single-valued free edge at the tip (mesh/wake_cut.py); it is
+            the unrolled planar tip-vortex continuation, and it
+            re-exposes the far-field branch-ray question P5 fixed on the
+            conforming path (the GB31.3 regression gate).
 
     Attributes (all set in __init__):
         s_raw, d, q: (n_nodes,) level-set offset / downstream coordinate /
@@ -102,8 +128,10 @@ class CutElementMap:
         cut_elems: sorted cut (wake) element ids
         beyond_tip_elems: sorted ids of elements the wake PLANE crosses
             downstream of the TE but OUTBOARD of the sheet's spanwise end
-            (empty on quasi-2D meshes; on a swept wing these are the
-            beyond-tip elements the spanwise clip rejects)
+            (span_length + outboard_fringe; empty on quasi-2D meshes; on a
+            swept wing these are the beyond-tip elements the spanwise clip
+            rejects; with the np.inf C3 sentinel the outboard rejection is
+            gone, so only inboard-clip rejections can remain here)
         te_lower_elems: sorted below-TE fan element ids (disjoint from
             cut_elems by construction)
         n_main, n_ext_dofs, n_total_dofs
@@ -120,6 +148,7 @@ class CutElementMap:
         eps_rel: float = 1e-6,
         te_tol_rel: float = 1e-3,
         inboard_clip=None,
+        outboard_fringe: float = 0.0,
     ):
         nodes = np.asarray(nodes, dtype=np.float64)
         el = np.asarray(elements, dtype=np.int64)
@@ -137,6 +166,9 @@ class CutElementMap:
         self.d = d
         self.q = q
         self.span_length = levelset.span_length
+        if outboard_fringe < 0.0:
+            raise ValueError("outboard_fringe must be >= 0")
+        self.outboard_fringe = float(outboard_fringe)
 
         # TE nodes: on the TE line itself (s ~ 0 AND d ~ 0).
         te_tol = te_tol_rel * h_node
@@ -182,11 +214,17 @@ class CutElementMap:
             t = np.where(crossing, si / (si - sj), 0.0)
         d_cross = di + t * (dj - di)
         q_cross = qi + t * (qj - qi)
-        on_sheet = (
-            crossing
-            & (d_cross > 0.0)
-            & (q_cross <= self.span_length)
-        )
+        if np.isinf(self.outboard_fringe):
+            # C3 sentinel: the tip clip is REMOVED -- the sheet runs
+            # outboard to the far field (the downstream and inboard tests
+            # below are unaffected).
+            on_sheet = crossing & (d_cross > 0.0)
+        else:
+            on_sheet = (
+                crossing
+                & (d_cross > 0.0)
+                & (q_cross <= self.span_length + self.outboard_fringe)
+            )
         if inboard_clip is None:
             # Legacy inboard clip: the sheet starts at the q = 0 TE end.
             on_sheet = on_sheet & (q_cross >= 0.0)
@@ -205,7 +243,9 @@ class CutElementMap:
         self.cut_elems = cand[on_sheet.any(axis=1)]
         # Candidates rejected purely by the spanwise clip (the beyond-tip
         # wake-plane extension): reported, not cut. With an inboard_clip
-        # this set also collects the inboard-rejected elements.
+        # this set also collects the inboard-rejected elements; with an
+        # outboard_fringe (B31/C1) "the clip" is the EXTENDED one, so only
+        # the still-further-outboard extension is reported here.
         downstream = crossing & (d_cross > 0.0)
         self.beyond_tip_elems = cand[
             downstream.any(axis=1) & ~on_sheet.any(axis=1)

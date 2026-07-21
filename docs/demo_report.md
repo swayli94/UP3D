@@ -154,8 +154,14 @@ is not evidence** (the 2026-07-13 audit rule).
   out-band 0.0565 (×2, P11 input). **B29 refresh (same day, user-adjudicated B28 §6)**: flat-fragment adopted as the LS production
   config — C side = clip + flat sheet ( `sheet_direction=(1,0,0)` ); M0.5 LS anchors 0.2115/0.2184; medium ceiling **0.7625→0.775**
   (live peak M3.98 @ wing tip); cross-model gaps **0.5/1.1/1.1 %** (M0.5/0.65/0.75, was 2.6/2.4/2.5); GB18.5 live flat cl_fus
-  **0.0382** (band −0.0006 / out 0.0388) @0.7875 vs conf 0.0423 — the ×2 out-band reading retired; 8/8 PASS —
-  [track_b](demo_report/track_b.md)
+  **0.0382** (band −0.0006 / out 0.0388) @0.7875 vs conf 0.0423 — the ×2 out-band reading retired; 8/8 PASS.
+  **B32 refresh (2026-07-22, user-adjudicated B31 §8-①)**: the conforming production recipe adopts tip_taper
+  (vanish_smooth 0.05·b_semi, uniform over M) — medium chain 0.50/0.65/0.75/0.79 strict re-solved 0 clamps (cl_p
+  **0.2143/0.2290/0.2450/0.2545**), coarse 0.84 re-solved (0.2590), and the ceiling climb **REACHES M0.84 at medium
+  (cl_p 0.2738, Mmax 2.14, 0 clamps)** — the "M0.80+ stall" is RETIRED (B31 attribution: the wing-tip sheet-termination
+  singularity; cure = taper) at cl_p cost ≈ −1.3 % (F3 band; `cases/analysis/b32_tip_taper_adoption/`); cross-model
+  gaps 0.5→1.9 % (M0.5 anchor re-pin 0.2173→0.2143, RECORDED), 1.1→**0.3 %** (M0.65 gate), 1.1→**0.2 %** (M0.75);
+  8/8 PASS — [track_b](demo_report/track_b.md)
 - **Track B** B19 LS-Newton Jacobian exactness (3-D) — `cases/analysis/c1_ls_jacobian_fd/` — GB19.1–19.6 ✓ (GB19.4 recorded NEGATIVE) —
   closed 2026-07-18: TWO Leg-A defects (DOF column maps + gradient factors), targeted probe **1.146e-01 → 1.33e-08** with the
   ε-discriminator flipped (ε-independent → ~1/ε); R bit-identical ( `git stash` A/B per fix) so no converged result moves; GB19.4:

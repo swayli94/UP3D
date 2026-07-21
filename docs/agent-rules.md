@@ -328,10 +328,12 @@ cross-model M0.65 2.4% PASS / M0.75 2.5%). The conforming legs below stand —
 bit-reproduced by B27.** ★★ The wing-body transonic capability is
 **asymmetric, and that is the finding.** **Conforming** (Newton + pressure Kutta,
 Mach continuation) IS the wing-body transonic path: coarse reaches **M0.84 (cl_p
-0.2617)**, medium reaches **M0.79 strict (cl_p 0.2579)** with a clean transonic
-rise cl_p(M) = **0.2173/0.2321/0.2579** at M0.50/0.65/0.79 (medium M0.80+ stalls —
-NOT slivers, the medium mesh is clean; a sharper shock/junction interaction,
-recorded not chased; ★ the conforming wing-body medium ramp needs `freeze_tol`
+0.2590)**, medium reaches **M0.79 strict (cl_p 0.2545)** with a clean transonic
+rise cl_p(M) = **0.2143/0.2290/0.2545** at M0.50/0.65/0.79 — **B32 (2026-07-22):
+the production recipe carries tip_taper (vanish_smooth 0.05·b_semi) and the climb
+REACHES M0.84 at medium (cl_p 0.2738, 0 clamps)** — the old "M0.80+ stall" was the
+wing-tip sheet-termination singularity (B31 attribution), cured by the taper at
+≈ −1.3 % cl_p cost (★ the conforming wing-body medium ramp needs `freeze_tol`
 raised to the wing-body churn floor 1e-6→1e-5, the B17 lesson). **Level-set** (B15
 freeze-ramp + B17 pin_gamma) does NOT reach transonic on the wing-body: the
 wing-fuselage junction spurious supersonic pocket (M²≈1.27 already at M0.5)
@@ -504,8 +506,10 @@ Wiring scope (user-arbitrated): coupled Newton + `solve_laplace_lifting` only �
   quadratic row's basin is smaller (M6 medium M0.5: cold Picard-5 seed wanders
   to cl +16% and fail-fasts at 29 steps/417 s; probe-seeded = 3 quadratic
   steps/26 s, faster than the probe path itself). The M0.84 ramp seeds level 0
-  the same way. tip_taper + pressure raises NotImplementedError (the B8 blend
-  is not re-derived).
+  the same way. tip_taper + pressure runs the B31 Gamma-pin row blend
+  (solve/newton.py NewtonWorkspace docstring; the pin carries the row's own
+  frozen slope SIGN — measured diag D > 0 on the conforming meshes, so an
+  unsigned weld would amplify instead of unload).
 
 B9 scope guards (user-arbitrated 2026-07-14; RE-SPEC'D 2026-07-17,
 user-approved): **subsonic M∞ 0.5 ONLY** (M0.84 excluded — the round-cap

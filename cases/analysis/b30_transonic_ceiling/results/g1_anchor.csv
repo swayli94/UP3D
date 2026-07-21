@@ -1,0 +1,5 @@
+PASS,cache,dof_match,exists,got_clp,got_cls,got_m_final,got_m_last,got_reached,ok_clp,ok_cls,ok_m_final,ok_m_last,ok_reached,phi_len
+True,ls_flat_medium_084,True,True,,a+dm,0.7875000000000003,0.7750000000000002,False,,True,True,True,True,114316
+True,ls_flat_coarse_084,True,True,0.2551079814841572,,,0.84,True,True,,,True,True,15152
+True,conf_medium_079,True,True,0.25788317634120655,,,,True,True,,,,True,135051
+True,conf_coarse_084,True,True,0.2617487298849126,,,,True,True,,,,True,21625

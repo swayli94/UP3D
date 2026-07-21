@@ -113,6 +113,23 @@ class MultivaluedOperator:
         # termination -> pure weld -> the jump vanishes SMOOTHLY over
         # r_blend instead of jumping to zero across one element.
         # span_blend=None (every existing path) -> bit-identical.
+        #
+        # B31 candidate C1 (GB31.3) outboard faded fringe: when the map
+        # carries an outboard_fringe, the sheet's free end has moved w
+        # OUTBOARD of the tip and the taper's z_tip moves with it, so
+        # w_j = tip_taper_factors(q_j, span_length + fringe, form, r_blend)
+        # is 1 over the whole PHYSICAL sheet (q <= span_length: the inboard
+        # rows stay the pure wake-LS rows -- the guardrail distinguishing
+        # C1 from the inboard span_blend dead end above, which welded the
+        # LIFTING sheet) and ramps 1 -> 0 across the fringe only. The
+        # outboard weld cannot re-level the inboard solution: the aux rows
+        # are upwind-convective along +x, so the fringe carries no
+        # information back into the lifting span. Requires
+        # r_blend <= fringe (else the fade would reach inboard -- asserted
+        # below). Maps without a fringe take the legacy
+        # z_tip = span_length call BIT-IDENTICAL. An np.inf fringe (C3:
+        # no tip clip at all) makes z_tip inf and w == 1 everywhere --
+        # the blend is a natural no-op (there is no free end to fade).
         self.span_blend = span_blend
         self.n_span_blended = 0
         if span_blend is not None and self._ls_coo is not None:
@@ -124,7 +141,16 @@ class MultivaluedOperator:
             is_te = np.zeros(cm.n_main, dtype=bool)
             is_te[cm.te_nodes] = True
             nonte = cut_nodes[~is_te[cut_nodes]]     # nodes of the LS rows
-            w = tip_taper_factors(cm.q[nonte], cm.span_length, form, r_blend)
+            fringe = getattr(cm, "outboard_fringe", 0.0)
+            if fringe > 0.0:
+                w = tip_taper_factors(cm.q[nonte],
+                                      cm.span_length + fringe, form, r_blend)
+                assert np.all(w[cm.q[nonte] <= cm.span_length] == 1.0), (
+                    "outboard fade reaches inboard of the tip: r_blend "
+                    "must be <= outboard_fringe (C1 inboard invariant)")
+            else:
+                w = tip_taper_factors(cm.q[nonte], cm.span_length,
+                                      form, r_blend)
             if not np.all(w == 1.0):
                 aux = cm.ext_dof_of_node[nonte]
                 # per-row LS magnitude BEFORE scaling (the weld's scale)

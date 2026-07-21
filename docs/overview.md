@@ -144,7 +144,9 @@ close-out 流程扩为**五个面 + backport check**。响应报告
 不对称本身就是结论**：conforming（Newton+压力 Kutta+Mach 续接）是翼身跨声速路——coarse 到
 **M0.84（cl_p 0.2617）**、medium 到 **M0.79 严格（0.2579）**，干净 cl(M) 升 0.2173/0.2321/0.2579
 @ M0.50/0.65/0.79（medium M0.80+ 停滞：非 sliver，更锐激波/交界相互作用，记录不追；★ 需把
-freeze_tol 抬到翼身 churn 地板 1e-6→1e-5，B17 教训）。level-set（B15 ramp+B17 pin_gamma）**不能**
+freeze_tol 抬到翼身 churn 地板 1e-6→1e-5，B17 教训）。**★ B32 勘误（2026-07-22）**：停滞归因 =
+翼尖片终止奇点（B31），生产配方接入 tip_taper（vanish_smooth 0.05·b_semi）后 medium 爬升**达
+M0.84**（cl_p 0.2738，0 钳制），代价 ≈ −1.3%，锚重钉 0.2143/0.2290/0.2450/0.2545 @ 0.50/0.65/0.75/0.79。level-set（B15 ramp+B17 pin_gamma）**不能**
 翼身跨声速：交界虚假超声速袋（G1.6/GB9.4，M0.5 就 M²≈1.27）**随加密恶化**——close-out 时
 coarse ~M0.575、medium 死于第一级 ~M0.5（Mmax 伪影 1.4→4.0）；★ B20 重基线勘误
 （2026-07-19）：coarse 天花板 **~M0.55（Mmax 1.31）**、medium ~M0.5 但 Mmax **5.22 为真实

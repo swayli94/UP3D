@@ -1,0 +1,8 @@
+leg,m,cl_p_new,cl_p_ref,ref,cost_pct,reached,nlim,nflr,mmax_cache,corr_mmax,mmax_field,mask_lim,mask_flr
+medium M0.50,0.5,0.214328,0.2173,B9/CL_M05 historical,-1.37,True,0,0,1.0151,0.6172,1.0151,0,0
+medium M0.65,0.65,0.228989,0.232114,old conf_medium_065,-1.35,True,0,0,1.3066,0.8369,1.3066,0,0
+medium M0.75,0.75,0.245025,0.248301,old conf_medium_075,-1.32,True,0,0,1.6035,1.009,1.6035,0,0
+medium M0.79,0.79,0.254506,0.257883,old conf_medium_079,-1.31,True,0,0,1.7902,1.0741,1.7902,0,0
+medium climb,0.84,0.273825,,"(new record, no ref)",,True,0,0,2.1396,1.1804,2.1396,0,0
+coarse M0.60,0.6,0.215529,0.217796,old conf_coarse_06,-1.04,True,0,0,1.0351,0.7319,1.0351,0,0
+coarse M0.84,0.84,0.259046,0.261749,old conf_coarse_084,-1.03,True,0,0,1.6675,1.0756,1.6675,0,0
