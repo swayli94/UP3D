@@ -56,6 +56,15 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   out-band cl_fus 0.0326 vs conforming oracle 0.0351 = 7.25% <= 15% TOL ⇒ **F1: sheet-POSITION sensitivity, not an error**;
   the "fuselage spurious lift" label retired; verdict + pre-registration in the dir) —
   `python cases/analysis/b28_cl_fus_flat_sheet/run_f2.py` — medium (~40 min)
+- `b31_tip_termination/` — B31 C-class wing-tip cure (sheet-termination re-spec) + LS step-semantics companion
+  (GB31.1 tip atlas PASS: all 8 dying-level clamps = cap_wall at the sheet tip edge / GB31.2a taper factorial
+  ⇒ **taper is the cause** (0.83 die→cure pair, 0 clamps) / GB31.2b production pressure+taper port ⇒ **✓
+  dying level 0.83 cured, 0.84 converged from a healthy seed** (chain-seed failure diagnosed as the fixable
+  weld-sign freeze hazard, F2 probe; cl_p cost −3.00% flagged) / GB31.3 LS ladder **C1 ✗ (inboard backflow
+  −19.5%) / C3 ✗ (coarse divergence) ⇒ LS-side C-class closed (negative)**, remaining route B10 roll-up /
+  GB31.4 step-semantics closed; verdict + pre-registration in the dir, library changes default-off
+  bit-identical) — `python cases/analysis/b31_tip_termination/run_g1.py` · `.../run_g2.py` · `.../run_g2b.py` ·
+  `.../run_g2c.py` · `.../run_g3.py` — all solves cached, CSV/PNG regenerate in minutes
 - `b30_transonic_ceiling/` — B30 (b)-class wing-body transonic ceiling attribution + López dissipation lever
   (GB30.1 anchor PASS 4/4 / GB30.2 dying-level clamp census: both paths 100% tip-localized O(10) ⇒ **B30-SAME** /
   GB30.3 `upwind_c=2.0` climb + `[1.8,1.6]` staging ⇒ **LS L1-◐ (one rung, elevated dissipation only) / CONF L1-✗

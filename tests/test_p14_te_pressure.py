@@ -266,9 +266,18 @@ def test_newton_workspace_estimator_mismatch_raises(newton_pressure_case):
                              workspace=r["workspace"])   # default = probe
 
 
-def test_pressure_tip_taper_not_implemented(naca_case):
-    mc, wc, _, _, _ = naca_case
-    with pytest.raises(NotImplementedError, match="tip_taper"):
-        NewtonWorkspace(mc, wc, alpha_deg=ALPHA,
-                        tip_taper=np.full(wc.n_stations, 0.5),
-                        kutta_estimator="pressure")
+def test_pressure_tip_taper_accepted(naca_case):
+    """B31: the pressure+taper row blend (NewtonWorkspace class docstring)
+    replaced the P14 NotImplementedError -- construction and one residual
+    evaluation must succeed. The full blend semantics (endpoints, FD
+    Jacobian, sigma freezing) live in tests/test_b31_pressure_taper.py."""
+    mc, wc, _, _, r_probe = naca_case
+    ws = NewtonWorkspace(mc, wc, alpha_deg=ALPHA,
+                         tip_taper=np.full(wc.n_stations, 0.5),
+                         kutta_estimator="pressure")
+    assert ws._taper_active
+    ws.set_mach(M_INF)
+    phi_free = np.asarray(r_probe["phi"])[:ws.n_red][ws.free]
+    _, F, _ = ws.eval_residual(phi_free, r_probe["gamma"], UPWIND_C,
+                               M_CRIT, M_CAP, RHO_FLOOR)
+    assert F.shape == (wc.n_stations,) and np.all(np.isfinite(F))

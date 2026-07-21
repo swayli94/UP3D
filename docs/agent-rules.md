@@ -504,8 +504,10 @@ Wiring scope (user-arbitrated): coupled Newton + `solve_laplace_lifting` only �
   quadratic row's basin is smaller (M6 medium M0.5: cold Picard-5 seed wanders
   to cl +16% and fail-fasts at 29 steps/417 s; probe-seeded = 3 quadratic
   steps/26 s, faster than the probe path itself). The M0.84 ramp seeds level 0
-  the same way. tip_taper + pressure raises NotImplementedError (the B8 blend
-  is not re-derived).
+  the same way. tip_taper + pressure runs the B31 Gamma-pin row blend
+  (solve/newton.py NewtonWorkspace docstring; the pin carries the row's own
+  frozen slope SIGN — measured diag D > 0 on the conforming meshes, so an
+  unsigned weld would amplify instead of unload).
 
 B9 scope guards (user-arbitrated 2026-07-14; RE-SPEC'D 2026-07-17,
 user-approved): **subsonic M∞ 0.5 ONLY** (M0.84 excluded — the round-cap

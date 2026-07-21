@@ -113,7 +113,41 @@ class NewtonWorkspace:
         warm starts) -- so F stays in Gamma-like units for the shared merit
         |R|^2 + |F|^2 and the f_norm < tol_gamma check. sigma cancels in
         the eliminated step (kutta_blocks), so the Newton ITERATES are
-        sigma-independent; only the merit weighting sees it."""
+        sigma-independent; only the merit weighting sees it.
+        With a non-unit tip_taper (B31; the P13/G13.2 tip unload ported to
+        the homogeneous row): scaling the pressure row alone is a no-op
+        (P_j = 0 is homogeneous), so the row is BLENDED with a Gamma pin
+        (the B8 row-blend form -- but welding an EXPLICIT Newton unknown,
+        so unlike the LS span_blend there is no global re-leveling
+        channel):
+
+          F_j = taper_j * sigma_j * F_raw_j + (1 - taper_j) * s_j * Gamma_j
+
+        taper_j = 1 is exactly the production row; taper_j -> 0 pins
+        Gamma_j to 0. The pin slope s_j = sign(diag D0)_j (frozen WITH
+        sigma at the first residual evaluation, recorded as
+        kutta_weld_sign) is the measured orientation of the row's own
+        Gamma-sensitivity: the naive unsigned weld -(1-t)*Gamma is only
+        correct under the dF/dGamma ~ -I orientation, while the measured
+        conforming meshes carry diag D > 0 (NACA 2.5D coarse: +80; M6
+        wing-body conforming coarse: median +566, uniform sign, 0 flips),
+        where it AMPLIFIES mid-taper loading (measured kappa = 1.08 at
+        t = 0.7) and the blended Gamma block sigma(tD - (1-t)) crosses
+        zero at t = 1/(1+D). With the row's own sign the blend unloads
+        monotonically toward the pinned endpoint (at the fixed-phi
+        linearization Gamma_b = t * Gamma*, the probe taper's Gamma_eff
+        = taper * Gamma_Kutta semantics; the re-equilibrated R = 0
+        manifold unloads HARDER -- the pressure row's Gamma-slope along
+        the manifold is the Schur-complement slope, much smaller than
+        the frozen direct slope, so mid-blend the pin dominates; measured
+        kappa(0.7) ~ 0.14 on NACA 2.5D coarse) and the raw Gamma block
+        stays ~ diag(D0)-conditioned at every t. In raw units (F/sigma)
+        the weld slope is s_j/sigma_j = sign(dj)*max(|dj|, 0.1 median) =
+        the floored frozen dF_raw/dGamma diagonal, so the blend is
+        dimensionally consistent (the pin enters with the row's own
+        slope, the B8 weld analog); because that ratio is physical, the
+        untapered path's post-hoc sigma-independence of the iterates does
+        NOT carry over -- sigma must be frozen, which it is."""
 
     def __init__(self, mesh_cut, wc, alpha_deg: float = 0.0,
                  u_inf: float = 1.0, gamma_air: float = 1.4,
@@ -143,15 +177,17 @@ class NewtonWorkspace:
                 f"{self.tip_taper.shape}")
         if kutta_estimator not in ("probe", "pressure"):
             raise ValueError(f"unknown kutta_estimator {kutta_estimator!r}")
-        if kutta_estimator == "pressure" and not np.all(self.tip_taper == 1.0):
-            raise NotImplementedError(
-                "tip_taper with the pressure Kutta estimator needs the B8 "
-                "row-blend re-derivation (the pressure row is homogeneous, "
-                "so scaling it alone is a no-op) -- not built in P14; the "
-                "committed M6 recipes run untapered")
         self.kutta_estimator = kutta_estimator
+        # B31: a non-unit taper activates the probe-path K row scaling
+        # below resp. the pressure-path row blend (eval_residual /
+        # kutta_blocks, class docstring). All-ones (incl. the None
+        # default) keeps BOTH estimators bit-identical to untapered.
+        self._taper_active = not np.all(self.tip_taper == 1.0)
         self.kutta_sigma = None        # frozen at the first eval_residual
         self.kutta_sigma_sign_flips = 0
+        # B31 blend pin slope (class docstring): sign(diag D0)_j, frozen
+        # alongside sigma; None until the first pressure-path evaluation.
+        self.kutta_weld_sign = None
 
         self.op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
         self.upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
@@ -217,7 +253,7 @@ class NewtonWorkspace:
         # F_j = taper_j * mean(probe jumps)_j - Gamma_j, so dF/dphi picks up
         # the SAME constant factor (taper is phi-independent). Scaling the
         # rows keeps the Jacobian exact; taper == 1 leaves K untouched.
-        if not np.all(self.tip_taper == 1.0):
+        if self._taper_active:
             self.K = sp.diags(self.tip_taper) @ self.K
 
         self.m_inf = None
@@ -333,7 +369,23 @@ class NewtonWorkspace:
                 adj = np.abs(dj)
                 self.kutta_sigma = 1.0 / np.maximum(
                     adj, 0.1 * np.median(adj))
-            F = self.kutta_sigma * F_raw
+                # B31: the blend's pin slope is the SIGN of the row's own
+                # frozen Gamma-sensitivity (class docstring); a measure-
+                # zero dj == 0 takes the mesh-wide median sign.
+                s = np.sign(dj)
+                self.kutta_weld_sign = np.where(s == 0.0, sign_ref, s)
+            if not self._taper_active:
+                F = self.kutta_sigma * F_raw
+            else:
+                # B31 row blend (class docstring): F_j = taper_j *
+                # sigma_j * F_raw_j + (1 - taper_j) * s_j * Gamma_j --
+                # the production row at taper_j = 1, a unit-slope Gamma
+                # pin (with the row's own orientation) at taper_j = 0.
+                # Gamma enters EXPLICITLY here (an argument of
+                # eval_residual), unlike the probe path.
+                F = (self.kutta_sigma * (self.tip_taper * F_raw)
+                     + (1.0 - self.tip_taper)
+                     * (self.kutta_weld_sign * gamma))
         else:
             # Gamma_eff = taper * Gamma_Kutta (P13/G13.2; taper == 1 by
             # default, so this is the untapered Kutta residual bit-for-bit).
@@ -393,14 +445,31 @@ class NewtonWorkspace:
         iterates are sigma-independent. D carries only the slave-jump
         chain: the CV construction asserted no control-volume dof is a
         far-field Dirichlet node, so restricting K_p to free columns
-        drops nothing."""
+        drops nothing. B31 blend (class docstring): the code-level row is
+        F_j = taper_j * sigma_j * F_raw_j + (1 - taper_j) * s_j * Gamma_j,
+        so F / sigma recovers the RAW blend G_j = taper_j * F_raw_j +
+        (1 - taper_j) * (s_j/sigma_j) * Gamma_j and the raw eliminated
+        blocks are dG/dphi_free = diag(taper) K_p and dG/dGamma =
+        diag(taper) D + diag((1 - taper) * s/sigma) -- the pin's
+        derivative is the frozen-slope diagonal on the Gamma block
+        (Gamma_j is an explicit Newton unknown; the slave-jump chain sits
+        entirely in the pressure part)."""
         if self.kutta_estimator == "probe":
             return self.K, F
         Kp_cut, D = self.cvs.newton_rows(state["phi_cut"])
         Kp_free = (Kp_cut @ self.con.T).tocsr()[:, self.free]
-        D_lu = sla.lu_factor(D)
+        if not self._taper_active:
+            D_lu = sla.lu_factor(D)
+            F_tilde = -sla.lu_solve(D_lu, F / self.kutta_sigma)
+            return _EliminatedKuttaRow(Kp_free, D_lu), F_tilde
+        t = self.tip_taper
+        Kt_free = (sp.diags(t) @ Kp_free).tocsr()
+        Db = t[:, None] * D
+        Db[np.diag_indices_from(Db)] += ((1.0 - t) * self.kutta_weld_sign
+                                         / self.kutta_sigma)
+        D_lu = sla.lu_factor(Db)
         F_tilde = -sla.lu_solve(D_lu, F / self.kutta_sigma)
-        return _EliminatedKuttaRow(Kp_free, D_lu), F_tilde
+        return _EliminatedKuttaRow(Kt_free, D_lu), F_tilde
 
 
 def _ew_forcing(r_norm, r_norm_prev, eta_prev, eta0=1e-2, gamma_ew=0.9,
@@ -543,6 +612,9 @@ def solve_newton_lifting(
     (NewtonWorkspace docstring for the sigma scaling; kutta_blocks for the
     exact eliminated step). Forwarded through solve_newton_transonic via
     newton_kw; a reused workspace must have been built with the same flag.
+    With a non-unit `tip_taper` the pressure row runs the B31 Gamma-pin
+    blend (NewtonWorkspace docstring); the probe path's per-station
+    scaling is unchanged.
 
     Returns the Picard-compatible result keys (phi on the cut mesh, gamma,
     converged, residual_history, mach2_max, nu_max, n_nu_active,
@@ -550,7 +622,8 @@ def solve_newton_lifting(
     order p_k), eta_history, n_gmres_total, n_newton, jacobian_nnz,
     n_term3_active, timings (per-stage wall-clock seconds), and
     kutta_estimator/kutta_sigma (the frozen pressure scaling, None on the
-    probe path).
+    probe path) and kutta_weld_sign (the frozen B31 blend pin slope, None
+    on the probe path and recorded under the pressure estimator).
     """
     if m_inf > 0.0 and upwind_c <= 0.0:
         raise ValueError(
@@ -1021,6 +1094,7 @@ def solve_newton_lifting(
         "kutta_estimator": ws.kutta_estimator,
         "kutta_sigma": ws.kutta_sigma,
         "kutta_sigma_sign_flips": ws.kutta_sigma_sign_flips,
+        "kutta_weld_sign": ws.kutta_weld_sign,
         "workspace": ws,
     }
 

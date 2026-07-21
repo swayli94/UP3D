@@ -2337,6 +2337,53 @@ cheap López lever → only then decide on a C-class cure. Pre-registration:
   freeze_max_clamped re-spec, LS line-search port.
 - ★ **No `pyfp3d/` change in scope** — analysis + recipe-knob phase.
 
+### B31 — C-class wing-tip cure (sheet-termination re-spec) + LS step-semantics companion ✓ CLOSED 2026-07-22 (user-adjudicated ①+④ from B30 VERDICT §7; SAME-BRANCH continuation of `kimi/b30-transonic-ceiling-attribution`; VERDICT `cases/analysis/b31_tip_termination/VERDICT.md`: **CONF-side C-class cure HOLDS** — taper is the cause (GB31.2a factorial), production pressure+taper cures dying level 0.83 and converges 0.84 from a healthy seed, 0 clamps all converged legs, cl_p cost −3.00 % flagged; 0.84 chain-seed failure diagnosed = fixable weld-sign freeze hazard (F2 probe); **LS-side C-class CLOSED (negative)** — C1 ✗ inboard backflow −19.5 %, C3 ✗ coarse divergence; GB31.4 closed; adoption decisions = user's call)
+
+**Trigger.** B30 verdict: both paths' (b)-class death is the SAME tip
+mechanism and dissipation is NOT the constraint (LS L1-◐ / CONF L1-✗) →
+the C-class tip cure (LS sheet-termination re-spec = the B8 legacy +
+conforming taper×termination interaction) becomes the named next phase;
+the "LS line-search port" is RETIRED as a framing (a best-of-tried safety
+backtrack already exists, newton_ls.py:899-922) and demoted to an
+evidence-only step-semantics evaluation (GB31.4). Pre-registration:
+`cases/analysis/b31_tip_termination/PRE_REGISTRATION.md`.
+
+- [x] **GB31.1 (tip-termination atlas, cache-only) — PASS:** all 8
+  dying-level clamp cells = cap_wall glued to the sheet tip edge
+  (z≈1.197–1.199, ≤0.012 from the edge); LS ring δ mean 0.0451/max
+  0.0774 with m2_main 0.64→3.54 across the ring; straddler side/main
+  M² ratio up to 7.68; CONF Γ_last 0.0078 (taper F=0.0104 → Γ_eff
+  8.1e-5). (`results/g1_tip_atlas.csv/.png`)
+- [x] **GB31.2 (conforming taper × production recipe) — 2a ✓ / 2b ✓:**
+  2a factorial (probe, ±taper): 0.83 die→cure pair, 0.84 cured, 0
+  clamps (probe-no-taper controls die even at 0.82 — U1 estimator
+  effect recorded). 2b pressure+taper port (newton.py blend
+  `t·σ·F_raw + (1−t)·s·Γ`, default-off bit-identical): medium gate
+  0.82 ✓ / **0.83 dying level ✓ cured** / 0.84 ✗ from the chained seed
+  (σ_flips=3 limit cycle) but **✓ from the healthy 2a seed (F2
+  diagnostic, 13 steps 0 clamps)** ⇒ failure = seed-dependent weld-sign
+  freeze hazard (fix nominated), not a structural estimator defect;
+  cl_p cost −3.00 % at the 0.82 control (outside the F3 single-wing
+  band — flagged). (`g2_conf_taper`, `g2b_coarse`, `g2c_medium` CSVs)
+- [x] **GB31.3 (LS termination function-space re-spec) — C1 ✗ / C3 ✗,
+  LS-side C-class CLOSED (negative):** C1 fringe_fade cures the tip
+  locally (mmax 1.30→0.87) but backflows inboard cl −19.5 % / Γ −33.2 %
+  (F5-style global re-level via three channels; guardrail breached
+  20–30×); C3 no-clip extension diverges at coarse (21 lim + 25 flr,
+  tip mmax 7.61; 220 cut elems beyond span, 26 touching the far field,
+  sheet reaching q≈14). Medium gate waived per the triage rule (user
+  override available). (`g3_probe_coarse.csv`)
+- [x] **GB31.4 (step-semantics evaluation, evidence-only) — CLOSED:**
+  step acceptance is not the constraint on either path (LS = frozen
+  active set + freeze-window semantics; CONF = smooth Newton stall with
+  the merit line search in place); the re-check hook after GB31.3 did
+  NOT trigger (no new step pathology). (`g4_step_semantics.md`)
+- Routed exits (NOT this phase, user arbitration): B10 roll-up rescope
+  (if C-class fails both legs), freeze_max_clamped re-spec stays
+  user-reserved, merit-semantics upgrade only on new pathology.
+- ★ Library changes allowed this phase (GB31.2b/31.3), ALL default-off
+  bit-identical (B20/B25 discipline); production adoption = user's call.
+
 ## Progress ledger
 
 ### Track B — level-set embedded wake
@@ -2361,8 +2408,8 @@ fix). — design 2026-07-07; B10 shelved 2026-07-10;
 numerics spec [design_track_b.md](../design_track_b.md) (supersedes DN1) + gate
 re-arbitration 2026-07-11; **B1 CLOSED 2026-07-11**, with M3/M4 delivered the
 same day; next = B2 *(that opening timeline is HISTORICAL — the live status is
-the ledger table below and the track line in agent-rules.md; as of 2026-07-21
-B1–B9 and B11–B30 are closed, B6 ◐, B10 shelved)*. Purpose is user-arbitrated as **mesh/geometry workflow
+the ledger table below and the track line in agent-rules.md; as of 2026-07-22
+B1–B9 and B11–B31 are closed, B6 ◐, B10 shelved)*. Purpose is user-arbitrated as **mesh/geometry workflow
 capability, not solver speed** (the kill-the-Γ-secant efficiency motivation is
 obsolete post-P8 Newton), so the efficiency criteria in the B-gates are
 non-regression guards only. Coexistence strategy: a parallel `solve/picard_ls.py`
@@ -2372,6 +2419,15 @@ byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
 wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
 blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
+- B31 — ✓ — 2026-07-22 — **C-class wing-tip cure (sheet-termination re-spec) + LS step-semantics companion** (user-adjudicated
+  ①+④ from B30 VERDICT §7; same-branch continuation; pre-registration + VERDICT `cases/analysis/b31_tip_termination/`). GB31.1
+  PASS: all 8 dying-level clamps = cap_wall at the sheet tip edge / GB31.2a **taper is the cause** (0.83 die→cure factorial, 0
+  clamps) / GB31.2b production pressure+taper port **✓ — 0.83 dying level cured strict, 0.84 converged from a healthy seed**
+  (chain-seed 0.84 failure = weld-sign freeze hazard, F2-diagnosed, fix nominated; cl_p cost −3.00 % flagged) / GB31.3 **C1 ✗
+  (inboard backflow −19.5 %) / C3 ✗ (coarse divergence, sheet reaches q≈14) ⇒ LS-side C-class CLOSED (negative)** / GB31.4
+  closed (step acceptance not the constraint; hook untriggered). Routed exits, user's call: ① CONF taper production adoption +
+  demo-anchor refresh, ② weld-sign freeze fix (①'s companion), ③ LS remaining route = B10 roll-up rescope,
+  freeze_max_clamped re-spec stays user-reserved.
 - B30 — ✓ — 2026-07-21 — **(b)-class wing-body transonic ceiling attribution + López dissipation lever** (user-adjudicated
   2026-07-21; executes B26 VERDICT §6.2 + the review §1.4 row; pre-registered + VERDICT `cases/analysis/b30_transonic_ceiling/`).
   **B30-SAME**: both paths' dying-level clamps 100 % tip-localized, O(10) — same mechanism (tip P13 + high-M Newton). **Lever:
