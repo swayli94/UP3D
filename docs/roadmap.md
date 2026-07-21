@@ -21,7 +21,7 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
 - **M — meshing** — [roadmap/track_m.md](roadmap/track_m.md) — M0, M1(+M1b), M2, M3, M4, M5 ✓ — **M2 ✓ (solver leg closed by B9
   2026-07-17; ledger erratum 2026-07-19: A3 claimed this line was fixed while it still read ◐)** (wing-body mesh ✓ 2026-07-13, **body
   re-spec'd + regenerated 2026-07-16**: 5 root chords, wing centered, 2-diameter ellipsoid nose, graded skin)
-- **B — level-set wake** — [roadmap/track_b.md](roadmap/track_b.md) — B1–B5, B7, B8, B11–B27 ✓ (**erratum 2026-07-19:
+- **B — level-set wake** — [roadmap/track_b.md](roadmap/track_b.md) — B1–B5, B7, B8, B11–B29 ✓ (**erratum 2026-07-19:
   this row had silently dropped B16/B17/B18 — see the track file for those entries**) · B6 ◐ (coarse gate ✓;
   medium quantitative closed by GB15.4, regressed under the first B20 re-baseline, **restored by B21**) · **B21 ✓ CLOSED 2026-07-19**
   (executes the Kimi-inspection N1 finding): `freeze_side_state` captured the frozen selection on the UNPATCHED side field —
@@ -38,7 +38,10 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   attributed to the wake inboard FREE-EDGE singularity, NOT G1.6 faceting; P11 close-out input) · **B27 ✓ CLOSED 2026-07-20** (B18 demo
   refresh: the pocket-healed LS reaches the SAME ceiling site as conforming — LS+clip coarse M0.84 reached / medium M0.7625 vs conforming
   M0.84/M0.79; conforming + LS A/C legs bit-reproduce the committed B18/B26 anchors (336/336,
-  `b27_b18_demo_refresh/g27_consistency.csv`); cross-model upgraded M0.5 (2.6%) + M0.65 medium (2.4% PASS) + M0.75 (2.5%)) · **B26 ✓
+  `b27_b18_demo_refresh/g27_consistency.csv`); cross-model upgraded M0.5 (2.6%) + M0.65 medium (2.4% PASS) + M0.75 (2.5%)) · **B29 ✓
+  CLOSED 2026-07-20** (flat-fragment = the wing-body LS production config, user-adjudicated B28 §6: B18 C side = clip+flat sheet,
+  M0.5 anchors 0.2115/0.2184; medium ceiling 0.7625→**0.775**; cross-model **0.5/1.1/1.1 %** M0.5/0.65/0.75; GB18.5 live flat
+  cl_fus 0.0382 vs conf 0.0423 — the B26 tilted ×2 out-band reading retired; demo 8/8) · **B26 ✓
   CLOSED 2026-07-20 (B26-A)** (the junction pocket WAS the LS wing-body transonic ceiling limiter — healed by B25's `inboard_clip`:
   medium 0.50→0.7625, coarse 0.82→0.84 reached; death class flips (a)→(b), wing-tip P13; the A-side anchor divergence = the B21/B22
   freeze-capture effect) · **B18 ✓ CLOSED 2026-07-18** (wing-body transonic: conforming reaches M0.84/M0.79; **erratum 2026-07-20:
@@ -60,7 +63,9 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   steps, +3.6 % wall — the plateau is the B15 churn limit cycle, which an exact derivative cannot fix).
   Leg B measured the residual's own asymmetry: the side field manufactures a **spurious supersonic state** (q² 3.22 vs 1.34) on 252
   elements ⇒ routed to a new phase, NOT adopted · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D, user-approved): wing-body cross-model validation —
-  LS (Picard) + conforming (NEW capability, Newton) agree to 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 error;
+  LS (Picard) + conforming (NEW capability, Newton) agree to 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 error
+  (**corrected by B28 2026-07-20**: wake-sheet POSITION sensitivity, not an error — gate re-spec'd to out-band cross-model ≤15%,
+  medium gap 7.0% PASS, demo 8/8);
   LS Newton diverges = neumann blockage not the solver**
 - **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10, zero implementation
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**

@@ -206,7 +206,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 - **M — 网格**（[roadmap/track_m.md](roadmap/track_m.md)） — M0、M1(+M1b 自相似阶梯)、M2、M3、M4、M5（圆顶翼尖盖）✓ — **M2 ✓（求解腿由 B9 于 2026-07-17 关闭；
   台账勘误 2026-07-19——A3 曾称已改而 ledger 行仍 ◐）**：翼身网格 2026-07-13 交付；**机身+远场 2026-07-16 按用户指示重定规格并重生成**（5 倍翼根弦长、机翼居中、2 倍直径椭球机鼻、
   蒙皮 h_body=2h_wall + 两端按半径加密；**R_FAR 15→25 MAC**；★需 `Mesh.OptimizeNetgen` 治 sliver 抽签）；遗留验证项（交界最内 TE 节点 CV fan）在 track_m 记录
-- **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） — B1–B5、B7、B8（characterized-not-cured）、B9、B11–B27 ✓；
+- **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） — B1–B5、B7、B8（characterized-not-cured）、B9、B11–B29 ✓；
   B6 ◐（coarse gate ✓；medium 定量项由 GB15.4 补上，B21 恢复、B22 上锁） — **B16 ✓ 关闭 2026-07-17（用户指示，追加于 B15 之后；执行 B9 的 recorded follow-up）**：
   LS Newton 远场 BC 通用化——远场 aux DOF 钉扎。★ 翼身 LS-Newton churn 根因 = 近奇异远场 aux 块（尾迹片贯穿远场边界的 aux DOF 只受巨型外区单元的 wake-LS 行约束）：
   8 个远场 MAIN 行 max\|R\|=**84.457** 逐位复现，cond1 **9.1e18→8.70e6**（勘误 2026-07-19：旧文 6.36e18 是 CSV 前预跑值）。`farfield_aux="pin"`（默认，
@@ -224,7 +224,11 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   C 侧 out-band ×2 → P11 输入），B25 `inboard_clip` 愈袋（corrM 14.66→0.63）；**B26-A：LS 天花板与 conforming 同址**（C 侧 = +clip：
   coarse 0.84 reached / medium 0.7625 死 0.775，(b) 类翼尖 P13 + 高 M Newton；A 侧复测爬过 B18 锚 = B21/B22 freeze-capture 效应，
   袋真实杀伤线 A medium 0.55 / Mmax 13.1）；**B27 demo 刷新**：conforming 逐位复现 B18 锚、LS A/C 逐位复现 B26 锚（g27_consistency.csv 336/336 bit），
-  跨模型升档 **M0.5(2.6%) + M0.65(2.4% PASS ≤5%) + M0.75(2.5%)** ≈ 全 Mach 的 B17 口径差带，demo 8/8 PASS。**B19 ✓ 关闭 2026-07-18**：
+  跨模型升档 **M0.5(2.6%) + M0.65(2.4% PASS ≤5%) + M0.75(2.5%)** ≈ 全 Mach 的 B17 口径差带，demo 8/8 PASS。**B29 ✓ 2026-07-20**：
+  flat-fragment 升格为翼身 LS 生产配置（用户裁决 B28 §6）——B18 C 侧 = clip+平片（`sheet_direction=(1,0,0)`），M0.5 锚重钉
+  0.2115/0.2184；medium 天花板 0.7625→**0.775**（垂死峰 M3.98 @ 翼尖实况）；跨模型 **0.5/1.1/1.1%**（M0.5/0.65/0.75，原
+  2.6/2.4/2.5%）；GB18.5 实况平片分解 cl_fus **0.0382**（带 −0.0006/带外 0.0388/极 0.0007）@0.7875 vs conf 0.0423——B26
+  斜片 ×2 读数退役（B28 位置敏感性），demo 8/8 PASS。**B19 ✓ 关闭 2026-07-18**：
   LS-Newton Jacobian 3-D 精确化（两处缺项；探针 1.146e-01→1.33e-08、ε 判别翻转；R 逐位不变、无收敛收益——GB19.4 阴性）；
   Leg B 测得 mixed-plain 侧场密度污染（虚假超声速 q² 3.22 vs 1.34）→ 路由 B20。**B20 ✓ 关闭 2026-07-18、永久采纳（用户裁决，开关移除）、重基线 2026-07-19**：
   mixed-plain 密度改读 main 场；所有移动数字向好，唯一回退 = M6 medium ramp（GB20.7 曾定谳"真实能力损失"）。**B21 ✓ 关闭 2026-07-19（执行 Kimi/N1）**：
@@ -236,7 +240,8 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   **B25 ✓ 关闭 2026-07-19（治愈 C-A）**：`inboard_clip`（`meshgen/fuselage.py:make_inboard_clip` + `wake/cut_elements.py`）把片内侧边界移到机身面/对称面 
   = conforming fragment 拓扑——medium α=3.06 走廊 corrM **14.66→0.63**、n_sup 88→0、cl_p +0.38%（∈[A, oracle]），全物理护栏干净；默认 None 逐位不变；
   次级护栏带外 cl_fus +135% 经 oracle 归因 flat-vs-tilted 片模型差，记录不阻塞 → P11 监视。**B9 ✓ 关闭 2026-07-17（重定规格）**：
-  翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6。B10 搁置
+  翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6（**B28 2026-07-20 更正**：cl_fus=尾流片位置敏感性，
+  非 G1.6 误差；gate 重设为带外跨模型一致 ≤15%，medium 差 7.0% PASS，demo 8/8）。B10 搁置
 - **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC），零实现 — V1 依赖 P6（已满足），
   预算等同一个 Track-P 阶段
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：

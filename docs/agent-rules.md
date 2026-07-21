@@ -1,6 +1,24 @@
 # pyFP3D Agent Rules
 
-Current phase: **B27 ✓ CLOSED 2026-07-20 (NEWEST; stacked on the unpushed
+Current phase: **B29 ✓ CLOSED 2026-07-20 (NEWEST; same branch as B28; no
+`pyfp3d/` change): flat-fragment adopted as the wing-body LS PRODUCTION
+config (user-adjudicated, B28 VERDICT §6).** B18 demo LS side C = B25 clip +
+B28 flat sheet (`sheet_direction=(1,0,0)`; NEW `ls_flat_*` caches, the B26
+tilted `ls_C_*` stale; side A tilted kept as the historical pocket
+comparison; conforming legs bit-reproduce). M0.5 LS anchors re-pinned
+0.2087/0.2117 → **0.2115/0.2184**. Flat C side: coarse 0.84 reached (cl_p
+0.2551); **medium ceiling 0.7625 → 0.775** (dies 0.7875, cls a+dm; live
+dying peak M3.98 @ wing TIP z=1.20 — GB18.4's C side now measured live);
+cross-model gaps **2.6→0.5 % (M0.5), 2.4→1.1 % (M0.65 PASS ≤5 %), 2.5→1.1 %
+(M0.75)**. **GB18.5 live flat decomposition: cl_fus 0.0382 (band −0.0006 /
+out 0.0388 / poles 0.0007) @0.7875 vs conf 0.0423 @0.79** — the B26 tilted
+"×2 out-band" reading (P11 watch item) retired per B28 (position
+sensitivity, not a lesion). checks.csv **8/8 PASS**;
+`tests/test_b9_wingbody_ls.py` switched to the production wiring (flat+clip,
+5/5). Evidence: `cases/demo/b18_wingbody_transonic/results/` (B29-refresh
+checks.csv / cross_model.csv / cl_vs_mach.csv / PNGs).
+
+**B27 ✓ CLOSED 2026-07-20 (stacked on the unpushed
 B25/B26 chain; B18 demo refresh + Track B doc close-out; no `pyfp3d/` change):
 the pocket-healed level-set reaches the SAME ceiling site as conforming — the
 "LS junction-limited (closed-negative)" B18 story is RETIRED.** ★ **GB27.1
@@ -413,7 +431,10 @@ validation** — the level-set (Picard) and conforming (NEW capability, P14
 Newton) wing-body lifts AGREE to **cl_p 0.4% / cl_kj 0.6%** at medium (conf
 0.2173/0.2188 vs LS 0.2165/0.2175; coarse 12.8% = resolution). GB9.1/9.2/9.3/9.5
 ✓, GB9.6 RECORDED, **GB9.4 XFAIL** (fuselage lift 16-20% ⇒ G1.6 fuselage-Cp
-error, band NOT moved). Demo `cases/demo/b9_wingbody/` 7 PASS + 1 XFAIL. The B9
+error, band NOT moved) — **corrected by B28 (2026-07-20)**: cl_fus = physical
+carryover + wake-sheet POSITION sensitivity, NOT the G1.6 error; GB9.4
+re-spec'd per B23 §(c) to out-band cross-model ≤ 15% and PASSES at 7.0%
+(medium), demo now 8/8. Demo `cases/demo/b9_wingbody/` 7 PASS + 1 XFAIL → **8 PASS post-B28**. The B9
 LS-Newton follow-up ("neumann res 1e43; freestream Newton 8 rows |R|≈84") is now
 **closed by B16** — the freestream Newton path works with the aux pin.
 - ★ **Conforming wing-body is the NEW capability** —
@@ -531,7 +552,9 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   ★ SLOWER at small scale, the fine memory-bounded route stays the unbuilt
   designed use-case) · B10 shelved · **B9 ✓ CLOSED 2026-07-17 (RE-SPEC'D)** —
   wing-body cross-model: LS (Picard) + conforming (NEW capability, Newton)
-  agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6; LS Newton
+  agree 0.4%/0.6% at medium M0.5; GB9.4 fuselage-lift XFAIL ⇒ G1.6 (**B28
+  2026-07-20 corrects**: sheet-position sensitivity not an error; gate
+  re-spec'd out-band cross-model ≤15%, medium 7.0% PASS, demo 8/8); LS Newton
   diverges on the wing-body = the neumann far-field blockage, not the solver ·
   **B16 ✓ CLOSED 2026-07-18 (churn fix; GB16.4 resolved by B17)** (NEW, executes
   the B9 follow-up) — the wing-body LS-Newton churn is a near-singular far-field

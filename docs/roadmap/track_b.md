@@ -534,6 +534,17 @@ pressure 3/4 steps, 0 lim/flr) ✓, GB9.2 (LS Picard converges both) ✓, GB9.3
   smooth-wall flat-facet natural-BC error on the fuselage (GB9.6's subject),
   NOT clean physics. Band NOT moved after the fact (house rule); recorded as
   the open state a wing-body body-surface claim carries until P11/Option C.
+  **★★ B28 erratum (2026-07-20): the "spurious lift ⇒ G1.6" reading is
+  measured FALSE.** The pre-registered flat-fragment decoupling
+  (`cases/analysis/b28_cl_fus_flat_sheet/`) drags the LS sheet GEOMETRY flat
+  at y=0 (`WakeLevelSet(sheet_direction=...)`, default None bit-identical)
+  while physics convects with the flow: out-band cl_fus 0.0326 vs the
+  conforming oracle 0.0351 (**7.25% ≤ 15% TOL**), where the flow-aligned
+  sheet gives 0.0504 (35.3%) — wake-sheet POSITION sensitivity, not a
+  discretization error. Decomposition: physical carryover baseline (~10% of
+  cl_p, both paths, refinement-flat) + pocket imprint (B25, cured) + sheet
+  position (B28). GB9.4 re-spec'd per B23 §(c) — see the ledger entry; B9
+  demo re-run 8/8 PASS (medium gap 7.0%).
 - ★ **LS uses PICARD, not Newton — measured, not assumed (user-questioned).**
   The committed LS Newton recipes (lagged-LU, `precond="schur"` B14, N5 freeze,
   the B15 Mach ramp) ALL diverge/churn on the subsonic wing-body. Diagnostic at
@@ -619,7 +630,14 @@ symmetry root edge).
       discretization error (GB9.6), not clean physics. Band NOT moved (house
       rule); the caveat a wing-body body-surface claim carries until
       P11/Option C.** Structural half census-locked (zero TE stations inboard
-      of the junction).
+      of the junction). **★★ B28 RE-SPEC (2026-07-20, executes B23 §(c)):**
+      the ≤5% band is retired by erratum (physical carryover is not an
+      error); the gate is now **out-band cross-model consistency** —
+      |cl_fus_out(conf) − cl_fus_out(LS)| ≤ 0.15·|cl_fus_out(conf)| at
+      medium (hard), coarse RECORDED, plus a RECORDED band/out/poles
+      decomposition (`cross_model_m05.csv` extra columns). TOL=15% = 1.5×
+      the out-band refinement noise (8-10%), pre-registered. Re-run: medium
+      gap **7.0% PASS**, coarse 10.0% RECORDED — demo 8/8.
 - [x] **GB9.5** ✓ cross-model agreement at medium M0.5: conforming-pressure vs
       LS agree to **< 1%** on cl_p(wing) AND on cl_KJ under the SAME
       exposed-span reducer (trapezoid over actual stations + tip closure, NO
@@ -1506,7 +1524,11 @@ coincidence landing near conforming; the row is superseded.
   the wing-tip P13 class + high-M Newton, per B26 committed peaks.**
 - [~] **GB18.5 — fuselage lift at the medium transonic top (RECORDED).** cl_fus
   16% of wing cl_p at M0.79 — the G1.6 flat-facet natural-BC error persists into
-  transonic (GB9.4 class).
+  transonic (GB9.4 class). **B29 re-anchor (2026-07-20):** the G1.6 reading is
+  retired (B28: carryover + sheet-position sensitivity); the LIVE flat C-side
+  decomposition at the 0.7875 ceiling state is cl_fus **0.0382** (band −0.0006 /
+  out-band 0.0388 / poles 0.0007) vs conf 0.0423 @0.79 — the B26 tilted
+  0.0781/0.0565 "×2" value is superseded.
 
 ★ **No `pyfp3d/` numerics change** — B18 is a pure demo/tests/docs phase using the
 existing conforming `solve_newton_transonic` and LS `solve_multivalued_newton_transonic`
@@ -2257,7 +2279,10 @@ refreshed `cases/demo/b18_wingbody_transonic/` (checks.csv **8/8 PASS**).
   inboard free-edge singularity, cured C-side; residual limiter = wing-tip
   P13 + high-M Newton, peaks quoted from B26 committed); GB18.5 refreshed
   (conf cl_fus 0.0423 = 16 % @0.79 live; C-side new-ceiling cl_fus 0.0781
-  / out-band 0.0565 ≈ ×2 → P11 watch item).
+  / out-band 0.0565 ≈ ×2 → P11 watch item — **CLOSED by B28 (2026-07-20):
+  wake-sheet position sensitivity, not a lesion; B29 supersedes the quoted
+  values: production flat sheet, live C-side cl_fus 0.0382 / out-band
+  0.0388 @0.7875 vs conf 0.0423 @0.79**).
 - [~] **GB27.5 (RECORDED):** the T1 erratum is in the demo docstring —
   the A-side re-test climbing past the B18 committed anchors (dies
   0.50/0.55) is the **B21/B22 freeze-capture repair effect**, not physics
@@ -2312,6 +2337,27 @@ byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
 wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
 blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
+- B29 — ✓ — 2026-07-20 — **Flat-fragment adopted as the wing-body LS PRODUCTION config** (user-adjudicated, B28 VERDICT §6;
+  same-branch continuation; no `pyfp3d/` change). B18 demo LS production side C = B25 clip + B28 flat sheet
+  (`sheet_direction=(1,0,0)`; NEW `ls_flat_*` caches, the B26 tilted `ls_C_*` stale; side A tilted kept as the historical
+  pocket comparison; conforming legs bit-reproduce). M0.5 LS anchors re-pinned 0.2087/0.2117 → **0.2115/0.2184** (the re-run
+  B9 demo). Flat C side re-solved: coarse 0.84 reached (cl_p 0.2551); **medium ceiling 0.7625 → 0.775** (dies 0.7875, cls a+dm;
+  live dying peak M3.98 @ wing TIP z=1.20 — GB18.4's C side now measured live, P13 class confirmed); cross-model gaps
+  **2.6→0.5 % (M0.5), 2.4→1.1 % (M0.65, PASS ≤5 %), 2.5→1.1 % (M0.75)**; coarse 0.60 1.7 %. **GB18.5 live flat decomposition:
+  cl_fus 0.0382 (band −0.0006, out 0.0388, poles 0.0007) @0.7875 vs conf 0.0423 @0.79** — the B26 tilted "×2 out-band"
+  reading (0.0781/0.0565) retired per B28 (position sensitivity). Demo **8/8 PASS**; `test_b9_wingbody_ls` switched to the
+  production wiring (flat+clip, 5/5 green).
+- B28 — ✓ — 2026-07-20 — **cl_fus decoupling + GB9.4 RE-SPEC — the "fuselage spurious lift" label retired** (executes B23 §(c);
+  pre-registered `cases/analysis/b28_cl_fus_flat_sheet/`). New `WakeLevelSet(sheet_direction=...)` knob decouples sheet GEOMETRY
+  drag-out from physics convection (default None bit-identical; `TestSheetDirection` 4 + b1/m2/v0 73 green). Decisive leg
+  (medium α=3.06, strict conv res 9.0e-8): flat-fragment out-band cl_fus **0.0326 vs conforming oracle 0.0351 = 7.25% ≤ 15% TOL**,
+  flow-aligned sheet 0.0504 = 35.3% ⇒ **F1: sheet-POSITION sensitivity, not an error**. cl_fus = physical carryover (~10% cl_p,
+  refinement-flat) + pocket imprint (B25 cured) + sheet position. GB9.4 re-spec'd: hard gate (medium) out-band cross-model ≤15%,
+  coarse RECORDED + full band/out/poles decomposition; old ≤5% band retired by erratum. B9 demo LS leg switched to flat-fragment
+  (legacy farfield kept), re-run **8/8 PASS** — GB9.4 medium gap **7.0%**, GB9.5 un-flipped (cl_p 0.5%/cl_kj 0.3%),
+  cl_fus/wing LS 0.205→0.176; LS Picard 59/73 outer converged (220 budget). B26's "C-side out-band ×2" watch item CLOSED;
+  M2 wiring suspicion excluded. Flat-fragment as PRODUCTION config for B18/GB18.5/GB27.4 left to the user — **adjudicated same
+  day → B29 (production adoption, 8/8 PASS)**.
 - B27 — ✓ — 2026-07-20 — **B18 demo refresh — LS legs resurrected, checks.csv 8/8 PASS** (no `pyfp3d/` change;
   full re-solve ~1 h 39 min). **GB27.1 ✓** conforming legs bit-reproduce the committed B18 anchors (B21/B22 inert on conforming).
   **GB27.2 ✓** LS A/C legs bit-reproduce B26 committed (`g27_consistency.csv` **336/336 bit-identical**).

@@ -151,7 +151,11 @@ is not evidence** (the 2026-07-13 audit rule).
   committed B26 anchors (GB27.2) — 336/336 in `cases/analysis/b27_b18_demo_refresh/results/g27_consistency.csv` .
   ★ the pre-B27 sections PNG was silently EMPTY (section_cp_curve tuple→dict API drift, swallowed by `except: pass` ) —
   fixed in the refresh. GB18.1/18.2/18.3(M0.65) PASS + GB18.3(M0.75)/18.4/18.5 RECORDED; cl_fus: conf 0.0423 @M0.79, C-side 0.0781 with
-  out-band 0.0565 (×2, P11 input) — [track_b](demo_report/track_b.md)
+  out-band 0.0565 (×2, P11 input). **B29 refresh (same day, user-adjudicated B28 §6)**: flat-fragment adopted as the LS production
+  config — C side = clip + flat sheet ( `sheet_direction=(1,0,0)` ); M0.5 LS anchors 0.2115/0.2184; medium ceiling **0.7625→0.775**
+  (live peak M3.98 @ wing tip); cross-model gaps **0.5/1.1/1.1 %** (M0.5/0.65/0.75, was 2.6/2.4/2.5); GB18.5 live flat cl_fus
+  **0.0382** (band −0.0006 / out 0.0388) @0.7875 vs conf 0.0423 — the ×2 out-band reading retired; 8/8 PASS —
+  [track_b](demo_report/track_b.md)
 - **Track B** B19 LS-Newton Jacobian exactness (3-D) — `cases/analysis/c1_ls_jacobian_fd/` — GB19.1–19.6 ✓ (GB19.4 recorded NEGATIVE) —
   closed 2026-07-18: TWO Leg-A defects (DOF column maps + gradient factors), targeted probe **1.146e-01 → 1.33e-08** with the
   ε-discriminator flipped (ε-independent → ~1/ε); R bit-identical ( `git stash` A/B per fix) so no converged result moves; GB19.4:
@@ -214,6 +218,15 @@ is not evidence** (the 2026-07-13 audit rule).
   drift) fixed; conf medium **0.75 NEW point 0.2483** strict. Façade: "junction-limited" → "**post-cure LS ceiling co-located with
   conforming** (coarse 0.84 = 0.84; medium 0.7625 ≈ 0.79)"; Track V sheet-topology prerequisites in place —
   [track_b](demo_report/track_b.md)
+- **Track B** B29 flat-fragment = the wing-body LS production config — `cases/demo/b18_wingbody_transonic/` (+
+  `cases/analysis/b28_cl_fus_flat_sheet/VERDICT.md` §6, user-adjudicated) — closed 2026-07-20 (same branch as B28; no
+  `pyfp3d/` change): B18 LS production side C = `inboard_clip` + `sheet_direction=(1,0,0)` (NEW `ls_flat_*` caches; the B26
+  tilted `ls_C_*` stale; A side tilted kept as the historical comparison; conforming bit-reproduce). Medium ceiling 0.7625 →
+  **0.775** (dies 0.7875, a+dm; live peak M3.98 @ wing tip z=1.20 — GB18.4's C side now live); cross-model **M0.5 0.5 % /
+  M0.65 1.1 % PASS (≤5 %) / M0.75 1.1 %** (was 2.6/2.4/2.5 %); GB18.5 live flat decomposition cl_fus **0.0382** (band −0.0006,
+  out-band 0.0388, poles 0.0007) @0.7875 vs conf 0.0423 @0.79 — the B26 tilted ×2 out-band reading retired (B28 position
+  sensitivity); M0.5 LS anchors re-pinned 0.2087/0.2117 → 0.2115/0.2184; checks.csv **8/8 PASS**; `test_b9_wingbody_ls` on
+  the production wiring (5/5) — [track_b](demo_report/track_b.md)
 - **P11** curved wall-adjacent elements (sphere leg) — `cases/demo/p11_curved_walls/` — 14 PASS + 2 XFAIL (G11.1/G11.2 recorded negatives) —
   2026-07-19 CLOSED (opened + closed same day, user-directed): the DP1 curved-element route measured **NEGATIVE** —
   a verified curved wall layer (planar null test ΔA ≡ 0 bitwise; quadrature = P1 reference to 1.3e-15;
