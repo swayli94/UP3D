@@ -1,9 +1,10 @@
 mach,path,resolution,cl_p,note
-0.5,conforming,medium,0.2173,B9 anchor
-0.65,conforming,medium,0.2321,
-0.75,conforming,medium,0.2483,NEW in B27
-0.79,conforming,medium,0.2579,strict ceiling
-0.84,conforming,coarse,0.2617,proof-of-concept
+0.5,conforming,medium,0.2143,B32 taper production anchor
+0.65,conforming,medium,0.2290,
+0.75,conforming,medium,0.2450,
+0.79,conforming,medium,0.2545,strict
+0.84,conforming,medium,0.2738,B32 climb record (clamps 0+0)
+0.84,conforming,coarse,0.2590,proof-of-concept
 0.5,level_set+flatfrag,medium,0.2184,B28 flat anchor
 0.65,level_set+flatfrag,medium,0.2296,directed ramp; strict final
 0.75,level_set+flatfrag,medium,0.2456,directed ramp; strict final

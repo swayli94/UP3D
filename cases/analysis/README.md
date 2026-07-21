@@ -56,6 +56,14 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   out-band cl_fus 0.0326 vs conforming oracle 0.0351 = 7.25% <= 15% TOL ⇒ **F1: sheet-POSITION sensitivity, not an error**;
   the "fuselage spurious lift" label retired; verdict + pre-registration in the dir) —
   `python cases/analysis/b28_cl_fus_flat_sheet/run_f2.py` — medium (~40 min)
+- `b32_tip_taper_adoption/` — B32 ② weld-sign freeze fix + ① conforming taper production adoption (user-adjudicated from
+  the B31 verdict) — **GB32.1 ✗ ROLLED BACK**: per-step weld-sign refresh turns the fixed system into a state-dependent
+  switching system (ill-posed — healthy 0.82 seed diverged; B31 frozen semantics restored bit-identical; the 0.84
+  fresh-seed hazard is handled by the F2 healthy-seed pattern) / **GB32.2 ✓ ADOPTED**: b18 CONF legs on tip_taper
+  (vanish_smooth 0.05·b_semi), conforming medium 0.50–0.79 strict re-solved 0 clamps, **ceiling climb 0.79 → 0.84
+  REACHED** (cl_p 0.2738, 0 clamps), demo checks 8/8 PASS, cl_p cost ≈ −1.3 % in the F3 band
+  (`results/g2_adoption_cost.csv`), cross-model gaps improved to 0.3 % (M0.65) / 0.2 % (M0.75) / GB32.3 VERDICT in dir —
+  `python cases/analysis/b32_tip_taper_adoption/run_g1.py` · `.../run_g2.py` — solves cached, CSV/PNG regenerate in minutes
 - `b31_tip_termination/` — B31 C-class wing-tip cure (sheet-termination re-spec) + LS step-semantics companion
   (GB31.1 tip atlas PASS: all 8 dying-level clamps = cap_wall at the sheet tip edge / GB31.2a taper factorial
   ⇒ **taper is the cause** (0.83 die→cure pair, 0 clamps) / GB31.2b production pressure+taper port ⇒ **✓

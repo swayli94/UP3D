@@ -1,7 +1,12 @@
 """
 Track B / B18 -- transonic (M0.84) ONERA M6 wing-body, REFRESHED by B29
 (2026-07-20): the level-set PRODUCTION side is now the B28 flat fragment
-(inboard clip + sheet geometry dragged flat at y=0).
+(inboard clip + sheet geometry dragged flat at y=0). REFRESHED again by
+B32 (2026-07-22): the conforming PRODUCTION recipe now carries the
+P13/G13.2 tip taper (vanish_smooth, r_c = 0.05*b_semi) through the B31
+pressure-row blend -- user-adjudicated from the B31 verdict (the taper
+cures the 0.83 dying level on the analysis grid; adoption cost cl_p ~ -3%
+at the top legs, reported per leg).
 
 Historical layers: the B18 baseline said "conforming reaches it, LS is
 junction-limited" (a spurious wing-fuselage junction supersonic pocket,
@@ -16,13 +21,19 @@ physics convects with the flow makes the out-band cl_fus agree with the
 conforming oracle to 7.25%. B29 adopts that flat fragment as the production
 LS configuration here (user-adjudicated, B28 VERDICT section 6) and
 re-solves the C side; the conforming legs and the side-A historical
-comparison are untouched (committed caches bit-reproduce).
+comparison are untouched (committed caches bit-reproduce). B32 adopts the
+tip taper as the production CONFORMING configuration (user-adjudicated,
+B31 VERDICT section 8) and re-solves the conforming legs (NEW conf_taper_*
+caches; the pre-adoption conf_* caches are stale); the LS legs and the
+side-A comparison are untouched (their caches bit-reproduce).
 
-  * CONFORMING (Newton + pressure Kutta, Mach continuation) -- the reference
-    path, unchanged: coarse reaches M0.84 (cl_p 0.2617); medium reaches M0.79
-    strict (cl_p 0.2579) with a clean transonic rise at M0.50/0.65/0.75/0.79
-    (the medium M0.75 point is NEW in B27 -- the second cross-model
-    abscissa).
+  * CONFORMING (Newton + pressure Kutta + tip taper, Mach continuation) --
+    the reference path: coarse reaches M0.84; medium reaches M0.79 strict
+    with a clean transonic rise at M0.50/0.65/0.75/0.79 plus the B32
+    ceiling-climb record leg toward 0.84 (the B31 0.83 dying level is
+    cured by the production taper on the analysis grid). The M0.50
+    conforming anchor is re-solved LIVE with the taper (the B9 no-taper
+    value is historical).
   * LEVEL-SET without the clip (side A = the B18 recipe re-run on the current
     code): STILL pocket-limited -- medium dies at M0.5125, class (a) (the
     pocket erupts at 0.55: Mmax 13.1, beyond freeze_max_clamped=8); coarse
@@ -36,18 +47,20 @@ comparison are untouched (committed caches bit-reproduce).
     with the flow -- the cross-model-consistent configuration (B28-F1).
     The M0.5 subsonic anchors move to the re-run B9 demo values
     (0.2115 / 0.2184), tightening the M0.5 cross-model gap 2.6% -> 0.5%.
-  * CROSS-MODEL: M0.5 (0.5%, B9/B28) + M0.65 (gated <= 5%) + M0.75
-    (recorded, shock-sensitive) at medium, plus the coarse M0.60 point
-    (under-resolved).
+  * CROSS-MODEL: M0.5 (B32 taper conf / B28 flat LS) + M0.65 (gated <= 5%)
+    + M0.75 (recorded, shock-sensitive) at medium, plus the coarse M0.60
+    point (under-resolved).
 
 Gates:
   GB18.1 (PASS)      conforming transonic reaches M0.84 (coarse) / M0.79
-                     (medium), strict; the monotone cl(M) rise incl. 0.75.
+                     (medium), strict; the monotone cl(M) rise; the B32
+                     climb leg records the post-adoption medium ceiling
+                     (>= 0.80 expected per the B31 analysis-grid cure).
   GB18.2 (PASS)      LS ceiling A vs C: C coarse reaches 0.84 while A dies
                      below it; C medium climbs past 0.70 while A dies
                      at/below 0.55. The pocket was the limiter.
   GB18.3 (PASS/REC)  cross-model: M0.65 medium |cl_p gap| <= 5% is a REAL
-                     gate; M0.5 anchor (0.5%), M0.75 medium and the coarse
+                     gate; M0.5 anchor, M0.75 medium and the coarse
                      M0.60 point are recorded.
   GB18.4 (RECORDED)  pocket attribution: the A side cites the committed B26
                      evidence (cases/analysis/b26_ls_transonic_ceiling/
@@ -66,8 +79,9 @@ Gates:
 
 All solves are gated (PYFP3D_TRANSONIC_GATES=1) + cached to gitignored
 results/*.npz (the flat C side uses NEW ls_flat_* caches; the B26 tilted
-ls_C_* caches are stale and unused). Meshes gitignored -> a level whose
-mesh is absent is skipped.
+ls_C_* caches are stale and unused; the B32 conforming taper legs use NEW
+conf_taper_* caches, the pre-adoption conf_* ones are stale). Meshes
+gitignored -> a level whose mesh is absent is skipped.
 """
 
 import json
@@ -86,6 +100,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from cases.demo._common import (CheckList, CRITICAL, MUTED, S1_BLUE, S2_AQUA,
                                 S3_YELLOW, apply_style, finish, write_csv)
+from pyfp3d.constraints.wake import tip_taper_factors
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.meshgen.fuselage import FuselageParams, make_inboard_clip
@@ -109,8 +124,12 @@ FUS = FuselageParams()
 Z_JUNC = junction_z(FUS)
 LS_DIR = REPO_ROOT / "cases/meshes/onera_m6_wingbody"
 CONF_DIR = REPO_ROOT / "cases/meshes/onera_m6_wingbody_conforming"
-# committed M0.5 subsonic anchors (B9 conforming pressure / B28 flat-fragment
-# LS -- the re-run B9 demo; supersedes the B17 tilted-sheet 0.2087/0.2117)
+# committed M0.5 subsonic anchors. LS = B28 flat-fragment (the re-run B9
+# demo); conforming = HISTORICAL pre-adoption record (B9 pressure, no
+# taper) -- superseded by the B32 taper adoption: the demo re-solves the
+# conforming M0.5 leg LIVE with the production taper below and uses that
+# value everywhere (this dict's conforming entries are kept for the
+# coarse increment reference + the paper trail).
 CL_M05 = {"conforming": {"coarse": 0.2089, "medium": 0.2173},
           "level_set":  {"coarse": 0.2115, "medium": 0.2184}}
 
@@ -121,6 +140,14 @@ CONF_SEED_KW = dict(farfield_spanwise_gamma=True, precond="direct",
 CONF_RAMP_NK = dict(freeze_refresh_max=8, precond="direct",
                     direct_refactor_every=1000, n_newton_max=80,
                     farfield_spanwise_gamma=True)
+# B32 tip-taper adoption (user-adjudicated from the B31 verdict): the
+# conforming production recipe unloads the tip Gamma with the P13/G13.2
+# vanish_smooth taper (r_c = 0.05*b_semi) through the B31 pressure-row
+# blend (solve/newton.py NewtonWorkspace docstring; the weld sign is
+# per-step refreshed since B32). Applied uniformly over M. NEW
+# conf_taper_* caches -- the pre-adoption conf_* caches are stale (the
+# ls_flat_* precedent).
+CONF_TAPER = ("vanish_smooth", 0.05)
 # LS freeze-ramp recipe (B15 + B17 pin_gamma; freeze_tol above the M0.5 floor)
 # -- frozen verbatim since B18; B26 re-measured the ceiling with it.
 LS_RAMP_KW = dict(farfield="freestream", farfield_aux="pin_gamma", freeze_tol=1e-4,
@@ -129,7 +156,8 @@ LS_RAMP_KW = dict(farfield="freestream", farfield_aux="pin_gamma", freeze_tol=1e
 DM = 0.05
 
 checks = CheckList("B18 wing-body transonic, B29 refresh: LS production = "
-                   "flat-fragment (inboard clip + flat sheet)")
+                   "flat-fragment (inboard clip + flat sheet); B32 refresh: "
+                   "conforming production = pressure Kutta + tip taper")
 
 
 # -------------------------------------------------------------------- builders
@@ -187,17 +215,23 @@ def fuselage_parts(mesh, mvop, phi_ext, s_ref, m_inf):
 
 # -------------------------------------------------------------------- solves
 def conf_ramp(level, mc, wc, m_target, m_start):
-    """Conforming Mach ramp to m_target; returns (cl_p, cl_kj, m_reached, mmax,
-    reached_flag). Cached."""
-    cache = OUT / f"conf_{level}_{str(m_target).replace('.','')}.npz"
+    """Conforming Mach ramp to m_target (B32: the production recipe carries
+    the tip taper -- CONF_TAPER above); returns (cl_p, cl_kj, m_reached,
+    mmax, reached_flag, n_limited, n_floored). Cached as conf_taper_*."""
+    cache = OUT / f"conf_taper_{level}_{str(m_target).replace('.','')}.npz"
     s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
     if cache.exists():
         d = np.load(cache)
-        return float(d["clp"]), float(d["clkj"]), float(d["m"]), float(d["mmax"]), bool(d["reached"])
+        return (float(d["clp"]), float(d["clkj"]), float(d["m"]),
+                float(d["mmax"]), bool(d["reached"]),
+                int(d["nlim"]), int(d["nflr"]))
     seed = solve_newton_lifting(mc, wc, m_inf=m_start, alpha_deg=ALPHA, **CONF_SEED_KW)
+    taper = tip_taper_factors(wc.station_z, B_SEMI, CONF_TAPER[0],
+                              CONF_TAPER[1] * B_SEMI)
     r = solve_newton_transonic(mc, wc, m_inf=m_target, alpha_deg=ALPHA, m_start=m_start,
         dm=DM, dm_min=0.01, freeze_tol=1e-5, intermediate_tol=1e-4,
         newton_kw=dict(CONF_RAMP_NK, kutta_estimator="pressure",
+                       tip_taper=taper,
                        phi_init=seed["phi"], gamma_init=seed["gamma"], n_picard_seed=0))
     m_reached = r["level_history"][-1][0]
     reached = abs(m_reached - m_target) < 1e-9 and r["converged"]
@@ -206,10 +240,12 @@ def conf_ramp(level, mc, wc, m_target, m_start):
     o = np.argsort(zte); zz = np.concatenate([zte[o], [B_SEMI]]); gg = np.concatenate([g[o], [0.0]])
     clkj = 2.0 * float(np.trapezoid(gg, zz)) / s_ref
     mmax = float(np.sqrt(r.get("mach2_max", 0.0)))   # conforming solver reports it
-    np.savez(cache, phi=r["phi"], clp=clp, clkj=clkj, m=m_reached, mmax=mmax, reached=reached)
+    nlim, nflr = int(r["n_limited"]), int(r["n_floored"])
+    np.savez(cache, phi=r["phi"], gamma=r["gamma"], clp=clp, clkj=clkj,
+             m=m_reached, mmax=mmax, reached=reached, nlim=nlim, nflr=nflr)
     print(f"  [conf {level} ->{m_target}] reached={reached} m={m_reached} cl_p={clp:.4f} "
-          f"Mmax={mmax:.2f} res={r['residual_history'][-1]:.1e}", flush=True)
-    return clp, clkj, m_reached, mmax, reached
+          f"Mmax={mmax:.2f} clamps={nlim}+{nflr} res={r['residual_history'][-1]:.1e}", flush=True)
+    return clp, clkj, m_reached, mmax, reached, nlim, nflr
 
 
 _LV_KEYS = ("m_inf", "tag", "gamma", "cl_kj", "mach_max", "n_newton",
@@ -296,13 +332,13 @@ def fig_cl_vs_mach(conf_pts, ls_pts, conf_coarse_084, ls_coarse_084, ls_ceiling_
     finish(fig, OUT, "b18_cl_vs_mach.png")
 
 
-def fig_ceiling(a_coarse, c_coarse, a_medium, c_medium):
+def fig_ceiling(a_coarse, c_coarse, a_medium, c_medium, conf_medium=0.79):
     fig, ax = plt.subplots(figsize=(7.2, 4.0))
     labels = ["conforming", "level-set\nA (no clip)", "level-set\nC (flat frag)"]
     xs = np.arange(3)
     w = 0.36
     vals_coarse = [0.84, a_coarse, c_coarse]
-    vals_medium = [0.79, a_medium, c_medium]
+    vals_medium = [conf_medium, a_medium, c_medium]
     ax.bar(xs - w / 2, vals_coarse, width=w, color=S3_YELLOW, label="coarse")
     ax.bar(xs + w / 2, vals_medium, width=w, color=S1_BLUE, label="medium")
     for x, v in zip(xs - w / 2, vals_coarse):
@@ -320,7 +356,7 @@ def fig_ceiling(a_coarse, c_coarse, a_medium, c_medium):
 
 def fig_sections_medium(mc, level="medium", m=0.79):
     """conforming M0.79 medium section Cp (the transonic shock)."""
-    cache = OUT / f"conf_{level}_{str(m).replace('.','')}.npz"
+    cache = OUT / f"conf_taper_{level}_{str(m).replace('.','')}.npz"
     if not cache.exists():
         return
     phi = np.load(cache)["phi"]
@@ -354,7 +390,7 @@ def run_coarse():
         return None
     print("=== coarse ===", flush=True)
     # conforming coarse M0.84 (headline proof-of-concept)
-    clp84, clkj84, m84, mmax84, r84 = conf_ramp("coarse", mc, wc, 0.84, 0.70)
+    clp84, clkj84, m84, mmax84, r84, _, _ = conf_ramp("coarse", mc, wc, 0.84, 0.70)
     checks.add("GB18.1", "conforming_coarse_M084",
                f"reached={r84} cl_p={clp84:.4f} (M_max {mmax84:.2f})",
                "conforming Mach-ramp reaches M0.84 at coarse (proof-of-concept; "
@@ -389,19 +425,31 @@ def run_medium(coarse):
         return
     print("=== medium ===", flush=True)
     s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
-    # conforming medium cl(M): 0.65, 0.75 (NEW in B27) and 0.79
-    # (0.5 is the committed anchor)
-    clp65, _, m65, _, r65 = conf_ramp("medium", mc, wc, 0.65, 0.60)
-    clp75, _, m75, _, r75 = conf_ramp("medium", mc, wc, 0.75, 0.70)
-    clp79, clkj79, m79, mmax79, r79 = conf_ramp("medium", mc, wc, 0.79, 0.70)
-    conf_pts = [(0.50, CL_M05["conforming"]["medium"]), (0.65, clp65),
-                (0.75, clp75), (0.79, clp79)]
+    # conforming medium cl(M), B32 production recipe (pressure + tip taper):
+    # 0.50 re-solved LIVE with the taper (the B9 no-taper anchor above is
+    # historical), 0.65, 0.75, 0.79 -- plus the ceiling-climb record leg.
+    clp50, _, _, _, r50, _, _ = conf_ramp("medium", mc, wc, 0.50, 0.50)
+    clp65, _, _, _, r65, _, _ = conf_ramp("medium", mc, wc, 0.65, 0.60)
+    clp75, _, _, _, r75, _, _ = conf_ramp("medium", mc, wc, 0.75, 0.70)
+    clp79, clkj79, m79, mmax79, r79, nlim79, nflr79 = conf_ramp(
+        "medium", mc, wc, 0.79, 0.70)
+    # B32 ceiling-climb record: the B31 dying level (0.83) is cured by the
+    # production taper on the analysis grid; the demo ramp records how far
+    # the production chain actually climbs (0.80/0.84 are the strict rungs).
+    clp_top, _, m_top, mmax_top, r_top, nlim_top, nflr_top = conf_ramp(
+        "medium", mc, wc, 0.84, 0.70)
+    conf_pts = [(0.50, clp50), (0.65, clp65), (0.75, clp75), (0.79, clp79),
+                (m_top, clp_top)]
     checks.add("GB18.1", "conforming_medium_M079",
                f"reached={r79} cl_p={clp79:.4f}; cl(M) 0.50/0.65/0.75/0.79 = "
-               f"{CL_M05['conforming']['medium']}/{clp65:.4f}/{clp75:.4f}/{clp79:.4f}",
-               "conforming reaches M0.79 STRICT at medium (M0.80+ stalls, recorded); "
-               "monotone transonic rise incl. the new M0.75 point",
-               r79 and r75 and clp79 > clp75 > clp65 > CL_M05["conforming"]["medium"])
+               f"{clp50:.4f}/{clp65:.4f}/{clp75:.4f}/{clp79:.4f}; B32 taper climb: "
+               f"m_reached={m_top:.4g} (cl_p {clp_top:.4f}, clamps "
+               f"{nlim_top}+{nflr_top})",
+               "conforming production (pressure+taper, B32) reaches M0.79 STRICT "
+               "at medium and the climb records the post-adoption ceiling "
+               "(B31: the 0.83 dying level is cured on the analysis grid); "
+               "monotone transonic rise",
+               r79 and r75 and clp79 > clp75 > clp65 > clp50 and m_top >= 0.80)
 
     # LS medium ceiling probe, A vs C (B26 G1 legs recipe, C now flat-sheet)
     ls_a = ls_ramp("A", "medium", mesh_a, mvop_a, 0.84, 0.50)
@@ -421,7 +469,7 @@ def run_medium(coarse):
     ls_c75 = ls_ramp("C", "medium", mesh_c, mvop_c, 0.75, 0.50)
     gap65 = abs(ls_c65["clp"] - clp65) / clp65 * 100
     gap75 = abs(ls_c75["clp"] - clp75) / clp75 * 100
-    d_conf_05 = abs(CL_M05["conforming"]["medium"] - CL_M05["level_set"]["medium"]) / CL_M05["conforming"]["medium"] * 100
+    d_conf_05 = abs(clp50 - CL_M05["level_set"]["medium"]) / clp50 * 100
     checks.add("GB18.3", "cross_model_medium_M065",
                f"conf {clp65:.4f} vs LS flat-frag {ls_c65['clp']:.4f} -> |gap| {gap65:.1f}%",
                "PASS gate: |cl_p gap| <= 5% at M0.65 medium (the B9/B28 M0.5 "
@@ -432,8 +480,8 @@ def run_medium(coarse):
                "threshold)", True)
 
     # cross_model.csv: M0.5 anchor + coarse 0.60 + the medium points
-    rows = [(0.50, "medium", f"{CL_M05['conforming']['medium']}", f"{CL_M05['level_set']['medium']}",
-             f"{d_conf_05:.1f}", "trustworthy (B9/B28 flat-fragment)")]
+    rows = [(0.50, "medium", f"{clp50:.4f}", f"{CL_M05['level_set']['medium']}",
+             f"{d_conf_05:.1f}", "trustworthy (B32 taper conf / B28 flat LS)")]
     if coarse and coarse["conf_cx"] is not None and coarse["ls_cx"] is not None:
         mx = coarse["mx"]
         dconf = coarse["conf_cx"] - CL_M05["conforming"]["coarse"]
@@ -473,7 +521,7 @@ def run_medium(coarse):
     # GB18.5 fuselage lift: live conforming value at the medium transonic top
     # + the LIVE flat C-side ceiling decomposition (B29; the B26 tilted-sheet
     # "x2 out-band" reading is retired by B28 = sheet-position sensitivity).
-    cl_fus = float(wall_forces(mc, phi=np.load(OUT / "conf_medium_079.npz")["phi"],
+    cl_fus = float(wall_forces(mc, phi=np.load(OUT / "conf_taper_medium_079.npz")["phi"],
                                alpha_deg=ALPHA, s_ref=s_ref, m_inf=m79, wall_tag="fuselage")["cl"])
     parts = fuselage_parts(mesh_c, mvop_c, d["phi_ext"], s_ref, float(d["m_final"]))
     checks.add("GB18.5", "fuselage_lift",
@@ -490,10 +538,12 @@ def run_medium(coarse):
 
     # artifacts
     write_csv(OUT, "cl_vs_mach.csv", "mach,path,resolution,cl_p,note",
-              [(0.50, "conforming", "medium", f"{CL_M05['conforming']['medium']}", "B9 anchor"),
+              [(0.50, "conforming", "medium", f"{clp50:.4f}", "B32 taper production anchor"),
                (0.65, "conforming", "medium", f"{clp65:.4f}", ""),
-               (0.75, "conforming", "medium", f"{clp75:.4f}", "NEW in B27"),
-               (0.79, "conforming", "medium", f"{clp79:.4f}", "strict ceiling"),
+               (0.75, "conforming", "medium", f"{clp75:.4f}", ""),
+               (0.79, "conforming", "medium", f"{clp79:.4f}", "strict"),
+               (f"{m_top:.4g}", "conforming", "medium", f"{clp_top:.4f}",
+                f"B32 climb record (clamps {nlim_top}+{nflr_top})"),
                (0.84, "conforming", "coarse", f"{coarse['clp84']:.4f}" if coarse else "n/a",
                 "proof-of-concept"),
                (0.50, "level_set+flatfrag", "medium", f"{CL_M05['level_set']['medium']}", "B28 flat anchor"),
@@ -513,7 +563,7 @@ def run_medium(coarse):
                    (ls_c["m_last"], ls_c["clp"]), a_deaths)
     fig_ceiling(coarse["ls_a"]["m_last"] if coarse else 0.82,
                 coarse["ls_c"]["m_last"] if coarse else 0.84,
-                ls_a["m_last"], ls_c["m_last"])
+                ls_a["m_last"], ls_c["m_last"], conf_medium=m_top)
     fig_sections_medium(mc)
 
 

@@ -2384,6 +2384,49 @@ evidence-only step-semantics evaluation (GB31.4). Pre-registration:
 - ★ Library changes allowed this phase (GB31.2b/31.3), ALL default-off
   bit-identical (B20/B25 discipline); production adoption = user's call.
 
+### B32 — ② weld-sign freeze fix + ① conforming taper production adoption ✓ CLOSED 2026-07-22 (user-adjudicated ①+② from B31 VERDICT §8; SAME-BRANCH continuation; pre-registered GB32.1–32.3; ② ✗ rolled back — per-step refresh = ill-posed switching system; ① ✓ adopted — conforming medium ceiling 0.79 → 0.84 reached, 0 clamps, cl_p cost ≈ −1.3 %)
+
+**Trigger.** B31 verdict: the CONF-side C-class cure HOLDS (taper is the
+cause; production pressure+taper cures dying level 0.83 and converges
+0.84 from a healthy seed) → the user adopted ① (production taper +
+demo-anchor refresh) with ② (the F2-diagnosed weld-sign freeze fix) as
+its companion prerequisite. Pre-registration:
+`cases/analysis/b32_tip_taper_adoption/PRE_REGISTRATION.md`.
+
+- [x] **GB32.1 (② weld-sign per-step refresh) — ✗ ROLLED BACK:** the
+  per-step refresh turns the fixed system into a state-dependent
+  SWITCHING system (s(x) = sign diag D(x)) — ill-posed: the clean 0.82
+  leg (σ_flips=0 seed, 8 steps 0 clamps pre-fix) diverged (80 steps,
+  23 lim + 13 flr, 16 applied flips; `results/g1.log`). Rolled back to
+  the B31 frozen semantics (bit-identical restore of 9822b60, 29/29
+  regression green); the 0.84 fresh-seed hazard is handled
+  operationally (F2 healthy-seed pattern; the production ramp's level-0
+  freeze at 0.70 subcritical is healthy). A well-posed refresh for the
+  switching system is separate research, not nominated here.
+- [x] **GB32.2 (① taper production adoption + demo anchors) — ✓ ADOPTED:**
+  b18 `run_demo.py` CONF legs now carry `tip_taper` (vanish_smooth,
+  r_c=0.05·b_semi, uniform over M; the `tip_taper=None` library default
+  untouched); conforming medium chain 0.50/0.65/0.75/0.79 strict
+  re-solved 0 clamps (cl_p 0.2143/0.2290/0.2450/0.2545) + coarse ramp
+  0.84 re-solved (0.2590); **ceiling climb 0.79 → 0.84 REACHED**
+  (cl_p 0.2738, Mmax 2.14, 0 clamps, res 1.9e-14 — production-ramp
+  semantics: the level-0 freeze at 0.70 subcritical is healthy, the
+  GB32.1 hazard does not trigger); demo checks **8/8 PASS**. Cost table
+  `cases/analysis/b32_tip_taper_adoption/results/g2_adoption_cost.csv`:
+  7/7 legs 0 clamps, corrM ≤ 1.180 (guard 1.3), cl_p cost −1.31..−1.37 %
+  medium / −1.03..−1.04 % coarse (inside the F3 band; the B31
+  analysis-grid −3.00 % is the single-level strict semantics — both
+  recorded, VERDICT §3); cross-model gaps IMPROVED M0.65 1.1 → **0.3 %**
+  (gate ≤ 5 %), M0.75 1.1 → **0.2 %**; M0.5 anchor re-pinned
+  0.2173 → 0.2143 (gap vs LS 0.2184 = 1.9 % RECORDED, no gate).
+- [x] **GB32.3 (wrap-up, evidence-only):** VERDICT
+  (`cases/analysis/b32_tip_taper_adoption/VERDICT.md`) + ledger + README
+  + merged regression (v0/b1/b2/m2/p8/p13/p14/b31, 16 threads:
+  **170 passed, 4 skipped**) + demo checks 8/8 rechecked.
+- ★ NOT this phase: ③ B10 roll-up rescope (model-level, user briefed,
+  not launched); freeze_max_clamped stays user-reserved; LS side and
+  the `tip_taper=None` library default untouched.
+
 ## Progress ledger
 
 ### Track B — level-set embedded wake
@@ -2409,7 +2452,7 @@ numerics spec [design_track_b.md](../design_track_b.md) (supersedes DN1) + gate
 re-arbitration 2026-07-11; **B1 CLOSED 2026-07-11**, with M3/M4 delivered the
 same day; next = B2 *(that opening timeline is HISTORICAL — the live status is
 the ledger table below and the track line in agent-rules.md; as of 2026-07-22
-B1–B9 and B11–B31 are closed, B6 ◐, B10 shelved)*. Purpose is user-arbitrated as **mesh/geometry workflow
+B1–B9 and B11–B32 are closed, B6 ◐, B10 shelved)*. Purpose is user-arbitrated as **mesh/geometry workflow
 capability, not solver speed** (the kill-the-Γ-secant efficiency motivation is
 obsolete post-P8 Newton), so the efficiency criteria in the B-gates are
 non-regression guards only. Coexistence strategy: a parallel `solve/picard_ls.py`
@@ -2419,6 +2462,18 @@ byte-untouched. Sequencing guard: P8's Newton landed on the conforming wake
 wake-LS Jacobian blocks are constant in φ, no Γ elimination/Woodbury); Track B
 blocks nothing in P7–P12, and M2 (wing-body) wants it.
 
+- B32 — ✓ — 2026-07-22 — **② weld-sign freeze fix + ① conforming taper production adoption** (user-adjudicated ①+②
+  from B31 VERDICT §8; same-branch continuation; pre-registration + VERDICT `cases/analysis/b32_tip_taper_adoption/`).
+  GB32.1 **✗ ROLLED BACK** — per-step weld-sign refresh turns the fixed system into a state-dependent SWITCHING
+  system (s(x)=sign diag D(x)), ill-posed: the healthy 0.82 seed (σ_flips=0, 8 steps 0 clamps) diverged under refresh
+  (80 steps, 23 lim + 13 flr; `results/g1.log`); B31 frozen semantics restored bit-identical to 9822b60 (29/29 green);
+  the 0.84 fresh-seed hazard = F2 healthy-seed operational pattern (the production ramp's level-0 freeze at 0.70
+  subcritical is healthy) / GB32.2 **✓ ADOPTED** — b18 CONF legs on tip_taper (vanish_smooth 0.05·b_semi): conforming
+  medium 0.50/0.65/0.75/0.79 strict 0 clamps (0.2143/0.2290/0.2450/0.2545), **ceiling climb 0.79 → 0.84 REACHED**
+  (cl_p 0.2738, Mmax 2.14, 0 clamps) — the "M0.80+ stall" retired; demo checks 8/8 PASS; cl_p cost ≈ −1.3 % in the
+  F3 band (7/7 legs 0 clamps, corrM ≤ 1.180); cross-model gaps 1.1 → **0.3 %** (M0.65) / 1.1 → **0.2 %** (M0.75);
+  M0.5 anchor re-pinned 0.2173 → 0.2143 (RECORDED) / GB32.3 wrap-up (merged regression 170 passed, 4 skipped).
+  NOT this phase: ③ B10 roll-up rescope (user briefed, not launched), freeze_max_clamped (user-reserved), LS side.
 - B31 — ✓ — 2026-07-22 — **C-class wing-tip cure (sheet-termination re-spec) + LS step-semantics companion** (user-adjudicated
   ①+④ from B30 VERDICT §7; same-branch continuation; pre-registration + VERDICT `cases/analysis/b31_tip_termination/`). GB31.1
   PASS: all 8 dying-level clamps = cap_wall at the sheet tip edge / GB31.2a **taper is the cause** (0.83 die→cure factorial, 0
