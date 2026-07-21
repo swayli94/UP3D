@@ -1,6 +1,61 @@
 # pyFP3D Agent Rules
 
-Current phase: **B29 ✓ CLOSED 2026-07-20 (NEWEST; same branch as B28; no
+Current phase: **B32 ✓ CLOSED 2026-07-22 (NEWEST; same branch as the
+B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
+✗ ROLLED BACK + ① conforming tip_taper PRODUCTION ADOPTION ✓.** ★ **②
+GB32.1 ✗** — refreshing the Kutta-row weld sign every Newton step turns the
+fixed system into a state-dependent SWITCHING system (ill-posed; the coarse
+0.84 chain-seed diverges, 80 steps / 23 lim + 13 flr); B31's FROZEN
+`kutta_weld_sign` semantics restored **bit-identical to 9822b60** (29/29
+green). ★★ **① GB32.2 ✓** — the b18 conforming legs now carry `tip_taper`
+(`vanish_smooth`, r_c 0.05·b_semi): **conforming wing-body medium ceiling
+M0.79 → M0.84 REACHED** (cl_p 0.2738, 0 clamps), the old "M0.80+ stall" was
+the wing-tip sheet-termination singularity (B31), cured by the taper at
+**≈ −1.3 % cl_p cost** in the F3 band (−1.03..−1.04 % coarse). M0.5 anchor
+re-pinned 0.2173 → **0.2143** (RECORDED); cross-model gaps **0.3 % (M0.65) /
+0.2 % (M0.75)** (`cross_model.csv`; M0.5 widens to 1.9 % from the taper
+anchor drop). demo **8/8 PASS**. no LS-side change. Evidence:
+`cases/analysis/b32_tip_taper_adoption/` + refreshed
+`cases/demo/b18_wingbody_transonic/results/`.
+
+**B31 ✓ CLOSED 2026-07-22 (same branch as B30; user-adjudicated ①+④ from
+B30 VERDICT §7): C-class wing-tip cure (sheet-termination re-spec) + LS
+step-semantics companion.** ★ **GB31.1 PASS** — all 8 dying-level clamps of
+the conforming M0.80+ stall = `cap_wall` at the wake sheet's TIP edge (the
+P13 free-edge singularity, not slivers). ★ **GB31.2a** factorial: `tip_taper`
+IS the cause (0.83 die → cure, 0 clamps). ★★ **GB31.2b ✓** — the production
+`kutta_estimator="pressure"` + taper port CURES the 0.83 dying level strict
+and converges 0.84 from a healthy seed. **`tip_taper` + `pressure` now runs
+the B31 Gamma-pin row blend** (`newton.py` NewtonWorkspace:
+`F_j = τ_j·σ_j·F_raw_j + (1−τ_j)·s_j·Γ_j`; the pin slope
+`s_j = sign(diag D0)_j` is FROZEN with σ at the first residual eval, recorded
+as `kutta_weld_sign` — measured diag D > 0 on the conforming meshes, so an
+unsigned weld would AMPLIFY mid-taper loading; **FD-verified**
+`test_blend_jacobian_fd_phi/_gamma` < 1e-8). The 0.84 chain-seed failure =
+the weld-sign freeze hazard B32② then closed by rollback-to-frozen.
+★ **GB31.3 — LS-side C-class CLOSED (negative)**: C1 ✗ inboard backflow
+−19.5 % / C3 ✗ coarse divergence (sheet reaches q≈14); the `outboard_fringe`
+knob is retained default-inert (C1/C3 both measured negative). ★ **GB31.4**
+step-semantics evaluation (evidence-only, CLOSED). Library changes this phase
+(`newton.py` blend, `cut_elements.py` `outboard_fringe`, `multivalued.py` C1
+fade) are ALL default-off / bit-identical. Tests
+`tests/test_b31_pressure_taper.py` (13) + `tests/test_b31_tip_fringe.py`
+(19). Adoption exits user-adjudicated → B32. Evidence
+`cases/analysis/b31_tip_termination/`.
+
+**B30 ✓ CLOSED 2026-07-21 (user-adjudicated; SAME branch
+`kimi/b30-transonic-ceiling-attribution`): (b)-class wing-body transonic
+ceiling attribution + López dissipation lever — the ceiling is the SAME
+mechanism on both paths.** The conforming-medium M0.80+ stall and the
+LS+clip-medium 0.775 death are ONE class: the **wing-tip P13 sheet-termination
+free-edge singularity + high-M Newton lim/flr oscillation**, NOT a
+wake-model-specific junction pocket (G2 census: the dying peaks co-locate at
+the wing TIP on both paths). The López artificial-dissipation lever is
+LS-part / CONF-fail (G3). ★ Named the **C-class tip cure → B31/B32**. no
+`pyfp3d/` change. Evidence `cases/analysis/b30_transonic_ceiling/`
+(g1_anchor / g2_census / g2_regions / g3_levers).
+
+**B29 ✓ CLOSED 2026-07-20 (same branch as B28; no
 `pyfp3d/` change): flat-fragment adopted as the wing-body LS PRODUCTION
 config (user-adjudicated, B28 VERDICT §6).** B18 demo LS side C = B25 clip +
 B28 flat sheet (`sheet_direction=(1,0,0)`; NEW `ls_flat_*` caches, the B26
@@ -95,11 +150,15 @@ capability at h=0.08** (structured control ≈11% there); geometric-crime share
 ≈0.2 pp; recovery ≈0.2–0.5 pp (unchanged). The 2%-max-at-medium bar demands
 O(h²) wall velocity at h=0.08 — beyond ANY P1-field method on ANY mesh.
 **G1.6's strict xfail STAYS**; PROJECT_STRUCTURE "Known gaps" + the G1.6 row
-carry the erratum. ★ **Route fork recorded (= user's call)**: (a) Option C
-re-spec with a measured PASSING form (all-scales-refined order ≥1.8 + mean-Cp
-< 1% at h_min 0.03 — measured 1.89–1.98 / 0.60%); (b) isoparametric P2 wall
-layer (the only route to the literal criterion); (c) accept as a permanent
-recorded limitation. ★ **Wing-body caveat**: the "three wounds, one G1.6 root
+carry the erratum. ★ **Route fork RESOLVED 2026-07-22 (user-directed): (a)
+Option C re-spec ADOPTED** — the active G1.6 gate is now the measured PASSING
+criterion (all-scales-refined order ≥1.8 + mean-Cp < 1% at h_min 0.03 —
+measured 1.98/1.89 & 0.60%), asserted by
+`tests/test_laplace_sphere.py::TestG16Respec` (reads P11's committed sweep, no
+re-solve); the literal 2%-max-at-medium `test_sphere_cp_medium_mesh` STAYS a
+strict xfail = the recorded P1 limitation. Unchosen, on record: (b) isoparametric
+P2 wall layer (only route to the literal criterion; would also tighten Track V's
+u_e input band, A4); (c) accept as permanent limitation. ★ **Wing-body caveat**: the "three wounds, one G1.6 root
 cause" table (next_phase_priorities) lost its sphere anchor — GB9.4/GB20.5
 worsen-with-refinement is qualitatively different behaviour and needs its own
 discriminator before "G1.6 class" is quoted again. ★ Backport check: N/A —
@@ -615,8 +674,37 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   the conforming ceiling site (GB27.1/27.2 bit-consistency 336/336;
   cross-model upgraded M0.5 + M0.65 2.4% PASS + M0.75 2.5%); the
   "junction-limited" story RETIRED; next = (b)-class ceiling attribution
-  (user's call).
-- **Track V** ([track_v.md](roadmap/track_v.md)): designed, zero implementation.
+  (user's call) · **B28 ✓ CLOSED 2026-07-20** — cl_fus decoupling + GB9.4
+  RE-SPEC: the "fuselage spurious lift" label retired (cl_fus = physical
+  carryover + wake-sheet POSITION sensitivity, NOT the G1.6 error); gate
+  re-spec'd to out-band cross-model ≤15%, medium 7.0% PASS, b9 demo 8/8
+  (`levelset.py` flat `sheet_direction`) · **B29 ✓ CLOSED 2026-07-20** —
+  flat-fragment adopted as the wing-body LS PRODUCTION config (no `pyfp3d/`
+  change; M0.5 LS anchors 0.2115/0.2184) · **B30 ✓ CLOSED 2026-07-21** —
+  (b)-class ceiling attribution: conforming M0.80+ stall and LS+clip 0.775
+  death are the SAME mechanism (wing-tip P13 free-edge singularity + high-M
+  Newton), NOT a wake-model pocket; named the C-class tip cure (no `pyfp3d/`
+  change) · **B31 ✓ CLOSED 2026-07-22** — C-class wing-tip cure: production
+  pressure+taper CURES the conforming 0.83 dying level (Gamma-pin row blend,
+  FD-verified); LS-side C-class CLOSED negative (C1/C3, `outboard_fringe`
+  retained default-inert) · **B32 ✓ CLOSED 2026-07-22** — ② weld-sign
+  per-step refresh rolled back (ill-posed), ① conforming tip_taper adopted:
+  wing-body medium ceiling M0.79 → **M0.84 reached** (cl_p 0.2738, 0 clamps),
+  cl_p cost ≈ −1.3%, demo 8/8.
+- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ◐ OPENED 2026-07-22** —
+  gates re-spec'd at opening against the B32/A4 state, then re-phased the same
+  day (user-directed): V1 standalone IBL3 core (GV1.1 vs analytic/self-similar),
+  V2 transpiration channel (GV2.1 exactness + ṁ=0 bit-identity + FD), V3 loose
+  coupling (GV3.1 NACA0012 vs committed XFOIL with the A4 input band quoted,
+  GV3.2 loose loop ≤ 10, GV3.3 fuselage body-of-revolution smoke = the only
+  fuselage-alone item); V4 optional quasi-simultaneous (skip wired to GV3.2);
+  V5 tight coupling — entry = GV5.0 M6 subsonic loose-coupling bridge
+  (RECORDED, first live 3-D crossflow exercise), GV5.3 anchored on the
+  committed M6 experiment **Cp** (no experimental CL committed), GV5.1 carries
+  a pre-registered FD note for the u_e-recovery zone switch; V6 wake sheet;
+  wing-body VII deferred until the LS-side tip cure. Binding reference on
+  hand: Drela 2013 = AIAA 2013-2437 (`docs/references/`, gitignored). No
+  implementation yet.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
   **A2 ✓** (CLOSED 2026-07-17, GA2.1–GA2.5; TE/Kutta fidelity attribution —
@@ -698,11 +786,19 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **479 passed + 25 skipped + 2 xfailed** (2026-07-20, B25 inboard
+Baseline: **519 passed + 25 skipped + 2 xfailed** (2026-07-22, B28–B32
+close-out **+ G1.6 Option C re-spec**; full-suite measured 516 @1223.39 s
+@16 threads, + the 3 `tests/test_laplace_sphere.py::TestG16Respec` asserts
+= 519 — the re-spec reads P11's committed sweep CSVs, non-interacting).
+The 516 = +37 vs the B25 479 = B28's cut-from-fragment locks
+(`tests/test_b1_cut_elements.py`, +4) + B31's `tests/test_b31_pressure_taper.py`
+(13) + `tests/test_b31_tip_fringe.py` (19) + a `tests/test_p14_te_pressure.py`
+lock (1); B29/B30/B32 added no tests.
+Previous: 479 + 25 + 2 (2026-07-20, B25 inboard
 fragment clip, +6 passed = `tests/test_b1_cut_elements.py::TestInboardFragmentClip`
 (4) + the same file's foot-preference lock (1) + `tests/test_m2_wingbody.py`'s
-waterline-extension lock (1); **measured 1100.63 s @16 threads**).
-Previous: 473 + 25 + 2 (2026-07-19, P11 curved
+waterline-extension lock (1); measured 1100.63 s @16 threads);
+473 + 25 + 2 (2026-07-19, P11 curved
 walls, +8 passed = the ungated `tests/test_p11_curved_walls.py`;
 measured 1124.94 s @16 threads);
 465 + 25 + 2 (2026-07-19, B22 3-D LS

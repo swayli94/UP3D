@@ -1,0 +1,3 @@
+case,level,te_wedge_deg,linear_available,quadratic_available,linear_note,quadratic_note
+naca0012,coarse,16.33,True,True,ok,ok
+naca0012,medium,16.44,True,True,ok,ok

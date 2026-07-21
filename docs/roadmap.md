@@ -21,7 +21,7 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
 - **M — meshing** — [roadmap/track_m.md](roadmap/track_m.md) — M0, M1(+M1b), M2, M3, M4, M5 ✓ — **M2 ✓ (solver leg closed by B9
   2026-07-17; ledger erratum 2026-07-19: A3 claimed this line was fixed while it still read ◐)** (wing-body mesh ✓ 2026-07-13, **body
   re-spec'd + regenerated 2026-07-16**: 5 root chords, wing centered, 2-diameter ellipsoid nose, graded skin)
-- **B — level-set wake** — [roadmap/track_b.md](roadmap/track_b.md) — B1–B5, B7, B8, B11–B29 ✓ (**erratum 2026-07-19:
+- **B — level-set wake** — [roadmap/track_b.md](roadmap/track_b.md) — B1–B5, B7, B8, B11–B32 ✓ (**erratum 2026-07-19:
   this row had silently dropped B16/B17/B18 — see the track file for those entries**) · B6 ◐ (coarse gate ✓;
   medium quantitative closed by GB15.4, regressed under the first B20 re-baseline, **restored by B21**) · **B21 ✓ CLOSED 2026-07-19**
   (executes the Kimi-inspection N1 finding): `freeze_side_state` captured the frozen selection on the UNPATCHED side field —
@@ -41,7 +41,16 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   `b27_b18_demo_refresh/g27_consistency.csv`); cross-model upgraded M0.5 (2.6%) + M0.65 medium (2.4% PASS) + M0.75 (2.5%)) · **B29 ✓
   CLOSED 2026-07-20** (flat-fragment = the wing-body LS production config, user-adjudicated B28 §6: B18 C side = clip+flat sheet,
   M0.5 anchors 0.2115/0.2184; medium ceiling 0.7625→**0.775**; cross-model **0.5/1.1/1.1 %** M0.5/0.65/0.75; GB18.5 live flat
-  cl_fus 0.0382 vs conf 0.0423 — the B26 tilted ×2 out-band reading retired; demo 8/8) · **B26 ✓
+  cl_fus 0.0382 vs conf 0.0423 — the B26 tilted ×2 out-band reading retired; demo 8/8) · **B28 ✓ CLOSED 2026-07-20**
+  (cl_fus decoupling + GB9.4 RE-SPEC — the "fuselage spurious lift" label retired: cl_fus = physical carryover + wake-sheet POSITION
+  sensitivity, NOT the G1.6 error; gate re-spec'd to out-band cross-model ≤15%, medium 7.0% PASS, b9 demo 8/8) · **B30 ✓ CLOSED
+  2026-07-21** ((b)-class ceiling attribution: the conforming M0.80+ stall and the LS+clip-medium 0.775 death are the SAME mechanism —
+  the wing-tip P13 free-edge singularity + high-M Newton, NOT a wake-model pocket; named the C-class tip cure) · **B31 ✓ CLOSED
+  2026-07-22** (C-class wing-tip cure: production pressure+taper CURES the conforming 0.83 dying level via the Gamma-pin row blend
+  in `newton.py` (frozen weld-sign, FD-verified); LS-side C-class CLOSED negative — C1 inboard backflow / C3 coarse divergence,
+  `outboard_fringe` retained default-inert) · **B32 ✓ CLOSED 2026-07-22** (② weld-sign per-step refresh rolled back — ill-posed
+  switching system, B31 frozen semantics restored bit-identical; ① conforming tip_taper adopted — wing-body medium ceiling M0.79 →
+  **M0.84 reached** (cl_p 0.2738, 0 clamps), cl_p cost ≈ −1.3%, demo 8/8) · **B26 ✓
   CLOSED 2026-07-20 (B26-A)** (the junction pocket WAS the LS wing-body transonic ceiling limiter — healed by B25's `inboard_clip`:
   medium 0.50→0.7625, coarse 0.82→0.84 reached; death class flips (a)→(b), wing-tip P13; the A-side anchor divergence = the B21/B22
   freeze-capture effect) · **B18 ✓ CLOSED 2026-07-18** (wing-body transonic: conforming reaches M0.84/M0.79; **erratum 2026-07-20:
@@ -67,7 +76,10 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   (**corrected by B28 2026-07-20**: wake-sheet POSITION sensitivity, not an error — gate re-spec'd to out-band cross-model ≤15%,
   medium gap 7.0% PASS, demo 8/8);
   LS Newton diverges = neumann blockage not the solver**
-- **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10, zero implementation
+- **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10 · **V1 ◐ OPENED 2026-07-22**
+  (gates re-spec'd at opening against the B32/A4 state; same day re-phased: V1 IBL3 core / V2 transpiration channel /
+  V3 loose coupling incl. the fuselage body-of-revolution smoke; V4 optional; V5 tight coupling with the GV5.0 M6
+  subsonic bridge and GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
   3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · **A2 ✓ CLOSED 2026-07-17** (TE/Kutta fidelity attribution,

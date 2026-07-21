@@ -1614,3 +1614,74 @@ Jacobian → GB19.6 残差 → B21 freeze 捕获）。测试锁：3-D 冻结≡l
   前置就位）；**(b) 类天花板归因**为下一 phase 候选（LS+clip medium 0.775 与
   conforming medium 0.80+ 若同机制 = 翼尖 P13 + 激波系 lim/flr 振荡，投入转向
   两路径共享的 Newton 鲁棒性）；cl_fus out-band ×2 → P11 监视项。
+
+## 23. B28–B32：flat 片生产化 + (b) 类天花板归因 + C-class 翼尖 cure（2026-07-20…22，已关闭）
+
+> 本节记录 B28–B32 shipped 的离散/内核改动，使数值规范描述已发布代码
+> （纪律 #11）。权威台账/gate 见 [roadmap/track_b.md](roadmap/track_b.md)。
+
+### 23.1 B28/B29 — flat-fragment 生产片 + GB9.4 重定规格
+
+- **flat 生产片**：翼身 LS 片方向从 B26 的 tilted 改为 **flat `sheet_direction=(1,0,0)`**
+  （y=0 平面沿 +x 直纹；`wake/levelset.py`）。配 B25 `inboard_clip` 成为翼身 LS 生产
+  配置。M0.5 LS 锚重钉 0.2115/0.2184。
+- **GB9.4 重定规格（B28）**：cl_fus 不是 G1.6 刻面误差，而是**物理携带 + 尾迹片位置
+  敏感性**（tilted vs flat 片模型差）。gate 从"机身升力 ≤5% wing cl_p"改为**带外跨模型
+  一致 ≤15%**（medium 7.0% PASS）。"机身虚假升力"标签退役；B26 tilted 的"×2 out-band"
+  读数为位置敏感性伪影，退役（残余 → P11 监视）。
+
+### 23.2 B30 — (b) 类天花板归因（无内核改动）
+
+conforming medium M0.80+ stall 与 LS+clip medium 0.775 death **同机制**：翼尖片终止的
+**P13 自由边奇点 + 高 M Newton lim/flr 振荡**，非某尾迹模型特有的交界袋（G2 census：
+两路径垂死峰均在翼尖共址）。⇒ 翼身跨声速的下一道墙 = **两路径共享的 Newton 鲁棒性**。
+
+### 23.3 B31 — C-class 翼尖 cure（内核数值改动，两处）
+
+**(a) conforming：tip_taper + pressure 的 Gamma-pin 行 blend**（`solve/newton.py`
+NewtonWorkspace）。此前 `tip_taper` + `kutta_estimator="pressure"` 抛 NotImplementedError；
+B31 实现 Kutta 行的融合：
+
+```
+F_j = τ_j · σ_j · F_raw_j + (1 − τ_j) · s_j · Γ_j
+```
+
+- τ_j = `tip_taper` 因子（`constraints/wake.py::tip_taper_factors`，vanish_smooth，
+  r_c 0.05·b_semi）；τ_j=1 = 生产行，τ_j→0 把 Γ_j 钉向 0。
+- **pin 斜率 s_j = sign(diag D0)_j**，在首次残差评估时**与 σ 一起冻结**，记为
+  `kutta_weld_sign`。这是行自身 ∂F/∂Γ 取向的实测：朴素无符号 weld −(1−τ)Γ 只在
+  dF/dΓ ≈ −I 取向下正确，而实测 conforming 网格 **diag D > 0**（NACA 2.5D coarse +80；
+  M6 翼身 conforming coarse 中位 +566，符号一致 0 翻转），无符号 weld 会在中 τ **放大**
+  加载（实测 κ=1.08 @ τ=0.7）而非卸载。
+- **精确 Jacobian**：D 块加 `(1−τ)·kutta_weld_sign` 对角项；dF/dφ = σ·τ·Kp。二者均
+  **FD 验证**（`test_b31_pressure_taper.py::test_blend_jacobian_fd_phi/_gamma`，<1e-8）。
+- **★ 冻结语义（B32 定谳）**：`kutta_weld_sign` 必须**冻结**（随 σ 首评一次）。B32 试过
+  每步 refresh，把定系统变成状态依赖的**切换系统**（ill-posed，coarse 0.84 chain-seed
+  发散），已回滚——见 §23.5。
+
+**(b) LS：`outboard_fringe`（候选 C1/C3）—— ⊘ 实测阴性关闭**（`wake/cut_elements.py`
++ `wake/multivalued.py`）。C1 = 翼尖外侧渐隐 fringe（片自由端外移 w、taper z_tip 随之
+外移，物理跨内保持纯 wake-LS 行）；C3 = np.inf 哨兵（去掉翼尖 clip，片延到远场）。
+**GB31.3：C1 内侧 backflow −19.5% / C3 coarse 发散（片到 q≈14）⇒ LS 侧 C-class 关闭
+（negative）**。保留 default 0.0 = 逐位不变、19 条测试锁机制，作为证据机器（**不得**在无
+新证据下再提为翼尖 cure）。与 B8 inboard `span_blend`"dead end"的机械区别：aux 行沿 +x
+上风对流，翼尖外侧的 weld 无法把信息带回内侧升力展向（C1 内侧不变量，装配层断言）。
+
+### 23.4 B31 效果（conforming）
+
+生产 pressure+taper 治愈 conforming 0.83 濒死级严格收敛、0 钳制，并从健康 seed 收敛 0.84。
+0.84 chain-seed 失败 = weld-sign 冻结 hazard（F2 探针诊断，B32② 回滚到冻结语义闭合）。
+翼尖片终止奇点（GB31.1：8 个濒死级钳制全在片翼尖边 `cap_wall`）由 taper 去奇点。
+
+### 23.5 B32 — ① tip_taper 生产采纳 / ② weld-sign per-step refresh 回滚
+
+- **① 采纳（GB32.2 ✓）**：b18 conforming 腿接入 tip_taper（vanish_smooth 0.05·b_semi）。
+  **翼身 medium 天花板 M0.79 → M0.84 达成**（cl_p 0.2738、0 钳制），代价 ≈ −1.3% cl_p
+  （F3 带；coarse −1.03..−1.04%）。M0.5 锚 0.2173 → **0.2143**（RECORDED）；跨模型
+  0.3%（M0.65）/ 0.2%（M0.75）。demo 8/8 PASS。
+- **② 回滚（GB32.1 ✗）**：weld-sign 每步 refresh 把冻结定系统变成状态依赖切换系统
+  （ill-posed；80 步 23 lim + 13 flr 发散）；B31 冻结语义**逐位复原 9822b60**（29/29 绿）。
+
+**出口**：conforming 翼身跨声速 = "默认即正确"路径（recipe `kutta_estimator="pressure"`
++ tip_taper + `freeze_tol=1e-5`）。LS 侧翼尖 C-class 阴性关闭 ⇒ **两路径共享的高 M Newton
+鲁棒性**是翼身跨声速真正的下一道墙（(b) 类，命名未裁决）。

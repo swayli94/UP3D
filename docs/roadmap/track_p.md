@@ -116,8 +116,10 @@ G1.2-b → G1.5; G1.2 → G1.6. Git history and documents dated before 2026-07-0
       see PROJECT_STRUCTURE.md for why). Fix routes researched and tiered 2026-07-06 (design.md §5.1, Option A/B/C) and **resolved the same
       day by G1.3/G1.4 + DP1 above**: boundary-data corrections are ruled out by measurement (oracle ceiling ≈ 11.3%);
       ~~the sanctioned route is now Option C … with curved/isoparametric wall elements as the separately-scoped physical-accuracy effort~~
-      **P11 executed the curved-element route 2026-07-19: measured NEGATIVE** — the remaining routes are the §P11 close-out fork (Option C
-      re-spec with the measured passing form / isoparametric P2 wall layer / accept as permanent limitation), user's call.
+      **P11 executed the curved-element route 2026-07-19: measured NEGATIVE.** Route fork **RESOLVED 2026-07-22 (user-directed): Option C
+      re-spec ADOPTED** — the active G1.6 gate is now the achievable measured criterion (all-scales φ_w order ≥1.8 + mean Cp <1% at
+      h_min 0.03), PASSING via `TestG16Respec`; the literal 2%-max xfail stays as the recorded P1 limitation. Routes (b) isoparametric P2
+      wall layer / (c) accept remain on record, not taken.
       Do not re-propose h-refinement, post-processing tweaks, boundary-data corrections, **or mapped-P1 (superparametric) curved wall
       elements** — all are ruled out with evidence.
 **Visual test examples:**
@@ -1232,15 +1234,20 @@ nothing to correct (now for the measured reason that the geometric defect is
 tiny), and the gate is still unmet on the committed medium mesh. What is
 OVERTURNED: "the dominant error is the flat-facet natural-BC variational
 crime" and "closing G1.6 needs curved/isoparametric elements".
-★ **Route fork at close-out (= user's call, per the opening's decision-point
-clause):** (a) **Option C re-spec of G1.6** — now with a measured, passing
-form (e.g. "φ_w order ≥ 1.8 on a family where all scales refine (E6/E8
-measured 1.89–1.98) + mean Cp < 1% at h_min 0.03 (measured 0.60%)"), honest
-because the 2%-max-at-medium bar demands O(h²)-accurate wall velocity at
-h=0.08, beyond ANY P1-field method on ANY mesh (structured control ~11%);
+★ **Route fork at close-out — RESOLVED 2026-07-22 (user-directed): (a) Option
+C re-spec ADOPTED.** The active G1.6 gate is now the achievable, measured
+criterion, asserted PASSING by `tests/test_laplace_sphere.py::TestG16Respec`
+(reads P11's committed sweep, no re-solve): **all-scales-refined φ_w order
+≥ 1.8** (E6 icosphere s4→s5 = 1.98; E8 far-refinement = 1.89) **+ mean Cp
+< 1% at h_min 0.03** (E8 h03_far10 = 0.60%) **+ far-only refinement drop ≥ 2×**
+(3.17×, the bulk-pollution corroboration). The literal 2%-max-at-medium
+`test_sphere_cp_medium_mesh` STAYS a strict xfail = the recorded P1 limitation
+(it demands O(h²) wall velocity at h=0.08, beyond ANY P1-field method on ANY
+mesh; structured control ~11%). The two unchosen routes remain on record:
 (b) **isoparametric P2 wall layer** (new midside DOFs, field order raised —
-the only route left to the literal criterion; expectation, not promise); (c)
-accept G1.6 as a permanent recorded limitation. ★ **Wing-body caveat**: the
+the only route left to the LITERAL criterion; expectation, not promise; ★ also
+the one route that would tighten Track V's u_e input band, A4); (c) accept as a
+permanent recorded limitation. ★ **Wing-body caveat**: the
 2026-07-19 priorities analysis pinned three wounds to "the G1.6 class"; the
 sphere anchor of that class just dissolved (slow convergence ≠ the wing-body
 wounds' refinement-WORSENING behaviour), so GB9.4/GB20.5 need their own
@@ -2148,7 +2155,8 @@ symptom by construction).
 - P11 — ✓ **CLOSED 2026-07-19 (sphere leg, user-directed open same day)** — G11.1 NOT MET (curved layer 11.56%→11.33% = the G1.4 oracle
   ceiling; superparametric O(h) risk fired), G11.2 NEGATIVE + **premise refuted** (order collapse = fixed-bulk sweep floor, E8 3.17×/order
   1.89; structured-shell control order ~2 with flat facets), G11.3/G11.4 ✓ ⇒ **G1.6 RE-ATTRIBUTED to intrinsic P1 capability at h=0.08**
-  (crime share ≈0.2 pp); route fork (Option C re-spec / isoparametric P2 layer / accept) = **user's call**;
+  (crime share ≈0.2 pp); route fork **RESOLVED 2026-07-22 (user-directed): Option C re-spec ADOPTED** (achievable criterion
+  `TestG16Respec` PASS; literal 2%-max stays xfail = recorded P1 limit; routes (b) P2 layer / (c) accept not taken);
   wing-body cross-attribution to "the G1.6 class" flagged for its own discriminator — 2026-07-19 — ★ **Close-out 2026-07-19:
   see §P11 for the full measured record** (demo `cases/demo/p11_curved_walls/` 14 PASS + 2 XFAIL; tests `tests/test_p11_curved_walls.py` 8;
   delivered `pyfp3d/solve/curved_wall.py` + opt-in `stiffness_delta` on `solve_laplace`, default bit-identical). Prior entry follows.

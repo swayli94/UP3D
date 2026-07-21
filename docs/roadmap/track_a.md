@@ -380,7 +380,22 @@ a measured no-op on committed data.
 
 ### Track A — verification & analysis
 
-Track status: **◐ IN PROGRESS** — created 2026-07-15. **A3 ✓ CLOSED
+Track status: **◐ IN PROGRESS** — created 2026-07-15. **A4 ✓ RECORDED
+2026-07-22** — wall edge-velocity (u_e) error-band study, the Track-V IBL
+input-quality prerequisite (measured on analytic ground truth: cylinder +
+sphere M0). Medium smooth-wall band ≈ **2.5 % peak-relative / 0.04·U∞
+max-norm / 0.012·U∞ rms, O(h)**; worst-relative in the LE/stagnation band
+(the IBL du_e/ds zone, 4–7 % @ medium); recovery scheme (linear/quadratic)
+has no universal winner (~1 % region-dependent); the sub-6° quadratic-recovery
+guard does NOT fire on NACA0012's 16° TE (corrects the audit's blanket
+"sharp-TE ⇒ linear-only" claim). ⇒ V-gates must budget this inviscid-input
+band separately from viscous-model error; GV5.3's CL-down direction check
+(gated only when the move exceeds this floor) and its Cp-RMS-down check
+survive it, a tight LE δ*/u_e comparison would be input-limited. (Gate IDs
+re-mapped 2026-07-22: the former GV3.3 is now GV5.3, anchored on committed
+Cp data.) Evidence
+`cases/analysis/a4_ue_error_band/` (VERDICT + ue_bands.csv / te_constraint.csv
+/ ue_error_band.png). No `pyfp3d/` change. **A3 ✓ CLOSED
 2026-07-18** (GA3.1–GA3.6; response to the 2026-07-17 independent Kimi
 inspection — 17 docs findings dispositioned, C2/C3 backported to the conforming
 Newton, reader C4/C5 hardened, C6/C7/P1/T1/T2/F0 fixed, and **C1 VERIFIED AND

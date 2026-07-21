@@ -15,6 +15,12 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/a1_solver_bottleneck/run_a1.py` — ~5 min (+ gated 3-D `run_a1_m6.py` ~1 h)
 - `a2_te_kutta_fidelity/` — A2 TE/Kutta fidelity attribution (GA2.1–GA2.5; S1 jitter + S2 TE Cp gap) —
   `python cases/analysis/a2_te_kutta_fidelity/run_a2.py` — ~90 s (+ gated `run_a2_interventions.py`)
+- `a4_ue_error_band/` — A4 wall edge-velocity (u_e) error-band study = the Track-V IBL input-quality
+  prerequisite (analytic ground truth: cylinder u_e=2Usinθ + sphere u_e=1.5Usinθ, coarse+medium ×
+  linear/quadratic recovery). Medium smooth-wall band ≈ 2.5% peak-relative / 0.04·U∞ max-norm / O(h);
+  LE/stagnation band worst-relative (the IBL du_e/ds zone); NACA0012 16° TE clears the sub-6° quadratic
+  guard (corrects the audit's blanket TE claim). VERDICT + CSV/PNG in the dir —
+  `python cases/analysis/a4_ue_error_band/run.py` — ~30 s (cheap M0 solves, no cache)
 - `c1_ls_jacobian_fd/` — **A3 / GA3.5 + B19 + B20 + B21** — is the LS Newton Jacobian exact on a 3D mesh?
   (kimi code-review C1; `run_check.py` measures it before/after the B19 fix, `run_legb_probe.py` measures B19 Leg B's residual asymmetry;
   `run_legb_apply.py` / `run_legb_beforeafter.py` / `run_legb_b18.py` are B20's before/after — HISTORICAL post-adoption,
