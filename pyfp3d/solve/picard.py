@@ -276,6 +276,7 @@ def solve_subsonic(
     m_inf: float,
     gamma_air: float = 1.4,
     u_inf: float = 1.0,
+    body_source_rhs: Optional[np.ndarray] = None,
     phi_init: Optional[np.ndarray] = None,
     omega: float = 1.0,
     n_picard_max: int = 40,
@@ -304,6 +305,13 @@ def solve_subsonic(
         gamma_air: specific heat ratio
         u_inf: freestream speed (q^2 is nondimensionalized by u_inf^2
             before entering the density law)
+        body_source_rhs: optional (n_nodes,) assembled RHS vector --
+            the solve_laplace hook threaded through the compressible
+            loop (Track V V2: the transpiration wall load of
+            viscous/transpiration.py, needed by GV3.3). Each Picard
+            iteration solves A(rho) phi = b - A[:,dir] vals_d and the
+            recorded residual is R - b (lagged b, consistent at
+            convergence). None (default) is bit-identical.
         phi_init: initial potential; None = freestream-like start with
             rho == 1 on the first matrix (design.md Sec 8 initial guess)
         omega: Picard under-relaxation (1.0 subsonic; omega == 1.0 replaces
@@ -331,6 +339,14 @@ def solve_subsonic(
     free = np.where(~is_dir)[0]
     vals_d = np.asarray(dirichlet_values, dtype=np.float64)
 
+    b_wall = None
+    if body_source_rhs is not None:
+        b_wall = np.asarray(body_source_rhs, dtype=np.float64)
+        if b_wall.shape != (n_nodes,):
+            raise ValueError(
+                f"body_source_rhs must be ({n_nodes},), got {b_wall.shape}"
+            )
+
     if phi_init is not None:
         phi = np.asarray(phi_init, dtype=np.float64).copy()
         phi[dirichlet_nodes] = vals_d
@@ -351,6 +367,8 @@ def solve_subsonic(
         A_csr = A.tocsr()
         A_free = A_csr[free][:, free].tocsr()
         b_free = -A_csr[free][:, dirichlet_nodes] @ vals_d
+        if b_wall is not None:
+            b_free = b_free + b_wall[free]
 
         _, M = build_amg_preconditioner(A_free)
         n_it = [0]
@@ -373,6 +391,8 @@ def solve_subsonic(
         _, q2 = op.velocities(phi)
         rho_new = density_field(q2 / u_inf**2, m_inf, gamma_air).copy()
         R = op.assemble_residual(phi, rho_new)
+        if b_wall is not None:
+            R = R - b_wall
         residual_history.append(float(np.max(np.abs(R[free]))))
         drho = float(np.max(np.abs(rho_new - rho)))
         drho_history.append(drho)
@@ -436,6 +456,7 @@ def solve_subsonic_lifting(
     damping_theta: Optional[float] = None,
     tol_residual: Optional[float] = None,
     farfield_spanwise_gamma: bool = False,
+    body_source_rhs: Optional[np.ndarray] = None,
 ) -> Dict[str, object]:
     """
     Lifting subsonic full-potential solve on a wake-cut mesh: NESTED
@@ -522,6 +543,13 @@ def solve_subsonic_lifting(
     quasi-2D/P2-P4 path bit-identical; it is also an exact no-op on
     single-station meshes.
 
+    `body_source_rhs` (Track V V2 transpiration channel): optional
+    (n_nodes,) wall RHS on the CUT mesh (viscous/transpiration.py;
+    needed by GV3.1). It replaces the all-zeros base vector b_zero, so
+    it rides the same reduced_rhs T^T reduction into every inner solve,
+    and the recorded residual is T^T (R - b). Lagged -- the Picard
+    operator is untouched. None (default) is bit-identical.
+
     Converged when the density lag ||rho_tilde(phi_new) -
     rho_tilde_matrix||_inf < tol_rho AND the inner Kutta loop met
     tol_gamma.
@@ -575,7 +603,18 @@ def solve_subsonic_lifting(
                                  sigma_p_frac=upwind_sigma_p_frac)
         con = WakeConstraint(op.assemble_matrix(), wc)
     n_red = con.n_reduced
-    b_zero = np.zeros(op.n_nodes, dtype=np.float64)
+    # Track V V2 transpiration channel: the wall RHS rides the SAME
+    # reduced_rhs T^T reduction as b_zero (and is lagged, so the Picard
+    # operator is untouched). None = the old all-zeros base, bit-identical.
+    if body_source_rhs is None:
+        b_zero = np.zeros(op.n_nodes, dtype=np.float64)
+    else:
+        b_zero = np.asarray(body_source_rhs, dtype=np.float64)
+        if b_zero.shape != (op.n_nodes,):
+            raise ValueError(
+                f"body_source_rhs must be ({op.n_nodes},) on the cut mesh, "
+                f"got {b_zero.shape}"
+            )
 
     # Dirichlet pattern is Gamma- and rho-independent: fix the split once.
     dir_nodes, _ = farfield_dirichlet(
@@ -771,7 +810,10 @@ def solve_subsonic_lifting(
                                           m_crit, gamma_air).copy()
             else:
                 rho_t_new = rho_new
-            R_red = con.T.T @ op.assemble_residual(phi_cut, rho_t_new)
+            R_vol = op.assemble_residual(phi_cut, rho_t_new)
+            if body_source_rhs is not None:
+                R_vol = R_vol - b_zero
+            R_red = con.T.T @ R_vol
             residual_history.append(float(np.max(np.abs(R_red[free]))))
             drho = float(np.max(np.abs(rho_t_new - rho_t)))
             drho_history.append(drho)
