@@ -89,8 +89,9 @@ the committed PNG/CSV are the evidence. Roadmap gates:
 
 - `v1_ibl3_standalone/` — **Track V / V1** GV1.1 standalone IBL3 verification (prescribed u_e, no FP coupling:
   laminar/turbulent flat plates + Falkner–Skan decelerating branch + refinement family, FE vs the closure's own
-  2-D ODE marches; pre-registered, **8 PASS / 3 FAIL** — (a) ×2 = closure-family fixed point H*≈2.7083 ≠ Blasius,
-  (e) = under-damped streamwise 2h grid mode at outflow ⇒ upwind/SUPG stabilization is a V3-blocking follow-up;
+  2-D ODE marches; pre-registered, **9 PASS / 2 FAIL** — (a) ×2 = closure-family fixed point H*≈2.7083 ≠ Blasius,
+  (e) first-run FAIL = under-damped streamwise 2h grid mode at outflow ⇒ fixed by the D-HB streamwise-tensor
+  stabilization (ε_s=0.02, order ≈1.0 restored); SUPG/upwind remains the V3+ upgrade route;
   VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, design record `docs/design_track_v.md` §9) —
   `python cases/analysis/v1_ibl3_standalone/run.py` — ~7 min (exit 1 = honest FAIL present)
 

@@ -47,6 +47,8 @@ RHO = 1.0
 MU = 1.0e-5
 Q = 1.0
 EPS_DIFF = 0.005
+EPS_DIFF_S = 0.02  # streamwise-tensor diffusion (D-HB follow-up; calibrated
+                   # knee value: strict (e) decrease + H order ~1.0 + margin)
 X0, X1 = 0.2, 2.2
 ZH = 0.2
 
@@ -185,7 +187,7 @@ def run_fe(nx, nz, turbulent, ue_fn, seed_fn, x0=X0, x1=X1, zh=ZH):
     flags = np.full(n, 1 if turbulent else 0, dtype=np.int64)
     st_bc = seed_fn(x0)
     solver = IBL3Solver(sm, u_e, RHO, MU, 0.0, flags, inflow, st_bc,
-                        eps_diff=EPS_DIFF)
+                        eps_diff=EPS_DIFF, eps_diff_s=EPS_DIFF_S)
     U0 = np.zeros((n, 6))
     for i in range(n):
         U0[i] = seed_fn(max(xyz[i, 0], 1.0e-3))

@@ -7,24 +7,29 @@ before the first execution; user directive: **no gate re-spec**) ·
 Evidence: `results/*.csv`, `results/gv1_1_panels.png`, `results/summary.csv`
 (regenerate: `python cases/analysis/v1_ibl3_standalone/run.py`).
 
+**Current run (stabilized scheme, ε_s = 0.02): 9 PASS / 2 FAIL.**
+First execution (isotropic-only diffusion): 8 PASS / 3 FAIL — the (e) FAIL
+exposed the streamwise grid mode and was fixed by the D-HB tensor
+follow-up; see "Addendum: (e) stabilization" below.
+
 ## Result table
 
 | gate | metric (band) | measured | verdict |
 |---|---|---|---|
-| (a) | max interior \|H−2.59\|/2.59 (≤ 2 %) | 3.77 % (H ∈ [2.6036, 2.6875] on 200×32) | **FAIL** |
-| (a) | δ*(x) power-law exponent ([0.48, 0.52]) | 0.5287 | **FAIL** |
+| (a) | max interior \|H−2.59\|/2.59 (≤ 2 %) | 3.76 % (H ∈ [2.6036, 2.6875] on 200×32) | **FAIL** |
+| (a) | δ*(x) power-law exponent ([0.48, 0.52]) | 0.5288 | **FAIL** |
 | (a) | δ* exponent, march reference (same fit) | 0.5149 | RECORDED |
-| (a) | δ* exponent, FE downstream half (x > 1.2) | 0.5100 | RECORDED |
+| (a) | δ* exponent, FE downstream half (x > 1.2) | 0.5101 | RECORDED |
 | (b) | max \|cf_FE − cf_march\|/cf_march at matched Re_θ (≤ 5 %) | 0.07 % (Re_θ ∈ [161, 653]) | PASS |
-| (c)/P1 | H monotone non-decreasing (m=−0.0904) | rise 0.5038, worst dip 3.6e-3 | PASS |
-| (c)/P2 | H rise ratio ([1.05, 4.0]) | 1.191 (H 2.642 → 3.146) | PASS |
+| (c)/P1 | H monotone non-decreasing (m=−0.0904) | rise 0.5042, worst dip 3.3e-3 | PASS |
+| (c)/P2 | H rise ratio ([1.05, 4.0]) | 1.191 (H 2.642 → 3.147) | PASS |
 | (c)/P3 | m=−0.05 rise < m=−0.0904 rise | 1.108 < 1.191 | PASS |
 | (d) | quasi-2-D lock, laminar (\|B\|,\|Ψ\|<1e-10, Cτ2=CTAU_LAM) | 0 / 0 / pinned | PASS |
-| (d) | quasi-2-D lock, turbulent (\|B\|,\|Ψ\|,\|Cτ2\|<1e-10) | 5e-19 / 7e-18 / 0 | PASS |
-| (e) | refinement error strictly decreasing; order RECORDED | errH 9.0e-5→4.5e-5→6.3e-5; errds 2.8e-6→1.5e-6→2.5e-6 | **FAIL** |
+| (d) | quasi-2-D lock, turbulent (\|B\|,\|Ψ\|,\|Cτ2\|<1e-10) | 0 / 0 / 0 | PASS |
+| (e) | refinement error strictly decreasing; order RECORDED | errH 4.31e-4→2.21e-4→1.12e-4 (orders 0.96, 0.99); errds 1.02e-5→6.81e-6→4.39e-6 (orders 0.59, 0.63) | PASS |
 
-Gate summary: **8 PASS / 3 FAIL** (+2 RECORDED diagnostics).
-`run.py` exits 1 (honest FAIL).
+Gate summary: **9 PASS / 2 FAIL** (+2 RECORDED diagnostics).
+`run.py` exits 1 (the two (a) rows are honest FAIL).
 
 ## Analysis
 
@@ -33,12 +38,12 @@ family's self-consistent flat-plate fixed point is H* ≈ 2.7083 (+4.54 % vs
 Blasius 2.59), established in Stage 2 by three independent constructions and
 recorded as a known risk in the pre-registration. The measured interior H
 rises from the Blasius Dirichlet inflow (2.5906) to 2.6875 at the outflow,
-still approaching the asymptote; the max deviation 3.77 % sits at the
+still approaching the asymptote; the max deviation 3.76 % sits at the
 outflow stations. This is closure-family physics, not an implementation
 error: the FE solution agrees with the closure's own 2-D ODE march to
-8.9e-5 / 6.3e-5 in H (see (e)), i.e. the solver faithfully integrates the
-family it was given. Verdict stands as written; no gate re-spec (user
-directive).
+2.2e-4 / 1.1e-4 in H on the two finer meshes (see (e)), i.e. the solver
+faithfully integrates the family it was given. Verdict stands as written;
+no gate re-spec (user directive).
 
 **(a) δ* exponent — FAIL, same root cause.** The measured window
 x ∈ [0.22, 2.18] is dominated by the family fixed-point adjustment
@@ -46,34 +51,55 @@ transient (H: 2.59 → 2.69), during which δ* grows faster than √x. The
 RECORDED diagnostics make the cause quantitative: the march reference
 fitted over the same stations gives 0.5149 (itself near the band edge),
 and the FE fit restricted to the downstream half (x > 1.2, where H has
-nearly equilibrated) gives 0.5100, inside the band. The 0.5287 full-window
+nearly equilibrated) gives 0.5101, inside the band. The 0.5288 full-window
 value is the transient's fingerprint, not discretization error.
 
-**(e) refinement — FAIL on a genuine numerical finding.** With the
-corrected reference (see "Implementation fixes" below), the FE-vs-march
-errors are clean enough to resolve the discretization's behavior, and they
+**(e) refinement — PASS after the stabilization fix (addendum below).**
+errH 4.31e-4 → 2.21e-4 → 1.12e-4 (orders 0.96, 0.99 — the O(ε_s·h)
+artificial-diffusion error the pre-registration anticipated) and errds
+1.02e-5 → 6.81e-6 → 4.39e-6 (orders 0.59, 0.63) strictly decrease on both
+measures. The first execution (isotropic-only diffusion) FAILED this gate:
+the strict decrease broke 100×16 → 200×32 at the outflow strip. Root cause
+and fix: see the addendum.
+
+## Addendum: (e) stabilization (2026-07-22, post-first-execution)
+
+First-execution finding (8 PASS / 3 FAIL run, git history): with the
+corrected reference (implementation fix 2/3 below), the FE-vs-march errors
 split into two mechanisms:
 
-- Near inflow (where the Dirichlet adjustment lives), the error is
-  diffusion-dominated, ∝ ε·h: 4.5e-5 → 1.6e-5 in H for 100×16 → 200×32 —
-  proper convergence, order ≈ 1 as the pre-registration anticipated.
-- At the outflow strip a 2h grid-scale mode dominates: alternating-sign
+- Near inflow (Dirichlet adjustment strip), diffusion-dominated error
+  ∝ ε·h, decreasing with refinement at order ≈ 1 — proper convergence.
+- At the outflow strip, a 2h grid-scale mode: alternating-sign
   station-to-station error, seeded near the inflow, amplified downstream
   with growth rate ∝ 1/h (at ε=0: −2.4e-6 at x=1.0 → −4.4e-5 at x=2.1 on
-  200×32; the same run on 100×16 stays ≤ 4e-6 everywhere). The D-HB
-  isotropic diffusion (ν = ε·q·h̄) damps it per-cell at rate ∝ ε/h, which
-  loses to the ∝1/h growth inside the design knob band: ε=0.005 and
-  ε=0.01 (band edge) both leave the 200×32 outflow error above the 100×16
-  level (ε=0.01: errH strictly decreasing but errds 2.64e-6 → 3.07e-6).
+  200×32; the same run on 100×16 stays ≤ 4e-6 everywhere). The isotropic
+  D-HB diffusion (ν = ε·q·h̄) damps it per cell at rate ∝ ε/h and loses to
+  the ∝1/h growth everywhere inside the design knob band (ε=0.005, and
+  ε=0.01 at the band edge, both leave the 200×32 outflow error above the
+  100×16 level).
 
-Verdict: the strong-form Galerkin discretization with the D-HB diffusion
-has an under-damped streamwise grid mode on fine meshes — exactly the kind
-of deficiency GV1.1(e) exists to catch. Recorded as V1 limitation with
-follow-up: streamwise-upwind / SUPG-type stabilization of the defect
-convection (Drela's production IBL codes upwind these terms), or the
-anisotropic diffusion tensor already listed in D-HB. Absolute level of the
-contamination at production settings: ≤ 6.3e-5 in H, ≤ 2.5e-6 in δ* on the
-finest gate mesh — benign for V1's purposes but structural for V3+.
+Fix (user-directed, same day): the anisotropic streamwise tensor listed as
+the D-HB follow-up — add ε_s·max(q)·h̄·(s1·∇G)(s1·∇N) to the diffusion
+term, with s1 the element-averaged edge-velocity direction (edge data, not
+state ⇒ Jacobian stays first-order exact; FD both lanes green). Calibration
+sweep on the (a)/(e) family (ε_s ∈ {0.01, 0.02, 0.03, 0.05}, all strictly
+decreasing on both measures):
+
+| ε_s | errH@200×32 | errds@200×32 | orders H | orders ds |
+|---|---|---|---|---|
+| 0.01 | 8.77e-5 | 3.55e-6 | 0.97, 0.60 | 0.43, 0.53 |
+| **0.02** | **1.12e-4** | **4.39e-6** | **0.96, 0.99** | **0.59, 0.63** |
+| 0.03 | 1.56e-4 | 5.16e-6 | 0.96, 0.98 | 0.67, 0.69 |
+| 0.05 | 2.43e-4 | 6.69e-6 | 0.95, 0.98 | 0.76, 0.77 |
+
+Adopted: **ε_s = 0.02** — the knee: 0.01 damps only marginally (ds order
+~0.5), 0.02 restores H order ≈ 1.0 with real margin at ~1.3× the minimal
+absolute error; the O(ε_s·h) modeling error grows linearly beyond. The
+solver default `eps_diff_s = 0.02`; 0.0 recovers the isotropic-only scheme.
+SUPG (consistent, zero modeling error) remains the longer-term upgrade
+route for V3+ if the O(ε_s·h) error becomes limiting; it needs the dropped
+second-derivative terms or a non-exact Jacobian, out of V1 patch scope.
 
 **(b), (c), (d) — PASS.** (b) cf(Re_θ) matches the closure's own turbulent
 2-D march to 0.07 % over Re_θ ∈ [161, 653] (the 1/7th power-law
@@ -124,7 +150,8 @@ machine precision against the FE flux tables, derivatives included).
 ## Numerical settings (as run)
 
 - eps_diff = 0.005 (D-HB, mid-band; band [0.001, 0.01]), V_eps = eps·max(q),
-  h̄ = √(2A_tri); c_l = 0.09 (D-CT-2).
+  h̄ = √(2A_tri); **eps_diff_s = 0.02** (D-HB streamwise tensor follow-up,
+  calibration table in the addendum); c_l = 0.09 (D-CT-2).
 - Newton/PTC: tol = 1e-9 relative on the steady residual inf-norm, CFL ramp
   1 → 1e8 ×2, halving backtracking on the F_pt merit with cfl/8 retry on
   rejection (≤ 10), scipy spsolve.

@@ -313,13 +313,20 @@ def _nodal_fluxes(states, q, s1, s2, rho, outs, douts, c_l, fv, dv):
 def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
               triangles, gradN, area_tri,
               color_offsets, color_elems,
-              veps, R, Jdata, elem_to_csr, do_jac):
+              veps, veps_s, s1n, R, Jdata, elem_to_csr, do_jac):
     """Element assembly of the six Galerkin residuals and (optionally) the
     analytic Jacobian into the CSR data array via elem_to_csr.
 
     Race-free within a color (no shared nodes), so prange over each color
     range is bit-deterministic. R and Jdata are accumulated; the caller
     zeroes them once per Newton step.
+
+    Artificial diffusion (D-HB): isotropic part veps*h_e*(grad G . grad N)
+    plus a streamwise tensor part veps_s*h_e*(s1.grad G)*(s1.grad N) with
+    s1 the element-averaged edge-direction unit vector. The streamwise part
+    damps the centered-Galerkin 2h streamwise mode (GV1.1(e) finding,
+    design doc §9 item 4); s1 depends on edge data only, not on the state,
+    so the Jacobian stays first-order exact.
     """
     n_colors = color_offsets.shape[0] - 1
     for c in range(n_colors):
@@ -384,6 +391,16 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                         + fv[nn[2], base] * gN[2, k]
                     )
 
+            # ---- element stream direction (edge data average, floored) ----
+            s1e = np.zeros(3)
+            for k in range(3):
+                s1e[k] = (s1n[nn[0], k] + s1n[nn[1], k] + s1n[nn[2], k]) / 3.0
+            s1m = np.sqrt(s1e[0] * s1e[0] + s1e[1] * s1e[1] + s1e[2] * s1e[2])
+            s1m = max(s1m, 1.0e-30)
+            s1e[0] /= s1m
+            s1e[1] /= s1m
+            s1e[2] /= s1m
+
             # ---- interpolated edge-data velocity weights for the divM
             # source terms: umw[a] = sum_m wq N_a(m) u(m), etc.
             umw = np.zeros(3)
@@ -421,13 +438,20 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                 acc[5] += wq * divs[6]
                 # diffusion (integrated by parts; constant gradients)
                 gab = veps * h_e * area
+                gabs = veps_s * h_e * area
+                gs1a = gN[a, 0] * s1e[0] + gN[a, 1] * s1e[1] + gN[a, 2] * s1e[2]
                 for dcol in range(6):
                     dot = (
                         gdens[dcol, 0] * gN[a, 0]
                         + gdens[dcol, 1] * gN[a, 1]
                         + gdens[dcol, 2] * gN[a, 2]
                     )
-                    acc[dcol] += gab * dot
+                    dots = (
+                        gdens[dcol, 0] * s1e[0]
+                        + gdens[dcol, 1] * s1e[1]
+                        + gdens[dcol, 2] * s1e[2]
+                    )
+                    acc[dcol] += gab * dot + gabs * dots * gs1a
                 # quad-point source integrals
                 for m in range(3):
                     w = wq * QUAD_N[m, a]
@@ -488,6 +512,12 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                             + gN[a, 1] * gN[b, 1]
                             + gN[a, 2] * gN[b, 2]
                         ) * (veps * h_e * area)
+                        gabs = (
+                            (gN[a, 0] * s1e[0] + gN[a, 1] * s1e[1]
+                             + gN[a, 2] * s1e[2])
+                            * (gN[b, 0] * s1e[0] + gN[b, 1] * s1e[1]
+                               + gN[b, 2] * s1e[2])
+                        ) * (veps_s * h_e * area)
                         for l in range(6):
                             # divergence + diffusion rows
                             je[0, l] += wq * ddiv[1, b, l] - ddiv[0, b, l] * umw[a]
@@ -497,7 +527,7 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                             je[4, l] += wq * ddiv[5, b, l]
                             je[5, l] += wq * ddiv[6, b, l]
                             for dcol in range(6):
-                                je[dcol, l] += gab * dv[nb, F_DMX + dcol, l]
+                                je[dcol, l] += (gab + gabs) * dv[nb, F_DMX + dcol, l]
                         # quad-point source derivatives
                         for m in range(3):
                             w = wq * QUAD_N[m, a] * QUAD_N[m, b]
@@ -550,11 +580,20 @@ class IBL3Solver:
     inflow_mask : (n,) bool Dirichlet nodes; inflow_state : (6,) or (n_in,6)
     c_l : dissipation length constant (D-CT-2); eps_diff : diffusion
         parameter epsilon in V_eps = eps * max(q) (D-HB, recorded in VERDICT)
+    eps_diff_s : streamwise-tensor diffusion coefficient (D-HB follow-up,
+        implemented after the GV1.1(e) finding): adds
+        eps_diff_s * max(q) * h_e * (s1.grad G)(s1.grad N), damping the
+        centered-Galerkin 2h streamwise mode. Default 0.02, calibrated on
+        the GV1.1(a)/(e) family: the smallest value giving strictly
+        decreasing refinement errors is 0.01 (marginal, ds order ~0.5);
+        0.02 keeps the strict decrease with H order ~1.0 and real damping
+        margin at ~1.3x the absolute error (see VERDICT addendum);
+        0.0 recovers the isotropic-only scheme.
     """
 
     def __init__(self, smesh, u_e, rho, mu, mach, turbulent_flags,
                  inflow_mask, inflow_state, c_l=C.C_L_DEFAULT,
-                 eps_diff=0.005):
+                 eps_diff=0.005, eps_diff_s=0.02):
         sm = smesh
         n = sm.xyz.shape[0]
         self.smesh = sm
@@ -595,6 +634,7 @@ class IBL3Solver:
         self._lam_idx = lam_set.astype(np.int64)
         self.c_l = float(c_l)
         self.eps_diff = float(eps_diff)
+        self.eps_diff_s = float(eps_diff_s)
 
         # frames
         self._q = np.empty(n)
@@ -607,6 +647,7 @@ class IBL3Solver:
         _frames(u_e, sm.basis_y, sm.basis_x, self._q, self._s1, self._s2,
                 self._u, self._w, self._q2, self._psi)
         self._veps = self.eps_diff * max(float(np.max(self._q)), 1.0e-30)
+        self._veps_s = self.eps_diff_s * max(float(np.max(self._q)), 1.0e-30)
 
         # Jacobian pattern and diagonal indices
         self.pattern, self.elem_to_csr = sm.build_jacobian_pattern()
@@ -683,8 +724,8 @@ class IBL3Solver:
         _assemble(self.fv, self.dv, self._u, self._w, self._q2, self._psi,
                   self._rho, self.smesh.triangles, self.smesh.gradN,
                   self.smesh.area_tri, self.smesh.color_offsets,
-                  self.smesh.color_elems, self._veps, R, self.Jdata,
-                  self.elem_to_csr, do_jac)
+                  self.smesh.color_elems, self._veps, self._veps_s, self._s1,
+                  R, self.Jdata, self.elem_to_csr, do_jac)
 
     def _apply_rows(self, R, U, do_jac):
         """Dirichlet inflow rows and laminar stress-pin rows (D-TR/D-BC)."""
@@ -817,6 +858,7 @@ class IBL3Solver:
             "final_residual": float(np.max(np.abs(rpure))),
             "cfl_final": cfl,
             "eps_diff": self.eps_diff,
+            "eps_diff_s": self.eps_diff_s,
             "veps": self._veps,
         }
         return U, info

@@ -91,6 +91,14 @@ setting are as pre-registered:
 3. Two RECORDED diagnostics added under gate (a) (march-reference delta*
    exponent, downstream-half FE exponent) to quantify the fixed-point
    transient's effect on the power-law fit. They carry no pass/fail.
+4. Streamwise-tensor diffusion (`eps_diff_s = 0.02`, D-HB's pre-listed
+   anisotropy follow-up) activated after the first execution: gate (e)'s
+   first run exposed an under-damped streamwise 2h grid mode that the
+   isotropic diffusion cannot damp inside its pre-registered knob band
+   ε∈[0.001,0.01]. This is a solver-scheme correction (the property (e)
+   verifies — mesh convergence of the discretization — is unchanged), with
+   the calibration sweep and the original FAIL both recorded in VERDICT.md.
+   All gate bands and the isotropic ε = 0.005 setting are untouched.
 
 First-execution superseded numbers are not listed here; the git history of
 this directory shows the sequence. Final verdicts: VERDICT.md.

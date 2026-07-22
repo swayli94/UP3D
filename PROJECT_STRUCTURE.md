@@ -189,7 +189,7 @@ pyfp3d/                    # Main package
 │                           #   sensitivities through the DOF indirection)
 ├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
-│   │                       #   GV1.1 EXECUTED 8 PASS / 3 FAIL (VERDICT
+│   │                       #   GV1.1 EXECUTED 9 PASS / 2 FAIL (VERDICT
 │   │                       #   cases/analysis/v1_ibl3_standalone/VERDICT.md); does NOT touch
 │   │                       #   solve/ (pure additive package)
 │   ├── __init__.py
@@ -1087,10 +1087,11 @@ paths = wing-tip P13 free-edge singularity + high-M Newton) + B31 C-class
 wing-tip cure (conforming pressure+taper CURES it; LS-side closed negative) +
 B32 conforming tip_taper adopted — wing-body medium ceiling M0.79 → M0.84
 reached**, 2026-07-21/22); Track V —
-**V1 ◐ OPENED 2026-07-22 · GV1.1 EXECUTED 8 PASS / 3 FAIL** (IBL3 solver core
+**V1 ◐ OPENED 2026-07-22 · GV1.1 EXECUTED 9 PASS / 2 FAIL** (IBL3 solver core
 shipped: `pyfp3d/viscous/` surface_mesh/closures/ibl3, standalone prescribed-u_e;
 VERDICT `cases/analysis/v1_ibl3_standalone/VERDICT.md` — (a) ×2 = closure-family
-fixed point, (e) = outflow grid-mode stabilization gap = V3-blocking follow-up,
+fixed point, (e) first-run outflow 2h grid mode FAIL → fixed by the D-HB
+streamwise-tensor stabilization ε_s=0.02 = PASS,
 (b)(c)(d) PASS); Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
