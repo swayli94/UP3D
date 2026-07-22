@@ -208,6 +208,25 @@ def cylinder_grad_exact(points, a=CYLINDER_RADIUS):
     return grad
 
 
+def cylinder_blowing_phi_exact(nodes, v0=0.1, n_mode=2, a=CYLINDER_RADIUS):
+    """phi = -(v0 a / n) (a/r)^n cos(n theta): the exterior Laplace solution
+    for the manufactured wall blowing dphi/dr = v0 cos(n theta) at r = a,
+    decaying at infinity (Track V V2 transpiration channel, gate GV2.1(a)
+    Fourier-mode MMS)."""
+    x, y = nodes[:, 0], nodes[:, 1]
+    r = np.hypot(x, y)
+    theta = np.arctan2(y, x)
+    return -(v0 * a / n_mode) * (a / r) ** n_mode * np.cos(n_mode * theta)
+
+
+def cylinder_blowing_m_dot(nodes, v0=0.1, n_mode=2):
+    """Manufactured blowing m_dot = v0 cos(n_mode * theta), nodal (rho = 1);
+    the assemble_transpiration_rhs input for the GV2.1(a) MMS. Evaluated at
+    every node -- the assembly only reads the wall-node entries."""
+    theta = np.arctan2(nodes[:, 1], nodes[:, 0])
+    return v0 * np.cos(n_mode * theta)
+
+
 def run_cylinder_case(mesh_path, body_source_rhs=None, mesh=None):
     """Solve incompressible flow past the quasi-2D cylinder and recover wall
     Cp(theta); pass body_source_rhs to solve with a wall-flux correction."""
