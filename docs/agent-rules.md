@@ -691,8 +691,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   per-step refresh rolled back (ill-posed), ① conforming tip_taper adopted:
   wing-body medium ceiling M0.79 → **M0.84 reached** (cl_p 0.2738, 0 clamps),
   cl_p cost ≈ −1.3%, demo 8/8.
-- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ◐ OPENED 2026-07-22 ·
-  GV1.1 EXECUTED 9 PASS / 2 FAIL** —
+- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ✓ CLOSED 2026-07-22 ·
+  GV1.1 9 PASS / 2 FAIL** —
   gates re-spec'd at opening against the B32/A4 state, then re-phased the same
   day (user-directed): V1 standalone IBL3 core (GV1.1 vs analytic/self-similar),
   V2 transpiration channel (GV2.1 exactness + ṁ=0 bit-identity + FD), V3 loose
@@ -709,7 +709,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   surface_mesh/closures/ibl3 + 35 new tests; VERDICT
   `cases/analysis/v1_ibl3_standalone/VERDICT.md`, implementation record
   `docs/design_track_v.md` §9): (a) ×2 FAIL = closure-family fixed point
-  H*≈2.7083 ≠ Blasius 2.59 (pre-registered known risk, no re-spec); (e)
+  H*≈2.7083 ≠ Blasius 2.59 (pre-registered known risk, no re-spec; accepted
+  as recorded FAIL at V1 closing); (e)
   first-run FAIL = under-damped streamwise 2h grid mode at outflow (∝1/h
   growth) → **fixed same-day by the D-HB streamwise-tensor follow-up
   (ε_s=0.02, order ≈1.0 restored) — PASS**; SUPG/upwind remains the V3+

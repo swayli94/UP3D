@@ -254,12 +254,13 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   次级护栏带外 cl_fus +135% 经 oracle 归因 flat-vs-tilted 片模型差，记录不阻塞 → P11 监视。**B9 ✓ 关闭 2026-07-17（重定规格）**：
   翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6（**B28 2026-07-20 更正**：cl_fus=尾流片位置敏感性，
   非 G1.6 误差；gate 重设为带外跨模型一致 ≤15%，medium 差 7.0% PASS，demo 8/8）。B10 搁置
-- **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC）；**V1 ◐ 2026-07-22 开题**
+- **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC）；**V1 ✓ CLOSED
+  2026-07-22**（GV1.1 9 PASS / 2 FAIL，(a)×2 = 闭包族不动点物理，recorded FAIL 接受）
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
   V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 可选 quasi-simultaneous；V5 紧耦合（入口 GV5.0 M6 亚声速
   松耦合桥 RECORDED；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源；GV5.1 预注 FD 区界单侧差分/光滑加权）；
-  V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，尚无实现。
+  V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V2–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
   四求解器统一计时插桩 + conforming×level-set × Picard×Newton 耗时基准） — **A2 ✓ 2026-07-17 关闭**（TE/Kutta 保真度归因，GA2.1–GA2.5）：**S1 定谳**——

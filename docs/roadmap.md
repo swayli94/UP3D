@@ -76,8 +76,9 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   (**corrected by B28 2026-07-20**: wake-sheet POSITION sensitivity, not an error — gate re-spec'd to out-band cross-model ≤15%,
   medium gap 7.0% PASS, demo 8/8);
   LS Newton diverges = neumann blockage not the solver**
-- **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10 · **V1 ◐ OPENED 2026-07-22**
-  (gates re-spec'd at opening against the B32/A4 state; same day re-phased: V1 IBL3 core / V2 transpiration channel /
+- **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10 · **V1 ✓ CLOSED 2026-07-22**
+  (GV1.1 9 PASS / 2 FAIL, (a) ×2 accepted as recorded FAIL = closure-family physics;
+  gates re-spec'd at opening against the B32/A4 state; same day re-phased: V1 IBL3 core / V2 transpiration channel /
   V3 loose coupling incl. the fuselage body-of-revolution smoke; V4 optional; V5 tight coupling with the GV5.0 M6
   subsonic bridge and GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**

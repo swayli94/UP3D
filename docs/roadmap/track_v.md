@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ◐ OPENED 2026-07-22 · GV1.1 EXECUTED 9P/2F**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -82,7 +82,7 @@ progressing loose → tight coupling.
 > running to V6, always read "V\<n\>" against context). Gates here are
 > GV<phase>.<n>.
 
-### V1 — IBL3 solver core (standalone verification) ◐ OPENED 2026-07-22 · GV1.1 EXECUTED (9 PASS / 2 FAIL)
+### V1 — IBL3 solver core (standalone verification) ✓ CLOSED 2026-07-22 · GV1.1 (9 PASS / 2 FAIL)
 
 **Deliverable:**
 
@@ -104,7 +104,7 @@ progressing loose → tight coupling.
 
 **Gates:**
 
-- [~] **GV1.1 standalone IBL3 verification** (prescribed u_e, no FP coupling):
+- [x] **GV1.1 standalone IBL3 verification** (prescribed u_e, no FP coupling):
   (a) laminar flat plate → Blasius: H within ±2 % of 2.59, δ*(x) ∝ √x;
   (b) turbulent flat plate: C_f(Re_θ) within ±5 % of the closure's own reference
   correlation; (c) prescribed decelerating u_e: separation indicator (H rise)
@@ -124,6 +124,9 @@ progressing loose → tight coupling.
   calibrated): errH 4.31e-4→2.21e-4→1.12e-4, order [0.96, 0.99] — PASS;
   SUPG/upwind of the defect convection remains the V3+ upgrade route
   (design doc §9 item 4).
+  **V1 CLOSED 2026-07-22 (user-directed)**: (a) ×2 accepted as recorded
+  FAIL — closure-family physics, FE matches the same-closure 2-D march to
+  <1e-4; no open technical items in V1 scope.
 
 **Prereq:** P6 ✓ + A4 ✓ (both done). V1 touches no wing-body wound and is
 independent of the LS-side (b)-class work — parallelizable.
@@ -365,12 +368,13 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
 0.5 % (P13/P14), so the remaining delta to experiment is the viscous target
 (assessed on the committed Cp data); direction is DOWN.
 
-- V1 — **◐ OPENED 2026-07-22 · GV1.1 EXECUTED 9 PASS / 2 FAIL** — IBL3
+- V1 — **✓ CLOSED 2026-07-22 · GV1.1 9 PASS / 2 FAIL** — IBL3
   solver core shipped (`viscous/surface_mesh.py`, `closures.py`, `ibl3.py`;
   wake unknowns reserved in the data layout). GV1.1 verdict + evidence:
   `cases/analysis/v1_ibl3_standalone/VERDICT.md`; implementation record:
-  `docs/design_track_v.md` §9. (a) ×2 FAIL =
-  closure-family fixed point (no re-spec, user-directed); (e) first-run
+  `docs/design_track_v.md` §9. (a) ×2 accepted as recorded FAIL at closing
+  (user-directed) = closure-family fixed point, FE matches the same-closure
+  2-D march to <1e-4; (e) first-run
   FAIL = streamwise 2h grid mode → fixed by the D-HB streamwise-tensor
   stabilization (ε_s=0.02), PASS; (b)(c)(d) PASS. Prereqs P6 ✓ + A4 ✓;
   no wing-body contact.
