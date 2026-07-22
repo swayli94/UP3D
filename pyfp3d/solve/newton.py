@@ -147,14 +147,27 @@ class NewtonWorkspace:
         dimensionally consistent (the pin enters with the row's own
         slope, the B8 weld analog); because that ratio is physical, the
         untapered path's post-hoc sigma-independence of the iterates does
-        NOT carry over -- sigma must be frozen, which it is."""
+        NOT carry over -- sigma must be frozen, which it is.
+
+    `external_rhs` (Track V V2 transpiration channel; roadmap
+    track_v.md "V2 -- Transpiration channel through all three drivers"):
+    an optional (n_cut,) external volume-RHS vector on the CUT mesh --
+    the transpiration wall load of viscous/transpiration.py. It is
+    subtracted inside eval_residual (R_red = T^T (R - b_ext)), so the
+    converged state solves T^T R(phi, Gamma) = T^T b_ext. LAGGED: b_ext
+    is frozen per solve and independent of (phi, Gamma), so the coupled
+    Jacobian is UNCHANGED (the GV2.1(c) FD-exactness clause) -- tight
+    coupling (d b_ext/d BL terms) is V5's augmentation, not this
+    channel. None (default) is bit-identical to the pre-V2 workspace.
+"""
 
     def __init__(self, mesh_cut, wc, alpha_deg: float = 0.0,
                  u_inf: float = 1.0, gamma_air: float = 1.4,
                  vortex_center=(0.25, 0.0),
                  farfield_spanwise_gamma: bool = False,
                  tip_taper: Optional[np.ndarray] = None,
-                 kutta_estimator: str = "probe"):
+                 kutta_estimator: str = "probe",
+                 external_rhs: Optional[np.ndarray] = None):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -178,6 +191,16 @@ class NewtonWorkspace:
         if kutta_estimator not in ("probe", "pressure"):
             raise ValueError(f"unknown kutta_estimator {kutta_estimator!r}")
         self.kutta_estimator = kutta_estimator
+        # V2 transpiration channel (class docstring): lagged external RHS
+        # on the cut mesh, subtracted in eval_residual. None = channel
+        # absent = bit-identical to the pre-V2 path.
+        if external_rhs is not None:
+            external_rhs = np.asarray(external_rhs, dtype=np.float64)
+            if external_rhs.shape != (len(mesh_cut.nodes),):
+                raise ValueError(
+                    f"external_rhs must be ({len(mesh_cut.nodes)},) on the "
+                    f"cut mesh, got {external_rhs.shape}")
+        self.external_rhs = external_rhs
         # B31: a non-unit taper activates the probe-path K row scaling
         # below resp. the pressure-path row blend (eval_residual /
         # kutta_blocks, class docstring). All-ones (incl. the None
@@ -346,7 +369,13 @@ class NewtonWorkspace:
             nu_max = 0.0
             n_nu_active = 0
 
-        R_red = self.con.T.T @ self.op.assemble_residual(phi_cut, rho_t)
+        R_vol = self.op.assemble_residual(phi_cut, rho_t)
+        if self.external_rhs is not None:
+            # V2 transpiration channel (class docstring): lagged, so the
+            # Jacobian below is untouched; the converged state solves
+            # T^T R = T^T b_ext.
+            R_vol = R_vol - self.external_rhs
+        R_red = self.con.T.T @ R_vol
         R_free = R_red[self.free]
         if self.kutta_estimator == "pressure":
             # P14: sigma-scaled pressure-equality residual; sigma frozen at
@@ -524,6 +553,7 @@ def solve_newton_lifting(
     workspace: Optional[NewtonWorkspace] = None,
     tip_taper: Optional[np.ndarray] = None,
     kutta_estimator: str = "probe",
+    external_rhs: Optional[np.ndarray] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -616,6 +646,12 @@ def solve_newton_lifting(
     blend (NewtonWorkspace docstring); the probe path's per-station
     scaling is unchanged.
 
+    `external_rhs` (Track V V2 transpiration channel): optional lagged
+    external volume RHS on the cut mesh (NewtonWorkspace docstring).
+    None (default) = channel absent = bit-identical. Forwarded through
+    solve_newton_transonic via newton_kw like the other workspace flags;
+    a reused workspace must carry the vector itself.
+
     Returns the Picard-compatible result keys (phi on the cut mesh, gamma,
     converged, residual_history, mach2_max, nu_max, n_nu_active,
     n_limited, n_floored) plus F_history, newton_orders (per-step observed
@@ -635,13 +671,19 @@ def solve_newton_lifting(
         ws = NewtonWorkspace(mesh_cut, wc, alpha_deg, u_inf, gamma_air,
                              vortex_center, farfield_spanwise_gamma,
                              tip_taper=tip_taper,
-                             kutta_estimator=kutta_estimator)
+                             kutta_estimator=kutta_estimator,
+                             external_rhs=external_rhs)
     elif ws.kutta_estimator != kutta_estimator:
         raise ValueError(
             f"workspace was built with kutta_estimator="
             f"{ws.kutta_estimator!r} but {kutta_estimator!r} was requested "
             "-- pass the flag consistently (transonic ramps forward it via "
             "newton_kw)")
+    elif external_rhs is not None and ws.external_rhs is not external_rhs:
+        raise ValueError(
+            "the workspace carries its own external_rhs (or none): build "
+            "the NewtonWorkspace with the vector and pass workspace=... "
+            "instead of forwarding external_rhs alongside it")
     ws.set_mach(m_inf)
 
     # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
