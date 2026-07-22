@@ -22,8 +22,10 @@ divergences via constant P1 gradients, 3-point edge-midpoint quadrature
 only the artificial diffusion is integrated by parts (D13 (74)), acting on
 each equation's conserved density (Mx, Mz, e, k_o, k_tau1, k_tau2) with
 isotropic h_bar = h I, h = sqrt(2 A) (D-HB). Residual components are taken
-in the GLOBAL (x, z) basis; V1 gates are planar, the curved-surface local
-basis projection of D13 §III.D.1 is a recorded follow-up.
+in the per-node LOCAL tangent basis (basis_x, basis_zc = basis_x x basis_y)
+of D13 SIII.D.1 (the V1 recorded follow-up, implemented for V3): on a
+planar +-y-normal surface basis_zc is exactly +z_global, so planar cases
+are bit-identical to the pre-V3 global-(x, z) form.
 
 Solution: backward-Euler pseudo-time on the physical conserved densities of
 D13 (70)-(72) (Mx - u m, Mz - w m, e - q^2 m, k_o, k_tau1, k_tau2; mass-
@@ -77,9 +79,21 @@ _DIVERGED = (F_M3, F_JX3, F_JZ3, F_E3, F_KO3, F_K13, F_K23)
 
 
 @_njit(cache=True, fastmath=True)
-def _frames(u_e, basis_y, basis_x, q, s1, s2, ucomp, wcomp, q2, psi):
+def _frames(u_e, basis_y, basis_x, basis_zc, q, s1, s2, ucomp, wcomp, q2,
+            psi, s1l, s2l):
     """Per-node edge-velocity frames: q, s1 = q_vec/q (fallback basis_x),
-    s2 = s1 x n_hat (D13 (38)), global components u, w, q^2, psi = atan2(w, u).
+    s2 = s1 x n_hat (D13 (38)); velocity components (u, w) = u_e . (basis_x,
+    basis_zc) and the flow angle psi = atan2(w, u) in the per-node LOCAL
+    tangent basis, where basis_zc = basis_x x basis_y (the right-handed
+    local "z"; on a planar +-y-normal surface this is exactly +z_global, so
+    planar cases are bit-identical to the pre-V3 global-basis form).
+
+    Also the local components of s1/s2 themselves (s1l/s2l (n,2) =
+    s . (basis_x, basis_zc)): the scalar flux contractions (Jx/Jz, tau,
+    DMX/DMZ) are per-node local-frame quantities (D13 SIII.D.1, the
+    curved-surface local basis projection -- the V1 recorded follow-up,
+    implemented for V3). The 3-D s1/s2 vectors are unchanged and still
+    carry the vector fluxes.
     """
     n = q.shape[0]
     for i in range(n):
@@ -111,20 +125,39 @@ def _frames(u_e, basis_y, basis_x, q, s1, s2, ucomp, wcomp, q2, psi):
         s2[i, 0] = c1 / cm
         s2[i, 1] = c2 / cm
         s2[i, 2] = c3 / cm
-        ucomp[i] = vx
-        wcomp[i] = vz
+        # local-basis velocity components and flow angle
+        bxx = basis_x[i, 0]
+        bxy = basis_x[i, 1]
+        bxz = basis_x[i, 2]
+        bzx = basis_zc[i, 0]
+        bzy = basis_zc[i, 1]
+        bzz = basis_zc[i, 2]
+        ui = vx * bxx + vy * bxy + vz * bxz
+        wi = vx * bzx + vy * bzy + vz * bzz
+        ucomp[i] = ui
+        wcomp[i] = wi
         q2[i] = qi * qi
-        psi[i] = np.arctan2(vz, vx)
+        psi[i] = np.arctan2(wi, ui)
+        # local components of s1/s2 (scalar flux contractions)
+        s1l[i, 0] = s1x * bxx + s1y * bxy + s1z * bxz
+        s1l[i, 1] = s1x * bzx + s1y * bzy + s1z * bzz
+        s2l[i, 0] = s2[i, 0] * bxx + s2[i, 1] * bxy + s2[i, 2] * bxz
+        s2l[i, 1] = s2[i, 0] * bzx + s2[i, 1] * bzy + s2[i, 2] * bzz
 
 
 @_njit(cache=True, fastmath=True)
-def _nodal_fluxes(states, q, s1, s2, rho, outs, douts, c_l, fv, dv):
+def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv):
     """Fill fv (n,NV) and dv (n,NV,6) from the closure packet.
 
     All formulas are algebraic chains of D13 (62)(63) and D-CT on top of the
     closure outputs; every derivative w.r.t. the six state unknowns follows
     the same chain (douts rows), so the FD-vs-analytic check at residual
     level exercises exactly these tables.
+
+    The vector fluxes are built from the 3-D s1/s2; the scalar contractions
+    (Jx/Jz, tau_x/tau_z, DMX/DMZ) use the per-node LOCAL components s1l/s2l
+    = s . (basis_x, basis_zc) (D13 SIII.D.1 local basis; "x"/"z" equation
+    rows are momentum along basis_x / basis_zc).
     """
     n = states.shape[0]
     for i in prange(n):
@@ -135,10 +168,10 @@ def _nodal_fluxes(states, q, s1, s2, rho, outs, douts, c_l, fv, dv):
         ct2 = states[i, 5]
         o = outs[i]
         do = douts[i]
-        s1x = s1[i, 0]
-        s1z = s1[i, 2]
-        s2x = s2[i, 0]
-        s2z = s2[i, 2]
+        s1x = s1l[i, 0]
+        s1z = s1l[i, 1]
+        s2x = s2l[i, 0]
+        s2z = s2l[i, 1]
         ds1 = o[C.OUT_DS1]
         ds2 = o[C.OUT_DS2]
         p11 = o[C.OUT_P11]
@@ -313,7 +346,7 @@ def _nodal_fluxes(states, q, s1, s2, rho, outs, douts, c_l, fv, dv):
 def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
               triangles, gradN, area_tri,
               color_offsets, color_elems,
-              veps, veps_s, s1n, R, Jdata, elem_to_csr, do_jac):
+              veps, veps_s, s1n, basisy, R, Jdata, elem_to_csr, do_jac):
     """Element assembly of the six Galerkin residuals and (optionally) the
     analytic Jacobian into the CSR data array via elem_to_csr.
 
@@ -327,6 +360,12 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
     damps the centered-Galerkin 2h streamwise mode (GV1.1(e) finding,
     design doc §9 item 4); s1 depends on edge data only, not on the state,
     so the Jacobian stays first-order exact.
+
+    The R4 (Q x grad(q^2)) . n source term is the scalar triple product of
+    the interpolated 3-D Q vector, the element q^2 gradient and the
+    interpolated LOCAL normal basis_y (D13 SIII.D.1; on a y-normal planar
+    surface it reduces operation-for-operation to the pre-V3 global
+    formula q3z*gq2x - q3x*gq2z, so planar cases stay bit-identical).
     """
     n_colors = color_offsets.shape[0] - 1
     for c in range(n_colors):
@@ -379,6 +418,18 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                     + psi[nn[1]] * gN[1, k]
                     + psi[nn[2]] * gN[2, k]
                 )
+
+            # ---- interpolated 3-D Q vector and local normal at the quad
+            # points (for the R4 (Q x grad(q^2)) . n triple product) ----
+            qm_tab = np.zeros((3, 3))
+            nm_tab = np.zeros((3, 3))
+            for m in range(3):
+                for b in range(3):
+                    nb = nn[b]
+                    nmb = QUAD_N[m, b]
+                    for k in range(3):
+                        qm_tab[m, k] += nmb * fv[nb, F_Q3 + k]
+                        nm_tab[m, k] += nmb * basisy[nb, k]
 
             # ---- diffusion gradients per density column ----
             gdens = np.zeros((6, 3))
@@ -459,8 +510,6 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                     q3g = 0.0
                     qo3g = 0.0
                     e3psi = 0.0
-                    q3x = 0.0
-                    q3z = 0.0
                     taux_m = 0.0
                     tauz_m = 0.0
                     dd_m = 0.0
@@ -475,8 +524,6 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                             q3g += nmb * fv[nb, F_Q3 + k] * gq2[k]
                             qo3g += nmb * fv[nb, F_QO3 + k] * gq2[k]
                             e3psi += nmb * fv[nb, F_E3 + k] * gpsi[k]
-                        q3x += nmb * fv[nb, F_Q3 + 0]
-                        q3z += nmb * fv[nb, F_Q3 + 2]
                         taux_m += nmb * fv[nb, F_TAUX]
                         tauz_m += nmb * fv[nb, F_TAUZ]
                         dd_m += nmb * fv[nb, F_DD]
@@ -484,7 +531,19 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                         do_m += nmb * fv[nb, F_DO]
                         s1_m += nmb * fv[nb, F_S1]
                         s2_m += nmb * fv[nb, F_S2]
-                    crossy = q3z * gq2[0] - q3x * gq2[2]
+                    # (Q x grad(q^2)) . n as the scalar triple product of
+                    # the interpolated 3-D Q, the element q^2 gradient and
+                    # the interpolated local normal; on planar y-normal
+                    # meshes nm=(0,1,0) and this reduces operation-for-
+                    # operation to the pre-V3 q3z*gq2x - q3x*gq2z.
+                    crossy = (
+                        (qm_tab[m, 1] * gq2[2] - qm_tab[m, 2] * gq2[1])
+                        * nm_tab[m, 0]
+                        + (qm_tab[m, 2] * gq2[0] - qm_tab[m, 0] * gq2[2])
+                        * nm_tab[m, 1]
+                        + (qm_tab[m, 0] * gq2[1] - qm_tab[m, 1] * gq2[0])
+                        * nm_tab[m, 2]
+                    )
                     acc[0] += w * (-taux_m)
                     acc[1] += w * (-tauz_m)
                     acc[2] += w * (-rho_m[m] * q3g - 2.0 * dd_m)
@@ -541,9 +600,13 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                                     dq3g += dv[nb, F_Q3 + k, l] * gq2[k]
                                     dqo3g += dv[nb, F_QO3 + k, l] * gq2[k]
                                     de3psi += dv[nb, F_E3 + k, l] * gpsi[k]
+                                gxn0 = gq2[1] * nm_tab[m, 2] - gq2[2] * nm_tab[m, 1]
+                                gxn1 = gq2[2] * nm_tab[m, 0] - gq2[0] * nm_tab[m, 2]
+                                gxn2 = gq2[0] * nm_tab[m, 1] - gq2[1] * nm_tab[m, 0]
                                 dcross = (
-                                    dv[nb, F_Q3 + 2, l] * gq2[0]
-                                    - dv[nb, F_Q3 + 0, l] * gq2[2]
+                                    dv[nb, F_Q3 + 0, l] * gxn0
+                                    + dv[nb, F_Q3 + 1, l] * gxn1
+                                    + dv[nb, F_Q3 + 2, l] * gxn2
                                 )
                                 je[0, l] += w * (-dv[nb, F_TAUX, l])
                                 je[1, l] += w * (-dv[nb, F_TAUZ, l])
@@ -644,8 +707,16 @@ class IBL3Solver:
         self._w = np.empty(n)
         self._q2 = np.empty(n)
         self._psi = np.empty(n)
-        _frames(u_e, sm.basis_y, sm.basis_x, self._q, self._s1, self._s2,
-                self._u, self._w, self._q2, self._psi)
+        self._s1l = np.empty((n, 2))
+        self._s2l = np.empty((n, 2))
+        # right-handed local "z" (D13 SIII.D.1): on a planar +-y-normal
+        # surface this is exactly +z_global, so planar cases are
+        # bit-identical to the pre-V3 global-basis form.
+        self._basis_zc = np.ascontiguousarray(
+            np.cross(sm.basis_x, sm.basis_y))
+        _frames(u_e, sm.basis_y, sm.basis_x, self._basis_zc,
+                self._q, self._s1, self._s2, self._u, self._w, self._q2,
+                self._psi, self._s1l, self._s2l)
         self._veps = self.eps_diff * max(float(np.max(self._q)), 1.0e-30)
         self._veps_s = self.eps_diff_s * max(float(np.max(self._q)), 1.0e-30)
 
@@ -690,8 +761,9 @@ class IBL3Solver:
     def _nodal(self, U):
         C.closure_all(U, self._q, self._rho, self._mu, self._mach,
                       self._flags, self.c_l, self.outs, self.douts)
-        _nodal_fluxes(U, self._q, self._s1, self._s2, self._rho,
-                      self.outs, self.douts, self.c_l, self.fv, self.dv)
+        _nodal_fluxes(U, self._q, self._s1, self._s2, self._s1l, self._s2l,
+                      self._rho, self.outs, self.douts, self.c_l,
+                      self.fv, self.dv)
 
     def _G_current(self):
         """Physical conserved densities G_c at the current fv tables
@@ -725,6 +797,7 @@ class IBL3Solver:
                   self._rho, self.smesh.triangles, self.smesh.gradN,
                   self.smesh.area_tri, self.smesh.color_offsets,
                   self.smesh.color_elems, self._veps, self._veps_s, self._s1,
+                  self.smesh.basis_y,
                   R, self.Jdata, self.elem_to_csr, do_jac)
 
     def _apply_rows(self, R, U, do_jac):
