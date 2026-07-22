@@ -262,10 +262,11 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   松耦合 + committed XFOIL 参考；PASS Δcl 比 0.542∈[0.5,2.0]、松环 4–5 次外迭代 ω=1.0（跨声速 M0.72 记录点 4 次
   无调参）；honest FAIL 局域化：cf 仅转捩后首站 +44%（XFOIL e^N 斜坡 vs 瞬时切换）、δ* H 族偏移 ≤27.9%；GV3.3
   旋成体三轮调试稳定化（尾带钉扎 + 钉扎带 ṁ 掩蔽 + FP 护栏），中段轴对称优秀、尾锥 σ/μ 0.55/横流 0.26 FAIL、
-  环不收敛 = 实测尾部失稳——V4 跳过判据按字面满足（GV3.2），GV3.3 反方证据入台账，**V4 决策交用户**）
+  环不收敛 = 实测尾部失稳——V4 跳过判据按字面满足（GV3.2），GV3.3 反方证据入台账，**V4 ⊘ 跳过
+  2026-07-22（用户定；重开触发 = V5 受挫或闭体粘性提前进范围）**）
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
-  V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 可选 quasi-simultaneous；V5 紧耦合（入口 GV5.0 M6 亚声速
+  V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合（入口 GV5.0 M6 亚声速
   松耦合桥 RECORDED；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源；GV5.1 预注 FD 区界单侧差分/光滑加权）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）

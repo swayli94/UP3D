@@ -1137,7 +1137,8 @@ cf +44 % at the first post-trip station only (XFOIL e^N ramp vs
 instantaneous switch), δ* H-family offset ≤ 27.9 % at x/c = 0.074, GV3.3
 tail-cone σ/μ 0.5533 / crossflow 0.2631 FAIL + loop NOT converged =
 measured stern instability — V4 skip criterion met by letter (GV3.2),
-counter-evidence logged (GV3.3), V4 decision user's call); Track A — A1, A2,
+counter-evidence logged (GV3.3) — **V4 ⊘ SKIPPED 2026-07-22** (user-directed;
+reopen trigger = V5 stall / pre-V5 closed-body scope)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),

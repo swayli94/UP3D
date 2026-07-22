@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -248,7 +248,7 @@ logically independent of V1; V3 needs both.
 
 **Prereq:** V1 + V2.
 
-### V4 — Quasi-simultaneous coupling ☐ (optional; decision fed by GV3.2 — inputs measured 2026-07-22, user's call pending)
+### V4 — Quasi-simultaneous coupling ⊘ SKIPPED 2026-07-22 (user-directed; criterion met on GV3.2)
 
 **Deliverable:** Hilbert-integral surface surrogate (`viscous/hilbert.py`);
 the BLWF58 method document is the reference description of the approach (NOT
@@ -267,7 +267,12 @@ on hand — see the header reference pin; fetch it before opening V4, or skip).
   2026-07-22, after the criterion was written): the loose loop does NOT
   converge at the closed-body stern (tail-cone ṁ growth ×5.7 over k = 5→10)
   — a live case for GV4.1's "converges a case the loose loop cannot" clause,
-  relevant if V5/V6 want closed-body geometries. **Decision: user's call.**
+  relevant if V5/V6 want closed-body geometries. **DECIDED 2026-07-22
+  (user-directed): V4 SKIPPED** — the criterion is met by its letter
+  (GV3.2: 4–5 iterations incl. transonic M 0.72, no per-case tuning).
+  The GV3.3 stern instability is logged as the **reopen trigger**: if
+  V5's augmented Newton stalls, or closed-body viscous cases enter scope
+  before V5 lands, V4 reopens as the fallback.
 
 **Prereq:** V3.
 
@@ -452,11 +457,13 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   ring and the tail cone; loop NOT converged — measured stern instability,
   V4 decision input). Also fixed en route: IBL3 local-basis crossflow
   leakage (25.9/0.15 → 1.8e-4/1.6e-3, `viscous/ibl3.py`). V4 skip criterion
-  MET by its letter (GV3.2), counter-evidence logged (GV3.3 stern) —
-  **V4 decision: user's call**.
-- V4 — ☐ (optional) — quasi-simultaneous coupling (`viscous/hilbert.py`,
-  BLWF58 reference — NOT on hand, fetch before opening or skip). Gate GV4.1;
-  concrete skip criterion wired to GV3.2.
+  MET by its letter (GV3.2), counter-evidence logged (GV3.3 stern).
+- V4 — **⊘ SKIPPED 2026-07-22 (user-directed)** — quasi-simultaneous
+  coupling (`viscous/hilbert.py`, BLWF58 reference — NOT on hand). Skip
+  criterion met by its letter on GV3.2 (4–5 iterations incl. transonic
+  M 0.72, no tuning). **Reopen trigger** (logged from GV3.3): V5's
+  augmented Newton stalls, or closed-body viscous cases enter scope
+  before V5 lands.
 - V5 — ☐ — tight coupling: augmented (φ, Γ, BL) Newton on P8/P14. Entry check
   GV5.0 = M6 subsonic M0.5 loose-coupling bridge (RECORDED; V3 driver, first
   live 3-D crossflow exercise, δ*(z) + ΔCL direction + 3-D iteration count;
