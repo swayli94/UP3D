@@ -191,7 +191,8 @@ pyfp3d/                    # Main package
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
 │   │                       #   GV1.1 9 PASS / 2 FAIL, V1 ✓ CLOSED 2026-07-22 (VERDICT
 │   │                       #   cases/analysis/v1_ibl3_standalone/VERDICT.md); V1 does NOT touch
-│   │                       #   solve/ (pure additive package) — V2 adds the solve/ RHS channels
+│   │                       #   solve/ (pure additive package) — V2 adds the solve/ RHS
+│   │                       #   channels, V3 the loose-coupling driver (coupling.py)
 │   ├── __init__.py
 │   ├── surface_mesh.py   # ✓ compact wall-surface DOF numbering + per-node local basis;
 │   │                       #   wake-slot reservation + master-map hook in the data layout
@@ -201,11 +202,17 @@ pyfp3d/                    # Main package
 │   ├── ibl3.py           # ✓ 6-equation surface Galerkin P1 FE: strong-form divergence +
 │   │                       #   only-diffusion-by-parts (D13 (74)), colored prange assembly,
 │   │                       #   analytic CSR Jacobian, physical-density PTC (F_pt merit)
-│   └── transpiration.py  # ✓ [V2] δ*→ṁ = ∇_Γ·(ρ_e u_e δ*) (gradN strong-form + node_area
-│                           #   lumping) + wall-RHS Galerkin assembly (wall_correction template,
-│                           #   b = −load(ṁ) blowing-positive, sign pinned by GV2.1(a)) +
-│                           #   per-zone u_e extraction per A4; GV2.1 23 PASS / 0 FAIL,
-│                           #   V2 ✓ CLOSED 2026-07-22 (cases/analysis/v2_transpiration_channel/)
+│   ├── transpiration.py  # ✓ [V2] δ*→ṁ = ∇_Γ·(ρ_e u_e δ*) (gradN strong-form + node_area
+│   │                       #   lumping) + wall-RHS Galerkin assembly (wall_correction template,
+│   │                       #   b = −load(ṁ) blowing-positive, sign pinned by GV2.1(a)) +
+│   │                       #   per-zone u_e extraction per A4; GV2.1 23 PASS / 0 FAIL,
+│   │                       #   V2 ✓ CLOSED 2026-07-22 (cases/analysis/v2_transpiration_channel/)
+│   └── coupling.py       # ✓ [V3] loose viscous–inviscid coupling: CouplingCase builders
+│                           #   (airfoil: LE-band Dirichlet pinning + station chain; closed
+│                           #   body: nose+tail stagnation-band pinning, tail-ṁ masking) +
+│                           #   run_loose_coupling outer loop (IBL→δ*→ṁ→FP→u_e);
+│                           #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
+│                           #   GV3.3 cases/analysis/v3_fuselage_smoke/
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -495,6 +502,8 @@ tests/                     # Unit and gate tests
 │                                  #   GV2.1(a) coarse MMS lock, GV2.1(b) Picard legs
 ├── test_v2_newton_rhs_channel.py  # ✓ [V2] GV2.1(b)/(c): Newton external_rhs + LS b_base
 │                                  #   bit-identity, Jacobian bit-invariance + FD under lagged ṁ
+├── test_v3_coupling.py            # ✓ [V3] case-builder wiring (airfoil strip + closed body),
+│                                  #   inflow/outflow pinning, 2-iteration coarse smoke
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1115,7 +1124,20 @@ streamwise-tensor stabilization ε_s=0.02 = PASS,
 newton_lifting / ls_newton — `None` ⇒ legacy path bit-identical; VERDICT
 `cases/analysis/v2_transpiration_channel/VERDICT.md` — (a) MMS cylinder-blowing
 convergence strict-decreasing, order 1.65/1.64 ≥ 1.0, (b) five-driver ṁ=0
-bit-identity, (c) FD Jacobian 6.6e-09–7.2e-08 < 1e-5); Track A — A1, A2,
+bit-identity, (c) FD Jacobian 6.6e-09–7.2e-08 < 1e-5); **V3 ✓ CLOSED
+2026-07-22 · GV3.1/GV3.2 2 PASS / 4 FAIL / 23 RECORDED · GV3.3 0 PASS /
+2 FAIL / 7 RECORDED** (loose coupling shipped: `pyfp3d/viscous/coupling.py`
++ committed XFOIL reference `cases/reference_data/naca0012_viscous_xfoil/`
++ BoR smoke generator `cases/meshes/fuselage_bor/`; IBL3 local-basis
+crossflow fix 25.9/0.15 → 1.8e-4/1.6e-3 en route; VERDICTs
+`cases/analysis/v3_loose_coupling/` + `cases/analysis/v3_fuselage_smoke/` —
+Δcl PASS ratio 0.542 ∈ [0.5, 2.0], loose loop 4–5 outer iters at ω = 1.0
+incl. transonic M 0.72 record (4 iters, no tuning); honest FAILs localized:
+cf +44 % at the first post-trip station only (XFOIL e^N ramp vs
+instantaneous switch), δ* H-family offset ≤ 27.9 % at x/c = 0.074, GV3.3
+tail-cone σ/μ 0.5533 / crossflow 0.2631 FAIL + loop NOT converged =
+measured stern instability — V4 skip criterion met by letter (GV3.2),
+counter-evidence logged (GV3.3), V4 decision user's call); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
@@ -1124,10 +1146,11 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **571 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V
-V2 transpiration channel + GV2.1; full-suite measured 571 @1321.89 s @16
-threads; +17 vs 554 = `test_v2_transpiration.py` (9) +
-`test_v2_newton_rhs_channel.py` (8); NOJIT lane 17/17 @163.78 s. Previous 554:
+Default suite: **578 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V
+V3 loose coupling + GV3.1/3.2/3.3; full-suite measured 578 @1637.39 s @16
+threads; +7 vs 571 = `test_v3_coupling.py` (7). Previous 571:
+V2 transpiration channel + GV2.1, 571 measured @1321.89 s, NOJIT lane
+17/17 @163.78 s; previous 554:
 V1 IBL3 core + GV1.1, 554 measured @1462.64 s, NOJIT lane 35/35; previous 519:
 B28–B32 close-out +
 G1.6 Option C re-spec, 516 measured @1223.39 s + 3 TestG16Respec asserts);

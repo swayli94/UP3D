@@ -1,0 +1,30 @@
+gate,metric,band,measured,verdict
+GV3.1,cf lower worst |err| (x/c=0.055),<= 15% every banded station,0.448,FAIL
+GV3.1,cf upper worst |err| (x/c=0.055),<= 15% every banded station,0.437,FAIL
+GV3.1,delta* lower worst |err| (x/c=0.074),<= 25% every banded station,0.276,FAIL
+GV3.1,delta* upper worst |err| (x/c=0.074),<= 25% every banded station,0.279,FAIL
+GV3.1,medium cf LOCAL-frame lower worst |err| (x/c=0.055) [as-registered, superseded],recorded,0.439,RECORDED
+GV3.1,medium cf LOCAL-frame upper worst |err| (x/c=0.074) [as-registered, superseded],recorded,0.475,RECORDED
+GV3.1,medium delta* max|err| le-zone,recorded,0.274,RECORDED
+GV3.1,medium delta* max|err| te-zone,recorded,0.244,RECORDED
+GV3.1,cl_inviscid (k=0),recorded,0.2844,RECORDED
+GV3.1,cl_coupled (final),recorded,0.2719,RECORDED
+GV3.1,Delta-cl vs XFOIL own (0.0230),recorded,0.0125,RECORDED
+GV3.1,Delta-cl direction + factor-2 band,0 < dcl, 0.5 <= ratio <= 2.0,ratio=0.542,PASS
+GV3.2,loose loop converged <= 10 outer iters,<= 10 (omega recorded),n_outer=5 omega=1.0 converged=True,PASS
+GV3.2,IBL residual floor over outer iters,recorded,1.211e-06,RECORDED
+GV3.1,coarse cf lower worst |err| (x/c=0.104),recorded,0.082,RECORDED
+GV3.1,coarse cf upper worst |err| (x/c=0.203),recorded,0.135,RECORDED
+GV3.1,coarse delta* lower worst |err| (x/c=0.163),recorded,0.384,RECORDED
+GV3.1,coarse delta* upper worst |err| (x/c=0.921),recorded,0.302,RECORDED
+GV3.1,coarse cf LOCAL-frame lower worst |err| (x/c=0.921) [as-registered, superseded],recorded,0.179,RECORDED
+GV3.1,coarse cf LOCAL-frame upper worst |err| (x/c=0.084) [as-registered, superseded],recorded,0.440,RECORDED
+GV3.1,coarse delta* max|err| le-zone,recorded,0.178,RECORDED
+GV3.1,coarse delta* max|err| te-zone,recorded,0.363,RECORDED
+GV3.1,coarse cl_inviscid (k=0),recorded,0.2776,RECORDED
+GV3.1,coarse cl_coupled (final),recorded,0.2678,RECORDED
+GV3.1,coarse Delta-cl vs XFOIL own (0.0230),recorded,0.0098,RECORDED
+GV3.1,coarse Delta-cl ratio,recorded,0.427,RECORDED
+GV3.2,transonic M0.72 coarse Newton: outer count,recorded,n_outer=4 converged=True omega=1.0,RECORDED
+GV3.2,transonic IBL residual floor,recorded,3.175e-06,RECORDED
+GV3.2,transonic cl final,recorded,0.3764,RECORDED

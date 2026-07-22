@@ -257,12 +257,17 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 - **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC）；**V1 ✓ CLOSED
   2026-07-22**（GV1.1 9 PASS / 2 FAIL，(a)×2 = 闭包族不动点物理，recorded FAIL 接受）；**V2 ✓ CLOSED 2026-07-22**
   （GV2.1 23 PASS / 0 FAIL：cylinder Fourier blowing 对解析 relmax 严格降、阶 1.650/1.640，ṁ=0 五路驱动逐位一致，
-  lagged ṁ 下 Newton Jacobian 逐位不变 + FD 6.6e-09–7.2e-08——transpiration 通道三路驱动全部打通）
+  lagged ṁ 下 Newton Jacobian 逐位不变 + FD 6.6e-09–7.2e-08——transpiration 通道三路驱动全部打通）；**V3 ✓ CLOSED
+  2026-07-22**（GV3.1/3.2 2 PASS / 4 FAIL / 23 RECORDED · GV3.3 0 PASS / 2 FAIL / 7 RECORDED：`viscous/coupling.py`
+  松耦合 + committed XFOIL 参考；PASS Δcl 比 0.542∈[0.5,2.0]、松环 4–5 次外迭代 ω=1.0（跨声速 M0.72 记录点 4 次
+  无调参）；honest FAIL 局域化：cf 仅转捩后首站 +44%（XFOIL e^N 斜坡 vs 瞬时切换）、δ* H 族偏移 ≤27.9%；GV3.3
+  旋成体三轮调试稳定化（尾带钉扎 + 钉扎带 ṁ 掩蔽 + FP 护栏），中段轴对称优秀、尾锥 σ/μ 0.55/横流 0.26 FAIL、
+  环不收敛 = 实测尾部失稳——V4 跳过判据按字面满足（GV3.2），GV3.3 反方证据入台账，**V4 决策交用户**）
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
   V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 可选 quasi-simultaneous；V5 紧耦合（入口 GV5.0 M6 亚声速
   松耦合桥 RECORDED；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源；GV5.1 预注 FD 区界单侧差分/光滑加权）；
-  V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V3–V6 尚无实现。
+  V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
   四求解器统一计时插桩 + conforming×level-set × Picard×Newton 耗时基准） — **A2 ✓ 2026-07-17 关闭**（TE/Kutta 保真度归因，GA2.1–GA2.5）：**S1 定谳**——
@@ -295,7 +300,13 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **554 passed + 25 skipped + 2 xfailed**（2026-07-22 Track V **V1 IBL3
+现基线 **578 passed + 25 skipped + 2 xfailed**（2026-07-22 Track V **V3 松耦合
+交付 + GV3.1/3.2/3.3 执行**：全套件实测 578 @1637.39 s @16 线程；+7 vs 下档 571 =
+`tests/test_v3_coupling.py`（7））。
+上一档 571+25+2（2026-07-22 Track V **V2 transpiration 通道 + GV2.1**：实测
+571 @1321.89 s；+17 vs 554 = `tests/test_v2_transpiration.py`（9）+
+`tests/test_v2_newton_rhs_channel.py`（8）；NOJIT 路 17/17 绿）。
+上一档 554+25+2（2026-07-22 Track V **V1 IBL3
 core 交付 + GV1.1 执行**：全套件实测 554 @1462.64 s @16 线程；+35 vs 下档 519 =
 `tests/test_v1_surface_mesh.py`（13）+ `tests/test_v1_closures.py`（17）
 + `tests/test_v1_ibl3.py`（5）；NOJIT 路 35/35 绿）。
