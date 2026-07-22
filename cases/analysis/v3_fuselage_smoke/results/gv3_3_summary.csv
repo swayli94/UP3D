@@ -1,0 +1,10 @@
+gate,metric,band,measured,verdict
+GV3.3(a),azimuthal sigma/mu(delta*) worst (x/L=0.940),<= 0.15 every window station,0.5533,FAIL
+GV3.3(b),max|B|/max|A|, max|Ct2|/max|Ct1|,<= 0.05,0.2631, 0.2295,FAIL
+GV3.3(b),max|Psi|, max|DS2|/|DS1|, max|CF2|/|CF1|,recorded,2.367e+03, 1.657e-02/5.609e-02, 4.623e+00/4.515e+00,RECORDED
+GV3.3(c),inflow pinned nodes / LE-band nodes,recorded,653 / 1330,RECORDED
+GV3.3(d),wall |dCp| on/off: max / mean,recorded,1.6560 / 0.0147,RECORDED
+GV3.3(d),nodes with delta* < 0 (separation indicator),recorded,20,RECORDED
+GV3.3(d),H(x) max 3.19 at x/L=0.030 (cyl 1.41),recorded,no tail rise,RECORDED
+GV3.3,loose loop n_outer / omega / converged,recorded,10 / 1.0 / False,RECORDED
+GV3.3,Re per body length (re_chord),recorded,3.000e+06 (7.4432e+05),RECORDED

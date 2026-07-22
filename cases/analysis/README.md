@@ -94,9 +94,34 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   stabilization (ε_s=0.02, order ≈1.0 restored); SUPG/upwind remains the V3+ upgrade route;
   VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, design record `docs/design_track_v.md` §9) —
   `python cases/analysis/v1_ibl3_standalone/run.py` — ~7 min (exit 1 = honest FAIL present)
+- `v2_transpiration_channel/` — **Track V / V2** GV2.1 transpiration channel verification (δ*→ṁ = ∇_Γ·(ρ_e u_e δ*)
+  wall-RHS channels in all five FP drivers, `None` ⇒ legacy path bit-identical; pre-registered, **23 PASS / 0 FAIL /
+  16 RECORDED** — (a) MMS cylinder-blowing convergence strict-decreasing order 1.65/1.64 ≥ 1.0, (b) five-driver ṁ=0
+  bit-identity, (c) FD Jacobian 6.6e-09–7.2e-08 < 1e-5; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir) —
+  `python cases/analysis/v2_transpiration_channel/run.py` — heavy (exit 1 = honest FAIL present)
+- `v3_loose_coupling/` — **Track V / V3** GV3.1/GV3.2 loose viscous–inviscid coupling on NACA0012 2.5-D strip
+  (M0.5/α2°/Re3e6 vs committed XFOIL reference `cases/reference_data/naca0012_viscous_xfoil/`; pre-registered,
+  **2 PASS / 4 FAIL / 23 RECORDED** — PASS: Δcl ratio 0.542 ∈ [0.5, 2.0], GV3.2 loop convergence 5 outer iters ω=1.0
+  (transonic M0.72 record point Newton 4 iters, no retuning); FAIL (binding band): cf first-post-transition station
+  +44% (XFOIL e^N ramp vs our instantaneous switch, all other stations ≤15%), δ* H-family offset +13–27% on the lower
+  side = closure-family difference; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, design record
+  `docs/design_track_v.md` §10) — `python cases/analysis/v3_loose_coupling/run.py` — heavy (exit 1 = honest FAIL
+  present)
+- `v3_fuselage_smoke/` — **Track V / V3** GV3.3 fuselage body-of-revolution smoke (Track V's only fuselage-alone
+  item: full-2π BoR, M0.3/α0/Re3e6 per body length, non-lifting Picard + loose coupling; pre-registered, **0 PASS /
+  2 FAIL / 7 RECORDED** — closed-body scheme stabilized through three debug rounds: tail-band Dirichlet pin +
+  transpiration masking on the pinned band + FP non-convergence guard; 10/10 outer iterations no numerical event,
+  mid-body x/L ∈ [0.34, 0.82] axisymmetry excellent (σ/μ(δ*) 0.018–0.068, crossflow ~1e-6); FAILs localized:
+  (a) σ/μ worst 0.5533 at x/L = 0.940 (post-trip ring + tail cone), (b) crossflow 0.2631/0.2295 tail-cone; loop
+  NOT converged — tail-cone ṁ_max ×5.7 over k = 5→10 = measured loose-coupling stern instability, V4 decision
+  input; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, mesh generator `cases/meshes/fuselage_bor/`, design
+  record `docs/design_track_v.md` §10) — `python cases/analysis/v3_fuselage_smoke/run.py --levels coarse` —
+  ~17 min (exit 1 = honest FAIL present)
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 `p14_*` are analysis studies belonging to Track B / Track P phases that live
 here because they are studies, not capability demos. `v1_ibl3_standalone/`
-is Track V's GV1.1 gate case, likewise a study.)*
+is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
+`v3_loose_coupling/` and `v3_fuselage_smoke/` are Track V's GV2.1 / GV3.x
+gate cases, same status.)*

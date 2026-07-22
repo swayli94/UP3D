@@ -79,6 +79,10 @@ cases/meshes/onera_m6_wingbody/*.msh
 # python cases/meshes/onera_m6_wingbody_conforming/generate_onera_m6_wingbody_conforming.py)
 cases/meshes/onera_m6_wingbody_conforming/*.msh
 
+# GV3.3 fuselage body-of-revolution family (same policy; regenerate:
+# python cases/meshes/fuselage_bor/generate_fuselage_bor.py)
+cases/meshes/fuselage_bor/*.msh
+
 # P9 discrimination fine meshes (roadmap P9: fine stays local;
 # regenerate: python cases/meshes/naca0012_2.5d/generate_naca0012.py --level fine)
 cases/meshes/naca0012_2.5d/fine.msh
@@ -103,6 +107,10 @@ docs/references
 
 # Temporary files
 temp/
+
+# External tools built from source (not a repo dependency; e.g. XFOIL
+# for cases/reference_data/naca0012_viscous_xfoil -- see its README.md)
+tools/
 
 # P11 sphere-shell sweep meshes (local caches; the demo regenerates them,
 # ~8 min: python cases/demo/p11_curved_walls/run_demo.py). coarse/medium.msh

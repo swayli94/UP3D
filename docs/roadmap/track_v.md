@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -170,7 +170,7 @@ independent of the LS-side (b)-class work — parallelizable.
 **Prereq:** P6 ✓ + A4 ✓. No BL solve is involved (manufactured ṁ), so V2 is
 logically independent of V1; V3 needs both.
 
-### V3 — Loose coupling (2.5-D ladder + fuselage smoke) ☐
+### V3 — Loose coupling (2.5-D ladder + fuselage smoke) ✓ CLOSED 2026-07-22 · GV3.1/GV3.2 (2 PASS / 4 FAIL / 23 RECORDED) · GV3.3 (0 PASS / 2 FAIL / 7 RECORDED)
 
 **Deliverable:**
 
@@ -187,7 +187,7 @@ logically independent of V1; V3 needs both.
 
 **Gates:**
 
-- [ ] **GV3.1 coupled 2.5-D NACA0012 subsonic vs committed XFOIL reference**
+- [x] **GV3.1 coupled 2.5-D NACA0012 subsonic vs committed XFOIL reference**
   (matched M/Re/α, forced transition, attached): δ*/c and C_f band OUTSIDE the
   LE/stagnation zone (band pre-registered at execution **and quoted alongside
   the A4 input band ≈2.5 % medium** — viscous-model error and inviscid-input
@@ -195,12 +195,29 @@ logically independent of V1; V3 needs both.
   (direction) with magnitude vs XFOIL's own viscous decrement (band
   pre-registered). LE-band pointwise comparison is RECORDED, not gated
   (input-limited 4–7 % per A4).
-- [ ] **GV3.2 loose-loop convergence**: ‖Δδ*‖/‖δ*‖ < 1e-3 in ≤ 10 outer
+  **EXECUTED 2026-07-22 → 1 PASS / 4 FAIL (+ 18 RECORDED; honest FAIL)** —
+  pre-registered + two same-day addenda (cf compared in the freestream frame —
+  XFOIL DUMP cf is freestream-normalized, our OUT_CF1 is local; Dirichlet
+  inflow-band stations labeled `pinned`, excluded from all statistics);
+  VERDICT + evidence `cases/analysis/v3_loose_coupling/`, XFOIL reference +
+  generation script `cases/reference_data/naca0012_viscous_xfoil/`.
+  **PASS Δcl**: cl 0.2844 → 0.2719, XFOIL's own decrement 0.0230, ratio
+  0.542 ∈ [0.5, 2.0]. **FAIL cf** upper/lower worst +43.7 %/+44.8 % at the
+  FIRST post-trip station x/c = 0.055 only — XFOIL's e^N intermittency ramps
+  cf over a finite run while our flags switch instantaneously; every other
+  banded station ≤ 15 % (coarse passes, worst 13.5 %). **FAIL δ*** upper/lower
+  worst 27.9 %/27.6 % at x/c = 0.074 — cf matches there (±7 %) so θ is
+  consistent; the bias is H in APG on the lower side (+13…+27 %), a
+  closure-family difference the 25 % band mostly but not fully absorbs.
+- [x] **GV3.2 loose-loop convergence**: ‖Δδ*‖/‖δ*‖ < 1e-3 in ≤ 10 outer
   iterations on the GV3.1 case, under-relaxation factor recorded honestly; one
   transonic-attached 2.5-D point (M ~0.70–0.75) run and RECORDED (iteration
   count + relaxation), not pass/fail — the DN6-predicted near-separation
   divergence risk is measured here, and feeds the V4 skip decision.
-- [ ] **GV3.3 fuselage smoke** (added 2026-07-22, user-directed) — the minimal
+  **EXECUTED 2026-07-22 → PASS** (same VERDICT): medium 5 outer iterations at
+  **ω = 1.0** (coarse 4); RECORDED transonic point M 0.72 (Newton driver): 4
+  iterations, no per-case tuning, cl 0.3764, IBL residual floor 3.2e-6.
+- [x] **GV3.3 fuselage smoke** (added 2026-07-22, user-directed) — the minimal
   genuinely-3-D closed-surface transpiration exercise, and Track V's **only
   fuselage-alone item** (no junction, no wake): body of revolution at α = 0,
   subsonic Picard (non-lifting) + loose coupling, forced transition, Re
@@ -213,10 +230,25 @@ logically independent of V1; V3 needs both.
   + tail-cone adverse-gradient H rise — an indicated tail separation is
   recorded and masked, not chased. Headless artifacts per CLAUDE.md §Workflow
   rule 1.
+  **EXECUTED 2026-07-22 → 0 PASS / 2 FAIL / 7 RECORDED (honest FAIL)** —
+  pre-registered; VERDICT + evidence `cases/analysis/v3_fuselage_smoke/`,
+  smoke-mesh generator `cases/meshes/fuselage_bor/`. Three debug rounds to a
+  stable closed-body scheme (exactly-singular Newton at the aft pole → tail
+  transpiration-sink runaway → Goldstein separation crash ⇒ FINAL: tail-band
+  Dirichlet pin + transpiration masking on the pinned band + FP
+  non-convergence guard; airfoil path untouched): 10/10 outer iterations, no
+  numerical event; mid-body x/L ∈ [0.34, 0.82] axisymmetry excellent
+  (σ/μ(δ*) 0.018–0.068, crossflow ratio ~1e-6). **FAIL (a)** σ/μ worst
+  0.5533 at x/L = 0.940 (12/63 window stations over band, localized in the
+  post-trip ring 0.20–0.33 and the tail cone ≥ 0.82); **FAIL (b)**
+  max|B|/max|A| = 0.2631, max|Cτ2|/max|Cτ1| = 0.2295 (maxima tail-cone).
+  Loop NOT converged — tail-cone ṁ_max ×5.7 over k = 5→10 = the measured
+  loose-coupling stern instability. Medium not executed (pre-registered
+  optional; coarse verdict decisive).
 
 **Prereq:** V1 + V2.
 
-### V4 — Quasi-simultaneous coupling ☐ (optional; decision fed by GV3.2)
+### V4 — Quasi-simultaneous coupling ⊘ SKIPPED 2026-07-22 (user-directed; criterion met on GV3.2)
 
 **Deliverable:** Hilbert-integral surface surrogate (`viscous/hilbert.py`);
 the BLWF58 method document is the reference description of the approach (NOT
@@ -229,6 +261,18 @@ on hand — see the header reference pin; fetch it before opening V4, or skip).
 - **Skip criterion (concrete):** if GV3.2 passes at ≤ 10 iterations including
   the recorded transonic point without per-case tuning, V4 is SKIPPED — record
   the decision in the ledger and move to V5.
+  **Decision inputs measured 2026-07-22:** GV3.2 PASSED at 4–5 iterations
+  including the transonic point (M 0.72, 4 iterations, no tuning) — the skip
+  criterion is MET by its letter. Counter-evidence from GV3.3 (added
+  2026-07-22, after the criterion was written): the loose loop does NOT
+  converge at the closed-body stern (tail-cone ṁ growth ×5.7 over k = 5→10)
+  — a live case for GV4.1's "converges a case the loose loop cannot" clause,
+  relevant if V5/V6 want closed-body geometries. **DECIDED 2026-07-22
+  (user-directed): V4 SKIPPED** — the criterion is met by its letter
+  (GV3.2: 4–5 iterations incl. transonic M 0.72, no per-case tuning).
+  The GV3.3 stern instability is logged as the **reopen trigger**: if
+  V5's augmented Newton stalls, or closed-body viscous cases enter scope
+  before V5 lands, V4 reopens as the fallback.
 
 **Prereq:** V3.
 
@@ -396,16 +440,30 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   FD) verdict + evidence: `cases/analysis/v2_transpiration_channel/VERDICT.md`
   — (a) orders 1.650/1.640 ≥ 1.0, sign pinned analytically; (b) five legs
   bit-identical; (c) Jacobian bit-invariant + FD exact under lagged ṁ.
-- V3 — ☐ — loose coupling, 2.5-D ladder + fuselage smoke
-  (`viscous/coupling.py`; committed XFOIL reference; body-of-revolution smoke
-  mesh). Gates GV3.1 (coupled NACA0012 vs XFOIL, forced transition, A4 band
-  quoted), GV3.2 (loose loop ≤ 10 iters; transonic point RECORDED → V4 skip
-  decision), GV3.3 (fuselage body-of-revolution smoke — axisymmetry +
-  crossflow≈0 asserted, rest RECORDED; Track V's only fuselage-alone item, no
-  junction/wake).
-- V4 — ☐ (optional) — quasi-simultaneous coupling (`viscous/hilbert.py`,
-  BLWF58 reference — NOT on hand, fetch before opening or skip). Gate GV4.1;
-  concrete skip criterion wired to GV3.2.
+- V3 — **✓ CLOSED 2026-07-22 · GV3.1/GV3.2 2 PASS / 4 FAIL / 23 RECORDED ·
+  GV3.3 0 PASS / 2 FAIL / 7 RECORDED (honest FAILs)** — loose coupling
+  shipped (`viscous/coupling.py`: CouplingCase builders + run_loose_coupling
+  outer loop; committed XFOIL reference
+  `cases/reference_data/naca0012_viscous_xfoil/`; BoR smoke-mesh generator
+  `cases/meshes/fuselage_bor/`). Gate verdicts + evidence:
+  `cases/analysis/v3_loose_coupling/VERDICT.md` (GV3.1/3.2 — PASS Δcl ratio
+  0.542 ∈ [0.5, 2.0] vs XFOIL's own decrement, PASS loop convergence 5 iters
+  ω = 1.0 (transonic M 0.72 record: 4 iters, no tuning); FAILs localized:
+  cf +44 % at the first post-trip station only (XFOIL e^N ramp vs
+  instantaneous switch), δ* H-family offset ≤ 27.9 % at x/c = 0.074) and
+  `cases/analysis/v3_fuselage_smoke/VERDICT.md` (GV3.3 — closed-body scheme
+  stabilized through three debug rounds: tail-band pin + transpiration
+  masking + FP guard; mid-body axisymmetry excellent, FAILs at the post-trip
+  ring and the tail cone; loop NOT converged — measured stern instability,
+  V4 decision input). Also fixed en route: IBL3 local-basis crossflow
+  leakage (25.9/0.15 → 1.8e-4/1.6e-3, `viscous/ibl3.py`). V4 skip criterion
+  MET by its letter (GV3.2), counter-evidence logged (GV3.3 stern).
+- V4 — **⊘ SKIPPED 2026-07-22 (user-directed)** — quasi-simultaneous
+  coupling (`viscous/hilbert.py`, BLWF58 reference — NOT on hand). Skip
+  criterion met by its letter on GV3.2 (4–5 iterations incl. transonic
+  M 0.72, no tuning). **Reopen trigger** (logged from GV3.3): V5's
+  augmented Newton stalls, or closed-body viscous cases enter scope
+  before V5 lands.
 - V5 — ☐ — tight coupling: augmented (φ, Γ, BL) Newton on P8/P14. Entry check
   GV5.0 = M6 subsonic M0.5 loose-coupling bridge (RECORDED; V3 driver, first
   live 3-D crossflow exercise, δ*(z) + ΔCL direction + 3-D iteration count;

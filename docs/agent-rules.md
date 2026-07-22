@@ -696,13 +696,28 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   (cylinder Fourier blowing vs analytic, orders 1.650/1.640; ṁ=0 bit-identical
   on all five driver legs; Newton Jacobian bit-invariant + FD exact under
   lagged ṁ — transpiration channel live through Picard ×3 / conforming Newton /
-  LS `b_base`) —
+  LS `b_base`) · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2 PASS / 4 FAIL /
+  23 RECORDED · GV3.3 0 PASS / 2 FAIL / 7 RECORDED** (loose coupling
+  shipped: `viscous/coupling.py` + committed XFOIL reference
+  `cases/reference_data/naca0012_viscous_xfoil/`; Δcl PASS ratio 0.542 ∈
+  [0.5, 2.0], loop converged 4–5 outer iters at ω = 1.0 incl. transonic
+  M 0.72 record (4 iters, no tuning); honest FAILs localized: cf +44 % at
+  the first post-trip station only (XFOIL e^N ramp vs our instantaneous
+  switch), δ* H-family offset ≤ 27.9 % at x/c = 0.074; GV3.3 fuselage
+  smoke stabilized through three debug rounds (tail-band Dirichlet pin +
+  transpiration masking + FP guard), mid-body axisymmetry excellent
+  (σ/μ(δ*) 0.018–0.068), tail-cone σ/μ 0.5533 / crossflow 0.2631 FAIL,
+  loop NOT converged = measured stern instability — V4 skip criterion met
+  by its letter (GV3.2), counter-evidence logged (GV3.3) — **V4 ⊘
+  SKIPPED 2026-07-22 (user-directed; reopen trigger = V5 stall or
+  pre-V5 closed-body scope)**) —
   gates re-spec'd at opening against the B32/A4 state, then re-phased the same
   day (user-directed): V1 standalone IBL3 core (GV1.1 vs analytic/self-similar),
   V2 transpiration channel (GV2.1 exactness + ṁ=0 bit-identity + FD), V3 loose
   coupling (GV3.1 NACA0012 vs committed XFOIL with the A4 input band quoted,
   GV3.2 loose loop ≤ 10, GV3.3 fuselage body-of-revolution smoke = the only
-  fuselage-alone item); V4 optional quasi-simultaneous (skip wired to GV3.2);
+  fuselage-alone item); V4 ⊘ SKIPPED 2026-07-22 (user-directed: skip
+  criterion met on GV3.2; GV3.3 stern instability = reopen trigger);
   V5 tight coupling — entry = GV5.0 M6 subsonic loose-coupling bridge
   (RECORDED, first live 3-D crossflow exercise), GV5.3 anchored on the
   committed M6 experiment **Cp** (no experimental CL committed), GV5.1 carries
@@ -803,7 +818,15 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **554 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V **V1
+Baseline: **578 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V **V3
+loose coupling shipped + GV3.1/3.2/3.3 executed**; full-suite measured 578
+@1637.39 s @16 threads; +7 vs the 571 below = `tests/test_v3_coupling.py`
+(7)).
+Previous: 571 passed + 25 skipped + 2 xfailed (2026-07-22, Track V **V2
+transpiration channel + GV2.1**; measured 571 @1321.89 s; +17 vs 554 =
+`tests/test_v2_transpiration.py` (9) + `tests/test_v2_newton_rhs_channel.py`
+(8); NOJIT lane 17/17 green).
+Previous: 554 passed + 25 skipped + 2 xfailed (2026-07-22, Track V **V1
 IBL3 core shipped + GV1.1 executed**; full-suite measured 554 @1462.64 s
 @16 threads; +35 vs the 519 below = `tests/test_v1_surface_mesh.py` (13) +
 `tests/test_v1_closures.py` (17) + `tests/test_v1_ibl3.py` (5); NOJIT lane
