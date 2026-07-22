@@ -691,7 +691,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   per-step refresh rolled back (ill-posed), ① conforming tip_taper adopted:
   wing-body medium ceiling M0.79 → **M0.84 reached** (cl_p 0.2738, 0 clamps),
   cl_p cost ≈ −1.3%, demo 8/8.
-- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ◐ OPENED 2026-07-22** —
+- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ◐ OPENED 2026-07-22 ·
+  GV1.1 EXECUTED 8 PASS / 3 FAIL** —
   gates re-spec'd at opening against the B32/A4 state, then re-phased the same
   day (user-directed): V1 standalone IBL3 core (GV1.1 vs analytic/self-similar),
   V2 transpiration channel (GV2.1 exactness + ṁ=0 bit-identity + FD), V3 loose
@@ -703,8 +704,17 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   committed M6 experiment **Cp** (no experimental CL committed), GV5.1 carries
   a pre-registered FD note for the u_e-recovery zone switch; V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on
-  hand: Drela 2013 = AIAA 2013-2437 (`docs/references/`, gitignored). No
-  implementation yet.
+  hand: Drela 2013 = AIAA 2013-2437 (`docs/references/`, gitignored).
+  **V1 shipped + GV1.1 executed 2026-07-22** (`pyfp3d/viscous/`:
+  surface_mesh/closures/ibl3 + 35 new tests; VERDICT
+  `cases/analysis/v1_ibl3_standalone/VERDICT.md`, implementation record
+  `docs/design_track_v.md` §9): (a) ×2 FAIL = closure-family fixed point
+  H*≈2.7083 ≠ Blasius 2.59 (pre-registered known risk, no re-spec); (e) FAIL
+  = under-damped streamwise 2h grid mode at outflow (∝1/h growth) —
+  **upwind/SUPG stabilization is a V3-blocking follow-up**; (b)(c)(d) PASS.
+  ★ Traps logged in §9: PTC backtracking merit must be F_pt (not the steady
+  residual); the site-packages editable install maps `pyfp3d` to the SIBLING
+  worktree — standalone scripts must sys.path-anchor their own worktree.
 - **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
   **A2 ✓** (CLOSED 2026-07-17, GA2.1–GA2.5; TE/Kutta fidelity attribution —
@@ -786,7 +796,12 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **519 passed + 25 skipped + 2 xfailed** (2026-07-22, B28–B32
+Baseline: **554 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V **V1
+IBL3 core shipped + GV1.1 executed**; full-suite measured 554 @1462.64 s
+@16 threads; +35 vs the 519 below = `tests/test_v1_surface_mesh.py` (13) +
+`tests/test_v1_closures.py` (17) + `tests/test_v1_ibl3.py` (5); NOJIT lane
+35/35 green).
+Previous: 519 passed + 25 skipped + 2 xfailed (2026-07-22, B28–B32
 close-out **+ G1.6 Option C re-spec**; full-suite measured 516 @1223.39 s
 @16 threads, + the 3 `tests/test_laplace_sphere.py::TestG16Respec` asserts
 = 519 — the re-spec reads P11's committed sweep CSVs, non-interacting).

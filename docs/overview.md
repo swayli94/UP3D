@@ -292,7 +292,11 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **519 passed + 25 skipped + 2 xfailed**（2026-07-22 B28–B32 收尾 **+ G1.6
+现基线 **554 passed + 25 skipped + 2 xfailed**（2026-07-22 Track V **V1 IBL3
+core 交付 + GV1.1 执行**：全套件实测 554 @1462.64 s @16 线程；+35 vs 下档 519 =
+`tests/test_v1_surface_mesh.py`（13）+ `tests/test_v1_closures.py`（17）
++ `tests/test_v1_ibl3.py`（5）；NOJIT 路 35/35 绿）。
+上一档 519+25+2（2026-07-22 B28–B32 收尾 **+ G1.6
 Option C 重定规格**：全套件实测 516 @1223.39 s，+ 3 条 `test_laplace_sphere.py::TestG16Respec`
 断言（读 P11 已提交 sweep CSV、无交互）= 519。516 明细：B28–B32 收尾：
 +37 passed vs B25 的 479 = B28 cut-from-fragment 锁（`test_b1_cut_elements.py`，+4）

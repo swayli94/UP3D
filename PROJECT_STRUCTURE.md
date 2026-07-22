@@ -187,6 +187,20 @@ pyfp3d/                    # Main package
 │                           #   a SAME-SIDE-RESTRICTED upstream walk (the wake is a slip line —
 │                           #   density information must not cross it), newton_side_data (P7
 │                           #   sensitivities through the DOF indirection)
+├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
+│   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
+│   │                       #   GV1.1 EXECUTED 8 PASS / 3 FAIL (VERDICT
+│   │                       #   cases/analysis/v1_ibl3_standalone/VERDICT.md); does NOT touch
+│   │                       #   solve/ (pure additive package)
+│   ├── __init__.py
+│   ├── surface_mesh.py   # ✓ compact wall-surface DOF numbering + per-node local basis;
+│   │                       #   wake-slot reservation + master-map hook in the data layout
+│   ├── closures.py       # ✓ laminar + turbulent closure packet, analytic state derivatives
+│   │                       #   (N_OUT=30 incl. stress-flux integrals), safety floors,
+│   │                       #   blasius_seed; family fixed point H*≈2.7083 (≠ Blasius 2.59)
+│   └── ibl3.py           # ✓ 6-equation surface Galerkin P1 FE: strong-form divergence +
+│                           #   only-diffusion-by-parts (D13 (74)), colored prange assembly,
+│                           #   analytic CSR Jacobian, physical-density PTC (F_pt merit)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -461,6 +475,9 @@ tests/                     # Unit and gate tests
 ├── mesh_utils.py         # ✓ [P1] Dependency-free structured-cube + sphere-shell mesh generators
 ├── __init__.py
 ├── test_v0_freestream.py # ✓ [P0/P1] Primary regression test (incl. cut-free residual check)
+├── test_v1_surface_mesh.py        # ✓ [V1] surface-mesh DOF/basis/geometry + master-map hook
+├── test_v1_closures.py            # ✓ [V1] closure FD-vs-analytic (both lanes), floors, seeds
+├── test_v1_ibl3.py                # ✓ [V1] IBL3 Jacobian FD, bit-determinism, Newton laminar+turbulent
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1070,7 +1087,11 @@ paths = wing-tip P13 free-edge singularity + high-M Newton) + B31 C-class
 wing-tip cure (conforming pressure+taper CURES it; LS-side closed negative) +
 B32 conforming tip_taper adopted — wing-body medium ceiling M0.79 → M0.84
 reached**, 2026-07-21/22); Track V —
-designed, not started; Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18**, **A4
+**V1 ◐ OPENED 2026-07-22 · GV1.1 EXECUTED 8 PASS / 3 FAIL** (IBL3 solver core
+shipped: `pyfp3d/viscous/` surface_mesh/closures/ibl3, standalone prescribed-u_e;
+VERDICT `cases/analysis/v1_ibl3_standalone/VERDICT.md` — (a) ×2 = closure-family
+fixed point, (e) = outflow grid-mode stabilization gap = V3-blocking follow-up,
+(b)(c)(d) PASS); Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
 `cases/analysis/a4_ue_error_band/`) (A3 = response
@@ -1078,12 +1099,11 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **519 passed + 25 skipped + 2 xfailed** (2026-07-22, B28–B32
-close-out + G1.6 Option C re-spec; full-suite measured 516 @1223.39 s, + the 3
-`test_laplace_sphere.py::TestG16Respec` asserts = 519. The 516 = +37 vs the
-B25 479 = B28 cut-from-fragment locks (`test_b1_cut_elements.py`, +4) + B31
-`test_b31_pressure_taper.py` (13) + `test_b31_tip_fringe.py` (19) + a
-`test_p14_te_pressure.py` lock (1); B29/B30/B32 added no tests; heavy
-transonic/Newton gates behind `PYFP3D_TRANSONIC_GATES=1`); the 16 M1 tests
+Default suite: **554 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V
+V1 IBL3 core + GV1.1; full-suite measured 554 @1462.64 s @16 threads; +35
+vs 519 = `test_v1_surface_mesh.py` (13) + `test_v1_closures.py` (17) +
+`test_v1_ibl3.py` (5); NOJIT lane 35/35. Previous 519: B28–B32 close-out +
+G1.6 Option C re-spec, 516 measured @1223.39 s + 3 TestG16Respec asserts);
+the 16 M1 tests
 skip unless the gitignored M6 meshes are regenerated (~30 s); the gated
 skips include B21's freeze-capture lock and B22's 3-D anchor locks.

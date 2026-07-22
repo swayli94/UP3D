@@ -87,7 +87,15 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/b30_transonic_ceiling/run_g1.py` · `.../run_g2.py` · `.../run_g3.py` — all solves cached,
   census/CSV/PNG regenerate in minutes
 
+- `v1_ibl3_standalone/` — **Track V / V1** GV1.1 standalone IBL3 verification (prescribed u_e, no FP coupling:
+  laminar/turbulent flat plates + Falkner–Skan decelerating branch + refinement family, FE vs the closure's own
+  2-D ODE marches; pre-registered, **8 PASS / 3 FAIL** — (a) ×2 = closure-family fixed point H*≈2.7083 ≠ Blasius,
+  (e) = under-damped streamwise 2h grid mode at outflow ⇒ upwind/SUPG stabilization is a V3-blocking follow-up;
+  VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, design record `docs/design_track_v.md` §9) —
+  `python cases/analysis/v1_ibl3_standalone/run.py` — ~7 min (exit 1 = honest FAIL present)
+
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 `p14_*` are analysis studies belonging to Track B / Track P phases that live
-here because they are studies, not capability demos.)*
+here because they are studies, not capability demos. `v1_ibl3_standalone/`
+is Track V's GV1.1 gate case, likewise a study.)*

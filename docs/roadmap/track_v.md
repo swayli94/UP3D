@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ◐ OPENED 2026-07-22**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ◐ OPENED 2026-07-22 · GV1.1 EXECUTED 8P/3F**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -82,7 +82,7 @@ progressing loose → tight coupling.
 > running to V6, always read "V\<n\>" against context). Gates here are
 > GV<phase>.<n>.
 
-### V1 — IBL3 solver core (standalone verification) ◐ OPENED 2026-07-22
+### V1 — IBL3 solver core (standalone verification) ◐ OPENED 2026-07-22 · GV1.1 EXECUTED (8 PASS / 3 FAIL)
 
 **Deliverable:**
 
@@ -104,13 +104,23 @@ progressing loose → tight coupling.
 
 **Gates:**
 
-- [ ] **GV1.1 standalone IBL3 verification** (prescribed u_e, no FP coupling):
+- [~] **GV1.1 standalone IBL3 verification** (prescribed u_e, no FP coupling):
   (a) laminar flat plate → Blasius: H within ±2 % of 2.59, δ*(x) ∝ √x;
   (b) turbulent flat plate: C_f(Re_θ) within ±5 % of the closure's own reference
   correlation; (c) prescribed decelerating u_e: separation indicator (H rise)
   at the self-similar reference location, band pre-registered; (d) quasi-2D
   invariant: crossflow unknowns (B, Ψ, C_τ2) ≈ 0 (structural lock); (e) surface
   refinement ×2: error drops, measured order recorded.
+  **EXECUTED 2026-07-22 → 8 PASS / 3 FAIL** (pre-registered, no re-spec;
+  VERDICT + evidence `cases/analysis/v1_ibl3_standalone/`):
+  (a) FAIL ×2 — H +3.77 % at outflow and δ* exponent 0.5287, both the
+  closure family's own fixed point H*≈2.7083 ≠ Blasius (Stage-2 finding,
+  pre-registered as known risk); (b) PASS 0.07 %; (c) PASS P1/P2/P3;
+  (d) PASS machine-zero lock, both regimes; (e) FAIL — strict-decrease
+  broken 100×16→200×32 by an under-damped streamwise 2h grid mode at the
+  outflow strip (growth ∝1/h; D-HB diffusion loses inside ε∈[0.001,0.01]);
+  **V3 prerequisite follow-up: upwind/SUPG stabilization of the defect
+  convection** (design doc §9 item 4).
 
 **Prereq:** P6 ✓ + A4 ✓ (both done). V1 touches no wing-body wound and is
 independent of the LS-side (b)-class work — parallelizable.
@@ -352,11 +362,14 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
 0.5 % (P13/P14), so the remaining delta to experiment is the viscous target
 (assessed on the committed Cp data); direction is DOWN.
 
-- V1 — **◐ OPENED 2026-07-22** — IBL3 solver core, standalone verification
-  (`viscous/surface_mesh.py`, `closures.py`, `ibl3.py`; wake unknowns reserved
-  in the data layout). Gate GV1.1 (standalone IBL3 vs analytic/self-similar:
-  Blasius, turbulent C_f, separation indicator, quasi-2-D crossflow lock,
-  refinement order). Prereqs P6 ✓ + A4 ✓; no wing-body contact.
+- V1 — **◐ OPENED 2026-07-22 · GV1.1 EXECUTED 8 PASS / 3 FAIL** — IBL3
+  solver core shipped (`viscous/surface_mesh.py`, `closures.py`, `ibl3.py`;
+  wake unknowns reserved in the data layout). GV1.1 verdict + evidence:
+  `cases/analysis/v1_ibl3_standalone/VERDICT.md`; implementation record +
+  (e) instability follow-up: `docs/design_track_v.md` §9. (a) ×2 FAIL =
+  closure-family fixed point (no re-spec, user-directed); (e) FAIL =
+  streamwise grid-mode stabilization gap (V3-blocking follow-up);
+  (b)(c)(d) PASS. Prereqs P6 ✓ + A4 ✓; no wing-body contact.
 - V2 — ☐ — transpiration channel through all three drivers
   (`viscous/transpiration.py`; conforming-Newton external-RHS channel +
   compressible-Picard RHS threading; LS uses the existing `b_base`). Gate
