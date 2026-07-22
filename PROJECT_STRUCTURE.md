@@ -190,17 +190,22 @@ pyfp3d/                    # Main package
 ├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
 │   │                       #   GV1.1 9 PASS / 2 FAIL, V1 ✓ CLOSED 2026-07-22 (VERDICT
-│   │                       #   cases/analysis/v1_ibl3_standalone/VERDICT.md); does NOT touch
-│   │                       #   solve/ (pure additive package)
+│   │                       #   cases/analysis/v1_ibl3_standalone/VERDICT.md); V1 does NOT touch
+│   │                       #   solve/ (pure additive package) — V2 adds the solve/ RHS channels
 │   ├── __init__.py
 │   ├── surface_mesh.py   # ✓ compact wall-surface DOF numbering + per-node local basis;
 │   │                       #   wake-slot reservation + master-map hook in the data layout
 │   ├── closures.py       # ✓ laminar + turbulent closure packet, analytic state derivatives
 │   │                       #   (N_OUT=30 incl. stress-flux integrals), safety floors,
 │   │                       #   blasius_seed; family fixed point H*≈2.7083 (≠ Blasius 2.59)
-│   └── ibl3.py           # ✓ 6-equation surface Galerkin P1 FE: strong-form divergence +
-│                           #   only-diffusion-by-parts (D13 (74)), colored prange assembly,
-│                           #   analytic CSR Jacobian, physical-density PTC (F_pt merit)
+│   ├── ibl3.py           # ✓ 6-equation surface Galerkin P1 FE: strong-form divergence +
+│   │                       #   only-diffusion-by-parts (D13 (74)), colored prange assembly,
+│   │                       #   analytic CSR Jacobian, physical-density PTC (F_pt merit)
+│   └── transpiration.py  # ✓ [V2] δ*→ṁ = ∇_Γ·(ρ_e u_e δ*) (gradN strong-form + node_area
+│                           #   lumping) + wall-RHS Galerkin assembly (wall_correction template,
+│                           #   b = −load(ṁ) blowing-positive, sign pinned by GV2.1(a)) +
+│                           #   per-zone u_e extraction per A4; GV2.1 23 PASS / 0 FAIL,
+│                           #   V2 ✓ CLOSED 2026-07-22 (cases/analysis/v2_transpiration_channel/)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -221,6 +226,9 @@ pyfp3d/                    # Main package
 │   │                       #   ✓ [P4] upwind_c/m_crit (ρ̃ in matrix+residual), q² limiter
 │   │                       #   (m_cap), pseudo-transient diag(m/Δτ), omega_rho, kutta_per_outer,
 │   │                       #   phi_init/gamma_init continuation seeds
+│   │                       #   ✓ [V2] body_source_rhs threaded through solve_subsonic /
+│   │                       #   solve_subsonic_lifting (the transpiration wall RHS; lifting
+│   │                       #   rides the reduced_rhs Tᵀ reduction; None = bit-identical)
 │   ├── wall_correction.py # ✓ [P1/G1.3] true-normal weak-flux correction RHS (Option A);
 │   │                       #   assembly-verified; correction itself RULED OUT by the
 │   │                       #   G1.3/G1.4 oracles (design.md §5.1.2) -- kept as reusable
@@ -288,6 +296,8 @@ pyfp3d/                    # Main package
 │   │                       #   DOF); ✓ [B15] freeze-selection + solve_multivalued_newton_transonic
 │   │                       #   Mach ramp (B_NEWTON_M6_DEFAULTS); ✓ [B14] precond="schur"
 │   │                       #   (schur_ls.py, epoch-aware AMG invalidation)
+│   │                       #   ✓ [V2] wall_rhs injection via the existing b_base slot (main
+│   │                       #   DOFs = first mvop.n_main slots; None = bit-identical)
 │   └── newton.py         # ✓ [P8/N4] fully-coupled (φ_red, Γ) Newton driver (design.md §8.1):
 │                           #   NewtonWorkspace (free/dir split, Kutta row K, affine far-field
 │                           #   basis vals0_red + V_red·Γ via unit-Γ probing), ONE shared
@@ -318,7 +328,10 @@ pyfp3d/                    # Main package
 │                           #   retries + final level stay strict). A/B: M6 medium +40.3%
 │                           #   locks-intact (promoted into NEWTON_M6_RECIPE); fold-zone NACA
 │                           #   medium NEGATIVE (untracked Γ seed) — contraindicated near
-│                           #   folds, NEWTON_TRANSONIC_RECIPE unchanged
+│                           #   folds, NEWTON_TRANSONIC_RECIPE unchanged;
+│                           #   ✓ [V2] NewtonWorkspace(external_rhs=…) lagged external-RHS
+│                           #   channel (R_free −= (Tᵀb_ext)[free]; Jacobian untouched —
+│                           #   GV2.1(c) bit-invariant + FD-exact; None = bit-identical)
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
@@ -478,6 +491,10 @@ tests/                     # Unit and gate tests
 ├── test_v1_surface_mesh.py        # ✓ [V1] surface-mesh DOF/basis/geometry + master-map hook
 ├── test_v1_closures.py            # ✓ [V1] closure FD-vs-analytic (both lanes), floors, seeds
 ├── test_v1_ibl3.py                # ✓ [V1] IBL3 Jacobian FD, bit-determinism, Newton laminar+turbulent
+├── test_v2_transpiration.py       # ✓ [V2] transpiration assembly/divergence/u_e exactness,
+│                                  #   GV2.1(a) coarse MMS lock, GV2.1(b) Picard legs
+├── test_v2_newton_rhs_channel.py  # ✓ [V2] GV2.1(b)/(c): Newton external_rhs + LS b_base
+│                                  #   bit-identity, Jacobian bit-invariance + FD under lagged ṁ
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1092,7 +1109,14 @@ shipped: `pyfp3d/viscous/` surface_mesh/closures/ibl3, standalone prescribed-u_e
 VERDICT `cases/analysis/v1_ibl3_standalone/VERDICT.md` — (a) ×2 = closure-family
 fixed point, (e) first-run outflow 2h grid mode FAIL → fixed by the D-HB
 streamwise-tensor stabilization ε_s=0.02 = PASS,
-(b)(c)(d) PASS); Track A — A1, A2, **A3 ✓ CLOSED 2026-07-18**, **A4
+(b)(c)(d) PASS); **V2 ✓ CLOSED 2026-07-22 · GV2.1 23 PASS / 0 FAIL /
+16 RECORDED** (transpiration coupling shipped: `pyfp3d/viscous/transpiration.py`
+δ*→ṁ operator + wall-RHS channels in solve_laplace / solve_subsonic(+lifting) /
+newton_lifting / ls_newton — `None` ⇒ legacy path bit-identical; VERDICT
+`cases/analysis/v2_transpiration_channel/VERDICT.md` — (a) MMS cylinder-blowing
+convergence strict-decreasing, order 1.65/1.64 ≥ 1.0, (b) five-driver ṁ=0
+bit-identity, (c) FD Jacobian 6.6e-09–7.2e-08 < 1e-5); Track A — A1, A2,
+**A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
 `cases/analysis/a4_ue_error_band/`) (A3 = response
@@ -1100,10 +1124,12 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **554 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V
-V1 IBL3 core + GV1.1; full-suite measured 554 @1462.64 s @16 threads; +35
-vs 519 = `test_v1_surface_mesh.py` (13) + `test_v1_closures.py` (17) +
-`test_v1_ibl3.py` (5); NOJIT lane 35/35. Previous 519: B28–B32 close-out +
+Default suite: **571 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V
+V2 transpiration channel + GV2.1; full-suite measured 571 @1321.89 s @16
+threads; +17 vs 554 = `test_v2_transpiration.py` (9) +
+`test_v2_newton_rhs_channel.py` (8); NOJIT lane 17/17 @163.78 s. Previous 554:
+V1 IBL3 core + GV1.1, 554 measured @1462.64 s, NOJIT lane 35/35; previous 519:
+B28–B32 close-out +
 G1.6 Option C re-spec, 516 measured @1223.39 s + 3 TestG16Respec asserts);
 the 16 M1 tests
 skip unless the gitignored M6 meshes are regenerated (~30 s); the gated

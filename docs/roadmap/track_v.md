@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -131,7 +131,7 @@ progressing loose → tight coupling.
 **Prereq:** P6 ✓ + A4 ✓ (both done). V1 touches no wing-body wound and is
 independent of the LS-side (b)-class work — parallelizable.
 
-### V2 — Transpiration channel through all three drivers ☐
+### V2 — Transpiration channel through all three drivers ✓ CLOSED 2026-07-22 · GV2.1 (23 PASS / 0 FAIL / 16 RECORDED)
 
 **Deliverable** (solver plumbing; IBL-independent — parallelizable with V1):
 
@@ -150,12 +150,22 @@ independent of the LS-side (b)-class work — parallelizable.
 
 **Gates:**
 
-- [ ] **GV2.1 transpiration channel exactness**: (a) manufactured blowing on the
+- [x] **GV2.1 transpiration channel exactness**: (a) manufactured blowing on the
   M0 cylinder (Fourier-mode ṁ has an analytic exterior Laplace solution): φ
   error O(h) vs analytic; (b) ṁ = 0 **bit-identical** on ALL drivers (Picard,
   conforming Newton with channel absent, LS `b_base`) — the pre-2026-07-22
   sketch's "δ* = 0 bit-identical" clause lives here now; (c) conforming Newton
   Jacobian stays EXACT under lagged ṁ (FD check).
+  **EXECUTED 2026-07-22 → 23 PASS / 0 FAIL / 16 RECORDED** (pre-registered,
+  no re-spec; VERDICT + evidence `cases/analysis/v2_transpiration_channel/`):
+  (a) relmax 2.1572e-02 > 6.8738e-03 > 2.2062e-03 strict decrease, measured
+  orders 1.650/1.640 ≥ 1.0 — the transpiration sign convention pinned by the
+  analytic match (a flipped sign lands at O(2)); (b) bit-identical on all
+  five legs (`solve_laplace` / `solve_subsonic` / `solve_subsonic_lifting` /
+  `solve_newton_lifting` / `solve_multivalued_newton`); (c) J_ff/B
+  bit-invariant under lagged b_ext, residual identity 0.0 exact, FD
+  6.6e-09–7.2e-08 < 1e-5. No implementation fixes needed during execution.
+  **V2 CLOSED 2026-07-22.**
 
 **Prereq:** P6 ✓ + A4 ✓. No BL solve is involved (manufactured ṁ), so V2 is
 logically independent of V1; V3 needs both.
@@ -378,11 +388,14 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   FAIL = streamwise 2h grid mode → fixed by the D-HB streamwise-tensor
   stabilization (ε_s=0.02), PASS; (b)(c)(d) PASS. Prereqs P6 ✓ + A4 ✓;
   no wing-body contact.
-- V2 — ☐ — transpiration channel through all three drivers
+- V2 — **✓ CLOSED 2026-07-22 · GV2.1 23 PASS / 0 FAIL / 16 RECORDED** —
+  transpiration channel through all three drivers shipped
   (`viscous/transpiration.py`; conforming-Newton external-RHS channel +
-  compressible-Picard RHS threading; LS uses the existing `b_base`). Gate
+  compressible-Picard RHS threading; LS rides the existing `b_base`). Gate
   GV2.1 (manufactured-blowing exactness + ṁ=0 bit-identity on all drivers +
-  FD). IBL-independent plumbing, parallelizable with V1.
+  FD) verdict + evidence: `cases/analysis/v2_transpiration_channel/VERDICT.md`
+  — (a) orders 1.650/1.640 ≥ 1.0, sign pinned analytically; (b) five legs
+  bit-identical; (c) Jacobian bit-invariant + FD exact under lagged ṁ.
 - V3 — ☐ — loose coupling, 2.5-D ladder + fuselage smoke
   (`viscous/coupling.py`; committed XFOIL reference; body-of-revolution smoke
   mesh). Gates GV3.1 (coupled NACA0012 vs XFOIL, forced transition, A4 band

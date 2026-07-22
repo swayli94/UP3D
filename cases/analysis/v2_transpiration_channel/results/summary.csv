@@ -1,0 +1,40 @@
+gate,metric,band,measured,verdict
+GV2.1(a),relmax coarse,recorded,2.157233e-02,RECORDED
+GV2.1(a),relmax_wall coarse,recorded,2.157233e-02,RECORDED
+GV2.1(a),relL2 coarse,recorded,5.491008e-03,RECORDED
+GV2.1(a),n_cg coarse,recorded,97,RECORDED
+GV2.1(a),residual coarse,recorded,1.291e-14,RECORDED
+GV2.1(a),relmax medium,recorded,6.873822e-03,RECORDED
+GV2.1(a),relmax_wall medium,recorded,6.873822e-03,RECORDED
+GV2.1(a),relL2 medium,recorded,2.331583e-03,RECORDED
+GV2.1(a),n_cg medium,recorded,165,RECORDED
+GV2.1(a),residual medium,recorded,5.777e-15,RECORDED
+GV2.1(a),relmax fine,recorded,2.206202e-03,RECORDED
+GV2.1(a),relmax_wall fine,recorded,2.206202e-03,RECORDED
+GV2.1(a),relL2 fine,recorded,1.028799e-03,RECORDED
+GV2.1(a),n_cg fine,recorded,282,RECORDED
+GV2.1(a),residual fine,recorded,1.253e-15,RECORDED
+GV2.1(a),relmax strict decrease c>m>f,binding,2.1572e-02 > 6.8738e-03 > 2.2062e-03,PASS
+GV2.1(a),order coarse->medium,>= 1.0,1.650,PASS
+GV2.1(a),order medium->fine,>= 1.0,1.640,PASS
+GV2.1(b),solve_laplace phi identical,np.array_equal,True,PASS
+GV2.1(b),solve_laplace residual_norm identical,np.array_equal,True,PASS
+GV2.1(b),solve_subsonic phi identical,np.array_equal,True,PASS
+GV2.1(b),solve_subsonic residual_history identical,np.array_equal,True,PASS
+GV2.1(b),solve_subsonic_lifting phi identical,np.array_equal,True,PASS
+GV2.1(b),solve_subsonic_lifting gamma identical,np.array_equal,True,PASS
+GV2.1(b),solve_subsonic_lifting residual_history identical,np.array_equal,True,PASS
+GV2.1(b),newton_lifting phi identical,np.array_equal,True,PASS
+GV2.1(b),newton_lifting gamma identical,np.array_equal,True,PASS
+GV2.1(b),newton_lifting residual_history identical,np.array_equal,True,PASS
+GV2.1(b),ls_newton phi_ext identical,np.array_equal,True,PASS
+GV2.1(b),ls_newton residual_history identical,np.array_equal,True,PASS
+GV2.1(c),J_ff bit-invariant under b_ext,np.array_equal,True,PASS
+GV2.1(c),B bit-invariant under b_ext,np.array_equal,True,PASS
+GV2.1(c),residual identity max abs err,< 1e-12,0.000e+00,PASS
+GV2.1(c),F invariant (np.array_equal),np.array_equal,True,PASS
+GV2.1(c),FD J_ff dir 0,< 1e-5,6.597e-09,PASS
+GV2.1(c),FD J_ff dir 1,< 1e-5,9.845e-09,PASS
+GV2.1(c),FD J_ff dir 2,< 1e-5,6.558e-09,PASS
+GV2.1(c),FD B gamma col 0,< 1e-5,7.171e-08,PASS
+GV2.1(c),nonzero load converged,recorded,True (|R| 2.69e-12, |dgamma| 2.980e-04),RECORDED

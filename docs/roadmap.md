@@ -77,7 +77,9 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   medium gap 7.0% PASS, demo 8/8);
   LS Newton diverges = neumann blockage not the solver**
 - **V — viscous coupling** — [roadmap/track_v.md](roadmap/track_v.md) — designed 2026-07-09/10 · **V1 ✓ CLOSED 2026-07-22**
-  (GV1.1 9 PASS / 2 FAIL, (a) ×2 accepted as recorded FAIL = closure-family physics;
+  (GV1.1 9 PASS / 2 FAIL, (a) ×2 accepted as recorded FAIL = closure-family physics; **V2 ✓ CLOSED 2026-07-22** (GV2.1 23 PASS /
+  0 FAIL: transpiration channel live through all three drivers — cylinder Fourier blowing vs analytic orders 1.650/1.640, ṁ=0
+  bit-identical on five legs, Newton Jacobian bit-invariant + FD exact under lagged ṁ);
   gates re-spec'd at opening against the B32/A4 state; same day re-phased: V1 IBL3 core / V2 transpiration channel /
   V3 loose coupling incl. the fuselage body-of-revolution smoke; V4 optional; V5 tight coupling with the GV5.0 M6
   subsonic bridge and GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
