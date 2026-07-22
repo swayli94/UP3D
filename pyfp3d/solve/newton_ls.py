@@ -309,6 +309,7 @@ def solve_multivalued_newton(
     amg_rebuild_every: int = 2,
     direct_refactor_every: int = 1,
     direct_reuse_rtol: float = 1e-8,
+    wall_rhs: Optional[np.ndarray] = None,
 ) -> Dict[str, object]:
     """Newton solve on the level-set path (B6-Newton; design_track_b.md 5.5).
 
@@ -396,6 +397,12 @@ def solve_multivalued_newton(
             is the medium/M6-scale escape (ILU diverges/factor-fails there),
             amortising the sparse factorization over k Newton steps. Ignored
             when precond is "ilu"/"amg"/"schur".
+        wall_rhs (Track V V2 transpiration channel): optional (n_nodes,)
+            wall RHS on the mesh nodes (viscous/transpiration.py), added
+            into the EXISTING b_base slot before the LSNewtonSystem is
+            built (main DOFs occupy the first mvop.n_main slots, aux are
+            n_main + k). Lagged -- the operator/Jacobian are untouched.
+            None (default) = bit-identical.
 
     Returns: dict with phi_ext, phi, gamma, cl_kj, te_jump, converged,
     residual_history, n_newton, n_limited, n_floored, mach2_max, nu_max,
@@ -485,6 +492,20 @@ def solve_multivalued_newton(
             ff_nodes = np.concatenate([ff_nodes, ff_aux_dofs])
         b_base = np.zeros(mvop.n_total)
         ff_vals = None
+
+    # Track V V2 transpiration channel: the wall RHS rides the EXISTING
+    # b_base slot (roadmap track_v.md V2 deliverable: "the LS path uses
+    # the existing b_base slot"). Main DOFs are indexed by mesh node id
+    # and occupy the first mvop.n_main slots (aux DOFs are n_main + k,
+    # wake/cut_elements.py), so the (n_nodes,) vector adds in directly.
+    # Lagged -- the operator/Jacobian are untouched. None = bit-identical.
+    if wall_rhs is not None:
+        wall_rhs = np.asarray(wall_rhs, dtype=np.float64)
+        if wall_rhs.shape != (mvop.n_main,):
+            raise ValueError(
+                f"wall_rhs must be ({mvop.n_main},) on the mesh nodes, "
+                f"got {wall_rhs.shape}")
+        b_base[: mvop.n_main] += wall_rhs
 
     # --- warm start (B15: the seed inherits the B13 lagged-LU, else it pays a
     # full factorization per outer -- ~11 min of pure seed at M6 medium) ------
