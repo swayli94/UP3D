@@ -1,0 +1,12 @@
+gate,metric,band,measured,verdict
+a,"max |H-2.59|/2.59 over interior","<= 2%","3.76% (H range [2.6036, 2.6875])",FAIL
+a,"delta*(x) power-law exponent","[0.48, 0.52]","0.5288",FAIL
+a,"delta* exponent of the march reference (same fit)","diagnostic only","0.5149",RECORDED
+a,"delta* exponent, FE downstream half (x > 1.2)","diagnostic only","0.5101",RECORDED
+e,"refinement error decrease (H, delta* vs march)","strictly decreasing","errH=['4.31e-04', '2.21e-04', '1.12e-04'] orderH=[0.96,0.99] errds=['1.02e-05', '6.81e-06', '4.39e-06'] orderds=[0.59,0.63]",PASS
+d,"quasi-2-D lock (laminar)","|B|,|Psi|<1e-10, Ctau2=CTAU_LAM","|B|=0.00e+00 |Psi|=0.00e+00 Ctau2=[0.e+00 1.e-08]",PASS
+b,"max |cf_FE - cf_march|/cf_march at matched Re_theta","<= 5%","0.07% (Re_theta in [161, 653])",PASS
+d,"quasi-2-D lock (turbulent)","|B|,|Psi|,|Ctau2|<1e-10","|B|=0.00e+00 |Psi|=0.00e+00 |Ctau2|=0.00e+00",PASS
+c/P1,"H(x) monotone non-decreasing (m=-0.0904)","monotone within 0.5% of total rise","rise=0.5042, worst dip=3.32e-03",PASS
+c/P2,"H rise ratio (m=-0.0904)","[1.05, 4.0]","1.191 (H 2.642 -> 3.147)",PASS
+c/P3,"m=-0.05 rise < m=-0.0904 rise","strictly smaller","1.108 < 1.191",PASS

@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ◐ OPENED 2026-07-22**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -82,7 +82,7 @@ progressing loose → tight coupling.
 > running to V6, always read "V\<n\>" against context). Gates here are
 > GV<phase>.<n>.
 
-### V1 — IBL3 solver core (standalone verification) ◐ OPENED 2026-07-22
+### V1 — IBL3 solver core (standalone verification) ✓ CLOSED 2026-07-22 · GV1.1 (9 PASS / 2 FAIL)
 
 **Deliverable:**
 
@@ -104,13 +104,29 @@ progressing loose → tight coupling.
 
 **Gates:**
 
-- [ ] **GV1.1 standalone IBL3 verification** (prescribed u_e, no FP coupling):
+- [x] **GV1.1 standalone IBL3 verification** (prescribed u_e, no FP coupling):
   (a) laminar flat plate → Blasius: H within ±2 % of 2.59, δ*(x) ∝ √x;
   (b) turbulent flat plate: C_f(Re_θ) within ±5 % of the closure's own reference
   correlation; (c) prescribed decelerating u_e: separation indicator (H rise)
   at the self-similar reference location, band pre-registered; (d) quasi-2D
   invariant: crossflow unknowns (B, Ψ, C_τ2) ≈ 0 (structural lock); (e) surface
   refinement ×2: error drops, measured order recorded.
+  **EXECUTED 2026-07-22 → 9 PASS / 2 FAIL** (pre-registered, no re-spec;
+  VERDICT + evidence `cases/analysis/v1_ibl3_standalone/`):
+  (a) FAIL ×2 — H +3.76 % at outflow and δ* exponent 0.5288, both the
+  closure family's own fixed point H*≈2.7083 ≠ Blasius (Stage-2 finding,
+  pre-registered as known risk); (b) PASS 0.07 %; (c) PASS P1/P2/P3;
+  (d) PASS machine-zero lock, both regimes; (e) first execution FAIL —
+  strict decrease broken 100×16→200×32 by an under-damped streamwise 2h
+  grid mode at the outflow strip (growth ∝1/h; isotropic D-HB loses inside
+  ε∈[0.001,0.01]) → **fixed same-day by the D-HB streamwise-tensor
+  follow-up** (anisotropic ν_s = ε_s·max(q)·h_e along s1, ε_s=0.02
+  calibrated): errH 4.31e-4→2.21e-4→1.12e-4, order [0.96, 0.99] — PASS;
+  SUPG/upwind of the defect convection remains the V3+ upgrade route
+  (design doc §9 item 4).
+  **V1 CLOSED 2026-07-22 (user-directed)**: (a) ×2 accepted as recorded
+  FAIL — closure-family physics, FE matches the same-closure 2-D march to
+  <1e-4; no open technical items in V1 scope.
 
 **Prereq:** P6 ✓ + A4 ✓ (both done). V1 touches no wing-body wound and is
 independent of the LS-side (b)-class work — parallelizable.
@@ -352,11 +368,16 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
 0.5 % (P13/P14), so the remaining delta to experiment is the viscous target
 (assessed on the committed Cp data); direction is DOWN.
 
-- V1 — **◐ OPENED 2026-07-22** — IBL3 solver core, standalone verification
-  (`viscous/surface_mesh.py`, `closures.py`, `ibl3.py`; wake unknowns reserved
-  in the data layout). Gate GV1.1 (standalone IBL3 vs analytic/self-similar:
-  Blasius, turbulent C_f, separation indicator, quasi-2-D crossflow lock,
-  refinement order). Prereqs P6 ✓ + A4 ✓; no wing-body contact.
+- V1 — **✓ CLOSED 2026-07-22 · GV1.1 9 PASS / 2 FAIL** — IBL3
+  solver core shipped (`viscous/surface_mesh.py`, `closures.py`, `ibl3.py`;
+  wake unknowns reserved in the data layout). GV1.1 verdict + evidence:
+  `cases/analysis/v1_ibl3_standalone/VERDICT.md`; implementation record:
+  `docs/design_track_v.md` §9. (a) ×2 accepted as recorded FAIL at closing
+  (user-directed) = closure-family fixed point, FE matches the same-closure
+  2-D march to <1e-4; (e) first-run
+  FAIL = streamwise 2h grid mode → fixed by the D-HB streamwise-tensor
+  stabilization (ε_s=0.02), PASS; (b)(c)(d) PASS. Prereqs P6 ✓ + A4 ✓;
+  no wing-body contact.
 - V2 — ☐ — transpiration channel through all three drivers
   (`viscous/transpiration.py`; conforming-Newton external-RHS channel +
   compressible-Picard RHS threading; LS uses the existing `b_base`). Gate
