@@ -273,7 +273,10 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
   V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合 ◐ OPEN（入口 GV5.0 M6 亚声速
-  松耦合桥 ✓ EXECUTED 2026-07-23 16R/0F——桥答案 = 松环在 3-D 升力翼上不够，紧耦合动机证据；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源；GV5.1 预注 FD 区界单侧差分/光滑加权）；
+  松耦合桥 ✓ EXECUTED 2026-07-23 16R/0F——桥答案 = 松环在 3-D 升力翼上不够，紧耦合动机证据；**GV5.1 ✓ EXECUTED 9P/1F/36R**——精确增广 (φ, Γ, BL) Newton 交付
+  且两级 FD 验证（worst 甜点 2.2e-8 coarse / 5.1e-9 medium），二次尾段 HONEST FAIL = IBL 稳态残差在 cond(J_BL,BL)~4e10 近零流形上的内禀地板（standalone 伪时间
+  同地板，非紧耦合缺陷），N_total 14/13 vs 松环 4/5；已提交 GV3.1 medium 不动点不可复现（IBL 地板轨迹散布，诊断已提交，HEAD 重生成种子经用户裁决接受）；下一步 =
+  IBL 地板 follow-up，GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -307,9 +310,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **583 passed + 25 skipped + 2 xfailed**（2026-07-23 Track V **V5 GV5.0
-执行**（M6 亚声速松耦合桥，RECORDED 入口检查）：全套件实测 583 @1218.05 s @16
-线程；+5 vs 下档 578 = `tests/test_v5_wing_case.py`（5））。
+现基线 **603 passed + 25 skipped + 2 xfailed**（2026-07-23 Track V **V5 GV5.1
+执行**（增广紧耦合 (φ, Γ, U) Newton：band (a) FD 精确性两级 PASS，band (b)
+二次尾段被 IBL 地板挡住 HONEST FAIL——VERDICT
+`cases/analysis/v5_tight_coupling/VERDICT.md`）：全套件实测 603 @1537.09 s
+@16 线程；+20 vs 下档 583 = `tests/test_v5_tight_jacobian.py`（8）+
+`tests/test_v5_tight_edge.py`（7）+ `tests/test_v5_tight_system.py`（5））。
+上一档 583+25+2（2026-07-23 Track V **V5 GV5.0 执行**（M6 亚声速松耦合桥，
+RECORDED 入口检查）：全套件实测 583 @1218.05 s @16 线程；+5 vs 下档 578 =
+`tests/test_v5_wing_case.py`（5））。
 上一档 578+25+2（2026-07-22 Track V **V3 松耦合交付 + GV3.1/3.2/3.3 执行**：
 全套件实测 578 @1637.39 s @16 线程；+7 vs 下档 571 =
 `tests/test_v3_coupling.py`（7））。

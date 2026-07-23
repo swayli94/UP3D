@@ -1,8 +1,11 @@
 # pyFP3D Agent Rules
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.0 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED entry check,
-16 RECORDED / 0 FAIL).** New machinery `viscous/coupling.py::build_wing_case`
+GV5.1 augmented (φ, Γ, BL) Newton ✓ EXECUTED (9 PASS / 1 FAIL / 36
+RECORDED; the verdict paragraph follows the GV5.0 recap below). Previous
+within V5: GV5.0 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED
+entry check, 16 RECORDED / 0 FAIL).** New machinery
+`viscous/coupling.py::build_wing_case`
 (3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
 outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked
 via the GV3.3 machinery) + `tests/test_v5_wing_case.py` (5). **Bridge
@@ -19,8 +22,32 @@ clean throughout (every warm pressure-Kutta Newton converges). δ*(z) CSVs
 feed GV5.3's band pre-registration; tip mask validated at both levels.
 Evidence: `cases/analysis/v5_m6_bridge/` (PRE_REGISTRATION committed
 f263424 before first execution; VERDICT + CSV/PNG). Medium wall-time
-polluted by external load — quoted flagged, not as solver cost. Next:
-GV5.1 (FD-verified coupling blocks) is the augmented-Newton build-out.
+polluted by external load — quoted flagged, not as solver cost.
+**GV5.1 ✓ EXECUTED 2026-07-23 (9 PASS / 1 FAIL / 36 RECORDED,
+`cases/analysis/v5_tight_coupling/`): the augmented (φ, Γ, BL) Newton
+with exact coupling blocks is delivered** (new machinery
+`viscous/tight.py` + `viscous/tight_driver.py`, `tests/v5_state.py` +
+3 tight test files). Band (a) FD exactness PASS both levels (worst
+sweet-spot coarse 2.246e-8 seed / 2.244e-8 endpoint, medium 5.074e-9
+seed+endpoint; masked 0/1236 + 0/2460; veps omission ≤ 3.0e-8 scaled,
+decision 5). Band (b) quadratic tail HONEST FAIL (medium binding): the
+polish runs 10 iterations un-converged — F_BL pinned from iter 0 at the
+loose-final IBL floor (medium 1.708e-6 / coarse 3.11e-6), lam → 0, no
+slope-2 regime (medium p = 0.02/0.50/16.07; F_φ resolved at iter 1);
+mechanism = the intrinsic floor of the steady IBL residual on the
+cond(J_BL,BL) ~ 4e10 near-null manifold (the standalone pseudo-time
+solve stalls there too), NOT a tight-coupling defect. Band (c) N_aug ≤ 2
+not met standalone nor as polish (N_polish = 10, N_total 14/13 vs loose
+4/5). Finding: the committed GV3.1 medium fixed point is NOT
+reproducible — the loose medium trajectory is chaotic on the IBL floor
+(three code/env → three fixed points cl 0.2217/0.2719/0.2814; diagnosis
+`results/gv5_1_medium_seed_diagnosis.md`; HEAD-regen seed user-accepted,
+wiring guard |dcl_k0| ≤ 1e-8 PASS 1.309e-9). VERDICT
+`cases/analysis/v5_tight_coupling/VERDICT.md`, design record
+`docs/design_track_v.md` §12. Next: the IBL-floor follow-up (J_BL,BL
+null-space structure diagnosis / closure-level regularization /
+globalization); GV5.2/5.3/5.4 sequencing = the user's call; the
+V4-reopen trigger was considered and NOT invoked.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -740,7 +767,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   GV3.2 loose loop ≤ 10, GV3.3 fuselage body-of-revolution smoke = the only
   fuselage-alone item); V4 ⊘ SKIPPED 2026-07-22 (user-directed: skip
   criterion met on GV3.2; GV3.3 stern instability = reopen trigger);
-  **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL)** —
+  **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL) ·
+  GV5.1 ✓ EXECUTED (9 PASS / 1 FAIL / 36 RECORDED)** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
@@ -748,7 +776,15 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   −2.4 % input-limited); crossflow small (max|B|/|A| ≤ 0.072); tip mask
   validated; `viscous/coupling.py::build_wing_case` +
   `tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands;
-  remaining = GV5.1 FD-verified coupling blocks (augmented Newton), GV5.2
+  GV5.1 (`cases/analysis/v5_tight_coupling/`): exact augmented (φ, Γ, BL)
+  Newton delivered + FD-verified both levels (2.2e-8 coarse / 5.1e-9
+  medium); quadratic tail HONEST FAIL = the intrinsic IBL floor on the
+  cond(J_BL,BL) ~ 4e10 near-null manifold (standalone pseudo-time stalls
+  there too), NOT a coupling defect; N_total 14/13 vs loose 4/5;
+  committed GV3.1 medium fixed point NOT reproducible (IBL-floor
+  trajectory scatter, diagnosis committed, HEAD-regen seed
+  user-accepted); remaining = the IBL-floor follow-up (sequencing =
+  user's call), GV5.2
   RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
   experimental CL committed), GV5.4 cost; V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on
@@ -847,7 +883,14 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **583 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V **V5
+Baseline: **603 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V **V5
+GV5.1 executed** (augmented tight (φ, Γ, U) Newton; band (a) FD exactness
+PASS both levels, band (b) quadratic tail HONEST FAIL on the IBL floor —
+VERDICT `cases/analysis/v5_tight_coupling/VERDICT.md`); full-suite measured
+603 @1537.09 s @16 threads; +20 vs the 583 below =
+`tests/test_v5_tight_jacobian.py` (8) + `tests/test_v5_tight_edge.py` (7) +
+`tests/test_v5_tight_system.py` (5)).
+Previous: 583 passed + 25 skipped + 2 xfailed (2026-07-23, Track V **V5
 GV5.0 executed** (M6 subsonic loose-coupling bridge, RECORDED entry check);
 full-suite measured 583 @1218.05 s @16 threads; +5 vs the 578 below =
 `tests/test_v5_wing_case.py` (5)).
