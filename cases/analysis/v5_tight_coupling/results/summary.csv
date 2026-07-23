@@ -1,0 +1,13 @@
+gate,metric,band,measured,verdict
+GV5.1,seed IBL floor (k=1, EXPECTED non-converged),recorded,converged=False n_iter=100 final_residual=2.819e-06,RECORDED
+GV5.1,FD: coupling blocks + full system, worst sweet-spot,< 1e-05,2.291e-08,PASS
+GV5.1,FD: masked rows (q <= 1e-12 fallback),<= 2% of F_BL rows,0 / 1236,PASS
+GV5.1,FD: veps frozen-vs-natural omission, worst scaled,recorded (decision 5),2.393e-08,RECORDED
+GV5.1,quadratic tail (slope-2 regime, coarse recorded; medium binding),slope ~2 before the floor,converged=False last p=0.24; mechanism: stalled k=1 IBL floor, cond(J_BL,BL) ~ 4e10 -> raw dU O(1e3), line search at lam << 1 (the Stage-3 smoke evidence, da27e95),RECORDED
+GV5.1,N_aug <= 2 (coarse recorded; medium binding; the pre-registered honesty note covers 3),<= 2,n_iter=10 converged=False (crawl on the stalled floor, not a blow-up),RECORDED
+GV5.1,ds_change of the last step vs tol_ds = 1e-3,recorded (cross-check),7.315e-05,RECORDED
+GV5.1,newton wall time (coarse),recorded,1s over 10 iterations,RECORDED
+GV5.1,FD at the coupled solution,pre-registered repeat,skipped: no coarse convergence (deferred to the medium leg),RECORDED
+GV5.1,compare: augmented iterations vs loose outer (coarse),recorded,n_iter=10 converged=False vs n_outer=4,RECORDED
+GV5.1,compare: final per-station max|delta* diff|,recorded,1.362e-03,RECORDED
+GV5.1,compare: cl_p augmented vs loose committed,recorded,0.2678 vs 0.2678,RECORDED

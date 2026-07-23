@@ -1,0 +1,9 @@
+metric,augmented,loose_committed,abs_diff
+iterations (aug Newton / loose outer),10,4,
+converged,False,True,
+final ds_max,6.484028e-03,4.602235e-03,1.882e-03
+final per-station max|delta* diff|,,,1.362e-03
+cl_p (pressure integral),0.267842,0.267764,7.741e-05
+cl_kj (2*Gamma, design.md Sec 9),0.268833,n/a (not committed),
+IBL residual floor (seed / loose final),2.819e-06,3.113e-06,
+final |F|_inf (aug) / ds_change_rel (loose),4.726e-06,1.885e-04,

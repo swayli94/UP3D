@@ -103,6 +103,8 @@ the last accepted step is recorded for the tol_ds = 1e-3 cross-check
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
+import time
+
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as sla
@@ -553,9 +555,11 @@ def newton_tight(
     delta*-change of the LAST accepted step is recorded against the
     tol_ds = 1e-3 cross-check. Returns a dict(x, converged, n_iter,
     history, block_max0, ds_change_last, merit0); history rows carry
-    (iter, block_max, merit, lam, ds_change).
+    (iter, block_max, merit, lam, ds_change, wall_s) with wall_s the
+    cumulative seconds since the loop start.
     """
     x = pack.x_base() if x0 is None else np.asarray(x0, dtype=np.float64).copy()
+    t0 = time.perf_counter()
     F = augmented_residual(pack, x)
     block_max0 = _block_max(pack, F)
     merit = _merit(pack, F)
@@ -581,7 +585,7 @@ def newton_tight(
     converged, bm = converged_at(F)
     history.append(
         {"iter": 0, "block_max": bm, "merit": merit, "lam": None,
-         "ds_change": 0.0}
+         "ds_change": 0.0, "wall_s": time.perf_counter() - t0}
     )
     if verbose:
         print(
@@ -635,7 +639,7 @@ def newton_tight(
         converged, bm = converged_at(F)
         history.append(
             {"iter": it, "block_max": bm, "merit": merit, "lam": float(lam),
-             "ds_change": ds_change_last}
+             "ds_change": ds_change_last, "wall_s": time.perf_counter() - t0}
         )
         if verbose:
             print(
