@@ -128,11 +128,26 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   bands; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir) —
   `python cases/analysis/v5_m6_bridge/run.py --levels coarse` — coarse ~25 min / medium ~6.5 h (exit 1 = honest
   FAIL present)
+- `v5_tight_coupling/` — **Track V / V5** GV5.1 tight-coupling exactness + convergence (augmented (φ, Γ, BL)
+  Newton on the NACA0012 2.5-D strip, coarse + medium; pre-registered incl. the Addendum-2 amended seed
+  (loose-converged state, user-adjudicated), **9 PASS / 1 FAIL / 36 RECORDED** — (a) FD exactness PASS both
+  levels (worst sweet-spot coarse 2.246e-8 seed / 2.244e-8 endpoint, medium 5.074e-9 seed+endpoint; masked
+  0/1236 + 0/2460 rows; veps omission ≤ 3.0e-8 scaled, decision 5); (b) quadratic tail HONEST FAIL (medium
+  binding): the polish runs 10 iterations un-converged, F_BL pinned from iter 0 at the loose-final IBL floor
+  (medium 1.708e-6 / coarse 3.11e-6) = the intrinsic floor of the steady IBL residual on the
+  cond(J_BL,BL) ~ 4e10 near-null manifold, NOT a coupling defect; (c) N_aug ≤ 2 not met standalone nor as
+  polish (N_total 14/13 vs loose 4/5); finding: the committed GV3.1 medium fixed point is NOT reproducible
+  (IBL-floor trajectory scatter — three code/env → three fixed points; diagnosis
+  `results/gv5_1_medium_seed_diagnosis.md`; HEAD-regen seed user-accepted); VERDICT + PRE_REGISTRATION +
+  CSVs in the dir, design record `docs/design_track_v.md` §12) —
+  `python cases/analysis/v5_tight_coupling/run.py --levels coarse` — coarse ~1 min / medium ~3 min
+  (exit 1 = honest FAIL present)
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 `p14_*` are analysis studies belonging to Track B / Track P phases that live
 here because they are studies, not capability demos. `v1_ibl3_standalone/`
 is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
-`v3_loose_coupling/`, `v3_fuselage_smoke/` and `v5_m6_bridge/` are Track V's
-GV2.1 / GV3.x / GV5.0 gate cases, same status.)*
+`v3_loose_coupling/`, `v3_fuselage_smoke/`, `v5_m6_bridge/` and
+`v5_tight_coupling/` are Track V's GV2.1 / GV3.x / GV5.x gate cases, same
+status.)*

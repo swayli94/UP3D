@@ -75,7 +75,7 @@ def _rhs_2d(y, turb):
         st[4] = max(y[2], 1.0e-10)
     else:
         st[4] = C.CTAU_LAM
-    out, dout = C.closure_scalar(st, q=Q, rho=RHO, mu=MU, turbulent=turb)
+    out, dout, _ = C.closure_scalar(st, q=Q, rho=RHO, mu=MU, turbulent=turb)
     f1 = 0.5 * out[C.OUT_CF1]
     f2 = 2.0 * out[C.OUT_CD]
     if not turb:
@@ -128,7 +128,7 @@ def march_2d(x_stations, y0, turb, x_start, nstep=4000):
         st[0] = max(yy[0], 1.0e-8)
         st[1] = max(yy[1], 0.05)
         st[4] = max(yy[2], 1.0e-10) if turb else C.CTAU_LAM
-        out, _ = C.closure_scalar(st, q=Q, rho=RHO, mu=MU, turbulent=turb)
+        out, _, _ = C.closure_scalar(st, q=Q, rho=RHO, mu=MU, turbulent=turb)
         rec["x"].append(xx)
         rec["delta"].append(yy[0])
         rec["A"].append(yy[1])
@@ -167,7 +167,7 @@ def _turb_seed(x):
     re_d = RHO * Q * delta / MU
     A = 0.5 * cf * re_d  # U_tau^2 = cf/2, U_tau = sqrt(A/Re_delta)
     st = np.array([delta, A, 0.0, 0.0, 1.0e-3, 0.0])
-    out, _ = C.closure_scalar(st, q=Q, rho=RHO, mu=MU, turbulent=True)
+    out, _, _ = C.closure_scalar(st, q=Q, rho=RHO, mu=MU, turbulent=True)
     st[4] = max((C.C_L_DEFAULT * out[C.OUT_SP1] / out[C.OUT_SD]) ** 2, 1.0e-6)
     return st
 
@@ -195,8 +195,9 @@ def run_fe(nx, nz, turbulent, ue_fn, seed_fn, x0=X0, x1=X1, zh=ZH):
     # closure outputs at the solution
     outs = np.empty((n, C.N_OUT))
     douts = np.empty((n, C.N_OUT, 6))
+    douts_e = np.empty((n, C.N_OUT, 2))
     C.closure_all(U, np.full(n, Q), np.full(n, RHO), np.full(n, MU),
-                  np.zeros(n), flags, C.C_L_DEFAULT, outs, douts)
+                  np.zeros(n), flags, C.C_L_DEFAULT, outs, douts, douts_e)
     h = (x1 - x0) / nx
     interior = (
         (xyz[:, 0] > x0 + 2.0 * h)

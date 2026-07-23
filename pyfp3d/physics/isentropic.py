@@ -334,6 +334,46 @@ def mach_squared_field(q_squared, M_inf, gamma=GAMMA):
     return out
 
 
+@numba.njit(cache=True)
+def density_derivative_wrt_q_sq_field(q_squared, M_inf, gamma=GAMMA):
+    r"""Elementwise dρ/d(q²) over an array of q² values -- the field
+    counterpart of `density_derivative_wrt_q_sq` (same formula, vectorized;
+    the density_field idiom).
+
+    Args:
+        q_squared: (n,) nondimensional speed squared per element
+        M_inf: Freestream Mach number
+        gamma: Specific heat ratio
+
+    Returns:
+        (n,) dρ/d(q²) array
+    """
+    out = np.empty_like(q_squared)
+    for i in range(q_squared.shape[0]):
+        out[i] = density_derivative_wrt_q_sq(q_squared[i], M_inf, gamma)
+    return out
+
+
+@numba.njit(cache=True)
+def mach_squared_derivative_wrt_q_sq_field(q_squared, M_inf, gamma=GAMMA):
+    r"""Elementwise dM²/d(q²) over an array of q² values -- the field
+    counterpart of `mach_squared_derivative_wrt_q_sq` (same formula,
+    vectorized).
+
+    Args:
+        q_squared: (n,) nondimensional speed squared per element
+        M_inf: Freestream Mach number
+        gamma: Specific heat ratio
+
+    Returns:
+        (n,) dM²/d(q²) array
+    """
+    out = np.empty_like(q_squared)
+    for i in range(q_squared.shape[0]):
+        out[i] = mach_squared_derivative_wrt_q_sq(q_squared[i], M_inf, gamma)
+    return out
+
+
 def validate_physics_bounds(rho, q, M, Cp, M_inf, gamma=GAMMA):
     """
     Validate that computed physics quantities stay within physical bounds.

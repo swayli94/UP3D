@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -308,9 +308,27 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   field, ΔCL viscous−inviscid (expected DOWN, direction recorded), 3-D
   loose-loop iteration count vs the GV3.2 2.5-D count; wing-tip band masked
   (tip_taper r_c = 0.05·b_semi). Feeds GV5.3's band pre-registration.
-- [ ] **GV5.1 exactness + convergence**: both coupling blocks FD-verified
+- [x] **GV5.1 exactness + convergence**: both coupling blocks FD-verified
   (project Jacobian discipline; the B19/B31 FD-gate pattern) + quadratic tail on
-  the GV3.1 case; outer iterations ≤ half the V3 loose loop. **Pre-registered
+  the GV3.1 case; outer iterations ≤ half the V3 loose loop. **EXECUTED
+  2026-07-23, 9 PASS / 1 FAIL / 36 RECORDED** (pre-registered incl. Addenda
+  1–2, amended seed = the loose-converged state, user-adjudicated; evidence
+  `cases/analysis/v5_tight_coupling/`, VERDICT + diagnosis committed) — (a) FD
+  exactness **PASS** both levels (worst sweet-spot coarse 2.246e-8 seed /
+  2.244e-8 endpoint, medium 5.074e-9 seed+endpoint; masked 0/1236 + 0/2460;
+  veps omission ≤ 3.0e-8 scaled, decision 5); (b) quadratic tail **HONEST
+  FAIL** (medium binding): the polish runs 10 iterations un-converged — F_BL
+  pinned from iter 0 at the loose-final IBL floor (medium 1.708e-6, coarse
+  3.11e-6), lam → 0, no slope-2 regime (medium p = 0.02/0.50/16.07; F_φ
+  resolved at iter 1, 1.16e-7) — mechanism: the IBL steady residual has an
+  intrinsic floor on the cond(J_BL,BL) ~ 4e10 near-null manifold (the
+  standalone pseudo-time solve stalls there too), NOT a tight-coupling
+  defect; (c) N_aug ≤ 2 not met standalone AND as polish (N_polish = 10,
+  N_total 14/13 vs loose 4/5). Finding: the committed GV3.1 medium fixed
+  point is NOT reproducible — IBL-floor trajectory scatter, three code/env →
+  three fixed points cl 0.2217/0.2719/0.2814 (diagnosis
+  `results/gv5_1_medium_seed_diagnosis.md`; HEAD-regen seed user-accepted,
+  wiring guard |dcl_k0| ≤ 1e-8 PASS 1.309e-9). **Pre-registered
   FD note (added 2026-07-22, user-directed):** J_BL,φ runs through the u_e
   recovery chain, whose per-zone choice (LE band linear+smoothed, elsewhere
   quadratic — per A4) is a discrete, non-differentiable switch: at zone-boundary
@@ -484,8 +502,23 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   `viscous/coupling.py::build_wing_case` (LE-band laminar pin per local x/c,
   both TE natural outflow, root symmetry natural, tip band z > 0.95·b_semi
   pinned + ṁ-masked via the GV3.3 machinery) + `tests/test_v5_wing_case.py`
-  (5). Remaining: FD-verified coupling
-  blocks (GV5.1; zone-switch FD pre-note registered), RAE2822 transonic VII vs
+  (5). **GV5.1 ✓ EXECUTED 2026-07-23** (9 PASS / 1 FAIL / 36 RECORDED;
+  `cases/analysis/v5_tight_coupling/`, VERDICT + PRE_REGISTRATION Addenda
+  1–2): the exact augmented Newton is delivered and FD-verified at both
+  levels (worst sweet-spot 2.2e-8 coarse / 5.1e-9 medium; new machinery
+  `viscous/tight.py` + `viscous/tight_driver.py`, `tests/v5_state.py` + 3
+  tight test files); the quadratic tail is HONEST FAIL — F_BL pins at the
+  IBL floor from iteration 0 (medium 1.708e-6 / coarse 3.11e-6), an
+  intrinsic floor of the steady IBL residual on the cond(J_BL,BL) ~ 4e10
+  near-null manifold (the standalone pseudo-time solve stalls there too),
+  NOT a coupling defect; N_aug ≤ 2 not met standalone nor as polish
+  (N_total 14/13 vs loose 4/5). Finding: the committed GV3.1 medium fixed
+  point is not reproducible (IBL-floor trajectory scatter; diagnosis
+  committed; HEAD-regen seed user-accepted). V5 stays **OPEN**: next =
+  the IBL-floor follow-up (J_BL,BL null-space structure diagnosis /
+  closure-level regularization / globalization); GV5.2/5.3/5.4 sequencing
+  = the user's call; the V4-reopen trigger was considered and NOT
+  invoked. Remaining: RAE2822 transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp
   (GV5.3 — anchored on committed data only, no external CL figure), cost

@@ -146,7 +146,60 @@ def _frames(u_e, basis_y, basis_x, basis_zc, q, s1, s2, ucomp, wcomp, q2,
 
 
 @_njit(cache=True, fastmath=True)
-def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv):
+def _frames_edge_jac(q, basis_y, s1, s2, ds2):
+    """ds2 (n,3,3) = d s2 / d u_hat at each node (GV5.1 edge Jacobian).
+
+    s2 = c/|c| with c = s1 x n and s1 = u_e/q = u_hat exactly when
+    q > 1e-12, so d s2/d u_hat = (I - s2 s2^T)/|c| . d(s1 x n)/du_hat
+    there; at fallback nodes (q <= 1e-12) the frame is frozen to basis_x
+    and the derivative is exactly zero. Derivatives of s1 (= u_hat), q,
+    psi and the local components are algebraic and live at their use
+    sites (_nodal_fluxes / _assemble).
+    """
+    n = q.shape[0]
+    for i in range(n):
+        for a in range(3):
+            for b in range(3):
+                ds2[i, a, b] = 0.0
+        if q[i] > 1.0e-12:
+            nx = basis_y[i, 0]
+            ny = basis_y[i, 1]
+            nz = basis_y[i, 2]
+            s1x = s1[i, 0]
+            s1y = s1[i, 1]
+            s1z = s1[i, 2]
+            c1 = s1y * nz - s1z * ny
+            c2 = s1z * nx - s1x * nz
+            c3 = s1x * ny - s1y * nx
+            cm = np.sqrt(c1 * c1 + c2 * c2 + c3 * c3)
+            cm = max(cm, 1.0e-30)
+            s2x = s2[i, 0]
+            s2y = s2[i, 1]
+            s2z = s2[i, 2]
+            for j in range(3):
+                # dc/du_hat_j = e_j x n
+                if j == 0:
+                    dc1 = 0.0
+                    dc2 = -nz
+                    dc3 = ny
+                elif j == 1:
+                    dc1 = nz
+                    dc2 = 0.0
+                    dc3 = -nx
+                else:
+                    dc1 = -ny
+                    dc2 = nx
+                    dc3 = 0.0
+                s2dc = s2x * dc1 + s2y * dc2 + s2z * dc3
+                ds2[i, 0, j] = (dc1 - s2x * s2dc) / cm
+                ds2[i, 1, j] = (dc2 - s2y * s2dc) / cm
+                ds2[i, 2, j] = (dc3 - s2z * s2dc) / cm
+
+
+@_njit(cache=True, fastmath=True)
+def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv,
+                  mu, mach, douts_e, ds2tab, basis_x, basis_zc, dv_e,
+                  do_edge):
     """Fill fv (n,NV) and dv (n,NV,6) from the closure packet.
 
     All formulas are algebraic chains of D13 (62)(63) and D-CT on top of the
@@ -158,6 +211,14 @@ def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv):
     (Jx/Jz, tau_x/tau_z, DMX/DMZ) use the per-node LOCAL components s1l/s2l
     = s . (basis_x, basis_zc) (D13 SIII.D.1 local basis; "x"/"z" equation
     rows are momentum along basis_x / basis_zc).
+
+    GV5.1: when do_edge is true, additionally fill dv_e (n,NV,7), the
+    derivatives w.r.t. the per-node edge scalars
+    (q, rho, mu, M, u_hat_1..3) with the state fixed. The packet interior
+    depends on edge data only through re_d = rho q delta/mu and
+    e_prime = r (g-1)/2 M^2 (douts_e rows, J2 chain below, mirroring the
+    DELTA_MIN/RE_D_MIN floors of closure_node); everything else is the
+    explicit scaling/frame chains of the fv formulas themselves.
     """
     n = states.shape[0]
     for i in prange(n):
@@ -189,6 +250,47 @@ def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv):
         rq = ri * qi
         rq2 = rq * qi
         rq3 = rq2 * qi
+
+        # --- GV5.1 edge-basis setup (packet chain + frame chains) ---
+        pde = np.zeros((C.N_OUT, 4))  # packet derivs w.r.t. (q, rho, mu, M)
+        ds2i = ds2tab[i]
+        bxi = basis_x[i]
+        bzci = basis_zc[i]
+        ds2x = np.zeros(3)  # d s2l_x / d u_hat_j
+        ds2z = np.zeros(3)  # d s2l_z / d u_hat_j
+        if do_edge:
+            mui = mu[i]
+            Mi = mach[i]
+            de_f = de
+            if de_f < C.DELTA_MIN:
+                de_f = C.DELTA_MIN
+            # J2 = d(re_d, e_prime)/d(q, rho, mu, M); the RE_D floor pins
+            # re_d (zero row) exactly as closure_node masks the column.
+            dre0 = 0.0
+            dre1 = 0.0
+            dre2 = 0.0
+            if ri * qi * de_f / mui >= C.RE_D_MIN:
+                dre0 = ri * de_f / mui
+                dre1 = qi * de_f / mui
+                dre2 = -ri * qi * de_f / (mui * mui)
+            dep3 = C.RECOVERY_R * (C.GAMMA_AIR - 1.0) * Mi
+            doe = douts_e[i]
+            for j in range(C.N_OUT):
+                a_re = doe[j, 0]
+                a_ep = doe[j, 1]
+                pde[j, 0] = a_re * dre0
+                pde[j, 1] = a_re * dre1
+                pde[j, 2] = a_re * dre2
+                pde[j, 3] = a_ep * dep3
+            for j in range(3):
+                ds2x[j] = (
+                    ds2i[0, j] * bxi[0] + ds2i[1, j] * bxi[1]
+                    + ds2i[2, j] * bxi[2]
+                )
+                ds2z[j] = (
+                    ds2i[0, j] * bzci[0] + ds2i[1, j] * bzci[1]
+                    + ds2i[2, j] * bzci[2]
+                )
 
         # --- 3-vector fluxes, value and derivative rows ---
         for k in range(3):
@@ -251,6 +353,95 @@ def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv):
                 elif l == 5:
                     dfac2 = de
                 dv[i, F_K23 + k, l] = rq3 * (dfac2 * dk1 + de * ct2 * ddk1)
+            if do_edge:
+                # edge columns 0..3 = (q, rho, mu, M): explicit scaling
+                # product rule + packet chain (pde); 4..6 = u_hat: frame
+                # chains only (packet has no u_hat dependence).
+                dk1v = ku1 * a1 + ku2 * a2
+                for c in range(4):
+                    if c == 0:
+                        s_rq = ri
+                        s_rq2 = 2.0 * ri * qi
+                        s_rq3 = 3.0 * ri * qi * qi
+                        s_qi = 1.0
+                    elif c == 1:
+                        s_rq = qi
+                        s_rq2 = qi * qi
+                        s_rq3 = qi * qi * qi
+                        s_qi = 0.0
+                    else:
+                        s_rq = 0.0
+                        s_rq2 = 0.0
+                        s_rq3 = 0.0
+                        s_qi = 0.0
+                    dxm = pde[C.OUT_DS1, c] * a1 + pde[C.OUT_DS2, c] * a2
+                    dv_e[i, F_M3 + k, c] = s_rq * (ds1 * a1 + ds2 * a2) + rq * dxm
+                    dca = pde[C.OUT_P11, c] * s1x + pde[C.OUT_P12, c] * s2x
+                    dcb = pde[C.OUT_P12, c] * s1x + pde[C.OUT_P22, c] * s2x
+                    dv_e[i, F_JX3 + k, c] = (
+                        s_rq2 * (ca * a1 + cb * a2) + rq2 * (dca * a1 + dcb * a2)
+                    )
+                    dcc = pde[C.OUT_P11, c] * s1z + pde[C.OUT_P12, c] * s2z
+                    dcd = pde[C.OUT_P12, c] * s1z + pde[C.OUT_P22, c] * s2z
+                    dv_e[i, F_JZ3 + k, c] = (
+                        s_rq2 * (cc * a1 + cd * a2) + rq2 * (dcc * a1 + dcd * a2)
+                    )
+                    dv_e[i, F_E3 + k, c] = s_rq3 * (
+                        o[C.OUT_PS1] * a1 + o[C.OUT_PS2] * a2
+                    ) + rq3 * (pde[C.OUT_PS1, c] * a1 + pde[C.OUT_PS2, c] * a2)
+                    dv_e[i, F_KO3 + k, c] = s_rq3 * (
+                        o[C.OUT_TC1] * a1 + o[C.OUT_TC2] * a2
+                    ) + rq3 * (pde[C.OUT_TC1, c] * a1 + pde[C.OUT_TC2, c] * a2)
+                    dv_e[i, F_Q3 + k, c] = s_qi * (
+                        o[C.OUT_DQ1] * a1 + o[C.OUT_DQ2] * a2
+                    ) + qi * (pde[C.OUT_DQ1, c] * a1 + pde[C.OUT_DQ2, c] * a2)
+                    dv_e[i, F_QO3 + k, c] = s_qi * (
+                        o[C.OUT_DC1] * a1 + o[C.OUT_DC2] * a2
+                    ) + qi * (pde[C.OUT_DC1, c] * a1 + pde[C.OUT_DC2, c] * a2)
+                    dku = pde[C.OUT_KU1, c] * a1 + pde[C.OUT_KU2, c] * a2
+                    dv_e[i, F_K13 + k, c] = (
+                        s_rq3 * de * ct1 * dk1v + rq3 * de * ct1 * dku
+                    )
+                    dv_e[i, F_K23 + k, c] = (
+                        s_rq3 * de * ct2 * dk1v + rq3 * de * ct2 * dku
+                    )
+                for c in range(4, 7):
+                    j = c - 4
+                    da1 = 1.0 if k == j else 0.0
+                    da2 = ds2i[k, j]
+                    ds1xj = bxi[j]
+                    ds2xj = ds2x[j]
+                    ds1zj = bzci[j]
+                    ds2zj = ds2z[j]
+                    dv_e[i, F_M3 + k, c] = rq * (ds1 * da1 + ds2 * da2)
+                    dcaj = p11 * ds1xj + p12 * ds2xj
+                    dcbj = p12 * ds1xj + p22 * ds2xj
+                    dv_e[i, F_JX3 + k, c] = rq2 * (
+                        dcaj * a1 + ca * da1 + dcbj * a2 + cb * da2
+                    )
+                    dccj = p11 * ds1zj + p12 * ds2zj
+                    dcdj = p12 * ds1zj + p22 * ds2zj
+                    dv_e[i, F_JZ3 + k, c] = rq2 * (
+                        dccj * a1 + cc * da1 + dcdj * a2 + cd * da2
+                    )
+                    dv_e[i, F_E3 + k, c] = rq3 * (
+                        o[C.OUT_PS1] * da1 + o[C.OUT_PS2] * da2
+                    )
+                    dv_e[i, F_KO3 + k, c] = rq3 * (
+                        o[C.OUT_TC1] * da1 + o[C.OUT_TC2] * da2
+                    )
+                    dv_e[i, F_Q3 + k, c] = qi * (
+                        o[C.OUT_DQ1] * da1 + o[C.OUT_DQ2] * da2
+                    )
+                    dv_e[i, F_QO3 + k, c] = qi * (
+                        o[C.OUT_DC1] * da1 + o[C.OUT_DC2] * da2
+                    )
+                    dv_e[i, F_K13 + k, c] = rq3 * de * ct1 * (
+                        ku1 * da1 + ku2 * da2
+                    )
+                    dv_e[i, F_K23 + k, c] = rq3 * de * ct2 * (
+                        ku1 * da1 + ku2 * da2
+                    )
 
         # --- scalars ---
         fv[i, F_TAUX] = 0.5 * rq2 * (cf1 * s1x + cf2 * s2x)
@@ -341,12 +532,93 @@ def _nodal_fluxes(states, q, s1, s2, s1l, s2l, rho, outs, douts, c_l, fv, dv):
             )
             dv[i, F_S2, l] = 2.0 * a1 * (dP2 - dD2)
 
+        # --- GV5.1 scalar rows, edge columns ---
+        if do_edge:
+            x_tx = cf1 * s1x + cf2 * s2x
+            x_tz = cf1 * s1z + cf2 * s2z
+            x_mx = ds1 * s1x + ds2 * s2x
+            x_mz = ds1 * s1z + ds2 * s2z
+            for c in range(4):
+                if c == 0:
+                    s_rq = ri
+                    s_rq2 = 2.0 * ri * qi
+                    s_rq3 = 3.0 * ri * qi * qi
+                elif c == 1:
+                    s_rq = qi
+                    s_rq2 = qi * qi
+                    s_rq3 = qi * qi * qi
+                else:
+                    s_rq = 0.0
+                    s_rq2 = 0.0
+                    s_rq3 = 0.0
+                dv_e[i, F_TAUX, c] = 0.5 * (
+                    s_rq2 * x_tx
+                    + rq2 * (pde[C.OUT_CF1, c] * s1x + pde[C.OUT_CF2, c] * s2x)
+                )
+                dv_e[i, F_TAUZ, c] = 0.5 * (
+                    s_rq2 * x_tz
+                    + rq2 * (pde[C.OUT_CF1, c] * s1z + pde[C.OUT_CF2, c] * s2z)
+                )
+                dv_e[i, F_DD, c] = s_rq3 * o[C.OUT_CD] + rq3 * pde[C.OUT_CD, c]
+                dv_e[i, F_DX, c] = s_rq3 * o[C.OUT_CDX] + rq3 * pde[C.OUT_CDX, c]
+                dv_e[i, F_DO, c] = s_rq3 * o[C.OUT_CDC] + rq3 * pde[C.OUT_CDC, c]
+                dv_e[i, F_DMX, c] = s_rq * x_mx + rq * (
+                    pde[C.OUT_DS1, c] * s1x + pde[C.OUT_DS2, c] * s2x
+                )
+                dv_e[i, F_DMZ, c] = s_rq * x_mz + rq * (
+                    pde[C.OUT_DS1, c] * s1z + pde[C.OUT_DS2, c] * s2z
+                )
+                dv_e[i, F_DE, c] = s_rq2 * o[C.OUT_DQ] + rq2 * pde[C.OUT_DQ, c]
+                dv_e[i, F_DKO, c] = s_rq2 * o[C.OUT_DQC] + rq2 * pde[C.OUT_DQC, c]
+                dv_e[i, F_DKT1, c] = (
+                    s_rq2 * de * ct1 * ak + rq2 * de * ct1 * pde[C.OUT_AK, c]
+                )
+                dv_e[i, F_DKT2, c] = (
+                    s_rq2 * de * ct2 * ak + rq2 * de * ct2 * pde[C.OUT_AK, c]
+                )
+                # DM = rho * delta_rho: the rho column carries the explicit
+                # drho factor as well as the packet chain
+                s_ri = 1.0 if c == 1 else 0.0
+                dv_e[i, F_DM, c] = (
+                    s_ri * o[C.OUT_DRHO] + ri * pde[C.OUT_DRHO, c]
+                )
+                # stress sources: sroot is state-only, so the edge chain is
+                # scaling + packet only (a1 = C.A1_BRADSHAW)
+                dv_e[i, F_S1, c] = 2.0 * C.A1_BRADSHAW * (
+                    s_rq3 * ct1 * sp1 + rq3 * ct1 * pde[C.OUT_SP1, c]
+                    - s_rq3 / c_l * sroot * ct1 * sd
+                    - rq3 / c_l * sroot * ct1 * pde[C.OUT_SD, c]
+                )
+                dv_e[i, F_S2, c] = 2.0 * C.A1_BRADSHAW * (
+                    s_rq3 * ct2 * sp2 + rq3 * ct2 * pde[C.OUT_SP2, c]
+                    - s_rq3 / c_l * sroot * ct2 * sd
+                    - rq3 / c_l * sroot * ct2 * pde[C.OUT_SD, c]
+                )
+            for c in range(4, 7):
+                j = c - 4
+                dv_e[i, F_TAUX, c] = 0.5 * rq2 * (cf1 * bxi[j] + cf2 * ds2x[j])
+                dv_e[i, F_TAUZ, c] = 0.5 * rq2 * (cf1 * bzci[j] + cf2 * ds2z[j])
+                dv_e[i, F_DD, c] = 0.0
+                dv_e[i, F_DX, c] = 0.0
+                dv_e[i, F_DO, c] = 0.0
+                dv_e[i, F_DMX, c] = rq * (ds1 * bxi[j] + ds2 * ds2x[j])
+                dv_e[i, F_DMZ, c] = rq * (ds1 * bzci[j] + ds2 * ds2z[j])
+                dv_e[i, F_DE, c] = 0.0
+                dv_e[i, F_DKO, c] = 0.0
+                dv_e[i, F_DKT1, c] = 0.0
+                dv_e[i, F_DKT2, c] = 0.0
+                dv_e[i, F_DM, c] = 0.0
+                dv_e[i, F_S1, c] = 0.0
+                dv_e[i, F_S2, c] = 0.0
+
 
 @_njit(cache=True)
 def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
               triangles, gradN, area_tri,
               color_offsets, color_elems,
-              veps, veps_s, s1n, basisy, R, Jdata, elem_to_csr, do_jac):
+              veps, veps_s, s1n, basisy, R, Jdata, elem_to_csr, do_jac,
+              dv_e, q_n, s1l, basis_x, basis_zc, Jdata_e, elem_to_csr_e,
+              do_jac_edge):
     """Element assembly of the six Galerkin residuals and (optionally) the
     analytic Jacobian into the CSR data array via elem_to_csr.
 
@@ -366,6 +638,20 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
     interpolated LOCAL normal basis_y (D13 SIII.D.1; on a y-normal planar
     surface it reduces operation-for-operation to the pre-V3 global
     formula q3z*gq2x - q3x*gq2z, so planar cases stay bit-identical).
+
+    GV5.1: when do_jac_edge is true, additionally assemble J_e, the
+    (6n x 7n) derivative w.r.t. the per-node edge scalars
+    (q, rho, mu, M, u_hat_1..3) at fixed state, into Jdata_e via
+    elem_to_csr_e. This adds the dv_e chains (nodal tables) plus the
+    direct element-level edge chains: gq2 (d/dq = 2 q gN), gpsi
+    (d psi/d u_hat), the u/w/q2 interpolation weights in the divM source
+    terms (d u/dq = s1l_x, d u/d u_hat = q basis_x, ...), rho_m (d/d rho =
+    N_b), the gq2 part of the (Q x grad(q^2)) . n triple product, and the
+    s1e normalization chain of the streamwise diffusion tensor
+    (d s1e/d u_hat_b = (I - s1e s1e^T)/(3 |s1_raw|)). veps/veps_s
+    themselves are FROZEN (GV5.1 decision 5): their d/dq through
+    eps*max(q) is deliberately omitted (the residual path recomputes them;
+    the omission is measured in the FD test).
     """
     n_colors = color_offsets.shape[0] - 1
     for c in range(n_colors):
@@ -625,6 +911,245 @@ def _assemble(fv, dv, ucomp, wcomp, q2, psi, rho,
                             for l in range(6):
                                 Jdata[elem_to_csr[e, a, b, ceq, l]] += je[ceq, l]
 
+            # ---- edge-data Jacobian (GV5.1) ----
+            if do_jac_edge:
+                ddiv_e = np.zeros((7, 3, 7))  # [flux, local node b, edge c]
+                for f_i in range(7):
+                    base = _DIVERGED[f_i]
+                    for b in range(3):
+                        nb = nn[b]
+                        for c in range(7):
+                            accd = 0.0
+                            for k in range(3):
+                                accd += dv_e[nb, base + k, c] * gN[b, k]
+                            ddiv_e[f_i, b, c] = accd
+                gab0 = veps * h_e * area
+                gabs0 = veps_s * h_e * area
+                for a in range(3):
+                    gs1a = (
+                        gN[a, 0] * s1e[0] + gN[a, 1] * s1e[1]
+                        + gN[a, 2] * s1e[2]
+                    )
+                    for b in range(3):
+                        nb = nn[b]
+                        qb = q_n[nb]
+                        ub = ucomp[nb]
+                        wb = wcomp[nb]
+                        ind_b = 1.0 if qb > 1.0e-12 else 0.0
+                        denpsi = max(ub * ub + wb * wb, 1.0e-30)
+                        # direct per-column chains of node-b edge data:
+                        # u = u_e.bx -> du/dq = s1l_x, du/d u_hat = q bx;
+                        # psi = atan2(w, u) (scale invariant -> no q col);
+                        # q2 -> 2 q on the q column only.
+                        du_e = np.zeros(7)
+                        dw_e = np.zeros(7)
+                        dq2_e = np.zeros(7)
+                        dpsi_e = np.zeros(7)
+                        du_e[0] = s1l[nb, 0]
+                        dw_e[0] = s1l[nb, 1]
+                        dq2_e[0] = 2.0 * qb
+                        for j in range(3):
+                            du_e[4 + j] = qb * basis_x[nb, j]
+                            dw_e[4 + j] = qb * basis_zc[nb, j]
+                            dpsi_e[4 + j] = qb * (
+                                ub * basis_zc[nb, j] - wb * basis_x[nb, j]
+                            ) / denpsi
+                        je_e = np.zeros((6, 7))
+                        gabi = (
+                            gN[a, 0] * gN[b, 0] + gN[a, 1] * gN[b, 1]
+                            + gN[a, 2] * gN[b, 2]
+                        ) * gab0
+                        gs1b = (
+                            gN[b, 0] * s1e[0] + gN[b, 1] * s1e[1]
+                            + gN[b, 2] * s1e[2]
+                        )
+                        gabsi = gs1a * gs1b * gabs0
+                        for c in range(7):
+                            # divergence rows
+                            je_e[0, c] += (
+                                wq * ddiv_e[1, b, c] - ddiv_e[0, b, c] * umw[a]
+                            )
+                            je_e[1, c] += (
+                                wq * ddiv_e[2, b, c] - ddiv_e[0, b, c] * wmw[a]
+                            )
+                            je_e[2, c] += (
+                                wq * ddiv_e[3, b, c] - ddiv_e[0, b, c] * q2mw[a]
+                            )
+                            je_e[3, c] += wq * ddiv_e[4, b, c]
+                            je_e[4, c] += wq * ddiv_e[5, b, c]
+                            je_e[5, c] += wq * ddiv_e[6, b, c]
+                            # diffusion rows (dv_e chain)
+                            for dcol in range(6):
+                                je_e[dcol, c] += (gabi + gabsi) * dv_e[
+                                    nb, F_DMX + dcol, c
+                                ]
+                        # diffusion rows: s1e normalization chain (u_hat
+                        # cols): the gabs term has TWO s1e factors --
+                        # (gdens.s1e) and (gN[a].s1e) -- and both
+                        # differentiate through
+                        # d s1e/d u_hat_b = (I - s1e s1e^T)/(3 |s1_raw|).
+                        for dcol in range(6):
+                            dots_d = (
+                                gdens[dcol, 0] * s1e[0]
+                                + gdens[dcol, 1] * s1e[1]
+                                + gdens[dcol, 2] * s1e[2]
+                            )
+                            for j in range(3):
+                                je_e[dcol, 4 + j] += (
+                                    gabs0
+                                    * (
+                                        dots_d * (gN[a, j] - gs1a * s1e[j])
+                                        + gs1a
+                                        * (gdens[dcol, j] - dots_d * s1e[j])
+                                    )
+                                    / (3.0 * s1m) * ind_b
+                                )
+                        # quad-point source derivatives
+                        for m in range(3):
+                            # fv-interpolant chains carry N[m,b]; the direct
+                            # chains carry only the row weight N[m,a]: the
+                            # gradient chains (gq2/gpsi depend on q2/psi at
+                            # node b WITHOUT quadrature interpolation) and
+                            # the rho_m chain (d rho_m/d rho_b = N[m,b] --
+                            # its interpolation factor IS the derivative,
+                            # so multiplying by w would square N[m,b]).
+                            w = wq * QUAD_N[m, a] * QUAD_N[m, b]
+                            wa = wq * QUAD_N[m, a]
+                            gxn0 = gq2[1] * nm_tab[m, 2] - gq2[2] * nm_tab[m, 1]
+                            gxn1 = gq2[2] * nm_tab[m, 0] - gq2[0] * nm_tab[m, 2]
+                            gxn2 = gq2[0] * nm_tab[m, 1] - gq2[1] * nm_tab[m, 0]
+                            # nm x qm for the gq2 part of the crossy chain
+                            nmq0 = (
+                                nm_tab[m, 1] * qm_tab[m, 2]
+                                - nm_tab[m, 2] * qm_tab[m, 1]
+                            )
+                            nmq1 = (
+                                nm_tab[m, 2] * qm_tab[m, 0]
+                                - nm_tab[m, 0] * qm_tab[m, 2]
+                            )
+                            nmq2 = (
+                                nm_tab[m, 0] * qm_tab[m, 1]
+                                - nm_tab[m, 1] * qm_tab[m, 0]
+                            )
+                            # interpolated E/Qo vectors and the q3g/qo3g/crossy
+                            # values at m (needed by the direct chains)
+                            em0 = 0.0
+                            em1 = 0.0
+                            em2 = 0.0
+                            qom0 = 0.0
+                            qom1 = 0.0
+                            qom2 = 0.0
+                            q3g_m = 0.0
+                            qo3g_m = 0.0
+                            for b2 in range(3):
+                                nb2 = nn[b2]
+                                nmb2 = QUAD_N[m, b2]
+                                em0 += nmb2 * fv[nb2, F_E3 + 0]
+                                em1 += nmb2 * fv[nb2, F_E3 + 1]
+                                em2 += nmb2 * fv[nb2, F_E3 + 2]
+                                qom0 += nmb2 * fv[nb2, F_QO3 + 0]
+                                qom1 += nmb2 * fv[nb2, F_QO3 + 1]
+                                qom2 += nmb2 * fv[nb2, F_QO3 + 2]
+                                for k in range(3):
+                                    q3g_m += nmb2 * fv[nb2, F_Q3 + k] * gq2[k]
+                                    qo3g_m += nmb2 * fv[nb2, F_QO3 + k] * gq2[k]
+                            crossy_m = (
+                                (qm_tab[m, 1] * gq2[2] - qm_tab[m, 2] * gq2[1])
+                                * nm_tab[m, 0]
+                                + (qm_tab[m, 2] * gq2[0] - qm_tab[m, 0] * gq2[2])
+                                * nm_tab[m, 1]
+                                + (qm_tab[m, 0] * gq2[1] - qm_tab[m, 1] * gq2[0])
+                                * nm_tab[m, 2]
+                            )
+                            emg = (
+                                em0 * gN[b, 0] + em1 * gN[b, 1] + em2 * gN[b, 2]
+                            )
+                            qmg = (
+                                qm_tab[m, 0] * gN[b, 0] + qm_tab[m, 1] * gN[b, 1]
+                                + qm_tab[m, 2] * gN[b, 2]
+                            )
+                            qomg = (
+                                qom0 * gN[b, 0] + qom1 * gN[b, 1]
+                                + qom2 * gN[b, 2]
+                            )
+                            nmqg = (
+                                nmq0 * gN[b, 0] + nmq1 * gN[b, 1]
+                                + nmq2 * gN[b, 2]
+                            )
+                            for c in range(7):
+                                dq3g = (
+                                    dv_e[nb, F_Q3 + 0, c] * gq2[0]
+                                    + dv_e[nb, F_Q3 + 1, c] * gq2[1]
+                                    + dv_e[nb, F_Q3 + 2, c] * gq2[2]
+                                )
+                                dqo3g = (
+                                    dv_e[nb, F_QO3 + 0, c] * gq2[0]
+                                    + dv_e[nb, F_QO3 + 1, c] * gq2[1]
+                                    + dv_e[nb, F_QO3 + 2, c] * gq2[2]
+                                )
+                                de3psi = (
+                                    dv_e[nb, F_E3 + 0, c] * gpsi[0]
+                                    + dv_e[nb, F_E3 + 1, c] * gpsi[1]
+                                    + dv_e[nb, F_E3 + 2, c] * gpsi[2]
+                                )
+                                dcross = (
+                                    dv_e[nb, F_Q3 + 0, c] * gxn0
+                                    + dv_e[nb, F_Q3 + 1, c] * gxn1
+                                    + dv_e[nb, F_Q3 + 2, c] * gxn2
+                                )
+                                # direct chains (weight wa): d gq2/d q_b =
+                                # 2 q_b gN[b]; d gpsi/d u_hat_b = gN[b] dpsi
+                                dq3g_d = 0.0
+                                dqo3g_d = 0.0
+                                dcross_d = 0.0
+                                drhom = 0.0
+                                if c == 0:
+                                    dq3g_d = qmg * 2.0 * qb
+                                    dqo3g_d = qomg * 2.0 * qb
+                                    dcross_d = nmqg * 2.0 * qb
+                                elif c == 1:
+                                    drhom = QUAD_N[m, b]
+                                je_e[0, c] += w * (
+                                    -dv_e[nb, F_TAUX, c] - divs[0] * du_e[c]
+                                )
+                                je_e[1, c] += w * (
+                                    -dv_e[nb, F_TAUZ, c] - divs[0] * dw_e[c]
+                                )
+                                je_e[2, c] += (
+                                    w * (
+                                        -rho_m[m] * dq3g
+                                        - 2.0 * dv_e[nb, F_DD, c]
+                                        - divs[0] * dq2_e[c]
+                                    )
+                                    + wa * (
+                                        -drhom * q3g_m
+                                        - rho_m[m] * dq3g_d
+                                    )
+                                )
+                                je_e[3, c] += (
+                                    w * (
+                                        de3psi
+                                        + 0.5 * rho_m[m] * dcross
+                                        - rho_m[m] * dqo3g
+                                        + dv_e[nb, F_DX, c]
+                                        - 2.0 * dv_e[nb, F_DO, c]
+                                    )
+                                    + wa * (
+                                        drhom * (0.5 * crossy_m - qo3g_m)
+                                        + emg * dpsi_e[c]
+                                        + 0.5 * rho_m[m] * dcross_d
+                                        - rho_m[m] * dqo3g_d
+                                    )
+                                )
+                                je_e[4, c] += w * (-dv_e[nb, F_S1, c])
+                                je_e[5, c] += w * (-dv_e[nb, F_S2, c])
+                        # scatter 6x7 block into the edge CSR
+                        for ceq in range(6):
+                            for c in range(7):
+                                Jdata_e[
+                                    elem_to_csr_e[e, a, b, ceq, c]
+                                ] += je_e[ceq, c]
+
 
 # ---------------------------------------------------------------------------
 # Solver driver
@@ -719,10 +1244,16 @@ class IBL3Solver:
                 self._psi, self._s1l, self._s2l)
         self._veps = self.eps_diff * max(float(np.max(self._q)), 1.0e-30)
         self._veps_s = self.eps_diff_s * max(float(np.max(self._q)), 1.0e-30)
+        # GV5.1: d s2/d u_hat table (edge-Jacobian frame chain)
+        self._ds2 = np.empty((n, 3, 3))
+        _frames_edge_jac(self._q, sm.basis_y, self._s1, self._s2, self._ds2)
 
         # Jacobian pattern and diagonal indices
         self.pattern, self.elem_to_csr = sm.build_jacobian_pattern()
         self.Jdata = self.pattern.data
+        # GV5.1: edge-data Jacobian pattern (6n x 7n)
+        self.pattern_e, self.elem_to_csr_e = sm.build_edge_jacobian_pattern()
+        self.Jdata_e = self.pattern_e.data
         indptr = self.pattern.indptr
         indices = self.pattern.indices
         nrow = NUNK * n
@@ -754,16 +1285,21 @@ class IBL3Solver:
         # work arrays (allocated once; hot path is zero-alloc)
         self.outs = np.empty((n, C.N_OUT))
         self.douts = np.empty((n, C.N_OUT, NUNK))
+        self.douts_e = np.empty((n, C.N_OUT, 2))
         self.fv = np.empty((n, NV))
         self.dv = np.empty((n, NV, NUNK))
+        self.dv_e = np.empty((n, NV, 7))
 
     # -- internal -----------------------------------------------------------
-    def _nodal(self, U):
+    def _nodal(self, U, do_edge=False):
         C.closure_all(U, self._q, self._rho, self._mu, self._mach,
-                      self._flags, self.c_l, self.outs, self.douts)
+                      self._flags, self.c_l, self.outs, self.douts,
+                      self.douts_e)
         _nodal_fluxes(U, self._q, self._s1, self._s2, self._s1l, self._s2l,
                       self._rho, self.outs, self.douts, self.c_l,
-                      self.fv, self.dv)
+                      self.fv, self.dv, self._mu, self._mach, self.douts_e,
+                      self._ds2, self.smesh.basis_x, self._basis_zc,
+                      self.dv_e, do_edge)
 
     def _G_current(self):
         """Physical conserved densities G_c at the current fv tables
@@ -791,14 +1327,17 @@ class IBL3Solver:
         dG[:, 5, :] = dv[:, F_DKT2, :]
         return dG
 
-    def _assemble_into(self, U, R, do_jac):
-        self._nodal(U)
+    def _assemble_into(self, U, R, do_jac, do_jac_edge=False):
+        self._nodal(U, do_edge=do_jac_edge)
         _assemble(self.fv, self.dv, self._u, self._w, self._q2, self._psi,
                   self._rho, self.smesh.triangles, self.smesh.gradN,
                   self.smesh.area_tri, self.smesh.color_offsets,
                   self.smesh.color_elems, self._veps, self._veps_s, self._s1,
                   self.smesh.basis_y,
-                  R, self.Jdata, self.elem_to_csr, do_jac)
+                  R, self.Jdata, self.elem_to_csr, do_jac,
+                  self.dv_e, self._q, self._s1l, self.smesh.basis_x,
+                  self._basis_zc, self.Jdata_e, self.elem_to_csr_e,
+                  do_jac_edge)
 
     def _apply_rows(self, R, U, do_jac):
         """Dirichlet inflow rows and laminar stress-pin rows (D-TR/D-BC)."""
@@ -820,7 +1359,70 @@ class IBL3Solver:
                     self.Jdata[indptr[r]:indptr[r + 1]] = 0.0
                     self.Jdata[self._diag[r]] = 1.0
 
+    def _apply_rows_edge(self):
+        """Zero the J_e rows pinned by Dirichlet inflow / laminar stress-pin
+        (those residual rows are replaced by the pinning equations, whose
+        edge derivative is exactly zero; no diagonal is set -- J_e is
+        rectangular, its rows simply vanish)."""
+        indptr = self.pattern_e.indptr
+        for ii in range(self._inflow_idx.size):
+            i = self._inflow_idx[ii]
+            for r in range(NUNK * i, NUNK * i + NUNK):
+                self.Jdata_e[indptr[r]:indptr[r + 1]] = 0.0
+        for ii in range(self._lam_idx.size):
+            i = self._lam_idx[ii]
+            for r in (NUNK * i + 4, NUNK * i + 5):
+                self.Jdata_e[indptr[r]:indptr[r + 1]] = 0.0
+
     # -- public -------------------------------------------------------------
+    def update_edge_data(self, u_e, rho, mu, mach):
+        """Re-set the edge data in place (GV5.1): re-runs the frame build and
+        recomputes veps/veps_s, so a subsequent residual /
+        residual_edge_jacobian call is bit-for-bit identical to a fresh
+        construction with the new data (validated in
+        tests/test_v5_tight_edge.py). BC masks, connectivity and the state
+        are untouched."""
+        n = self.n
+        u_e = np.ascontiguousarray(u_e, dtype=np.float64)
+        if u_e.shape != (n, 3):
+            raise ValueError(f"u_e shape {u_e.shape}, expected ({n}, 3)")
+        if not np.all(np.isfinite(u_e)):
+            raise ValueError("u_e contains non-finite values")
+
+        def _arr(v, name):
+            a = np.asarray(v, dtype=np.float64)
+            if a.ndim == 0:
+                a = np.full(n, float(a))
+            if a.shape != (n,):
+                raise ValueError(f"{name} shape {a.shape}, expected ({n},)")
+            return np.ascontiguousarray(a)
+
+        self._rho = _arr(rho, "rho")
+        self._mu = _arr(mu, "mu")
+        self._mach = _arr(mach, "mach")
+        _frames(u_e, self.smesh.basis_y, self.smesh.basis_x, self._basis_zc,
+                self._q, self._s1, self._s2, self._u, self._w, self._q2,
+                self._psi, self._s1l, self._s2l)
+        _frames_edge_jac(self._q, self.smesh.basis_y, self._s1, self._s2,
+                         self._ds2)
+        self._veps = self.eps_diff * max(float(np.max(self._q)), 1.0e-30)
+        self._veps_s = self.eps_diff_s * max(float(np.max(self._q)), 1.0e-30)
+
+    def residual_edge_jacobian(self, U):
+        """Residual (n,6) and edge-data Jacobian J_e (scipy csr, 6n x 7n):
+        d R / d (q, rho, mu, M, u_hat_1..3) per node with the state U fixed
+        (GV5.1, the J_BL,phi building block). veps/veps_s are FROZEN in
+        J_e (decision 5): the residual path recomputes them from the edge
+        data, the Jacobian does not differentiate them (the omission is
+        measured in the FD gate)."""
+        U = np.ascontiguousarray(U, dtype=np.float64)
+        R = np.zeros((self.n, NUNK))
+        self.Jdata_e[:] = 0.0
+        self._assemble_into(U, R, False, do_jac_edge=True)
+        self._apply_rows(R, U, False)
+        self._apply_rows_edge()
+        return R, self.pattern_e
+
     def residual(self, U, dt_inv=None, U_old=None):
         """Steady residual (n,6); optionally with backward-Euler pseudo-time
         on the physical conserved densities (D13 (70)-(72), design D-PT)."""

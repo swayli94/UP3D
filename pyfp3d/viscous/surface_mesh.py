@@ -219,6 +219,38 @@ def _build_elem_to_csr_block6(triangles, indptr, indices):
     return emap
 
 
+@_njit(cache=True)
+def _build_elem_to_csr_block6x7(triangles, indptr, indices):
+    """elem_to_csr[e, a, b, p, c] -> flat data index of
+    (row = 6*triangles[e,a] + p, col = 7*triangles[e,b] + c) in the CSR
+    pattern built by build_edge_jacobian_pattern (6-eq block rows x 7
+    edge-scalar block cols, GV5.1). Binary search per entry; built once,
+    one-time cost."""
+    n_tris = len(triangles)
+    emap = np.empty((n_tris, 3, 3, 6, 7), dtype=np.int64)
+    for e in range(n_tris):
+        for a in range(3):
+            row_node = triangles[e, a]
+            for p in range(6):
+                row = 6 * row_node + p
+                lo = indptr[row]
+                hi = indptr[row + 1]
+                for b in range(3):
+                    col_node = triangles[e, b]
+                    for c in range(7):
+                        col = 7 * col_node + c
+                        x = lo
+                        y = hi
+                        while x < y:
+                            mid = (x + y) // 2
+                            if indices[mid] < col:
+                                x = mid + 1
+                            else:
+                                y = mid
+                        emap[e, a, b, p, c] = x
+    return emap
+
+
 class SurfaceMesh:
     """Compact wall-surface DOF numbering + P1 surface-FE geometry for IBL3.
 
@@ -455,6 +487,43 @@ class SurfaceMesh:
         pattern.sort_indices()
         pattern.data[:] = 0.0
         elem_to_csr = _build_elem_to_csr_block6(
+            tri, pattern.indptr.astype(np.int64), pattern.indices.astype(np.int64)
+        )
+        return pattern, elem_to_csr
+
+    def build_edge_jacobian_pattern(self):
+        """Symbolic CSR sparsity of the edge-data Jacobian (GV5.1).
+
+        Shape (6*n_s, 7*n_s): every node pair (A, B) sharing a triangle is
+        expanded to its full 6x7 block -- rows are the six equations
+        p = 0..5 of node A, columns the seven edge scalars
+        c = 0..6 = (q, rho, mu, M, u_hat_1, u_hat_2, u_hat_3) of node B.
+        Same construction idiom as build_jacobian_pattern.
+
+        Returns:
+            (pattern_csr, elem_to_csr): pattern_csr is the scipy csr_matrix;
+            elem_to_csr is (F,3,3,6,7) int64 with the flat data index for
+            each (element, local node a, local node b, eq p, scalar c).
+        """
+        tri = self.triangles
+        n_row = 6 * self.n_node
+        n_col = 7 * self.n_node
+        rows_node = np.repeat(tri, 3, axis=1).reshape(-1)  # (F*9,)
+        cols_node = np.tile(tri, (1, 3)).reshape(-1)  # (F*9,)
+        dof6 = np.arange(6)
+        dof7 = np.arange(7)
+        # Per node pair: rows cycle p (each repeated 7x), cols cycle c --
+        # the zip covers the full 6x7 block (all 42 (p, c) combos).
+        rows = np.repeat(6 * rows_node[:, None] + dof6[None, :], 7, axis=1).reshape(-1)
+        cols = np.tile(7 * cols_node[:, None] + dof7[None, :], (1, 6)).reshape(-1)
+        pattern = sp.coo_matrix(
+            (np.ones(len(rows), dtype=np.float64), (rows, cols)),
+            shape=(n_row, n_col),
+        ).tocsr()
+        pattern.sum_duplicates()
+        pattern.sort_indices()
+        pattern.data[:] = 0.0
+        elem_to_csr = _build_elem_to_csr_block6x7(
             tri, pattern.indptr.astype(np.int64), pattern.indices.astype(np.int64)
         )
         return pattern, elem_to_csr

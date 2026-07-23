@@ -84,7 +84,10 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   V3 loose coupling incl. the fuselage body-of-revolution smoke (**V3 ✓ CLOSED 2026-07-22**; **V4 ⊘ SKIPPED
   2026-07-22**, user-directed); V5 tight coupling ◐ OPEN 2026-07-23 (**GV5.0 M6
   subsonic bridge ✓ EXECUTED 16R/0F** — loose loop NOT sufficient on the 3-D lifting wing, tight-coupling
-  motivation measured) and GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
+  motivation measured; **GV5.1 ✓ EXECUTED 9P/1F/36R** — exact augmented Newton delivered, FD-verified
+  both levels (2.2e-8/5.1e-9); quadratic tail HONEST FAIL = the intrinsic IBL floor (cond(J_BL,BL) ~ 4e10
+  near-null manifold, not a coupling defect), next = the IBL-floor follow-up, sequencing = user's call) and
+  GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
   3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · **A2 ✓ CLOSED 2026-07-17** (TE/Kutta fidelity attribution,

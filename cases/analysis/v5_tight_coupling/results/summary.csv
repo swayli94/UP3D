@@ -1,0 +1,46 @@
+protocol,gate,metric,band,measured,verdict
+k1seed,GV5.1,seed IBL floor (k=1, EXPECTED non-converged),recorded,converged=False n_iter=100 final_residual=2.819e-06,RECORDED
+k1seed,GV5.1,FD: coupling blocks + full system, worst sweet-spot,< 1e-05,2.291e-08,PASS
+k1seed,GV5.1,FD: masked rows (q <= 1e-12 fallback),<= 2% of F_BL rows,0 / 1236,PASS
+k1seed,GV5.1,FD: veps frozen-vs-natural omission, worst scaled,recorded (decision 5),2.393e-08,RECORDED
+k1seed,GV5.1,quadratic tail (slope-2 regime, coarse recorded; medium binding),slope ~2 before the floor,converged=False last p=0.24; mechanism: stalled k=1 IBL floor, cond(J_BL,BL) ~ 4e10 -> raw dU O(1e3), line search at lam << 1 (the Stage-3 smoke evidence, da27e95),RECORDED
+k1seed,GV5.1,N_aug <= 2 (coarse recorded; medium binding; the pre-registered honesty note covers 3),<= 2,n_iter=10 converged=False (crawl on the stalled floor, not a blow-up),RECORDED
+k1seed,GV5.1,ds_change of the last step vs tol_ds = 1e-3,recorded (cross-check),7.315e-05,RECORDED
+k1seed,GV5.1,newton wall time (coarse),recorded,1s over 10 iterations,RECORDED
+k1seed,GV5.1,FD at the coupled solution,pre-registered repeat,skipped: no coarse convergence (deferred to the medium leg),RECORDED
+k1seed,GV5.1,compare: augmented iterations vs loose outer (coarse),recorded,n_iter=10 converged=False vs n_outer=4,RECORDED
+k1seed,GV5.1,compare: final per-station max|delta* diff|,recorded,1.362e-03,RECORDED
+k1seed,GV5.1,compare: cl_p augmented vs loose committed,recorded,0.2678 vs 0.2678,RECORDED
+amended,GV5.1,coarse loose-regen recipe cross-check vs committed GV3.1 (Addendum 2; environment-drift band, the docstring diagnostic),converged; |dcl_k0| <= 1e-08; |dcl_final| <= 1e-03; |dds_max| <= 1e-02 rel; n_outer within +-1 recorded,converged=True; dcl_k0=1.559e-12; dcl_final=1.520e-04; dds_max=1.232e-05 rel 2.676e-03; n_outer 4 vs committed 4,PASS
+amended,GV5.1,coarse seed reproducibility diagnostic (2026-07-23, why the cross-check band is not bit-exact),recorded,HEAD regen bit-identical run-to-run (|dphi|=|dU|=0, same IBL iters); pre-Stage-2 code (c2dc325, same env) gives k=0 cl drift 1.6e-12 and n_outer=3 vs committed 4 -> the committed artifacts predate an environment shift; the IBL floor stopping amplifies 1e-12 to ~1e-4 in cl. Band set ~5x above the measured drift, ~10x below any wiring-error signature,RECORDED
+amended,GV5.1,coarse seed state (loose-converged),recorded,n_outer=4 converged=True cl=0.26791639 ds_max=4.589919e-03 ds_change_rel=3.682e-05 wall=28s,RECORDED
+amended,GV5.1,coarse seed IBL floor (loose-final, EXPECTED non-converged),recorded,converged=False n_iter=30 final_residual=3.154e-06,RECORDED
+amended,GV5.1,coarse FD at the seed: coupling blocks + full system, worst sweet-spot,< 1e-05,2.246e-08,PASS
+amended,GV5.1,coarse FD at the seed: masked rows (q <= 1e-12 fallback),<= 2% of F_BL rows,0 / 1236,PASS
+amended,GV5.1,coarse FD at the seed: veps frozen-vs-natural omission, worst scaled,recorded (decision 5),3.011e-08,RECORDED
+amended,GV5.1,coarse quadratic tail read on the polish history (slope-2 regime over the last decades before the floor),slope ~2 before the floor (coarse recorded; medium binding),converged=False n_iter=10 p=0.98; p=3.68; p=0.57 | e_last=3.110e-06 f_bl_last=3.110e-06,RECORDED
+amended,GV5.1,coarse N_polish and N_total = N_loose + N_polish vs the committed loose baseline (Addendum 2 (c); standalone N_aug <= 2 recorded NOT met on the k=1 seed, no further standalone retries),recorded (honest counts),N_polish=10 converged=False N_total=14 vs committed loose n_outer=4,RECORDED
+amended,GV5.1,coarse ds_change of the last polish step vs tol_ds = 1e-3,recorded (cross-check),4.309e-05,RECORDED
+amended,GV5.1,coarse newton wall time,recorded,1s over 10 iterations,RECORDED
+amended,GV5.1,coarse FD at the coupled solution, worst sweet-spot (LAST ITERATE, not converged),< 1e-05,2.244e-08,PASS
+amended,GV5.1,coarse compare: N_polish and N_total vs committed loose outer,recorded,N_polish=10 converged=False N_total=14 vs n_outer=4,RECORDED
+amended,GV5.1,coarse compare: final per-station max|delta* diff|,recorded,2.232e-04,RECORDED
+amended,GV5.1,coarse compare: cl_p augmented vs loose committed,recorded,0.267519 vs 0.267764,RECORDED
+amended,GV5.1,coarse wall times per phase,recorded,loose=28s pack=0s fd_seed=1s newton=1s fd_solution=1s leg_total=31s,RECORDED
+amended,GV5.1,medium loose-regen recipe cross-check vs committed GV3.1 (Addendum 2; wiring guard per the 2026-07-23 user decision),converged; |dcl_k0| <= 1e-08,converged=True; dcl_k0=1.309e-09; n_outer 3 vs committed 5,PASS
+amended,GV5.1,medium seed pointwise offsets vs committed GV3.1 (loose-trajectory scatter across the IBL-floor manifold; a recorded FINDING, not a recipe error -- gv5_1_medium_seed_diagnosis.md),recorded (scatter caveat),dcl_final=9.467e-03; dds_max=3.387e-03 rel 4.951e-01; n_outer 3 vs 5,RECORDED
+amended,GV5.1,medium loose trajectory scatter (FINDING, 2026-07-23 diagnosis): three code/env trajectories -> three fixed points,recorded,committed cl=0.2719/ds=6.841e-3 (n_outer=5); HEAD regen cl=0.2814/ds=3.454e-3 (n_outer=3); c2dc325 regen cl=0.2217/ds=9.728e-3 (n_outer=6). Mechanism: 1e-12-level douts perturbations amplified on the cond(J_BL,BL)~4e10 near-null manifold at the 100-iter-capped IBL solves; HEAD bit-identical run-to-run; coarse well-conditioned (0.14% k=1 ds),RECORDED
+amended,GV5.1,medium seed state (loose-converged),recorded,n_outer=3 converged=True cl=0.28137437 ds_max=3.454219e-03 ds_change_rel=8.476e-04 wall=66s,RECORDED
+amended,GV5.1,medium seed IBL floor (loose-final, EXPECTED non-converged),recorded,converged=False n_iter=16 final_residual=1.712e-06,RECORDED
+amended,GV5.1,medium FD at the seed: coupling blocks + full system, worst sweet-spot,< 1e-05,5.074e-09,PASS
+amended,GV5.1,medium FD at the seed: masked rows (q <= 1e-12 fallback),<= 2% of F_BL rows,0 / 2460,PASS
+amended,GV5.1,medium FD at the seed: veps frozen-vs-natural omission, worst scaled,recorded (decision 5),2.005e-08,RECORDED
+amended,GV5.1,medium quadratic tail read on the polish history (slope-2 regime over the last decades before the floor),slope ~2 before the floor (binding; PASS = converged and median(last 3 p) in [1.5, 2.5], vacuous when < 3 contractions),converged=False n_iter=10 p=0.02; p=0.50; p=16.07 | e_last=1.708e-06 f_bl_last=1.708e-06,FAIL
+amended,GV5.1,medium N_polish and N_total = N_loose + N_polish vs the committed loose baseline (Addendum 2 (c); standalone N_aug <= 2 recorded NOT met on the k=1 seed, no further standalone retries),recorded (honest counts),N_polish=10 converged=False N_total=13 vs committed loose n_outer=5,RECORDED
+amended,GV5.1,medium ds_change of the last polish step vs tol_ds = 1e-3,recorded (cross-check),5.529e-08,RECORDED
+amended,GV5.1,medium newton wall time,recorded,5s over 10 iterations,RECORDED
+amended,GV5.1,medium FD at the coupled solution, worst sweet-spot (LAST ITERATE, not converged),< 1e-05,5.074e-09,PASS
+amended,GV5.1,medium compare: N_polish and N_total vs committed loose outer,recorded,N_polish=10 converged=False N_total=13 vs n_outer=5,RECORDED
+amended,GV5.1,medium compare: final per-station max|delta* diff| (seed scatter caveat: the committed medium fixed point is one IBL-floor trajectory sample -- gv5_1_medium_seed_diagnosis.md),recorded,2.338e-03,RECORDED
+amended,GV5.1,medium compare: cl_p augmented vs loose committed (seed scatter caveat: the committed medium fixed point is one IBL-floor trajectory sample -- gv5_1_medium_seed_diagnosis.md),recorded,0.281752 vs 0.271907,RECORDED
+amended,GV5.1,medium wall times per phase,recorded,loose=66s pack=1s fd_seed=1s newton=5s fd_solution=1s leg_total=76s,RECORDED

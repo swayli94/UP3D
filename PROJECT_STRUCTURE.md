@@ -207,14 +207,23 @@ pyfp3d/                    # Main package
 │   │                       #   b = −load(ṁ) blowing-positive, sign pinned by GV2.1(a)) +
 │   │                       #   per-zone u_e extraction per A4; GV2.1 23 PASS / 0 FAIL,
 │   │                       #   V2 ✓ CLOSED 2026-07-22 (cases/analysis/v2_transpiration_channel/)
-│   └── coupling.py       # ✓ [V3] loose viscous–inviscid coupling: CouplingCase builders
-│                           #   (airfoil: LE-band Dirichlet pinning + station chain; closed
-│                           #   body: nose+tail stagnation-band pinning, tail-ṁ masking;
-│                           #   wing [V5]: local-x/c LE pin + TE outflow + tip-band pin/ṁ mask) +
-│                           #   run_loose_coupling outer loop (IBL→δ*→ṁ→FP→u_e);
-│                           #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
-│                           #   GV3.3 cases/analysis/v3_fuselage_smoke/,
-│                           #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23)
+│   ├── coupling.py       # ✓ [V3] loose viscous–inviscid coupling: CouplingCase builders
+│   │                       #   (airfoil: LE-band Dirichlet pinning + station chain; closed
+│   │                       #   body: nose+tail stagnation-band pinning, tail-ṁ masking;
+│   │                       #   wing [V5]: local-x/c LE pin + TE outflow + tip-band pin/ṁ mask) +
+│   │                       #   run_loose_coupling outer loop (IBL→δ*→ṁ→FP→u_e);
+│   │                       #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
+│   │                       #   GV3.3 cases/analysis/v3_fuselage_smoke/,
+│   │                       #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23)
+│   ├── tight.py          # ✓ [V5] fixed/linear operators of the augmented tight system:
+│   │                       #   W wall-load / S scatter / P pin-mask / L surface-divergence /
+│   │                       #   D closure-row / G per-zone u_e-recovery operators + the
+│   │                       #   Jacobian assemblies J_φ,BL / J_BL,φ (edge-data chain) /
+│   │                       #   J_φφ augmentation (dṁ/dφ through ρ_e·u_e)
+│   └── tight_driver.py   # ✓ [V5] TightPack + block/augmented residual + Jacobian +
+│                           #   newton_tight (splu + P8/P14 backtracking; probe guard =
+│                           #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
+│                           #   2026-07-23 (cases/analysis/v5_tight_coupling/)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -486,7 +495,15 @@ cases/                     # Test cases and reference data
 │   │                           #   ② weld-sign per-step refresh rolled back (ill-posed)
 │   ├── c1_ls_jacobian_fd/      # [A3/B19/B20/B21] LS-Jacobian FD probes, Leg-B density
 │   │                           #   gap, GB20.7 recipe sweep + B21 N1 freeze-capture sweep
-│   └── p14_te_pressure_diag/   # [P14] TE pressure-Kutta diagnostics
+│   ├── p14_te_pressure_diag/   # [P14] TE pressure-Kutta diagnostics
+│   ├── v1_ibl3_standalone/     # [V1/GV1.1] standalone IBL3 verification (prescribed u_e)
+│   ├── v2_transpiration_channel/ # [V2/GV2.1] transpiration channel (δ*→ṁ) verification
+│   ├── v3_fuselage_smoke/      # [V3/GV3.3] fuselage body-of-revolution smoke
+│   ├── v3_loose_coupling/      # [V3/GV3.1/3.2] loose coupling, NACA0012 2.5-D strip
+│   ├── v5_m6_bridge/           # [V5/GV5.0] M6 subsonic loose-coupling bridge (RECORDED)
+│   └── v5_tight_coupling/      # [V5/GV5.1] augmented-Newton exactness + convergence
+│                               #   (9P/1F/36R: FD PASS both levels; quadratic tail blocked
+│                               #   by the IBL floor) + the medium-seed diagnosis
 │                           # (was missing from this tree until 2026-07-19 — the D9 finding)
 
 tests/                     # Unit and gate tests
@@ -508,6 +525,12 @@ tests/                     # Unit and gate tests
 │                                  #   inflow/outflow pinning, 2-iteration coarse smoke
 ├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
 │                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
+├── v5_state.py                    # ✓ [V5] shared GV5.1 builders: the 2.5-D NACA0012 strip case
+│                                  #   + the loose-k1 state fixture behind all tight-gate tests
+├── test_v5_tight_jacobian.py      # ✓ [V5] tight Stage 1: fixed operators + J_φ,BL FD gate
+├── test_v5_tight_edge.py          # ✓ [V5] tight Stage 2: J_BL,φ = J_e·D_ue·G edge-chain FD gates
+├── test_v5_tight_system.py        # ✓ [V5] tight Stage 3: full-system FD gate + smoke augmented
+│                                  #   Newton (line-search probe guard exercised green)
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1151,7 +1174,21 @@ medium patch refined away but bounded δ* limit cycle 2–12 %/k, tol 1e-3
 never met; ΔCL DOWN both estimators (medium −2.4 % input-limited); crossflow
 small max|B|/|A| ≤ 0.072; tip mask validated; `build_wing_case` +
 `tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands; medium
-wall-time polluted by external load, quoted flagged); Track A — A1, A2,
+wall-time polluted by external load, quoted flagged) · **GV5.1 ✓ EXECUTED
+2026-07-23 (9 PASS / 1 FAIL / 36 RECORDED)** (augmented tight (φ, Γ, BL)
+Newton shipped: `pyfp3d/viscous/tight.py` + `tight_driver.py`,
+`tests/v5_state.py` + 3 tight test files; VERDICT
+`cases/analysis/v5_tight_coupling/VERDICT.md`, design record
+`docs/design_track_v.md` §12 — band (a) FD exactness PASS both levels,
+worst sweet-spot 2.2e-8 coarse / 5.1e-9 medium; band (b) quadratic tail
+HONEST FAIL = the intrinsic floor of the steady IBL residual on the
+cond(J_BL,BL) ~ 4e10 near-null manifold (the standalone pseudo-time solve
+stalls there too), NOT a coupling defect; band (c) N_aug ≤ 2 not met
+standalone nor as polish, N_total 14/13 vs loose 4/5; finding: the
+committed GV3.1 medium fixed point is NOT reproducible — IBL-floor
+trajectory scatter, diagnosis committed, HEAD-regen seed user-accepted;
+next = the IBL-floor follow-up, GV5.2/5.3/5.4 sequencing = user's call;
+V4-reopen trigger considered, NOT invoked); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
@@ -1160,10 +1197,13 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **583 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V
-V5 GV5.0 (M6 subsonic loose-coupling bridge, RECORDED entry check);
-full-suite measured 583 @1218.05 s @16 threads; +5 vs 578 =
-`test_v5_wing_case.py` (5). Previous 578:
+Default suite: **603 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V
+V5 GV5.1 (augmented tight (φ, Γ, U) Newton; FD exactness PASS both levels,
+quadratic tail HONEST FAIL on the IBL floor); full-suite measured 603
+@1537.09 s @16 threads; +20 vs 583 = `test_v5_tight_jacobian.py` (8) +
+`test_v5_tight_edge.py` (7) + `test_v5_tight_system.py` (5). Previous 583:
+V5 GV5.0 (M6 subsonic loose-coupling bridge, RECORDED entry check),
+583 measured @1218.05 s; previous 578:
 V3 loose coupling + GV3.1/3.2/3.3, 578 measured @1637.39 s; previous 571:
 V2 transpiration channel + GV2.1, 571 measured @1321.89 s, NOJIT lane
 17/17 @163.78 s; previous 554:
