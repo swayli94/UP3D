@@ -86,7 +86,12 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   subsonic bridge ✓ EXECUTED 16R/0F** — loose loop NOT sufficient on the 3-D lifting wing, tight-coupling
   motivation measured; **GV5.1 ✓ EXECUTED 9P/1F/36R** — exact augmented Newton delivered, FD-verified
   both levels (2.2e-8/5.1e-9); quadratic tail HONEST FAIL = the intrinsic IBL floor (cond(J_BL,BL) ~ 4e10
-  near-null manifold, not a coupling defect), next = the IBL-floor follow-up, sequencing = user's call) and
+  near-null manifold, not a coupling defect); **IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24**
+  (14 RECORDED, `cases/analysis/v5_ibl_floor/`) — the raw cond is MOSTLY a scaling artifact (equilibrated
+  2e4/7e5/1e7, sub-1e-6 count → 0/0/2, no exact null directions); the genuine scaled (A, Ψ) stiffness
+  1e5–1e7 + the TE-band (B, δ) floor residual inside J's range = the GV5.1b targets; the pseudo-time
+  controller bottoms out at the floor (globalization alone insufficient); next = GV5.1b design,
+  sequencing = user's call) and
   GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;

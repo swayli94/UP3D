@@ -2,7 +2,8 @@
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
 GV5.1 augmented (φ, Γ, BL) Newton ✓ EXECUTED (9 PASS / 1 FAIL / 36
-RECORDED; the verdict paragraph follows the GV5.0 recap below). Previous
+RECORDED) + IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24 (14
+RECORDED; the verdict paragraphs follow the GV5.0 recap below). Previous
 within V5: GV5.0 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED
 entry check, 16 RECORDED / 0 FAIL).** New machinery
 `viscous/coupling.py::build_wing_case`
@@ -44,10 +45,31 @@ reproducible — the loose medium trajectory is chaotic on the IBL floor
 `results/gv5_1_medium_seed_diagnosis.md`; HEAD-regen seed user-accepted,
 wiring guard |dcl_k0| ≤ 1e-8 PASS 1.309e-9). VERDICT
 `cases/analysis/v5_tight_coupling/VERDICT.md`, design record
-`docs/design_track_v.md` §12. Next: the IBL-floor follow-up (J_BL,BL
-null-space structure diagnosis / closure-level regularization /
-globalization); GV5.2/5.3/5.4 sequencing = the user's call; the
-V4-reopen trigger was considered and NOT invoked.
+`docs/design_track_v.md` §12. The IBL-floor follow-up executed the next
+day (the paragraph below); the V4-reopen trigger was considered and NOT
+invoked.
+**IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED, no
+bands, `cases/analysis/v5_ibl_floor/`, findings.md + run.py-regenerable
+artifacts): the near-null cluster PERSISTS at the loose-converged states
+(S1 500/1236 <1e-6·σmax cond 1.3e11; S2 1082/2460 cond 4.0e13; the
+s1/s3 spectra overlap curve-for-curve) and is carried by the turbulent
+(A, Ψ) variables mid-chord → TE.** Q3: the raw cond 4e10–4e13 is
+MOSTLY a scaling artifact (row+col equilibration → 2e4/7e5/1e7;
+sub-1e-6 count 501/500/1082 → 0/0/2, no exact null directions); the
+genuine scaled (A, Ψ) stiffness 1e5–1e7 is the real target. Q4: the
+closure-floor active set is EMPTY (the floor-active-null hypothesis
+dead). Q5: the F_BL floor lives in the TE band (B, δ) equations,
+essentially entirely INSIDE J's range (left-null alignment ≤ 7.7e-3).
+Q6: eps_diff ×4 moves the floor ≤ 6 % (not an artificial-viscosity
+truncation); the DELTA_MIN probe is DEFERRED (numba-baked module
+constant; Q4's empty set = the zero-sensitivity substitute). Q7: the
+pseudo-time controller bottoms out (cfl pinned at cfl_min, the residual
+frozen at 3.154e-6 from iter 0) = the formulation floor expressed
+through the controller — globalization alone cannot pass it. Next:
+**GV5.1b design** — fold row/column equilibration into the tight solve
++ a damped/projected Newton targeting the scaled (A, Ψ) stiffness; band
+(b)'s slope-2 window redefined BEFORE the floor; GV5.2/5.3/5.4
+sequencing = the user's call.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -783,8 +805,14 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   there too), NOT a coupling defect; N_total 14/13 vs loose 4/5;
   committed GV3.1 medium fixed point NOT reproducible (IBL-floor
   trajectory scatter, diagnosis committed, HEAD-regen seed
-  user-accepted); remaining = the IBL-floor follow-up (sequencing =
-  user's call), GV5.2
+  user-accepted); IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24
+  (14 RECORDED, `cases/analysis/v5_ibl_floor/`): the raw cond mostly a
+  scaling artifact (equilibrated 2e4/7e5/1e7, sub-1e-6 → 0/0/2, no
+  exact null directions), the genuine scaled (A, Ψ) stiffness 1e5–1e7 +
+  the TE-band (B, δ) floor residual inside J's range = the GV5.1b
+  targets; the pseudo-time controller bottoms out at the floor;
+  remaining = GV5.1b design (equilibration + damped/projected Newton;
+  the slope-2 window before the floor; sequencing = user's call), GV5.2
   RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
   experimental CL committed), GV5.4 cost; V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on

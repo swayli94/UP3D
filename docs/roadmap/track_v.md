@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -514,11 +514,25 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   NOT a coupling defect; N_aug ≤ 2 not met standalone nor as polish
   (N_total 14/13 vs loose 4/5). Finding: the committed GV3.1 medium fixed
   point is not reproducible (IBL-floor trajectory scatter; diagnosis
-  committed; HEAD-regen seed user-accepted). V5 stays **OPEN**: next =
-  the IBL-floor follow-up (J_BL,BL null-space structure diagnosis /
-  closure-level regularization / globalization); GV5.2/5.3/5.4 sequencing
-  = the user's call; the V4-reopen trigger was considered and NOT
-  invoked. Remaining: RAE2822 transonic VII vs
+  committed; HEAD-regen seed user-accepted). **IBL-floor follow-up
+  diagnosis ✓ EXECUTED 2026-07-24** (14 RECORDED, no bands;
+  `cases/analysis/v5_ibl_floor/`): the near-null cluster PERSISTS at the
+  loose-converged states, carried by the turbulent (A, Ψ) variables
+  mid-chord → TE; the raw cond 4e10–4e13 is MOSTLY a scaling artifact
+  (row+col equilibration → 2e4/7e5/1e7, sub-1e-6 count 501/500/1082 →
+  0/0/2 — no exact null directions) but a genuine scaled (A, Ψ)
+  stiffness of 1e5–1e7 remains = the real GV5.1b/GV5.4 target; the F_BL
+  floor lives in the TE band (B, δ) equations essentially entirely
+  INSIDE J's range; the closure-floor active set is EMPTY (the
+  floor-active-null hypothesis dead), eps_diff ×4 moves the floor ≤ 6 %
+  (not an artificial-viscosity truncation), and the pseudo-time
+  controller bottoms out with the residual frozen = a formulation floor
+  that globalization alone cannot pass. V5 stays **OPEN**: next =
+  **GV5.1b design** (equilibration folded into the tight solve + a
+  damped/projected Newton targeting the scaled (A, Ψ) stiffness; band
+  (b)'s slope-2 window redefined BEFORE the floor), GV5.2/5.3/5.4
+  sequencing = the user's call; the V4-reopen trigger was considered
+  and NOT invoked. Remaining: RAE2822 transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp
   (GV5.3 — anchored on committed data only, no external CL figure), cost

@@ -500,6 +500,9 @@ cases/                     # Test cases and reference data
 │   ├── v2_transpiration_channel/ # [V2/GV2.1] transpiration channel (δ*→ṁ) verification
 │   ├── v3_fuselage_smoke/      # [V3/GV3.3] fuselage body-of-revolution smoke
 │   ├── v3_loose_coupling/      # [V3/GV3.1/3.2] loose coupling, NACA0012 2.5-D strip
+│   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
+│   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
+│   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
 │   ├── v5_m6_bridge/           # [V5/GV5.0] M6 subsonic loose-coupling bridge (RECORDED)
 │   └── v5_tight_coupling/      # [V5/GV5.1] augmented-Newton exactness + convergence
 │                               #   (9P/1F/36R: FD PASS both levels; quadratic tail blocked
@@ -1187,7 +1190,15 @@ stalls there too), NOT a coupling defect; band (c) N_aug ≤ 2 not met
 standalone nor as polish, N_total 14/13 vs loose 4/5; finding: the
 committed GV3.1 medium fixed point is NOT reproducible — IBL-floor
 trajectory scatter, diagnosis committed, HEAD-regen seed user-accepted;
-next = the IBL-floor follow-up, GV5.2/5.3/5.4 sequencing = user's call;
+IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED,
+`cases/analysis/v5_ibl_floor/`: raw cond 4e10–4e13 mostly a scaling
+artifact (equilibrated 2e4/7e5/1e7, sub-1e-6 → 0/0/2, no exact null
+directions), genuine scaled (A, Ψ) stiffness 1e5–1e7 remains; the floor
+residual lives at the TE band (B, δ) equations inside J's range; closure
+floors inactive; eps_diff ×4 ≤ 6 %; the pseudo-time controller bottoms
+out = a formulation floor globalization alone cannot pass; next = GV5.1b
+design — equilibration + damped/projected Newton, slope-2 window before
+the floor), GV5.2/5.3/5.4 sequencing = user's call;
 V4-reopen trigger considered, NOT invoked); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality

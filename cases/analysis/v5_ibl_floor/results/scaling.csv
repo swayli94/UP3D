@@ -1,0 +1,4 @@
+state,cond_raw,cond_equilibrated,row_norm_range,col_norm_range,n_lt_1e-6_raw,n_lt_1e-6_scaled,n_lt_1e-8_raw,n_lt_1e-8_scaled,n_lt_1e-10_raw,n_lt_1e-10_scaled
+s3,4.083694e+10,2.100639e+04,8.354506e+04,1.354288e+06,501,0,121,0,1,0
+s1,1.317499e+11,7.424635e+05,7.695627e+04,2.990828e+06,500,0,136,0,1,0
+s2,3.970862e+13,1.137795e+07,3.277629e+05,7.578425e+05,1082,2,541,0,12,0

@@ -1,0 +1,7 @@
+probe,factor_eps_diff,factor_eps_diff_s,eps_diff,eps_diff_s,converged,n_iter,final_residual,floor_ratio_vs_base,n_sigma_lt_1e-6,n_sigma_lt_1e-8,cond,note
+eps_base(x1),1.0,1.0,0.005,0.02,False,21,3.153666e-06,1.0,500,136,1.376544e+11,re-solve from S1 U at the pack eps (the Q7 run)
+eps_diff x0.5,0.50,1.00,0.0025,0.02,False,65,3.061788e-06,0.9709,501,140,1.934309e+11,wall=52s
+eps_diff x2,2.00,1.00,0.01,0.02,False,100,3.330353e-06,1.0560,498,129,6.452527e+10,wall=65s
+both x0.5 (extra),0.50,0.50,0.0025,0.01,False,75,3.055684e-06,0.9689,503,152,5.099073e+10,wall=90s
+both x2 (extra),2.00,2.00,0.01,0.04,False,100,3.893914e-06,1.2347,483,113,2.519863e+10,wall=108s
+DELTA_MIN probe,,,,,,,,,,,,DEFERRED (not cleanly probeable via the interface; numba-baked module constant; Q4 active set is the substitute evidence)
