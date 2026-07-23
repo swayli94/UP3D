@@ -57,7 +57,7 @@ def _turb_seed_state(x, q=Q0, rho=RHO0, mu=MU0):
     # U_tau^2 = cf/2 and U_tau = sqrt(A/Re_delta) (B=0 limit of D13 (57))
     A = 0.5 * cf * re_d
     state = np.array([delta, A, 0.0, 0.0, 1.0e-3, 0.0])
-    out, _ = C.closure_scalar(state, q=q, rho=rho, mu=mu, turbulent=True)
+    out, _, _ = C.closure_scalar(state, q=q, rho=rho, mu=mu, turbulent=True)
     ct_eq = (C.C_L_DEFAULT * out[C.OUT_SP1] / out[C.OUT_SD]) ** 2
     state[4] = max(ct_eq, 1.0e-6)
     return state
@@ -178,11 +178,13 @@ def test_laminar_plate_newton():
     # family-consistent H in the interior (loose smoke; GV1.1(a) is the gate)
     outs = np.empty((n, C.N_OUT))
     douts = np.empty((n, C.N_OUT, 6))
+    douts_e = np.empty((n, C.N_OUT, 2))
     q = np.full(n, Q0)
     rho = np.full(n, RHO0)
     mu = np.full(n, MU0)
     mach = np.zeros(n)
-    C.closure_all(U, q, rho, mu, mach, flags, C.C_L_DEFAULT, outs, douts)
+    C.closure_all(U, q, rho, mu, mach, flags, C.C_L_DEFAULT, outs, douts,
+                  douts_e)
     H = outs[interior, C.OUT_H1]
     assert np.all(H > 2.55) and np.all(H < 2.75)
     # delta* grows downstream (sqrt-x-like)
@@ -208,11 +210,13 @@ def test_turbulent_plate_newton():
     assert info["converged"]
     outs = np.empty((n, C.N_OUT))
     douts = np.empty((n, C.N_OUT, 6))
+    douts_e = np.empty((n, C.N_OUT, 2))
     q = np.full(n, Q0)
     rho = np.full(n, RHO0)
     mu = np.full(n, MU0)
     mach = np.zeros(n)
-    C.closure_all(U, q, rho, mu, mach, flags, C.C_L_DEFAULT, outs, douts)
+    C.closure_all(U, q, rho, mu, mach, flags, C.C_L_DEFAULT, outs, douts,
+                  douts_e)
     cf = outs[:, C.OUT_CF1]
     H = outs[:, C.OUT_H1]
     assert np.all(cf > 0.0)

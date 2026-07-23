@@ -23,28 +23,19 @@ Covers, on the 2.5-D NACA0012 coarse wake-cut strip (M0.5, alpha 2, Re
     directions, tolerance < 1e-5 (the PRE_REGISTRATION FD protocol;
     unmasked rows expected at 1e-6-1e-8 per the P8/P14 precedent).
 
-Runs in both lanes: default JIT and PYFP3D_NOJIT=1 (the closure packet and
-the IBL solve fall back to pure Python, slower but same numerics).
+Runs in both lanes: default JIT and PYFP3D_NOJIT=1. Under NOJIT the two
+k=1-fixture tests (the external_rhs roundtrip and the J_phi,BL FD gate)
+are skipped -- the pure-Python k=1 fixture (FP + IBL solves) is JIT-lane
+only, the tests/test_v3_coupling.py:204 precedent; the cheap operator
+unit tests (W/S/P/L/D/G, no k=1 state) still run.
 """
 
 import os
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-from pyfp3d.mesh.reader import read_mesh
-from pyfp3d.mesh.wake_cut import cut_wake
-from pyfp3d.physics.isentropic import density_field, mach_squared_field
-from pyfp3d.solve.newton import NewtonWorkspace, solve_newton_lifting
 from pyfp3d.viscous import closures as C
-from pyfp3d.viscous.coupling import (
-    CouplingConfig,
-    _lam_seed,
-    _turb_seed,
-    build_airfoil_case,
-)
-from pyfp3d.viscous.ibl3 import IBL3Solver
 from pyfp3d.viscous.tight import (
     assemble_j_phi_bl,
     closure_ds1_jacobian,
@@ -59,130 +50,29 @@ from pyfp3d.viscous.transpiration import (
     edge_velocity_per_zone,
     transpiration_from_delta_star,
 )
-
-REPO_ROOT = Path(__file__).parent.parent
-NACA_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
-
-M_INF, ALPHA, RE = 0.5, 2.0, 3.0e6
-# the GV3.1 Newton-leg settings (cases/analysis/v3_loose_coupling/run.py:67)
-UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR = 1.5, 0.95, 3.0, 0.05
-CASE_ARGS = dict(
-    upwind_c=UPWIND_C,
-    m_crit=M_CRIT,
-    m_cap=M_CAP,
-    rho_floor=RHO_FLOOR,
-    tol_residual=1e-10,
+from tests.v5_state import (
+    M_CRIT,
+    M_CAP,
+    RHO_FLOOR,
+    UPWIND_C,
+    build_k1_state,
+    build_naca_case,
 )
+
 NOJIT = os.environ.get("PYFP3D_NOJIT", "0") == "1"
 
 
 @pytest.fixture(scope="module")
 def naca_case():
-    """The 2.5-D coarse strip + IBL case wiring (the test_v3_coupling.py
-    fixture, lines 56-63)."""
-    mc, wc = cut_wake(read_mesh(str(NACA_DIR / "coarse.msh")))
-    cfg = CouplingConfig(re_chord=RE, m_inf=M_INF, alpha_deg=ALPHA)
-    case = build_airfoil_case(
-        mc.nodes, mc.elements, mc.boundary_faces["wall"], cfg
-    )
-    return mc, wc, cfg, case
+    """The 2.5-D coarse strip + IBL case wiring (tests/v5_state.py)."""
+    return build_naca_case()
 
 
 @pytest.fixture(scope="module")
 def k1_state(naca_case):
-    """The loose-loop k=1 state point (coupling.py:689-806 mirrored
-    step-by-step, seeds included via the module's own private helpers so
-    the mirror cannot drift): inviscid-converged (phi, gamma) + ONE IBL
-    Newton solve + the closure packet. The PRE_REGISTRATION risks section
-    records the IBL floor on harsh k=1 states -- the solve's convergence
-    is recorded, not asserted (the FD gate needs a smooth state point of
-    the closure map, not a converged one)."""
-    mc, wc, cfg, case = naca_case
-    sm = case.sm
-    mu = 1.0 / cfg.re_chord
-    n_cut = len(mc.nodes)
-
-    # inviscid baseline (coupling.py:689; the GV3.1 Newton recipe)
-    r = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **CASE_ARGS)
-    assert r["converged"]
-    phi = np.asarray(r["phi"], dtype=np.float64)
-    gamma = np.asarray(r["gamma"], dtype=np.float64)
-
-    # u_e recovery + edge data (coupling.py:710-726)
-    le_mask_vol = np.zeros(n_cut, dtype=bool)
-    le_mask_vol[sm.volume_node_of[case.le_band_surf]] = True
-    ue_vol = edge_velocity_per_zone(
-        mc.nodes,
-        case.wall_faces,
-        phi,
-        elements=case.elements,
-        le_band_mask=le_mask_vol,
-        n_smooth_passes=cfg.n_smooth_passes,
-    )
-    ue_surf = ue_vol[sm.volume_node_of]
-    assert np.all(np.isfinite(ue_surf))
-    q2 = np.sum(ue_surf ** 2, axis=1)
-    q = np.sqrt(q2)
-    rho_e = density_field(q2, cfg.m_inf, cfg.gamma_air)
-    mach_e = np.sqrt(mach_squared_field(q2, cfg.m_inf, cfg.gamma_air))
-
-    # inflow Dirichlet band, frozen at this state (coupling.py:738-763,
-    # airfoil branch: stations exist, seed_kind None -> all laminar seeds)
-    xc_n = case.stations.xc[case.stations.station_of]
-    inflow_mask = xc_n <= cfg.inflow_band_x
-    idx_in = np.where(inflow_mask)[0]
-    inflow_state = np.stack([
-        _lam_seed(case.seed_fetch[i], max(float(q[i]), 1.0e-8), 1.0, mu)
-        for i in idx_in
-    ])
-
-    # U0 seed (coupling.py:784-792)
-    q_floor = 0.02 * max(float(np.max(q)), 1.0e-12)
-    U0 = np.zeros((sm.n_node, 6), dtype=np.float64)
-    for i in range(sm.n_node):
-        qq = max(q[i], q_floor)
-        if case.turbulent_flags[i]:
-            U0[i] = _turb_seed(case.seed_fetch[i], qq, 1.0, mu)
-        else:
-            U0[i] = _lam_seed(case.seed_fetch[i], qq, 1.0, mu)
-
-    # ONE IBL solve (coupling.py:772-795)
-    solver = IBL3Solver(
-        sm,
-        ue_surf,
-        rho_e,
-        mu,
-        mach_e,
-        case.turbulent_flags,
-        inflow_mask,
-        inflow_state,
-        eps_diff=cfg.eps_diff,
-        eps_diff_s=cfg.eps_diff_s,
-    )
-    U, ibl_info = solver.solve(U0, tol=cfg.ibl_tol, max_iter=cfg.ibl_max_iter)
-    assert np.all(np.isfinite(U))
-
-    # closure packet (coupling.py:800-806)
-    outs = np.empty((sm.n_node, C.N_OUT), dtype=np.float64)
-    douts = np.empty((sm.n_node, C.N_OUT, 6), dtype=np.float64)
-    C.closure_all(
-        U, q, rho_e, np.full(sm.n_node, mu), mach_e,
-        case.turbulent_flags, C.C_L_DEFAULT, outs, douts,
-    )
-
-    # the workspace the FD oracle runs on; external_rhs is set
-    # post-construction by the tests (the delta* = 0 identity test first)
-    ws = NewtonWorkspace(mc, wc, alpha_deg=ALPHA)
-    ws.set_mach(M_INF)
-    phi_free = phi[: ws.n_red][ws.free].copy()
-    return {
-        "mc": mc, "wc": wc, "cfg": cfg, "case": case, "sm": sm,
-        "mu": mu, "n_cut": n_cut, "phi": phi, "gamma": gamma,
-        "le_mask_vol": le_mask_vol, "ue_surf": ue_surf, "q": q,
-        "rho_e": rho_e, "mach_e": mach_e, "U": U, "outs": outs,
-        "douts": douts, "ibl_info": ibl_info, "ws": ws,
-        "phi_free": phi_free,
-    }
+    """The loose-loop k=1 state point (tests/v5_state.py; shared with the
+    Stage-2 gate so both probe the same pre-registered state)."""
+    return build_k1_state(naca_case)
 
 
 def _rel_err(got, ref, floor=1e-30):
@@ -345,6 +235,9 @@ def test_edge_velocity_operator_two_zone_rows(naca_case):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    NOJIT, reason="the k=1 fixture (FP + IBL solves) is JIT-lane only"
+)
 def test_external_rhs_attribute_roundtrip(k1_state):
     """Precondition of the FD protocol: NewtonWorkspace.external_rhs is a
     plain attribute read per eval_residual call (solve/newton.py:197-203,
@@ -364,6 +257,9 @@ def test_external_rhs_attribute_roundtrip(k1_state):
     assert np.array_equal(F_z, F_n)
 
 
+@pytest.mark.skipif(
+    NOJIT, reason="the k=1 fixture (FP + IBL solves) is JIT-lane only"
+)
 def test_j_phi_bl_fd_random_directions(k1_state):
     """GV5.1 Stage-1 gate: J_phi,BL = -(T^T W S P L D)[free, :] vs central
     FD of eval_residual through the external_rhs channel, epsilon ladder
@@ -396,9 +292,10 @@ def test_j_phi_bl_fd_random_directions(k1_state):
         with external_rhs set."""
         outs = np.empty((n_s, C.N_OUT), dtype=np.float64)
         douts = np.empty((n_s, C.N_OUT, 6), dtype=np.float64)
+        douts_e = np.empty((n_s, C.N_OUT, 2), dtype=np.float64)
         C.closure_all(
             np.ascontiguousarray(U_pert), q, rho_e, mu_arr, mach_e,
-            case.turbulent_flags, C.C_L_DEFAULT, outs, douts,
+            case.turbulent_flags, C.C_L_DEFAULT, outs, douts, douts_e,
         )
         m_surf = transpiration_from_delta_star(
             sm, rho_e, ue_surf, outs[:, C.OUT_DS1]

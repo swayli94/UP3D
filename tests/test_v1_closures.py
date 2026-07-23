@@ -42,19 +42,19 @@ def _fd_worst_rel(state, turbulent, mach=0.0, eps=1.0e-6):
     """Worst relative |fd - analytic| over the (28,6) block (central FD);
     entries with both |fd| and |analytic| below 1e-8 are exact zeros (noise
     floor) and skipped."""
-    out0, d0 = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, mach=mach,
-                                turbulent=turbulent)
+    out0, d0, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, mach=mach,
+                                   turbulent=turbulent)
     assert np.all(np.isfinite(out0))
     assert np.all(np.isfinite(d0))
     worst = 0.0
     for s in range(6):
         st = np.array(state, dtype=float)
         st[s] += eps
-        out1, _ = C.closure_scalar(st, q=Q0, rho=RHO0, mu=MU0, mach=mach,
-                                   turbulent=turbulent)
+        out1, _, _ = C.closure_scalar(st, q=Q0, rho=RHO0, mu=MU0, mach=mach,
+                                      turbulent=turbulent)
         st[s] -= 2.0 * eps
-        out2, _ = C.closure_scalar(st, q=Q0, rho=RHO0, mu=MU0, mach=mach,
-                                   turbulent=turbulent)
+        out2, _, _ = C.closure_scalar(st, q=Q0, rho=RHO0, mu=MU0, mach=mach,
+                                      turbulent=turbulent)
         fd = (out1 - out2) / (2.0 * eps)
         for j in range(C.N_OUT):
             if abs(fd[j]) < 1.0e-8 and abs(d0[j, s]) < 1.0e-8:
@@ -96,7 +96,7 @@ def test_fd_compressible_mach():
 
 @pytest.mark.parametrize("state,turb", [(LAM_2D, False), (TURB_2D, True)])
 def test_crossflow_structural_zeros(state, turb):
-    out, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, turbulent=turb)
+    out, _, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, turbulent=turb)
     for j in CROSSFLOW_ZERO_OUTPUTS:
         assert abs(out[j]) < 1.0e-14, f"output {j} = {out[j]} not ~0 in 2-D"
 
@@ -119,7 +119,7 @@ def test_laminar_thickness_independent_quadrature():
         W[i] = prof[1]
     ds1_trap = np.trapezoid(1.0 - U, eta)
     th11_trap = np.trapezoid(U * (1.0 - U), eta)
-    out, _ = C.closure_scalar(LAM_3D, q=Q0, rho=RHO0, mu=MU0, turbulent=False)
+    out, _, _ = C.closure_scalar(LAM_3D, q=Q0, rho=RHO0, mu=MU0, turbulent=False)
     delta = LAM_3D[0]
     assert abs(out[C.OUT_DS1] / delta - ds1_trap) < 1.0e-6
     assert abs(out[C.OUT_TH11] / delta - th11_trap) < 1.0e-6
@@ -146,7 +146,8 @@ def test_turbulent_edge_conditions():
     re_d = RHO0 * Q0 * delta / MU0
     prof = np.empty(4)
     dprof = np.empty((4, 4))
-    C._turb_UW(1.0, delta, A, B, Psi, re_d, prof, dprof)
+    dprof_re = np.empty(4)
+    C._turb_UW(1.0, delta, A, B, Psi, re_d, prof, dprof, dprof_re)
     assert abs(prof[0] - 1.0) < 1.0e-12
     assert abs(prof[1]) < 1.0e-12
 
@@ -160,7 +161,7 @@ def test_blasius_seed_consistency():
     state = C.blasius_seed(x, q=Q0, rho=RHO0, mu=MU0)
     assert state[0] > 0.0
     assert state[2] == 0.0 and state[3] == 0.0
-    out, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, turbulent=False)
+    out, _, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, turbulent=False)
     # H matched to the Blasius target by construction of blasius_A
     assert abs(out[C.OUT_H1] - 2.5906) < 1.0e-6
     # theta matched to 0.664 x / sqrt(Re_x)
@@ -174,7 +175,7 @@ def test_blasius_seed_consistency():
 
 def test_stress_source_fd():
     state = TURB_3D
-    out_c, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, turbulent=True)
+    out_c, _, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0, turbulent=True)
     for comp, sp, sd in ((0, out_c[C.OUT_SP1], out_c[C.OUT_SD]),
                          (1, out_c[C.OUT_SP2], out_c[C.OUT_SD])):
         o = np.empty(3)
@@ -202,7 +203,7 @@ def test_stress_source_fd():
 
 def test_stress_source_equilibrium():
     # S = 2 a1 (P - D) = 0 at Ctau_eq = (c_l sp / sd)^2 (D-CT equilibrium)
-    out_c, _ = C.closure_scalar(TURB_2D, q=Q0, rho=RHO0, mu=MU0, turbulent=True)
+    out_c, _, _ = C.closure_scalar(TURB_2D, q=Q0, rho=RHO0, mu=MU0, turbulent=True)
     sp, sd = out_c[C.OUT_SP1], out_c[C.OUT_SD]
     ct_eq = (C.C_L_DEFAULT * sp / sd) ** 2
     state = TURB_2D.copy()
@@ -222,16 +223,16 @@ def test_stress_source_equilibrium():
 def test_nonpositive_delta_floored(turb):
     for d0 in (0.0, -1.0e-3, 1.0e-10):
         state = np.array([d0, 8.0, 0.5, 0.2, 1.0e-8, 1.0e-8])
-        out, dout = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0,
-                                     turbulent=turb)
+        out, dout, _ = C.closure_scalar(state, q=Q0, rho=RHO0, mu=MU0,
+                                        turbulent=turb)
         assert np.all(np.isfinite(out))
         assert np.all(np.isfinite(dout))
         assert np.all(dout[:, 0] == 0.0)  # d/d(delta) masked below the floor
     # two sub-floor probes must give identical outputs (piecewise constant)
-    oa, _ = C.closure_scalar(np.array([1.0e-10, 8.0, 0.5, 0.2, 1e-8, 1e-8]),
-                             q=Q0, rho=RHO0, mu=MU0, turbulent=turb)
-    ob, _ = C.closure_scalar(np.array([2.0e-10, 8.0, 0.5, 0.2, 1e-8, 1e-8]),
-                             q=Q0, rho=RHO0, mu=MU0, turbulent=turb)
+    oa, _, _ = C.closure_scalar(np.array([1.0e-10, 8.0, 0.5, 0.2, 1e-8, 1e-8]),
+                                q=Q0, rho=RHO0, mu=MU0, turbulent=turb)
+    ob, _, _ = C.closure_scalar(np.array([2.0e-10, 8.0, 0.5, 0.2, 1e-8, 1e-8]),
+                                q=Q0, rho=RHO0, mu=MU0, turbulent=turb)
     assert np.allclose(oa, ob, rtol=0.0, atol=0.0)
 
 
@@ -256,12 +257,15 @@ def test_closure_all_parity():
     flags = (rng.random(n) > 0.5).astype(np.int64)
     outs = np.empty((n, C.N_OUT))
     douts = np.empty((n, C.N_OUT, 6))
-    C.closure_all(states, q, rho, mu, mach, flags, C.C_L_DEFAULT, outs, douts)
+    douts_e = np.empty((n, C.N_OUT, 2))
+    C.closure_all(states, q, rho, mu, mach, flags, C.C_L_DEFAULT, outs, douts,
+                  douts_e)
     for i in range(n):
-        o, d = C.closure_scalar(states[i], q=Q0, rho=RHO0, mu=MU0,
-                                turbulent=bool(flags[i]))
+        o, d, de = C.closure_scalar(states[i], q=Q0, rho=RHO0, mu=MU0,
+                                    turbulent=bool(flags[i]))
         assert np.allclose(outs[i], o, rtol=0.0, atol=0.0)
         assert np.allclose(douts[i], d, rtol=0.0, atol=0.0)
+        assert np.allclose(douts_e[i], de, rtol=0.0, atol=0.0)
 
 
 def test_closure_all_zero_length():
@@ -270,5 +274,6 @@ def test_closure_all_zero_length():
     flags = np.empty(0, dtype=np.int64)
     outs = np.empty((0, C.N_OUT))
     douts = np.empty((0, C.N_OUT, 6))
+    douts_e = np.empty((0, C.N_OUT, 2))
     C.closure_all(empty6, empty1, empty1, empty1, empty1, flags,
-                  C.C_L_DEFAULT, outs, douts)  # must not raise
+                  C.C_L_DEFAULT, outs, douts, douts_e)  # must not raise

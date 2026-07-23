@@ -260,14 +260,16 @@ def _spalding_uplus(yplus):
 
 @_njit(cache=True, fastmath=True)
 def _turb_scales(delta, A, B, re_d, out):
-    """U_tau, W_tau, delta+ and derivatives w.r.t. (delta, A, B).
+    """U_tau, W_tau, delta+ and derivatives w.r.t. (delta, A, B) and re_d.
 
     D13 (55)(57) incompressible form (nu_w = nu_i):
       U_tau = A / (A^2+B^2)^{1/4} / sqrt(Re_delta)
       W_tau = B / (A^2+B^2)^{1/4} / sqrt(Re_delta)
       delta+ = sqrt(Re_delta) * (A^2+B^2)^{1/4}
     out = (U_tau, W_tau, delta+, dU_tau/d.., dW_tau/d.., ddelta+/d..)
-    rows 6..14 hold d/d(delta, A, B) triples packed flat.
+    rows 6..14 hold d/d(delta, A, B) triples packed flat; out[12..14] =
+    d/dre_d of (U_tau, W_tau, delta+) (the GV5.1 edge-derivative column;
+    the caller's RE_D_MIN floor mask handles the kink).
     """
     a2b2 = A * A + B * B
     a2b2 = max(a2b2, 1.0e-12)
@@ -302,17 +304,27 @@ def _turb_scales(delta, A, B, re_d, out):
     out[9] = ddp_dD
     out[10] = ddp_dA
     out[11] = ddp_dB
+    # d/dre_d: only sqr = sqrt(re_d) carries re_d
+    dsqr_dre = 0.5 / sqr
+    out[12] = -u_t / sqr * dsqr_dre
+    out[13] = -w_t / sqr * dsqr_dre
+    out[14] = q14 * dsqr_dre
 
 
 @_njit(cache=True, fastmath=True)
-def _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof):
-    """Turbulent (U, W, U', W') + derivatives w.r.t. (delta, A, B, Psi).
+def _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof, dprof_re):
+    """Turbulent (U, W, U', W') + derivatives w.r.t. (delta, A, B, Psi) and
+    re_d.
 
     D13 (47)(48): U = U_t u+(eta*d+) + K cos(Ups - Psi(1-eta)^2) g_o
                   W = W_t u+(eta*d+) - K sin(Ups - Psi(1-eta)^2) g_o
-    dprof rows: d/dDelta, d/dA, d/dB, d/dPsi of each entry (4x4).
+    dprof rows: d/dDelta, d/dA, d/dB, d/dPsi of each entry (4x4); dprof_re
+    (4,) = d/dre_d of each entry (the GV5.1 edge column: re_d enters only
+    through the (U_t, W_t, delta+) scales, so the same chain code runs on
+    a 4-wide (delta, A, B, re_d) derivative stack -- rows 0..2 bit-
+    identical to the pre-GV5.1 dprof).
     """
-    sc = np.empty(12)
+    sc = np.empty(15)
     _turb_scales(delta, A, B, re_d, sc)
     u_t, w_t, dp = sc[0], sc[1], sc[2]
     # u+ at eta*d+ and at the edge d+
@@ -324,20 +336,27 @@ def _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof):
     K = max(K, 1.0e-30)
     Ups = np.arctan2(wx, ux)
     # d(K, Ups)/ds via chain rule; helpers: d(wx), d(ux)
-    # derivatives of u_t, w_t, dp w.r.t. (delta, A, B)
-    du_t = sc[3:6]
-    dw_t = sc[6:9]
-    ddp = sc[9:12]
-    # d(up_e)/ds = dup_e * d(dp)/ds
-    dwx = np.empty(3)
-    dux = np.empty(3)
+    # derivatives of u_t, w_t, dp w.r.t. (delta, A, B, re_d)
+    du_t = np.empty(4)
+    dw_t = np.empty(4)
+    ddp = np.empty(4)
     for i in range(3):
+        du_t[i] = sc[3 + i]
+        dw_t[i] = sc[6 + i]
+        ddp[i] = sc[9 + i]
+    du_t[3] = sc[12]
+    dw_t[3] = sc[13]
+    ddp[3] = sc[14]
+    # d(up_e)/ds = dup_e * d(dp)/ds
+    dwx = np.empty(4)
+    dux = np.empty(4)
+    for i in range(4):
         dwx[i] = dw_t[i] * up_e + w_t * dup_e * ddp[i]
         dux[i] = -(du_t[i] * up_e + u_t * dup_e * ddp[i])
-    dK = np.empty(3)
-    dUps = np.empty(3)
+    dK = np.empty(4)
+    dUps = np.empty(4)
     den = max(ux * ux + wx * wx, 1.0e-30)
-    for i in range(3):
+    for i in range(4):
         dK[i] = (wx * dwx[i] + ux * dux[i]) / K
         dUps[i] = (ux * dwx[i] - wx * dux[i]) / den
     # local u+ and its eta derivative
@@ -361,14 +380,15 @@ def _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof):
     prof[1] = W
     prof[2] = Up_
     prof[3] = Wp_
-    # state derivatives: rows d/dDelta, d/dA, d/dB; then d/dPsi
-    for i in range(3):
+    # state derivatives: rows d/dDelta, d/dA, d/dB; then d/dPsi -- and the
+    # re_d column (row 3 of the extended stack -> dprof_re)
+    for i in range(4):
         # d(u_t*up): up depends on state via y = eta*dp
         d_up = dup * eta * ddp[i]
         dU = du_t[i] * up + u_t * d_up + dK[i] * ca * g_o + K * (-sa) * dUps[i] * g_o
         dW = dw_t[i] * up + w_t * d_up - dK[i] * sa * g_o - K * ca * dUps[i] * g_o
         # eta-derivative of dU/dstate: Up_ = u_t*dup*dp + K(-sa*ang'*g_o + ca*dg_o)
-        # (d ang'/ds = 0 for s in (delta, A, B); dup differentiates via
+        # (d ang'/ds = 0 for s in (delta, A, B, re_d); dup differentiates via
         # _spalding_d2up(y) * eta * ddp)
         dUp_s = (
             du_t[i] * d_up_deta
@@ -384,10 +404,16 @@ def _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof):
             - dK[i] * (ca * d_ang_deta * g_o + sa * dg_o)
             - K * (-sa * dUps[i] * d_ang_deta * g_o + ca * dUps[i] * dg_o)
         )
-        dprof[i, 0] = dU
-        dprof[i, 1] = dW
-        dprof[i, 2] = dUp_s
-        dprof[i, 3] = dWp_s
+        if i < 3:
+            dprof[i, 0] = dU
+            dprof[i, 1] = dW
+            dprof[i, 2] = dUp_s
+            dprof[i, 3] = dWp_s
+        else:
+            dprof_re[0] = dU
+            dprof_re[1] = dW
+            dprof_re[2] = dUp_s
+            dprof_re[3] = dWp_s
     # d/dPsi: d ang/dPsi = -t ; d ang'/dPsi = 2(1-eta) ; d sa = ca*(-t), d ca = sa*t
     dU_psi = K * sa * t * g_o
     dW_psi = K * ca * t * g_o
@@ -432,13 +458,27 @@ def _density_R(U, W, e_prime, d_hw):
 # ---------------------------------------------------------------------------
 
 @_njit(cache=True, fastmath=True)
-def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
-    """Evaluate the 28-output closure packet and its (28,6) state derivatives.
+def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout, dout_e):
+    """Evaluate the 28-output closure packet, its (28,6) state derivatives
+    and its (28,2) edge-scalar derivatives.
 
     state = (delta, A, B, Psi, Ctau1, Ctau2); q/rho/mu/mach = edge parameters
-    (held fixed; derivatives w.r.t. them are NOT produced in V1).
-    turbulent: 0 = laminar family, 1 = turbulent family (forced-transition
-    regime flag, D-TR). c_l: dissipation length constant (D-CT-2).
+    (held fixed in dout). turbulent: 0 = laminar family, 1 = turbulent
+    family (forced-transition regime flag, D-TR). c_l: dissipation length
+    constant (D-CT-2).
+
+    dout_e (GV5.1, the J_BL,phi piece of cases/analysis/v5_tight_coupling/
+    PRE_REGISTRATION.md decision 5): explicit partials w.r.t. the TWO
+    derived edge scalars the packet interior depends on -- dout_e[:, 0] =
+    d/dre_d, dout_e[:, 1] = d/de_prime -- HOLDING THE 6-STATE FIXED; the
+    chain to (q, rho, mu, M) lives in ibl3.py::_nodal_fluxes (J2 of
+    re_d = rho*q*delta/mu, e_prime = r(g-1)/2*M^2). Threaded through the
+    same eta-quadrature accumulators as an 8-wide derivative stack
+    (columns 0..5 = state, bit-identical to the pre-GV5.1 dout; 6 = re_d,
+    7 = e_prime). Floor masking: RE_D_MIN active => the re_d column is
+    zeroed (re_d pinned, FD-consistent); DELTA_MIN masks ONLY the
+    d/d(delta) column -- the re_d column is NOT masked since re_d is
+    evaluated at the floored delta.
 
     The eta-quadrature engine evaluates every integrand of D13 (60)(61) and
     its analytic state derivative at the same Gauss points; outputs are the
@@ -458,6 +498,12 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
     ct1 = state[4]
     ct2 = state[5]
     re_d = rho * q * delta / mu
+    re_mult = 1.0
+    if re_d < RE_D_MIN:
+        # RE_D floor active: re_d is pinned, so the composite map has zero
+        # edge derivative through re_d -- mask the column (FD-consistent,
+        # the DELTA_MIN dmult precedent).
+        re_mult = 0.0
     re_d = max(re_d, RE_D_MIN)
     e_prime = RECOVERY_R * 0.5 * (GAMMA_AIR - 1.0) * mach * mach
     d_hw = 0.0  # adiabatic wall (V1 scope; overheat ratio is a follow-up)
@@ -471,19 +517,22 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         n_g = ETA_LAM.shape[0]
 
     # accumulators for the 28 outputs and their derivatives w.r.t.
-    # (delta, A, B, Psi, ct1, ct2)
+    # (delta, A, B, Psi, ct1, ct2, re_d, e_prime) -- columns 0..5 are the
+    # state derivatives (bit-identical to the pre-GV5.1 (N_OUT,6) dacc),
+    # 6/7 the GV5.1 edge columns
     acc = np.zeros(N_OUT)
-    dacc = np.zeros((N_OUT, 6))
+    dacc = np.zeros((N_OUT, 8))
 
     # stress-sector outer weight shape w(eta) = 4 eta (1-eta) (D-CT-1)
     prof = np.empty(4)
     dprof = np.empty((4, 4))
+    dprof_re = np.empty(4)
 
     for k in range(n_g):
         eta = eta_g[k]
         wk = w_g[k]
         if turbulent:
-            _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof)
+            _turb_UW(eta, delta, A, B, Psi, re_d, prof, dprof, dprof_re)
         else:
             _lam_UW(eta, A, B, Psi, prof, dprof)
         U = prof[0]
@@ -492,10 +541,13 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         Wp = prof[3]
         # derivative arrays: turbulent rows (delta, A, B, Psi); laminar rows
         # (A, B, Psi) -> remap; delta enters only via the overall delta factor.
-        dU = np.zeros(6)
-        dW = np.zeros(6)
-        dUp = np.zeros(6)
-        dWp = np.zeros(6)
+        # 8-wide stack: [0..5] state, [6] re_d (turbulent profiles only;
+        # the laminar family is re_d-free), [7] e_prime (profiles are
+        # e_prime-free; R carries the whole e_prime column).
+        dU = np.zeros(8)
+        dW = np.zeros(8)
+        dUp = np.zeros(8)
+        dWp = np.zeros(8)
         if turbulent:
             dU[0] = dprof[0, 0]
             dU[1] = dprof[1, 0]
@@ -513,6 +565,10 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
             dWp[1] = dprof[1, 3]
             dWp[2] = dprof[2, 3]
             dWp[3] = dprof[3, 3]
+            dU[6] = dprof_re[0]
+            dW[6] = dprof_re[1]
+            dUp[6] = dprof_re[2]
+            dWp[6] = dprof_re[3]
         else:
             dU[1] = dprof[0, 0]
             dU[2] = dprof[1, 0]
@@ -526,23 +582,29 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
             dWp[3] = dprof[2, 3]
 
         R = _density_R(U, Wv, e_prime, d_hw)
-        dR = np.zeros(6)
+        dR = np.zeros(8)
         # R = 1/(1 + dHw(1-U) + E'(1-U^2-W^2)); dR/ds = -R^2 * d(inv)/ds
+        # (columns 0..5 state + 6 re_d: the turbulent profiles carry re_d
+        # through dU[6]/dW[6]; the laminar family's dU[6]/dW[6] are zero,
+        # so this is bit-identical there)
         if e_prime != 0.0 or d_hw != 0.0:
             cof = -R * R
-            for s in range(6):
+            for s in range(7):
                 dinv = (-d_hw - 2.0 * e_prime * U) * dU[s] - 2.0 * e_prime * Wv * dW[s]
                 dR[s] = cof * dinv
+        # e_prime column: dR/de' = -R^2 (1-U^2-W^2) (live even at e'=0; the
+        # guard above only skips exactly-zero STATE columns)
+        dR[7] = -R * R * (1.0 - U * U - Wv * Wv)
 
         # angle-deviation profile dpsi = atan2(W, U) (D13 (40); the "-Psi"
         # symbols inside D13 (60) are this pointwise deviation)
         u2w2 = U * U + Wv * Wv
         u2w2 = max(u2w2, 1.0e-30)
         dpsi = np.arctan2(Wv, U)
-        d_dpsi = np.zeros(6)
+        d_dpsi = np.zeros(8)
         ddpsi_deta = (U * Wp - Wv * Up) / u2w2
-        d_ddpsi = np.zeros(6)
-        for s in range(6):
+        d_ddpsi = np.zeros(8)
+        for s in range(8):
             d_dpsi[s] = (U * dW[s] - Wv * dU[s]) / u2w2
             # d(ddpsi_deta)/ds (product rule through the quotient)
             num = dU[s] * Wp + U * dWp[s] - dW[s] * Up - Wv * dUp[s]
@@ -552,7 +614,7 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         # ---- integrands of the 16 thicknesses (D13 (60)) ----
         # g[0..15] in packet order 0..15; each scaled by delta afterwards.
         g = np.empty(16)
-        dg = np.zeros((16, 6))
+        dg = np.zeros((16, 8))
         g[0] = 1.0 - R
         g[1] = 1.0 - R * U
         g[2] = -R * Wv
@@ -569,7 +631,7 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         g[13] = -dpsi * u2w2 * R * Wv
         g[14] = -dpsi * U
         g[15] = -dpsi * Wv
-        for s in range(6):
+        for s in range(8):
             dg[0, s] = -dR[s]
             dg[1, s] = -dR[s] * U - R * dU[s]
             dg[2, s] = -dR[s] * Wv - R * dW[s]
@@ -601,13 +663,25 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
 
         # ---- shear profiles S, T (D13 (44)(45) laminar / (49)(50) turbulent)
         if turbulent:
-            sc = np.empty(12)
+            sc = np.empty(15)
             _turb_scales(delta, A, B, re_d, sc)
             u_t, w_t = sc[0], sc[1]
             dp = sc[2]
-            du_t = sc[3:6]
-            dw_t = sc[6:9]
-            ddp = sc[9:12]
+            du_t = np.zeros(8)
+            dw_t = np.zeros(8)
+            ddp = np.zeros(8)
+            du_t[0] = sc[3]
+            du_t[1] = sc[4]
+            du_t[2] = sc[5]
+            du_t[6] = sc[12]
+            dw_t[0] = sc[6]
+            dw_t[1] = sc[7]
+            dw_t[2] = sc[8]
+            dw_t[6] = sc[13]
+            ddp[0] = sc[9]
+            ddp[1] = sc[10]
+            ddp[2] = sc[11]
+            ddp[6] = sc[14]
             up_e, dup_e = _spalding_uplus(dp)
             wx = w_t * up_e
             ux = 1.0 - u_t * up_e
@@ -624,30 +698,29 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
             S = R * (u_t * mag * (1.0 - g_o) + ct1 * K * ca * dg_o)
             T = R * (w_t * mag * (1.0 - g_o) - ct1 * K * sa * dg_o)
             # derivatives
-            dS = np.zeros(6)
-            dT = np.zeros(6)
-            dmag = np.zeros(6)
-            dmag[0] = (u_t * du_t[0] + w_t * dw_t[0]) / mag
-            dmag[1] = (u_t * du_t[1] + w_t * dw_t[1]) / mag
-            dmag[2] = (u_t * du_t[2] + w_t * dw_t[2]) / mag
-            dK = np.zeros(6)
-            dUp2 = np.zeros(6)
+            dS = np.zeros(8)
+            dT = np.zeros(8)
+            dmag = np.zeros(8)
+            for i in range(8):
+                dmag[i] = (u_t * du_t[i] + w_t * dw_t[i]) / mag
+            dK = np.zeros(8)
+            dUp2 = np.zeros(8)
             den = max(ux * ux + wx * wx, 1.0e-30)
-            dwx = np.empty(3)
-            dux = np.empty(3)
-            for i in range(3):
+            dwx = np.empty(8)
+            dux = np.empty(8)
+            for i in range(8):
                 dwx[i] = dw_t[i] * up_e + w_t * dup_e * ddp[i]
                 dux[i] = -(du_t[i] * up_e + u_t * dup_e * ddp[i])
-            for i in range(3):
+            for i in range(8):
                 dK[i] = (wx * dwx[i] + ux * dux[i]) / K
                 dUp2[i] = (ux * dwx[i] - wx * dux[i]) / den
-            dang = np.zeros(6)
-            for i in range(3):
+            dang = np.zeros(8)
+            for i in range(8):
                 dang[i] = dUp2[i]
             dang[3] = -t1
-            for s in range(6):
-                dvisc1 = du_t[s] * mag + u_t * dmag[s] if s < 3 else 0.0
-                dvisc2 = dw_t[s] * mag + w_t * dmag[s] if s < 3 else 0.0
+            for s in range(8):
+                dvisc1 = du_t[s] * mag + u_t * dmag[s]
+                dvisc2 = dw_t[s] * mag + w_t * dmag[s]
                 base1 = dvisc1 * (1.0 - g_o)
                 base2 = dvisc2 * (1.0 - g_o)
                 dKterm1 = dK[s] * ca - K * sa * dang[s]
@@ -661,11 +734,12 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
             inv_re = 1.0 / re_d
             S = inv_re * Up
             T = inv_re * Wp
-            dS = np.zeros(6)
-            dT = np.zeros(6)
-            dre_d = np.zeros(6)
+            dS = np.zeros(8)
+            dT = np.zeros(8)
+            dre_d = np.zeros(8)
             dre_d[0] = re_d / delta
-            for s in range(6):
+            dre_d[6] = 1.0
+            for s in range(8):
                 dS[s] = -dre_d[s] * inv_re * inv_re * Up + inv_re * dUp[s]
                 dT[s] = -dre_d[s] * inv_re * inv_re * Wp + inv_re * dWp[s]
 
@@ -675,19 +749,19 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         ddpsiU_deta = ddpsi_deta * U + dpsi * Up
         ddpsiW_deta = ddpsi_deta * Wv + dpsi * Wp
         # derivatives of ddpsiU_deta, ddpsiW_deta
-        d_ddpsiU = np.zeros(6)
-        d_ddpsiW = np.zeros(6)
-        for s in range(6):
+        d_ddpsiU = np.zeros(8)
+        d_ddpsiW = np.zeros(8)
+        for s in range(8):
             d_ddpsiU[s] = d_ddpsi[s] * U + ddpsi_deta * dU[s] + d_dpsi[s] * Up + dpsi * dUp[s]
             d_ddpsiW[s] = d_ddpsi[s] * Wv + ddpsi_deta * dW[s] + d_dpsi[s] * Wp + dpsi * dWp[s]
 
         cD_g = S * Up + T * Wp
         cDx_g = S * Wp - T * Up
         cDc_g = S * ddpsiU_deta + T * ddpsiW_deta
-        d_cD = np.zeros(6)
-        d_cDx = np.zeros(6)
-        d_cDc = np.zeros(6)
-        for s in range(6):
+        d_cD = np.zeros(8)
+        d_cDx = np.zeros(8)
+        d_cDc = np.zeros(8)
+        for s in range(8):
             d_cD[s] = dS[s] * Up + S * dUp[s] + dT[s] * Wp + T * dWp[s]
             d_cDx[s] = dS[s] * Wp + S * dWp[s] - dT[s] * Up - T * dUp[s]
             d_cDc[s] = dS[s] * ddpsiU_deta + S * d_ddpsiU[s] + dT[s] * ddpsiW_deta + T * d_ddpsiW[s]
@@ -700,13 +774,13 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         sd_g = (R * wsig) ** 1.5
         ku1_g = R * wsig * U
         ku2_g = R * wsig * Wv
-        d_ak = np.zeros(6)
-        d_sp1 = np.zeros(6)
-        d_sp2 = np.zeros(6)
-        d_sd = np.zeros(6)
-        d_ku1 = np.zeros(6)
-        d_ku2 = np.zeros(6)
-        for s in range(6):
+        d_ak = np.zeros(8)
+        d_sp1 = np.zeros(8)
+        d_sp2 = np.zeros(8)
+        d_sd = np.zeros(8)
+        d_ku1 = np.zeros(8)
+        d_ku2 = np.zeros(8)
+        for s in range(8):
             d_ak[s] = dR[s] * wsig
             d_sp1[s] = dR[s] * wsig * Up + R * wsig * dUp[s]
             d_sp2[s] = dR[s] * wsig * Wp + R * wsig * dWp[s]
@@ -717,7 +791,7 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         # ---- accumulate (weighted) ----
         for j in range(16):
             acc[j] += wk * g[j]
-            for s in range(6):
+            for s in range(8):
                 dacc[j, s] += wk * dg[j, s]
         acc[OUT_CD] += wk * cD_g
         acc[OUT_CDX] += wk * cDx_g
@@ -728,7 +802,7 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         acc[OUT_SD] += wk * sd_g
         acc[OUT_KU1] += wk * ku1_g
         acc[OUT_KU2] += wk * ku2_g
-        for s in range(6):
+        for s in range(8):
             dacc[OUT_CD, s] += wk * d_cD[s]
             dacc[OUT_CDX, s] += wk * d_cDx[s]
             dacc[OUT_CDC, s] += wk * d_cDc[s]
@@ -746,10 +820,14 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
     if dmult == 0.0:
         for j in range(N_OUT):
             dacc[j, 0] = 0.0
+    # mask d/d(re_d) everywhere when the RE_D_MIN floor is active
+    if re_mult == 0.0:
+        for j in range(N_OUT):
+            dacc[j, 6] = 0.0
 
     # ---- wall values (D13 (61)): cf1 = 2 S(0), cf2 = 2 T(0) ----
     if turbulent:
-        sc = np.empty(12)
+        sc = np.empty(15)
         _turb_scales(delta, A, B, re_d, sc)
         u_t, w_t = sc[0], sc[1]
         mag = np.sqrt(u_t * u_t + w_t * w_t)
@@ -759,36 +837,52 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         T0 = R0 * w_t * mag
         cf1 = 2.0 * S0
         cf2 = 2.0 * T0
-        dcf1 = np.zeros(6)
-        dcf2 = np.zeros(6)
-        du_t = sc[3:6]
-        dw_t = sc[6:9]
-        dmag = np.zeros(6)
-        for i in range(3):
+        dcf1 = np.zeros(8)
+        dcf2 = np.zeros(8)
+        du_t = np.zeros(8)
+        dw_t = np.zeros(8)
+        du_t[0] = sc[3]
+        du_t[1] = sc[4]
+        du_t[2] = sc[5]
+        du_t[6] = sc[12]
+        dw_t[0] = sc[6]
+        dw_t[1] = sc[7]
+        dw_t[2] = sc[8]
+        dw_t[6] = sc[13]
+        dmag = np.zeros(8)
+        for i in range(8):
             dmag[i] = (u_t * du_t[i] + w_t * dw_t[i]) / mag
-        for s in range(3):
+        for s in range(8):
             dcf1[s] = 2.0 * R0 * (du_t[s] * mag + u_t * dmag[s])
             dcf2[s] = 2.0 * R0 * (dw_t[s] * mag + w_t * dmag[s])
+        # e_prime column: R0 = 1/(1 + dHw + E') -> dR0/de' = -R0^2
+        dcf1[7] += 2.0 * (-R0 * R0) * u_t * mag
+        dcf2[7] += 2.0 * (-R0 * R0) * w_t * mag
         # R0 depends on (A,B,Psi) via dHw*(1-U)+E'(1-U^2-W^2) at U=W=0 -> const
     else:
         inv_re = 1.0 / re_d
         # U'(0) = A, W'(0) = B exactly in the laminar family
         cf1 = 2.0 * inv_re * A
         cf2 = 2.0 * inv_re * B
-        dcf1 = np.zeros(6)
-        dcf2 = np.zeros(6)
+        dcf1 = np.zeros(8)
+        dcf2 = np.zeros(8)
         dcf1[0] = -cf1 / delta
         dcf1[1] = 2.0 * inv_re
         dcf2[0] = -cf2 / delta
         dcf2[2] = 2.0 * inv_re
+        dcf1[6] = -cf1 / re_d
+        dcf2[6] = -cf2 / re_d
     dcf1[0] *= dmult
     dcf2[0] *= dmult
+    if re_mult == 0.0:
+        dcf1[6] = 0.0
+        dcf2[6] = 0.0
 
     # ---- scale thicknesses by delta (integrals were per-unit-delta) ----
     for j in range(16):
         v = acc[j]
         acc[j] = delta * v
-        for s in range(6):
+        for s in range(8):
             dacc[j, s] = (dmult if s == 0 else 0.0) * v + delta * dacc[j, s]
 
     out[0:16] = acc[0:16]
@@ -816,6 +910,21 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         dout[OUT_SD, s] = dacc[OUT_SD, s]
         dout[OUT_KU1, s] = dacc[OUT_KU1, s]
         dout[OUT_KU2, s] = dacc[OUT_KU2, s]
+    # edge columns: col 0 = d/d(re_d) (dacc col 6), col 1 = d/d(e_prime) (col 7)
+    for c in range(2):
+        s = 6 + c
+        dout_e[0:16, c] = dacc[0:16, s]
+        dout_e[OUT_CF1, c] = dcf1[s]
+        dout_e[OUT_CF2, c] = dcf2[s]
+        dout_e[OUT_CD, c] = dacc[OUT_CD, s]
+        dout_e[OUT_CDX, c] = dacc[OUT_CDX, s]
+        dout_e[OUT_CDC, c] = dacc[OUT_CDC, s]
+        dout_e[OUT_AK, c] = dacc[OUT_AK, s]
+        dout_e[OUT_SP1, c] = dacc[OUT_SP1, s]
+        dout_e[OUT_SP2, c] = dacc[OUT_SP2, s]
+        dout_e[OUT_SD, c] = dacc[OUT_SD, s]
+        dout_e[OUT_KU1, c] = dacc[OUT_KU1, s]
+        dout_e[OUT_KU2, c] = dacc[OUT_KU2, s]
 
     # ---- derived: theta11 = p11 - ds1, theta*1 = ps1 - ds1, H = ds1/theta11
     th = acc[OUT_P11] - acc[OUT_DS1]
@@ -828,6 +937,11 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout):
         dout[OUT_TH11, s] = dacc[OUT_P11, s] - dacc[OUT_DS1, s]
         dout[OUT_THS1, s] = dacc[OUT_PS1, s] - dacc[OUT_DS1, s]
         dout[OUT_H1, s] = (dacc[OUT_DS1, s] * th - acc[OUT_DS1] * (dacc[OUT_P11, s] - dacc[OUT_DS1, s])) / (th_safe * th_safe)
+    for c in range(2):
+        s = 6 + c
+        dout_e[OUT_TH11, c] = dacc[OUT_P11, s] - dacc[OUT_DS1, s]
+        dout_e[OUT_THS1, c] = dacc[OUT_PS1, s] - dacc[OUT_DS1, s]
+        dout_e[OUT_H1, c] = (dacc[OUT_DS1, s] * th - acc[OUT_DS1] * (dacc[OUT_P11, s] - dacc[OUT_DS1, s])) / (th_safe * th_safe)
 
 
 # ---------------------------------------------------------------------------
@@ -867,16 +981,18 @@ def stress_source(state, q, rho, c_l, sp, sd, comp, out, dout):
 # ---------------------------------------------------------------------------
 
 @_njit(cache=True, fastmath=True, parallel=True)
-def closure_all(states, q, rho, mu, mach, turbulent_flags, c_l, outs, douts):
-    """closure_node over all surface nodes; outs (n,30), douts (n,30,6)
-    preallocated by the caller and written in place (design.md §7 rule 4).
-    Per-node embarrassingly parallel loop (no scatter) -> plain prange.
+def closure_all(states, q, rho, mu, mach, turbulent_flags, c_l, outs, douts,
+                douts_e):
+    """closure_node over all surface nodes; outs (n,30), douts (n,30,6),
+    douts_e (n,30,2) preallocated by the caller and written in place
+    (design.md §7 rule 4). Per-node embarrassingly parallel loop (no scatter)
+    -> plain prange.
     """
     n = states.shape[0]
     for i in prange(n):
         closure_node(
             states[i], q[i], rho[i], mu[i], mach[i], turbulent_flags[i], c_l,
-            outs[i], douts[i],
+            outs[i], douts[i], douts_e[i],
         )
 
 
@@ -886,12 +1002,18 @@ def closure_all(states, q, rho, mu, mach, turbulent_flags, c_l, outs, douts):
 
 def closure_scalar(state, q=1.0, rho=1.0, mu=1.0e-5, mach=0.0, turbulent=False,
                    c_l=C_L_DEFAULT):
-    """Python-level single-node evaluation; returns (out (28,), dout (28,6))."""
+    """Python-level single-node evaluation.
+
+    Returns (out (N_OUT,), dout (N_OUT,6), dout_e (N_OUT,2)); dout_e holds
+    d/d(re_d) in col 0 and d/d(e_prime) in col 1 with the state fixed.
+    """
     st = np.ascontiguousarray(state, dtype=np.float64)
     out = np.empty(N_OUT)
     dout = np.empty((N_OUT, 6))
-    closure_node(st, q, rho, mu, mach, 1 if turbulent else 0, c_l, out, dout)
-    return out, dout
+    dout_e = np.empty((N_OUT, 2))
+    closure_node(st, q, rho, mu, mach, 1 if turbulent else 0, c_l, out, dout,
+                 dout_e)
+    return out, dout, dout_e
 
 
 # ---------------------------------------------------------------------------
@@ -902,8 +1024,8 @@ def blasius_A(target_H=2.5906, mu=1.0e-5, q=1.0, rho=1.0):
     """Solve H_lam(A) = target_H for A (1-D damped Newton on the family)."""
     A = 8.0
     for _ in range(60):
-        out, dout = closure_scalar((1.0e-3, A, 0.0, 0.0, CTAU_LAM, 0.0),
-                                   q=q, rho=rho, mu=mu, turbulent=False)
+        out, dout, _ = closure_scalar((1.0e-3, A, 0.0, 0.0, CTAU_LAM, 0.0),
+                                      q=q, rho=rho, mu=mu, turbulent=False)
         H = out[OUT_H1]
         dH_dA = dout[OUT_H1, 1]
         step = (H - target_H) / dH_dA
@@ -924,8 +1046,8 @@ def blasius_seed(x, q=1.0, rho=1.0, mu=1.0e-5):
     re_x = rho * q * x / mu
     theta_target = 0.664 * x / np.sqrt(re_x)
     A = blasius_A(mu=mu, q=q, rho=rho)
-    out, _ = closure_scalar((1.0e-3, A, 0.0, 0.0, CTAU_LAM, 0.0),
-                            q=q, rho=rho, mu=mu, turbulent=False)
+    out, _, _ = closure_scalar((1.0e-3, A, 0.0, 0.0, CTAU_LAM, 0.0),
+                               q=q, rho=rho, mu=mu, turbulent=False)
     theta_hat = out[OUT_TH11] / 1.0e-3  # per-unit-delta theta
     delta = theta_target / theta_hat
     return np.array([delta, A, 0.0, 0.0, CTAU_LAM, 0.0])

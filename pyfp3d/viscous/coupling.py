@@ -355,7 +355,7 @@ def _turb_seed(s: float, q: float, rho: float, mu: float) -> np.ndarray:
     cf = 0.0576 * re_x ** -0.2
     re_d = rho * q * delta / mu
     st = np.array([delta, 0.5 * cf * re_d, 0.0, 0.0, 1.0e-3, 0.0])
-    out, _ = C.closure_scalar(st, q=q, rho=rho, mu=mu, turbulent=True)
+    out, _, _ = C.closure_scalar(st, q=q, rho=rho, mu=mu, turbulent=True)
     st[4] = max((C.C_L_DEFAULT * out[C.OUT_SP1] / out[C.OUT_SD]) ** 2, 1.0e-6)
     return st
 
@@ -799,9 +799,10 @@ def run_loose_coupling(
             )
         outs = np.empty((sm.n_node, C.N_OUT), dtype=np.float64)
         douts = np.empty((sm.n_node, C.N_OUT, 6), dtype=np.float64)
+        douts_e = np.empty((sm.n_node, C.N_OUT, 2), dtype=np.float64)
         C.closure_all(
             U, q, rho_e, np.full(sm.n_node, mu), mach_e,
-            case.turbulent_flags, C.C_L_DEFAULT, outs, douts,
+            case.turbulent_flags, C.C_L_DEFAULT, outs, douts, douts_e,
         )
         ds_new = outs[:, C.OUT_DS1]
 

@@ -1,4 +1,4 @@
-"""Track V V5 Stage 1 -- fixed/linear sparse operators of the augmented
+"""Track V V5 Stages 1+2 -- fixed/linear sparse operators of the augmented
 Newton system (binding: docs/roadmap/track_v.md GV5.1 + the 2026-07-22
 pre-registered FD note; design: cases/analysis/v5_tight_coupling/
 PRE_REGISTRATION.md).
@@ -53,6 +53,18 @@ the P1 per-triangle gradient -> crease-gated smoothing -> area-weighted
 nodal average chain (post/surface.py:80-118, 147-189;
 transpiration.py:206-228).
 
+Stage 2 (the BL <- phi block):
+
+* D_ue -- the per-node (7, 3) Jacobian of the IBL3 edge-data packet
+  (q, rho, mu, M, u_hat_1..3) w.r.t. u_e (edge_data_jacobian below): the
+  coupling.py:723-726 chain q = |u_e|, rho = density_field(q^2),
+  mu = 1/re_chord (constant), M = sqrt(mach_squared_field(q^2)),
+  u_hat = u_e/q.
+* J_BL,phi = J_e D_ue G (assemble_j_bl_phi): J_e is the IBL3 edge-data
+  Jacobian of IBL3Solver.residual_edge_jacobian (ibl3.py:1398-1411; state
+  fixed, veps/veps_s frozen by decision 5 -- the FD gate measures the
+  omission).
+
 Assembly happens once per case/outer state: plain numpy/scipy.sparse, no
 numba (the viscous/coupling.py orchestration precedent).
 """
@@ -68,6 +80,11 @@ from pyfp3d.post.surface import (
     wall_outward_normals,
     wall_triangle_adjacency,
 )
+from pyfp3d.physics.isentropic import (
+    density_derivative_wrt_q_sq_field,
+    mach_squared_derivative_wrt_q_sq_field,
+    mach_squared_field,
+)
 from pyfp3d.viscous import closures as C
 
 __all__ = [
@@ -78,6 +95,8 @@ __all__ = [
     "closure_ds1_jacobian",
     "edge_velocity_operator",
     "assemble_j_phi_bl",
+    "edge_data_jacobian",
+    "assemble_j_bl_phi",
 ]
 
 
@@ -419,3 +438,84 @@ def assemble_j_phi_bl(ws, W, S, P, L, D) -> sp.csr_matrix:
     J_cut = W @ S @ P @ L @ D  # (n_cut, 6 n_s): the wall RHS derivative
     J_red = ws.con.T.T @ J_cut  # (n_red, 6 n_s)
     return (-J_red[ws.free, :]).tocsr()
+
+
+def edge_data_jacobian(
+    ue_surf: np.ndarray, m_inf: float, gamma_air: float = 1.4
+) -> sp.csr_matrix:
+    """D_ue: the per-node (7, 3) Jacobian of the IBL3 edge-data packet
+    (q, rho, mu, M, u_hat_1..3) w.r.t. the edge velocity u_e, as a
+    block-diagonal (7 n_s, 3 n_s) CSR matrix (one dense 7x3 block per
+    surface node).
+
+    The packet map is the coupling.py:723-726 chain evaluated per node:
+    q = |u_e|, rho = density_field(q^2), mu = 1/re_chord (constant -- zero
+    row, coupling.py:681), M = sqrt(mach_squared_field(q^2)),
+    u_hat = u_e/q. The block rows are
+
+        q:     u_hat^T
+        rho:   2 rho'(q^2) u_e^T         (density_derivative_wrt_q_sq)
+        mu:    0
+        M:     m2'(q^2) u_e^T / sqrt(m2) (mach_squared_derivative_wrt_q_sq;
+               dM = dm2/(2 sqrt(m2)) dq^2, dq^2 = 2 u_e^T du_e)
+        u_hat: (I - u_hat u_hat^T) / q
+
+    Nodes with q <= 1e-12 (the _frames fallback, ibl3.py:105-112) get a
+    zero block: the packet map is degenerate there and the FD gate masks
+    them (tests/test_v5_tight_edge.py).
+    """
+    ue = np.asarray(ue_surf, dtype=np.float64)
+    if ue.ndim != 2 or ue.shape[1] != 3:
+        raise ValueError(f"ue_surf shape {ue.shape}, expected (n_s, 3)")
+    n_s = ue.shape[0]
+    q2 = np.sum(ue * ue, axis=1)
+    q = np.sqrt(q2)
+    live = q > 1.0e-12
+    qs = np.where(live, q, 1.0)
+    uhat = ue / qs[:, None]
+    m2 = mach_squared_field(q2, m_inf, gamma_air)
+    blk = np.zeros((n_s, 7, 3), dtype=np.float64)
+    blk[:, 0, :] = uhat
+    blk[:, 1, :] = (
+        2.0
+        * density_derivative_wrt_q_sq_field(q2, m_inf, gamma_air)[:, None]
+        * ue
+    )
+    blk[:, 3, :] = (
+        mach_squared_derivative_wrt_q_sq_field(q2, m_inf, gamma_air)[:, None]
+        * ue
+        / np.sqrt(np.maximum(m2, 1.0e-300))[:, None]
+    )
+    blk[:, 4:7, :] = (
+        np.eye(3)[None, :, :]
+        - uhat[:, :, None] * uhat[:, None, :]
+    ) / qs[:, None, None]
+    blk[~live] = 0.0
+    ii = np.arange(n_s, dtype=np.int64)
+    rows = np.broadcast_to(
+        7 * ii[:, None, None] + np.arange(7, dtype=np.int64)[None, :, None],
+        (n_s, 7, 3),
+    ).reshape(-1)
+    cols = np.broadcast_to(
+        3 * ii[:, None, None] + np.arange(3, dtype=np.int64)[None, None, :],
+        (n_s, 7, 3),
+    ).reshape(-1)
+    vals = blk.reshape(-1)
+    nz = vals != 0.0
+    return sp.coo_matrix(
+        (vals[nz], (rows[nz], cols[nz])), shape=(7 * n_s, 3 * n_s)
+    ).tocsr()
+
+
+def assemble_j_bl_phi(J_e, D_ue, G) -> sp.csr_matrix:
+    """J_BL,phi = J_e D_ue G: the phi -> IBL-residual block of the
+    augmented Jacobian (GV5.1 Stage 2; the chain phi -> u_e -> edge packet
+    -> R_BL with the IBL state fixed).
+
+    J_e is the (6 n_s, 7 n_s) edge-data Jacobian of
+    IBL3Solver.residual_edge_jacobian (ibl3.py:1398-1411; state fixed,
+    veps/veps_s frozen by decision 5 -- the FD gate measures the
+    omission), D_ue the (7 n_s, 3 n_s) packet Jacobian of
+    edge_data_jacobian, G the (3 n_s, n_cut) phi -> u_e operator of
+    edge_velocity_operator. Returns the (6 n_s, n_cut) CSR product."""
+    return (J_e @ D_ue @ G).tocsr()
