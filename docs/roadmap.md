@@ -81,8 +81,10 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   0 FAIL: transpiration channel live through all three drivers — cylinder Fourier blowing vs analytic orders 1.650/1.640, ṁ=0
   bit-identical on five legs, Newton Jacobian bit-invariant + FD exact under lagged ṁ);
   gates re-spec'd at opening against the B32/A4 state; same day re-phased: V1 IBL3 core / V2 transpiration channel /
-  V3 loose coupling incl. the fuselage body-of-revolution smoke; V4 optional; V5 tight coupling with the GV5.0 M6
-  subsonic bridge and GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
+  V3 loose coupling incl. the fuselage body-of-revolution smoke (**V3 ✓ CLOSED 2026-07-22**; **V4 ⊘ SKIPPED
+  2026-07-22**, user-directed); V5 tight coupling ◐ OPEN 2026-07-23 (**GV5.0 M6
+  subsonic bridge ✓ EXECUTED 16R/0F** — loose loop NOT sufficient on the 3-D lifting wing, tight-coupling
+  motivation measured) and GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
   3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · **A2 ✓ CLOSED 2026-07-17** (TE/Kutta fidelity attribution,

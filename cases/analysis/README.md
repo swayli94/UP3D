@@ -117,11 +117,22 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   input; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, mesh generator `cases/meshes/fuselage_bor/`, design
   record `docs/design_track_v.md` §10) — `python cases/analysis/v3_fuselage_smoke/run.py --levels coarse` —
   ~17 min (exit 1 = honest FAIL present)
+- `v5_m6_bridge/` — **Track V / V5** GV5.0 M6 subsonic loose-coupling bridge (RECORDED entry check: ONERA M6
+  coarse+medium conforming, M0.5/α3.06, forced x_tr/c 0.05, Re_MAC 11.72e6; V3 loose driver + new
+  `viscous/coupling.py::build_wing_case` 3-D wing IBL case — LE-band laminar pin per local x/c, both TE natural
+  outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked; pre-registered,
+  **16 RECORDED / 0 FAIL** — bridge answer: the loose loop does NOT converge ≤10 at either level; coarse =
+  root-upper-TE separation patch (H 4–5.5) feedback runaway ṁ_max ×12.4 (GV3.3-stern class), medium = patch
+  resolved away but bounded δ* limit cycle 2–12 %/k; ΔCL DOWN both estimators (coarse −5.2 %/−4.8 %, medium
+  −2.4 %/−2.1 % input-limited); crossflow first live 3-D exercise max|B|/|A| ≤ 0.072; δ*(z) CSVs feed GV5.3's
+  bands; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir) —
+  `python cases/analysis/v5_m6_bridge/run.py --levels coarse` — coarse ~25 min / medium ~6.5 h (exit 1 = honest
+  FAIL present)
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 `p14_*` are analysis studies belonging to Track B / Track P phases that live
 here because they are studies, not capability demos. `v1_ibl3_standalone/`
 is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
-`v3_loose_coupling/` and `v3_fuselage_smoke/` are Track V's GV2.1 / GV3.x
-gate cases, same status.)*
+`v3_loose_coupling/`, `v3_fuselage_smoke/` and `v5_m6_bridge/` are Track V's
+GV2.1 / GV3.x / GV5.0 gate cases, same status.)*

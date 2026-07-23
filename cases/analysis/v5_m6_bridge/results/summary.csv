@@ -1,0 +1,9 @@
+gate,metric,band,measured,verdict
+GV5.0,medium max|B|/max|A| (argmax z/b=0.145, mid),recorded,4.6665e+01 / 6.4561e+02 = 0.0723,RECORDED
+GV5.0,medium max|Ct2|/max|Ct1|, max|Psi|,recorded,0.1261, 3.9954e+03,RECORDED
+GV5.0,medium Delta-cl_p viscous-inviscid (0.2086 -> 0.2035),recorded, expect DOWN,-0.0050 (2.41%) DOWN (input-limited: |dcl| < A4 2.5% floor),RECORDED
+GV5.0,medium Delta-cl_kj viscous-inviscid (0.2107 -> 0.2062),recorded, expect DOWN,-0.0044 (2.10%) DOWN (input-limited: |dcl| < A4 2.5% floor),RECORDED
+GV5.0,medium loose loop n_outer / converged (GV3.2 2.5-D count: 4 (coarse) / 5 (medium)),recorded,10 / False,RECORDED
+GV5.0,medium IBL residual floor / mdot_max first->last,recorded,1.798e-06 / 0.000e+00 -> 6.389e-02 (growth x0.61 over k),RECORDED
+GV5.0,medium re_chord (Re_MAC/MAC) / wall time,recorded,1.8140e+07 per m / 23266s,RECORDED
+GV5.0,medium final FP solve: converged / n_newton,recorded,True / 2,RECORDED

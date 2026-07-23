@@ -54,6 +54,7 @@ __all__ = [
     "FpSeed",
     "build_airfoil_case",
     "build_closed_body_case",
+    "build_wing_case",
     "make_picard_lifting_driver",
     "make_newton_lifting_driver",
     "make_picard_nonlifting_driver",
@@ -467,6 +468,92 @@ def build_closed_body_case(
         le_band_surf=le_band,
         stations=None,
         outflow_pin_surf=tail_pin,
+    )
+
+
+def build_wing_case(
+    nodes: np.ndarray,
+    elements: np.ndarray,
+    wall_faces: np.ndarray,
+    config: CouplingConfig,
+    x_le: Callable[[np.ndarray], np.ndarray],
+    chord_at: Callable[[np.ndarray], np.ndarray],
+    tip_mask_frac: float = 0.05,
+) -> CouplingCase:
+    """IBL case on a 3-D lifting wing wall (GV5.0 M6 bridge; GV5.3 gate).
+
+    The wall of the wake-CUT mesh carries TE-duplicated nodes, so the IBL
+    surface has natural outflow boundary edges along BOTH TE lines (the
+    airfoil discipline, now per span station); the root section (z = 0
+    symmetry plane) is an open boundary edge and takes the natural
+    zero-flux condition, which IS symmetry. Boundary conditions:
+
+    * INFLOW: the LE band (local x/c <= config.inflow_band_x), Dirichlet-
+      pinned to per-node laminar Blasius seeds (the airfoil stagnation-
+      band discipline, evaluated on the LOCAL section: x/c =
+      (x - x_le(z)) / chord_at(z); planform callables are caller-supplied
+      so the builder stays mesh-agnostic).
+    * TIP MASK: the band z > z_tip * (1 - tip_mask_frac) -- the
+      production tip_taper radius r_c = 0.05 * b_semi (B32; the tip-edge
+      singularity zone is outside the VII validity envelope, track_v.md
+      scope guards). The band is Dirichlet-pinned to per-node regime seed
+      states AND masked out of the transpiration source: mechanically it
+      reuses ``outflow_pin_surf`` (pin + m_dot mask), i.e. exactly the
+      GV3.3 tail-pin semantics -- the frozen seed delta* there is
+      boundary data, not solution, and generates no transpiration.
+      ``z_tip`` = max wall z (= B_SEMI on the flat-cap M6 family).
+    * The A4 u_e recovery zone (le_band_surf) covers the LE band
+      (x/c < config.le_band_x) PLUS the tip mask band (the linear+smoothed
+      path is the robust one next to the tip-edge singularity; the band
+      is masked from every comparison anyway).
+
+    Transition is forced per side at config.x_tr_upper/lower of the local
+    chord; the per-node side split is the incident-triangle centroid y
+    sign (the M6 section is symmetric about the chord plane y = 0).
+    stations is None: run_loose_coupling takes its closed-body branch,
+    pinning candidates | outflow_pin_surf with per-node regime seeds --
+    which is exactly the wing's pin set.
+    """
+    sm = SurfaceMesh.from_wall_faces(nodes, wall_faces, elements)
+    x, y, z = sm.xyz[:, 0], sm.xyz[:, 1], sm.xyz[:, 2]
+    z_tip = float(np.max(z))
+    zc = np.clip(z, 0.0, z_tip)
+    chord_n = chord_at(zc)
+    xc_n = (x - x_le(zc)) / chord_n
+
+    # per-node side: mean incident-triangle centroid y vs the chord plane
+    cent_y = sm.xyz[sm.triangles].mean(axis=1)[:, 1]
+    ysum = np.zeros(sm.n_node, dtype=np.float64)
+    ycnt = np.zeros(sm.n_node, dtype=np.float64)
+    np.add.at(ysum, sm.triangles.reshape(-1), np.repeat(cent_y, 3))
+    np.add.at(ycnt, sm.triangles.reshape(-1), 1.0)
+    side_node = np.where(ysum / np.maximum(ycnt, 1.0) >= 0.0, 1, -1)
+
+    tip_mask = z > z_tip * (1.0 - tip_mask_frac)
+    flags = np.zeros(sm.n_node, dtype=np.int64)
+    flags[(side_node == 1) & (xc_n >= config.x_tr_upper)] = 1
+    flags[(side_node == -1) & (xc_n >= config.x_tr_lower)] = 1
+
+    inflow_candidates = (xc_n <= config.inflow_band_x) & ~tip_mask
+    seed_fetch = np.maximum(x - x_le(zc), 1.0e-4 * chord_n)
+    inflow_fetch = (
+        float(np.mean(seed_fetch[inflow_candidates]))
+        if np.any(inflow_candidates)
+        else float(np.mean(seed_fetch))
+    )
+    le_band = (xc_n < config.le_band_x) | tip_mask
+    return CouplingCase(
+        nodes=np.asarray(nodes, dtype=np.float64),
+        elements=np.asarray(elements),
+        wall_faces=np.asarray(wall_faces),
+        sm=sm,
+        turbulent_flags=flags,
+        inflow_candidates=np.asarray(inflow_candidates, dtype=bool),
+        seed_fetch=seed_fetch,
+        inflow_fetch=inflow_fetch,
+        le_band_surf=np.asarray(le_band, dtype=bool),
+        stations=None,
+        outflow_pin_surf=np.asarray(tip_mask, dtype=bool),
     )
 
 

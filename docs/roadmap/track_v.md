@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -287,8 +287,17 @@ band, so exact Schur elimination may not pay: measure, don't assume).
 
 **Gates:**
 
-- [ ] **GV5.0 M6 subsonic loose-coupling bridge** (RECORDED, entry check; added
-  2026-07-22, user-directed) — runs on the **V3 loose driver** (no augmented
+- [x] **GV5.0 M6 subsonic loose-coupling bridge** (RECORDED, entry check; added
+  2026-07-22, user-directed; **EXECUTED 2026-07-23, 16 RECORDED / 0 FAIL** —
+  evidence `cases/analysis/v5_m6_bridge/`: the loose loop does NOT converge
+  ≤10 at either level — coarse: root-upper-TE separation patch (H 4–5.5)
+  feedback runaway, ṁ_max ×12.4 (GV3.3-stern class); medium: refinement
+  removes the patch (0 TE nodes H>3.5), runaway gone, but a bounded
+  δ* limit cycle (2–12 %/k) never meets tol_ds 1e-3; ΔCL DOWN both
+  estimators (coarse −5.2 %/−4.8 %, medium −2.4 %/−2.1 % = input-limited
+  under the A4 2.5 % floor); crossflow small (max|B|/|A| ≤ 0.072); tip
+  mask validated; δ*(z) CSVs = GV5.3's band feed) — runs on the **V3
+  loose driver** (no augmented
   Newton), scheduled here so the 2.5-D → transonic-3-D jump is bridged and the
   crossflow content (Ψ, B equations) gets its **first live 3-D exercise**
   before GV5.3: ONERA M6 (existing `cases/meshes/onera_m6/` family, coarse +
@@ -464,10 +473,18 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   M 0.72, no tuning). **Reopen trigger** (logged from GV3.3): V5's
   augmented Newton stalls, or closed-body viscous cases enter scope
   before V5 lands.
-- V5 — ☐ — tight coupling: augmented (φ, Γ, BL) Newton on P8/P14. Entry check
-  GV5.0 = M6 subsonic M0.5 loose-coupling bridge (RECORDED; V3 driver, first
-  live 3-D crossflow exercise, δ*(z) + ΔCL direction + 3-D iteration count;
-  bridges 2.5-D → transonic 3-D, feeds GV5.3's bands); FD-verified coupling
+- V5 — ◐ OPEN 2026-07-23 — tight coupling: augmented (φ, Γ, BL) Newton on
+  P8/P14. **Entry check GV5.0 ✓ EXECUTED 2026-07-23** (16 RECORDED / 0 FAIL;
+  `cases/analysis/v5_m6_bridge/`): the bridge answer is that the loose loop is
+  NOT sufficient on the 3-D lifting wing — coarse runs away on a root-upper-TE
+  separation patch (ṁ_max ×12.4, the GV3.3-stern/Veldman class), medium
+  resolves the patch away but sits in a bounded unconverged δ* cycle; ΔCL DOWN
+  both estimators at both levels (medium −2.4 % input-limited); crossflow
+  small; tip mask validated; δ*(z) CSVs feed GV5.3's bands. New machinery:
+  `viscous/coupling.py::build_wing_case` (LE-band laminar pin per local x/c,
+  both TE natural outflow, root symmetry natural, tip band z > 0.95·b_semi
+  pinned + ṁ-masked via the GV3.3 machinery) + `tests/test_v5_wing_case.py`
+  (5). Remaining: FD-verified coupling
   blocks (GV5.1; zone-switch FD pre-note registered), RAE2822 transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp
