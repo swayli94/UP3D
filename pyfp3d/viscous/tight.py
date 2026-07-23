@@ -65,6 +65,22 @@ Stage 2 (the BL <- phi block):
   fixed, veps/veps_s frozen by decision 5 -- the FD gate measures the
   omission).
 
+Stage 3 (the phi <- phi transpiration augmentation, PRE_REGISTRATION
+"Jacobian blocks": the phi block must stay exact under the transpiration
+coupling, else the augmented Newton degenerates to quasi-Newton):
+
+* Div -- surface_divergence_vector_operator: the matrix form of
+  surface_divergence_nodal (transpiration.py:137-150) on the
+  delta*-weighted flux, delta* frozen: m = Div(ds) @ (rho_e u_e).ravel()
+  is the transpiration mass flux at frozen ds (complement of L, which is
+  the same divergence at frozen (rho_e, u_e)).
+* Drhou -- rhou_jacobian: d(rho_e u_e)/dphi_cut at frozen geometry, the
+  isentropic chain rho(q^2), q^2 = |u_e|^2, u_e = G phi (no division by q
+  anywhere: d rho/d phi = 2 rho'(q^2) u_e^T G, smooth at u_e = 0).
+* J_phi,phi^aug -- assemble_j_phi_phi_aug = -(T^T W S P Div Drhou)[free, :]:
+  the d/d phi_cut of the transpiration wall RHS at frozen U, the exact
+  analog of J_phi,BL with Div Drhou in place of L D.
+
 Assembly happens once per case/outer state: plain numpy/scipy.sparse, no
 numba (the viscous/coupling.py orchestration precedent).
 """
@@ -82,6 +98,7 @@ from pyfp3d.post.surface import (
 )
 from pyfp3d.physics.isentropic import (
     density_derivative_wrt_q_sq_field,
+    density_field,
     mach_squared_derivative_wrt_q_sq_field,
     mach_squared_field,
 )
@@ -97,6 +114,9 @@ __all__ = [
     "assemble_j_phi_bl",
     "edge_data_jacobian",
     "assemble_j_bl_phi",
+    "surface_divergence_vector_operator",
+    "rhou_jacobian",
+    "assemble_j_phi_phi_aug",
 ]
 
 
@@ -519,3 +539,122 @@ def assemble_j_bl_phi(J_e, D_ue, G) -> sp.csr_matrix:
     edge_data_jacobian, G the (3 n_s, n_cut) phi -> u_e operator of
     edge_velocity_operator. Returns the (6 n_s, n_cut) CSR product."""
     return (J_e @ D_ue @ G).tocsr()
+
+
+def surface_divergence_vector_operator(
+    smesh, delta_star: np.ndarray
+) -> sp.csr_matrix:
+    """Div: the matrix form of surface_divergence_nodal
+    (viscous/transpiration.py:137-150) on the delta*-weighted defect flux,
+    delta* FROZEN, (n_s, 3 n_s) CSR: the transpiration mass flux at frozen
+    ds is m_surf = Div(ds) @ (rho_e u_e).ravel().
+
+    The complement of L (surface_divergence_delta_operator, which freezes
+    (rho_e, u_e) and differentiates delta*): same assembly idiom, per
+    triangle e the strong-form P1 divergence
+    div_e = sum_b delta*_b (v_b . gradN[e,b]) of the nodal vector v,
+    mass-lumped m_i = (1/node_area_i) sum_{e in i} (a_e/3) div_e, so per
+    (e, local vertex a, local vertex b, component c):
+
+        Div[tri[e,a], 3 tri[e,b] + c] += (a_e/3) delta*[n_b]
+                                         gradN[e,b,c] / node_area[n_a].
+
+    Div(ds) @ (rho_e * ue).ravel() == transpiration_from_delta_star(
+    smesh, rho_e, ue, ds) to machine precision (unit-tested).
+    """
+    ds = np.asarray(delta_star, dtype=np.float64)
+    if ds.shape != (smesh.n_node,):
+        raise ValueError(
+            f"delta_star must be ({smesh.n_node},), got {ds.shape}"
+        )
+    tri = smesh.triangles  # (F, 3)
+    n_t = tri.shape[0]
+    # per (e, b, c): the div_e coefficient of v[n_b, c] before lumping
+    coeff = (smesh.area_tri[:, None, None] / 3.0) * ds[tri][:, :, None] * smesh.gradN
+    # per (e, a, b, c): row vertex a (9 (b,c) slots each), col 3 n_b + c
+    rows = np.repeat(tri, 9, axis=1)  # (F, 27): vertex a, nine times
+    cols_bc = (3 * tri[:, :, None] + np.arange(3, dtype=np.int64)).reshape(n_t, 9)
+    cols = np.tile(cols_bc, (1, 3))  # (F, 27): (b, c) cycling, per a
+    vals = np.tile(coeff.reshape(n_t, 9), (1, 3)) / smesh.node_area[rows]
+    return sp.coo_matrix(
+        (vals.reshape(-1), (rows.reshape(-1), cols.reshape(-1))),
+        shape=(smesh.n_node, 3 * smesh.n_node),
+    ).tocsr()
+
+
+def rhou_jacobian(
+    ue_surf: np.ndarray,
+    drho_dq2: np.ndarray,
+    G: sp.csr_matrix,
+    m_inf: float,
+    gamma_air: float = 1.4,
+) -> sp.csr_matrix:
+    """Drhou: d(rho_e u_e)/d phi_cut at frozen geometry, (3 n_s, n_cut)
+    CSR -- the transpiration chain's edge mass-flux derivative (GV5.1
+    Stage 3; the phi-side analog of D_ue's rho row).
+
+    Per surface node the edge packet is u_e = (G phi)[3i:3i+3],
+    q^2 = |u_e|^2, rho_e = density_field(q^2) (coupling.py:723-726), so
+
+        d rho_e / d phi   = 2 rho'(q^2) u_e^T G_i
+        d(rho_e u_e)/dphi = (rho_e I_3 + 2 rho'(q^2) u_e u_e^T) G_i
+
+    with G_i the node's 3-row slice of G. NO division by q anywhere: the
+    map is smooth at u_e = 0 (the GV5.1 FD-note settlement), unlike the
+    u_hat rows of edge_data_jacobian, so no fallback masking applies.
+
+    ``drho_dq2`` is density_derivative_wrt_q_sq_field(q^2, m_inf,
+    gamma_air) evaluated by the caller; rho_e itself is recomputed inside
+    from the same isentropic chain (density_field(q^2, m_inf, gamma_air))
+    so the two factors cannot drift apart. G is the (3 n_s, n_cut)
+    edge_velocity_operator.
+    """
+    ue = np.asarray(ue_surf, dtype=np.float64)
+    if ue.ndim != 2 or ue.shape[1] != 3:
+        raise ValueError(f"ue_surf shape {ue.shape}, expected (n_s, 3)")
+    n_s = ue.shape[0]
+    drho = np.asarray(drho_dq2, dtype=np.float64)
+    if drho.shape != (n_s,):
+        raise ValueError(f"drho_dq2 must be ({n_s},), got {drho.shape}")
+    if G.shape != (3 * n_s, G.shape[1]):
+        raise ValueError(f"G shape {G.shape}, expected (3*{n_s}, n_cut)")
+    q2 = np.sum(ue * ue, axis=1)
+    rho = density_field(q2, m_inf, gamma_air)
+    blk = (
+        rho[:, None, None] * np.eye(3)[None, :, :]
+        + 2.0 * drho[:, None, None] * ue[:, :, None] * ue[:, None, :]
+    )  # (n_s, 3, 3): rho I + 2 rho' u u^T
+    ii = np.arange(n_s, dtype=np.int64)
+    rows = np.broadcast_to(
+        3 * ii[:, None, None] + np.arange(3, dtype=np.int64)[None, :, None],
+        (n_s, 3, 3),
+    ).reshape(-1)
+    cols = np.broadcast_to(
+        3 * ii[:, None, None] + np.arange(3, dtype=np.int64)[None, None, :],
+        (n_s, 3, 3),
+    ).reshape(-1)
+    B = sp.coo_matrix(
+        (blk.reshape(-1), (rows, cols)), shape=(3 * n_s, 3 * n_s)
+    ).tocsr()
+    return (B @ G).tocsr()
+
+
+def assemble_j_phi_phi_aug(ws, W, S, P, Div, Drhou) -> sp.csr_matrix:
+    """J_phi,phi^aug = -(T^T W S P Div Drhou)[ws.free, :]: the
+    d/d phi_cut of the transpiration wall RHS at frozen (U, delta*), the
+    phi-side augmentation of the inviscid diagonal block (GV5.1 Stage 3;
+    PRE_REGISTRATION "Jacobian blocks" -- without it the phi block is
+    quasi-Newton under the transpiration coupling).
+
+    The exact analog of assemble_j_phi_bl with Div Drhou (the phi ->
+    mass-flux chain at frozen delta*) in place of L D (the U -> mass-flux
+    chain at frozen edge data); see the module docstring for the factor
+    definitions. Shape (ws.n_free, n_cut), CSR; the caller maps the cut
+    columns onto the (phi_free, Gamma) unknowns via d phi_cut/d phi_free
+    = T[:, free] and d phi_cut/d Gamma = T[:, dir_red] @ V_red + G_jump
+    (tight_driver.build_tight_pack, mirroring B's construction at
+    solve/newton.py:456).
+    """
+    J_cut = W @ S @ P @ Div @ Drhou  # (n_cut, n_cut): wall RHS derivative
+    J_red = ws.con.T.T @ J_cut  # (n_red, n_cut)
+    return (-J_red[ws.free, :]).tocsr()
