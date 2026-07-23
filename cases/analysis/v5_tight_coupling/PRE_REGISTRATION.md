@@ -45,7 +45,8 @@ Jacobian blocks (all assembled sparse):
   produce them (`closures.py` "held fixed; derivatives w.r.t. them are NOT
   produced in V1") — and chaining them through the `_assemble` wiring
   wherever edge data appears (closure fluxes, the q²/ψ/u/w/ρ source terms,
-  the s1 streamwise-diffusion direction, the diffusion scales).
+  the s1 streamwise-diffusion direction; the global diffusion scales are
+  frozen — design decision 5 below).
   **This closure edge-derivative extension is the heavy piece of V5.**
 - J_BL,BL: existing `IBL3Solver.residual_jacobian` (FD-verified in V1).
 
@@ -79,6 +80,25 @@ Jacobian blocks (all assembled sparse):
    laminar/turbulent per-node regime, laminar stress pins,
    eps_diff = 0.005 / eps_diff_s = 0.02 — the load-bearing V1
    calibration).
+
+5. **Edge-data basis and the one frozen term (added 2026-07-23, pre-execution
+   addendum after the closures/ibl3 code read)**: the closure packet's
+   interior edge-dependence flows through exactly TWO derived scalars —
+   `re_d = ρ·q·δ/μ` and `e_prime = r(γ−1)/2·M²` (closures.py:460-462);
+   every (q, ρ, μ, M) scaling of the fluxes lives explicitly in
+   `ibl3.py::_nodal_fluxes` (rq/rq²/rq³/qi factors). The per-node edge
+   basis is therefore 7 scalars: (q, ρ, μ, M, û₁, û₂, û₃) with û the
+   edge-direction unit vector (all frame data — s1, s2, ψ, s1l/s2l — are
+   analytic per-node functions of û and the fixed local bases).
+   **Frozen**: the GLOBAL artificial-diffusion scales
+   `veps = eps_diff·max(q)`, `veps_s = eps_diff_s·max(q)`
+   (ibl3.py:720-721) are lagged within a Newton step (updated between
+   steps) — their edge derivative is a max()-kinked global rank-one term
+   on the artificial-viscosity scale only; the full-state FD gate measures
+   the omission (expected ≪ the 1e-5 tolerance; the argmax-tie kink is a
+   masked-row candidate under the decision-1 discipline). Everything else
+   — closure fluxes via (re_d, e_prime), the q²/ψ/u/w/ρ source terms, the
+   s1 element-direction normalize chain — is differentiated exactly.
 
 ## FD verification protocol (the B19/B31 pattern)
 
