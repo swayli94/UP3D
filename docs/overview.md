@@ -275,8 +275,12 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合 ◐ OPEN（入口 GV5.0 M6 亚声速
   松耦合桥 ✓ EXECUTED 2026-07-23 16R/0F——桥答案 = 松环在 3-D 升力翼上不够，紧耦合动机证据；**GV5.1 ✓ EXECUTED 9P/1F/36R**——精确增广 (φ, Γ, BL) Newton 交付
   且两级 FD 验证（worst 甜点 2.2e-8 coarse / 5.1e-9 medium），二次尾段 HONEST FAIL = IBL 稳态残差在 cond(J_BL,BL)~4e10 近零流形上的内禀地板（standalone 伪时间
-  同地板，非紧耦合缺陷），N_total 14/13 vs 松环 4/5；已提交 GV3.1 medium 不动点不可复现（IBL 地板轨迹散布，诊断已提交，HEAD 重生成种子经用户裁决接受）；下一步 =
-  IBL 地板 follow-up，GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  同地板，非紧耦合缺陷），N_total 14/13 vs 松环 4/5；已提交 GV3.1 medium 不动点不可复现（IBL 地板轨迹散布，诊断已提交，HEAD 重生成种子经用户裁决接受）；**IBL 地板 follow-up 诊断
+  ✓ EXECUTED 2026-07-24**（14 RECORDED 无 band，`cases/analysis/v5_ibl_floor/`：近零簇在松环收敛态持续（S1 500/1236 cond 1.3e11、S2 1082/2460 cond 4.0e13、s1/s3 谱几乎重合），由湍流 (A,Ψ)
+  变量承载、mid-chord→TE 分布；原始 cond 4e10–4e13 主要是缩放 artifact（行列均衡 → 2e4/7e5/1e7、亚 1e-6 计数 501/500/1082 → 0/0/2、无精确零方向），均衡后余 1e5–1e7 真 (A,Ψ)
+  刚度 = GV5.1b/GV5.4 的真正靶子；F_BL 地板住 TE 带 (B,δ) 方程且几乎全在 J 值域内；闭包地板活动集全空（假说死）、eps_diff ×4 地板仅移 ≤6 %（非人工粘性截断）、伪时间控制器触底
+  （cfl 钉 cfl_min、残差自第 0 迭代冻结）= 公式化地板经控制器表现，单靠全局化过不了地板）；下一步 = GV5.1b 设计（equilibration 并入紧解 + 针对缩放后 (A,Ψ) 刚度的阻尼/投影
+  Newton，band (b) slope-2 窗口重定义在地板之前），GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：

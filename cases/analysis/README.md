@@ -117,6 +117,22 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   input; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, mesh generator `cases/meshes/fuselage_bor/`, design
   record `docs/design_track_v.md` §10) — `python cases/analysis/v3_fuselage_smoke/run.py --levels coarse` —
   ~17 min (exit 1 = honest FAIL present)
+- `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
+  pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
+  medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS
+  at the converged states (S1 500/1236 <1e-6·σmax cond 1.3e11; S2 1082/2460 cond 4.0e13; the s1/s3 spectra
+  overlap curve-for-curve), carried by the turbulent (A, Ψ) variables mid-chord → TE; the raw cond 4e10–4e13
+  is MOSTLY a scaling artifact (row+col equilibration → 2e4/7e5/1e7, sub-1e-6 count 501/500/1082 → 0/0/2,
+  no exact null directions) with a genuine scaled (A, Ψ) stiffness 1e5–1e7 remaining = the GV5.1b/GV5.4
+  target; the F_BL floor lives in the TE band (B, δ) equations essentially entirely INSIDE J's range
+  (left-null alignment ≤ 7.7e-3); closure-floor active set EMPTY (DELTA_MIN sensitivity identically zero —
+  the Q6(b) substitute); eps_diff ×4 moves the floor ≤ 6 % (not an artificial-viscosity truncation); the
+  pseudo-time controller bottoms out with the residual frozen at 3.154e-6 from iter 0 = a formulation floor
+  globalization alone cannot pass; findings `results/findings.md` (+ summary.csv + CSV/PNG, design record
+  `docs/design_track_v.md` §13) —
+  `python cases/analysis/v5_ibl_floor/run.py` — ~50 min under external load (2026-07-24 measurement;
+  minutes-scale unloaded; exit 0 always — RECORDED study with no bands; a loose-regen wiring-guard failure
+  raises RuntimeError = recipe error; `--states`/`--phases` for partial re-runs)
 - `v5_m6_bridge/` — **Track V / V5** GV5.0 M6 subsonic loose-coupling bridge (RECORDED entry check: ONERA M6
   coarse+medium conforming, M0.5/α3.06, forced x_tr/c 0.05, Re_MAC 11.72e6; V3 loose driver + new
   `viscous/coupling.py::build_wing_case` 3-D wing IBL case — LE-band laminar pin per local x/c, both TE natural
@@ -148,6 +164,7 @@ table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 `p14_*` are analysis studies belonging to Track B / Track P phases that live
 here because they are studies, not capability demos. `v1_ibl3_standalone/`
 is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
-`v3_loose_coupling/`, `v3_fuselage_smoke/`, `v5_m6_bridge/` and
-`v5_tight_coupling/` are Track V's GV2.1 / GV3.x / GV5.x gate cases, same
-status.)*
+`v3_loose_coupling/`, `v3_fuselage_smoke/`, `v5_m6_bridge/`,
+`v5_ibl_floor/` and `v5_tight_coupling/` are Track V's GV2.1 / GV3.x /
+GV5.x gate cases (the `v5_ibl_floor/` one a RECORDED diagnosis, no
+bands), same status.)*
