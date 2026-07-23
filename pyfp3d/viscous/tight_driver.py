@@ -548,7 +548,12 @@ def newton_tight(
     |F_phi|^2 + |F_Gamma|^2 + |F_BL|^2 (the P8/P14 accept-or-least-bad
     idiom, solve/newton.py:1053-1087, with the halving budget raised
     from 5 to max_backtracks=30 for the stalled-seed BL step scale --
-    module docstring).
+    module docstring). Backtracking PROBES are guarded the IBL3Solver
+    way (ibl3.py:1497-1513): a probe that throws (a nonphysical x_try
+    can divide by zero inside the closure quadrature -- observed on the
+    GV5.1 medium polish, iter 6) or that returns a non-finite residual
+    or merit counts as merit=+inf and simply keeps halving; only probe
+    rejection is affected, never an accepted step.
 
     Convergence (module docstring): every block's max-norm <= tol_abs +
     tol * |F_j(x0)|_inf. Per-block norms are tracked separately; the
@@ -607,14 +612,29 @@ def newton_tight(
             raise RuntimeError(
                 f"tight Newton step non-finite at iteration {it}"
             )
-        # P8/P14 safety-only backtracking (module docstring)
+        # P8/P14 safety-only backtracking (module docstring). A far
+        # probe can be nonphysical enough to THROW inside the closure
+        # quadrature -- the ZeroDivisionError reaches the jit boundary,
+        # where numba's CPUDispatcher re-raises it as SystemError
+        # ("returned a result with an exception set"), so BOTH are
+        # caught -- or to return non-finite values: count it as
+        # merit=+inf and keep halving -- the IBL3Solver.solve
+        # halving-on-nonfinite idiom (ibl3.py:1497-1513, where a NaN
+        # probe simply fails the decrease test) and the P8/P14
+        # globalization precedent. Only probe REJECTION is guarded;
+        # accepted steps are untouched.
         lam = 1.0
         best = None
         accepted = False
         for _ in range(max_backtracks):
             x_try = x + lam * d
-            F_try = augmented_residual(pack, x_try)
-            merit_try = _merit(pack, F_try)
+            try:
+                F_try = augmented_residual(pack, x_try)
+                merit_try = _merit(pack, F_try)
+            except (ArithmeticError, SystemError):
+                F_try, merit_try = None, np.inf
+            if F_try is not None and not np.all(np.isfinite(F_try)):
+                F_try, merit_try = None, np.inf
             if np.isfinite(merit_try) and (
                 not line_search or merit_try <= merit
             ):

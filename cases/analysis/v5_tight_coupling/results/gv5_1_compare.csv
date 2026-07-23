@@ -1,9 +1,38 @@
-metric,augmented,loose_committed,abs_diff
-iterations (aug Newton / loose outer),10,4,
-converged,False,True,
-final ds_max,6.484028e-03,4.602235e-03,1.882e-03
-final per-station max|delta* diff|,,,1.362e-03
-cl_p (pressure integral),0.267842,0.267764,7.741e-05
-cl_kj (2*Gamma, design.md Sec 9),0.268833,n/a (not committed),
-IBL residual floor (seed / loose final),2.819e-06,3.113e-06,
-final |F|_inf (aug) / ds_change_rel (loose),4.726e-06,1.885e-04,
+protocol,level,metric,augmented,loose_committed,abs_diff
+k1seed,coarse,iterations (aug Newton / loose outer),10,4,
+k1seed,coarse,converged,False,True,
+k1seed,coarse,final ds_max,6.484028e-03,4.602235e-03,1.882e-03
+k1seed,coarse,final per-station max|delta* diff|,,,1.362e-03
+k1seed,coarse,cl_p (pressure integral),0.267842,0.267764,7.741e-05
+k1seed,coarse,cl_kj (2*Gamma, design.md Sec 9),0.268833,n/a (not committed),
+k1seed,coarse,IBL residual floor (seed / loose final),2.819e-06,3.113e-06,
+k1seed,coarse,final |F|_inf (aug) / ds_change_rel (loose),4.726e-06,1.885e-04,
+amended,coarse,N_polish (aug polish iterations),10,,
+amended,coarse,N_total = N_loose + N_polish vs loose outer,14,4,
+amended,coarse,converged,False,True,
+amended,coarse,final |F_phi|_max,1.440535e-06,,
+amended,coarse,final |F_gamma|_max,6.327930e-09,,
+amended,coarse,final |F_BL|_max,3.110150e-06,,
+amended,coarse,ds_change_last (polish) / ds_change_rel (loose final),4.309125e-05,1.885277e-04,
+amended,coarse,final ds_max,5.019268e-03,4.602235e-03,4.170e-04
+amended,coarse,final per-station max|delta* diff|,,,2.232e-04
+amended,coarse,cl_p (pressure integral),0.267519,0.267764,2.455e-04
+amended,coarse,cl_kj (2*Gamma, design.md Sec 9),0.268514,n/a (not committed),
+amended,coarse,seed cl_p (loose-converged) vs committed loose final,0.267916,0.267764,1.520e-04
+amended,coarse,IBL residual floor (seed / loose final),3.154e-06,3.113e-06,
+amended,coarse,final |F|_inf (aug) / ds_change_rel (loose),3.110e-06,1.885e-04,
+amended,medium,N_polish (aug polish iterations),10,,
+amended,medium,N_total = N_loose + N_polish vs loose outer,13,5,
+amended,medium,converged,False,True,
+amended,medium,final |F_phi|_max,1.157463e-07,,
+amended,medium,final |F_gamma|_max,1.528531e-09,,
+amended,medium,final |F_BL|_max,1.708240e-06,,
+amended,medium,ds_change_last (polish) / ds_change_rel (loose final),5.529377e-08,6.530033e-04,
+amended,medium,final ds_max,3.449552e-03,6.840905e-03,3.391e-03
+amended,medium,final per-station max|delta* diff|,,,2.338e-03
+amended,medium,cl_p (pressure integral),0.281752,0.271907,9.845e-03
+amended,medium,cl_kj (2*Gamma, design.md Sec 9),0.281946,n/a (not committed),
+amended,medium,seed cl_p (loose-converged) vs committed loose final,0.281374,0.271907,9.467e-03
+amended,medium,IBL residual floor (seed / loose final),1.712e-06,1.160e-06,
+amended,medium,final |F|_inf (aug) / ds_change_rel (loose),1.708e-06,6.530e-04,
+amended,medium,seed-vs-committed offset = IBL-floor trajectory scatter (finding, not a defect),see summary.csv,see gv5_1_medium_seed_diagnosis.md,
