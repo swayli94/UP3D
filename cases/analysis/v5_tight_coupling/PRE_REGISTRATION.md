@@ -165,3 +165,44 @@ Jacobian blocks (all assembled sparse):
    committed GV3.1 result, NOT recomputed).
 4. `summary.csv` — pass/fail rows for the three pass bands + recorded
    rows; `VERDICT.md` after execution.
+
+## Addendum 2 (2026-07-23, user-adjudicated): amended seed protocol
+
+**Trigger (committed coarse evidence, 71df59a):** band (a) FD exactness
+PASSED on coarse (worst sweet-spot 2.29e-8, all scopes; 0/1236 masked;
+veps omission 2.4e-8 scaled per decision 5). Bands (b)/(c) did NOT hold
+on coarse: the Newton from the pre-registered k=1 seed crawled to k=10
+(merit 9.4e-10 → 5.3e-10, no quadratic tail, last p = 0.24). Mechanism
+established: NOT a tight-coupling defect — the k=1 state sits in a
+near-null direction of the steady BL block (cond(J_BL,BL) ~ 4e10; the
+standalone pseudo-time IBL solve itself stalls there at 100 iterations,
+converged=False); the loose loop never needs BL-block convergence at
+that state (it under-relaxes past it), the augmented Newton demands
+simultaneous convergence and so exposes the seed's ill-conditioning.
+The φ-side resolved its transpiration kick at iteration 4 (cl_p matches
+the loose result to 7.7e-5); the BL block is the pinned one.
+
+**Decision (user, 2026-07-23): amended seed protocol.** The seed is the
+loose loop's CONVERGED state (the committed GV3.1 recipe: ω = 1.0,
+≤ 10 outer iterations, tol_ds = 1e-3 — regenerated, since the committed
+artifacts hold CSVs not arrays; the loose comparison numbers are still
+read from the committed GV3.1 results, never recomputed). The augmented
+Newton runs as a POLISH from that state (same line search, same
+convergence criterion, ≤ 10 iterations). Pass-band re-reads:
+
+- (a) FD exactness: unchanged (PASSED on coarse; repeated at the
+  medium seed and — now that a converged state exists — at the coupled
+  solution per the original "repeated at the coupled solution" clause).
+- (b) quadratic tail: read on the polish history (slope-2 regime over
+  the last decades before the floor) — reachable from inside the basin.
+- (c) N_aug ≤ 2 standalone: recorded **NOT met** by the coarse evidence
+  (the k=1 IBL basin; no further standalone retries). The polish count
+  N_polish is recorded with the honest total N_loose + N_polish
+  alongside (the loose loop's 4 coarse / 5 medium counts are the
+  committed comparison baseline).
+
+Everything else in this pre-registration is unchanged. The V4-reopen
+trigger ("V5's augmented Newton stalls") was explicitly considered at
+this decision point and NOT invoked: the stall mechanism is understood
+(IBL seed basin, not a coupling defect), so the globalization question
+is recorded here as a follow-up candidate rather than a V5 blocker.
