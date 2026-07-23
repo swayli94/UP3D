@@ -1,6 +1,28 @@
 # pyFP3D Agent Rules
 
-Current phase: **B32 ✓ CLOSED 2026-07-22 (NEWEST; same branch as the
+Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
+GV5.0 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED entry check,
+16 RECORDED / 0 FAIL).** New machinery `viscous/coupling.py::build_wing_case`
+(3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
+outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked
+via the GV3.3 machinery) + `tests/test_v5_wing_case.py` (5). **Bridge
+answer: the V3 loose loop is NOT sufficient on the 3-D lifting wing** —
+coarse: root-upper-TE separation patch (H 4–5.5) drives δ*↔ṁ↔u_e runaway
+(ṁ_max ×12.4 over k; the GV3.3-stern/Veldman class, first measurement on a
+lifting wing); medium: refinement removes the patch (0 TE nodes H>3.5),
+runaway gone, but a bounded δ* limit cycle (2–12 %/k) never meets
+tol_ds 1e-3. ΔCL DOWN both estimators at both levels (coarse −5.2 %/−4.8 %
+cl_p/cl_kj, still drifting at k=10; medium −2.4 %/−2.1 %, settled but
+input-limited under the A4 2.5 % floor). Crossflow first live 3-D exercise:
+max|B|/|A| ≤ 0.072, quasi-2-D lock retained only at the LE pin. FP side
+clean throughout (every warm pressure-Kutta Newton converges). δ*(z) CSVs
+feed GV5.3's band pre-registration; tip mask validated at both levels.
+Evidence: `cases/analysis/v5_m6_bridge/` (PRE_REGISTRATION committed
+f263424 before first execution; VERDICT + CSV/PNG). Medium wall-time
+polluted by external load — quoted flagged, not as solver cost. Next:
+GV5.1 (FD-verified coupling blocks) is the augmented-Newton build-out.
+
+Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
 ✗ ROLLED BACK + ① conforming tip_taper PRODUCTION ADOPTION ✓.** ★ **②
 GB32.1 ✗** — refreshing the Kutta-row weld sign every Newton step turns the
@@ -718,10 +740,17 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   GV3.2 loose loop ≤ 10, GV3.3 fuselage body-of-revolution smoke = the only
   fuselage-alone item); V4 ⊘ SKIPPED 2026-07-22 (user-directed: skip
   criterion met on GV3.2; GV3.3 stern instability = reopen trigger);
-  V5 tight coupling — entry = GV5.0 M6 subsonic loose-coupling bridge
-  (RECORDED, first live 3-D crossflow exercise), GV5.3 anchored on the
-  committed M6 experiment **Cp** (no experimental CL committed), GV5.1 carries
-  a pre-registered FD note for the u_e-recovery zone switch; V6 wake sheet;
+  **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL)** —
+  M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
+  loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
+  separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
+  refined away, bounded δ* limit cycle); ΔCL DOWN both estimators (medium
+  −2.4 % input-limited); crossflow small (max|B|/|A| ≤ 0.072); tip mask
+  validated; `viscous/coupling.py::build_wing_case` +
+  `tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands;
+  remaining = GV5.1 FD-verified coupling blocks (augmented Newton), GV5.2
+  RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
+  experimental CL committed), GV5.4 cost; V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on
   hand: Drela 2013 = AIAA 2013-2437 (`docs/references/`, gitignored).
   **V1 shipped + GV1.1 executed 2026-07-22** (`pyfp3d/viscous/`:
@@ -818,7 +847,11 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **578 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V **V3
+Baseline: **583 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V **V5
+GV5.0 executed** (M6 subsonic loose-coupling bridge, RECORDED entry check);
+full-suite measured 583 @1218.05 s @16 threads; +5 vs the 578 below =
+`tests/test_v5_wing_case.py` (5)).
+Previous: 578 passed + 25 skipped + 2 xfailed (2026-07-22, Track V **V3
 loose coupling shipped + GV3.1/3.2/3.3 executed**; full-suite measured 578
 @1637.39 s @16 threads; +7 vs the 571 below = `tests/test_v3_coupling.py`
 (7)).

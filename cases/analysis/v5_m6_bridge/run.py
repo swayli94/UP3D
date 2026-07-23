@@ -151,6 +151,7 @@ def run_level(level):
 
     s_ref = planform_area(mc.nodes, wall)
     o = np.argsort(wc.station_z)
+    t0 = time.perf_counter()
 
     def probe(phi, gamma, k):
         f = wall_force_coefficients(mc.nodes, mc.elements, wall, phi,
@@ -158,11 +159,14 @@ def run_level(level):
                                     m_inf=M_INF)
         cl_kj = cl_kj_3d(np.asarray(gamma)[o], wc.station_z[o], s_ref,
                          B_SEMI)
+        # progress logging only (a blind 4-h timeout killed the first
+        # medium run with no per-iteration output; not a numerics change)
+        print(f"    [k={k}] cl_p={f['cl']:.4f} cl_kj={float(cl_kj):.4f} "
+              f"(+{time.perf_counter() - t0:.0f}s)", flush=True)
         return {"cl_p": f["cl"], "cl_kj": float(cl_kj),
                 "cd_p": f["cd_pressure"]}
 
     driver = make_m6_driver(mc, wc, taper)
-    t0 = time.perf_counter()
     res = run_loose_coupling(driver, case, cfg, probe=probe)
     wall_s = time.perf_counter() - t0
     print(f"    converged={res.converged} n_outer={res.n_outer} "
@@ -340,9 +344,9 @@ def _panel_cl(runs):
     for run, ls in zip(runs, ("-", "--")):
         h = run["res"].history
         ks = [r["k"] for r in h]
-        axes[0].plot(ks, [r.get("cl_p", np.nan) for r in h], "o-", ls=ls,
+        axes[0].plot(ks, [r.get("cl_p", np.nan) for r in h], "o", ls=ls,
                      label=f"{run['level']}")
-        axes[1].plot(ks, [r.get("cl_kj", np.nan) for r in h], "o-", ls=ls,
+        axes[1].plot(ks, [r.get("cl_kj", np.nan) for r in h], "o", ls=ls,
                      label=f"{run['level']}")
     axes[0].set_ylabel("cl_p (pressure integral)")
     axes[1].set_ylabel("cl_KJ (Gamma integration)")

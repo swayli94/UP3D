@@ -263,11 +263,17 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   无调参）；honest FAIL 局域化：cf 仅转捩后首站 +44%（XFOIL e^N 斜坡 vs 瞬时切换）、δ* H 族偏移 ≤27.9%；GV3.3
   旋成体三轮调试稳定化（尾带钉扎 + 钉扎带 ṁ 掩蔽 + FP 护栏），中段轴对称优秀、尾锥 σ/μ 0.55/横流 0.26 FAIL、
   环不收敛 = 实测尾部失稳——V4 跳过判据按字面满足（GV3.2），GV3.3 反方证据入台账，**V4 ⊘ 跳过
-  2026-07-22（用户定；重开触发 = V5 受挫或闭体粘性提前进范围）**）
+  2026-07-22（用户定；重开触发 = V5 受挫或闭体粘性提前进范围）**）；**V5 ◐ OPEN 2026-07-23**
+  （**GV5.0 ✓ EXECUTED 16 RECORDED / 0 FAIL**，`cases/analysis/v5_m6_bridge/`：M6 亚声速松耦合桥——
+  桥答案 = 松环在 3-D 升力翼上不够用：coarse 根部上翼面 TE 分离斑块（H 4–5.5）δ*↔ṁ↔u_e 失稳
+  ṁ_max ×12.4（GV3.3 尾部同类），medium 加密消除斑块但留有界 δ* 极限环（2–12 %/k）不达 tol 1e-3；
+  ΔCL 双估计量下行（coarse −5.2 %/−4.8 %，medium −2.4 %/−2.1 % 输入受限）；横流首次活体 3-D 演习
+  max|B|/|A| ≤ 0.072；翼尖掩蔽有效；新增 `viscous/coupling.py::build_wing_case` +
+  `tests/test_v5_wing_case.py` (5)；δ*(z) CSV 喂 GV5.3 带预注册；medium 壁时被外部负载污染，引用须带旗标）
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
-  V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合（入口 GV5.0 M6 亚声速
-  松耦合桥 RECORDED；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源；GV5.1 预注 FD 区界单侧差分/光滑加权）；
+  V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合 ◐ OPEN（入口 GV5.0 M6 亚声速
+  松耦合桥 ✓ EXECUTED 2026-07-23 16R/0F——桥答案 = 松环在 3-D 升力翼上不够，紧耦合动机证据；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源；GV5.1 预注 FD 区界单侧差分/光滑加权）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -301,8 +307,11 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **578 passed + 25 skipped + 2 xfailed**（2026-07-22 Track V **V3 松耦合
-交付 + GV3.1/3.2/3.3 执行**：全套件实测 578 @1637.39 s @16 线程；+7 vs 下档 571 =
+现基线 **583 passed + 25 skipped + 2 xfailed**（2026-07-23 Track V **V5 GV5.0
+执行**（M6 亚声速松耦合桥，RECORDED 入口检查）：全套件实测 583 @1218.05 s @16
+线程；+5 vs 下档 578 = `tests/test_v5_wing_case.py`（5））。
+上一档 578+25+2（2026-07-22 Track V **V3 松耦合交付 + GV3.1/3.2/3.3 执行**：
+全套件实测 578 @1637.39 s @16 线程；+7 vs 下档 571 =
 `tests/test_v3_coupling.py`（7））。
 上一档 571+25+2（2026-07-22 Track V **V2 transpiration 通道 + GV2.1**：实测
 571 @1321.89 s；+17 vs 554 = `tests/test_v2_transpiration.py`（9）+

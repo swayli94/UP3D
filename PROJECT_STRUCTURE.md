@@ -209,10 +209,12 @@ pyfp3d/                    # Main package
 │   │                       #   V2 ✓ CLOSED 2026-07-22 (cases/analysis/v2_transpiration_channel/)
 │   └── coupling.py       # ✓ [V3] loose viscous–inviscid coupling: CouplingCase builders
 │                           #   (airfoil: LE-band Dirichlet pinning + station chain; closed
-│                           #   body: nose+tail stagnation-band pinning, tail-ṁ masking) +
+│                           #   body: nose+tail stagnation-band pinning, tail-ṁ masking;
+│                           #   wing [V5]: local-x/c LE pin + TE outflow + tip-band pin/ṁ mask) +
 │                           #   run_loose_coupling outer loop (IBL→δ*→ṁ→FP→u_e);
 │                           #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
-│                           #   GV3.3 cases/analysis/v3_fuselage_smoke/
+│                           #   GV3.3 cases/analysis/v3_fuselage_smoke/,
+│                           #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -504,6 +506,8 @@ tests/                     # Unit and gate tests
 │                                  #   bit-identity, Jacobian bit-invariance + FD under lagged ṁ
 ├── test_v3_coupling.py            # ✓ [V3] case-builder wiring (airfoil strip + closed body),
 │                                  #   inflow/outflow pinning, 2-iteration coarse smoke
+├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
+│                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1138,7 +1142,16 @@ instantaneous switch), δ* H-family offset ≤ 27.9 % at x/c = 0.074, GV3.3
 tail-cone σ/μ 0.5533 / crossflow 0.2631 FAIL + loop NOT converged =
 measured stern instability — V4 skip criterion met by letter (GV3.2),
 counter-evidence logged (GV3.3) — **V4 ⊘ SKIPPED 2026-07-22** (user-directed;
-reopen trigger = V5 stall / pre-V5 closed-body scope)); Track A — A1, A2,
+reopen trigger = V5 stall / pre-V5 closed-body scope)); **V5 ◐ OPEN
+2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL)** (M6 subsonic
+loose-coupling bridge, VERDICT `cases/analysis/v5_m6_bridge/`: bridge answer
+= the loose loop is NOT sufficient on the 3-D lifting wing — coarse
+root-upper-TE separation-patch runaway ṁ_max ×12.4 (GV3.3-stern class),
+medium patch refined away but bounded δ* limit cycle 2–12 %/k, tol 1e-3
+never met; ΔCL DOWN both estimators (medium −2.4 % input-limited); crossflow
+small max|B|/|A| ≤ 0.072; tip mask validated; `build_wing_case` +
+`tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands; medium
+wall-time polluted by external load, quoted flagged); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
@@ -1147,9 +1160,11 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **578 passed + 25 skipped + 2 xfailed** (2026-07-22, Track V
-V3 loose coupling + GV3.1/3.2/3.3; full-suite measured 578 @1637.39 s @16
-threads; +7 vs 571 = `test_v3_coupling.py` (7). Previous 571:
+Default suite: **583 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V
+V5 GV5.0 (M6 subsonic loose-coupling bridge, RECORDED entry check);
+full-suite measured 583 @1218.05 s @16 threads; +5 vs 578 =
+`test_v5_wing_case.py` (5). Previous 578:
+V3 loose coupling + GV3.1/3.2/3.3, 578 measured @1637.39 s; previous 571:
 V2 transpiration channel + GV2.1, 571 measured @1321.89 s, NOJIT lane
 17/17 @163.78 s; previous 554:
 V1 IBL3 core + GV1.1, 554 measured @1462.64 s, NOJIT lane 35/35; previous 519:
