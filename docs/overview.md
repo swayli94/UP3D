@@ -335,7 +335,14 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **620 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1c
+现基线 **627 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1d
+执行**（近带种子读地板紧邻处二次盆：同样无盆——近带种子立即停滞，coarse 爬至
+24× 地板未进带，medium 首步推离带；binding medium median p = 1.17 honest FAIL——
+VERDICT `cases/analysis/v5_1d_near_band_window/VERDICT.md`）：全套件实测 627
+@1340.77 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比；壁时明显低于同线程数 GV5.1c 账目的 3903 s——机器/缓存条件不同，标记引用）；
++7 vs 下档 620 = `tests/test_v5_near_band_seed.py`（7））。
+上一档 620+25+2（2026-07-24 Track V **V5 GV5.1c
 执行**（above-band 种子读地板前 slope-2 窗：地板之上无二次收缩——λ 封顶折半 +
 中程停滞，binding medium median p = 0.56 honest FAIL——VERDICT
 `cases/analysis/v5_1c_above_band_window/VERDICT.md`）：全套件实测 620 @3903.16 s

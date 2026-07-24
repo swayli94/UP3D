@@ -1057,7 +1057,18 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **620 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+Baseline: **627 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+GV5.1d executed** (the near-band window read: NO quadratic basin adjacent to
+the floor either — near-band seeds stall immediately, coarse crawling to 24×
+floor, medium's first step moving AWAY from the band; binding medium median
+p = 1.17 honest FAIL — VERDICT
+`cases/analysis/v5_1d_near_band_window/VERDICT.md`); full-suite measured 627
+@1340.77 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries; wall markedly below the
+GV5.1c-era 3903 s on the same thread count — machine/cache conditions differ,
+quoted flagged); +7 vs the 620
+below = `tests/test_v5_near_band_seed.py` (7)).
+Previous: 620 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1c executed** (the above-band window read: NO quadratic regime above the
 floor — λ-capped halvings + a mid-range stall, binding medium median p = 0.56
 honest FAIL — VERDICT

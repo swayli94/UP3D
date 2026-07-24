@@ -1266,7 +1266,16 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **620 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+Default suite: **627 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+V5 GV5.1d (the near-band window read: NO quadratic basin adjacent to the
+floor either — near-band seeds stall immediately (coarse crawling to 24×
+floor, medium's first step moving AWAY from the band), binding medium
+median p = 1.17 honest FAIL); full-suite measured 627 @1340.77 s **@8
+threads** (temporary 8-core session constraint, user-directed; NOT
+comparable to the 16-thread ledger entries; wall markedly below the
+GV5.1c-era 3903 s on the same thread count — machine/cache conditions
+differ, quoted flagged); +7 vs 620 =
+`test_v5_near_band_seed.py` (7). Previous 620:
 V5 GV5.1c (the above-band window read: NO quadratic regime above the floor —
 λ-capped halvings + a mid-range stall, binding medium median p = 0.56 honest
 FAIL); full-suite measured 620 @3903.16 s **@8 threads** (temporary 8-core
