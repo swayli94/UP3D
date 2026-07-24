@@ -215,7 +215,7 @@ def _tight_polish(st, solver):
     res = td.newton_tight(pack, x0=pack.x_base(), max_iter=10, tol=1e-8,
                           tol_abs=1e-10, line_search=True, scaling="rowcol",
                           lm_damping=True, floor_stop=True, verbose=False)
-    F = pack.F_BL(res["x"])
+    F = td.augmented_residual(pack, res["x"])
     return {
         "tight_n_iter": res["n_iter"],
         "tight_F_max": float(np.max(np.abs(F))),
@@ -224,19 +224,18 @@ def _tight_polish(st, solver):
     }
 
 
-def _anatomy(solver0, U, path):
-    """Per-node original-system residual anatomy at U (diag-style CSV)."""
-    R = solver0.residual(U)
-    n = U.size // 6
-    delta = np.abs(R[0::6][:n])
-    H_row = np.abs(R[2::6][:n])
-    ke = np.abs(R[1::6][:n])
+def _anatomy(solver0, U, sm, path):
+    """Per-node original-system residual anatomy at U -- the diagnosis's
+    residual_anatomy_s{1,2}.csv column naming (F_delta/F_A/F_B/F_Psi/
+    F_Ct1/F_Ct2, signed; F_max = max abs) for direct comparison."""
+    R = np.asarray(solver0.residual(U)).reshape(-1, 6)
+    n = R.shape[0]
     df = pd.DataFrame({
         "node": np.arange(n),
-        "abs_delta_row": delta,
-        "abs_H_row": H_row,
-        "abs_ke_row": ke,
-        "abs_max_row": np.maximum(np.maximum(delta, H_row), ke),
+        "x_c": sm.xyz[:, 0],
+        "F_delta": R[:, 0], "F_A": R[:, 1], "F_B": R[:, 2],
+        "F_Psi": R[:, 3], "F_Ct1": R[:, 4], "F_Ct2": R[:, 5],
+        "F_max": np.max(np.abs(R), axis=1),
     })
     df.to_csv(path, index=False)
 
@@ -299,7 +298,8 @@ def main():
         pd.DataFrame({"iter": range(n_hist), "V0_flag_off": h0,
                       "V1_te_extrapolate": h1}).to_csv(
             RESULTS / f"floor_probe_{level}.csv", index=False)
-        _anatomy(solver0, U_v1, RESULTS / f"residual_anatomy_{level}.csv")
+        _anatomy(solver0, U_v1, st["sm"],
+                 RESULTS / f"residual_anatomy_{level}.csv")
 
         rows.append(_record(
             level=level, mode="V0_control", floor=floor0,

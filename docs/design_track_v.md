@@ -585,3 +585,57 @@ artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPO
    在册路线**；GV5.4 块预条件解决成本不解决地板。V4 重开触发保持
    挂起（预注册：本 gate 失败不触发）。下一步 = 用户在 GV5.5 /
    GV5.2 / GV5.3 / GV5.4 间排序。
+
+## §17 GV5.5 —— TE 带 (B,δ) 公式层破地板：V1 TE 出流行替换执行记录（2026-07-24，2 PASS / 1 FAIL / 9 RECORDED）
+
+独立项（2026-07-24 用户定序：GV5.1d → GV5.5 → GV5.2–5.4）。预注册
+`cases/analysis/v5_5_te_floor/PRE_REGISTRATION.md` 先于首行代码提交；
+路线选择在开工时按登记落定：**路线 (a) TE 自然出流离散先行**，行级
+变体 **V1 = TE 出流行替换**（δ 载体行 6i+0 `R = δ_i − δ_up`、H 载体行
+6i+2 `R = H_i − H_up` 一阶外推，精确雅可比行，CSR pattern 内构造守卫，
+默认 OFF flag `te_extrapolate`，`te_outflow_pairs` 由 case 层提供冻结
+数据）。binding 指标 = **m2**（V1 终态上的**原系统**残差，防行替换
+作弊）；m1 = 变体系统自身地板（记录）。全程 8 线程临时约束。
+
+1. **V0 控制**：coarse 逐位接近 committed 地板（3.1537e-6 vs 3.154e-6，
+   control_rel 1.06e-4 ≤ 1%）；medium 8 线程散布条款**第三次触发**——
+   同一第 4 不动点（cl 0.28245999），floor_ref 改用种子自身 flag-OFF
+   地板 1.8238e-6（与 GV5.1c/1d 的 1.824e-6 一致）。接线守卫两腿过
+   （|dcl_k0| ≤ 1e-8）。
+2. **band (a) PASS 两腿**：变体系统在 amended 种子处的雅可比作用 FD
+   最大相对误差 1.79e-7（coarse）/ 1.09e-8（medium），均 < 1e-5——
+   替换行解析精确（9 个新测试 `tests/test_v5_te_outflow.py` 在单元
+   层面同样锁死：默认 OFF 逐位、行结构、FD、J_e 清零、越 pattern
+   守卫、平板 smoke、strip 配对）。
+3. **band (b) honest FAIL（binding，"变差"档）**：变体系统在种子处
+   残差 9.821（coarse）/ 4.846（medium）——替换行测得 TE 自然跳量
+   （δ_TE − δ_up、H_TE − H_up 在松环收敛态非零，O(1) 量级）。伪时间
+   （诊断 Q7 协议，同一协议下 flag-OFF 系统 11–21 迭代即达地板）仅降
+   ~2–5× 即**全步拒 stalled**（cfl 压到 1e-3 地板：coarse it=11 起冻结
+   于 4.703；medium 磨 75 迭代至 0.986 后冻结）。m2 = 1.752e-2 =
+   **5554× 地板**（coarse）/ 4.487e-1 = **245998× floor_ref**（medium，
+   binding）——比预注册"≥0.9× 不动"档更差，属"变差"档。
+4. **次要读数与 guards**：GV5.1b tight polish（次要读数）coarse 终态
+   F_max 7.32e-5（committed GV5.1b 末值 3.07e-6 的 23.8×）；medium
+   **发散**（F_max 3.98，floor_stop 未救回）——polish 路径同样不破
+   地板。guards：平板 H 带 flag-ON 过（层流 [2.606, 2.687] ∈
+   [2.55, 2.75]，湍流 [1.509, 1.872] ∈ [1.2, 2.0]）；松环 smoke
+   flag-ON **coarse 红**（cl_rel 2.62% > 2.5% A4 带且撞 10-outer 帽未
+   收敛）/ **medium 边际过**（cl_rel 2.49%，3 outer 收敛）——TE 处理
+   会把松环不动点 cl 推动 ~2.5–2.6%，物理上可察觉，是 flag 保持默认
+   OFF 的又一理由。
+5. **物理读法**：m2 峰值**不在 TE**——anatomy（诊断同款列命名
+   F_delta/F_A/F_B/F_Psi/F_Ct1/F_Ct2）显示最大原系统残差在
+   **x_c ≈ 0.027 的 LE 吸力区**（coarse 节点 53 F_B −1.75e-2；medium
+   节点 310 F_Psi −0.449、F_B −0.271，两侧对称），TE 行本身安静。
+   硬外推约束（δ_TE = δ_up、H_TE = H_up）与耦合动量/闭包系统在条带
+   分辨率下**不相容**——变体系统在 amended 种子附近没有解，伪时间
+   找不到下降路径，破坏迁移到最刚的耦合块（LE）。破地板不能靠在
+   TE 带局部改写边界行绕开 (B,δ) 公式层刚度。
+6. **程序状态**：盆地搜寻（GV5.1b/1c/1d）+ 首个公式层处理（GV5.5
+   V1）均未动地板分毫。flag `te_extrapolate` 保持默认 OFF（legacy
+   逐位一致；tight 舰队 + 全套件 flag-OFF 绿）。**升级阶梯保持登记
+   未开**：upwind 边界通量 (a)-变体、闭包正则化 (b)——开启与否 =
+   用户裁决。V5 保持 OPEN；下一步 = GV5.2（RAE2822 跨声速 VII）/
+   GV5.3（M6 Cp）/ GV5.4（cost RECORDED）（用户 2026-07-24 定序）。
+   V4 重开触发保持挂起。

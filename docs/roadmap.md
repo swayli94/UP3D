@@ -111,11 +111,12 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   band) — NO quadratic basin adjacent to the floor either (coarse crawls to 24× floor, medium's
   first step moves AWAY from the band then crawls to 493×; binding medium median p = 1.17 honest
   FAIL; μ retries 0 a third time): the flat/ragged merit neighborhood extends down to within
-  ~1.5 decades of the floor — basin hunting exhausted (GV5.1b/1c/1d), **GV5.5 now the only
-  registered route for the floor itself**); floor-breaking registered as the STANDALONE item
-  **GV5.5 TE-band
-  (B, δ) formulation** (2026-07-24, user-directed; NOT opened, sequencing = user's
-  call)) and
+  ~1.5 decades of the floor — basin hunting exhausted (GV5.1b/1c/1d)) → **GV5.5 ✓ EXECUTED
+  2026-07-24** (2P/1F/9R, `cases/analysis/v5_5_te_floor/`): the standalone TE-band (B, δ)
+  formulation item — route (a) variant V1 = TE-outflow row replacement does **NOT** break
+  the floor (m2 = 5554×/245998× the floor, the pre-registered "worse" clause; the damage
+  peaks at the LE suction zone, not the TE; flag stays default-OFF; escalation ladder
+  stays registered-not-opened, opening = user's adjudication)) and
   GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;

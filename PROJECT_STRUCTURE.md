@@ -201,7 +201,9 @@ pyfp3d/                    # Main package
 │   │                       #   blasius_seed; family fixed point H*≈2.7083 (≠ Blasius 2.59)
 │   ├── ibl3.py           # ✓ 6-equation surface Galerkin P1 FE: strong-form divergence +
 │   │                       #   only-diffusion-by-parts (D13 (74)), colored prange assembly,
-│   │                       #   analytic CSR Jacobian, physical-density PTC (F_pt merit)
+│   │                       #   analytic CSR Jacobian, physical-density PTC (F_pt merit);
+│   │                       #   [V5/GV5.5] default-OFF te_extrapolate TE-outflow row
+│   │                       #   replacement (rows 6i+0/6i+2, exact J rows, in-pattern guard)
 │   ├── transpiration.py  # ✓ [V2] δ*→ṁ = ∇_Γ·(ρ_e u_e δ*) (gradN strong-form + node_area
 │   │                       #   lumping) + wall-RHS Galerkin assembly (wall_correction template,
 │   │                       #   b = −load(ṁ) blowing-positive, sign pinned by GV2.1(a)) +
@@ -212,6 +214,8 @@ pyfp3d/                    # Main package
 │   │                       #   body: nose+tail stagnation-band pinning, tail-ṁ masking;
 │   │                       #   wing [V5]: local-x/c LE pin + TE outflow + tip-band pin/ṁ mask) +
 │   │                       #   run_loose_coupling outer loop (IBL→δ*→ṁ→FP→u_e);
+│   │                       #   [V5/GV5.5] CouplingConfig.te_extrapolate (default OFF) +
+│   │                       #   te_outflow_pairs(case) TE↔upstream pairing;
 │   │                       #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
 │   │                       #   GV3.3 cases/analysis/v3_fuselage_smoke/,
 │   │                       #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23)
@@ -512,6 +516,10 @@ cases/                     # Test cases and reference data
 │   │                           #   basin exist ADJACENT to the floor? (2P/1F/7R: NO —
 │   │                           #   the stall extends down to 24× floor; medium's first
 │   │                           #   step moves AWAY from the band)
+│   ├── v5_5_te_floor/          # [V5/GV5.5] TE-band (B,δ) formulation floor-breaking
+│   │                           #   (2P/1F/9R: the V1 TE-outflow row replacement does NOT
+│   │                           #   break the floor — m2 5554×/245998× the floor, "worse"
+│   │                           #   clause; damage peaks at the LE, flag default-OFF)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -545,6 +553,10 @@ tests/                     # Unit and gate tests
 │                                  #   window sanity vs both floor bands + the GV5.1c
 │                                  #   stall region / escalation direction / band-entry
 │                                  #   read / near-band calibration / imported-helper id
+├── test_v5_te_outflow.py          # ✓ [V5/GV5.5] TE-outflow row replacement tests (9):
+│                                  #   default-OFF bitwise + residual/J row structure +
+│                                  #   flag-ON FD + J_e zeroing + out-of-pattern guards +
+│                                  #   plate smoke + te_outflow_pairs on the NACA strip
 ├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
 │                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
 ├── v5_state.py                    # ✓ [V5] shared GV5.1 builders: the 2.5-D NACA0012 strip case
@@ -1252,11 +1264,19 @@ entering the band; medium's first accepted step moves F_BL AWAY from
 the band, then crawls to 493×; binding medium median p = 1.17 honest
 FAIL; μ retries 0 a third time) — the flat/ragged merit neighborhood
 extends down to within ~1.5 decades of the floor: basin hunting
-exhausted (GV5.1b/1c/1d), GV5.5 now the only registered route for the
-floor itself; floor-breaking registered as the STANDALONE
-item **GV5.5 TE-band (B, δ) formulation** (2026-07-24, user-directed,
-NOT opened); next = GV5.5 or
-GV5.2/5.3/5.4 sequencing = user's call;
+exhausted (GV5.1b/1c/1d) → **GV5.5 ✓ EXECUTED 2026-07-24 (2 PASS /
+1 FAIL / 9 RECORDED, `cases/analysis/v5_5_te_floor/`, design record
+`docs/design_track_v.md` §17)**: the standalone TE-band (B, δ)
+formulation item — route (a) variant V1 = TE-outflow row replacement
+(rows 6i+0/6i+2 first-order extrapolation, exact Jacobian rows,
+default-OFF flag `te_extrapolate`) does NOT break the floor: the
+binding m2 (original-system residual at the V1 terminal) = 5554×
+(coarse) / 245998× (medium, 8-thread scatter clause) the floor — the
+pre-registered "worse" clause; the damage peaks at the LE suction zone
+(x_c ≈ 0.027, F_B/F_Psi rows), not the TE; band (a) FD PASS both
+levels; the flag stays default-OFF (legacy bit-identical) and the
+escalation ladder stays registered-not-opened (opening = user's
+adjudication); next = GV5.2/5.3/5.4 (user sequencing 2026-07-24);
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
