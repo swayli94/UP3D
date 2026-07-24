@@ -410,6 +410,28 @@ def _run_point(level, mc, wc, pname, pt):
         "m_peak_preshock": m_peak, "x_at_peak": x_peak,
         "outside_envelope": bool(m_peak > 1.3),
         "cp_rms_upper": rms_up, "cp_rms_lower": rms_lo,
+        "failure": "",
+    }
+
+
+def _failure_row(level, pname, pt, exc):
+    """Pre-registered §6 recipe-limit clause: an FP-driver failure at a
+    point reads as that point RECORDED; the remaining legs still read.
+    The summary row carries the failure note; metrics stay NaN."""
+    return {
+        "level": level, "point": pname,
+        "m_inf": pt["m"], "alpha": pt["alpha"],
+        "converged": False, "n_outer": -1,
+        "wall_s": float("nan"), "fp_calls": -1,
+        "fp_continuation": -1, "fp_stall_accepted": -1,
+        "cl_final": float("nan"), "ibl_final_residual": float("nan"),
+        "x_shock": float("nan"),
+        "band_lo": pt["band"][0], "band_hi": pt["band"][1],
+        "shock_in_band": False,
+        "m_peak_preshock": float("nan"), "x_at_peak": float("nan"),
+        "outside_envelope": False,
+        "cp_rms_upper": float("nan"), "cp_rms_lower": float("nan"),
+        "failure": str(exc)[:100],
     }
 
 
@@ -432,7 +454,12 @@ def main():
         for pname, pt in POINTS.items():
             print(f"  --- {level} {pname}: M={pt['m']} alpha={pt['alpha']} "
                   f"Re={RE:.2e} x_tr={X_TR} ---", flush=True)
-            r = _run_point(level, mc, wc, pname, pt)
+            try:
+                r = _run_point(level, mc, wc, pname, pt)
+            except RuntimeError as e:
+                r = _failure_row(level, pname, pt, e)
+                print(f"    POINT RECORDED (§6 recipe-limit clause): {e}",
+                      flush=True)
             rows.append(r)
             print(f"    converged={r['converged']} outer={r['n_outer']} "
                   f"wall={r['wall_s']:.0f}s x_shock={r['x_shock']:.4f} "
