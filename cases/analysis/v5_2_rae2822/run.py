@@ -55,6 +55,7 @@ from pyfp3d.post.surface import (  # noqa: E402
     triangle_tangential_gradients,
     wall_crease_angles,
     wall_force_coefficients,
+    wall_outward_normals,
     wall_tangential_gradient,
     wall_tangential_gradient_quadratic,
 )
@@ -197,13 +198,18 @@ def shock_x(x, cp, x_lo=0.2, x_hi=0.9):
 
 def _wall_cp_sides(mc, phi, m_inf, alpha, s_ref):
     """Per-side binned wall Cp curves ((x, cp) upper, (x, cp) lower),
-    averaged per (rounded-x, side) bin from the per-triangle Cp."""
+    averaged per (rounded-x, side) bin from the per-triangle Cp.
+
+    Side split by the outward-normal y sign (the D11 idiom, surface_ls.py):
+    robust on reflex-cambered sections whose aft lower surface sits above
+    the chord line (RAE2822), where a centroid-y split would mislabel the
+    aft lower triangles as upper."""
     wf = mc.boundary_faces["wall"]
     f = wall_force_coefficients(mc.nodes, mc.elements, wf, phi,
                                 alpha_deg=alpha, s_ref=s_ref, m_inf=m_inf)
     cp = f["cp_tri"]
     cen = mc.nodes[wf].mean(axis=1)
-    side_up = cen[:, 1] >= 0.0
+    side_up = wall_outward_normals(mc.nodes, mc.elements, wf)[:, 1] > 0.0
     out = []
     for mask in (side_up, ~side_up):
         xr = np.round(cen[mask, 0], 4)
@@ -219,12 +225,14 @@ def _wall_cp_sides(mc, phi, m_inf, alpha, s_ref):
 def _peak_mach(mc, phi, m_inf, x_max):
     """Pre-shock peak Mach on the upper wall (total-enthalpy relation,
     u_inf = 1 -> a_inf = 1/M_inf), over triangles with centroid
-    x <= x_max; returns (M_peak, x_at_peak)."""
+    x <= x_max; returns (M_peak, x_at_peak). Upper-side selection by the
+    outward-normal y sign (reflex-camber robust, see _wall_cp_sides)."""
     wf = mc.boundary_faces["wall"]
     grad_tri, _, _ = triangle_tangential_gradients(mc.nodes, wf, phi)
     q2 = np.sum(grad_tri * grad_tri, axis=1)
     cen = mc.nodes[wf].mean(axis=1)
-    mask = (cen[:, 1] >= 0.0) & (cen[:, 0] <= x_max)
+    up = wall_outward_normals(mc.nodes, mc.elements, wf)[:, 1] > 0.0
+    mask = up & (cen[:, 0] <= x_max)
     a0_sq = 1.0 / m_inf**2 + 0.5 * (GAMMA - 1.0)
     a2 = a0_sq - 0.5 * (GAMMA - 1.0) * q2[mask]
     a2 = np.maximum(a2, 1e-12)
@@ -237,19 +245,23 @@ def _peak_mach(mc, phi, m_inf, x_max):
 # band (a): the A4 TE-wedge pre-check
 # ---------------------------------------------------------------------------
 
-def _te_precheck(level, mc):
-    wf = mc.boundary_faces["wall"]
-    ang, _ = wall_crease_angles(mc.nodes, mc.elements, wf)
+def _te_precheck(level, mesh):
+    """A4-method TE structural pre-check, on the UNCUT mesh (the A4
+    runner measures crease/gradient availability pre-cut; on the cut mesh
+    the TE strips no longer share the TE edge and the crease measure is
+    meaningless)."""
+    wf = mesh.boundary_faces["wall"]
+    ang, _ = wall_crease_angles(mesh.nodes, mesh.elements, wf)
     wedge_mesh = 180.0 - float(np.nanmax(ang))
-    phi_dummy = mc.nodes[:, 0].copy()
+    phi_dummy = mesh.nodes[:, 0].copy()
     lin_ok, quad_ok = True, True
     lin_note = quad_note = "ok"
     try:
-        wall_tangential_gradient(mc.nodes, wf, phi_dummy)
+        wall_tangential_gradient(mesh.nodes, wf, phi_dummy)
     except ValueError as e:
         lin_ok, lin_note = False, str(e)[:60]
     try:
-        wall_tangential_gradient_quadratic(mc.nodes, wf, phi_dummy)
+        wall_tangential_gradient_quadratic(mesh.nodes, wf, phi_dummy)
     except ValueError as e:
         quad_ok, quad_note = False, str(e)[:60]
     x, z_lo, z_up = load_airfoil_ordinates(RAE_DIR / "rae2822.dat")
@@ -338,13 +350,15 @@ def main():
     rows = []
     for level in LEVELS:
         print(f"\n==================== GV5.2 level={level} ====================")
-        mc, wc = cut_wake(read_mesh(RAE_DIR / f"{level}.msh"))
-        te = _te_precheck(level, mc)
+        mesh = read_mesh(RAE_DIR / f"{level}.msh")
+        te = _te_precheck(level, mesh)
         te_rows.append(te)
         print(f"  band (a): wedge mesh {te['te_wedge_deg_mesh']:.2f} deg / "
               f"ordinates {te['te_wedge_deg_ordinates']:.2f} deg; "
               f"quadratic_available={te['quadratic_available']} "
               f"({te['quadratic_note']})")
+        mc, wc = cut_wake(mesh)
+        del mesh
         for pname, pt in POINTS.items():
             print(f"  --- {level} {pname}: M={pt['m']} alpha={pt['alpha']} "
                   f"Re={RE:.2e} x_tr={X_TR} ---", flush=True)

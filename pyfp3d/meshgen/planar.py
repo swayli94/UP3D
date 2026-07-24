@@ -149,7 +149,14 @@ def load_airfoil_ordinates(path) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load a 3-column measured-ordinate airfoil file (x/c, z/c lower,
     z/c upper; '#' comments and blank lines skipped) -- the Cook/AGARD
     Table 6.1 layout. Returns (x, z_lower, z_upper) with x ascending
-    0 (LE) .. 1 (TE) on BOTH sides."""
+    0 (LE) .. 1 (TE) on BOTH sides.
+
+    NOTE the Cook Table 6.1 convention: the lower ordinate is tabulated
+    as the POSITIVE-DOWN distance below the chord line (it flips sign
+    where the lower surface pokes above the datum, e.g. near the
+    RAE2822 TE) -- the physical z_lower = -z_lower_tabulated. The raw
+    columns are returned; consumers negate where physical z is needed.
+    """
     rows = []
     with open(path) as f:
         for ln in f:

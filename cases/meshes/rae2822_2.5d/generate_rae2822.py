@@ -7,7 +7,7 @@ Geometry: the Cook, McDonald & Firmin (AGARD-AR-138) Table 6.1 measured
 ordinates, committed verbatim as rae2822.dat beside this script
 (source: https://www.grc.nasa.gov/www/wind/valid/raetaf/geom.txt ,
 fetched 2026-07-24, sha256
-d1e0bed044169ed6311d43cfde62d938f24a8ca796fe12773097371da7ea3acf).
+32a2803a211223c2899ff036b32223367fa5566c4bfb999a2e556813e1be43c5).
 The point-set path
 (pyfp3d/meshgen/planar.py::pointset_airfoil_coordinates) PCHIP-resamples
 each side onto the cosine-clustered grid; the TE closes sharp at (1, 0).
@@ -72,6 +72,10 @@ LEVELS = {
 def generate_level(out_dir: Path, level: str, inspect: bool = True) -> Path:
     p = LEVELS[level]
     x, z_lo, z_up = load_airfoil_ordinates(DAT)
+    # Cook Table 6.1 convention: the lower ordinate is tabulated
+    # POSITIVE-DOWN (distance below the chord line) -- negate for the
+    # physical z (verified: thickness 12.1% @ 37.9%, camber 1.3% @ 75.7%).
+    z_lo = -z_lo
     coords = pointset_airfoil_coordinates(x, z_lo, z_up, n_half=p["n_half"])
     points2d, triangles, edge_groups, interior_groups = airfoil_wake_2d(
         coords, model_name=f"rae2822_2d_{level}",

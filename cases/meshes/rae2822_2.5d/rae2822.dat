@@ -2,6 +2,10 @@
 # Measured Ordinates from Table 6.1 (Cook, McDonald & Firmin, AGARD-AR-138)
 # Source: https://www.grc.nasa.gov/www/wind/valid/raetaf/geom.txt (fetched 2026-07-24)
 # x/c z/c_lower z/c_upper
+# CONVENTION: z/c_lower is tabulated POSITIVE-DOWN (distance below the
+# chord line, Cook Table 6.1; sign flips where the lower surface pokes
+# above the datum near the TE) -- physical z_lower = -(tabulated).
+# Verified: thickness 12.1% @ x/c 37.9, camber 1.3% @ 75.7.
 0.00000 0.00000 0.00000
 0.00060 0.00317 0.00323
 0.00241 0.00658 0.00642

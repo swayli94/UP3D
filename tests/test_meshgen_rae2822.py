@@ -47,10 +47,19 @@ def test_ordinates_load():
     assert abs(x[i] - 0.45099) < 1e-12 and abs(z_up[i] - 0.06286) < 1e-12
     assert z_up[0] == 0.0 and z_lo[0] == 0.0
     assert z_up[-1] == 0.0 and z_lo[-1] == 0.0
+    # the positive-down lower convention (physical z_lower = -tabulated):
+    # thickness 12.1% @ x/c 0.379, camber 1.3% @ 0.757 (airfoiltools sig.)
+    thick = z_up + z_lo          # = z_up - (-z_lo)
+    camber = 0.5 * (z_up - z_lo)  # physical: (z_up + z_lo_phys)/2
+    assert abs(thick[int(np.argmax(thick))] - 0.121) < 0.002
+    assert abs(camber[int(np.argmax(camber))] - 0.013) < 0.001
+    # physical section: strictly positive thickness inside (LE/TE sharp)
+    assert np.all(thick[1:-1] > 0.0)
 
 
 def test_resample_convention_and_bounds():
     x, z_lo, z_up = load_airfoil_ordinates(DAT)
+    z_lo = -z_lo  # physical z (the generator's convention fix)
     coords = pointset_airfoil_coordinates(x, z_lo, z_up, n_half=120)
     # the closed-polyline convention: first/last exactly (1, 0)
     assert tuple(coords[0]) == (1.0, 0.0)
@@ -62,6 +71,13 @@ def test_resample_convention_and_bounds():
     z = coords[1:-1, 1]
     assert z.max() <= max(z_up.max(), abs(z_lo.min())) + 1e-12
     assert z.min() >= z_lo.min() - 1e-12
+    # the physical contour does NOT self-intersect (the 2026-07-24
+    # convention erratum: the un-negated lower folds over the upper and
+    # the 2-D gmsh build never terminates)
+    upper = coords[: int(np.argmin(coords[:, 0])) + 1]
+    lower = coords[int(np.argmin(coords[:, 0])):]
+    assert upper[:, 1].min() >= -1e-12  # upper stays at/above datum-ish
+    assert lower[:, 1].max() <= 2.0e-3  # lower stays below save the TE poke
     # cosine clustering: the end spacing is much finer than mid-chord
     xs = np.unique(coords[:, 0])
     d = np.diff(xs)

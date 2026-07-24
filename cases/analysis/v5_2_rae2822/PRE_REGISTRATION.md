@@ -140,3 +140,39 @@ Meshgen minutes; VII legs: coarse ~5–10 min, medium ~20–40 min per
 point (Newton-driver transonic outer = FP Newton + IBL solve), total
 ~1–1.5 h for the four legs. A leg exceeding 2 h reads as a recipe
 problem — stop and adjudicate, do not silently grind.
+
+## Addendum 2026-07-24 (execution mechanics — no band/protocol change)
+
+Found and fixed between the first implementation commit and execution;
+none of these touches the metrics, bands, or the VII recipe:
+
+1. **Lower-surface ordinate sign.** Cook Table 6.1's `z/c lower` column
+   is POSITIVE-DOWN (distance below the chord line; it changes sign
+   where the aft lower surface rises above the chord). Physical
+   `z_lower = −(tabulated)`; verified against the published signatures
+   (max thickness 12.1 % @ 37.9 %c; camber 1.3 % @ 75.7 %c) and a
+   segment-intersection sweep (0 self-intersections after the fix; 2
+   before). Generator + `rae2822.dat` header updated; tests lock the
+   signatures and the no-self-intersection property.
+2. **`cut_wake` Kutta-probe fallback** (`pyfp3d/mesh/wake_cut.py`).
+   RAE2822's reflex camber places BOTH TE flank neighbours on the +y
+   side of the TE node, so the global-hint sign rule found no lower
+   probe and raised. New fallback: when both strict passes come up
+   one-sided, re-classify with the local TE-wedge bisector normal
+   (aligned with the global hint). The fallback fires ONLY where the
+   old code would have raised — previously working meshes are
+   bit-identical. Regression: `test_kutta_probes_cambered_te`; the
+   hard-rule-7 sweep (`test_topology_asserts_all_wake_meshes`) now also
+   covers both new RAE meshes.
+3. **Runner Cp side split** (`_wall_cp_sides`, `_peak_mach`): switched
+   from centroid-y to the outward-normal y sign (the D11 idiom,
+   `post/surface_ls.py`) — a centroid-y split mislabels the reflex band
+   (9 aft lower triangles above y = 0 on coarse) as upper, which would
+   contaminate the band-(b) shock window and the per-side RMS.
+4. **Band (a) measured on the UNCUT mesh** (the A4 runner's method):
+   on the cut mesh the TE strips no longer share the TE edge, so the
+   max-crease measure does not see the TE wedge. Values recorded:
+   coarse 9.46° / medium 9.92° mesh-crease vs 12.91° ordinate fit
+   (x ≥ 0.95 secant sum; the gap = reflex-camber curvature over the fit
+   window). Quadratic recovery available on both levels; the ≈6° guard
+   clears by both measures → the §3 fallback does NOT fire.
