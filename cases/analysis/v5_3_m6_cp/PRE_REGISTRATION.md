@@ -160,6 +160,43 @@ n_newton / rescue path taken / accept_reason), per-level wall time
 - Runner exits 1 iff any PASS/FAIL gate reads FAIL (honest-FAIL
   discipline; RECORDED-only outcomes exit 0).
 
+## Addendum 2026-07-25 #1 (execution mechanics — no band/protocol change)
+
+**Event**: at the first execution the medium k = 0 cold start FAILED W1
+(cl_p 0.2157 / cl_kj 0.2260 vs the anchors 0.2776 / 0.2823, rel 22 % >
+1 %) and the level read RECORDED per the recipe-limit clause; the loose
+loop itself CONVERGED in 9 outer from that poisoned seed (the k = 1 warm
+solve jumped to cl 0.277 and the loop settled at 0.2774). Coarse passed
+W1 and ran clean.
+
+**Root cause (measured, NOT the initially suspected 8-thread branch
+scatter)**: the driver's cold start carried a short-circuit copied from
+the GV5.0 bridge's M0.5 driver — `if not r0["converged"]: return r0`
+after the M0.70 probe seed. On medium @8 threads the M0.70 probe solve
+stalls below the 1e-10 target (n_newton cap at |R| ~ 1e-6), the
+short-circuit fired, and the k = 0 state became the HALF-CONVERGED M0.70
+seed (cl 0.2157/0.2260 — the diagnostic's M0.70-seed cl to all printed
+digits) — the ramp never ran. P14 (the recipe this driver mirrors) has
+NO such short-circuit: the ramp's level 0 warm-starts from the imperfect
+seed and re-converges every level itself. The measured diagnostic
+(/tmp/gv53_branch_diag.py, same worktree, same thread count): from the
+very same failed M0.70 seed, the P14 ramp converges level-by-level
+(0.70: 3 Newton → 6.4e-6; 0.75: 2 → 9.4e-6; 0.80: 2 → 7.9e-6; 0.8395:
+12 → 7.6e-15) and lands ON the anchored branch (cl_p 0.27726 / cl_KJ
+0.28188, rel 0.13–0.15 % vs the P14 anchors) — identical to the state
+reached from the LOCAL P14 npz cache to 9 printed digits, so no cache or
+branch-repair mechanism is needed. The W1 guard caught the wiring bug
+exactly as designed.
+
+**Fix (execution mechanics only)**: remove the short-circuit — the cold
+start runs the P14 ramp unconditionally (the ramp's level 0 re-converges
+the M0.70 seed; a non-converged seed is logged, never returned early).
+The cold chain stays: ramp strict → ramp stall-accept → raise. All
+bands, metrics, conditions, NEWTON_M6_RECIPE, the loose recipe and the
+wiring guards are UNCHANGED. Coarse results stand (its M0.70 seed
+converged, so the short-circuit never fired — the coarse k = 0 is
+legitimately on-anchor); medium is re-executed with the fixed driver.
+
 ## 6. Artifacts
 
 `cases/analysis/v5_3_m6_cp/`: this pre-registration, run.py, VERDICT.md

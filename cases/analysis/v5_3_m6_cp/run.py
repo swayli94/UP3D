@@ -177,13 +177,15 @@ def make_m6_driver(mc, wc):
         return {k: v for k, v in NEWTON_M6_RECIPE.items() if k != "newton_kw"}
 
     def _cold(rhs, stall):
-        # P14 verbatim: M0.70 PROBE-Kutta seed, then the pressure ramp
+        # P14 verbatim: M0.70 PROBE-Kutta seed, then the pressure ramp.
+        # NO early return on a non-converged seed (addendum 2026-07-25 #1:
+        # the ramp's level 0 re-converges the seed itself; the bridge's
+        # M0.5 short-circuit poisoned the medium k=0 at the first
+        # execution -- W1 caught it).
         r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA,
                                   **M6_NEWTON_KW)
-        if not r0["converged"]:
-            log.append(("cold_seed_m070", str(r0.get("accept_reason")),
-                        False))
-            return r0
+        log.append(("cold_seed_m070", str(r0.get("accept_reason")),
+                    bool(r0["converged"])))
         r = solve_newton_transonic(
             mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
             newton_kw=_ramp_kw((r0["phi"], r0["gamma"]), rhs, stall),
