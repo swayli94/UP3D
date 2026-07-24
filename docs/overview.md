@@ -343,7 +343,13 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **627 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1d
+现基线 **636 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.5
+执行**（TE 带 (B,δ) 公式层破地板独立项：V1 TE 出流行替换**不破地板**——binding
+m2 = 5554×/245998× 地板，"变差"档；破坏峰值在 LE 吸力区而非 TE；flag 保持默认
+OFF——VERDICT `cases/analysis/v5_5_te_floor/VERDICT.md`）：全套件实测 636
+@1402.11 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比）；+9 vs 下档 627 = `tests/test_v5_te_outflow.py`（9））。
+上一档 627+25+2（2026-07-24 Track V **V5 GV5.1d
 执行**（近带种子读地板紧邻处二次盆：同样无盆——近带种子立即停滞，coarse 爬至
 24× 地板未进带，medium 首步推离带；binding medium median p = 1.17 honest FAIL——
 VERDICT `cases/analysis/v5_1d_near_band_window/VERDICT.md`）：全套件实测 627

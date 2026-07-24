@@ -1106,7 +1106,15 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **627 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+Baseline: **636 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+GV5.5 executed** (the TE-band (B, δ) formulation item: the V1 TE-outflow row
+replacement does NOT break the floor — binding m2 5554×/245998× the floor,
+the "worse" clause; flag default-OFF — VERDICT
+`cases/analysis/v5_5_te_floor/VERDICT.md`); full-suite measured 636
+@1402.11 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries); +9 vs the 627
+below = `tests/test_v5_te_outflow.py` (9)).
+Previous: 627 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1d executed** (the near-band window read: NO quadratic basin adjacent to
 the floor either — near-band seeds stall immediately, coarse crawling to 24×
 floor, medium's first step moving AWAY from the band; binding medium median

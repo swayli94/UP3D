@@ -1286,7 +1286,14 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **627 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+Default suite: **636 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+V5 GV5.5 (the TE-band (B, δ) formulation item: the V1 TE-outflow row
+replacement does NOT break the floor — binding m2 5554×/245998× the floor,
+the "worse" clause; damage peaks at the LE suction zone, not the TE; flag
+default-OFF); full-suite measured 636 @1402.11 s **@8
+threads** (temporary 8-core session constraint, user-directed; NOT
+comparable to the 16-thread ledger entries); +9 vs 627 =
+`test_v5_te_outflow.py` (9). Previous 627:
 V5 GV5.1d (the near-band window read: NO quadratic basin adjacent to the
 floor either — near-band seeds stall immediately (coarse crawling to 24×
 floor, medium's first step moving AWAY from the band), binding medium
