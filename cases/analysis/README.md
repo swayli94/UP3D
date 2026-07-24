@@ -145,6 +145,28 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   after the adjudication edit; the as-executed runner exited 1 on the medium live check); a
   loose-regen wiring-guard failure raises RuntimeError = recipe error; `--levels`/`--no-k1` for
   partial re-runs)
+- `v5_1c_above_band_window/` — **Track V / V5** GV5.1c the above-band seed: the pre-floor
+  slope-2 window read (the GV5.1b follow-up, user-directed 2026-07-24; pre-registered 1e90d59
+  before the first execution; the GV5.1 amended protocol verbatim — HEAD-regen loose-converged
+  seeds, wiring guard PASS both legs — plus a calibrated δ×(1+ε) perturbation at the free BL
+  nodes, ε = 1e4 by the deterministic log10 bisection → seed F_BL 3.219e-1 coarse / 1.819e-1
+  medium ≈ 1e4× the floor band), **2 PASS / 1 FAIL / 7 RECORDED** — the window is now MEASURED:
+  **no quadratic regime anywhere above the floor** — the clean-descent steps are line-search-capped
+  halvings (λ = 0.5 → p = 1.00 by construction, the backtracking cap), then the trajectory
+  STALLS mid-range (F_BL ~ 3e-2 → 1.3e-2 / 2.2e-2 over 10 iterations), never reaching the band
+  (4262× / 12867× the floor at the cap); binding medium median p = 0.56 → honest FAIL (coarse
+  1.00 recorded), regression slopes 0.75/0.62; μ rejection-retries 0 once more (the line search
+  carries all the globalization); band (a) PASS both levels with the cond-aware e2 tolerance
+  PRE-REGISTERED (e2 2.06e-9 / 2.40e-9 vs 3.9e-2 / 5.2e-2); new finding: the tight-Newton
+  obstacle is not only the formulation floor — a mid-range descent barrier sits 3–4 decades
+  above it (near-band-seed follow-up = candidate GV5.1d, user adjudication); executed under the
+  temporary 8-thread session constraint (runner default 16; wall times flagged non-comparable);
+  the medium fixed point scattered AGAIN at 8 threads (a 4th fixed point cl 0.28245999; coarse
+  bit-identical); VERDICT + PRE_REGISTRATION + CSVs in the dir, design record
+  `docs/design_track_v.md` §15) —
+  `python cases/analysis/v5_1c_above_band_window/run.py` — coarse ~3 min / medium ~3 min at
+  8 threads unloaded (2026-07-24 measurement; exit 1 = honest FAIL present; a loose-regen
+  wiring-guard failure raises RuntimeError = recipe error; `--levels` for partial re-runs)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS
@@ -193,6 +215,7 @@ table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 here because they are studies, not capability demos. `v1_ibl3_standalone/`
 is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
 `v3_loose_coupling/`, `v3_fuselage_smoke/`, `v5_m6_bridge/`,
-`v5_1b_scaled_newton/`, `v5_ibl_floor/` and `v5_tight_coupling/` are
+`v5_1b_scaled_newton/`, `v5_1c_above_band_window/`, `v5_ibl_floor/` and
+`v5_tight_coupling/` are
 Track V's GV2.1 / GV3.x / GV5.x gate cases (the `v5_ibl_floor/` one a
 RECORDED diagnosis, no bands), same status.)*

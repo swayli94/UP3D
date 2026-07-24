@@ -504,6 +504,10 @@ cases/                     # Test cases and reference data
 │   │                           #   (2P/0F/7R adjudicated (1P/1F/7R as executed): machinery
 │   │                           #   exact, floor_reached stop works;
 │   │                           #   window question reframed to an above-band seed)
+│   ├── v5_1c_above_band_window/ # [V5/GV5.1c] the above-band seed: the pre-floor
+│   │                           #   slope-2 window read (2P/1F/7R: NO quadratic regime
+│   │                           #   above the floor — λ-capped halvings + a mid-range
+│   │                           #   stall, never reaching the band)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -530,6 +534,9 @@ tests/                     # Unit and gate tests
 │                                  #   bit-identity, Jacobian bit-invariance + FD under lagged ṁ
 ├── test_v3_coupling.py            # ✓ [V3] case-builder wiring (airfoil strip + closed body),
 │                                  #   inflow/outflow pinning, 2-iteration coarse smoke
+├── test_v5_above_band_seed.py         # ✓ [V5/GV5.1c] synthetic seed-helper tests (9):
+│                                  #   perturbation mask + calibration bisection + triple
+│                                  #   filter + regression slope + pooled verdict logic
 ├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
 │                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
 ├── v5_state.py                    # ✓ [V5] shared GV5.1 builders: the 2.5-D NACA0012 strip case
@@ -1218,9 +1225,20 @@ band from iter 0 ⇒ no above-band window by construction — fallback:
 medium floor_reached at iter 5 at the same merit, coarse still
 descending below GV5.1, k=1 standalone F_BL −31 % / merit 2.3× below,
 μ rejection-retries 0 (scaling the active ingredient); the window
-question reframed to an above-band-seed protocol (candidate GV5.1c),
-floor-breaking = TE-band formulation work queued; next = GV5.1c or
-the TE-band formulation work,
+question reframed to an above-band-seed protocol → **GV5.1c ✓ EXECUTED
+2026-07-24 (2 PASS / 1 FAIL / 7 RECORDED,
+`cases/analysis/v5_1c_above_band_window/`, design record
+`docs/design_track_v.md` §15)**: calibrated above-band seeds (δ×(1+ε),
+ε = 1e4 → F_BL ≈ 1e4× the floor band) — the pre-floor slope-2 window
+MEASURED: NO quadratic regime above the floor (λ = 0.5-capped halvings
+p = 1.00 by construction; then a mid-range stall at F_BL ~ 1e-2, never
+reaching the band; binding medium median p = 0.56 honest FAIL; μ retries
+0 again; band (a) PASS with the cond-aware e2 tolerance pre-registered);
+the tight-Newton obstacle is bigger than the floor — a mid-range descent
+barrier 3–4 decades above it (near-band-seed follow-up = candidate
+GV5.1d, user adjudication); floor-breaking registered as the STANDALONE
+item **GV5.5 TE-band (B, δ) formulation** (2026-07-24, user-directed,
+NOT opened); next = GV5.1d or GV5.5 or
 GV5.2/5.3/5.4 sequencing = user's call;
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
@@ -1231,11 +1249,16 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **611 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+Default suite: **620 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+V5 GV5.1c (the above-band window read: NO quadratic regime above the floor —
+λ-capped halvings + a mid-range stall, binding medium median p = 0.56 honest
+FAIL); full-suite measured 620 @3903.16 s **@8 threads** (temporary 8-core
+session constraint, user-directed, machine idle; NOT comparable to the
+16-thread ledger entries); +9 vs 611 =
+`test_v5_above_band_seed.py` (9). Previous 611:
 V5 GV5.1b (scaled+damped augmented Newton; machinery exact, band (b) window
-question reframed); full-suite measured 611 @6556.77 s @16 threads (wall
-polluted by co-tenant load ~70–80, quoted flagged); +8 vs 603 =
-`test_v5_tight_scaled.py` (8). Previous 603:
+question reframed), 611 measured @6556.77 s @16 threads (wall polluted by
+co-tenant load ~70–80, quoted flagged); previous 603:
 V5 GV5.1 (augmented tight (φ, Γ, U) Newton; FD exactness PASS both levels,
 quadratic tail HONEST FAIL on the IBL floor), 603 measured @1537.09 s;
 previous 583:

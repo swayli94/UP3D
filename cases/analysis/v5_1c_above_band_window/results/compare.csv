@@ -1,0 +1,35 @@
+level,metric,gv5_1c,committed_reference,note
+coarse,N_polish (T1[+T2]) / N_total vs committed loose outer,10 / 14,4,regen loose n_outer=4
+coarse,T1 F_BL p above the floor band,i2:1.00; i3:1.00; i4:0.19; i5:0.02; i6:340.81; i7:0.09; i8:1.00; i9:0.07; i10:26.49,,the band-(b) read
+coarse,T1 contraction factors log10(e_prev/e_i),i1:0.30dex; i2:0.30dex; i3:0.30dex; i4:0.06dex; i5:0.00dex; i6:0.31dex; i7:0.03dex; i8:0.03dex; i9:0.00dex; i10:0.05dex,,fallback context
+coarse,T1 eps / seed |F_BL|_max,1.000000e+04 / 3.219161e-01,window [5e-02,5e-01],1.02e+04x the floor band; 2 calibration evals
+coarse,T1 final merit,4.246145e-03,2.043853e-10,vs GV5.1b committed final
+coarse,T1 final |F_BL|_max vs floor,1.344172e-02,3.070478e-06,vs GV5.1b committed final; 4261.80x the diagnosed floor
+coarse,T1 merit p (all contractions),i2:1.00; i3:1.00; i4:0.21; i5:0.01; i6:343.01; i7:0.18; i8:0.52; i9:0.12; i10:3.83,,recorded alongside per the prereg
+coarse,T1 regression slope log e_{i+1} vs log e_i,0.75 over 10 pairs,,fallback context (>= 3 pairs)
+coarse,T1 termination / converged,cap / False,GV5.1b: floor_reached (medium) / cap (coarse),
+coarse,above-band triples T1 / pooled,9 / 9,>= 3 -> median-p band applies,T2 escalation fired: False
+coarse,band_a_e1 diag(rn)@Jsc@diag(cn) vs J (relerr),2.624e-16,<= 1e-12,on the perturbed T1-seed J
+coarse,band_a_e2 mu=0 damped vs undamped splu (relerr),2.063e-09,<= 3.9e-02,cond-aware tolerance PRE-REGISTERED (the GV5.1b adjudication)
+coarse,band_a_e3 dx = C dy round-trip (relerr),3.990e-10,<= 1e-06,
+coarse,loose committed: cl / ds_max / ibl_floor,,0.26776443 / 4.602235e-03 / 3.113e-06,read; never recomputed
+coarse,mu schedule: final mu / total reject-retries (T1),5.081e-11 / 0,,
+coarse,polish wall time (s) T1[+T2],7,,threads=8 (temporary 8-thread session constraint; runner default 16)
+coarse,unperturbed seed |F_BL|_max (x the diagnosed floor),3.153842e-06 (1.00x),floor 3.154e-06,the GV5.1b constructional read (inside the band)
+medium,N_polish (T1[+T2]) / N_total vs committed loose outer,10 / 13,5,regen loose n_outer=3
+medium,T1 F_BL p above the floor band,i2:1.00; i3:0.56; i4:0.00; i5:6.52; i8:0.14; i9:0.02; i10:3.97,,the band-(b) read
+medium,T1 contraction factors log10(e_prev/e_i),i1:0.30dex; i2:0.30dex; i3:0.17dex; i4:0.00dex; i5:0.00dex; i7:0.19dex; i8:0.03dex; i9:0.00dex; i10:0.00dex,,fallback context
+medium,T1 eps / seed |F_BL|_max,1.000000e+04 / 1.818830e-01,window [5e-02,5e-01],1.06e+04x the floor band; 2 calibration evals
+medium,T1 final merit,8.613065e-03,9.074491e-11,vs GV5.1b committed final
+medium,T1 final |F_BL|_max vs floor,2.202837e-02,1.708125e-06,vs GV5.1b committed final; 12867.04x the diagnosed floor
+medium,T1 merit p (all contractions),i2:1.00; i3:0.92; i4:0.00; i5:7.47; i6:8.27; i7:3.81; i8:0.30; i9:0.02; i10:3.09,,recorded alongside per the prereg
+medium,T1 regression slope log e_{i+1} vs log e_i,0.62 over 9 pairs,,fallback context (>= 3 pairs)
+medium,T1 termination / converged,cap / False,GV5.1b: floor_reached (medium) / cap (coarse),
+medium,above-band triples T1 / pooled,7 / 7,>= 3 -> median-p band applies,T2 escalation fired: False
+medium,band_a_e1 diag(rn)@Jsc@diag(cn) vs J (relerr),2.275e-16,<= 1e-12,on the perturbed T1-seed J
+medium,band_a_e2 mu=0 damped vs undamped splu (relerr),2.398e-09,<= 5.2e-02,cond-aware tolerance PRE-REGISTERED (the GV5.1b adjudication)
+medium,band_a_e3 dx = C dy round-trip (relerr),2.568e-10,<= 1e-06,
+medium,loose committed: cl / ds_max / ibl_floor,,0.27190697 / 6.840905e-03 / 1.160e-06,read; never recomputed
+medium,mu schedule: final mu / total reject-retries (T1),5.081e-11 / 0,,
+medium,polish wall time (s) T1[+T2],4,,threads=8 (temporary 8-thread session constraint; runner default 16)
+medium,unperturbed seed |F_BL|_max (x the diagnosed floor),1.823848e-06 (1.07x),floor 1.712e-06,the GV5.1b constructional read (inside the band)

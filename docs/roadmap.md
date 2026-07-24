@@ -101,9 +101,15 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   medium floor_reached at iter 5 at the same merit (9.074e-11 ≈ 9.025e-11), coarse still descending
   below GV5.1 (2.044e-10 < 2.068e-10), k=1 standalone F_BL −31 % / merit 2.3× below, μ rejection-retries
   0 (scaling the active ingredient); the window question reframed to an above-band-seed protocol
-  (candidate GV5.1c), floor-breaking = TE-band formulation work queued; next = GV5.1c or the
-  TE-band formulation work,
-  sequencing = user's call) and
+  → **GV5.1c ✓ EXECUTED 2026-07-24** (2P/1F/7R, `cases/analysis/v5_1c_above_band_window/`):
+  calibrated above-band δ-perturbed seeds (ε = 1e4 → seed F_BL ≈ 1e4× the floor band) — the
+  pre-floor slope-2 window MEASURED: NO quadratic regime above the floor (λ = 0.5-capped halvings
+  p = 1.00 by construction; then a mid-range stall at F_BL ~ 1e-2, never reaching the band;
+  binding medium median p = 0.56 honest FAIL); the obstacle is bigger than the floor — a
+  mid-range descent barrier 3–4 decades above it (near-band-seed follow-up = candidate GV5.1d,
+  user adjudication); floor-breaking registered as the STANDALONE item **GV5.5 TE-band
+  (B, δ) formulation** (2026-07-24, user-directed; NOT opened, sequencing = user's
+  call)) and
   GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
