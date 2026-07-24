@@ -287,8 +287,9 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   10× 地板带内侧（F_BL = 1.00× 地板）⇒ 构造上无 above-band 收缩段，走预注册 fallback：medium floor_reached 第 5 迭代
   同 merit 收官（9.074e-11 ≈ 9.025e-11，取代 GV5.1 的 10 步 λ-collapse 爬行）、coarse 末 merit 2.044e-10 < GV5.1
   2.068e-10 仍在降、k=1 standalone F_BL −31 %/merit 2.3× 更深、μ 拒绝重试 0 次——缩放是活性成分，阻尼臂惰性；
-  窗口问题被重构为需 above-band 种子的协议（候选 GV5.1c），破地板本身 = TE 带 (B,δ) 公式层工作排队）；下一步 =
-  GV5.1c（above-band 种子）或 TE 带公式层工作，GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  窗口问题被重构为需 above-band 种子的协议 → **GV5.1c OPENED 2026-07-24**（用户定；标定 above-band δ 扰动种子，
+  真正读地板前 slope-2 窗）；破地板本身登记为独立项 **GV5.5 TE 带 (B,δ) 公式层**（2026-07-24 用户定，未开工，
+  排序待裁决）；GV5.2/5.3/5.4/5.5 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：

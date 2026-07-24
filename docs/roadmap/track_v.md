@@ -357,6 +357,28 @@ band, so exact Schur elimination may not pay: measure, don't assume).
 - [ ] **GV5.4 cost (RECORDED)**: augmented step wall-time ≤ ~2× the inviscid
   Newton step on M6 medium with the block preconditioner working; measured
   number recorded either way.
+- [ ] **GV5.5 TE-band (B, δ) formulation — breaking the IBL floor
+  (STANDALONE ITEM, registered 2026-07-24, user-directed; NOT opened;
+  sequencing after GV5.1c = user's call)**. Target: the steady-IBL residual
+  floor (max-norm coarse 3.154e-6 / medium 1.710e-6, the committed
+  loose-final floors) localized by the committed diagnosis
+  (`cases/analysis/v5_ibl_floor/` findings Q5 = design doc §13 item 3) in
+  the **TE-band (B, δ) equations**, lying essentially entirely inside J's
+  range — a formulation floor (Q7: the pseudo-time controller bottoms out
+  with the residual frozen), not a solver limitation, and not crossable by
+  globalization alone (GV5.1b: scaling + damping delivered and exact, μ
+  inert, floor intact). Candidate routes (recorded at registration; the
+  choice is made at opening): TE natural-outflow discretization work on
+  the (B, δ) equations; closure regularization in the TE band. Success
+  criterion sketch — to be pre-registered BEFORE code per discipline when
+  the item opens: the standalone IBL floor descends below the committed
+  floors by a pre-registered factor on the same 2.5-D testbed, with the
+  GV1.1/V3 evidence base re-checked (closure/discretization edits re-open
+  those gates' comparability — bands re-quoted, not silently inherited).
+  Explicitly OUT of GV5.1c scope (GV5.1c measures the pre-floor window
+  with the floor in place; GV5.5 attacks the floor itself). Prereq: none
+  beyond the committed diagnosis; the GV5.1c window read is informative
+  but NOT binding for the opening.
 
 **Prereq:** P8 ✓ + P14 ✓ + V3. **Wing-body VII is explicitly OUT of V5 scope**
 (scope guards below).
@@ -559,9 +581,13 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   perturbed δ*) = candidate GV5.1c; breaking the floor itself = the
   TE-band (B, δ) formulation work, queued. VERDICT
   `cases/analysis/v5_1b_scaled_newton/VERDICT.md`, design record
-  `docs/design_track_v.md` §14. V5 stays **OPEN**: next = GV5.1c
-  (above-band seed) or the TE-band formulation work, sequencing = the
-  user's call; the V4-reopen trigger stays parked. Remaining: RAE2822
+  `docs/design_track_v.md` §14. V5 stays **OPEN**: **DECIDED 2026-07-24
+  (user-directed)** — next = **GV5.1c** (above-band seed, the true
+  pre-floor slope-2 read; opened on `kimi/track-v5-gv5-1c`); the
+  floor-breaking work is registered as the STANDALONE item **GV5.5**
+  (TE-band (B, δ) formulation, see the gates above; NOT opened,
+  sequencing = user's call); the V4-reopen trigger stays parked.
+  Remaining: RAE2822
   transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp
