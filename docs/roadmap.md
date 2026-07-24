@@ -90,7 +90,17 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   (14 RECORDED, `cases/analysis/v5_ibl_floor/`) — the raw cond is MOSTLY a scaling artifact (equilibrated
   2e4/7e5/1e7, sub-1e-6 count → 0/0/2, no exact null directions); the genuine scaled (A, Ψ) stiffness
   1e5–1e7 + the TE-band (B, δ) floor residual inside J's range = the GV5.1b targets; the pseudo-time
-  controller bottoms out at the floor (globalization alone insufficient); next = GV5.1b design,
+  controller bottoms out at the floor (globalization alone insufficient)); **GV5.1b ✓ EXECUTED
+  2026-07-24** (1P/1F/7R, `cases/analysis/v5_1b_scaled_newton/`) — scaled+damped machinery delivered and
+  exact (equilibration + Levenberg + floor-reached stop, flags default OFF = legacy bit-identical; suite
+  28 green; the medium live-seed e2 FAIL is a non-pre-registered ≤1e-10 threshold on a cond ~ 1e10
+  solve = pivot-order machine floor, user adjudication requested); the amended seeds sit INSIDE the 10×
+  floor band from iter 0 (F_BL = 1.00× the floor) ⇒ no above-band window by construction → fallback:
+  medium floor_reached at iter 5 at the same merit (9.074e-11 ≈ 9.025e-11), coarse still descending
+  below GV5.1 (2.044e-10 < 2.068e-10), k=1 standalone F_BL −31 % / merit 2.3× below, μ rejection-retries
+  0 (scaling the active ingredient); the window question reframed to an above-band-seed protocol
+  (candidate GV5.1c), floor-breaking = TE-band formulation work queued; next = the band (a) threshold
+  adjudication + GV5.1c or the TE-band formulation work,
   sequencing = user's call) and
   GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**

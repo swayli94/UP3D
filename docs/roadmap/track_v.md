@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 1P/1F/7R**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -527,12 +527,37 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   floor-active-null hypothesis dead), eps_diff ×4 moves the floor ≤ 6 %
   (not an artificial-viscosity truncation), and the pseudo-time
   controller bottoms out with the residual frozen = a formulation floor
-  that globalization alone cannot pass. V5 stays **OPEN**: next =
-  **GV5.1b design** (equilibration folded into the tight solve + a
-  damped/projected Newton targeting the scaled (A, Ψ) stiffness; band
-  (b)'s slope-2 window redefined BEFORE the floor), GV5.2/5.3/5.4
-  sequencing = the user's call; the V4-reopen trigger was considered
-  and NOT invoked. Remaining: RAE2822 transonic VII vs
+  that globalization alone cannot pass. **GV5.1b ✓ EXECUTED 2026-07-24**
+  (1 PASS / 1 FAIL / 7 RECORDED; `cases/analysis/v5_1b_scaled_newton/`,
+  VERDICT + PRE_REGISTRATION committed 8b7793f): the scaled + damped
+  Newton machinery is delivered and exact — solver-internal row/column
+  equilibration + Levenberg diagonal damping + a floor-reached stop,
+  flags default OFF (legacy path bit-reproduces the committed histories;
+  new `tests/test_v5_tight_scaled.py` (8), tight fleet 28 passed twice).
+  Band (a) suite PASS both levels; the medium live-seed e2 identity
+  reads 1.96e-10 vs a ≤ 1e-10 threshold chosen at implementation time
+  (NOT pre-registered) = SuperLU pivot-order roundoff through
+  cond(J) ~ 1e10, the backward-error floor — recorded FAIL, user
+  adjudication requested. Band (b): the amended seeds sit INSIDE the
+  10× floor band from iter 0 (F_BL = 1.00× the floor), no above-band
+  contraction segment exists by construction → the pre-registered
+  fallback: medium terminates floor_reached at iter 5 (replacing
+  GV5.1's 10-step λ-collapse crawl) at the same merit
+  (9.074e-11 ≈ 9.025e-11); coarse ends below GV5.1 and still
+  descending (merit 2.044e-10 < 2.068e-10); the k=1 standalone
+  descends markedly deeper (F_BL 3.268e-6, −31 % vs the k1seed; merit
+  2.3× below). Band (c): coarse 10 vs 8 NOT met, medium 5 vs 10 met
+  (degenerate band-entry iter 0). μ rejection-retries = 0 across all
+  three runs — the scaling is the active ingredient, the damping arm
+  inert at these states. The window question is REFRAMED, not
+  answered: it needs an above-band seed (early loose iterate /
+  perturbed δ*) = candidate GV5.1c; breaking the floor itself = the
+  TE-band (B, δ) formulation work, queued. VERDICT
+  `cases/analysis/v5_1b_scaled_newton/VERDICT.md`, design record
+  `docs/design_track_v.md` §14. V5 stays **OPEN**: next = the band (a)
+  threshold adjudication + GV5.1c (above-band seed) or the TE-band
+  formulation work, sequencing = the user's call; the V4-reopen
+  trigger stays parked. Remaining: RAE2822 transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp
   (GV5.3 — anchored on committed data only, no external CL figure), cost

@@ -117,6 +117,28 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   input; VERDICT + PRE_REGISTRATION + CSV/PNG in the dir, mesh generator `cases/meshes/fuselage_bor/`, design
   record `docs/design_track_v.md` §10) — `python cases/analysis/v3_fuselage_smoke/run.py --levels coarse` —
   ~17 min (exit 1 = honest FAIL present)
+- `v5_1b_scaled_newton/` — **Track V / V5** GV5.1b scaled + damped augmented Newton (the GV5.1
+  follow-up designed on the IBL-floor diagnosis; pre-registered 8b7793f before the first execution;
+  the GV5.1 amended protocol verbatim — HEAD-regen loose-converged seeds, wiring guard PASS both
+  legs), **1 PASS / 1 FAIL / 7 RECORDED** — the machinery is delivered and exact (solver-internal
+  row/column equilibration + Levenberg damping + floor-reached stop, flags default OFF = legacy path
+  bit-identical; band (a) suite + tight fleet 28 green); the FAIL is the medium live-seed e2
+  identity 1.96e-10 vs a ≤ 1e-10 threshold chosen at implementation time (NOT pre-registered) =
+  SuperLU pivot-order roundoff through cond(J) ~ 1e10, user adjudication requested (VERDICT §3);
+  band (b): the amended seeds sit INSIDE the 10× floor band from iter 0 (F_BL = 1.00× the floor) —
+  no above-band contraction segment exists by construction → pre-registered fallback: medium
+  termination floor_reached at iter 5 (replacing GV5.1's 10-step λ-collapse crawl) at the same
+  merit (9.074e-11 ≈ 9.025e-11), coarse ends below GV5.1 and still descending
+  (2.044e-10 < 2.068e-10), the k=1 standalone descends markedly deeper (F_BL 3.268e-6, −31 % vs
+  the k1seed; merit 2.3× below); band (c) coarse 10 vs 8 NOT met, medium 5 vs 10 met (degenerate
+  band-entry iter 0); μ rejection-retries 0 on all three runs — scaling the active ingredient; the
+  window question REFRAMED to an above-band-seed protocol (candidate GV5.1c); VERDICT +
+  PRE_REGISTRATION + CSVs in the dir, design record `docs/design_track_v.md` §14) —
+  `python cases/analysis/v5_1b_scaled_newton/run.py` — coarse leg ~5 min / medium ~27 min /
+  k=1 ~2 min under external load (2026-07-24 measurement; the default full run exits 1 = the
+  medium live-check FAIL above, see VERDICT §3; `--levels coarse` alone exits 0; a loose-regen
+  wiring-guard failure raises RuntimeError = recipe error; `--levels`/`--no-k1` for partial
+  re-runs)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS
@@ -165,6 +187,6 @@ table still listed only a1. Note two rows are NOT Track A — `b9_*` and
 here because they are studies, not capability demos. `v1_ibl3_standalone/`
 is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
 `v3_loose_coupling/`, `v3_fuselage_smoke/`, `v5_m6_bridge/`,
-`v5_ibl_floor/` and `v5_tight_coupling/` are Track V's GV2.1 / GV3.x /
-GV5.x gate cases (the `v5_ibl_floor/` one a RECORDED diagnosis, no
-bands), same status.)*
+`v5_1b_scaled_newton/`, `v5_ibl_floor/` and `v5_tight_coupling/` are
+Track V's GV2.1 / GV3.x / GV5.x gate cases (the `v5_ibl_floor/` one a
+RECORDED diagnosis, no bands), same status.)*

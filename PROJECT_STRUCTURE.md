@@ -500,6 +500,9 @@ cases/                     # Test cases and reference data
 │   ├── v2_transpiration_channel/ # [V2/GV2.1] transpiration channel (δ*→ṁ) verification
 │   ├── v3_fuselage_smoke/      # [V3/GV3.3] fuselage body-of-revolution smoke
 │   ├── v3_loose_coupling/      # [V3/GV3.1/3.2] loose coupling, NACA0012 2.5-D strip
+│   ├── v5_1b_scaled_newton/    # [V5/GV5.1b] scaled + damped augmented Newton
+│   │                           #   (1P/1F/7R: machinery exact, floor_reached stop works;
+│   │                           #   window question reframed to an above-band seed)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -534,6 +537,8 @@ tests/                     # Unit and gate tests
 ├── test_v5_tight_edge.py          # ✓ [V5] tight Stage 2: J_BL,φ = J_e·D_ue·G edge-chain FD gates
 ├── test_v5_tight_system.py        # ✓ [V5] tight Stage 3: full-system FD gate + smoke augmented
 │                                  #   Newton (line-search probe guard exercised green)
+├── test_v5_tight_scaled.py        # ✓ [V5/GV5.1b] scaled+damped path: 8 tests = scaling
+│                                  #   identities + μ schedule + floor-stop + k1 smoke
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1196,10 +1201,25 @@ artifact (equilibrated 2e4/7e5/1e7, sub-1e-6 → 0/0/2, no exact null
 directions), genuine scaled (A, Ψ) stiffness 1e5–1e7 remains; the floor
 residual lives at the TE band (B, δ) equations inside J's range; closure
 floors inactive; eps_diff ×4 ≤ 6 %; the pseudo-time controller bottoms
-out = a formulation floor globalization alone cannot pass; next = GV5.1b
-design — equilibration + damped/projected Newton, slope-2 window before
-the floor), GV5.2/5.3/5.4 sequencing = user's call;
-V4-reopen trigger considered, NOT invoked); Track A — A1, A2,
+out = a formulation floor globalization alone cannot pass); **GV5.1b ✓
+EXECUTED 2026-07-24 (1 PASS / 1 FAIL / 7 RECORDED,
+`cases/analysis/v5_1b_scaled_newton/`, design record
+`docs/design_track_v.md` §14)**: the scaled + damped machinery is
+delivered and exact (solver-internal row/column equilibration +
+Levenberg damping + floor-reached stop, flags default OFF = legacy
+bit-identical; `tests/test_v5_tight_scaled.py` (8), tight fleet 28
+green); the medium live-seed e2 FAIL is a non-pre-registered ≤1e-10
+threshold on a cond ~ 1e10 solve = SuperLU pivot-order machine floor,
+user adjudication requested; the amended seeds sit INSIDE the 10× floor
+band from iter 0 ⇒ no above-band window by construction — fallback:
+medium floor_reached at iter 5 at the same merit, coarse still
+descending below GV5.1, k=1 standalone F_BL −31 % / merit 2.3× below,
+μ rejection-retries 0 (scaling the active ingredient); the window
+question reframed to an above-band-seed protocol (candidate GV5.1c),
+floor-breaking = TE-band formulation work queued; next = the band (a)
+threshold adjudication + GV5.1c or the TE-band formulation work,
+GV5.2/5.3/5.4 sequencing = user's call;
+V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
@@ -1208,11 +1228,14 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **603 passed + 25 skipped + 2 xfailed** (2026-07-23, Track V
+Default suite: **611 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+V5 GV5.1b (scaled+damped augmented Newton; machinery exact, band (b) window
+question reframed); full-suite measured 611 @6556.77 s @16 threads (wall
+polluted by co-tenant load ~70–80, quoted flagged); +8 vs 603 =
+`test_v5_tight_scaled.py` (8). Previous 603:
 V5 GV5.1 (augmented tight (φ, Γ, U) Newton; FD exactness PASS both levels,
-quadratic tail HONEST FAIL on the IBL floor); full-suite measured 603
-@1537.09 s @16 threads; +20 vs 583 = `test_v5_tight_jacobian.py` (8) +
-`test_v5_tight_edge.py` (7) + `test_v5_tight_system.py` (5). Previous 583:
+quadratic tail HONEST FAIL on the IBL floor), 603 measured @1537.09 s;
+previous 583:
 V5 GV5.0 (M6 subsonic loose-coupling bridge, RECORDED entry check),
 583 measured @1218.05 s; previous 578:
 V3 loose coupling + GV3.1/3.2/3.3, 578 measured @1637.39 s; previous 571:

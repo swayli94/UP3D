@@ -416,3 +416,60 @@ GV5.1b 设计输入（排序待用户裁决）：① equilibration 并入紧解
 （GV5.4 的 BL 块预条件同样应按 (A,Ψ) 结构组织）；③ band (b) 的
 slope-2 窗口重定义为地板之前（地板已由本诊断钉死为公式性质，
 不再是收敛判据的一部分）；④ 全局化改动单用无效（Q7 已证）。
+
+## 14. V5 实现记录（GV5.1b scaled+damped Newton，2026-07-24）
+
+门禁 `cases/analysis/v5_1b_scaled_newton/`（预注册 8b7793f 先于首次
+执行；1 PASS / 1 FAIL / 7 RECORDED；`run.py` 单 runner 从头再生成
+全部 artifact，协议 = GV5.1 amended 逐字——松环重生成种子 + 接线
+守卫 |dcl_k0| ≤ 1e-8 两腿均过（coarse 1.56e-12 / medium 1.31e-9）；
+执行证据 `results/summary.csv` + `results/compare.csv` + 三条
+newton_history CSV，判决 `VERDICT.md`）。实现决策与结果：
+
+1. **求解器内部实现，装配逐位不动**。`newton_tight` 新增三旗标
+   `scaling / lm_damping / floor_stop`：每迭代对装好的全增广 J 做
+   一遍行/列 2-范数均衡（零安全）得 R、C，解 (R·J·C + μI) δy =
+   −R·F（splu，保稀疏、无法方程），δx = C·δy；μ 走确定性日程
+   （μ₀ = 1e-6，线搜索拒绝 ×10 封顶 1e2 并重解，接受 ÷3 封底
+   1e-12）；P8/P14 回溯 + 探针守卫逐字沿用；floor-reached 停止类
+   = merit 相对下降 < 1e-4 连续 3 个接受步。三旗标默认全关 =
+   legacy 路径逐位（对 committed k1seed 历史回归 rel ≤ 2e-6 通过；
+   tight 舰队 28 passed 两次，执行前后各一；新测试
+   `tests/test_v5_tight_scaled.py` 8 个）。
+2. **band (a) 套件精确；medium 活体 e2 记 FAIL = 阈值校准问题，
+   非代数错**。良态合成系统上的机器精度恒等式 + μ 日程转移全绿。
+   活体种子 J 上 e1（对角代数）≤ 2.6e-16 两级均过；e2（μ=0 阻尼
+   步 vs 无阻尼 splu 步）medium 1.96e-10 超实现时自设的 ≤1e-10
+   前向阈值——两矩阵数学相同，+0.0·I 引入的显式零元改变 SuperLU
+   列主序，差 = 经 cond(J) ~ 1e10 放大的舍入（backward-error
+   意义下恒等成立，离 cond·eps 上界还有 4 个 decade）。阈值非预
+   注册、事后未动；裁决请求在案（VERDICT §3：建议改 cond-aware
+   阈值读 PASS，套件仍是 binding gate，活体检查降为 RECORDED）。
+3. **band (b) 无窗可读 = 构造性结果，非机构失败**。amended 种子
+   本身就是松环末态，F_BL 自第 0 迭代坐在 1.00× 诊断地板
+   （coarse 3.154e-6/3.154e-6、medium 1.710e-6/1.712e-6），深在
+   预注册 10× 地板带内侧——全程无 above-band 收缩段，median-p
+   判读为空，走预注册 fallback（RECORDED）。fallback 读数：
+   medium termination = **floor_reached** 第 5 迭代干净收官
+   （merit 9.074e-11 ≈ GV5.1 的 9.025e-11），取代 GV5.1 的 10 步
+   λ-collapse 爬行；coarse 末 merit 2.044e-10 < GV5.1 的
+   2.068e-10 且仍在降（λ_last = 0.031 未塌）；k=1 standalone
+   下潜显著更深（F_BL 3.268e-6 vs k1seed 4.726e-6 = −31 %，
+   merit 2.25e-10 vs 5.28e-10 = 2.3× 低）——给足房间时缩放
+   Newton 确实下潜，但 10 步慢降不是二次尾段。
+4. **μ 惰性；缩放是活性成分**。三条 run 上 μ 拒绝重试合计 0 次，
+   μ 自 1e-6 单调衰减到 ~5e-11/1e-8——Levenberg 对角臂在这些态
+   上从未启用，与 §13 第 5 条"单靠全局化过不了地板"互证；真正
+   起作用的是行/列均衡（与 §13 第 2 条"cond 主要是缩放
+   artifact"互证）。阻尼代码路径保留（套件覆盖），但在
+   above-band 种子出现前不指望它起作用；均衡件是 GV5.4 预条件
+   的现成配料。
+5. **窗口问题被重构而非回答 → GV5.1c 输入**。要在地板带之上读
+   slope-2，需要 F_BL 高于地板带的种子（早松环迭代态或扰动 δ*
+   态；k=1 态也只有 1.5× 地板）；在此之前"增广 Newton 在地板
+   之前二次收敛" = 未检验而非证伪。破地板本身仍是公式层工作
+   （TE 带 (B,δ) 方程，§13 第 3 条），排队待用户裁决。band (c)
+   计数：coarse N_polish 10 vs 期望 ≤8 NOT met（记录）；medium
+   5 vs ≤10 met（退化：band-entry iter 0）。下一步 = band (a)
+   阈值裁决 + GV5.1c（above-band 种子）或 TE 带公式层工作，
+   排序 = 用户裁决；V4 重开触发保持挂起。
