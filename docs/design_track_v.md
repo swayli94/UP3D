@@ -530,3 +530,58 @@ session；runner 默认 16 不动，约束经环境变量落地并记入 artifac
    = 用户在 GV5.1d（近带种子）/ GV5.5（已登记的 TE 带 (B,δ) 公式层
    独立项，未开工）/ GV5.2 / GV5.3 / GV5.4 间排序；V4 重开触发保持
    挂起（预注册：本 gate 失败不触发）。
+
+## 16. V5 实现记录（GV5.1d 近带种子：地板紧邻处无二次盆，2026-07-24）
+
+门禁 `cases/analysis/v5_1d_near_band_window/`（预注册先于首次执行；
+**2 PASS / 1 FAIL / 7 RECORDED**；`run.py` 单 runner 从头再生成全部
+artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPORT
+不镜像；接线守卫两腿均过 coarse 1.56e-12 / medium 1.54e-9；执行证据
+`results/summary.csv` + `results/compare.csv` + 两条 newton_history CSV
++ 两条 seed_calibration CSV，判决 `VERDICT.md`）。**本 session 临时
+8 线程约束**（用户定，仅本 session；runner 默认 16 不动，约束经环境
+变量落地并记入 artifact；壁时不可与 16 线程账目直接比）。设计决策与
+结果：
+
+1. **近带种子按预注册交付**。窗 = T1 [1e-4, 1e-3] 主（medium 带的
+   5.8–58× / coarse 带的 3.2–31.6×——带正上方 1–2 个 decade，且低于
+   GV5.1c 中程停滞区 ~1e-2）/ T2 [1e-3, 1e-2] 升级（仅在 <3 above-band
+   三元组时触发；两级 T1 均 ≥3 三元组 ⇒ T2 未触发）。标定：coarse
+   ε = 10 → 种子 F_BL 1.711e-4（5.42× 带），medium ε = 56 → 6.02e-4
+   （35× 带），对分 4/6 次评估。
+2. **判读：地板紧邻处也不存在二次盆**（band (b)，medium binding
+   honest FAIL）。coarse：一次 λ = 0.5 封顶折半（1.7e-4 → 8.7e-5）后
+   爬行——λ 塌缩到 6e-5–8e-3，收缩因子 ≤ 0.03 dex/step，10 迭代走到
+   7.59e-5 = **地板的 24.07×（带的 2.4×）仍未进带**；median p = 0.35
+   （recorded），回归斜率 0.15。medium：第一个接受步把 F_BL **推离
+   带**（6.0e-4 → 9.8e-4——merit 1.82e-5 → 1.09e-5 全靠块再平衡
+   （F_φ 7.8e-4 → 4.9e-4）换得，BL 块反而增大），随后同样爬行到
+   8.43e-4 = **地板的 492.6×**；median p = 1.17 ∉ [1.5, 2.5] → FAIL，
+   回归斜率 0.88。两腿 termination 均为 cap；band-entry iter = none
+   （本 gate 提升为关键 datum——GV5.1c 从上方从未进带，GV5.1d 从近带
+   也未进带）。
+3. **物理读法**：GV5.1c 的"中程屏障+下方或有盆地"图像被否定——平坦/
+   锯齿 merit 邻域从 1e4× 地板一路延伸**向下到距地板 ~1.5 个 decade
+   内**（coarse 24× 处仍是停滞区）。与诊断自洽：缩放后 (A, Ψ) 刚度
+   1e5–1e7（findings Q2）意味着沿 Newton 方向的 merit 极平，线搜索
+   只能走 1e-3–1e-4 相对步——"收敛"的是线搜索不是模型。近带处
+   Newton 方向甚至不是 BL 下降方向（medium 第一步）。p 序列的
+   0.06…8.45…128 散布判为平台上的舍入噪声，非收缩regime。
+4. **band (a) PASS 两腿**（cond-aware e2 容差沿用上轮裁决）：扰动种子
+   J 上 e1 2.6e-16/2.3e-16、e2 1.54e-11/1.20e-11（容差 9.2e-2/9.7e-2，
+   ~12 个 decade 余量）、e3 6.7e-12/7.1e-12。套件 49 passed 两次
+   （执行前后；tight 舰队 33 + 9 + 新 7 `tests/test_v5_near_band_seed.py`
+   合成映射测试）。μ 拒绝重试**第三次为 0**（μ 1e-6 → 5e-11）——
+   Levenberg 臂在三类种子（amended / above-band / near-band）下均不
+   启用；行/列均衡仍是唯一活性配料。
+5. **medium 不动点**：8 线程下仍是第 4 个不动点（cl 0.28245999，
+   n_outer 3，未扰动 F_BL 1.824e-6 = 1.07× 地板）——与 GV5.1c 同一
+   散布；coarse 逐位一致（cl 0.26791639）。近带判读引用 committed
+   地板带，不受散布影响（窗以带为单位）。
+6. **程序状态**：盆地搜寻穷尽（GV5.1b 全局化 / GV5.1c 远种子 /
+   GV5.1d 近种子全部无法下降最后 ~1.5 个 decade）——地板及其平坦
+   邻域是同一障碍，且是公式层的：**GV5.5（TE 带 (B,δ) 公式层独立项，
+   机制上 = 诊断行命名的 row 0 x-动量 + row 2 动能）成为破地板唯一
+   在册路线**；GV5.4 块预条件解决成本不解决地板。V4 重开触发保持
+   挂起（预注册：本 gate 失败不触发）。下一步 = 用户在 GV5.5 /
+   GV5.2 / GV5.3 / GV5.4 间排序。

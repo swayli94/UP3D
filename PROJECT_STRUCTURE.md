@@ -508,6 +508,10 @@ cases/                     # Test cases and reference data
 │   │                           #   slope-2 window read (2P/1F/7R: NO quadratic regime
 │   │                           #   above the floor — λ-capped halvings + a mid-range
 │   │                           #   stall, never reaching the band)
+│   ├── v5_1d_near_band_window/ # [V5/GV5.1d] the near-band seed: does a quadratic
+│   │                           #   basin exist ADJACENT to the floor? (2P/1F/7R: NO —
+│   │                           #   the stall extends down to 24× floor; medium's first
+│   │                           #   step moves AWAY from the band)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -537,6 +541,10 @@ tests/                     # Unit and gate tests
 ├── test_v5_above_band_seed.py         # ✓ [V5/GV5.1c] synthetic seed-helper tests (9):
 │                                  #   perturbation mask + calibration bisection + triple
 │                                  #   filter + regression slope + pooled verdict logic
+├── test_v5_near_band_seed.py          # ✓ [V5/GV5.1d] synthetic near-band tests (7):
+│                                  #   window sanity vs both floor bands + the GV5.1c
+│                                  #   stall region / escalation direction / band-entry
+│                                  #   read / near-band calibration / imported-helper id
 ├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
 │                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
 ├── v5_state.py                    # ✓ [V5] shared GV5.1 builders: the 2.5-D NACA0012 strip case
@@ -1235,10 +1243,19 @@ p = 1.00 by construction; then a mid-range stall at F_BL ~ 1e-2, never
 reaching the band; binding medium median p = 0.56 honest FAIL; μ retries
 0 again; band (a) PASS with the cond-aware e2 tolerance pre-registered);
 the tight-Newton obstacle is bigger than the floor — a mid-range descent
-barrier 3–4 decades above it (near-band-seed follow-up = candidate
-GV5.1d, user adjudication); floor-breaking registered as the STANDALONE
+barrier 3–4 decades above it → **GV5.1d ✓ EXECUTED 2026-07-24 (2 PASS /
+1 FAIL / 7 RECORDED, `cases/analysis/v5_1d_near_band_window/`, design
+record `docs/design_track_v.md` §16)**: near-band seeds (T1 = [1e-4,
+1e-3]; coarse 5.42× / medium 35× the band) — NO quadratic basin
+adjacent to the floor either (coarse crawls to 24× floor, never
+entering the band; medium's first accepted step moves F_BL AWAY from
+the band, then crawls to 493×; binding medium median p = 1.17 honest
+FAIL; μ retries 0 a third time) — the flat/ragged merit neighborhood
+extends down to within ~1.5 decades of the floor: basin hunting
+exhausted (GV5.1b/1c/1d), GV5.5 now the only registered route for the
+floor itself; floor-breaking registered as the STANDALONE
 item **GV5.5 TE-band (B, δ) formulation** (2026-07-24, user-directed,
-NOT opened); next = GV5.1d or GV5.5 or
+NOT opened); next = GV5.5 or
 GV5.2/5.3/5.4 sequencing = user's call;
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4

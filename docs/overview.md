@@ -292,10 +292,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   地板前 slope-2 窗——**地板之上处处无二次收缩**：干净下降段全是线搜索封顶折半（λ = 0.5 → p = 1.00 构造值），
   随后中程停滞（F_BL ~ 3e-2 → 1.3e-2/2.2e-2，10 迭代内从未进带，距地板 4262×/12867×），binding medium
   median p = 0.56 honest FAIL；紧 Newton 的障碍不止地板——其上 3–4 个 decade 还有一道中程下降屏障；
-  近带种子是否有局部二次盆 = 后续问题（候选 GV5.1d，待裁决）；μ 拒绝重试再为 0；band (a) PASS 两腿
+  近带种子是否有局部二次盆 = 后续问题 → **GV5.1d ✓ EXECUTED 2026-07-24**（2P/1F/7R，
+  `cases/analysis/v5_1d_near_band_window/`：近带种子 T1 = [1e-4, 1e-3]（coarse 5.4×/medium 35× 带）
+  ——**地板紧邻处也无二次盆**：coarse 一次封顶折半后爬行（λ → 6e-5）至 24× 地板仍未进带，medium 首个
+  接受步把 F_BL 推离带（6.0e-4 → 9.8e-4，merit 靠块再平衡换得）后爬行至 493×；binding medium
+  median p = 1.17 honest FAIL；μ 拒绝重试第三次为 0——平坦/锯齿 merit 邻域向下延伸到距地板
+  ~1.5 个 decade 内，盆地搜寻穷尽（GV5.1b/1c/1d），**GV5.5 成为破地板唯一在册路线**）；μ 拒绝重试再为 0；band (a) PASS 两腿
   （cond-aware e2 容差本次预注册）；8 线程临时约束下执行（runner 默认 16，壁时标记）；medium 不动点在
   8 线程下再次散布（第 4 个不动点 cl 0.28245999，coarse 逐位一致））；破地板本身登记为独立项
-  **GV5.5 TE 带 (B,δ) 公式层**（2026-07-24 用户定，未开工，排序待裁决）；GV5.1d/5.2/5.3/5.4/5.5 排序待
+  **GV5.5 TE 带 (B,δ) 公式层**（2026-07-24 用户定，未开工，排序待裁决）；GV5.2/5.3/5.4/5.5 排序待
   用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）

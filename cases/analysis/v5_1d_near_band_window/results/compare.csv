@@ -1,0 +1,37 @@
+level,metric,gv5_1d,committed_reference,note
+coarse,BAND-ENTRY iter T1 (T2 if fired),none,GV5.1c: never (both levels),the key new datum -- a near-band trajectory reaching the band has traversed the near-band region
+coarse,N_polish (T1[+T2]) / N_total vs committed loose outer,10 / 14,4,regen loose n_outer=4
+coarse,T1 F_BL p above the floor band,i2:0.10; i3:0.44; i4:0.25; i5:0.25; i6:2.00; i7:0.02; i8:128.24; i9:0.96,,the band-(b) read
+coarse,T1 contraction factors log10(e_prev/e_i),i1:0.30dex; i2:0.03dex; i3:0.01dex; i4:0.00dex; i5:0.00dex; i6:0.00dex; i7:0.00dex; i8:0.00dex; i9:0.00dex,,fallback context
+coarse,T1 eps / seed |F_BL|_max (NEAR-BAND),1.000000e+01 / 1.711268e-04,window [1e-04,1e-03],5.42e+00x the floor band; 4 calibration evals; GV5.1c's T1 was [5e-2,5e-1]
+coarse,T1 final merit,2.065417e-07,GV5.1b 2.043853e-10 / GV5.1c 4.246145e-03,vs the committed finals (read; never recomputed)
+coarse,T1 final |F_BL|_max vs floor,7.592872e-05,GV5.1b 3.070478e-06 / GV5.1c 1.344172e-02,24.07x the diagnosed floor
+coarse,T1 merit p (all contractions),i2:0.07; i3:0.43; i4:0.33; i5:0.17; i6:0.05; i7:0.16; i8:100.54; i9:92.88; i10:0.05,,recorded alongside per the prereg
+coarse,T1 regression slope log e_{i+1} vs log e_i,0.15 over 9 pairs,,fallback context (>= 3 pairs)
+coarse,T1 termination / converged,cap / False,GV5.1b: floor_reached (medium) / cap (coarse); GV5.1c: cap (both),
+coarse,above-band triples T1 / pooled,8 / 8,>= 3 -> median-p band applies,T2 escalation fired: False
+coarse,band_a_e1 diag(rn)@Jsc@diag(cn) vs J (relerr),2.624e-16,<= 1e-12,on the perturbed T1-seed J
+coarse,band_a_e2 mu=0 damped vs undamped splu (relerr),1.544e-11,<= 9.2e-02,cond-aware tolerance carried in (the GV5.1b adjudication)
+coarse,band_a_e3 dx = C dy round-trip (relerr),6.730e-12,<= 1e-06,
+coarse,loose committed: cl / ds_max / ibl_floor,,0.26776443 / 4.602235e-03 / 3.113e-06,read; never recomputed
+coarse,mu schedule: final mu / total reject-retries (T1),5.081e-11 / 0,,
+coarse,polish wall time (s) T1[+T2],2,,threads=8 (temporary 8-thread session constraint; runner default 16)
+coarse,unperturbed seed |F_BL|_max (x the diagnosed floor),3.153842e-06 (1.00x),floor 3.154e-06,the GV5.1b constructional read (inside the band)
+medium,BAND-ENTRY iter T1 (T2 if fired),none,GV5.1c: never (both levels),the key new datum -- a near-band trajectory reaching the band has traversed the near-band region
+medium,N_polish (T1[+T2]) / N_total vs committed loose outer,10 / 13,5,regen loose n_outer=3
+medium,T1 F_BL p above the floor band,i3:1.01; i4:8.45; i5:0.06; i6:0.90; i7:1.34; i8:2.86; i9:0.37; i10:5.38,,the band-(b) read
+medium,T1 contraction factors log10(e_prev/e_i),i2:0.00dex; i3:0.00dex; i4:0.03dex; i5:0.00dex; i6:0.00dex; i7:0.00dex; i8:0.01dex; i9:0.00dex; i10:0.01dex,,fallback context
+medium,T1 eps / seed |F_BL|_max (NEAR-BAND),5.623413e+01 / 6.022058e-04,window [1e-04,1e-03],3.52e+01x the floor band; 6 calibration evals; GV5.1c's T1 was [5e-2,5e-1]
+medium,T1 final merit,8.609768e-06,GV5.1b 9.074491e-11 / GV5.1c 8.613065e-03,vs the committed finals (read; never recomputed)
+medium,T1 final |F_BL|_max vs floor,8.432515e-04,GV5.1b 1.708125e-06 / GV5.1c 2.202837e-02,492.55x the diagnosed floor
+medium,T1 merit p (all contractions),i2:0.03; i3:0.93; i4:6.37; i5:0.09; i6:0.82; i7:1.19; i8:3.61; i9:0.94; i10:0.70,,recorded alongside per the prereg
+medium,T1 regression slope log e_{i+1} vs log e_i,0.88 over 9 pairs,,fallback context (>= 3 pairs)
+medium,T1 termination / converged,cap / False,GV5.1b: floor_reached (medium) / cap (coarse); GV5.1c: cap (both),
+medium,above-band triples T1 / pooled,8 / 8,>= 3 -> median-p band applies,T2 escalation fired: False
+medium,band_a_e1 diag(rn)@Jsc@diag(cn) vs J (relerr),2.275e-16,<= 1e-12,on the perturbed T1-seed J
+medium,band_a_e2 mu=0 damped vs undamped splu (relerr),1.198e-11,<= 9.7e-02,cond-aware tolerance carried in (the GV5.1b adjudication)
+medium,band_a_e3 dx = C dy round-trip (relerr),7.129e-12,<= 1e-06,
+medium,loose committed: cl / ds_max / ibl_floor,,0.27190697 / 6.840905e-03 / 1.160e-06,read; never recomputed
+medium,mu schedule: final mu / total reject-retries (T1),5.081e-11 / 0,,
+medium,polish wall time (s) T1[+T2],4,,threads=8 (temporary 8-thread session constraint; runner default 16)
+medium,unperturbed seed |F_BL|_max (x the diagnosed floor),1.823848e-06 (1.07x),floor 1.712e-06,the GV5.1b constructional read (inside the band)
