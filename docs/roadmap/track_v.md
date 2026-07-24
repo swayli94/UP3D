@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 TE-band (B,δ) formulation REGISTERED 2026-07-24, NOT opened)**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF)**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -357,26 +357,40 @@ band, so exact Schur elimination may not pay: measure, don't assume).
 - [ ] **GV5.4 cost (RECORDED)**: augmented step wall-time ≤ ~2× the inviscid
   Newton step on M6 medium with the block preconditioner working; measured
   number recorded either way.
-- [ ] **GV5.5 TE-band (B, δ) formulation — breaking the IBL floor
-  (STANDALONE ITEM, registered 2026-07-24, user-directed; NOT opened;
-  sequencing after GV5.1c = user's call)**. Target: the steady-IBL residual
-  floor (max-norm coarse 3.154e-6 / medium 1.710e-6, the committed
-  loose-final floors) localized by the committed diagnosis
+- [x] **GV5.5 TE-band (B, δ) formulation — breaking the IBL floor
+  (STANDALONE ITEM, registered 2026-07-24, user-directed; OPENED and
+  EXECUTED 2026-07-24 — 2 PASS / 1 FAIL / 9 RECORDED)**. Target: the
+  steady-IBL residual floor (max-norm coarse 3.154e-6 / medium 1.710e-6,
+  the committed loose-final floors) localized by the committed diagnosis
   (`cases/analysis/v5_ibl_floor/` findings Q5 = design doc §13 item 3) in
   the **TE-band (B, δ) equations**, lying essentially entirely inside J's
   range — a formulation floor (Q7: the pseudo-time controller bottoms out
   with the residual frozen), not a solver limitation, and not crossable by
   globalization alone (GV5.1b: scaling + damping delivered and exact, μ
-  inert, floor intact). Candidate routes (recorded at registration; the
-  choice is made at opening): TE natural-outflow discretization work on
-  the (B, δ) equations; closure regularization in the TE band. Success
-  criterion sketch — to be pre-registered BEFORE code per discipline when
-  the item opens: the standalone IBL floor descends below the committed
-  floors by a pre-registered factor on the same 2.5-D testbed, with the
-  GV1.1/V3 evidence base re-checked (closure/discretization edits re-open
-  those gates' comparability — bands re-quoted, not silently inherited).
-  Explicitly OUT of GV5.1c scope (GV5.1c measures the pre-floor window
-  with the floor in place; GV5.5 attacks the floor itself). Prereq: none
+  inert, floor intact). Route chosen at opening per the registration:
+  (a) TE natural-outflow discretization work FIRST, as the row-level
+  variant **V1 = TE-outflow row replacement** (first-order extrapolation:
+  δ-carrier row 6i+0 `R = δ_i − δ_up`, H-carrier row 6i+2
+  `R = H_i − H_up`, exact Jacobian rows, CSR in-pattern guard, default-OFF
+  flag `te_extrapolate`; `te_outflow_pairs` supplied by the case layer).
+  **Outcome (cases/analysis/v5_5_te_floor/VERDICT.md): V1 does NOT break
+  the floor** — the variant system sees the amended seed at residual
+  9.8/4.8 (the replaced rows measure the natural TE jump), the pseudo-time
+  stalls (all steps rejected, cfl → 1e-3 floor), and the BINDING m2
+  (original-system residual at the V1 terminal) lands 5554× (coarse) /
+  245998× (medium, vs the seed's own flag-OFF floor per the scatter
+  clause) ABOVE the floor — the pre-registered "worse" clause; the damage
+  peaks at the LE suction zone (x_c ≈ 0.027, F_B/F_Psi), not the TE.
+  Band (a) FD PASS both levels; V0 control coarse bit-close, medium on
+  the 4th fixed point (scatter clause handled as pre-registered); guards:
+  plate H bands PASS flag-ON, loose smoke flag-ON coarse RED (cl_rel
+  2.62% > 2.5%, cap-hit) / medium marginal PASS (2.49%); tight polish
+  secondary read no floor break either (7.32e-5 / diverged 3.98 vs
+  committed finals 3.07e-6 / 1.708e-6). The flag stays default-OFF
+  (legacy paths bit-identical); the escalation ladder (upwind
+  boundary-flux (a)-variant / closure regularization (b)) stays
+  registered-not-opened — opening = user's adjudication. Executed under
+  the temporary 8-thread session constraint. Prereq: none
   beyond the committed diagnosis; the GV5.1c window read is informative
   but NOT binding for the opening.
 
@@ -631,11 +645,29 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   Executed under the temporary 8-thread session constraint; medium on
   the same 4th fixed point as GV5.1c (cl 0.28245999; coarse
   bit-identical). Design record `docs/design_track_v.md` §16. V5
-  stays **OPEN**: next = the user's sequencing call among **GV5.5**
-  (the registered TE-band (B, δ) formulation item, NOT opened — per
-  GV5.1d the only registered route for the floor itself),
-  GV5.2/GV5.3/GV5.4; the V4-reopen
-  trigger stays parked. Remaining: RAE2822
+  stays **OPEN**; the V4-reopen trigger stays parked.
+- **GV5.5 TE-band (B, δ) formulation — EXECUTED 2026-07-24 (2 PASS /
+  1 FAIL / 9 RECORDED, `cases/analysis/v5_5_te_floor/`)**: route (a)
+  variant V1 = TE-outflow row replacement (first-order extrapolation on
+  the δ-carrier row 6i+0 and the H-carrier row 6i+2, exact Jacobian rows,
+  default-OFF flag `te_extrapolate`) does **NOT** break the floor — the
+  amended seed sits at variant residual 9.8 (coarse) / 4.8 (medium), the
+  pseudo-time stalls with all steps rejected, and the BINDING m2
+  (original-system residual at the V1 terminal) = 1.752e-2 = **5554×**
+  the floor (coarse) / 4.487e-1 = **245998×** the seed's own flag-OFF
+  floor (medium; the 8-thread scatter clause fired — the 4th fixed point
+  cl 0.28245999 again, handled as pre-registered) — the pre-registered
+  "worse" clause. Band (a) FD PASS both levels (≤1.8e-7); the damage
+  peaks at the **LE suction zone** (x_c ≈ 0.027, F_B/F_Psi rows), not
+  the TE; tight-polish secondary read no floor break either (coarse
+  7.32e-5 vs committed 3.07e-6; medium diverged 3.98). Guards: plate H
+  bands PASS flag-ON; loose smoke flag-ON coarse RED (cl_rel 2.62% >
+  2.5%, cap-hit) / medium marginal PASS (2.49%). The flag stays
+  default-OFF (legacy bit-identical); the escalation ladder (upwind
+  boundary-flux (a)-variant / closure regularization (b)) stays
+  registered-not-opened — opening = user's adjudication. Design record
+  `docs/design_track_v.md` §17. Next = **GV5.2/GV5.3/GV5.4** (user
+  sequencing 2026-07-24: GV5.1d → GV5.5 → GV5.2–5.4). Remaining: RAE2822
   transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp

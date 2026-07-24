@@ -1,15 +1,30 @@
 # pyFP3D Agent Rules
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.1d the near-band window read ✓ EXECUTED 2026-07-24 (2 PASS /
-1 FAIL / 7 RECORDED; `cases/analysis/v5_1d_near_band_window/` — NO
+GV5.5 the TE-band (B, δ) formulation floor-breaking item ✓ EXECUTED
+2026-07-24 (2 PASS / 1 FAIL / 9 RECORDED;
+`cases/analysis/v5_5_te_floor/` — route (a) variant V1 = TE-outflow row
+replacement (first-order extrapolation on the δ-carrier row 6i+0 / the
+H-carrier row 6i+2, exact Jacobian rows, default-OFF flag
+`te_extrapolate`) does NOT break the floor: the amended seed sits at
+variant residual 9.8/4.8, the pseudo-time stalls with all steps
+rejected, and the BINDING m2 (original-system residual at the V1
+terminal) = 5554× the floor (coarse) / 245998× the seed's own flag-OFF
+floor (medium; the 8-thread scatter clause fired — the 4th fixed point
+cl 0.28245999 again) — the pre-registered "worse" clause; the damage
+peaks at the LE suction zone (x_c ≈ 0.027, F_B/F_Psi rows), not the
+TE; band (a) FD PASS both levels; tight-polish secondary read no floor
+break either; the flag stays default-OFF (legacy bit-identical) and the
+escalation ladder (upwind boundary-flux (a)-variant / closure
+regularization (b)) stays registered-not-opened — opening = user's
+adjudication). Previous within V5: GV5.1d the near-band window read ✓
+EXECUTED 2026-07-24 (2 PASS /
+1 FAIL / 7 RECORDED — NO
 quadratic basin adjacent to the floor either: near-band seeds
 (5.4×/35× the band) stall immediately (λ → 1e-3–1e-4, ≤ 0.03 dex/step;
 medium's first step moves AWAY from the band), coarse crawling to 24×
 floor, band never entered; binding medium median p = 1.17 honest FAIL;
-basin hunting exhausted (GV5.1b/1c/1d) — GV5.5 now the only registered
-route for the floor itself; the verdict
-paragraphs follow the GV5.1b recap below). Previous within V5: GV5.1c
+basin hunting exhausted (GV5.1b/1c/1d)), GV5.1c
 the above-band window read ✓ EXECUTED 2026-07-24 (2 PASS /
 1 FAIL / 7 RECORDED — NO quadratic regime anywhere above the floor:
 λ-capped halvings p = 1.00
@@ -22,9 +37,8 @@ PASS; 1/1/7 as executed, preserved in commit 1c55906), GV5.1 augmented
 EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) + IBL-floor follow-up
 diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED), and earlier the GV5.0
 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED
-entry check, 16 RECORDED / 0 FAIL).** Also registered 2026-07-24
-(user-directed): **GV5.5 TE-band (B, δ) formulation** — the
-floor-breaking work as a STANDALONE item, NOT opened. New machinery
+entry check, 16 RECORDED / 0 FAIL).** Next = **GV5.2 / GV5.3 / GV5.4**
+(user sequencing 2026-07-24). New machinery
 `viscous/coupling.py::build_wing_case`
 (3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
 outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked
@@ -182,6 +196,36 @@ medium on the same 4th fixed point as GV5.1c (cl 0.28245999; coarse
 bit-identical). Next = the user's sequencing call among GV5.5 /
 GV5.2 / GV5.3 / GV5.4; the V4-reopen trigger stays parked. Design
 record `docs/design_track_v.md` §16.
+**GV5.5 ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 9 RECORDED;
+`cases/analysis/v5_5_te_floor/`, VERDICT + PRE_REGISTRATION committed
+pre-execution, implementation + tests + runner committed): the first
+formulation-level TE treatment does NOT break the floor.** Route (a)
+variant V1 = TE-outflow row replacement (row 6i+0 δ-carrier / row 6i+2
+H-carrier first-order extrapolation `R = U_i − U_up`, exact Jacobian
+rows with an out-of-pattern construction guard, default-OFF flag
+`te_extrapolate`; `te_outflow_pairs` from the case layer). Band (a) FD
+PASS both levels (≤ 1.8e-7); V0 control coarse bit-close to the
+committed floor, medium on the 4th fixed point (cl 0.28245999 — the
+8-thread scatter clause fired, floor_ref = the seed's own flag-OFF
+floor 1.824e-6). The variant system sees the amended seed at residual
+9.8 (coarse) / 4.8 (medium) — the replaced rows measure the natural TE
+jump — the pseudo-time stalls with every step rejected (cfl → 1e-3
+floor), and the BINDING m2 (original-system residual at the V1
+terminal) = 1.752e-2 = **5554×** the floor (coarse) / 4.487e-1 =
+**245998×** the floor_ref (medium) — the pre-registered "worse"
+clause; the m2 peak sits at the **LE suction zone** (x_c ≈ 0.027,
+F_B/F_Psi rows), not the TE. Tight-polish secondary read: coarse
+7.32e-5 vs committed 3.07e-6; medium diverged (3.98). Guards: plate H
+bands PASS flag-ON (lam [2.606, 2.687], turb [1.509, 1.872]); loose
+smoke flag-ON coarse RED (cl_rel 2.62% > 2.5%, 10-outer cap hit) /
+medium marginal PASS (2.49%, 3 outer converged). The flag stays
+default-OFF (legacy paths bit-identical; 9 new tests
+`tests/test_v5_te_outflow.py`, tight fleet + full suite green
+flag-OFF); the escalation ladder (upwind boundary-flux (a)-variant /
+closure regularization (b)) stays registered-not-opened — opening =
+user adjudication. Executed under the temporary 8-thread session
+constraint. Next = **GV5.2 / GV5.3 / GV5.4** (user sequencing
+2026-07-24). Design record `docs/design_track_v.md` §17.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -905,8 +949,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   GV5.1 ✓ EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b ✓ EXECUTED
   (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed) ·
   GV5.1c ✓ EXECUTED (2 PASS / 1 FAIL / 7 RECORDED) · GV5.1d ✓ EXECUTED
-  (2 PASS / 1 FAIL / 7 RECORDED) · GV5.5 TE-band
-  (B, δ) formulation REGISTERED 2026-07-24, NOT opened)** —
+  (2 PASS / 1 FAIL / 7 RECORDED) · GV5.5 ✓ EXECUTED
+  (2 PASS / 1 FAIL / 9 RECORDED))** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
@@ -956,11 +1000,16 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   493×; binding medium median p = 1.17 honest FAIL; μ retries 0 a
   third time): the flat/ragged merit neighborhood extends down to
   within ~1.5 decades of the floor — basin hunting exhausted
-  (GV5.1b/1c/1d), GV5.5 now the only registered route for the floor
-  itself; remaining = **GV5.5** (the registered standalone TE-band
-  (B, δ) formulation item, NOT opened; sequencing = user's call), GV5.2
-  RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
-  experimental CL committed), GV5.4 cost; V6 wake sheet;
+  (GV5.1b/1c/1d) → **GV5.5 ✓ EXECUTED 2026-07-24** (2P/1F/9R,
+  `cases/analysis/v5_5_te_floor/`): the TE-outflow row replacement (V1)
+  does NOT break the floor — binding m2 = 5554× (coarse) / 245998×
+  (medium, scatter clause) the floor, the "worse" clause; the damage
+  peaks at the LE suction zone, not the TE; flag default-OFF, the
+  escalation ladder stays registered-not-opened (opening = user
+  adjudication); remaining = **GV5.2**
+  RAE2822, **GV5.3** anchored on the committed M6 experiment **Cp** (no
+  experimental CL committed), **GV5.4** cost (user sequencing
+  2026-07-24: GV5.1d → GV5.5 → GV5.2–5.4); V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on
   hand: Drela 2013 = AIAA 2013-2437 (`docs/references/`, gitignored).
   **V1 shipped + GV1.1 executed 2026-07-22** (`pyfp3d/viscous/`:
@@ -1057,7 +1106,15 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **627 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+Baseline: **636 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+GV5.5 executed** (the TE-band (B, δ) formulation item: the V1 TE-outflow row
+replacement does NOT break the floor — binding m2 5554×/245998× the floor,
+the "worse" clause; flag default-OFF — VERDICT
+`cases/analysis/v5_5_te_floor/VERDICT.md`); full-suite measured 636
+@1402.11 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries); +9 vs the 627
+below = `tests/test_v5_te_outflow.py` (9)).
+Previous: 627 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1d executed** (the near-band window read: NO quadratic basin adjacent to
 the floor either — near-band seeds stall immediately, coarse crawling to 24×
 floor, medium's first step moving AWAY from the band; binding medium median

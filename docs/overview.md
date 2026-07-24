@@ -297,11 +297,19 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   ——**地板紧邻处也无二次盆**：coarse 一次封顶折半后爬行（λ → 6e-5）至 24× 地板仍未进带，medium 首个
   接受步把 F_BL 推离带（6.0e-4 → 9.8e-4，merit 靠块再平衡换得）后爬行至 493×；binding medium
   median p = 1.17 honest FAIL；μ 拒绝重试第三次为 0——平坦/锯齿 merit 邻域向下延伸到距地板
-  ~1.5 个 decade 内，盆地搜寻穷尽（GV5.1b/1c/1d），**GV5.5 成为破地板唯一在册路线**）；μ 拒绝重试再为 0；band (a) PASS 两腿
+  ~1.5 个 decade 内，盆地搜寻穷尽（GV5.1b/1c/1d））；μ 拒绝重试再为 0；band (a) PASS 两腿
   （cond-aware e2 容差本次预注册）；8 线程临时约束下执行（runner 默认 16，壁时标记）；medium 不动点在
-  8 线程下再次散布（第 4 个不动点 cl 0.28245999，coarse 逐位一致））；破地板本身登记为独立项
-  **GV5.5 TE 带 (B,δ) 公式层**（2026-07-24 用户定，未开工，排序待裁决）；GV5.2/5.3/5.4/5.5 排序待
-  用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  8 线程下再次散布（第 4 个不动点 cl 0.28245999，coarse 逐位一致））→ **GV5.5 ✓ EXECUTED 2026-07-24**
+  （2P/1F/9R，`cases/analysis/v5_5_te_floor/`：破地板独立项——路线 (a) 变体 V1 = TE 出流行替换
+  （δ 载体行 6i+0 / H 载体行 6i+2 一阶外推，精确雅可比行，默认 OFF flag）**不破地板**——变体系统在
+  种子处残差 9.8/4.8（替换行测得 TE 自然跳量），伪时间全步拒 stalled，binding m2（V1 终态上的原系统
+  残差）= 5554×（coarse）/ 245998×（medium，8 线程散布条款触发，用种子自身 flag-OFF 地板）——
+  预注册"变差"档；破坏峰值在 LE 吸力区（x_c ≈ 0.027，F_B/F_Psi 行）而非 TE；tight 次要读数同样不破
+  （coarse 7.32e-5 vs committed 3.07e-6；medium 发散 3.98）；guards：平板 H 带 flag-ON 过，松环 smoke
+  flag-ON coarse 红（cl_rel 2.62% > 2.5%，撞 10-outer 帽）/ medium 边际过（2.49%）；flag 保持默认
+  OFF（legacy 逐位一致），升级阶梯（upwind 边界通量 (a)-变体 / 闭包正则化 (b)）保持登记未开——
+  开启 = 用户裁决）；下一步 = **GV5.2/5.3/5.4**（用户 2026-07-24 排序：GV5.1d → GV5.5 → GV5.2–5.4）；
+  GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -335,7 +343,13 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **627 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1d
+现基线 **636 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.5
+执行**（TE 带 (B,δ) 公式层破地板独立项：V1 TE 出流行替换**不破地板**——binding
+m2 = 5554×/245998× 地板，"变差"档；破坏峰值在 LE 吸力区而非 TE；flag 保持默认
+OFF——VERDICT `cases/analysis/v5_5_te_floor/VERDICT.md`）：全套件实测 636
+@1402.11 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比）；+9 vs 下档 627 = `tests/test_v5_te_outflow.py`（9））。
+上一档 627+25+2（2026-07-24 Track V **V5 GV5.1d
 执行**（近带种子读地板紧邻处二次盆：同样无盆——近带种子立即停滞，coarse 爬至
 24× 地板未进带，medium 首步推离带；binding medium median p = 1.17 honest FAIL——
 VERDICT `cases/analysis/v5_1d_near_band_window/VERDICT.md`）：全套件实测 627

@@ -189,6 +189,30 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/v5_1d_near_band_window/run.py` — coarse ~0.5 min / medium ~1.3 min
   at 8 threads unloaded (2026-07-24 measurement; exit 1 = honest FAIL present; a loose-regen
   wiring-guard failure raises RuntimeError = recipe error; `--levels` for partial re-runs)
+- `v5_5_te_floor/` — **Track V / V5** GV5.5 TE-band (B, δ) formulation — breaking the IBL
+  floor (STANDALONE item, registered + opened + executed 2026-07-24, user-directed;
+  pre-registered before the first code change): route (a) variant V1 = TE-outflow row
+  replacement (δ-carrier row 6i+0 / H-carrier row 6i+2 first-order extrapolation
+  `R = U_i − U_up`, exact Jacobian rows, CSR in-pattern guard, default-OFF flag
+  `te_extrapolate`; `te_outflow_pairs` from the case layer), **2 PASS / 1 FAIL /
+  9 RECORDED** — **V1 does NOT break the floor**: the variant system sees the amended
+  seed at residual 9.8 (coarse) / 4.8 (medium) — the replaced rows measure the natural
+  TE jump — the pseudo-time stalls with every step rejected (cfl → 1e-3 floor), and the
+  BINDING m2 (original-system residual at the V1 terminal) = 1.752e-2 = **5554×** the
+  committed floor (coarse; V0 control bit-close, control_rel 1.06e-4) / 4.487e-1 =
+  **245998×** the seed's own flag-OFF floor (medium — the 8-thread scatter clause fired,
+  the 4th fixed point cl 0.28245999 again) — the pre-registered "worse" clause; band (a)
+  FD PASS both levels (≤ 1.8e-7); the m2 peak sits at the **LE suction zone**
+  (x_c ≈ 0.027, F_B/F_Psi rows), not the TE; tight-polish secondary read no floor break
+  either (coarse 7.32e-5 vs committed 3.07e-6; medium diverged 3.98); guards: plate H
+  bands PASS flag-ON, loose smoke flag-ON coarse RED (cl_rel 2.62% > 2.5%, cap-hit) /
+  medium marginal PASS (2.49%); the flag stays default-OFF (legacy bit-identical), the
+  escalation ladder (upwind boundary-flux (a)-variant / closure regularization (b)) stays
+  registered-not-opened — opening = user's adjudication; VERDICT + PRE_REGISTRATION +
+  CSVs in the dir, design record `docs/design_track_v.md` §17) —
+  `python cases/analysis/v5_5_te_floor/run.py` — coarse ~6 min / medium ~12 min
+  at 8 threads unloaded (2026-07-24 measurement; the per-leg loose regen + V0/V1 solves
+  + tight polish + guards included)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS
