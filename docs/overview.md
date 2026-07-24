@@ -279,8 +279,16 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   ✓ EXECUTED 2026-07-24**（14 RECORDED 无 band，`cases/analysis/v5_ibl_floor/`：近零簇在松环收敛态持续（S1 500/1236 cond 1.3e11、S2 1082/2460 cond 4.0e13、s1/s3 谱几乎重合），由湍流 (A,Ψ)
   变量承载、mid-chord→TE 分布；原始 cond 4e10–4e13 主要是缩放 artifact（行列均衡 → 2e4/7e5/1e7、亚 1e-6 计数 501/500/1082 → 0/0/2、无精确零方向），均衡后余 1e5–1e7 真 (A,Ψ)
   刚度 = GV5.1b/GV5.4 的真正靶子；F_BL 地板住 TE 带 (B,δ) 方程且几乎全在 J 值域内；闭包地板活动集全空（假说死）、eps_diff ×4 地板仅移 ≤6 %（非人工粘性截断）、伪时间控制器触底
-  （cfl 钉 cfl_min、残差自第 0 迭代冻结）= 公式化地板经控制器表现，单靠全局化过不了地板）；下一步 = GV5.1b 设计（equilibration 并入紧解 + 针对缩放后 (A,Ψ) 刚度的阻尼/投影
-  Newton，band (b) slope-2 窗口重定义在地板之前），GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  （cfl 钉 cfl_min、残差自第 0 迭代冻结）= 公式化地板经控制器表现，单靠全局化过不了地板）；**GV5.1b ✓ EXECUTED 2026-07-24**
+  （2P/0F/7R 裁决后（执行时 1P/1F/7R 保留于 commit 1c55906），`cases/analysis/v5_1b_scaled_newton/`：scaled+damped 机构交付且精确——求解器内部行列均衡 + Levenberg 对角阻尼 +
+  floor-reached 停止类，旗标默认关 = legacy 逐位，套件 28 green；medium 活体 e2 恒等式 1.96e-10 超自设 ≤1e-10 阈值
+  = cond~1e10 下 SuperLU 主序舍入的机器地板（阈值非预注册，非代数错）——**2026-07-24 用户裁决 cond-aware 读 PASS**
+  （tol = max(1e-10, 10·κ₁·eps)，κ₁~1e10 → ~1e-5 量级，4 个 decade 余量，VERDICT §3；run.py 阈值改由 κ₁ 一范数估计现算）；amended 种子自第 0 迭代即坐在
+  10× 地板带内侧（F_BL = 1.00× 地板）⇒ 构造上无 above-band 收缩段，走预注册 fallback：medium floor_reached 第 5 迭代
+  同 merit 收官（9.074e-11 ≈ 9.025e-11，取代 GV5.1 的 10 步 λ-collapse 爬行）、coarse 末 merit 2.044e-10 < GV5.1
+  2.068e-10 仍在降、k=1 standalone F_BL −31 %/merit 2.3× 更深、μ 拒绝重试 0 次——缩放是活性成分，阻尼臂惰性；
+  窗口问题被重构为需 above-band 种子的协议（候选 GV5.1c），破地板本身 = TE 带 (B,δ) 公式层工作排队）；下一步 =
+  GV5.1c（above-band 种子）或 TE 带公式层工作，GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -314,11 +322,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **603 passed + 25 skipped + 2 xfailed**（2026-07-23 Track V **V5 GV5.1
-执行**（增广紧耦合 (φ, Γ, U) Newton：band (a) FD 精确性两级 PASS，band (b)
-二次尾段被 IBL 地板挡住 HONEST FAIL——VERDICT
-`cases/analysis/v5_tight_coupling/VERDICT.md`）：全套件实测 603 @1537.09 s
-@16 线程；+20 vs 下档 583 = `tests/test_v5_tight_jacobian.py`（8）+
+现基线 **611 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1b
+执行**（scaled+damped 增广 Newton：机构精确交付，band (b) 窗口问题重构——VERDICT
+`cases/analysis/v5_1b_scaled_newton/VERDICT.md`）：全套件实测 611 @6556.77 s
+@16 线程（wall 受合租负载 ~70–80 污染，标记引用；GV5.1 时空载为 1537 s）；
++8 vs 下档 603 = `tests/test_v5_tight_scaled.py`（8））。
+上一档 603+25+2（2026-07-23 Track V **V5 GV5.1 执行**（增广紧耦合 (φ, Γ, U)
+Newton：band (a) FD 精确性两级 PASS，band (b) 二次尾段被 IBL 地板挡住 HONEST
+FAIL——VERDICT `cases/analysis/v5_tight_coupling/VERDICT.md`）：全套件实测
+603 @1537.09 s @16 线程；+20 vs 下档 583 = `tests/test_v5_tight_jacobian.py`（8）+
 `tests/test_v5_tight_edge.py`（7）+ `tests/test_v5_tight_system.py`（5））。
 上一档 583+25+2（2026-07-23 Track V **V5 GV5.0 执行**（M6 亚声速松耦合桥，
 RECORDED 入口检查）：全套件实测 583 @1218.05 s @16 线程；+5 vs 下档 578 =

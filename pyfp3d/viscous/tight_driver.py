@@ -531,6 +531,80 @@ def _block_max(pack: TightPack, F: np.ndarray) -> np.ndarray:
     )
 
 
+# ---------------------------------------------------------------------------
+# GV5.1b scaled + damped linear step (cases/analysis/v5_1b_scaled_newton/
+# PRE_REGISTRATION.md): solver-internal only -- the assembled F/J are
+# bit-identical to GV5.1 (the FD verdicts stand); these helpers only
+# transform the assembled operators. Design inputs: the committed IBL-floor
+# diagnosis (cases/analysis/v5_ibl_floor/results/findings.md).
+# ---------------------------------------------------------------------------
+
+MU0 = 1.0e-6       # Levenberg-style damping, initial value
+MU_MIN = 1.0e-12   # schedule lower bound (accept: mu <- max(mu/3, MU_MIN))
+MU_MAX = 1.0e2     # schedule upper bound (reject: mu <- min(10*mu, MU_MAX))
+FLOOR_REL_TOL = 1.0e-4  # floor-reached: merit relative decrease below this
+FLOOR_CONSEC = 3        # ... over this many consecutive accepted steps
+
+
+def mu_on_accept(mu: float) -> float:
+    """The pre-registered damping schedule, accepted step."""
+    return max(mu / 3.0, MU_MIN)
+
+
+def mu_on_reject(mu: float) -> float:
+    """The pre-registered damping schedule, line-search rejection."""
+    return min(mu * 10.0, MU_MAX)
+
+
+class FloorStop:
+    """The pre-registered floor-reached stop: the merit relative decrease
+    stays below FLOOR_REL_TOL over FLOOR_CONSEC consecutive accepted
+    steps (replaces GV5.1's lambda-collapse crawl to the iteration
+    cap)."""
+
+    def __init__(self) -> None:
+        self._hits = 0
+
+    def update(self, rel_decrease: float) -> bool:
+        self._hits = (self._hits + 1
+                      if rel_decrease < FLOOR_REL_TOL else 0)
+        return self._hits >= FLOOR_CONSEC
+
+
+def equilibrate_rc(J: sp.csr_matrix):
+    """One-pass row/column 2-norm equilibration of the assembled sparse J
+    (zero-safe: a zero row/column gets scale 1 -- the pre-registered
+    recipe, the diagnosis Q3 method). Returns (rn, cn, Jsc) with
+    Jsc = diag(1/rn) @ J @ diag(1/cn)."""
+    J = J.tocsr()
+    rn = np.sqrt(np.asarray(J.multiply(J).sum(axis=1)).ravel())
+    rn = np.where(rn > 0.0, rn, 1.0)
+    J1 = sp.diags(1.0 / rn) @ J
+    cn = np.sqrt(np.asarray(J1.multiply(J1).sum(axis=0)).ravel())
+    cn = np.where(cn > 0.0, cn, 1.0)
+    return rn, cn, (J1 @ sp.diags(1.0 / cn)).tocsr()
+
+
+def scaled_damped_step(J: sp.csr_matrix, F: np.ndarray, mu: float,
+                       scaling: Optional[str] = None) -> np.ndarray:
+    """(J~ + mu I) dy = -F~ via splu (sparsity preserved, no normal
+    equations), unscaled dx = C dy. scaling="rowcol": J~ = R J C and
+    F~ = R F (equilibrate_rc); scaling=None: J~ = J, F~ = F, C = I, so
+    mu = 0 recovers the undamped splu step exactly."""
+    if scaling == "rowcol":
+        rn, cn, Js = equilibrate_rc(J)
+        Fs = F / rn
+    elif scaling is None:
+        cn, Js, Fs = None, J.tocsr(), F
+    else:
+        raise ValueError(f"unknown scaling {scaling!r}")
+    n = Js.shape[0]
+    d_y = -sla.splu(
+        (Js.tocsc() + mu * sp.eye(n, format="csc")).tocsc()
+    ).solve(Fs)
+    return d_y if cn is None else d_y / cn
+
+
 def newton_tight(
     pack: TightPack,
     x0: Optional[np.ndarray] = None,
@@ -540,6 +614,9 @@ def newton_tight(
     line_search: bool = True,
     max_backtracks: int = 30,
     verbose: bool = False,
+    scaling: Optional[str] = None,
+    lm_damping: bool = False,
+    floor_stop: bool = False,
 ) -> Dict:
     """The augmented Newton loop on the full state (PRE_REGISTRATION
     convergence protocol): seed = the pack base x0 (inviscid-converged
@@ -559,9 +636,23 @@ def newton_tight(
     tol * |F_j(x0)|_inf. Per-block norms are tracked separately; the
     delta*-change of the LAST accepted step is recorded against the
     tol_ds = 1e-3 cross-check. Returns a dict(x, converged, n_iter,
-    history, block_max0, ds_change_last, merit0); history rows carry
-    (iter, block_max, merit, lam, ds_change, wall_s) with wall_s the
-    cumulative seconds since the loop start.
+    history, block_max0, ds_change_last, merit0, termination); history
+    rows carry (iter, block_max, merit, lam, ds_change, wall_s, mu) with
+    wall_s the cumulative seconds since the loop start. termination is
+    "converged" or "cap" on the legacy path, plus "floor_reached" on the
+    GV5.1b path.
+
+    GV5.1b (cases/analysis/v5_1b_scaled_newton/PRE_REGISTRATION.md):
+    scaling="rowcol" + lm_damping=True + floor_stop=True switch the
+    linear step to the scaled + damped path -- per iteration R, C from
+    the current J (equilibrate_rc), (R J C + mu I) dy = -R F by splu,
+    dx = C dy; mu follows the deterministic schedule (MU0; x10 on a
+    line-search rejection with a retry, /3 on an accepted step, bounded
+    [MU_MIN, MU_MAX]); the P8/P14 backtracking + probe guard applies
+    unchanged on each damped trial step; floor_stop adds the
+    pre-registered floor-reached termination (FloorStop). The DEFAULTS
+    (scaling=None, lm_damping=False, floor_stop=False) keep the legacy
+    path bit-for-bit (the committed GV5.1 runner reproduces).
     """
     x = pack.x_base() if x0 is None else np.asarray(x0, dtype=np.float64).copy()
     t0 = time.perf_counter()
@@ -582,6 +673,7 @@ def newton_tight(
     converged = False
     ds_change_last = 0.0
     n_it_done = 0
+    termination = None
 
     def converged_at(F_):
         bm = _block_max(pack, F_)
@@ -590,84 +682,185 @@ def newton_tight(
     converged, bm = converged_at(F)
     history.append(
         {"iter": 0, "block_max": bm, "merit": merit, "lam": None,
-         "ds_change": 0.0, "wall_s": time.perf_counter() - t0}
+         "ds_change": 0.0, "wall_s": time.perf_counter() - t0, "mu": None}
     )
     if verbose:
         print(
             f"newton_tight iter 0: |F_phi|={bm[0]:.3e} |F_Gam|={bm[1]:.3e} "
             f"|F_BL|={bm[2]:.3e} merit={merit:.3e}"
         )
-    for it in range(1, max_iter + 1):
-        if converged:
-            break
-        n_it_done = it
-        J = augmented_jacobian(pack, x)
-        try:
-            d = -sla.splu(J.tocsc()).solve(F)
-        except RuntimeError as exc:
-            raise RuntimeError(
-                f"tight Newton factorization failed at iteration {it}: {exc}"
-            ) from exc
-        if not np.all(np.isfinite(d)):
-            raise RuntimeError(
-                f"tight Newton step non-finite at iteration {it}"
-            )
-        # P8/P14 safety-only backtracking (module docstring). A far
-        # probe can be nonphysical enough to THROW inside the closure
-        # quadrature -- the ZeroDivisionError reaches the jit boundary,
-        # where numba's CPUDispatcher re-raises it as SystemError
-        # ("returned a result with an exception set"), so BOTH are
-        # caught -- or to return non-finite values: count it as
-        # merit=+inf and keep halving -- the IBL3Solver.solve
-        # halving-on-nonfinite idiom (ibl3.py:1497-1513, where a NaN
-        # probe simply fails the decrease test) and the P8/P14
-        # globalization precedent. Only probe REJECTION is guarded;
-        # accepted steps are untouched.
-        lam = 1.0
-        best = None
-        accepted = False
-        for _ in range(max_backtracks):
-            x_try = x + lam * d
-            try:
-                F_try = augmented_residual(pack, x_try)
-                merit_try = _merit(pack, F_try)
-            except (ArithmeticError, SystemError):
-                F_try, merit_try = None, np.inf
-            if F_try is not None and not np.all(np.isfinite(F_try)):
-                F_try, merit_try = None, np.inf
-            if np.isfinite(merit_try) and (
-                not line_search or merit_try <= merit
-            ):
-                accepted = True
+
+    if scaling is None and not lm_damping and not floor_stop:
+        # ---- the legacy GV5.1 path (bit-for-bit; the committed runner
+        # reproduces) -------------------------------------------------
+        for it in range(1, max_iter + 1):
+            if converged:
+                termination = "converged"
                 break
-            if np.isfinite(merit_try) and (
-                best is None or merit_try < best[0]
-            ):
-                best = (merit_try, lam, x_try, F_try)
-            lam *= 0.5
-        if not accepted:
-            if best is None:
+            n_it_done = it
+            J = augmented_jacobian(pack, x)
+            try:
+                d = -sla.splu(J.tocsc()).solve(F)
+            except RuntimeError as exc:
                 raise RuntimeError(
-                    f"tight Newton line search failed at iteration {it} "
-                    f"(merit {merit:.3e})"
+                    f"tight Newton factorization failed at iteration {it}: {exc}"
+                ) from exc
+            if not np.all(np.isfinite(d)):
+                raise RuntimeError(
+                    f"tight Newton step non-finite at iteration {it}"
                 )
-            merit_try, lam, x_try, F_try = best
-        x, F, merit = x_try, F_try, merit_try
-        ds_new = ds_at(x)
-        ds_change_last = float(np.max(np.abs(ds_new - ds_prev)))
-        ds_prev = ds_new
-        converged, bm = converged_at(F)
-        history.append(
-            {"iter": it, "block_max": bm, "merit": merit, "lam": float(lam),
-             "ds_change": ds_change_last, "wall_s": time.perf_counter() - t0}
-        )
-        if verbose:
-            print(
-                f"newton_tight iter {it}: |F_phi|={bm[0]:.3e} "
-                f"|F_Gam|={bm[1]:.3e} |F_BL|={bm[2]:.3e} "
-                f"merit={merit:.3e} lam={lam:.2f} "
-                f"ds_change={ds_change_last:.3e}"
+            # P8/P14 safety-only backtracking (module docstring). A far
+            # probe can be nonphysical enough to THROW inside the closure
+            # quadrature -- the ZeroDivisionError reaches the jit boundary,
+            # where numba's CPUDispatcher re-raises it as SystemError
+            # ("returned a result with an exception set"), so BOTH are
+            # caught -- or to return non-finite values: count it as
+            # merit=+inf and keep halving -- the IBL3Solver.solve
+            # halving-on-nonfinite idiom (ibl3.py:1497-1513, where a NaN
+            # probe simply fails the decrease test) and the P8/P14
+            # globalization precedent. Only probe REJECTION is guarded;
+            # accepted steps are untouched.
+            lam = 1.0
+            best = None
+            accepted = False
+            for _ in range(max_backtracks):
+                x_try = x + lam * d
+                try:
+                    F_try = augmented_residual(pack, x_try)
+                    merit_try = _merit(pack, F_try)
+                except (ArithmeticError, SystemError):
+                    F_try, merit_try = None, np.inf
+                if F_try is not None and not np.all(np.isfinite(F_try)):
+                    F_try, merit_try = None, np.inf
+                if np.isfinite(merit_try) and (
+                    not line_search or merit_try <= merit
+                ):
+                    accepted = True
+                    break
+                if np.isfinite(merit_try) and (
+                    best is None or merit_try < best[0]
+                ):
+                    best = (merit_try, lam, x_try, F_try)
+                lam *= 0.5
+            if not accepted:
+                if best is None:
+                    raise RuntimeError(
+                        f"tight Newton line search failed at iteration {it} "
+                        f"(merit {merit:.3e})"
+                    )
+                merit_try, lam, x_try, F_try = best
+            x, F, merit = x_try, F_try, merit_try
+            ds_new = ds_at(x)
+            ds_change_last = float(np.max(np.abs(ds_new - ds_prev)))
+            ds_prev = ds_new
+            converged, bm = converged_at(F)
+            history.append(
+                {"iter": it, "block_max": bm, "merit": merit,
+                 "lam": float(lam), "ds_change": ds_change_last,
+                 "wall_s": time.perf_counter() - t0, "mu": None}
             )
+            if verbose:
+                print(
+                    f"newton_tight iter {it}: |F_phi|={bm[0]:.3e} "
+                    f"|F_Gam|={bm[1]:.3e} |F_BL|={bm[2]:.3e} "
+                    f"merit={merit:.3e} lam={lam:.2f} "
+                    f"ds_change={ds_change_last:.3e}"
+                )
+    else:
+        # ---- the GV5.1b scaled + damped path (pre-registered) ---------
+        mu = MU0
+        floor = FloorStop() if floor_stop else None
+        for it in range(1, max_iter + 1):
+            if converged:
+                termination = "converged"
+                break
+            n_it_done = it
+            J = augmented_jacobian(pack, x)
+            merit_prev = merit
+            mu_retries = 0
+            while True:
+                d = scaled_damped_step(
+                    J, F, mu if lm_damping else 0.0, scaling=scaling)
+                if not np.all(np.isfinite(d)):
+                    raise RuntimeError(
+                        f"tight Newton step non-finite at iteration {it}"
+                    )
+                # the P8/P14 backtracking + probe guard, unchanged, on
+                # each damped trial step (the legacy idiom above)
+                lam = 1.0
+                best = None
+                accepted = False
+                for _ in range(max_backtracks):
+                    x_try = x + lam * d
+                    try:
+                        F_try = augmented_residual(pack, x_try)
+                        merit_try = _merit(pack, F_try)
+                    except (ArithmeticError, SystemError):
+                        F_try, merit_try = None, np.inf
+                    if F_try is not None and not np.all(np.isfinite(F_try)):
+                        F_try, merit_try = None, np.inf
+                    if np.isfinite(merit_try) and (
+                        not line_search or merit_try <= merit
+                    ):
+                        accepted = True
+                        break
+                    if np.isfinite(merit_try) and (
+                        best is None or merit_try < best[0]
+                    ):
+                        best = (merit_try, lam, x_try, F_try)
+                    lam *= 0.5
+                if accepted or not lm_damping:
+                    break
+                # a line-search rejection in the damped path: raise mu and
+                # retry the damped solve (the pre-registered schedule); at
+                # the cap, fall back to the legacy accept-or-least-bad
+                if mu >= MU_MAX:
+                    if best is None:
+                        raise RuntimeError(
+                            f"tight Newton line search failed at iteration "
+                            f"{it} (merit {merit:.3e}, mu at cap {MU_MAX:.0e})"
+                        )
+                    break
+                mu = mu_on_reject(mu)
+                mu_retries += 1
+            mu_used = mu
+            if not accepted:
+                if best is None:
+                    raise RuntimeError(
+                        f"tight Newton line search failed at iteration {it} "
+                        f"(merit {merit:.3e})"
+                    )
+                # the least-bad fallback: a REJECTED step taken per the
+                # legacy idiom -- mu stays (no accept-decrease)
+                merit_try, lam, x_try, F_try = best
+            elif lm_damping:
+                mu = mu_on_accept(mu)
+            x, F, merit = x_try, F_try, merit_try
+            ds_new = ds_at(x)
+            ds_change_last = float(np.max(np.abs(ds_new - ds_prev)))
+            ds_prev = ds_new
+            converged, bm = converged_at(F)
+            history.append(
+                {"iter": it, "block_max": bm, "merit": merit,
+                 "lam": float(lam), "ds_change": ds_change_last,
+                 "wall_s": time.perf_counter() - t0, "mu": float(mu_used),
+                 "mu_retries": mu_retries,
+                 "accepted": bool(accepted)}
+            )
+            if verbose:
+                print(
+                    f"newton_tight iter {it}: |F_phi|={bm[0]:.3e} "
+                    f"|F_Gam|={bm[1]:.3e} |F_BL|={bm[2]:.3e} "
+                    f"merit={merit:.3e} lam={lam:.2f} mu={mu_used:.1e} "
+                    f"retries={mu_retries} ds_change={ds_change_last:.3e}"
+                )
+            rel_dec = ((merit_prev - merit)
+                       / max(abs(merit_prev), 1.0e-300))
+            if not converged and floor is not None and floor.update(rel_dec):
+                termination = "floor_reached"
+                break
+    if termination is None:
+        termination = "converged" if converged else "cap"
     return {
         "x": x,
         "converged": converged,
@@ -676,4 +869,5 @@ def newton_tight(
         "block_max0": block_max0,
         "ds_change_last": ds_change_last,
         "merit0": merit0,
+        "termination": termination,
     }

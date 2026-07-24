@@ -1,0 +1,44 @@
+level,metric,gv5_1b,gv5_1_or_loose_committed,note
+coarse,F_BL p above the floor band,n/a,,the band-(b) read
+coarse,N_polish (polish iterations to termination),10,,literal band-entry iter 0
+coarse,N_total = N_loose + N_polish vs committed loose outer,14,4,regen loose n_outer=4
+coarse,band_a_e1 diag(rn)@Jsc@diag(cn) vs J (relerr),2.624e-16,<= 1e-12,
+coarse,band_a_e2 mu=0 damped vs undamped splu (relerr),9.240e-11,<= 1e-10,
+coarse,band_a_e3 dx = C dy round-trip (relerr),1.506e-11,<= 1e-06,cond-amplified through cond(J) ~ 1e10
+coarse,converged,False,GV5.1: False,
+coarse,ds_change_last (polish),1.391938e-04,,tol_ds = 1e-3 cross-check
+coarse,final merit,2.043853e-10,2.067560e-10,below GV5.1 committed
+coarse,final |F_BL|_max,3.070478e-06,3.110150e-06,vs GV5.1 committed amended final
+coarse,final |F_BL|_max vs diagnosed floor,3.070478e-06,3.154e-06,ratio 0.974x the seed IBL floor; floor band 3.16e-05
+coarse,longest above-band contraction run,0,,>= 3 -> median-p band applies
+coarse,loose committed: cl / ds_max / ibl_floor,,0.26776443 / 4.602235e-03 / 3.113e-06,read; never recomputed
+coarse,merit p (all contractions),i2:51.03; i3:5.36; i4:0.03; i5:11.97; i6:0.33; i7:0.27; i8:1.04; i9:3.49; i10:2.79,,recorded alongside per the prereg
+coarse,mu schedule: final mu / total reject-retries,5.081e-11 / 0,,
+coarse,polish wall time (s),43,,
+coarse,seed merit,2.332968e-10,,
+coarse,seed |F_BL|_max,3.153842e-06,,regen seed (HEAD trajectory)
+coarse,termination,cap,GV5.1: cap (lambda-collapse crawl),lam_last=0.0312
+medium,F_BL p above the floor band,n/a,,the band-(b) read
+medium,N_polish (polish iterations to termination),5,,literal band-entry iter 0
+medium,N_total = N_loose + N_polish vs committed loose outer,8,5,regen loose n_outer=3
+medium,band_a_e1 diag(rn)@Jsc@diag(cn) vs J (relerr),2.275e-16,<= 1e-12,
+medium,band_a_e2 mu=0 damped vs undamped splu (relerr),1.963e-10,<= 1e-10,
+medium,band_a_e3 dx = C dy round-trip (relerr),3.705e-10,<= 1e-06,cond-amplified through cond(J) ~ 1e10
+medium,converged,False,GV5.1: False,
+medium,ds_change_last (polish),4.227902e-06,,tol_ds = 1e-3 cross-check
+medium,final merit,9.074491e-11,9.024644e-11,at/above GV5.1 committed
+medium,final |F_BL|_max,1.708125e-06,1.708240e-06,vs GV5.1 committed amended final
+medium,final |F_BL|_max vs diagnosed floor,1.708125e-06,1.712e-06,ratio 0.998x the seed IBL floor; floor band 1.71e-05
+medium,longest above-band contraction run,0,,>= 3 -> median-p band applies
+medium,loose committed: cl / ds_max / ibl_floor,,0.27190697 / 6.840905e-03 / 1.160e-06,read; never recomputed
+medium,merit p (all contractions),i2:0.52; i3:0.03; i4:1.64; i5:0.54,,recorded alongside per the prereg
+medium,mu schedule: final mu / total reject-retries,1.235e-08 / 0,,
+medium,polish wall time (s),120,,
+medium,seed merit,9.100983e-11,,
+medium,seed |F_BL|_max,1.709994e-06,,regen seed (HEAD trajectory)
+medium,termination,floor_reached,GV5.1: cap (lambda-collapse crawl),lam_last=0.0001
+k1standalone,final merit,2.248349e-10,5.276918e-10,below k1seed
+k1standalone,final |F_BL|_max,3.267673e-06,4.726291e-06,vs GV5.1 k1seed committed iter-10
+k1standalone,n_iter,10,10,
+k1standalone,termination,cap,GV5.1 k1seed: cap,
+k1standalone,wall time (s),113,,
