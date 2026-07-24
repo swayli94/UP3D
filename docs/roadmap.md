@@ -116,7 +116,12 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   formulation item — route (a) variant V1 = TE-outflow row replacement does **NOT** break
   the floor (m2 = 5554×/245998× the floor, the pre-registered "worse" clause; the damage
   peaks at the LE suction zone, not the TE; flag stays default-OFF; escalation ladder
-  stays registered-not-opened, opening = user's adjudication)) and
+  stays registered-not-opened, opening = user's adjudication)) → **GV5.2 ✓ EXECUTED
+  2026-07-25** (band (b) FAIL + the loose-recipe transonic-limit anatomy,
+  `cases/analysis/v5_2_rae2822/`: RAE2822 P1/P2 VII vs committed experiment — every
+  computed shock 0.06–0.10 c downstream of the bracket; 1/4 legs converged; the loose
+  displacement-thickness feedback is too weak at M ≥ 0.725 ⇒ the next transonic-VII
+  reads come from the tight/augmented path, not loose-loop tuning) and
   GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;

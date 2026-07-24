@@ -213,6 +213,35 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/v5_5_te_floor/run.py` — coarse ~6 min / medium ~12 min
   at 8 threads unloaded (2026-07-24 measurement; the per-leg loose regen + V0/V1 solves
   + tight polish + guards included)
+- `v5_2_rae2822/` — **Track V / V5** GV5.2 RAE2822 transonic VII vs committed experiment
+  (registered + opened + executed 2026-07-24→25, user-directed; pre-registered before the
+  first code change; addenda #1–#3 before the respective (re-)executions): the loose VII
+  loop (the GV3.1 recipe verbatim ω = 1.0, ≤ 10 outer, tol_ds 1e-3) with the GV3.2
+  transonic Newton-driver protocol (NEWTON_ARGS imported), Cook/AGARD-AR-138 Table 6.1
+  geometry (positive-DOWN lower column; signature-locked 12.1 % @ 37.9 %c thickness,
+  1.3 % @ 75.7 %c camber, 0 contour self-intersections), new
+  `cases/meshes/rae2822_2.5d/` embedded-wake quasi-2D family (coarse 5560 nodes / 16236
+  tets, medium 20790 / 61494), points P1 (M 0.725, α 2.55) / P2 (M 0.73, α 3.19),
+  Re 6.5e6, forced x_tr/c 0.03 both sides, coarse recorded / medium binding — **band (b)
+  FAIL**: every computed shock 0.06–0.10 c DOWNSTREAM of the experimental bracket
+  (coarse P1 0.6122, coarse P2 0.6520, medium P1 0.6288 vs [0.495, 0.580] / [0.520,
+  0.605]; medium P2 unreadable — k = 4 transpiration runaway, GV3.3 class, §6 clause
+  RECORDED), worsening with Mach/α and NOT improving with refinement (the coarse→medium
+  P1 shock moves further aft); 1/4 legs converged (coarse P1, still 0.06 c aft);
+  M_peak 1.365 / 1.306 outside-envelope RECORDED at the capped legs; Cp RMS 0.12–0.27
+  dominated by the shock displacement + the over-deep LE suction peak; band (a) TE-wedge
+  pre-check RECORDED both levels (mesh-crease 9.46°/9.92° vs ordinate-fit 12.91°;
+  quadratic recovery available, no fallback); two camber-specific defects fixed before
+  execution (addendum #1: the `cut_wake` Kutta-probe bisector-normal fallback + the
+  runner Cp outward-normal side split); the FP rescue chain (strict → Mach continuation
+  → honesty-guarded stall-accept, addenda #2/#3) load-bearing at every leg; the reading
+  = recipe limit, not a crash — the loose displacement-thickness feedback is too weak at
+  M ≥ 0.725, arguing the next transonic-VII reads come from the tight/augmented path;
+  executed under the temporary 8-thread session constraint (wall times non-comparable);
+  VERDICT + PRE_REGISTRATION (+3 addenda) + CSVs in the dir, design record
+  `docs/design_track_v.md` §18) —
+  `python cases/analysis/v5_2_rae2822/run.py` — ~43 min at 8 threads unloaded
+  (2026-07-25 measurement; all four legs + the band-(a) pre-check included)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS

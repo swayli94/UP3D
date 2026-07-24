@@ -1,23 +1,39 @@
 # pyFP3D Agent Rules
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.5 the TE-band (B, δ) formulation floor-breaking item ✓ EXECUTED
-2026-07-24 (2 PASS / 1 FAIL / 9 RECORDED;
-`cases/analysis/v5_5_te_floor/` — route (a) variant V1 = TE-outflow row
-replacement (first-order extrapolation on the δ-carrier row 6i+0 / the
-H-carrier row 6i+2, exact Jacobian rows, default-OFF flag
-`te_extrapolate`) does NOT break the floor: the amended seed sits at
-variant residual 9.8/4.8, the pseudo-time stalls with all steps
-rejected, and the BINDING m2 (original-system residual at the V1
-terminal) = 5554× the floor (coarse) / 245998× the seed's own flag-OFF
-floor (medium; the 8-thread scatter clause fired — the 4th fixed point
-cl 0.28245999 again) — the pre-registered "worse" clause; the damage
-peaks at the LE suction zone (x_c ≈ 0.027, F_B/F_Psi rows), not the
-TE; band (a) FD PASS both levels; tight-polish secondary read no floor
-break either; the flag stays default-OFF (legacy bit-identical) and the
-escalation ladder (upwind boundary-flux (a)-variant / closure
-regularization (b)) stays registered-not-opened — opening = user's
-adjudication). Previous within V5: GV5.1d the near-band window read ✓
+GV5.2 RAE2822 transonic VII vs committed experiment ✓ EXECUTED
+2026-07-25 (band (b) FAIL + the loose-recipe transonic-limit anatomy;
+`cases/analysis/v5_2_rae2822/` — the loose GV3.1 recipe + the GV3.2
+Newton-driver protocol at P1 M 0.725/α 2.55 / P2 M 0.73/α 3.19, Re
+6.5e6, x_tr/c 0.03: band (a) TE wedge 9.46°/9.92° mesh-crease vs 12.91°
+ordinate fit, quadratic available, no fallback; **band (b) FAIL** —
+every computed shock 0.06–0.10 c DOWNSTREAM of the experimental
+bracket (medium P1 terminal 0.6288 vs [0.495, 0.580], leg
+non-converged RECORDED; medium P2 loop runaway at k = 4, mdot 1.59, §6
+RECORDED), worsening with Mach/α and NOT improving with mesh
+refinement; only 1/4 legs converged (coarse P1, 7 outer, still 0.6122
+out of band); Cp RMS 0.185–0.265 upper dominated by the shock
+displacement + the over-deep LE suction; M_peak 1.365 (coarse P2) /
+1.306 (medium P1) outside-envelope RECORDED. Execution mechanics, all
+pre-registered in addenda before each (re-)execution: `cut_wake` Kutta
+probe bisector-normal fallback (RAE2822 reflex camber puts both TE
+flanks on the +y side; fires only where the old code raised) + runner
+Cp side split → outward-normal idiom + the FP-driver cheap→deep rescue
+chain (strict 1e-10 → `solve_newton_transonic` Mach continuation →
+honesty-guarded stall acceptance) against the M ≥ 0.725 shock-cell
+plateaus — load-bearing everywhere (2/10 → 10/22 stall-accepts per
+leg). Reading: the loose displacement-thickness feedback is too
+weak/slow at these transonic points — the next transonic-VII reads
+come from the tight/augmented path, not further loose-loop tuning).
+Previous within V5: GV5.5 the TE-band (B, δ) formulation floor-breaking
+item ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 9 RECORDED — V1
+TE-outflow row replacement does NOT break the floor: m2 = 5554× the
+floor (coarse) / 245998× the seed's flag-OFF floor (medium), the
+pre-registered "worse" clause; the damage peaks at the LE suction
+zone, not the TE; band (a) FD PASS both levels; the flag stays
+default-OFF, legacy bit-identical; the escalation ladder stays
+registered-not-opened — opening = user's adjudication), GV5.1d the
+near-band window read ✓
 EXECUTED 2026-07-24 (2 PASS /
 1 FAIL / 7 RECORDED — NO
 quadratic basin adjacent to the floor either: near-band seeds
@@ -37,7 +53,7 @@ PASS; 1/1/7 as executed, preserved in commit 1c55906), GV5.1 augmented
 EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) + IBL-floor follow-up
 diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED), and earlier the GV5.0
 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED
-entry check, 16 RECORDED / 0 FAIL).** Next = **GV5.2 / GV5.3 / GV5.4**
+entry check, 16 RECORDED / 0 FAIL).** Next = **GV5.3 / GV5.4**
 (user sequencing 2026-07-24). New machinery
 `viscous/coupling.py::build_wing_case`
 (3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
@@ -226,6 +242,46 @@ closure regularization (b)) stays registered-not-opened — opening =
 user adjudication. Executed under the temporary 8-thread session
 constraint. Next = **GV5.2 / GV5.3 / GV5.4** (user sequencing
 2026-07-24). Design record `docs/design_track_v.md` §17.
+**GV5.2 ✓ EXECUTED 2026-07-25 (band (b) FAIL + the loose-recipe
+transonic-limit anatomy; `cases/analysis/v5_2_rae2822/`, PRE_REGISTRATION
++ 3 execution addenda committed before each (re-)execution): the loose
+GV3.1 recipe + the GV3.2 Newton protocol does NOT reproduce the
+experimental shock at either RAE2822 point.** Conditions P1
+M 0.725/α 2.55 / P2 M 0.73/α 3.19, Re 6.5e6, x_tr/c = 0.03, the new
+`cases/meshes/rae2822_2.5d/` family (coarse 5560 nodes / medium 20790;
+Cook Table 6.1 ordinates, signature-locked). Band (a): TE wedge
+9.46° coarse / 9.92° medium mesh-crease (A4 method, uncut mesh) vs
+12.91° ordinate fit; quadratic recovery available both levels ⇒ the
+~6° guard clears, no fallback. **Band (b) FAIL** (medium binding): P1
+terminal x_shock 0.6288 outside [0.495, 0.580] (leg non-converged at
+the k = 10 cap — ds_change_rel oscillates, mdot grows, ds_neg_floored
+36, IBL capped every outer), P2 loop runaway at k = 4 (mdot_max = 1.59,
+the GV3.3 class; §6 recipe-limit RECORDED). Coarse recorded: P1
+converged (7 outer) but 0.6122 out of band; P2 capped + IBL
+exactly-singular warning, 0.6520 out. Every computed shock sits
+0.06–0.10 c DOWNSTREAM of the bracket, worsening with Mach/α, NOT
+improving with refinement. (c) Cp RMS RECORDED 0.185/0.146,
+0.176/0.118, 0.265/0.129 (upper/lower) — dominated by the shock
+displacement + the over-deep LE suction. Outside-envelope RECORDED:
+coarse P2 M_peak 1.365, medium P1 1.306. Two camber-specific defects
+found+fixed pre-execution (addendum #1): the `cut_wake` Kutta probe
+gained a TE-wedge bisector-normal fallback (RAE2822 reflex camber puts
+BOTH TE flank neighbours on the +y side of the TE node — the
+global-hint sign rule found no lower probe; fallback fires only where
+the old code raised; regression `test_kutta_probes_cambered_te`), and
+the runner's Cp side split switched to the outward-normal idiom (a
+centroid-y split mislabels 9 aft lower triangles as upper on coarse).
+The FP driver gained the pre-registered rescue chain (addenda #2/#3:
+strict 1e-10 first → `solve_newton_transonic` Mach continuation from
+m_start = 0.70 → honesty-guarded stall acceptance at |R| ≲ 1e-9
+shock-cell plateaus; per-attempt path + accept_reason logged;
+load-bearing: 2/10 → 10/22 stall-accepts per leg). Reading: the
+displacement-thickness feedback through the loose update is too
+weak/slow at M ≥ 0.725 — the next transonic-VII reads come from the
+tight/augmented path, not further loose-loop tuning. Executed under
+the temporary 8-thread session constraint (~43 min for 4 legs incl.
+the runaway). Next = **GV5.3 / GV5.4** (user sequencing 2026-07-24).
+Design record `docs/design_track_v.md` §18.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -950,7 +1006,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed) ·
   GV5.1c ✓ EXECUTED (2 PASS / 1 FAIL / 7 RECORDED) · GV5.1d ✓ EXECUTED
   (2 PASS / 1 FAIL / 7 RECORDED) · GV5.5 ✓ EXECUTED
-  (2 PASS / 1 FAIL / 9 RECORDED))** —
+  (2 PASS / 1 FAIL / 9 RECORDED) · GV5.2 ✓ EXECUTED
+  (band (b) FAIL + the loose-recipe transonic-limit anatomy))** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
@@ -1006,8 +1063,17 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   (medium, scatter clause) the floor, the "worse" clause; the damage
   peaks at the LE suction zone, not the TE; flag default-OFF, the
   escalation ladder stays registered-not-opened (opening = user
-  adjudication); remaining = **GV5.2**
-  RAE2822, **GV5.3** anchored on the committed M6 experiment **Cp** (no
+  adjudication) → **GV5.2 ✓ EXECUTED 2026-07-25** (band (b) FAIL +
+  the loose-recipe transonic-limit anatomy,
+  `cases/analysis/v5_2_rae2822/`): RAE2822 P1/P2 VII vs committed
+  experiment — every computed shock 0.06–0.10 c downstream of the
+  bracket (medium P1 terminal 0.6288 out of band, leg non-converged;
+  medium P2 k = 4 runaway §6 RECORDED); 1/4 legs converged; band (a)
+  9.46°/9.92° vs 12.91°, no fallback; M_peak 1.365/1.306 two
+  outside-envelope RECORDED; the loose displacement-thickness feedback
+  too weak at M ≥ 0.725 ⇒ next transonic-VII reads from the
+  tight/augmented path; remaining = **GV5.3** anchored on the
+  committed M6 experiment **Cp** (no
   experimental CL committed), **GV5.4** cost (user sequencing
   2026-07-24: GV5.1d → GV5.5 → GV5.2–5.4); V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on
@@ -1106,7 +1172,16 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **636 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+Baseline: **642 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V5
+GV5.2 executed** (the RAE2822 transonic VII vs committed experiment: band (b)
+FAIL + the loose-recipe transonic-limit anatomy — every computed shock
+0.06–0.10 c downstream of the bracket, 1/4 legs converged — VERDICT
+`cases/analysis/v5_2_rae2822/VERDICT.md`); full-suite measured 642
+@1245.33 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries); +6 vs the 636
+below = `tests/test_meshgen_rae2822.py` (5) +
+`tests/test_p2_wake_cut.py::test_kutta_probes_cambered_te` (1)).
+Previous: 636 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.5 executed** (the TE-band (B, δ) formulation item: the V1 TE-outflow row
 replacement does NOT break the floor — binding m2 5554×/245998× the floor,
 the "worse" clause; flag default-OFF — VERDICT

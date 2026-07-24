@@ -639,3 +639,77 @@ artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPO
    用户裁决。V5 保持 OPEN；下一步 = GV5.2（RAE2822 跨声速 VII）/
    GV5.3（M6 Cp）/ GV5.4（cost RECORDED）（用户 2026-07-24 定序）。
    V4 重开触发保持挂起。
+
+## §18 GV5.2 —— RAE2822 跨声速 VII 对 committed 实验：band (b) FAIL + 松环配方极限解剖（2026-07-24→25，band (a)/(c)/(d) RECORDED）
+
+用户定序项（GV5.1d → GV5.5 → GV5.2–5.4）。预注册
+`cases/analysis/v5_2_rae2822/PRE_REGISTRATION.md` 先于首行代码提交，
+addenda #1–#3 先于各自（重）执行提交。协议 = 松环 VII（GV3.1 配方逐字
+ω = 1.0、≤ 10 outer、tol_ds = 1e-3）+ GV3.2 跨声速 Newton driver 协议
+（NEWTON_ARGS 导入，不重造）；几何 = Cook/AGARD-AR-138 Table 6.1
+坐标（下表面列 positive-DOWN，签名锁定：12.1 % @ 37.9 %c 厚度、
+1.3 % @ 75.7 %c 弯度、0 轮廓自交）；新网格族
+`cases/meshes/rae2822_2.5d/`（M0 式嵌入尾迹准 2D 配方镜像 NACA 族：
+coarse 5560 节点 / 16236 四面体，medium 20790 / 61494；stats + 分层
+PNG 入账）；两点 P1（M 0.725 / α 2.55）/ P2（M 0.73 / α 3.19），
+Re 6.5e6，两侧强制转捩 x_tr/c 0.03；coarse 记录、medium binding。
+全程 8 线程临时约束（壁时标记不可比）。
+
+1. **band (a) TE 楔角预检 RECORDED（无 fallback）**：mesh-crease 楔角
+   （A4 法，**未切**网格上测——切后 TE 边消失）9.46° coarse /
+   9.92° medium vs 坐标拟合 12.91°（x ≥ 0.95 割线和；差值 = 反弯度
+   在拟合窗内的曲率）。≈6° quadratic 恢复守卫两级过
+   （`quadratic_available=True`）→ 预注册 linear+smoothed fallback
+   未触发。执行前修了两个反弯度特有缺陷（addendum #1）：`cut_wake`
+   Kutta 探针加 TE 楔 bisector-normal fallback（RAE2822 后段下表面
+   在弦线上方——两翼瓣邻居都在 TE 节点 +y 侧，旧探针失效；fallback
+   只在旧代码抛错处触发，旧网格位等价；回归
+   `test_kutta_probes_cambered_te`）；runner Cp 分侧换 outward-normal
+   惯例（D11 `wall_outward_normals`——centroid-y 分侧把 coarse 上
+   9 个 aft 下表面三角错标为 upper，会污染 band (b) 激波窗与分侧
+   RMS）。
+2. **band (b) FAIL（medium binding）**：x_shock = 窗内
+   （x/c ∈ [0.2, 0.9]）压缩分支 max dCp/dx，读松环终态上壁面 Cp；
+   接受带 = 实验 bracket ± 0.03 c（G4.1 无黏带）：P1 [0.495, 0.580]、
+   P2 [0.520, 0.605]。实测 coarse P1 **0.6122**、coarse P2 **0.6520**、
+   medium P1 **0.6288**（k = 10 顶格终态上读）全部带外；medium P2
+   不可读（§6 配方极限条款）。**每个算出的激波都在实验带下游
+   0.06–0.10 c**（P1 偏 0.06–0.08，P2 偏 0.05–0.10），随 Mach/α
+   恶化；coarse→medium 在 P1 反而再往后移（0.6122 → 0.6288）且 LE
+   吸力峰加深——**不是粗网格伪影**。方向（无黏族激波在黏性实验
+   下游）符合 full-potential 求解在位移厚度反馈拉不回激波时的
+   预期；幅度 = 本 gate 的诚实阴性发现。
+3. **(c) Cp RMS RECORDED**：rms_upper/rms_lower = coarse P1
+   0.185/0.146、coarse P2 0.176/0.118、medium P1 0.265/0.129——
+   比 A4 输入带（medium ~2.5 % peak-rel u_e）高一个量级，由 (i) 激波
+   位移（RMS 穿过错位跳变积分）与 (ii) 过深 LE 吸力峰（medium P1
+   上表面 x/c ≈ 0.009 处 diff −0.27）主导；下表面一致性普遍显著
+   好于上表面。
+4. **(d) 收敛与 guards RECORDED**：松环不动点在跨声速点**不收缩**
+   ——顶格腿 ds_change_rel 振荡（medium P1：0.06 → 0.49 → 0.11 →
+   0.32）而非衰减，mdot_max 增长（0.013 → 0.13），ds_neg_floored
+   爬到 k = 10 的 36 节点，IBL 每个 outer 都撞 100 迭代帽。
+   medium P2 outright 发散：k = 4 mdot_max = 1.59（GV3.3
+   transpiration 失控类；loud-fail 守卫触发；§6 条款读 RECORDED）。
+   coarse P2 中途 IBL `MatrixRankWarning`（J 精确奇异）继续跑，
+   k = 10 IBL 残差 NaN（记录）。M_peak：coarse P1 1.271 @ 0.155；
+   coarse P2 **1.365**、medium P1 **1.306** 均超 1.3 包线 →
+   outside-envelope RECORDED（非 FAIL）。**FP 救援链
+   （addenda #2/#3：严格 1e-10 → 库内 Mach 延拓 m_start = 0.70 →
+   诚实守卫 stall-accept）每腿承力**：每级 2 次延拓冷启动；
+   stall-accept 占比 2/10（P1 coarse）→ 10/22（P1 medium）次 FP
+   调用，全部卡在 |R| ≲ 1e-9 平台（Kutta 约束已收敛、接受时零
+   limiter/floor 活动，accept_reason 入 run.log）；严格 1e-10
+   始终是每次调用的首选。
+5. **物理读法**：失败是**配方极限**，按预注册条款记录，不是代码
+   崩溃：4 腿中 3 腿 ≤ 10 outer 不收敛（一顶格、一顶格 + 奇异 IBL、
+   一失控），唯一收敛腿（coarse P1：7 outer / 150 s / cl 0.9036）
+   激波仍偏后 0.06 c。miss 方向 + 环不收缩 ⇒ 松环更新通道的位移
+   厚度反馈在 M ≥ 0.725 太弱/太慢——与 IBL 地板发现
+   （GV5.1b/5.5）一致；逼出救援链的激波单元 Newton 平台同时标出
+   内层求解在 M ≥ 0.725（2.5-D）的鲁棒边界。
+6. **程序状态**：本 gate 未开任何跟进项（登记未开 = 用户裁决）；
+   数据主张下一次跨声速 VII 读数走 **tight/augmented 耦合**，不再
+   调松环。V5 保持 OPEN；下一步 = GV5.3（M6 Cp）/ GV5.4（cost
+   RECORDED）（用户 2026-07-24 定序）。全套件基线见三面 ledger 行
+   （随 baseline commit 填入）。V4 重开触发保持挂起。
