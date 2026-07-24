@@ -287,9 +287,16 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   10× 地板带内侧（F_BL = 1.00× 地板）⇒ 构造上无 above-band 收缩段，走预注册 fallback：medium floor_reached 第 5 迭代
   同 merit 收官（9.074e-11 ≈ 9.025e-11，取代 GV5.1 的 10 步 λ-collapse 爬行）、coarse 末 merit 2.044e-10 < GV5.1
   2.068e-10 仍在降、k=1 standalone F_BL −31 %/merit 2.3× 更深、μ 拒绝重试 0 次——缩放是活性成分，阻尼臂惰性；
-  窗口问题被重构为需 above-band 种子的协议 → **GV5.1c OPENED 2026-07-24**（用户定；标定 above-band δ 扰动种子，
-  真正读地板前 slope-2 窗）；破地板本身登记为独立项 **GV5.5 TE 带 (B,δ) 公式层**（2026-07-24 用户定，未开工，
-  排序待裁决）；GV5.2/5.3/5.4/5.5 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  窗口问题被重构为需 above-band 种子的协议 → **GV5.1c ✓ EXECUTED 2026-07-24**（2P/1F/7R，
+  `cases/analysis/v5_1c_above_band_window/`：标定 above-band δ 扰动种子（ε = 1e4 → 种子 F_BL ≈ 1e4× 地板带）真正读
+  地板前 slope-2 窗——**地板之上处处无二次收缩**：干净下降段全是线搜索封顶折半（λ = 0.5 → p = 1.00 构造值），
+  随后中程停滞（F_BL ~ 3e-2 → 1.3e-2/2.2e-2，10 迭代内从未进带，距地板 4262×/12867×），binding medium
+  median p = 0.56 honest FAIL；紧 Newton 的障碍不止地板——其上 3–4 个 decade 还有一道中程下降屏障；
+  近带种子是否有局部二次盆 = 后续问题（候选 GV5.1d，待裁决）；μ 拒绝重试再为 0；band (a) PASS 两腿
+  （cond-aware e2 容差本次预注册）；8 线程临时约束下执行（runner 默认 16，壁时标记）；medium 不动点在
+  8 线程下再次散布（第 4 个不动点 cl 0.28245999，coarse 逐位一致））；破地板本身登记为独立项
+  **GV5.5 TE 带 (B,δ) 公式层**（2026-07-24 用户定，未开工，排序待裁决）；GV5.1d/5.2/5.3/5.4/5.5 排序待
+  用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -323,7 +330,13 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **611 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1b
+现基线 **620 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.1c
+执行**（above-band 种子读地板前 slope-2 窗：地板之上无二次收缩——λ 封顶折半 +
+中程停滞，binding medium median p = 0.56 honest FAIL——VERDICT
+`cases/analysis/v5_1c_above_band_window/VERDICT.md`）：全套件实测 620 @3903.16 s
+**@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接比，
+机器空载）；+9 vs 下档 611 = `tests/test_v5_above_band_seed.py`（9））。
+上一档 611+25+2（2026-07-24 Track V **V5 GV5.1b
 执行**（scaled+damped 增广 Newton：机构精确交付，band (b) 窗口问题重构——VERDICT
 `cases/analysis/v5_1b_scaled_newton/VERDICT.md`）：全套件实测 611 @6556.77 s
 @16 线程（wall 受合租负载 ~70–80 污染，标记引用；GV5.1 时空载为 1537 s）；

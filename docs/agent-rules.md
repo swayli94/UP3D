@@ -1,15 +1,22 @@
 # pyFP3D Agent Rules
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.1b scaled + damped augmented Newton ✓ EXECUTED 2026-07-24 (2 PASS /
+GV5.1c the above-band window read ✓ EXECUTED 2026-07-24 (2 PASS /
+1 FAIL / 7 RECORDED; `cases/analysis/v5_1c_above_band_window/` — NO
+quadratic regime anywhere above the floor: λ-capped halvings p = 1.00
+by construction, then a mid-range stall at F_BL ~ 1e-2, never reaching
+the band; binding medium median p = 0.56 honest FAIL; the verdict
+paragraphs follow the GV5.1b recap below). Previous within V5: GV5.1b
+scaled + damped augmented Newton ✓ EXECUTED 2026-07-24 (2 PASS /
 0 FAIL / 7 RECORDED adjudicated 2026-07-24 — band (a) medium cond-aware
-PASS; 1/1/7 as executed, preserved in commit 1c55906; the verdict
-paragraphs follow the GV5.0 recap
-below). Previous within V5: GV5.1 augmented (φ, Γ, BL) Newton ✓
+PASS; 1/1/7 as executed, preserved in commit 1c55906), GV5.1 augmented
+(φ, Γ, BL) Newton ✓
 EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) + IBL-floor follow-up
 diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED), and earlier the GV5.0
 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED
-entry check, 16 RECORDED / 0 FAIL).** New machinery
+entry check, 16 RECORDED / 0 FAIL).** Also registered 2026-07-24
+(user-directed): **GV5.5 TE-band (B, δ) formulation** — the
+floor-breaking work as a STANDALONE item, NOT opened. New machinery
 `viscous/coupling.py::build_wing_case`
 (3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
 outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked
@@ -110,6 +117,36 @@ loose iterate or perturbed δ* — to actually read the pre-floor slope-2
 window) or the TE-band (B, δ) formulation work that breaks the floor
 itself; sequencing = the user's call; the V4-reopen trigger stays
 parked. Design record `docs/design_track_v.md` §14.
+**GV5.1c ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 7 RECORDED;
+`cases/analysis/v5_1c_above_band_window/`, VERDICT + PRE_REGISTRATION
+committed 1e90d59 pre-execution): the pre-floor slope-2 window is now
+MEASURED — NO quadratic regime anywhere above the floor.** Seeds
+delivered genuinely above-band as pre-registered (the amended seed +
+δ×(1+ε) at the free BL nodes, ε = 1e4 by the deterministic
+calibration bisection → seed F_BL 3.219e-1 coarse / 1.819e-1 medium ≈
+1e4× the floor band; the F_BL response to δ-scaling saturates).
+Read: the clean-descent steps are line-search-capped halvings
+(λ = 0.5, contraction exactly 0.30 dex → p = 1.00 BY CONSTRUCTION,
+the backtracking cap, not Newton asymptotics); then the trajectory
+STALLS mid-range (F_BL ~ 3e-2 → 1.3e-2 / 2.2e-2 over 10 iterations)
+and NEVER reaches the floor band (4262× / 12867× the floor at the
+cap) — binding medium median p = 0.56 → honest FAIL (coarse 1.00
+recorded); regression slopes 0.75/0.62; μ rejection-retries 0 once
+more (the line search carries all the globalization). Band (a) PASS
+both levels with the cond-aware e2 tolerance PRE-REGISTERED this time
+(e2 2.06e-9 / 2.40e-9 vs 3.9e-2 / 5.2e-2). New finding: the
+tight-Newton obstacle is not only the formulation floor — a mid-range
+descent barrier sits 3–4 decades above it; whether a quadratic basin
+exists ADJACENT to the floor = the near-band-seed follow-up question
+(candidate GV5.1d, user adjudication). Executed under the temporary
+8-thread session constraint (runner default 16; wall times flagged
+non-comparable); the medium fixed point scattered AGAIN at 8 threads
+(a 4th fixed point cl 0.28245999; coarse bit-identical) — the GV5.1
+§4 caveat. Floor-breaking itself = **GV5.5** (the registered
+standalone TE-band (B, δ) formulation item, NOT opened). Next = the
+user's sequencing call among GV5.1d / GV5.5 / GV5.2 / GV5.3 / GV5.4;
+the V4-reopen trigger stays parked. Design record
+`docs/design_track_v.md` §15.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -831,7 +868,9 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   criterion met on GV3.2; GV3.3 stern instability = reopen trigger);
   **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL) ·
   GV5.1 ✓ EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b ✓ EXECUTED
-  (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed)** —
+  (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed) ·
+  GV5.1c ✓ EXECUTED (2 PASS / 1 FAIL / 7 RECORDED) · GV5.5 TE-band
+  (B, δ) formulation REGISTERED 2026-07-24, NOT opened)** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
@@ -866,9 +905,16 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   the same merit, coarse still descending below GV5.1, k=1 standalone
   F_BL −31 % / merit 2.3× below, μ rejection-retries 0 (scaling the
   active ingredient); the window question reframed to an
-  above-band-seed protocol; remaining = GV5.1c (above-band seed) or
-  the TE-band (B, δ)
-  formulation work (sequencing = user's call), GV5.2
+  above-band-seed protocol → **GV5.1c ✓ EXECUTED 2026-07-24** (2P/1F/7R,
+  `cases/analysis/v5_1c_above_band_window/`): calibrated above-band seeds
+  (ε = 1e4 → F_BL ≈ 1e4× the band) — the pre-floor slope-2 window
+  MEASURED: NO quadratic regime above the floor (λ-capped halvings
+  p = 1.00 by construction; mid-range stall at F_BL ~ 1e-2, never
+  reaching the band; binding medium median p = 0.56 honest FAIL);
+  the obstacle is bigger than the floor — a mid-range descent barrier
+  3–4 decades above it; remaining = GV5.1d (near-band seed, candidate,
+  user adjudication) or **GV5.5** (the registered standalone TE-band
+  (B, δ) formulation item, NOT opened; sequencing = user's call), GV5.2
   RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
   experimental CL committed), GV5.4 cost; V6 wake sheet;
   wing-body VII deferred until the LS-side tip cure. Binding reference on
@@ -967,7 +1013,15 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **611 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+Baseline: **620 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+GV5.1c executed** (the above-band window read: NO quadratic regime above the
+floor — λ-capped halvings + a mid-range stall, binding medium median p = 0.56
+honest FAIL — VERDICT
+`cases/analysis/v5_1c_above_band_window/VERDICT.md`); full-suite measured 620
+@3903.16 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries, machine idle); +9 vs the 611
+below = `tests/test_v5_above_band_seed.py` (9)).
+Previous: 611 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1b executed** (scaled+damped augmented Newton; machinery exact, band (b)
 window question reframed — VERDICT
 `cases/analysis/v5_1b_scaled_newton/VERDICT.md`); full-suite measured 611

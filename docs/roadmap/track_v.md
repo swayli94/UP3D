@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24)**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.5 TE-band (B,δ) formulation REGISTERED 2026-07-24, NOT opened)**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -581,13 +581,37 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   perturbed δ*) = candidate GV5.1c; breaking the floor itself = the
   TE-band (B, δ) formulation work, queued. VERDICT
   `cases/analysis/v5_1b_scaled_newton/VERDICT.md`, design record
-  `docs/design_track_v.md` §14. V5 stays **OPEN**: **DECIDED 2026-07-24
-  (user-directed)** — next = **GV5.1c** (above-band seed, the true
-  pre-floor slope-2 read; opened on `kimi/track-v5-gv5-1c`); the
-  floor-breaking work is registered as the STANDALONE item **GV5.5**
-  (TE-band (B, δ) formulation, see the gates above; NOT opened,
-  sequencing = user's call); the V4-reopen trigger stays parked.
-  Remaining: RAE2822
+  `docs/design_track_v.md` §14. **GV5.1c ✓ EXECUTED 2026-07-24**
+  (2 PASS / 1 FAIL / 7 RECORDED; `cases/analysis/v5_1c_above_band_window/`,
+  VERDICT + PRE_REGISTRATION committed 1e90d59 pre-execution; the
+  above-band-seed window read, user-directed): the above-band seeds
+  delivered as pre-registered (the amended seed + δ×(1+ε) at the free
+  BL nodes, ε = 1e4 by the deterministic calibration bisection → seed
+  F_BL 3.219e-1 coarse / 1.819e-1 medium ≈ 1e4× the floor band) and
+  the pre-floor slope-2 window is MEASURED — **no quadratic regime
+  anywhere above the floor**: the clean-descent steps are
+  line-search-capped halvings (λ = 0.5 → p = 1.00 by construction,
+  the backtracking cap, not Newton asymptotics) and the trajectory
+  STALLS mid-range (F_BL ~ 3e-2 → 1.3e-2 / 2.2e-2 over 10
+  iterations), never reaching the band (4262× / 12867× the floor at
+  the cap); binding medium median p = 0.56 → honest FAIL (coarse
+  1.00 recorded); regression slopes 0.75/0.62; μ rejection-retries
+  0 again (the line search carries all the globalization). Band (a)
+  PASS both levels with the cond-aware e2 tolerance pre-registered
+  (e2 2.06e-9 / 2.40e-9 vs 3.9e-2 / 5.2e-2). New finding: the
+  tight-Newton obstacle is not only the formulation floor — a
+  mid-range descent barrier sits 3–4 decades above it; whether a
+  quadratic basin exists ADJACENT to the floor = the near-band-seed
+  follow-up question (candidate GV5.1d, user adjudication).
+  Executed under the temporary 8-thread session constraint (runner
+  default 16; wall times flagged non-comparable); the medium fixed
+  point scattered AGAIN at 8 threads (a 4th fixed point cl
+  0.28245999, unperturbed F_BL 1.824e-6 = 1.07× floor; coarse
+  bit-identical). Design record `docs/design_track_v.md` §15. V5
+  stays **OPEN**: next = the user's sequencing call among GV5.1d
+  (near-band seed), **GV5.5** (the registered TE-band (B, δ)
+  formulation item, NOT opened), GV5.2/GV5.3/GV5.4; the V4-reopen
+  trigger stays parked. Remaining: RAE2822
   transonic VII vs
   committed experiment (GV5.2; needs the 2.5-D RAE2822 mesh family + A4
   TE-wedge pre-check), M6 CL-down + Cp-RMS-down vs committed experiment Cp
