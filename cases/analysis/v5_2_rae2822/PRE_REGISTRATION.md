@@ -176,3 +176,77 @@ none of these touches the metrics, bands, or the VII recipe:
    (x ≥ 0.95 secant sum; the gap = reflex-camber curvature over the fit
    window). Quadratic recovery available on both levels; the ≈6° guard
    clears by both measures → the §3 fallback does NOT fire.
+
+## Addendum 2026-07-24 #2 (FP-driver stall rescue — pre-execution)
+
+The first execution attempt crashed at coarse P1 outer iter 1 on the
+GV3.3 loud-fail guard (`FP driver did not converge`). Diagnosis run
+BEFORE any remedy (standalone, coarse mesh, inviscid k=0 call):
+
+- M 0.725 / α 2.55 single-shot Newton (the GV3.2 protocol verbatim):
+  NOT converged in 30 Newton iterations — the residual drops to
+  ~2.7e-6 and then sits on a 4-iteration identical plateau (a
+  shock-cell limit cycle), tol_residual = 1e-10 unreachable.
+- M 0.72 / α 2.55 same protocol: converged in 7 iterations to 7.7e-13.
+  The mesh and α are fine; the stall is specific to M 0.725+.
+
+Pre-registered rescue (this addendum, committed before re-execution):
+the FP driver keeps the GV3.2 single-shot as first choice for every
+warm-started (k ≥ 1) solve, and falls back to the library's DESIGNATED
+transonic path — `solve/newton.py::solve_newton_transonic`, upward Mach
+continuation from m_start = 0.70 with warm starts from converged levels
+only and a STRICT final level at NEWTON_ARGS' tol_residual = 1e-10
+(design.md Sec 8.1; the solve_newton_lifting docstring itself routes
+transonic levels through it) — for (i) the k=0 cold start and (ii) any
+in-loop single-shot that reports converged=False. Validated standalone:
+M 0.70 level 5 Newton iters to |R| = 3.8e-13, M 0.725 final level 8
+iters to |R| = 4.0e-11 (accept=tol, strict). If BOTH paths fail the
+GV3.3 guard still raises — no silent acceptance anywhere.
+
+Unchanged (still binding): NEWTON_ARGS verbatim, the loose recipe
+(ω = 1.0, ≤ 10 outer, tol_ds = 1e-3), the conditions, all bands and
+metrics. What changes is ONLY how each inner FP solve reaches its
+converged state; the outer fixed point and every metric are computed
+from converged states exactly as before. The per-call driver path
+(single_shot / continuation) is counted in summary.csv.
+
+## Addendum 2026-07-24 #3 (stall-acceptance tier — pre-execution)
+
+Addendum #2's chain (single-shot strict → continuation strict) was
+validated end-to-end and FAILED at outer iter 2 — a DIFFERENT failure
+mode, measured (coarse P1, k=2 FP call, mdot_max = 1.30e-2):
+
+- warm single-shot: 30 Newton iters, residual frozen at ~1.0e-9 for the
+  last 6+ iterations (a hard shock-cell plateau, NOT slow convergence —
+  raising n_newton_max to 60 changes nothing);
+- strict continuation (M 0.70 → 0.725, with dm-halving retry via
+  M 0.7125): final level plateaus at 5.2e-10 — also short of 1e-10.
+
+The plateau state is converged to ~7 orders of magnitude of residual
+reduction — 6+ orders tighter than the OUTER fixed-point tolerance
+(tol_ds = 1e-3) the solution feeds into; tol_residual = 1e-10 is
+inherited subsonic practice (cheap under quadratic convergence),
+unreachable at a transonic shock-cell plateau. The library already
+carries the honesty-guarded acceptance for exactly this state:
+`solve_newton_lifting(accept_on_stall=True)` accepts a live plateau
+(accept_reason "stall") ONLY when the Kutta constraint is converged
+(f_norm < tol_gamma), no upwind limiter/floor activity is active, and
+the plateau detector (live_stalled) fires — otherwise it keeps
+iterating/reporting non-convergence.
+
+Pre-registered FP-call chain (this addendum; supersedes #2's), ordered
+cheap → deep, first success wins, every attempt's
+(path, accept_reason, converged) logged:
+
+- warm-started (k ≥ 1): single strict → single stall-accept →
+  continuation strict → continuation stall-accept → the GV3.3 loud
+  raise;
+- cold start (k = 0): continuation strict → continuation
+  stall-accept → raise.
+
+Strict 1e-10 remains the FIRST choice at every call; a stall acceptance
+is recorded per leg (summary.csv: fp_calls / fp_continuation /
+fp_stall_accepted) and reported in the VERDICT. No silent acceptance:
+if every tier fails, the guard still raises and the point reads
+RECORDED per §6. All bands, metrics, conditions, NEWTON_ARGS and the
+loose recipe remain binding and unchanged.

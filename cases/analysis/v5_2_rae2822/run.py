@@ -62,8 +62,11 @@ from pyfp3d.post.surface import (  # noqa: E402
 from pyfp3d.viscous.coupling import (  # noqa: E402
     CouplingConfig,
     build_airfoil_case,
-    make_newton_lifting_driver,
     run_loose_coupling,
+)
+from pyfp3d.solve.newton import (  # noqa: E402
+    solve_newton_lifting,
+    solve_newton_transonic,
 )
 
 
@@ -281,6 +284,67 @@ def _te_precheck(level, mesh):
 # one (level, point) VII leg
 # ---------------------------------------------------------------------------
 
+def _make_transonic_driver(mc, wc, m_inf, alpha):
+    """GV3.2 Newton driver + the committed transonic rescue chain
+    (pre-registration addenda 2026-07-24 #2 and #3). Per FP call, ordered
+    cheap -> deep, FIRST success wins:
+
+    warm-started (k >= 1): single-shot strict -> single-shot
+    stall-accept -> cold continuation strict -> cold continuation
+    stall-accept -> the GV3.3 loud raise.
+    cold start (k = 0):    continuation strict -> continuation
+    stall-accept -> raise.
+
+    Continuation = `solve_newton_transonic` upward Mach ramp from
+    m_start = 0.70 (the library's designated transonic path, strict
+    final level at NEWTON_ARGS' tol_residual). Stall-accept =
+    `accept_on_stall=True` -- the library's honesty-guarded plateau
+    acceptance (accept_reason "stall" only under f_norm < tol_gamma,
+    zero upwind-limiter/floor activity, and the live_stalled plateau
+    rule), for the |R| ~ 1e-9 shock-cell plateaus the strict 1e-10
+    cannot reach; every attempt's (path, accept_reason, converged) is
+    logged for the summary."""
+    log = []
+
+    def _single(rhs, seed, stall):
+        kw = dict(NEWTON_ARGS)
+        if stall:
+            kw["accept_on_stall"] = True
+        r = solve_newton_lifting(
+            mc, wc, m_inf=m_inf, alpha_deg=alpha, external_rhs=rhs,
+            phi_init=seed.phi, gamma_init=seed.gamma, **kw)
+        log.append(("single_stall_accept" if stall else "single_strict",
+                    str(r.get("accept_reason")), bool(r["converged"])))
+        return r
+
+    def _cont(rhs, stall):
+        kw = dict(external_rhs=rhs, **NEWTON_ARGS)
+        if stall:
+            kw["accept_on_stall"] = True
+        r = solve_newton_transonic(
+            mc, wc, m_inf=m_inf, alpha_deg=alpha, newton_kw=kw)
+        log.append(("continuation_stall_accept" if stall
+                    else "continuation_strict",
+                    str(r.get("accept_reason")), bool(r["converged"])))
+        return r
+
+    def solve(rhs, seed):
+        attempts = (
+            [lambda: _single(rhs, seed, False),
+             lambda: _single(rhs, seed, True),
+             lambda: _cont(rhs, False),
+             lambda: _cont(rhs, True)] if seed is not None else
+            [lambda: _cont(rhs, False), lambda: _cont(rhs, True)])
+        r = attempts[0]()
+        for attempt in attempts[1:]:
+            if r["converged"]:
+                break
+            r = attempt()
+        return r["phi"], r["gamma"], r
+
+    return solve, log
+
+
 def _run_point(level, mc, wc, pname, pt):
     cfg = CouplingConfig(re_chord=RE, m_inf=pt["m"], alpha_deg=pt["alpha"],
                          x_tr_upper=X_TR, x_tr_lower=X_TR)
@@ -295,11 +359,14 @@ def _run_point(level, mc, wc, pname, pt):
             alpha_deg=pt["alpha"], s_ref=s_ref, m_inf=pt["m"])
         return {"cl": f["cl"], "cd_p": f["cd_pressure"]}
 
-    driver = make_newton_lifting_driver(mc, wc, pt["m"], pt["alpha"],
-                                        **NEWTON_ARGS)
+    driver, path_log = _make_transonic_driver(mc, wc, pt["m"], pt["alpha"])
     t0 = time.perf_counter()
     res = run_loose_coupling(driver, case, cfg, probe=probe)
     wall = time.perf_counter() - t0
+    n_stall = sum(1 for _, a, c in path_log if a == "stall" and c)
+    n_cont = sum(1 for p, _, _ in path_log if p.startswith("continuation"))
+    print(f"    fp calls: {len(path_log)} ({n_cont} continuation, "
+          f"{n_stall} stall-accepted)", flush=True)
 
     up, lo = _wall_cp_sides(mc, res.phi, pt["m"], pt["alpha"], s_ref)
     xs = shock_x(up[0], up[1])
@@ -332,6 +399,9 @@ def _run_point(level, mc, wc, pname, pt):
         "m_inf": pt["m"], "alpha": pt["alpha"],
         "converged": bool(res.converged), "n_outer": int(res.n_outer),
         "wall_s": wall,
+        "fp_calls": int(len(path_log)),
+        "fp_continuation": int(n_cont),
+        "fp_stall_accepted": int(n_stall),
         "cl_final": float(hist[-1]["cl"]) if hist else float("nan"),
         "ibl_final_residual": float(hist[-1]["ibl_final_residual"])
         if hist and "ibl_final_residual" in hist[-1] else float("nan"),
