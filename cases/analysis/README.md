@@ -120,11 +120,15 @@ the committed PNG/CSV are the evidence. Roadmap gates:
 - `v5_1b_scaled_newton/` — **Track V / V5** GV5.1b scaled + damped augmented Newton (the GV5.1
   follow-up designed on the IBL-floor diagnosis; pre-registered 8b7793f before the first execution;
   the GV5.1 amended protocol verbatim — HEAD-regen loose-converged seeds, wiring guard PASS both
-  legs), **1 PASS / 1 FAIL / 7 RECORDED** — the machinery is delivered and exact (solver-internal
+  legs), **2 PASS / 0 FAIL / 7 RECORDED** (adjudicated 2026-07-24; the as-executed 1 PASS / 1 FAIL /
+  7 RECORDED is preserved in commit 1c55906) — the machinery is delivered and exact (solver-internal
   row/column equilibration + Levenberg damping + floor-reached stop, flags default OFF = legacy path
-  bit-identical; band (a) suite + tight fleet 28 green); the FAIL is the medium live-seed e2
+  bit-identical; band (a) suite + tight fleet 28 green); the medium live-seed e2
   identity 1.96e-10 vs a ≤ 1e-10 threshold chosen at implementation time (NOT pre-registered) =
-  SuperLU pivot-order roundoff through cond(J) ~ 1e10, user adjudication requested (VERDICT §3);
+  SuperLU pivot-order roundoff through cond(J) ~ 1e10 — **adjudicated PASS 2026-07-24 (user)
+  under the cond-aware read** tol = max(1e-10, 10·κ₁(J)·eps), a ~1e-5-class bound at κ₁ ~ 1e10,
+  a ~4-decade margin (VERDICT §3; run.py now computes the tolerance live from a κ₁ one-norm
+  estimate);
   band (b): the amended seeds sit INSIDE the 10× floor band from iter 0 (F_BL = 1.00× the floor) —
   no above-band contraction segment exists by construction → pre-registered fallback: medium
   termination floor_reached at iter 5 (replacing GV5.1's 10-step λ-collapse crawl) at the same
@@ -135,10 +139,12 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   window question REFRAMED to an above-band-seed protocol (candidate GV5.1c); VERDICT +
   PRE_REGISTRATION + CSVs in the dir, design record `docs/design_track_v.md` §14) —
   `python cases/analysis/v5_1b_scaled_newton/run.py` — coarse leg ~5 min / medium ~27 min /
-  k=1 ~2 min under external load (2026-07-24 measurement; the default full run exits 1 = the
-  medium live-check FAIL above, see VERDICT §3; `--levels coarse` alone exits 0; a loose-regen
-  wiring-guard failure raises RuntimeError = recipe error; `--levels`/`--no-k1` for partial
-  re-runs)
+  k=1 ~2 min under external load (2026-07-24 measurement; per the CURRENT run.py logic — the e2
+  tolerance is now computed live cond-aware from a κ₁ one-norm estimate, VERDICT §3 — a fresh full
+  re-run reads 2 PASS / 0 FAIL / 7 RECORDED and exits 0 (not verified by an end-to-end re-run
+  after the adjudication edit; the as-executed runner exited 1 on the medium live check); a
+  loose-regen wiring-guard failure raises RuntimeError = recipe error; `--levels`/`--no-k1` for
+  partial re-runs)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS

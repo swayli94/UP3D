@@ -280,14 +280,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   变量承载、mid-chord→TE 分布；原始 cond 4e10–4e13 主要是缩放 artifact（行列均衡 → 2e4/7e5/1e7、亚 1e-6 计数 501/500/1082 → 0/0/2、无精确零方向），均衡后余 1e5–1e7 真 (A,Ψ)
   刚度 = GV5.1b/GV5.4 的真正靶子；F_BL 地板住 TE 带 (B,δ) 方程且几乎全在 J 值域内；闭包地板活动集全空（假说死）、eps_diff ×4 地板仅移 ≤6 %（非人工粘性截断）、伪时间控制器触底
   （cfl 钉 cfl_min、残差自第 0 迭代冻结）= 公式化地板经控制器表现，单靠全局化过不了地板）；**GV5.1b ✓ EXECUTED 2026-07-24**
-  （1P/1F/7R，`cases/analysis/v5_1b_scaled_newton/`：scaled+damped 机构交付且精确——求解器内部行列均衡 + Levenberg 对角阻尼 +
-  floor-reached 停止类，旗标默认关 = legacy 逐位，套件 28 green；medium 活体 e2 恒等式 1.96e-10 超自设 ≤1e-10 阈值记
-  FAIL = cond~1e10 下 SuperLU 主序舍入的机器地板（阈值非预注册、待用户裁决，非代数错）；amended 种子自第 0 迭代即坐在
+  （2P/0F/7R 裁决后（执行时 1P/1F/7R 保留于 commit 1c55906），`cases/analysis/v5_1b_scaled_newton/`：scaled+damped 机构交付且精确——求解器内部行列均衡 + Levenberg 对角阻尼 +
+  floor-reached 停止类，旗标默认关 = legacy 逐位，套件 28 green；medium 活体 e2 恒等式 1.96e-10 超自设 ≤1e-10 阈值
+  = cond~1e10 下 SuperLU 主序舍入的机器地板（阈值非预注册，非代数错）——**2026-07-24 用户裁决 cond-aware 读 PASS**
+  （tol = max(1e-10, 10·κ₁·eps)，κ₁~1e10 → ~1e-5 量级，4 个 decade 余量，VERDICT §3；run.py 阈值改由 κ₁ 一范数估计现算）；amended 种子自第 0 迭代即坐在
   10× 地板带内侧（F_BL = 1.00× 地板）⇒ 构造上无 above-band 收缩段，走预注册 fallback：medium floor_reached 第 5 迭代
   同 merit 收官（9.074e-11 ≈ 9.025e-11，取代 GV5.1 的 10 步 λ-collapse 爬行）、coarse 末 merit 2.044e-10 < GV5.1
   2.068e-10 仍在降、k=1 standalone F_BL −31 %/merit 2.3× 更深、μ 拒绝重试 0 次——缩放是活性成分，阻尼臂惰性；
   窗口问题被重构为需 above-band 种子的协议（候选 GV5.1c），破地板本身 = TE 带 (B,δ) 公式层工作排队）；下一步 =
-  band (a) 阈值裁决 + GV5.1c（above-band 种子）或 TE 带公式层工作，GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  GV5.1c（above-band 种子）或 TE 带公式层工作，GV5.2/5.3/5.4 排序待用户裁决；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：

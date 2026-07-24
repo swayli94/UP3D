@@ -104,10 +104,14 @@ GV51_RUN = os.path.join(HERE, "..", "v5_tight_coupling", "run.py")
 FLOOR_BAND = {"coarse": 3.16e-5, "medium": 1.71e-5}
 RECIPE_TOL_K0 = 1e-8       # the GV5.1 wiring guard |dcl_k0|
 
-# band (a) live-identity thresholds: e1/e2 are solve-free / same-solve
-# algebra (machine precision); e3 is the round-trip through a cond ~
-# 1e10 system (cond-amplified)
+# band (a) live-identity thresholds: e1 is solve-free algebra (machine
+# precision); e3 is the round-trip through a cond ~ 1e10 system
+# (cond-amplified); e2 compares two splu solves of the SAME matrix
+# differing only by explicit zeros (pivot-order roundoff) -- 2026-07-24
+# user adjudication (VERDICT Sec.3): read cond-aware,
+# tol_e2 = max(1e-10, E2_COND_SAFETY * cond1(J) * eps)
 BAND_A_TOL = (1.0e-12, 1.0e-10, 1.0e-6)
+E2_COND_SAFETY = 10.0
 
 SUMMARY = []               # (band, level, key_result, verdict)
 
@@ -258,8 +262,9 @@ def band_a_live(pack):
     operators (assembly bit-identical to GV5.1): e1 = max-norm rel error
     of diag(rn) @ Jsc @ diag(cn) vs J; e2 = the mu=0 damped step vs the
     undamped splu step; e3 = the dx = C dy round-trip. Returns
-    (e1, e2, e3) (e2/e3 nan if the seed J is splu-singular -- recorded,
-    the polish itself starts at mu > 0 and is unaffected)."""
+    (e1, e2, e3, tol_e2, ok) with tol_e2 the adjudicated cond-aware
+    e2 tolerance (e2/e3/tol_e2 nan if the seed J is splu-singular --
+    recorded, the polish itself starts at mu > 0 and is unaffected)."""
     x0 = pack.x_base()
     F0 = td.augmented_residual(pack, x0)
     J0 = td.augmented_jacobian(pack, x0)
@@ -267,24 +272,36 @@ def band_a_live(pack):
     E = (sp.diags(rn) @ Jsc @ sp.diags(cn) - J0).tocsr()
     e1 = float(abs(E.data).max() / abs(J0.data).max())
     try:
-        d_ref = -sla.splu(J0.tocsc()).solve(F0)
+        lu = sla.splu(J0.tocsc())
+        d_ref = -lu.solve(F0)
         scale = max(float(np.max(np.abs(d_ref))), 1e-300)
         d0 = td.scaled_damped_step(J0, F0, 0.0)
         e2 = float(np.max(np.abs(d0 - d_ref)) / scale)
         d_rc = td.scaled_damped_step(J0, F0, 0.0, scaling="rowcol")
         e3 = float(np.max(np.abs(d_rc - d_ref)) / scale)
+        # the adjudicated cond-aware e2 tolerance (VERDICT Sec.3):
+        # kappa_1(J) from the one-norm estimator, the inverse applied
+        # through the LU already factorized above
+        cond1 = float(
+            sla.onenormest(J0)
+            * sla.onenormest(sla.LinearOperator(
+                J0.shape, matvec=lu.solve,
+                rmatvec=lambda b: lu.solve(b, trans="T"))))
+        tol_e2 = max(BAND_A_TOL[1],
+                     E2_COND_SAFETY * cond1 * np.finfo(float).eps)
     except RuntimeError as exc:
         print(f"    band (a) live: seed J splu-singular ({exc}) -- "
               "e2/e3 recorded nan", flush=True)
         e2 = e3 = float("nan")
+        tol_e2 = float("nan")
     ok = (e1 <= BAND_A_TOL[0]
-          and (np.isnan(e2) or e2 <= BAND_A_TOL[1])
+          and (np.isnan(e2) or e2 <= tol_e2)
           and (np.isnan(e3) or e3 <= BAND_A_TOL[2]))
     print(f"    band (a) live on the seed J: e1={e1:.3e} (<="
-          f"{BAND_A_TOL[0]:.0e}) e2={e2:.3e} (<={BAND_A_TOL[1]:.0e}) "
+          f"{BAND_A_TOL[0]:.0e}) e2={e2:.3e} (<={tol_e2:.0e} cond-aware) "
           f"e3={e3:.3e} (<={BAND_A_TOL[2]:.0e}) -> "
           f"{'PASS' if ok else 'FAIL'}", flush=True)
-    return e1, e2, e3, ok
+    return e1, e2, e3, tol_e2, ok
 
 
 # ---------------------------------------------------------------------------
@@ -377,11 +394,13 @@ def run_leg(level):
     pack = td.build_tight_pack(st, UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR)
     print(f"    pack in {time.perf_counter() - t0:.0f}s", flush=True)
 
-    e1, e2, e3, a_ok = band_a_live(pack)
+    e1, e2, e3, tol_e2, a_ok = band_a_live(pack)
     _record("(a)", level,
             f"live identities on the seed J: e1={e1:.3e} e2={e2:.3e} "
-            f"e3={e3:.3e} (the suite gates the machine-precision "
-            "algebra + the mu schedule)", "PASS" if a_ok else "FAIL")
+            f"(<= {tol_e2:.1e} cond-aware, user-adjudicated 2026-07-24 "
+            f"VERDICT Sec.3) e3={e3:.3e} (the suite gates the "
+            "machine-precision algebra + the mu schedule)",
+            "PASS" if a_ok else "FAIL")
 
     print(f"--- [{level}] polish: newton_tight(scaling=rowcol, "
           "lm_damping, floor_stop; max_iter=10) ---", flush=True)

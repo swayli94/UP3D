@@ -1,8 +1,10 @@
 # pyFP3D Agent Rules
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.1b scaled + damped augmented Newton ✓ EXECUTED 2026-07-24 (1 PASS /
-1 FAIL / 7 RECORDED; the verdict paragraphs follow the GV5.0 recap
+GV5.1b scaled + damped augmented Newton ✓ EXECUTED 2026-07-24 (2 PASS /
+0 FAIL / 7 RECORDED adjudicated 2026-07-24 — band (a) medium cond-aware
+PASS; 1/1/7 as executed, preserved in commit 1c55906; the verdict
+paragraphs follow the GV5.0 recap
 below). Previous within V5: GV5.1 augmented (φ, Γ, BL) Newton ✓
 EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) + IBL-floor follow-up
 diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED), and earlier the GV5.0
@@ -70,7 +72,9 @@ frozen at 3.154e-6 from iter 0) = the formulation floor expressed
 through the controller — globalization alone cannot pass it. GV5.1b,
 designed on this diagnosis's inputs, executed the same day (the
 paragraph below).
-**GV5.1b ✓ EXECUTED 2026-07-24 (1 PASS / 1 FAIL / 7 RECORDED,
+**GV5.1b ✓ EXECUTED 2026-07-24 (2 PASS / 0 FAIL / 7 RECORDED
+adjudicated 2026-07-24; 1 PASS / 1 FAIL / 7 RECORDED as executed,
+preserved in commit 1c55906;
 `cases/analysis/v5_1b_scaled_newton/`, VERDICT + PRE_REGISTRATION
 committed 8b7793f): the scaled + damped augmented Newton machinery is
 delivered and exact — and the window question is REFRAMED, not
@@ -85,8 +89,11 @@ legacy path bit-reproduces the committed histories
 (8); tight fleet 28 passed twice). Band (a) suite PASS both levels; the
 medium live-seed e2 identity 1.96e-10 vs a ≤ 1e-10 threshold chosen at
 implementation time (NOT pre-registered) = SuperLU pivot-order roundoff
-through cond(J) ~ 1e10 — recorded FAIL, **user adjudication
-requested**. Band (b): the amended seeds sit INSIDE the 10× floor band
+through cond(J) ~ 1e10 — **adjudicated PASS 2026-07-24 (user) under
+the cond-aware read** tol = max(1e-10, 10·κ₁(J)·eps), a ~1e-5-class
+bound at κ₁ ~ 1e10, a ~4-decade margin (VERDICT §3; run.py now
+computes the tolerance live from a κ₁ one-norm estimate). Band (b):
+the amended seeds sit INSIDE the 10× floor band
 from iter 0 (F_BL = 1.00× the floor) — no above-band contraction
 segment exists by construction → the pre-registered fallback: medium
 terminates **floor_reached** at iter 5 (replacing GV5.1's 10-step
@@ -97,8 +104,8 @@ the k1seed; merit 2.3× below). Band (c): coarse 10 vs 8 NOT met,
 medium 5 vs 10 met (degenerate band-entry iter 0). μ rejection-retries
 = 0 on all three runs — the scaling is the active ingredient, the
 damping arm inert at these states (consistent with the diagnosis:
-globalization alone cannot pass the floor). Next: the band (a)
-threshold adjudication + **GV5.1c** (an above-floor-band seed — early
+globalization alone cannot pass the floor). Next: **GV5.1c** (an
+above-floor-band seed — early
 loose iterate or perturbed δ* — to actually read the pre-floor slope-2
 window) or the TE-band (B, δ) formulation work that breaks the floor
 itself; sequencing = the user's call; the V4-reopen trigger stays
@@ -824,7 +831,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   criterion met on GV3.2; GV3.3 stern instability = reopen trigger);
   **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL) ·
   GV5.1 ✓ EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b ✓ EXECUTED
-  (1 PASS / 1 FAIL / 7 RECORDED)** —
+  (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed)** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
@@ -845,20 +852,22 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   exact null directions), the genuine scaled (A, Ψ) stiffness 1e5–1e7 +
   the TE-band (B, δ) floor residual inside J's range = the GV5.1b
   targets; the pseudo-time controller bottoms out at the floor; GV5.1b
-  ✓ EXECUTED 2026-07-24 (1P/1F/7R, `cases/analysis/v5_1b_scaled_newton/`):
+  ✓ EXECUTED 2026-07-24 (2P/0F/7R adjudicated; 1P/1F/7R as executed,
+  `cases/analysis/v5_1b_scaled_newton/`):
   the scaled + damped machinery is delivered and exact (row/column
   equilibration + Levenberg damping + floor-reached stop, flags default
   OFF = legacy bit-identical; `tests/test_v5_tight_scaled.py` (8),
-  tight fleet 28 green); the medium live-seed e2 FAIL is a
-  non-pre-registered ≤1e-10 threshold on a cond ~ 1e10 solve =
-  pivot-order machine floor, user adjudication requested; the amended
+  tight fleet 28 green); the medium live-seed e2 read on a
+  non-pre-registered ≤1e-10 threshold = pivot-order machine floor
+  through cond ~ 1e10, adjudicated PASS 2026-07-24 under the
+  cond-aware read (VERDICT §3); the amended
   seeds sit INSIDE the 10× floor band from iter 0 ⇒ no above-band
   window by construction — fallback: medium floor_reached at iter 5 at
   the same merit, coarse still descending below GV5.1, k=1 standalone
   F_BL −31 % / merit 2.3× below, μ rejection-retries 0 (scaling the
   active ingredient); the window question reframed to an
-  above-band-seed protocol; remaining = the band (a) threshold
-  adjudication + GV5.1c (above-band seed) or the TE-band (B, δ)
+  above-band-seed protocol; remaining = GV5.1c (above-band seed) or
+  the TE-band (B, δ)
   formulation work (sequencing = user's call), GV5.2
   RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
   experimental CL committed), GV5.4 cost; V6 wake sheet;

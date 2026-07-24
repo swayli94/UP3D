@@ -420,7 +420,10 @@ slope-2 窗口重定义为地板之前（地板已由本诊断钉死为公式性
 ## 14. V5 实现记录（GV5.1b scaled+damped Newton，2026-07-24）
 
 门禁 `cases/analysis/v5_1b_scaled_newton/`（预注册 8b7793f 先于首次
-执行；1 PASS / 1 FAIL / 7 RECORDED；`run.py` 单 runner 从头再生成
+执行；裁决后 **2 PASS / 0 FAIL / 7 RECORDED**——band (a) medium
+cond-aware 读 PASS，2026-07-24 用户裁决（VERDICT §3）；执行时读数
+1 PASS / 1 FAIL / 7 RECORDED 保留在 commit 1c55906；`run.py` 单
+runner 从头再生成
 全部 artifact，协议 = GV5.1 amended 逐字——松环重生成种子 + 接线
 守卫 |dcl_k0| ≤ 1e-8 两腿均过（coarse 1.56e-12 / medium 1.31e-9）；
 执行证据 `results/summary.csv` + `results/compare.csv` + 三条
@@ -436,15 +439,20 @@ newton_history CSV，判决 `VERDICT.md`）。实现决策与结果：
    legacy 路径逐位（对 committed k1seed 历史回归 rel ≤ 2e-6 通过；
    tight 舰队 28 passed 两次，执行前后各一；新测试
    `tests/test_v5_tight_scaled.py` 8 个）。
-2. **band (a) 套件精确；medium 活体 e2 记 FAIL = 阈值校准问题，
-   非代数错**。良态合成系统上的机器精度恒等式 + μ 日程转移全绿。
+2. **band (a) 套件精确；medium 活体 e2 = 阈值校准问题，非代数错；
+   裁决落地 PASS（2026-07-24 用户）**。良态合成系统上的机器精度
+   恒等式 + μ 日程转移全绿。
    活体种子 J 上 e1（对角代数）≤ 2.6e-16 两级均过；e2（μ=0 阻尼
    步 vs 无阻尼 splu 步）medium 1.96e-10 超实现时自设的 ≤1e-10
    前向阈值——两矩阵数学相同，+0.0·I 引入的显式零元改变 SuperLU
    列主序，差 = 经 cond(J) ~ 1e10 放大的舍入（backward-error
    意义下恒等成立，离 cond·eps 上界还有 4 个 decade）。阈值非预
-   注册、事后未动；裁决请求在案（VERDICT §3：建议改 cond-aware
-   阈值读 PASS，套件仍是 binding gate，活体检查降为 RECORDED）。
+   注册、事后未动；**2026-07-24 用户裁决：cond-aware 读 PASS**
+   （VERDICT §3）——e2 容差改为 tol = max(1e-10, 10·κ₁(J)·eps)
+   （κ₁ 由一范数估计现算，~1e10 → ~1e-5 量级界，实测 1.96e-10
+   以 ~4 个 decade 余量通过）；套件仍是 binding gate，活体检查
+   按 cond-aware 容差重发。as-executed 的 1/1/7 读保留在 commit
+   1c55906。
 3. **band (b) 无窗可读 = 构造性结果，非机构失败**。amended 种子
    本身就是松环末态，F_BL 自第 0 迭代坐在 1.00× 诊断地板
    （coarse 3.154e-6/3.154e-6、medium 1.710e-6/1.712e-6），深在
@@ -470,6 +478,6 @@ newton_history CSV，判决 `VERDICT.md`）。实现决策与结果：
    之前二次收敛" = 未检验而非证伪。破地板本身仍是公式层工作
    （TE 带 (B,δ) 方程，§13 第 3 条），排队待用户裁决。band (c)
    计数：coarse N_polish 10 vs 期望 ≤8 NOT met（记录）；medium
-   5 vs ≤10 met（退化：band-entry iter 0）。下一步 = band (a)
-   阈值裁决 + GV5.1c（above-band 种子）或 TE 带公式层工作，
+   5 vs ≤10 met（退化：band-entry iter 0）。下一步 = GV5.1c
+   （above-band 种子）或 TE 带公式层工作，
    排序 = 用户裁决；V4 重开触发保持挂起。

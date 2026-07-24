@@ -501,7 +501,8 @@ cases/                     # Test cases and reference data
 │   ├── v3_fuselage_smoke/      # [V3/GV3.3] fuselage body-of-revolution smoke
 │   ├── v3_loose_coupling/      # [V3/GV3.1/3.2] loose coupling, NACA0012 2.5-D strip
 │   ├── v5_1b_scaled_newton/    # [V5/GV5.1b] scaled + damped augmented Newton
-│   │                           #   (1P/1F/7R: machinery exact, floor_reached stop works;
+│   │                           #   (2P/0F/7R adjudicated (1P/1F/7R as executed): machinery
+│   │                           #   exact, floor_reached stop works;
 │   │                           #   window question reframed to an above-band seed)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
@@ -1202,22 +1203,24 @@ directions), genuine scaled (A, Ψ) stiffness 1e5–1e7 remains; the floor
 residual lives at the TE band (B, δ) equations inside J's range; closure
 floors inactive; eps_diff ×4 ≤ 6 %; the pseudo-time controller bottoms
 out = a formulation floor globalization alone cannot pass); **GV5.1b ✓
-EXECUTED 2026-07-24 (1 PASS / 1 FAIL / 7 RECORDED,
+EXECUTED 2026-07-24 (2 PASS / 0 FAIL / 7 RECORDED adjudicated
+2026-07-24; 1P/1F/7R as executed, preserved in commit 1c55906,
 `cases/analysis/v5_1b_scaled_newton/`, design record
 `docs/design_track_v.md` §14)**: the scaled + damped machinery is
 delivered and exact (solver-internal row/column equilibration +
 Levenberg damping + floor-reached stop, flags default OFF = legacy
 bit-identical; `tests/test_v5_tight_scaled.py` (8), tight fleet 28
-green); the medium live-seed e2 FAIL is a non-pre-registered ≤1e-10
-threshold on a cond ~ 1e10 solve = SuperLU pivot-order machine floor,
-user adjudication requested; the amended seeds sit INSIDE the 10× floor
+green); the medium live-seed e2 read on a non-pre-registered ≤1e-10
+threshold = SuperLU pivot-order machine floor through cond ~ 1e10,
+adjudicated PASS under the cond-aware read tol = max(1e-10, 10·κ₁·eps)
+(~4-decade margin, VERDICT §3); the amended seeds sit INSIDE the 10× floor
 band from iter 0 ⇒ no above-band window by construction — fallback:
 medium floor_reached at iter 5 at the same merit, coarse still
 descending below GV5.1, k=1 standalone F_BL −31 % / merit 2.3× below,
 μ rejection-retries 0 (scaling the active ingredient); the window
 question reframed to an above-band-seed protocol (candidate GV5.1c),
-floor-breaking = TE-band formulation work queued; next = the band (a)
-threshold adjudication + GV5.1c or the TE-band formulation work,
+floor-breaking = TE-band formulation work queued; next = GV5.1c or
+the TE-band formulation work,
 GV5.2/5.3/5.4 sequencing = user's call;
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4

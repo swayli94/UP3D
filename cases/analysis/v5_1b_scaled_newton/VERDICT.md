@@ -6,13 +6,16 @@ first execution). Runner: `run.py` (regenerates every artifact in
 `results/`; seeds by the committed recipe, wiring guard PASS both
 legs — coarse 1.56e-12, medium 1.31e-9). Executed 2026-07-24 on
 `kimi/track-v5-gv5-1b`. Row-level record: `results/summary.csv` —
-**1 PASS / 1 FAIL / 7 RECORDED** (the FAIL is on a non-pre-registered
-threshold; §3, user adjudication requested).
+**2 PASS / 0 FAIL / 7 RECORDED** (band (a) medium resolved by user
+adjudication 2026-07-24: the cond-aware read, §3; the as-executed
+runner read 1 PASS / 1 FAIL / 7 RECORDED, preserved in commit
+1c55906).
 
 **Answer to the gate question, up front:** the scaled + damped
 Newton machinery is delivered and exact (band (a) suite green: 28
-tests; the medium live-check FAIL is a threshold calibration issue on
-a cond ~ 1e10 solve, not an algebra error — §3). It does NOT unlock a
+tests; the medium live-check is a threshold calibration issue on a
+cond ~ 1e10 solve, not an algebra error — adjudicated PASS under
+the cond-aware read, §3). It does NOT unlock a
 quadratic window — and the window question itself is **reframed, not
 answered**: the amended-protocol seeds sit at ~1× the IBL floor
 (coarse F_BL = 3.154e-6 vs floor 3.154e-6; medium 1.710e-6 vs
@@ -54,7 +57,7 @@ floor bands coarse 3.16e-5 / medium 1.71e-5).
 | band | criterion | coarse | medium (binding) | verdict |
 |---|---|---|---|---|
 | (a) suite identities + regression | machine-precision algebra, μ schedule, tight 28 green | green | green | **PASS** (both) |
-| (a) live-seed identities (extra runner check, thresholds NOT pre-registered) | e1 ≤ 1e-12, e2 ≤ 1e-10, e3 ≤ 1e-6 | e1 2.6e-16 / e2 9.2e-11 / e3 1.5e-11 | e1 2.3e-16 / e2 **1.96e-10** / e3 3.7e-10 | coarse PASS; **medium FAIL on e2 — §3, adjudication** |
+| (a) live-seed identities (extra runner check, thresholds NOT pre-registered) | e1 ≤ 1e-12, e2 ≤ max(1e-10, 10·κ₁·eps) (adjudicated), e3 ≤ 1e-6 | e1 2.6e-16 / e2 9.2e-11 / e3 1.5e-11 | e1 2.3e-16 / e2 1.96e-10 / e3 3.7e-10 | **PASS** (both; medium e2 adjudicated, §3) |
 | (b) pre-floor quadratic window | ≥ 3 contractions, median p ∈ [1.5, 2.5] above the floor band | no above-band segment (seed inside band) — fallback read | same | RECORDED (fallback) |
 | (b) fallback: final merit vs GV5.1 committed | recorded | 2.044e-10 < 2.068e-10; termination cap, still descending | 9.074e-11 ≈ 9.025e-11; termination **floor_reached** (iter 5) | RECORDED |
 | (c) counts | N_polish ≤ 2× loose (aspirational) | 10 vs 8 — NOT met (recorded) | 5 vs 10 — met (degenerate: band-entry iter 0) | RECORDED |
@@ -77,10 +80,14 @@ implementation time, NOT pre-registered, and was not adjusted after
 the fact (discipline). The pre-registered band (a) gate — the
 machine-precision identity suite on well-conditioned systems plus the
 regression fleet — is green on both levels. **Adjudication
-requested:** read band (a) medium as PASS under a cond-aware
-threshold (recommended; the suite remains the binding gate and the
-live check is re-issued as RECORDED with the backward-error note), or
-keep the FAIL as the gate's honest answer on the live check.
+(2026-07-24, user): PASS under the cond-aware read.** The suite
+remains the binding gate; the live e2 check is re-issued with the
+cond-aware tolerance tol_e2 = max(1e-10, 10·κ₁(J)·eps) — measured
+1.96e-10 against a ~1e-5-class bound at κ₁ ~ 1e10, a ~4-decade
+margin. `run.py` (the tolerance is now computed live from a κ₁
+one-norm estimate) and `results/summary.csv` are updated accordingly;
+the as-executed runner read (1 PASS / 1 FAIL / 7 RECORDED) is
+preserved in commit 1c55906.
 
 ## 4. band (b): why there is no window at these seeds
 
@@ -121,13 +128,15 @@ current best evidence that the scaled Newton descends when given room
    states (μ never engages) — keep the code path (it is exercised by
    the suite) but do not expect it to matter until an above-band
    seed exists. The V4-reopen trigger stays parked.
-5. The band (a) §3 adjudication, once given, is recorded here and in
-   the summary; the runner's live-check thresholds belong in the
-   pre-registration of any GV5.1c.
+5. The band (a) §3 adjudication (given 2026-07-24: cond-aware PASS)
+   is recorded here and in the summary; the runner's live-check
+   thresholds belong in the pre-registration of any GV5.1c.
 
 ## 6. Artifact index
 
-- `results/summary.csv` — 1 PASS / 1 FAIL / 7 RECORDED + wall rows.
+- `results/summary.csv` — 2 PASS / 0 FAIL / 7 RECORDED + wall rows
+  (band (a) medium amended by the 2026-07-24 adjudication; the
+  as-executed 1/1/7 read is preserved in commit 1c55906).
 - `results/newton_history_{coarse,medium}.csv` — polish histories
   (F blocks, merit, μ, λ, p_merit, ds_change, termination).
 - `results/newton_history_coarse_k1standalone.csv` — the k=1 record.
