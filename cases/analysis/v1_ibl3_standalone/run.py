@@ -176,7 +176,25 @@ def _turb_seed(x):
 # FE case driver
 # ---------------------------------------------------------------------------
 
-def run_fe(nx, nz, turbulent, ue_fn, seed_fn, x0=X0, x1=X1, zh=ZH):
+def _outflow_pairs(sm, x1):
+    """(te_node, upstream_node) pairs on the plate outflow edge x = x1
+    (GV5.5: the plate's natural outflow is the same truncated-tent
+    treatment as the airfoil TE; additive, used only when te=True)."""
+    nbrs = [set() for _ in range(sm.n_node)]
+    for t in range(sm.n_tri):
+        a, b, c = (int(v) for v in sm.triangles[t])
+        nbrs[a].update((b, c))
+        nbrs[b].update((a, c))
+        nbrs[c].update((a, b))
+    pairs = []
+    for i in np.where(np.abs(sm.xyz[:, 0] - x1) < 1.0e-12)[0]:
+        cand = [j for j in nbrs[int(i)] if sm.xyz[j, 0] < x1 - 1.0e-12]
+        cand.sort(key=lambda j: (-sm.xyz[j, 0], j))
+        pairs.append((int(i), cand[0]))
+    return np.asarray(pairs, dtype=np.int64)
+
+
+def run_fe(nx, nz, turbulent, ue_fn, seed_fn, x0=X0, x1=X1, zh=ZH, te=False):
     xyz, tris = structured_rectangle_surface(x0, x1, -zh, zh, nx, nz)
     sm = SurfaceMesh.from_wall_faces(xyz, tris)
     n = xyz.shape[0]
@@ -187,7 +205,9 @@ def run_fe(nx, nz, turbulent, ue_fn, seed_fn, x0=X0, x1=X1, zh=ZH):
     flags = np.full(n, 1 if turbulent else 0, dtype=np.int64)
     st_bc = seed_fn(x0)
     solver = IBL3Solver(sm, u_e, RHO, MU, 0.0, flags, inflow, st_bc,
-                        eps_diff=EPS_DIFF, eps_diff_s=EPS_DIFF_S)
+                        eps_diff=EPS_DIFF, eps_diff_s=EPS_DIFF_S,
+                        te_pairs=(_outflow_pairs(sm, x1) if te else None),
+                        te_extrapolate=te)
     U0 = np.zeros((n, 6))
     for i in range(n):
         U0[i] = seed_fn(max(xyz[i, 0], 1.0e-3))

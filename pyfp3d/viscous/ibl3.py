@@ -1181,7 +1181,8 @@ class IBL3Solver:
 
     def __init__(self, smesh, u_e, rho, mu, mach, turbulent_flags,
                  inflow_mask, inflow_state, c_l=C.C_L_DEFAULT,
-                 eps_diff=0.005, eps_diff_s=0.02):
+                 eps_diff=0.005, eps_diff_s=0.02,
+                 te_pairs=None, te_extrapolate=False):
         sm = smesh
         n = sm.xyz.shape[0]
         self.smesh = sm
@@ -1282,6 +1283,59 @@ class IBL3Solver:
                         diagblk[i, ceq, col - NUNK * i] = p
         self._diagblk = diagblk
 
+        # GV5.5: TE-outflow row replacement (first-order extrapolation;
+        # default OFF = legacy bit-identical). te_pairs = (n_te, 2)
+        # (node, upstream chain neighbor, from coupling.te_outflow_pairs);
+        # when te_extrapolate is on, _apply_rows replaces rows 6*i+0 /
+        # 6*i+2 by U[i,0]-U[up,0] / U[i,1]-U[up,1] (the (delta, A)
+        # carrier pairing -- the 2-D momentum/energy core) and
+        # _apply_rows_edge zeroes the matching J_e rows. The off-diagonal
+        # CSR positions are resolved once here; an out-of-pattern pair is
+        # a recipe error (raise).
+        self.te_extrapolate = bool(te_extrapolate)
+        if te_pairs is None:
+            te_pairs = np.zeros((0, 2), dtype=np.int64)
+        te_pairs = np.asarray(te_pairs, dtype=np.int64)
+        if te_pairs.ndim != 2 or te_pairs.shape[1] != 2:
+            raise ValueError(f"te_pairs must be (n_te, 2), got "
+                             f"{te_pairs.shape}")
+        if self.te_extrapolate and te_pairs.shape[0] == 0:
+            raise ValueError("te_extrapolate=True with empty te_pairs")
+        self._te_i = np.ascontiguousarray(te_pairs[:, 0])
+        self._te_up = np.ascontiguousarray(te_pairs[:, 1])
+        self._te_n = self._te_i.size if self.te_extrapolate else 0
+        self._te_pos0 = np.zeros(self._te_i.size, dtype=np.int64)
+        self._te_pos2 = np.zeros(self._te_i.size, dtype=np.int64)
+        self._te_posd2 = np.zeros(self._te_i.size, dtype=np.int64)
+        for ii in range(self._te_i.size):
+            i = int(self._te_i[ii])
+            up = int(self._te_up[ii])
+            if not (0 <= i < n) or not (0 <= up < n) or i == up:
+                raise ValueError(f"te_pairs entry {(i, up)} out of range")
+            # row 6i+0: d/d U[i,0] = 1 (diagonal), d/d U[up,0] = -1;
+            # row 6i+2: d/d U[i,1] = 1 (NOT the diagonal -- the row
+            # constrains the A column), d/d U[up,1] = -1
+            r0, c0 = NUNK * i, NUNK * up
+            r2, cA_i, cA_up = NUNK * i + 2, NUNK * i + 1, NUNK * up + 1
+            p0 = p2 = pd2 = -1
+            for p in range(indptr[r0], indptr[r0 + 1]):
+                if indices[p] == c0:
+                    p0 = p
+                    break
+            for p in range(indptr[r2], indptr[r2 + 1]):
+                if indices[p] == cA_up:
+                    p2 = p
+                elif indices[p] == cA_i:
+                    pd2 = p
+            if p0 < 0 or p2 < 0 or pd2 < 0:
+                raise ValueError(
+                    f"te_pairs ({i}, {up}) out of the CSR pattern -- "
+                    "the upstream neighbor must share an element with "
+                    "the TE node")
+            self._te_pos0[ii] = p0
+            self._te_pos2[ii] = p2
+            self._te_posd2[ii] = pd2
+
         # work arrays (allocated once; hot path is zero-alloc)
         self.outs = np.empty((n, C.N_OUT))
         self.douts = np.empty((n, C.N_OUT, NUNK))
@@ -1340,7 +1394,9 @@ class IBL3Solver:
                   do_jac_edge)
 
     def _apply_rows(self, R, U, do_jac):
-        """Dirichlet inflow rows and laminar stress-pin rows (D-TR/D-BC)."""
+        """Dirichlet inflow rows and laminar stress-pin rows (D-TR/D-BC);
+        GV5.5: TE-outflow extrapolation rows when te_extrapolate is on
+        (default off = legacy bit-identical)."""
         indptr = self.pattern.indptr
         for ii in range(self._inflow_idx.size):
             i = self._inflow_idx[ii]
@@ -1358,12 +1414,28 @@ class IBL3Solver:
                 for r in (NUNK * i + 4, NUNK * i + 5):
                     self.Jdata[indptr[r]:indptr[r + 1]] = 0.0
                     self.Jdata[self._diag[r]] = 1.0
+        for ii in range(self._te_n):
+            i = int(self._te_i[ii])
+            up = int(self._te_up[ii])
+            R[i, 0] = U[i, 0] - U[up, 0]
+            R[i, 2] = U[i, 1] - U[up, 1]
+            if do_jac:
+                r0 = NUNK * i
+                r2 = NUNK * i + 2
+                self.Jdata[indptr[r0]:indptr[r0 + 1]] = 0.0
+                self.Jdata[self._diag[r0]] = 1.0
+                self.Jdata[self._te_pos0[ii]] = -1.0
+                self.Jdata[indptr[r2]:indptr[r2 + 1]] = 0.0
+                self.Jdata[self._te_posd2[ii]] = 1.0
+                self.Jdata[self._te_pos2[ii]] = -1.0
 
     def _apply_rows_edge(self):
         """Zero the J_e rows pinned by Dirichlet inflow / laminar stress-pin
         (those residual rows are replaced by the pinning equations, whose
         edge derivative is exactly zero; no diagonal is set -- J_e is
-        rectangular, its rows simply vanish)."""
+        rectangular, its rows simply vanish). GV5.5: the TE-outflow
+        extrapolation rows are likewise zeroed (the condition
+        U[i]-U[up]=0 has zero edge derivative)."""
         indptr = self.pattern_e.indptr
         for ii in range(self._inflow_idx.size):
             i = self._inflow_idx[ii]
@@ -1372,6 +1444,10 @@ class IBL3Solver:
         for ii in range(self._lam_idx.size):
             i = self._lam_idx[ii]
             for r in (NUNK * i + 4, NUNK * i + 5):
+                self.Jdata_e[indptr[r]:indptr[r + 1]] = 0.0
+        for ii in range(self._te_n):
+            i = int(self._te_i[ii])
+            for r in (NUNK * i, NUNK * i + 2):
                 self.Jdata_e[indptr[r]:indptr[r + 1]] = 0.0
 
     # -- public -------------------------------------------------------------

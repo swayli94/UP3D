@@ -118,6 +118,9 @@ class CouplingConfig:
     eps_diff: float = 0.005
     eps_diff_s: float = 0.02
     chord: float = 1.0
+    te_extrapolate: bool = False  # GV5.5: TE-outflow row replacement
+    # (first-order extrapolation on rows 0/2 at the TE nodes; default OFF
+    # = legacy bit-identical). Airfoil cases only.
 
 
 # ---------------------------------------------------------------------------
@@ -405,6 +408,45 @@ def build_airfoil_case(
         le_band_surf=np.asarray(inflow_candidates, dtype=bool),
         stations=st,
     )
+
+
+def te_outflow_pairs(case: CouplingCase) -> np.ndarray:
+    """(n_te, 2) (te_node, upstream_node) pairs for the GV5.5 TE-outflow
+    row replacement (frozen case data; airfoil cases only).
+
+    The TE station (max-x) holds the wake-cut TE copies; each copy's
+    upstream partner is its element-adjacent same-side node in the
+    nearest upstream station (max x/c among the same-side
+    element-neighbors outside the TE station -- deterministic by
+    (station x/c, node index)). The pair shares an element by
+    construction, so the solver's CSR in-pattern guard cannot fire on
+    case-built pairs.
+    """
+    st = case.stations
+    if st is None:
+        raise ValueError("te_outflow_pairs is airfoil-only (needs the "
+                         "station table)")
+    sm = case.sm
+    te_row = int(np.argmax(st.xc))
+    nbrs = [set() for _ in range(sm.n_node)]
+    for t in range(sm.n_tri):
+        a, b, c = (int(v) for v in sm.triangles[t])
+        nbrs[a].update((b, c))
+        nbrs[b].update((a, c))
+        nbrs[c].update((a, b))
+    pairs = []
+    for i in sorted(int(v) for v in np.where(st.station_of == te_row)[0]):
+        cand = [j for j in nbrs[i]
+                if st.station_of[j] != te_row
+                and st.side_node[j] == st.side_node[i]]
+        if not cand:
+            raise RuntimeError(
+                f"TE node {i} has no same-side element neighbor outside "
+                "the TE station -- the strip topology is not the "
+                "expected chain")
+        cand.sort(key=lambda j: (-st.xc[st.station_of[j]], j))
+        pairs.append((i, cand[0]))
+    return np.asarray(pairs, dtype=np.int64)
 
 
 def build_closed_body_case(
@@ -780,6 +822,9 @@ def run_loose_coupling(
             inflow_state,
             eps_diff=config.eps_diff,
             eps_diff_s=config.eps_diff_s,
+            te_pairs=(te_outflow_pairs(case)
+                      if config.te_extrapolate else None),
+            te_extrapolate=config.te_extrapolate,
         )
         if U is None:
             q_floor = 0.02 * max(float(np.max(q)), 1.0e-12)
