@@ -145,7 +145,80 @@ def naca0012_coordinates(n_half: int = 120) -> np.ndarray:
     return coords
 
 
-def naca0012_wake_2d(
+def load_airfoil_ordinates(path) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Load a 3-column measured-ordinate airfoil file (x/c, z/c lower,
+    z/c upper; '#' comments and blank lines skipped) -- the Cook/AGARD
+    Table 6.1 layout. Returns (x, z_lower, z_upper) with x ascending
+    0 (LE) .. 1 (TE) on BOTH sides."""
+    rows = []
+    with open(path) as f:
+        for ln in f:
+            ln = ln.strip()
+            if not ln or ln.startswith("#"):
+                continue
+            rows.append([float(v) for v in ln.split()])
+    arr = np.asarray(rows, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[1] != 3:
+        raise ValueError(f"{path}: expected 3 columns (x, z_lower, z_upper)")
+    x, z_lo, z_up = arr[:, 0], arr[:, 1], arr[:, 2]
+    if not np.all(np.diff(x) > 0.0):
+        raise ValueError(f"{path}: x/c must be strictly ascending")
+    return x, z_lo, z_up
+
+
+def pointset_airfoil_coordinates(
+    x: np.ndarray,
+    z_lower: np.ndarray,
+    z_upper: np.ndarray,
+    n_half: int = 120,
+) -> np.ndarray:
+    """Closed polyline from measured ordinates, the naca0012_coordinates
+    convention: TE -> upper -> LE -> lower -> TE, first and last rows
+    exactly (1, 0), cosine-clustered (LE/TE refined).
+
+    Each side is resampled with a shape-preserving monotone cubic
+    (PCHIP -- no overshoot, no new extrema vs the measured ordinates)
+    onto the cosine-clustered x grid; the TE is forced to the single
+    sharp point (1, 0) (the ordinate set closes there).
+    """
+    from scipy.interpolate import PchipInterpolator
+
+    beta = np.linspace(0.0, np.pi, n_half)
+    xs = 0.5 * (1.0 - np.cos(beta))  # 0 (LE) .. 1 (TE), cosine-clustered
+    zu = PchipInterpolator(x, z_upper)(xs)
+    zl = PchipInterpolator(x, z_lower)(xs)
+    upper = np.stack([xs[::-1], zu[::-1]], axis=1)  # TE -> LE
+    lower = np.stack([xs[1:], zl[1:]], axis=1)      # LE -> TE (skip LE)
+    coords = np.vstack([upper, lower])
+    coords[0] = (1.0, 0.0)
+    coords[-1] = (1.0, 0.0)
+    return coords
+
+
+def te_wedge_angle_deg(
+    x: np.ndarray,
+    z_lower: np.ndarray,
+    z_upper: np.ndarray,
+    x_min: float = 0.95,
+) -> float:
+    """Geometric TE wedge angle (degrees) from measured ordinates:
+    least-squares straight-line fit of each side over x/c >= x_min,
+    wedge = |slope angle upper| + |slope angle lower|. The A4 TE guard
+    (`post/surface.py::_wall_vertex_normals`, ratio 0.05) corresponds to
+    a ~6-degree wedge; the GV5.2 pre-check quotes this measure against it.
+    """
+    m = x >= x_min
+    out = []
+    for z in (z_upper, z_lower):
+        A = np.stack([x[m], np.ones(int(m.sum()))], axis=1)
+        slope, _ = np.linalg.lstsq(A, z[m], rcond=None)[0]
+        out.append(abs(np.degrees(np.arctan(slope))))
+    return float(out[0] + out[1])
+
+
+def airfoil_wake_2d(
+    coords: np.ndarray,
+    model_name: str = "airfoil_2d",
     r_far: float = 15.0,
     h_wall: float = 0.02,
     h_far: float = 3.0,
@@ -153,19 +226,21 @@ def naca0012_wake_2d(
     dist_min: float = 0.1,
     dist_max: float = 8.0,
     wake_dist_max: float = 1.5,
-    n_half: int = 120,
     embed_wake: bool = True,
     corridor_alpha_deg: Tuple[float, float] = (-6.0, 6.0),
     corridor_n_lines: int = 5,
 ) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-    """NACA0012 in a circular far field with an embedded wake line TE -> farfield.
+    """Airfoil in a circular far field with an embedded wake line TE -> farfield.
 
-    The far-field circle is centered at mid-chord (0.5, 0) and passes through
-    the point (0.5 + r_far, 0) where the wake line ends, so the wake spans the
-    whole distance from the sharp TE to the far-field boundary. The wake line
-    is embedded in the surface (gmsh.model.mesh.embed): triangle edges conform
-    to it, and its line elements are returned as the interior edge group
-    "wake" for extrude.py to turn into the tagged interior face sheet.
+    ``coords`` is the closed wall polyline in the naca0012_coordinates
+    convention (TE -> upper -> LE -> lower -> TE; the repeated final TE
+    row is dropped here). The far-field circle is centered at mid-chord
+    (0.5, 0) and passes through the point (0.5 + r_far, 0) where the wake
+    line ends, so the wake spans the whole distance from the sharp TE to
+    the far-field boundary. The wake line is embedded in the surface
+    (gmsh.model.mesh.embed): triangle edges conform to it, and its line
+    elements are returned as the interior edge group "wake" for
+    extrude.py to turn into the tagged interior face sheet.
 
     With ``embed_wake=False`` (the M3 wake-free family, roadmap Track M /
     design_track_b.md section 5.7) NO wake line is embedded -- the mesh
@@ -190,10 +265,10 @@ def naca0012_wake_2d(
     gmsh.initialize()
     try:
         gmsh.option.setNumber("General.Terminal", 0)
-        gmsh.model.add("naca0012_2d")
+        gmsh.model.add(model_name)
         geo = gmsh.model.geo
 
-        coords = naca0012_coordinates(n_half=n_half)[:-1]  # drop repeated TE
+        coords = np.asarray(coords, dtype=np.float64)[:-1]  # drop repeated TE
         pt = [geo.addPoint(x, y, 0.0) for x, y in coords]
         te = pt[0]
         i_le = int(np.argmin(coords[:, 0]))
@@ -271,3 +346,32 @@ def naca0012_wake_2d(
         return points2d, triangles, groups, interior
     finally:
         gmsh.finalize()
+
+
+def naca0012_wake_2d(
+    r_far: float = 15.0,
+    h_wall: float = 0.02,
+    h_far: float = 3.0,
+    h_wake: Optional[float] = None,
+    dist_min: float = 0.1,
+    dist_max: float = 8.0,
+    wake_dist_max: float = 1.5,
+    n_half: int = 120,
+    embed_wake: bool = True,
+    corridor_alpha_deg: Tuple[float, float] = (-6.0, 6.0),
+    corridor_n_lines: int = 5,
+) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    """NACA0012 in a circular far field with an embedded wake line TE -> farfield.
+
+    Thin wrapper over airfoil_wake_2d with the analytic closed-TE
+    naca0012_coordinates polyline; see airfoil_wake_2d for the full
+    protocol (identical gmsh calls, bit-identical behavior to the
+    pre-refactor builder).
+    """
+    return airfoil_wake_2d(
+        naca0012_coordinates(n_half=n_half), model_name="naca0012_2d",
+        r_far=r_far, h_wall=h_wall, h_far=h_far, h_wake=h_wake,
+        dist_min=dist_min, dist_max=dist_max, wake_dist_max=wake_dist_max,
+        embed_wake=embed_wake, corridor_alpha_deg=corridor_alpha_deg,
+        corridor_n_lines=corridor_n_lines,
+    )

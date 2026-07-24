@@ -80,7 +80,13 @@ corrections beyond the dataset-labeled conditions; wing-body.
 - **Band (b) shock location** (PASS/FAIL, medium binding, coarse
   recorded): x_shock = the x/c of max |dCp/dx| on the upper-surface
   computed wall Cp at the loose-final state (the wall-Cp machinery on
-  the final phi). Experimental brackets from the committed data (the
+  the final phi). **Addendum 2026-07-24 (pre-execution clarification):
+  the search is restricted to the compression branch (positive dCp/dx)
+  inside the mid-chord window x/c ∈ [0.2, 0.9]** — the unwindowed max
+  |dCp/dx| picks the LE suction spike (experimentally ~0.3 at
+  x/c = 0.0002), not the shock; the window covers both committed
+  brackets with margin and excludes the LE/TE recoveries. Experimental
+  brackets from the committed data (the
   two stations flanking the shock jump): P1 [0.525, 0.55], P2 [0.55,
   0.575]. **Pre-registered acceptance = the bracket widened ±0.03c**
   (the G4.1 inviscid band): P1 **[0.495, 0.580]**, P2 **[0.520,
