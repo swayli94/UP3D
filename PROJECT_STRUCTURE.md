@@ -408,6 +408,12 @@ cases/                     # Test cases and reference data
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
+│   ├── rae2822_2.5d/     # ✓ [V5/GV5.2] RAE2822 family via the point-set airfoil path
+│   │                       #   (meshgen/planar.py::airfoil_wake_2d + load_airfoil_ordinates
+│   │                       #   PCHIP resample; rae2822.dat = the Cook/AGARD-AR-138 Table 6.1
+│   │                       #   ordinates, positive-down lower column, sha256 in the generator
+│   │                       #   header; coarse 5560 nodes / medium 20790, .msh + stats + layer
+│   │                       #   PNGs committed)
 │   ├── onera_m6_wingbody/          # ✓ [M2] wing-body half model, WAKE-FREE (level-set path);
 │   │                       #   coarse/medium, .msh gitignored (~4-5 min regen), stats CSVs +
 │   │                       #   inspection PNG committed
@@ -520,6 +526,10 @@ cases/                     # Test cases and reference data
 │   │                           #   (2P/1F/9R: the V1 TE-outflow row replacement does NOT
 │   │                           #   break the floor — m2 5554×/245998× the floor, "worse"
 │   │                           #   clause; damage peaks at the LE, flag default-OFF)
+│   ├── v5_2_rae2822/           # [V5/GV5.2] RAE2822 transonic VII vs committed experiment
+│   │                           #   (band (b) FAIL + the loose-recipe transonic-limit anatomy:
+│   │                           #   every computed shock 0.06–0.10c aft of the bracket, 1/4
+│   │                           #   legs converged; band (a) 9.46°/9.92° no fallback)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -557,6 +567,11 @@ tests/                     # Unit and gate tests
 │                                  #   default-OFF bitwise + residual/J row structure +
 │                                  #   flag-ON FD + J_e zeroing + out-of-pattern guards +
 │                                  #   plate smoke + te_outflow_pairs on the NACA strip
+├── test_meshgen_rae2822.py        # ✓ [V5/GV5.2] RAE2822 point-set meshgen tests (5):
+│                                  #   ordinate load (Cook layout) + PCHIP resample
+│                                  #   convention/bounds/clustering + thickness/camber
+│                                  #   signature locks + no-self-intersection + TE wedge
+│                                  #   + the Cp-compare helpers on both committed layouts
 ├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
 │                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
 ├── v5_state.py                    # ✓ [V5] shared GV5.1 builders: the 2.5-D NACA0012 strip case
@@ -582,6 +597,7 @@ tests/                     # Unit and gate tests
 ├── test_p2_wake_cut.py              # ✓ [P2] Cut topology unit tests (synthetic strip, no Gmsh),
 │                                     #   G2.1 + G2.2, assert-fires-on-broken-cut, hard-rule-7
 │                                     #   sweep over every wake-tagged mesh in cases/meshes/
+│                                     #   + [GV5.2] cambered-TE Kutta-probe bisector fallback
 ├── test_p2_kutta_naca0012.py        # ✓ [P2] Gates G2.3/G2.4/G2.5 + V2.1–V2.5 artifacts
 ├── test_m1_onera_m6.py              # ✓ [M1] M6 family: tags/geometry/wake-tip closure/quality,
 │                                     #   swept-TE station + free-edge cut semantics, G2.1-style
@@ -1276,7 +1292,24 @@ pre-registered "worse" clause; the damage peaks at the LE suction zone
 (x_c ≈ 0.027, F_B/F_Psi rows), not the TE; band (a) FD PASS both
 levels; the flag stays default-OFF (legacy bit-identical) and the
 escalation ladder stays registered-not-opened (opening = user's
-adjudication); next = GV5.2/5.3/5.4 (user sequencing 2026-07-24);
+adjudication) → **GV5.2 ✓ EXECUTED 2026-07-25 (band (b) FAIL + the
+loose-recipe transonic-limit anatomy, `cases/analysis/v5_2_rae2822/`,
+design record `docs/design_track_v.md` §18)**: RAE2822 P1/P2 VII vs the
+committed experiment — band (a) TE wedge 9.46°/9.92° mesh-crease vs
+12.91° ordinate fit, quadratic available, no fallback; **band (b)
+FAIL**: every computed shock 0.06–0.10 c downstream of the bracket
+(medium P1 terminal 0.6288 out of band, leg non-converged RECORDED;
+medium P2 k = 4 transpiration runaway §6 RECORDED), worsening with
+Mach/α, not improving with refinement; only 1/4 legs converged (coarse
+P1, 7 outer); M_peak 1.365/1.306 two outside-envelope RECORDED; the
+`cut_wake` Kutta probe gained a bisector-normal fallback for the
+RAE2822 reflex camber (fires only where the old code raised) and the
+FP driver a pre-registered rescue chain (strict → Mach continuation →
+honesty-guarded stall acceptance) against the M ≥ 0.725 shock-cell
+plateaus; reading: the loose displacement-thickness feedback is too
+weak at M ≥ 0.725 ⇒ the next transonic-VII reads come from the
+tight/augmented path, not loose-loop tuning; next = GV5.3/5.4 (user
+sequencing 2026-07-24);
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
@@ -1286,7 +1319,14 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **636 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V
+Default suite: **642 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+V5 GV5.2 (the RAE2822 transonic VII vs committed experiment: band (b) FAIL +
+the loose-recipe transonic-limit anatomy — every computed shock 0.06–0.10 c
+downstream of the bracket, 1/4 legs converged); full-suite measured 642
+@1245.33 s **@8 threads** (temporary 8-core session constraint,
+user-directed; NOT comparable to the 16-thread ledger entries); +6 vs 636 =
+`test_meshgen_rae2822.py` (5) + `test_p2_wake_cut.py` (1,
+test_kutta_probes_cambered_te). Previous 636:
 V5 GV5.5 (the TE-band (B, δ) formulation item: the V1 TE-outflow row
 replacement does NOT break the floor — binding m2 5554×/245998× the floor,
 the "worse" clause; damage peaks at the LE suction zone, not the TE; flag

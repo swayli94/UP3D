@@ -189,3 +189,45 @@ def test_topology_asserts_all_wake_meshes(mesh_dir):
         assert_wake_topology(mesh_cut, wc)
         ran += 1
     assert ran >= 2, "expected at least the naca0012_2.5d coarse+medium family"
+
+
+def test_kutta_probes_cambered_te():
+    """GV5.2 regression: RAE2822-style reflex camber puts BOTH wall
+    neighbours of the TE node on the +y side (the aft lower surface sits
+    above the chord line), so the global-hint sign rule finds no lower
+    probe. The TE-wedge bisector-normal fallback must still split the
+    flanks: upper = the neighbour further along the local hint."""
+    from types import SimpleNamespace
+
+    from pyfp3d.mesh.reader import Mesh
+    from pyfp3d.mesh.wake_cut import _kutta_probe_nodes
+
+    dz = 0.04
+    # Per z-plane: TE at (1, 0), upper flank at (0.98, +4.0e-3), lower
+    # flank at (0.98, +9.0e-4) -- BOTH above y = 0 (reflex camber), and a
+    # wake node downstream at y = 0.
+    pts = [
+        (1.0, 0.0, 0.0),      # 0: TE, plane 0
+        (0.98, 4.0e-3, 0.0),  # 1: upper flank, plane 0
+        (0.98, 9.0e-4, 0.0),  # 2: lower flank, plane 0
+        (1.5, 0.0, 0.0),      # 3: wake, plane 0
+        (1.0, 0.0, dz),       # 4: TE, plane 1
+        (0.98, 4.0e-3, dz),   # 5: upper flank, plane 1
+        (0.98, 9.0e-4, dz),   # 6: lower flank, plane 1
+        (1.5, 0.0, dz),       # 7: wake, plane 1
+    ]
+    mesh = Mesh()
+    mesh.nodes = np.asarray(pts, dtype=np.float64)
+    mesh.boundary_faces = {
+        "wall": np.array([
+            [0, 1, 5], [0, 5, 4],   # upper strip
+            [0, 6, 2], [0, 4, 6],   # lower strip
+        ], dtype=np.int64),
+    }
+    wc = SimpleNamespace(te_nodes=np.array([0, 4], dtype=np.int64))
+    wall_nodes = np.array([0, 1, 2, 4, 5, 6], dtype=np.int64)
+    wake_nodes = np.array([3, 7], dtype=np.int64)
+    upper, lower = _kutta_probe_nodes(
+        mesh, wc, wall_nodes, wake_nodes, np.array([0.0, 1.0, 0.0]), 1e-9)
+    assert list(upper) == [1, 5]
+    assert list(lower) == [2, 6]

@@ -308,8 +308,19 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   （coarse 7.32e-5 vs committed 3.07e-6；medium 发散 3.98）；guards：平板 H 带 flag-ON 过，松环 smoke
   flag-ON coarse 红（cl_rel 2.62% > 2.5%，撞 10-outer 帽）/ medium 边际过（2.49%）；flag 保持默认
   OFF（legacy 逐位一致），升级阶梯（upwind 边界通量 (a)-变体 / 闭包正则化 (b)）保持登记未开——
-  开启 = 用户裁决）；下一步 = **GV5.2/5.3/5.4**（用户 2026-07-24 排序：GV5.1d → GV5.5 → GV5.2–5.4）；
-  GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  开启 = 用户裁决）→ **GV5.2 ✓ EXECUTED 2026-07-25**（band (b) FAIL + 松环跨声速配方极限解剖，
+  `cases/analysis/v5_2_rae2822/`：RAE2822 跨声速 VII vs committed 实验（P1 M0.725/α2.55、P2
+  M0.73/α3.19，Re 6.5e6，x_tr/c 0.03）——band (a) TE 楔角 9.46°/9.92°（mesh-crease，A4 方法）vs
+  12.91° 坐标拟合，quadratic 可用无 fallback；**band (b) FAIL**（medium binding：P1 终端
+  x_shock 0.6288 在 [0.495,0.580] 外（腿不收敛 RECORDED），P2 k=4 transpiration 失控
+  §6 RECORDED）；所有计算激波在实验激波下游 0.06–0.10c，随 Mach/α 恶化且不随加密改善——非粗网格
+  伪影；4 腿仅 coarse P1 收敛（7 outer）；Cp RMS 0.185–0.265（上翼面，含激波错位积分）；M_peak
+  1.365/1.306 两点超 1.3 包线 RECORDED；执行期机制全部预注册入账：`cut_wake` Kutta 探针
+  bisector-normal fallback（RAE 反弯度令两翼瓣同侧，仅在旧代码会抛错处触发）+ runner Cp 分侧换
+  outward-normal 惯例 + FP driver 廉价→深救援链（严格 1e-10 → Mach 延拓 → honesty-guarded
+  stall-accept，2/10→10/22 次/腿承力）；判读：M ≥ 0.725 处松环位移厚度反馈太弱/太慢，后续跨声速
+  VII 读数应走 tight/augmented 路径而非继续调松环）；下一步 = **GV5.3/5.4**（用户 2026-07-24
+  排序：GV5.1d → GV5.5 → GV5.2–5.4）；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -343,7 +354,14 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **636 passed + 25 skipped + 2 xfailed**（2026-07-24 Track V **V5 GV5.5
+现基线 **642 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V5 GV5.2
+执行**（RAE2822 跨声速 VII vs committed 实验：band (b) FAIL + 松环配方极限解剖——
+所有计算激波在实验带下游 0.06–0.10c，4 腿仅 1 收敛——VERDICT
+`cases/analysis/v5_2_rae2822/VERDICT.md`）：全套件实测 642
+@1245.33 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比）；+6 vs 下档 636 = `tests/test_meshgen_rae2822.py`（5）+
+`tests/test_p2_wake_cut.py::test_kutta_probes_cambered_te`（1））。
+上一档 636+25+2（2026-07-24 Track V **V5 GV5.5
 执行**（TE 带 (B,δ) 公式层破地板独立项：V1 TE 出流行替换**不破地板**——binding
 m2 = 5554×/245998× 地板，"变差"档；破坏峰值在 LE 吸力区而非 TE；flag 保持默认
 OFF——VERDICT `cases/analysis/v5_5_te_floor/VERDICT.md`）：全套件实测 636

@@ -453,6 +453,16 @@ def _kutta_probe_nodes(mesh, wc, wall_nodes, wake_nodes, hint, z_tol):
     up empty falls back to the unrestricted nearest +/- side neighbor --
     the probe is then off-plane by O(h), the same order as the "one node
     off the TE" approximation itself.
+
+    Cambered trailing edges (e.g. RAE2822 reflex camber, whose aft lower
+    surface sits ABOVE the chord line) place both flank neighbours on the
+    same side of the global hint, so the sign rule finds no "lower" probe.
+    When both passes come up one-sided, retry with a LOCAL hint: the
+    normal of the TE-wedge bisector (aligned with the global hint), which
+    always separates the two flanks. The fallback only fires where the
+    strict rule would have raised, so previously working meshes are
+    unaffected. On a swept TE with same-side flanks the local hint is
+    built from the two nearest candidates and is heuristic there.
     """
     nodes = mesh.nodes
     wall_faces = np.asarray(mesh.boundary_faces["wall"], dtype=np.int64)
@@ -473,16 +483,20 @@ def _kutta_probe_nodes(mesh, wc, wall_nodes, wake_nodes, hint, z_tol):
     upper = np.full(n_te, -1, dtype=np.int64)
     lower = np.full(n_te, -1, dtype=np.int64)
 
-    def _pick(t: int, same_plane: bool):
+    def _candidates(t: int, same_plane: bool):
+        return [
+            nb for nb in neighbors[t]
+            if not is_wake[nb] and nb not in te_set
+            and (not same_plane
+                 or abs(nodes[nb, 2] - nodes[t, 2]) <= 10 * z_tol + 1e-12)
+        ]
+
+    def _pick(t: int, same_plane: bool, hint_vec):
         up, lo = -1, -1
         d_up, d_lo = np.inf, np.inf
-        for nb in neighbors[t]:
-            if is_wake[nb] or nb in te_set:
-                continue
-            if same_plane and abs(nodes[nb, 2] - nodes[t, 2]) > 10 * z_tol + 1e-12:
-                continue
+        for nb in _candidates(t, same_plane):
             offset = nodes[nb] - nodes[t]
-            side = float(np.dot(offset, hint))
+            side = float(np.dot(offset, hint_vec))
             dist = float(np.linalg.norm(offset))
             if side > 0 and dist < d_up:
                 up, d_up = nb, dist
@@ -490,10 +504,42 @@ def _kutta_probe_nodes(mesh, wc, wall_nodes, wake_nodes, hint, z_tol):
                 lo, d_lo = nb, dist
         return up, lo
 
+    def _bisector_hint(t: int):
+        """Local hint: the normal of the TE-wedge bisector, built from the
+        two nearest flank candidates and aligned with the global hint.
+        Returns None when two distinct flank directions cannot be found."""
+        cand = _candidates(t, same_plane=True)
+        if len(cand) < 2:
+            cand = _candidates(t, same_plane=False)
+        if len(cand) < 2:
+            return None
+        cand.sort(key=lambda nb: float(np.linalg.norm(nodes[nb] - nodes[t])))
+        u1 = nodes[cand[0]] - nodes[t]
+        u2 = nodes[cand[1]] - nodes[t]
+        n1, n2 = np.linalg.norm(u1), np.linalg.norm(u2)
+        if n1 == 0.0 or n2 == 0.0:
+            return None
+        b = u1 / n1 + u2 / n2
+        bn = np.linalg.norm(b)
+        if bn < 1e-12:
+            return None
+        b /= bn
+        n_loc = hint - float(np.dot(hint, b)) * b
+        nn = np.linalg.norm(n_loc)
+        if nn < 1e-12:
+            return None
+        return n_loc / nn
+
     for k, t in enumerate(wc.te_nodes):
-        up, lo = _pick(int(t), same_plane=True)
+        up, lo = _pick(int(t), same_plane=True, hint_vec=hint)
         if up < 0 or lo < 0:
-            up, lo = _pick(int(t), same_plane=False)
+            up, lo = _pick(int(t), same_plane=False, hint_vec=hint)
+        if up < 0 or lo < 0:
+            n_loc = _bisector_hint(int(t))
+            if n_loc is not None:
+                up, lo = _pick(int(t), same_plane=True, hint_vec=n_loc)
+                if up < 0 or lo < 0:
+                    up, lo = _pick(int(t), same_plane=False, hint_vec=n_loc)
         upper[k], lower[k] = up, lo
 
     if np.any(upper < 0) or np.any(lower < 0):

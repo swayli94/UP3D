@@ -1,0 +1,3 @@
+level,te_wedge_deg_mesh,te_wedge_deg_ordinates,linear_available,quadratic_available,quadratic_note,fallback_linear_smoothed
+coarse,9.45988562780343,12.910932158681415,True,True,ok,False
+medium,9.915643499689082,12.910932158681415,True,True,ok,False

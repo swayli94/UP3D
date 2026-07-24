@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF)**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF) · GV5.2 ✓ 2026-07-25 band-(b) FAIL + the loose-recipe transonic-limit anatomy (1/4 legs converged; every computed shock 0.06–0.10 c aft of the experimental bracket)**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -334,13 +334,20 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   quadratic — per A4) is a discrete, non-differentiable switch: at zone-boundary
   nodes use one-sided differences with a pre-registered tolerance, or make the
   zone switch a smooth weighting; the choice is recorded in the gate.
-- [ ] **GV5.2 2-D transonic VII vs experiment**: RAE2822
+- [x] **GV5.2 2-D transonic VII vs experiment — EXECUTED 2026-07-25,
+  band (b) FAIL + the loose-recipe transonic-limit anatomy
+  (`cases/analysis/v5_2_rae2822/`)**: RAE2822
   (`cases/reference_data/rae2822_experiment/`, M0.725/α2.55 + M0.73/α3.19,
   Re 6.5e6): shock location within a pre-registered band of experiment + Cp RMS
-  recorded. **Needs a NEW 2.5-D RAE2822 mesh family** (small meshgen task, the
-  2.5-D extrusion machinery exists) **+ the A4 TE-wedge pre-check**: if the RAE
-  TE wedge < ~6° the quadratic-recovery guard fires ⇒ TE-band u_e falls back to
-  linear+smoothed, recorded in the gate.
+  recorded. The NEW 2.5-D RAE2822 mesh family
+  (`cases/meshes/rae2822_2.5d/`, coarse 5560 nodes / medium 20790, Cook
+  Table 6.1 ordinates) + the A4 TE-wedge pre-check: wedge 9.46°/9.92°
+  mesh-crease vs 12.91° ordinate fit ⇒ the ~6° guard clears, no fallback
+  (RECORDED). Band (b): every computed shock 0.06–0.10 c DOWNSTREAM of the
+  bracket (medium P1 terminal 0.6288 vs [0.495, 0.580]; medium P2 loop
+  runaway k = 4, §6 RECORDED) ⇒ **FAIL**; the loose recipe converges only
+  1/4 legs (coarse P1) at these points — the displacement-thickness
+  feedback is too weak at M ≥ 0.725 (motivates the tight/augmented path).
 - [ ] **GV5.3 M6 wing direction+magnitude check — anchored on the committed Cp
   data** (re-anchored 2026-07-22, user-directed:
   `cases/reference_data/onera_m6_experiment/` holds Cp only — no experimental
@@ -675,6 +682,42 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   recorded (GV5.4). Block precond: AMG-φ / ILU-BL, `schur_ls.py` prototype;
   BL block is NOT thin — measure before Schur. Wing-body VII out of scope
   (deferred, see scope guards).
+- **GV5.2 RAE2822 transonic VII vs committed experiment — EXECUTED
+  2026-07-25 (band (b) FAIL + 3 recipe-limit RECORDED + 2
+  outside-envelope RECORDED, `cases/analysis/v5_2_rae2822/`)**: the
+  loose GV3.1 recipe (ω = 1.0, ≤ 10 outer, tol_ds = 1e-3) with the GV3.2
+  Newton-driver protocol at the two dataset-labeled points (P1
+  M 0.725/α 2.55, P2 M 0.73/α 3.19, Re 6.5e6, x_tr/c = 0.03). Band (a):
+  TE wedge 9.46° coarse / 9.92° medium mesh-crease (A4 method) vs 12.91°
+  ordinate fit; quadratic recovery available ⇒ no fallback. **Band (b)
+  FAIL** (medium binding): P1 terminal x_shock 0.6288 outside
+  [0.495, 0.580] (leg non-converged at the k = 10 cap — ds_change_rel
+  oscillates, mdot grows, IBL capped every outer), P2 loop runaway at
+  k = 4 (mdot_max = 1.59, the GV3.3 class; §6 recipe-limit RECORDED);
+  coarse recorded: P1 converged (7 outer) but 0.6122 out of band, P2
+  capped + IBL exactly-singular warning, 0.6520 out. Every computed
+  shock sits 0.06–0.10 c DOWNSTREAM of the experimental bracket,
+  worsening with Mach/α and NOT improving with mesh refinement (coarse →
+  medium P1 moves further aft) — the miss is not a coarse-mesh artifact.
+  (c) Cp RMS RECORDED 0.185/0.146, 0.176/0.118, 0.265/0.129
+  (upper/lower) — dominated by the shock displacement + the over-deep LE
+  suction; lower side markedly better. Outside-envelope RECORDED:
+  coarse P2 M_peak 1.365, medium P1 1.306 (> 1.3). Execution mechanics
+  (all pre-registered in addenda BEFORE each (re-)execution): the
+  RAE2822 reflex camber broke two global-y assumptions — `cut_wake`'s
+  Kutta probe gained a TE-wedge bisector-normal fallback (fires only
+  where the old code raised) and the runner's Cp side split switched to
+  the outward-normal idiom; the FP driver gained a cheap→deep rescue
+  chain (strict 1e-10 → `solve_newton_transonic` Mach continuation →
+  honesty-guarded stall acceptance) against the M ≥ 0.725 shock-cell
+  plateaus — load-bearing everywhere (2 continuation cold starts per
+  level, 2/10 → 10/22 stall-accepts per leg). Reading: the
+  displacement-thickness feedback through the loose update is too
+  weak/slow at these transonic points — the next transonic-VII reads
+  should come from the tight/augmented path, not further loose-loop
+  tuning. Design record `docs/design_track_v.md` §18. Next =
+  **GV5.3/GV5.4** (user sequencing 2026-07-24). Executed under the
+  temporary 8-thread session constraint (~43 min for 4 legs).
 - V6 — ☐ — wake-sheet IBL correction, a continuation of V1's data layout (wake
   unknowns reserved). GV6.0 LS sheet-source design adjudication BEFORE code
   (conforming needs no new mechanism; may close conforming-only), GV6.1
