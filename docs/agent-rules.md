@@ -1,12 +1,20 @@
 # pyFP3D Agent Rules
 
 Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.1c the above-band window read ✓ EXECUTED 2026-07-24 (2 PASS /
-1 FAIL / 7 RECORDED; `cases/analysis/v5_1c_above_band_window/` — NO
-quadratic regime anywhere above the floor: λ-capped halvings p = 1.00
+GV5.1d the near-band window read ✓ EXECUTED 2026-07-24 (2 PASS /
+1 FAIL / 7 RECORDED; `cases/analysis/v5_1d_near_band_window/` — NO
+quadratic basin adjacent to the floor either: near-band seeds
+(5.4×/35× the band) stall immediately (λ → 1e-3–1e-4, ≤ 0.03 dex/step;
+medium's first step moves AWAY from the band), coarse crawling to 24×
+floor, band never entered; binding medium median p = 1.17 honest FAIL;
+basin hunting exhausted (GV5.1b/1c/1d) — GV5.5 now the only registered
+route for the floor itself; the verdict
+paragraphs follow the GV5.1b recap below). Previous within V5: GV5.1c
+the above-band window read ✓ EXECUTED 2026-07-24 (2 PASS /
+1 FAIL / 7 RECORDED — NO quadratic regime anywhere above the floor:
+λ-capped halvings p = 1.00
 by construction, then a mid-range stall at F_BL ~ 1e-2, never reaching
-the band; binding medium median p = 0.56 honest FAIL; the verdict
-paragraphs follow the GV5.1b recap below). Previous within V5: GV5.1b
+the band; binding medium median p = 0.56 honest FAIL), GV5.1b
 scaled + damped augmented Newton ✓ EXECUTED 2026-07-24 (2 PASS /
 0 FAIL / 7 RECORDED adjudicated 2026-07-24 — band (a) medium cond-aware
 PASS; 1/1/7 as executed, preserved in commit 1c55906), GV5.1 augmented
@@ -147,6 +155,33 @@ standalone TE-band (B, δ) formulation item, NOT opened). Next = the
 user's sequencing call among GV5.1d / GV5.5 / GV5.2 / GV5.3 / GV5.4;
 the V4-reopen trigger stays parked. Design record
 `docs/design_track_v.md` §15.
+**GV5.1d ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 7 RECORDED;
+`cases/analysis/v5_1d_near_band_window/`, VERDICT + PRE_REGISTRATION
+committed pre-execution): the near-band window is now MEASURED — NO
+quadratic basin adjacent to the floor either.** Seeds delivered into
+the near-band windows as pre-registered (the GV5.1c protocol verbatim,
+T1 = [1e-4, 1e-3]: coarse ε = 10 → F_BL 1.711e-4 = 5.42× the band,
+medium ε = 56 → 6.02e-4 = 35×; T2 never fired — ≥ 3 triples on both
+T1 legs). Read: coarse halves once (the λ = 0.5 cap) then CRAWLS
+(λ → 6e-5, ≤ 0.03 dex/step) to 7.59e-5 = 24× the floor, never
+entering the band; medium's FIRST accepted step moves F_BL AWAY from
+the band (6.0e-4 → 9.8e-4 — merit bought by block rebalance, not BL
+descent) then crawls to 8.43e-4 = 493× the floor; binding medium
+median p = 1.17 → honest FAIL (coarse 0.35 recorded); regression
+slopes 0.15/0.88; μ rejection-retries 0 for the third time (the line
+search carries all the globalization). Band (a) PASS both levels
+(cond-aware e2 carried in, ~12-decade margin). The GV5.1c mid-range
+stall is NOT a barrier with a basin below it: the flat/ragged merit
+neighborhood extends DOWN to within ~1.5 decades of the floor
+(consistent with the diagnosis's scaled (A, Ψ) stiffness 1e5–1e7) —
+basin hunting is exhausted (GV5.1b/1c/1d), and **GV5.5 is now the
+only registered open route for the floor itself** (mechanically rows
+0 = x-momentum / 2 = kinetic-energy per the diagnosis's index
+naming). Executed under the temporary 8-thread session constraint;
+medium on the same 4th fixed point as GV5.1c (cl 0.28245999; coarse
+bit-identical). Next = the user's sequencing call among GV5.5 /
+GV5.2 / GV5.3 / GV5.4; the V4-reopen trigger stays parked. Design
+record `docs/design_track_v.md` §16.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -869,7 +904,8 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL) ·
   GV5.1 ✓ EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b ✓ EXECUTED
   (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed) ·
-  GV5.1c ✓ EXECUTED (2 PASS / 1 FAIL / 7 RECORDED) · GV5.5 TE-band
+  GV5.1c ✓ EXECUTED (2 PASS / 1 FAIL / 7 RECORDED) · GV5.1d ✓ EXECUTED
+  (2 PASS / 1 FAIL / 7 RECORDED) · GV5.5 TE-band
   (B, δ) formulation REGISTERED 2026-07-24, NOT opened)** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
@@ -912,8 +948,16 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   p = 1.00 by construction; mid-range stall at F_BL ~ 1e-2, never
   reaching the band; binding medium median p = 0.56 honest FAIL);
   the obstacle is bigger than the floor — a mid-range descent barrier
-  3–4 decades above it; remaining = GV5.1d (near-band seed, candidate,
-  user adjudication) or **GV5.5** (the registered standalone TE-band
+  3–4 decades above it → **GV5.1d ✓ EXECUTED 2026-07-24** (2P/1F/7R,
+  `cases/analysis/v5_1d_near_band_window/`): near-band seeds (T1 =
+  [1e-4, 1e-3]; 5.42×/35× the band) — NO quadratic basin adjacent to
+  the floor either (coarse crawls to 24× floor, band never entered;
+  medium's first step moves F_BL AWAY from the band, then crawls to
+  493×; binding medium median p = 1.17 honest FAIL; μ retries 0 a
+  third time): the flat/ragged merit neighborhood extends down to
+  within ~1.5 decades of the floor — basin hunting exhausted
+  (GV5.1b/1c/1d), GV5.5 now the only registered route for the floor
+  itself; remaining = **GV5.5** (the registered standalone TE-band
   (B, δ) formulation item, NOT opened; sequencing = user's call), GV5.2
   RAE2822, GV5.3 anchored on the committed M6 experiment **Cp** (no
   experimental CL committed), GV5.4 cost; V6 wake sheet;
@@ -1013,7 +1057,18 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **620 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+Baseline: **627 passed + 25 skipped + 2 xfailed** (2026-07-24, Track V **V5
+GV5.1d executed** (the near-band window read: NO quadratic basin adjacent to
+the floor either — near-band seeds stall immediately, coarse crawling to 24×
+floor, medium's first step moving AWAY from the band; binding medium median
+p = 1.17 honest FAIL — VERDICT
+`cases/analysis/v5_1d_near_band_window/VERDICT.md`); full-suite measured 627
+@1340.77 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries; wall markedly below the
+GV5.1c-era 3903 s on the same thread count — machine/cache conditions differ,
+quoted flagged); +7 vs the 620
+below = `tests/test_v5_near_band_seed.py` (7)).
+Previous: 620 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1c executed** (the above-band window read: NO quadratic regime above the
 floor — λ-capped halvings + a mid-range stall, binding medium median p = 0.56
 honest FAIL — VERDICT

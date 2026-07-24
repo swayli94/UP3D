@@ -167,6 +167,28 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/v5_1c_above_band_window/run.py` — coarse ~3 min / medium ~3 min at
   8 threads unloaded (2026-07-24 measurement; exit 1 = honest FAIL present; a loose-regen
   wiring-guard failure raises RuntimeError = recipe error; `--levels` for partial re-runs)
+- `v5_1d_near_band_window/` — **Track V / V5** GV5.1d the near-band seed: does a quadratic
+  basin exist ADJACENT to the floor? (the GV5.1c follow-up, user-directed 2026-07-24;
+  pre-registered before the first execution; the GV5.1c protocol verbatim — the amended base
+  seed + δ×(1+ε) at the free BL nodes, the deterministic log10 bisection, helpers IMPORTED
+  from the GV5.1c runner — with NEW near-band windows T1 = [1e-4, 1e-3] primary / T2 =
+  [1e-3, 1e-2] escalation, T2 never fired: coarse ε = 10 → F_BL 1.711e-4 = 5.42× the band,
+  medium ε = 56 → 6.02e-4 = 35×), **2 PASS / 1 FAIL / 7 RECORDED** — the near-band window is
+  now MEASURED: **no quadratic basin adjacent to the floor either** — coarse halves once (the
+  λ = 0.5 cap) then crawls (λ → 6e-5, ≤ 0.03 dex/step) to 7.59e-5 = 24× the floor, never
+  entering the band; medium's FIRST accepted step moves F_BL AWAY from the band (6.0e-4 →
+  9.8e-4, merit bought by block rebalance) then crawls to 8.43e-4 = 493× the floor; binding
+  medium median p = 1.17 → honest FAIL (coarse 0.35 recorded), regression slopes 0.15/0.88;
+  μ rejection-retries 0 for the third time; band (a) PASS both levels (cond-aware e2 carried
+  in, ~12-decade margin); the flat/ragged merit neighborhood extends down to within ~1.5
+  decades of the floor — basin hunting exhausted (GV5.1b/1c/1d), **GV5.5 now the only
+  registered route for the floor itself**; executed under the temporary 8-thread session
+  constraint; medium on the same 4th fixed point as GV5.1c (cl 0.28245999; coarse
+  bit-identical); VERDICT + PRE_REGISTRATION + CSVs in the dir, design record
+  `docs/design_track_v.md` §16) —
+  `python cases/analysis/v5_1d_near_band_window/run.py` — coarse ~0.5 min / medium ~1.3 min
+  at 8 threads unloaded (2026-07-24 measurement; exit 1 = honest FAIL present; a loose-regen
+  wiring-guard failure raises RuntimeError = recipe error; `--levels` for partial re-runs)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS

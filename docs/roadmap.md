@@ -106,8 +106,14 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   pre-floor slope-2 window MEASURED: NO quadratic regime above the floor (λ = 0.5-capped halvings
   p = 1.00 by construction; then a mid-range stall at F_BL ~ 1e-2, never reaching the band;
   binding medium median p = 0.56 honest FAIL); the obstacle is bigger than the floor — a
-  mid-range descent barrier 3–4 decades above it (near-band-seed follow-up = candidate GV5.1d,
-  user adjudication); floor-breaking registered as the STANDALONE item **GV5.5 TE-band
+  mid-range descent barrier 3–4 decades above it → **GV5.1d ✓ EXECUTED 2026-07-24** (2P/1F/7R,
+  `cases/analysis/v5_1d_near_band_window/`): near-band seeds (T1 = [1e-4, 1e-3]; 5.4×/35× the
+  band) — NO quadratic basin adjacent to the floor either (coarse crawls to 24× floor, medium's
+  first step moves AWAY from the band then crawls to 493×; binding medium median p = 1.17 honest
+  FAIL; μ retries 0 a third time): the flat/ragged merit neighborhood extends down to within
+  ~1.5 decades of the floor — basin hunting exhausted (GV5.1b/1c/1d), **GV5.5 now the only
+  registered route for the floor itself**); floor-breaking registered as the STANDALONE item
+  **GV5.5 TE-band
   (B, δ) formulation** (2026-07-24, user-directed; NOT opened, sequencing = user's
   call)) and
   GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
