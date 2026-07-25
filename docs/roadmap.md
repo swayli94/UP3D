@@ -82,7 +82,7 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   bit-identical on five legs, Newton Jacobian bit-invariant + FD exact under lagged ṁ);
   gates re-spec'd at opening against the B32/A4 state; same day re-phased: V1 IBL3 core / V2 transpiration channel /
   V3 loose coupling incl. the fuselage body-of-revolution smoke (**V3 ✓ CLOSED 2026-07-22**; **V4 ⊘ SKIPPED
-  2026-07-22**, user-directed); V5 tight coupling ◐ OPEN 2026-07-23 (**GV5.0 M6
+  2026-07-22**, user-directed); V5 tight coupling ✓ CLOSED 2026-07-25 (**GV5.0 M6
   subsonic bridge ✓ EXECUTED 16R/0F** — loose loop NOT sufficient on the 3-D lifting wing, tight-coupling
   motivation measured; **GV5.1 ✓ EXECUTED 9P/1F/36R** — exact augmented Newton delivered, FD-verified
   both levels (2.2e-8/5.1e-9); quadratic tail HONEST FAIL = the intrinsic IBL floor (cond(J_BL,BL) ~ 4e10
