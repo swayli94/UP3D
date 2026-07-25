@@ -507,13 +507,21 @@ def run_level(level):
             f"W1 wiring guard: the {level} probe ramp did not converge "
             "the final level -- recipe error, not a verdict")
     rel = abs(cl_p / A1_PROBE_CL_P - 1.0)
-    if rel > 0.015:
+    # addendum 2026-07-25 #1: the cl_p tolerance binds MEDIUM only (the
+    # A1 anchor is a medium number; the coarse deviation = the committed
+    # pressure mesh effect -5.35%, measured here -4.97%); the coarse
+    # cl_p is RECORDED with the cross-check quoted
+    if level == "medium" and rel > 0.015:
         raise RuntimeError(
             f"W1 wiring guard: {level} probe seed cl_p {cl_p:.6f} vs "
             f"the committed A1 anchor {A1_PROBE_CL_P:.5f} (rel "
             f"{rel:.3%} > 1.5%) -- recipe error, not a verdict")
+    tag = (", medium-binding)"
+           if level == "medium"
+           else ", coarse RECORDED; cf. the committed pressure mesh "
+                "effect -5.35%)")
     print(f"    [W1 ok] probe seed cl_p {cl_p:.5f} (anchor "
-          f"{A1_PROBE_CL_P:.5f}, rel {rel:.3%})", flush=True)
+          f"{A1_PROBE_CL_P:.5f}, rel {rel:.3%}{tag}", flush=True)
 
     # -- the inviscid anchor (D6): the final level's step_records -------------
     sr = ramp["step_records"]

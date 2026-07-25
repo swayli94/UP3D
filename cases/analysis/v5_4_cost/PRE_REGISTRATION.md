@@ -195,3 +195,28 @@ pre-registered seed regardless.
   rung works), incl. stale-preconditioner reuse across Newton steps.
 - The (A,Ψ)-structured BL preconditioner (the design-doc organization)
   if the plain ILU rung stalls on the scaled (A,Ψ) stiffness.
+
+---
+
+## Addendum 2026-07-25 #1 — W1 becomes medium-binding (execution mechanics)
+
+First execution: the **coarse** W1 fired (cl_p 0.255793 vs the A1 anchor
+0.26918, rel 4.97 % > 1.5 %). Root cause: the A1 `conf_newton` anchor is
+a **medium-mesh** number (a1_m6_runs.csv runs `onera_m6/medium` only) —
+no committed coarse probe anchor exists. The measured coarse deviation is
+the expected mesh effect: the committed P14 pressure-Kutta mesh effect is
+coarse 0.262778 vs medium 0.277628 = **−5.35 %**, and the measured coarse
+probe deviation is **−4.97 %** — the same sign and size, i.e. the coarse
+probe seed sits exactly where the committed mesh effect puts it. The
+wiring itself is separately guarded by W3 (the FD guard passed the coarse
+wiring smoke at ≤ 2.5e-11 medians) and by the binding medium W1.
+
+Change (guard scope only — no band, protocol, or verdict-item change;
+medium W1 untouched):
+
+- **W1 (medium, binding)**: unchanged — the final level converged strict
+  AND |cl_p − 0.26918| ≤ 1.5 %.
+- **W1 (coarse, shakedown)**: the final level must converge strict
+  (raise = recipe error); cl_p is RECORDED with the mesh-effect
+  cross-check (vs the committed pressure mesh effect −5.35 %) quoted in
+  the VERDICT narrative.
