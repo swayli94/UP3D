@@ -272,7 +272,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   `tests/test_v5_wing_case.py` (5)；δ*(z) CSV 喂 GV5.3 带预注册；medium 壁时被外部负载污染，引用须带旗标）
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
-  V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合 ◐ OPEN（入口 GV5.0 M6 亚声速
+  V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合 ✓ CLOSED 2026-07-25（入口 GV5.0 M6 亚声速
   松耦合桥 ✓ EXECUTED 2026-07-23 16R/0F——桥答案 = 松环在 3-D 升力翼上不够，紧耦合动机证据；**GV5.1 ✓ EXECUTED 9P/1F/36R**——精确增广 (φ, Γ, BL) Newton 交付
   且两级 FD 验证（worst 甜点 2.2e-8 coarse / 5.1e-9 medium），二次尾段 HONEST FAIL = IBL 稳态残差在 cond(J_BL,BL)~4e10 近零流形上的内禀地板（standalone 伪时间
   同地板，非紧耦合缺陷），N_total 14/13 vs 松环 4/5；已提交 GV3.1 medium 不动点不可复现（IBL 地板轨迹散布，诊断已提交，HEAD 重生成种子经用户裁决接受）；**IBL 地板 follow-up 诊断
