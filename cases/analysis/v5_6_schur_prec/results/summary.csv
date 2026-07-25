@@ -1,0 +1,10 @@
+gate,metric,band,measured,verdict
+(a),augmented step wall medium,<= ~2x the inviscid step (RECORDED either way),23.88s / 3.03s = 7.87x,RECORDED
+(b),block preconditioner working medium,GMRES info=0 within budget on every step + accepted (D5),NOT-WORKING,FAIL
+(c),DOFs medium,RECORDED,n_free 62820 + n_st 166 + 6n_s 61230,RECORDED
+(c),seed blocks medium,RECORDED,|F_phi| 4.92e-05 |F_gam| 2.12e-16 |F_BL| 2.87e-06; IBL floor 2.87e-06 (converged=False),RECORDED
+(c),inviscid anchor medium,RECORDED,13 steps mean 3.03s (asm 0.11 pre 0.81 lin 2.04, 1 refactors),RECORDED
+(c),augmented phases medium,RECORDED,asm 1.3s + setup 2.2s + linsolve 16.8s per step; termination cap,RECORDED
+(c),FD guard medians medium,< 1e-6 (W3),phi 9.56e-12 gamma 7.34e-12 BL 0.00e+00,RECORDED
+(c),memory medium,RECORDED,ru_maxrss 1.7 GB,RECORDED
+(c),wall medium @16 threads,RECORDED,seed 106s + IBL 1000s + newton 120s,RECORDED
