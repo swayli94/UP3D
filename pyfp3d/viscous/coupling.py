@@ -47,6 +47,7 @@ from pyfp3d.viscous.transpiration import (
     transpiration_from_delta_star,
 )
 from pyfp3d.viscous.wake_sheet import (
+    WAKE_L_REL_CHORDS,
     WakeSheetCase,
     assemble_wake_sheet_rhs,
     wake_edge_velocity,
@@ -131,6 +132,10 @@ class CouplingConfig:
     # (viscous/wake_sheet.py) added to the loose loop's body_source_rhs;
     # default OFF = legacy bit-identical (W1). Requires the wake= case of
     # run_loose_coupling. Airfoil (quasi-2D strip) cases only.
+    wake_l_rel_chords: float = WAKE_L_REL_CHORDS  # GV6.2: threaded to
+    # wake_transpiration_source's l_rel_chords (the L_rel sweep plumbing;
+    # default = the pinned 1.0 c MODEL CHOICE = bit-identical). Only read
+    # when wake_transpiration is ON.
 
 
 # ---------------------------------------------------------------------------
@@ -921,6 +926,7 @@ def run_loose_coupling(
                 config.m_inf,
                 config.gamma_air,
                 config.chord,
+                l_rel_chords=config.wake_l_rel_chords,
             )
             rhs = rhs + assemble_wake_sheet_rhs(case.nodes, wake, m_wake)
         phi, gamma, dinfo = fp_solve(rhs, FpSeed(phi=phi, gamma=gamma))

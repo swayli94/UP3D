@@ -431,7 +431,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
 **Prereq:** P8 ✓ + P14 ✓ + V3. **Wing-body VII is explicitly OUT of V5 scope**
 (scope guards below).
 
-### V6 — Wake-sheet IBL correction ☐ (continuation of V1's data layout, not an independent solver)
+### V6 — Wake-sheet IBL correction ◐ GV6.1 ✓ · GV6.2 ✓ EXECUTED 2026-07-25 (close-out = the user's producer-(ii) adjudication per the GV6.0 ruling; continuation of V1's data layout, not an independent solver)
 
 Same 6 equations with wake closure relations; the wake unknowns were reserved in
 V1's layout. δ*_wake enters as the wake-sheet RHS mass source; TE thickness
@@ -467,15 +467,27 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
   Harness discipline recorded in the VERDICT: (a)(ii) runs BOTH legs
   fresh-compile (numba cache-load is NOT bit-faithful to fresh-compile
   in `pyfp3d/viscous/`; isolate3/4, `results/ab_cache_mode_isolation.csv`).
-- [ ] **GV6.2 measured effect** (**◐ OPENED 2026-07-25** — PRE_REGISTRATION
-  committed before execution
-  (`cases/analysis/v6_2_measured_effect/PRE_REGISTRATION.md`); the XFOIL
-  wake-reference sourcing question posed for **user ruling BEFORE band (b)
-  executes**; bands all RECORDED; one additive `CouplingConfig`
-  plumbing field registered for the L_rel sweep): wake-IBL on/off cl (and
+- [x] **GV6.2 measured effect** (**✓ CLOSED 2026-07-25 — 0 PASS / 0 FAIL /
+  24 RECORDED**; PRE_REGISTRATION committed before execution (`ab89483`),
+  the XFOIL wake-reference sourcing RULED Option A (user); VERDICT
+  `cases/analysis/v6_2_measured_effect/VERDICT.md`): wake-IBL on/off cl (and
   TE-region Cp) delta on
   the GV3.1 case, direction-checked against XFOIL's wake modelling; RECORDED
   with the A4 input band quoted.
+  **Δ-cl +0.00015 (+0.0547 %, ratio 0.022 vs the 2.5 % band) / TE max
+  |ΔCp| 0.00250 (ratio 0.051 vs the propagated δCp_A4 0.0493) — NOT
+  significant vs the A4 input band**, L-robust over L_rel ∈ {0.5, 1.0,
+  2.0} c (+0.00017/+0.00015/+0.00013; 1.0 c stays the pinned MODEL
+  CHOICE; the `CouplingConfig.wake_l_rel_chords` plumbing, default =
+  bit-identical, +1 test); the XFOIL wake direction check (Option A
+  sourcing, G3 polar reproduction in-line): direction AGREES (XFOIL wake
+  δ* monotone decreasing 32/32, H 2.0143 → 1.0760), the RATE disagrees —
+  XFOIL effective relaxation 0.454 c vs pinned 1.0 c (recorded, not
+  tuned), the TE anchor low (0.00662 vs XFOIL 0.01440 / committed
+  surface sum 0.01191 — the GV3.1 δ* caveat), XFOIL θ falls to 0.695
+  downstream vs the conserved-θ construction (model-form). The
+  producer-(ii) opening decision = **user adjudication** (the GV6.0
+  ruling; the recorded reading = the significance condition NOT met).
 
 **Design constraints (unchanged from DN2 §4.5):** TE kink absorbed by Drela
 local-basis adaptation; **straight wake + mass-transpiration relaxation, no
@@ -843,13 +855,19 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   Design record `docs/design_track_v.md` §20. Next = **V5 close-out —
   all five gates executed; user adjudication**. Executed under the
   temporary 8-thread session constraint.
-- V6 — ◐ — wake-sheet IBL correction, a continuation of V1's data layout (wake
+- V6 — ◐ (gates executed; close-out = the user's producer-(ii) adjudication)
+  — wake-sheet IBL correction, a continuation of V1's data layout (wake
   unknowns reserved). GV6.0 RULED 2026-07-25 (Option A: conforming-only +
   producer (i); the LS leg + solved wake IBL = recorded follow-ups), GV6.1 ✓
   CLOSED 2026-07-25 (conforming sheet source + δ*_wake=0 bit-identity, 6
-  PASS / 0 FAIL / 7 RECORDED, VERDICT cases/analysis/v6_1_wake_sheet/) —
-  Next = **GV6.2 measured on/off effect vs the A4 band** (GV6.1 recorded
-  Δ-cl +0.00015 / TE-region max |ΔCp| 0.00250; the XFOIL wake-reference
-  sourcing question needs its own pre-registration — the committed CSVs
-  carry surface rows only). Straight wake + mass-transpiration relaxation,
-  no geometric relaxation.
+  PASS / 0 FAIL / 7 RECORDED, VERDICT cases/analysis/v6_1_wake_sheet/),
+  GV6.2 ✓ CLOSED 2026-07-25 (0 PASS / 0 FAIL / 24 RECORDED, VERDICT
+  cases/analysis/v6_2_measured_effect/): the measured on/off effect Δ-cl
+  +0.00015 (+0.0547 %) / TE max |ΔCp| 0.00250 sits at 0.022×/0.051× the A4
+  input band = NOT significant, L-robust over the {0.5, 1.0, 2.0} c sweep
+  (1.0 c stays pinned); the XFOIL wake direction check (Option A sourcing)
+  AGREES on direction, rate 0.454 c vs pinned 1.0 c + TE-anchor/downstream-θ
+  model-form differences recorded. Producer (ii) opening = user adjudication
+  per the GV6.0 ruling (the recorded reading = the significance condition
+  NOT met). Straight wake + mass-transpiration relaxation, no geometric
+  relaxation.

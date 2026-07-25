@@ -371,15 +371,19 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/v6_1_wake_sheet/run.py` — ~6 min at 8 threads (2026-07-25 measurement;
   the two fresh-compile (a)(ii) worktree legs dominate; exit 1 = honest FAIL present)
 - `v6_2_measured_effect/` — **Track V / V6** GV6.2 measured wake-IBL on/off effect vs the A4
-  band (**◐ OPENED 2026-07-25, pre-registered before execution; the XFOIL wake-reference
-  sourcing question posed for user ruling BEFORE band (b) executes** — the committed reference
-  CSVs carry surface rows only): on/off Δ-cl + TE-region |ΔCp| on the committed GV3.1 medium
-  recipe (all bands RECORDED, quoted against the A4 ≈2.5 % u_e input band with the pinned
-  Cp propagation), the XFOIL wake δ* direction check, and the L_rel ∈ {0.5, 1.0, 2.0}·c
-  sensitivity sweep (L_rel = 1.0 c stays pinned); one additive `CouplingConfig.wake_l_rel_chords`
-  plumbing field registered (default = bit-identical, +1 test); producer-(ii) opening =
-  user adjudication per the GV6.0 ruling — PRE_REGISTRATION in the dir, execution pending
-  the sourcing ruling
+  band (pre-registered `ab89483` before execution; the XFOIL wake-reference sourcing RULED
+  Option A (user) — analysis-local rows, `cases/reference_data/` untouched, G3 polar
+  reproduction in-line; **0 PASS / 0 FAIL / 24 RECORDED** — the on/off Δ-cl +0.00015
+  (+0.0547 %) / TE-region max |ΔCp| 0.00250 sits at 0.022×/0.051× the A4 input band = NOT
+  significant, L-robust over L_rel ∈ {0.5, 1.0, 2.0} c (1.0 c stays the pinned MODEL
+  CHOICE; the `CouplingConfig.wake_l_rel_chords` plumbing, default = bit-identical, +1
+  test); XFOIL wake direction AGREES (monotone δ* relaxation 32/32, H 2.0143→1.0760),
+  rate disagrees (XFOIL effective 0.454 c vs pinned 1.0 c, recorded not tuned), TE anchor
+  low (0.00662 vs 0.01440/0.01191, the GV3.1 δ* caveat); producer-(ii) opening = user
+  adjudication per the GV6.0 ruling; VERDICT + PRE_REGISTRATION + CSVs/PNG in the dir) —
+  `python cases/analysis/v6_2_measured_effect/run.py` — ~5 min at 8 threads (2026-07-25
+  measurement; four medium loose legs ~69 s each + the XFOIL invocation; exit 0 = guards
+  clean, all bands RECORDED)
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and

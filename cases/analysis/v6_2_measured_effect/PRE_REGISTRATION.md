@@ -47,8 +47,8 @@ input band quoted."*
   exits 0 unless a §4 guard fires (guards are recipe-error raisers, not
   bands; honest-anomaly readings are recorded, never tuned).
 
-## 2. The XFOIL wake-reference sourcing question — USER RULING required
-## before band (b) executes
+## 2. The XFOIL wake-reference sourcing question — **RULED 2026-07-25
+## (user): Option A** (posed for user ruling before band (b) executes)
 
 The gate text's direction check needs XFOIL's *wake* solution downstream
 of the TE. The committed reference CSVs
