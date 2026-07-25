@@ -439,7 +439,10 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
 
 **Gates:**
 
-- [ ] **GV6.0 design adjudication (BEFORE code, user-adjudicated)**: the LS-path
+- [ ] **GV6.0 design adjudication (BEFORE code, user-adjudicated — ◐ OPENED
+  2026-07-25, adjudication document committed
+  `cases/analysis/v6_0_design_adjudication/DESIGN_ADJUDICATION.md`, awaiting
+  the user ruling)**: the LS-path
   sheet-source mechanism. `pyfp3d/wake/` has **no sheet-surface integration
   machinery** — the options are zero-isosurface polygon integration (new
   geometry code) or a volume-band approximation (deviates from the "sheet RHS"
