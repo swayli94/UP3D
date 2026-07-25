@@ -467,7 +467,13 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
   Harness discipline recorded in the VERDICT: (a)(ii) runs BOTH legs
   fresh-compile (numba cache-load is NOT bit-faithful to fresh-compile
   in `pyfp3d/viscous/`; isolate3/4, `results/ab_cache_mode_isolation.csv`).
-- [ ] **GV6.2 measured effect**: wake-IBL on/off cl (and TE-region Cp) delta on
+- [ ] **GV6.2 measured effect** (**◐ OPENED 2026-07-25** — PRE_REGISTRATION
+  committed before execution
+  (`cases/analysis/v6_2_measured_effect/PRE_REGISTRATION.md`); the XFOIL
+  wake-reference sourcing question posed for **user ruling BEFORE band (b)
+  executes**; bands all RECORDED; one additive `CouplingConfig`
+  plumbing field registered for the L_rel sweep): wake-IBL on/off cl (and
+  TE-region Cp) delta on
   the GV3.1 case, direction-checked against XFOIL's wake modelling; RECORDED
   with the A4 input band quoted.
 
