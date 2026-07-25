@@ -188,3 +188,40 @@ state:
   reference CSVs carry surface rows only, the DUMP wake rows were discarded
   at generation time; how GV6.2 sources its XFOIL wake reference is a
   GV6.2-pre-registration item, likely a user ruling).
+
+---
+
+## Addendum 2026-07-25 (PRE-CODE design review): the per-face ½ṁ_wake recipe
+
+Filed per §7 BEFORE the first code change (branch `kimi/track-v6-gv6-1`).
+A pre-code weak-form review found §3's scatter recipe internally
+inconsistent with §3's own jump claim by a factor 2. The bands and guards
+are UNCHANGED; the recipe text is corrected as follows.
+
+**The inconsistency.** §3 as registered: "minus-side nodes carry ṁ_wake …
+each plus-side slave node carries the same ṁ_wake value", and "folding sums
+both sides' loads into the master row … this realizes [ρ∂φ/∂n] = ṁ_wake".
+Both statements cannot hold: the Tᵀ fold SUMS the Galerkin loads of the two
+coincident face copies into the master row, so two copies each carrying ṁ
+give the folded load −2∫Nṁ dS. The wall-transpiration calibration
+(`transpiration.py:19-27,114`) is ONE face: b = −∫Nṁ dS realizes
+ρ∂φ/∂n_body = ṁ (factor 1). On the sheet the folded equation constrains the
+SUM of the two one-sided fluxes (the homogeneous case is the registered
+[ρ dφ/dn] = 0 continuity, `constraints/wake.py:18-21`), so two full-ṁ
+copies realize **[ρv_n] = 2ṁ_wake**, not ṁ_wake.
+
+**The physics.** ṁ_wake = div_Γ(ρ_e u_e δ*_wake) is the divergence of the
+TOTAL wake defect mass flux = the total per-area ejection of the sheet =
+the jump strength: continuity of the defect gives [ρv_n] = ṁ_wake, split
+symmetrically as v_n^± = ±ṁ_wake/(2ρ) (the source-sheet identity). Band
+(b)'s pinned expectation (jump = ṁ₀/ρ₀ within 5 %) encodes exactly this.
+
+**Corrected recipe (pinned).** Each face copy carries **½ṁ_wake**:
+`ṁ_full[minus nodes] = ṁ_full[plus slaves] = 0.5·ṁ_wake`. The fold then
+contributes −∫Nṁ_wake dS once and the realized jump is ṁ_wake. (Loading
+the minus faces only with the full ṁ_wake yields the same folded vector;
+the ½-both-copies form is chosen to keep §3's registered both-sides-loaded
+mechanism.) Band (b)'s pinned 5 % jump lock is UNCHANGED — it now also
+empirically pins this factor (a 2× error lands 100 % outside the lock);
+bands (a)/(c), W1–W3, the producer constants (L_rel = 1.0 c), and the §8
+scope are all untouched.
