@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF) · GV5.2 ✓ 2026-07-25 band-(b) FAIL + the loose-recipe transonic-limit anatomy (1/4 legs converged; every computed shock 0.06–0.10 c aft of the experimental bracket) · GV5.3 ✓ 2026-07-25 0P/1F/17R (band (b) honest FAIL — the loose viscous Cp does NOT move toward the committed M6 experiment: 1/5 unmasked stations + a pooled increase; band (a) RECORDED input-limited, Δcl_KJ −2.20 % DOWN under the A4 floor)**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ✓ CLOSED 2026-07-25 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF) · GV5.2 ✓ 2026-07-25 band-(b) FAIL + the loose-recipe transonic-limit anatomy (1/4 legs converged; every computed shock 0.06–0.10 c aft of the experimental bracket) · GV5.3 ✓ 2026-07-25 0P/1F/17R (band (b) honest FAIL — the loose viscous Cp does NOT move toward the committed M6 experiment: 1/5 unmasked stations + a pooled increase; band (a) RECORDED input-limited, Δcl_KJ −2.20 % DOWN under the A4 floor) · GV5.4 ✓ 2026-07-25 0P/1F/17R (augmented step 7.53× the inviscid step RECORDED, above the ≤ ~2× reference band; block preconditioner NOT-WORKING honest FAIL — block-Jacobi diverges, exact-BL Schur stalls 1/4; Schur-aware reduced-space preconditioning = the registered follow-up)**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -276,7 +276,7 @@ on hand — see the header reference pin; fetch it before opening V4, or skip).
 
 **Prereq:** V3.
 
-### V5 — Tight coupling: augmented Newton ☐
+### V5 — Tight coupling: augmented Newton ✓ CLOSED 2026-07-25 · GV5.0 (16 RECORDED / 0 FAIL) · GV5.1 (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b/1c/1d · GV5.5 · GV5.2 · GV5.3 · GV5.4 (0 PASS / 1 FAIL / 17 RECORDED) — all five gates executed, close-out pending user adjudication
 
 **Deliverable:** augmented (φ, Γ, BL) Newton on the P8/P14 machinery; coupling
 blocks J_φ,BL (∂ṁ/∂BL through the transpiration assembly) and J_BL,φ (∂u_e/∂φ
@@ -371,9 +371,26 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   under addendum #1. Reading: the 3-D counterpart of GV5.2 — further reads
   belong to the tight/augmented path. (The pre-P14 "0.245
   vs 0.288" framing is superseded — see scope guards.)
-- [ ] **GV5.4 cost (RECORDED)**: augmented step wall-time ≤ ~2× the inviscid
-  Newton step on M6 medium with the block preconditioner working; measured
-  number recorded either way.
+- [x] **GV5.4 cost — EXECUTED 2026-07-25 (0 PASS / 1 FAIL / 17
+  RECORDED, `cases/analysis/v5_4_cost/`)**: augmented step 22.93 s vs the
+  in-session inviscid anchor 3.05 s/step = **7.53×, above the ≤ ~2×
+  reference band** (recorded either way per the registration; 4/5
+  augmented steps carry capped-GMRES work, annotated; 8-thread session
+  walls, not comparable to 16-thread ledger entries). Block
+  preconditioner NOT-WORKING at medium (D5): rung-1 block-Jacobi
+  diverges (rel_res 5.75e4 — the φ–BL off-diagonal coupling too
+  strong); rung-2 exact-BL Schur converges 1/4 steps (2.66e-8 @277 it,
+  then stalls vs rtol 1e-8 @300 cap — pure AMG-φ cannot see the
+  J_hB·J_BB⁻¹·J_Bh Schur correction). "Measure before Schur" answered:
+  splu(J_BL,BL) setup 1.8 s (elimination cheap — Krylov convergence is
+  the bottleneck), AMG-φ 0.2 s / ILU-BL 2.5 s. System 124,216 DOFs;
+  W1/W2/W3 PASS (cl_p 0.26429 vs the addendum-#4 P14-locked 0.2646 =
+  0.116 %; FD median φ 8.7e-12 / Γ 7.3e-12 / BL 0). Reading:
+  wing-scale augmented Newton needs a stronger (Schur-aware, (A,Ψ)
+  structured) reduced-space preconditioner before cost reads into the
+  ≤ ~2× band — the honest negative the registration asked to record;
+  the EW-forcing variant registered-not-opened (user adjudication).
+  Design record `docs/design_track_v.md` §20.
 - [x] **GV5.5 TE-band (B, δ) formulation — breaking the IBL floor
   (STANDALONE ITEM, registered 2026-07-24, user-directed; OPENED and
   EXECUTED 2026-07-24 — 2 PASS / 1 FAIL / 9 RECORDED)**. Target: the
@@ -544,7 +561,8 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   M 0.72, no tuning). **Reopen trigger** (logged from GV3.3): V5's
   augmented Newton stalls, or closed-body viscous cases enter scope
   before V5 lands.
-- V5 — ◐ OPEN 2026-07-23 — tight coupling: augmented (φ, Γ, BL) Newton on
+- V5 — ✓ CLOSED 2026-07-25 (all five gates executed; close-out pending user
+  adjudication) — tight coupling: augmented (φ, Γ, BL) Newton on
   P8/P14. **Entry check GV5.0 ✓ EXECUTED 2026-07-23** (16 RECORDED / 0 FAIL;
   `cases/analysis/v5_m6_bridge/`): the bridge answer is that the loose loop is
   NOT sufficient on the 3-D lifting wing — coarse runs away on a root-upper-TE
@@ -765,6 +783,42 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   record `docs/design_track_v.md` §19. Next = **GV5.4** (user sequencing
   2026-07-24). Executed under the temporary 8-thread session constraint
   (coarse 1721 s + medium 12479 s).
+- **GV5.4 augmented-step cost on M6 medium — EXECUTED 2026-07-25 (0
+  PASS / 1 FAIL / 17 RECORDED, `cases/analysis/v5_4_cost/`)**: the
+  tight/augmented Newton path (the GV5.1b scaled+damped driver with an
+  injectable `step_solve` solve callback — a library change, default
+  `None` = splu bit-identical) measured on the 124,216-DOF W2 system
+  (62,820 φ + 166 Γ + 61,230 BL). **Band (a) RECORDED**: augmented
+  step 22.93 s vs the in-session inviscid anchor 3.05 s/step = **7.53×
+  — above the ≤ ~2× reference band** (the registration records the
+  number either way; 4/5 augmented steps carry capped-GMRES work,
+  annotated in the VERDICT; walls under the temporary 8-thread session
+  constraint, not comparable to 16-thread ledger entries). **Band (b)
+  FAIL (D5) — the block preconditioner does NOT work at medium**:
+  rung-1 block-Jacobi (AMG-φ + ILU-BL) diverges (rel_res 5.75e4 — the
+  φ–BL off-diagonal coupling too strong for a block-diagonal
+  approximation); rung-2 exact-BL Schur (AMG-φ on the Schur operator)
+  converges 1/4 steps (2.66e-8 @277 iterations, then stalls
+  2.07e-7/6.13e-5/2.52e-6 vs rtol 1e-8 at the 300 cap — a pure AMG-φ
+  cycle cannot represent the J_hB·J_BB⁻¹·J_Bh Schur correction). The
+  registered "measure before Schur" question answered: splu(J_BL,BL)
+  setup is only 1.8 s (the elimination is cheap — Krylov convergence
+  is the bottleneck, not the factorization); AMG-φ setup 0.2 s, ILU-BL
+  2.5 s. Guards: W1 cl_p 0.26429 vs the addendum-#4 P14-locked anchor
+  0.2646 (0.116 %), W2/W3 PASS (FD median φ 8.7e-12 / Γ 7.3e-12 /
+  BL 0); the IBL floor trajectory intact (merit pinned 9.35e-9, |F_BL|
+  2.888e-6, steps 2–5 λ ~ 1e-4 strictly decreasing). Execution
+  narrative: four addenda — #1 W1 cl_p tolerance scoped medium-only,
+  #2 the M0.70 seed chain not raising on non-convergence, #3 the seed
+  chain = the A1 conf_newton verbatim, #4 the W1 anchor re-pinned from
+  the stale A1 0.26918 to the P14 probe G8.2 lock 0.2646. Reading: the
+  pre-registered honest negative — wing-scale augmented Newton needs a
+  stronger (Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
+  before the augmented-step cost can read into the ≤ ~2× band; the
+  EW-forcing variant stays registered-not-opened (user adjudication).
+  Design record `docs/design_track_v.md` §20. Next = **V5 close-out —
+  all five gates executed; user adjudication**. Executed under the
+  temporary 8-thread session constraint.
 - V6 — ☐ — wake-sheet IBL correction, a continuation of V1's data layout (wake
   unknowns reserved). GV6.0 LS sheet-source design adjudication BEFORE code
   (conforming needs no new mechanism; may close conforming-only), GV6.1

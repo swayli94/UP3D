@@ -1,33 +1,47 @@
 # pyFP3D Agent Rules
 
-Current phase: **V5 ◐ OPEN 2026-07-23 (NEWEST; Track V tight coupling):
-GV5.3 M6 wing direction+magnitude check vs committed Cp ✓ EXECUTED
-2026-07-25 (band (b) honest FAIL + band (a) RECORDED input-limited, 0
-PASS / 1 FAIL / 17 RECORDED; `cases/analysis/v5_3_m6_cp/` — the loose
-GV3.1 recipe on the GV5.0 wing case at TEST 2308 M 0.8395/α 3.06,
-Re_MAC 11.72e6, x_tr/c 0.05, the P14 transonic FP recipe verbatim
-(NEWTON_M6_RECIPE imported), k = 0 anchored to the committed P14 cl_KJ
-0.2823/0.2688 via the W1 wiring guard (PASS both levels): **band (a)
-RECORDED input-limited** — Δcl_KJ −2.20 % medium / −1.03 % coarse,
-direction DOWN both estimators (the expected viscous decambering) but
-under the A4 2.5 % floor, most of the medium move arriving with the
-late k = 9–10 separation-patch event (bounded, no runaway); **band (b)
-honest FAIL** (medium binding) — the viscous Cp does NOT move toward
-the committed 7-station experiment: 1/5 unmasked stations improved
-(root η = 0.20 only), pooled RMS 0.1288 → 0.1299 INCREASED (coarse
-0/5, +0.0024), every |ΔRMS| < 0.05 flagged input-limited per the A4
-Cp-scale annotation — a DIRECTION verdict; tip-masked stations clean.
-Neither level converges ≤ 10 outer (the GV5.0/GV5.2 signature; medium
-tight limit cycle k = 1–8 before the k = 9 event); the FP rescue chain
-load-bearing (10/21, 10/22 stall-accepts). The first-execution medium
-k = 0 FAILED W1 (the GV5.0 bridge's M0.5 short-circuit returned the
-half-converged M0.70 seed — the ramp never ran); root-caused by
-measurement (the P14 ramp from the same seed lands on the anchored
-branch — NOT an 8-thread branch scatter) and fixed under addendum #1.
-Reading: the 3-D counterpart of GV5.2 — the loose feedback is too weak
-to repair the inviscid-family mismatch at transonic conditions; further
-reads belong to the tight/augmented path; no follow-up opened).
-Previous within V5: GV5.2 the RAE2822 transonic VII vs committed
+Current phase: **V5 ✓ CLOSED 2026-07-25 (NEWEST; Track V tight
+coupling — all five gates executed, close-out pending user
+adjudication): GV5.4 augmented-step cost on M6 medium ✓ EXECUTED
+2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED;
+`cases/analysis/v5_4_cost/` — the tight/augmented Newton path (the
+GV5.1b scaled+damped driver + an injectable `step_solve` solve
+callback, a library change with default None = splu bit-identical)
+measured on the 124,216-DOF W2 system (62,820 φ + 166 Γ + 61,230
+BL): **band (a) RECORDED** — augmented step 22.93 s vs the
+in-session inviscid anchor 3.05 s/step = **7.53×, above the ≤ ~2×
+reference band** (recorded either way per the registration; 4/5
+steps carry capped-GMRES work, annotated; 8-thread session walls,
+not comparable to 16-thread ledger entries); **band (b) honest
+FAIL (D5)** — the block preconditioner does NOT work at medium:
+rung-1 block-Jacobi (AMG-φ + ILU-BL) diverges (rel_res 5.75e4, the
+φ–BL off-diagonal coupling too strong for a block-diagonal
+approximation), rung-2 exact-BL Schur converges 1/4 steps (2.66e-8
+@277 it, then stalls 2.07e-7/6.13e-5/2.52e-6 vs rtol 1e-8 @300 cap
+— a pure AMG-φ cycle cannot represent the J_hB·J_BB⁻¹·J_Bh Schur
+correction). The registered "measure before Schur" question
+answered: splu(J_BL,BL) setup only 1.8 s (the elimination is cheap
+— Krylov convergence is the bottleneck, not the factorization),
+AMG-φ setup 0.2 s / ILU-BL 2.5 s. Guards W1/W2/W3 PASS (cl_p
+0.26429 vs the addendum-#4 P14-locked anchor 0.2646 = 0.116 %; FD
+median φ 8.7e-12 / Γ 7.3e-12 / BL 0; the IBL floor trajectory
+intact, merit pinned 9.35e-9, steps 2–5 λ ~ 1e-4 strictly
+decreasing). Execution narrative: four addenda (#1 W1 cl_p
+tolerance scoped medium-only; #2 the M0.70 seed chain not raising
+on non-convergence; #3 the seed chain = the A1 conf_newton
+verbatim; #4 the W1 anchor re-pinned from the stale A1 0.26918 to
+the P14 probe G8.2 lock 0.2646). Reading: the pre-registered
+honest negative — wing-scale augmented Newton needs a stronger
+(Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
+before the augmented-step cost can read into the ≤ ~2× band; the
+EW-forcing variant registered-not-opened (user adjudication)).
+Previous within V5: GV5.3 the M6 wing direction+magnitude check vs
+committed Cp ✓ EXECUTED 2026-07-25 (band (b) honest FAIL + band (a)
+RECORDED input-limited, 0P/1F/17R — the viscous Cp does NOT move
+toward the committed 7-station experiment: 1/5 unmasked stations
+improved, pooled RMS 0.1288 → 0.1299 increased; Δcl_KJ −2.20 %
+DOWN but under the A4 floor; the 3-D counterpart of the GV5.2
+reading; no follow-up opened), GV5.2 the RAE2822 transonic VII vs committed
 experiment ✓ EXECUTED 2026-07-25 (band (b) FAIL + the loose-recipe
 transonic-limit anatomy — every computed shock 0.06–0.10 c downstream
 of the experimental bracket, worsening with Mach/α, NOT improving with
@@ -62,8 +76,9 @@ PASS; 1/1/7 as executed, preserved in commit 1c55906), GV5.1 augmented
 EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) + IBL-floor follow-up
 diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED), and earlier the GV5.0
 M6 subsonic loose-coupling bridge ✓ EXECUTED (RECORDED
-entry check, 16 RECORDED / 0 FAIL).** Next = **GV5.4**
-(user sequencing 2026-07-24). New machinery
+entry check, 16 RECORDED / 0 FAIL).** Next = **V5 close-out — all
+five gates executed; user adjudication** (the Schur-aware
+preconditioner + the EW-forcing variant registered-not-opened). New machinery
 `viscous/coupling.py::build_wing_case`
 (3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
 outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked
@@ -335,6 +350,52 @@ No follow-up opened (user adjudication). Executed under the temporary
 8-thread session constraint (coarse 1721 s + medium 12479 s). Next =
 **GV5.4** (user sequencing 2026-07-24). Design record
 `docs/design_track_v.md` §19.
+
+**GV5.4 ✓ EXECUTED 2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED;
+`cases/analysis/v5_4_cost/`, PRE_REGISTRATION + 4 addenda committed
+before each (re-)execution): the augmented step costs 7.53× the
+inviscid step, and the block preconditioner does NOT work at
+medium.** The tight/augmented Newton path (the GV5.1b scaled+damped
+driver with an injectable `step_solve` solve callback — a library
+change, default None = splu bit-identical, +2 tests
+`tests/test_v5_tight_scaled.py`) measured on the 124,216-DOF W2
+system (62,820 φ + 166 Γ + 61,230 BL; the A1 conf_newton seed
+chain verbatim per addendum #3). **Band (a) RECORDED**: augmented
+step 22.93 s vs the in-session inviscid anchor 3.05 s/step (13
+final-layer steps uniform) = **7.53× — above the ≤ ~2× reference
+band** (the registration records the number either way; 4/5
+augmented steps carry capped-GMRES work, annotated; the A1
+committed @16t 4.35 s/step quoted as the non-binding cross-check
+only; walls under the temporary 8-thread session constraint, not
+comparable to 16-thread ledger entries). **Band (b) honest FAIL
+(D5)**: rung-1 block-Jacobi (AMG-φ + ILU-BL) DIVERGES (rel_res
+5.75e4 — the φ–BL off-diagonal coupling too strong for a
+block-diagonal approximation; that step = the least-bad step);
+rung-2 exact-BL Schur (AMG-φ on the Schur operator) converges 1/4
+steps (2.66e-8 @277 iterations, then stalls 2.07e-7/6.13e-5/2.52e-6
+vs rtol 1e-8 at the 300 cap — a pure AMG-φ cycle cannot represent
+the J_hB·J_BB⁻¹·J_Bh Schur correction). The registered "measure
+before Schur" question answered: splu(J_BL,BL) setup is only 1.8 s
+(the elimination is cheap — Krylov convergence is the bottleneck,
+not the factorization); AMG-φ setup 0.2 s, ILU-BL 2.5 s. Guards:
+W1 cl_p 0.26429 vs the addendum-#4 P14-locked anchor 0.2646
+(0.116 %, medium-only tolerance per addendum #1); W2/W3 PASS (FD
+median φ 8.7e-12 / Γ 7.3e-12 / BL 0); the IBL floor trajectory
+intact (merit pinned 9.35e-9, |F_BL| 2.888e-6, steps 2–5 λ ~ 1e-4
+strictly decreasing). Coarse scouting: rung-2 working (RECORDED),
+ratio 20.58× (the 0.17 s inviscid step too small to read).
+Execution narrative: four addenda — #1 the W1 cl_p tolerance
+scoped medium-only, #2 the M0.70 seed chain not raising on
+non-convergence, #3 the seed chain = the A1 conf_newton verbatim,
+#4 the W1 anchor re-pinned from the stale A1 0.26918 to the P14
+probe G8.2 lock 0.2646. Reading: the pre-registered honest
+negative — wing-scale augmented Newton needs a stronger
+(Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
+before the augmented-step cost can read into the ≤ ~2× band; the
+EW-forcing variant registered-not-opened (user adjudication).
+Executed under the temporary 8-thread session constraint. Next =
+**V5 close-out — all five gates executed; user adjudication**.
+Design record `docs/design_track_v.md` §20.
 
 Previous: **B32 ✓ CLOSED 2026-07-22 (same branch as the
 B30/B31 chain; `pyfp3d/` unchanged from B31): ② weld-sign per-step refresh
@@ -1054,7 +1115,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   GV3.2 loose loop ≤ 10, GV3.3 fuselage body-of-revolution smoke = the only
   fuselage-alone item); V4 ⊘ SKIPPED 2026-07-22 (user-directed: skip
   criterion met on GV3.2; GV3.3 stern instability = reopen trigger);
-  **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL) ·
+  **V5 ✓ CLOSED 2026-07-25 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL) ·
   GV5.1 ✓ EXECUTED (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b ✓ EXECUTED
   (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1P/1F/7R as executed) ·
   GV5.1c ✓ EXECUTED (2 PASS / 1 FAIL / 7 RECORDED) · GV5.1d ✓ EXECUTED
@@ -1062,7 +1123,10 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   (2 PASS / 1 FAIL / 9 RECORDED) · GV5.2 ✓ EXECUTED
   (band (b) FAIL + the loose-recipe transonic-limit anatomy) · GV5.3 ✓
   EXECUTED (band (b) honest FAIL + band (a) RECORDED input-limited,
-  0P/1F/17R))** —
+  0P/1F/17R) · GV5.4 ✓ EXECUTED (augmented step 7.53× the inviscid
+  step RECORDED above the ≤ ~2× band; block preconditioner
+  NOT-WORKING honest FAIL — block-Jacobi diverges, exact-BL Schur
+  stalls 1/4; 0P/1F/17R))** —
   M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
@@ -1234,7 +1298,17 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
 
-Baseline: **642 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V5
+Baseline: **644 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V5
+GV5.4 executed** (the augmented-step cost on M6 medium: band (a) RECORDED —
+the augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
+≤ ~2× band; band (b) honest FAIL — the block preconditioner does NOT work
+at medium: block-Jacobi diverges, exact-BL Schur stalls 1/4 — VERDICT
+`cases/analysis/v5_4_cost/VERDICT.md`); full-suite measured 644
+@1230.61 s **@8 threads** (temporary 8-core session constraint, user-directed;
+NOT comparable to the 16-thread ledger entries); +2 vs the 642
+below = `tests/test_v5_tight_scaled.py` (2 new: the `step_solve` callback
+wiring + the default-None splu bit-identity guard)).
+Previous: 642 passed + 25 skipped + 2 xfailed (2026-07-25, Track V **V5
 GV5.3 executed** (the M6 wing direction+magnitude check vs committed Cp:
 band (b) honest FAIL — the viscous Cp does NOT move toward the committed
 7-station experiment (1/5 unmasked stations + a pooled increase); band (a)

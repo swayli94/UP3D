@@ -782,3 +782,61 @@ Kutta，n_picard_seed=0；暖 outer 解；FP 侧**无 tip_taper** 使 k=0 解可
    用户 2026-07-24 定序）。全套件基线见三面 ledger 行（随 baseline
    commit 填入；本 gate 无库/测试改动，计数沿用 GV5.2 的 642+25+2，
    壁时重测）。V4 重开触发保持挂起。
+
+## §20 GV5.4 —— M6 medium 增广步成本实测：7.53× RECORDED + 块预条件 honest FAIL（2026-07-25，0P/1F/17R）
+
+用户定序末项（GV5.1d → GV5.5 → GV5.2–5.4）。预注册
+`cases/analysis/v5_4_cost/PRE_REGISTRATION.md` 先于首行代码提交，
+addendum #1–#4 各先于对应（重）执行提交。问题（登记原文）：M6 medium
+上增广 Newton 步壁时能否读进 ≤ ~2× 无黏 Newton 步的参考带（块预条件
+工作的前提下；数值照录不论落点）？附带回答登记的 "measure before
+Schur" 问题：J_BL,BL 的直接消元到底多贵（决定 Schur 路线是否值得）。
+系统 = W2 增广系统 124,216 DOFs（62,820 φ + 166 Γ + 61,230 BL），
+种子链 = A1 conf_newton 逐字（addendum #3）。全程 8 线程临时约束
+（壁时标记不可比）。
+
+1. **实现（库改动 + 接线守卫）**：`pyfp3d/viscous/tight_driver.py` 的
+   `scaled_damped_step` 增可选 `solve(A, b)` 回调、`newton_tight` 增
+   `step_solve` 透传（两条路径；默认 None = splu 逐位一致——默认路径
+   不触任何已提交数字）；+2 测试 `tests/test_v5_tight_scaled.py`（回调
+   接线 + 默认逐位一致）。runner 把 splu 与两档块预条件 rung 作为
+   `step_solve` 注入同一驱动，步级壁时逐步入 CSV。守卫：W1 = 种子态
+   cl_p 对锚（addendum #4 重订 P14 探针 G8.2 锁 0.2646；#1 把容差
+   只绑 medium——A1 锚是 medium 数，coarse 偏差与已提交压力网格效应
+   −5.35 % 相符）；W2 = 系统规模/块界守卫；W3 = FD 点验（增广 Jacobian
+   对 φ/Γ/BL 三块，中位 φ 8.7e-12 / Γ 7.3e-12 / BL 0）全过。W1 cl_p
+   0.26429 vs 0.2646 = 0.116 %。
+2. **band (a) RECORDED**：增广步 22.93 s / 同 session 无黏锚 3.05 s/步
+   （末层 13 步均匀）= **7.53×**，高于 ≤ ~2× 参考带——登记明言
+   "recorded either way"，故记 RECORDED 而非 FAIL；4/5 增广步含
+   capped-GMRES 工作（rung 打帽后回退 splu 的步），VERDICT 如实注明。
+   A1 committed @16t 4.35 s/step 仅作非约束对照（线程数不同不可比）。
+   coarse 摸底（叙事不入账）：rung-2 working（RECORDED），ratio
+   20.58×——coarse 无黏步 0.17 s 太小读不出数。
+3. **band (b) honest FAIL（D5）——块预条件在 medium 不工作**：
+   rung-1 块 Jacobi（AMG-φ + ILU-BL 块对角近似）**发散**（rel_res
+   5.75e4；φ–BL 非对角耦合太强，块对角近似根本压不住；该步为
+   least-bad 步）；rung-2 exact-BL Schur（Schur 算子上用 AMG-φ）
+   仅 1/4 步收敛（2.66e-8 @277 迭代），其余三步停滞
+   2.07e-7 / 6.13e-5 / 2.52e-6 vs rtol 1e-8 @300 帽——纯 AMG-φ
+   循环表不出 Schur 修正 J_hB·J_BB⁻¹·J_Bh（φ 侧预条件看不到 BL
+   消元对势流的反作用）。
+4. **"measure before Schur" 答案**：splu(J_BL,BL) setup 仅 **1.8 s**
+   ——BL 块直接消元便宜，**瓶颈在 Krylov 收敛而不在分解**（AMG-φ
+   setup 0.2 s、ILU-BL 2.5 s）。即 Schur 路线的消元成本不是障碍，
+   障碍是 Schur 算子的谱性质需要感知耦合结构的预条件。IBL 地板
+   轨迹全程完整（merit 钉 9.35e-9，|F_BL| 2.888e-6，步 2–5
+   λ ~ 1e-4 严格下降）——成本实验不扰动已入账的地板结论。
+5. **执行叙事（四个 addendum，各先于重执行提交）**：#1 coarse W1
+   触发（cl_p −4.97 % vs A1 锚）→ 容差只绑 medium；#2 medium M0.70
+   probe 种子严格不收敛 → 种子链不收敛不 raise（照 A1 行为）；#3
+   种子链定为 A1 conf_newton 逐字（消任何配方漂移）；#4 W1 锚从
+   陈旧 A1 0.26918 重订 P14 探针 G8.2 锁 0.2646（A1 数是旧分支态，
+   G8.2 探针锁才是现行锚）。
+6. **判读与程序状态**：预注册要记的诚实负结果——翼尺度增广 Newton
+   在块对角/纯 AMG-φ 类预条件下读不进 ≤ ~2× 带；要读进带需要更强的
+   （Schur-aware、(A,Ψ) 结构化）约化空间预条件。跟进登记未开：
+   Schur-aware 预条件阶梯 + EW-forcing 变体（均用户裁决）。**V5 五个
+   gate 全部执行完 → CLOSED 2026-07-25**（close-out 待用户裁决）。
+   全套件基线 642 → 644（+2 = 新 W4 回调测试）见三面 ledger 行。
+   V4 重开触发保持挂起。
