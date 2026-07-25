@@ -132,7 +132,15 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   block-Jacobi diverges, exact-BL Schur stalls 1/4; "measure before Schur" answered:
   the BL elimination is cheap (1.8 s), Krylov convergence is the bottleneck ⇒
   Schur-aware reduced-space preconditioning = the registered follow-up; **V5
-  CLOSED** — all five gates executed, user adjudication); **V6 wake sheet ✓
+  CLOSED** — all five gates executed, user adjudication) → **GV5.6 ✓ CLOSED
+  2026-07-25** (0P/1F/17R, `cases/analysis/v5_6_schur_prec/`: the follow-up
+  executed (user-adjudicated) — rung 3 exact-BL Schur + AMG on the explicitly
+  sparsified Ŝ_φφ = J_φφ − J_hB·D_BB⁻¹·J_Bh, rung 4 block-triangular; band
+  (b) honest FAIL: the corrected-AMG matrix catastrophically worse than plain
+  AMG(J_φφ) at medium (rel_res 0.664 vs GV5.4's 2e-7..6e-5 stagnation band),
+  coarse rung 3 works (5/5) — the "AMG on a sparsified Schur" direction
+  measured dead at wing scale; band (a) 7.87× RECORDED; the inter-node (A,Ψ)
+  M_BB route + EW-forcing registered-not-opened); **V6 wake sheet ✓
   CLOSED 2026-07-25** — GV6.0 RULED (Option A: conforming-only +
   producer (i); the LS leg + solved wake IBL = recorded follow-ups) →
   **GV6.1 ✓ CLOSED 2026-07-25** (6P/0F/7R, `cases/analysis/v6_1_wake_sheet/`:
