@@ -193,6 +193,22 @@ geometry code and no deviation from the registered formulation.
    law, the sign-pin MMS, the bit-identity gate, the TE-continuity assert)
    committed before the first code change, per Track-V discipline.
 
+## 6. RULING (user, 2026-07-25)
+
+- GV6.0 main ruling: **Option A** — V6 closes conforming-only; the LS
+  sheet-source leg becomes a recorded follow-up (its own pre-registration
+  if/when opened).
+- δ*_wake producer: **(i) prescribed** — TE-continuity δ_wake(TE) =
+  δ*_upper + δ*_lower by construction + a straight-wake relaxation law
+  (pinned in the GV6.1 pre-registration, XFOIL-referenced); the solved wake
+  IBL ("same 6 equations with wake closure relations") is registered as the
+  follow-up producer (ii), to be opened only if the GV6.2 measured effect
+  is significant against the A4 input band.
+- Process: the GV6.1 pre-registration is committed on this branch before
+  the first code change; branch push + PR deferred to bundle the
+  adjudication document and the GV6.1 pre-registration together (user,
+  2026-07-25).
+
 ---
 
 *Survey basis: two read-only codebase surveys dated 2026-07-25 (wake /
