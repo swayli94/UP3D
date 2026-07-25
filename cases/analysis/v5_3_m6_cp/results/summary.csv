@@ -1,0 +1,19 @@
+gate,metric,band,measured,verdict
+GV5.3(a)-coarse,coarse Delta-cl_KJ (0.2685 -> 0.2658),recorded (binding = medium),-0.0028 (1.03%) input-limited (|dcl| <= A4 2.5% floor),RECORDED
+GV5.3(a)-coarse,coarse Delta-cl_p consistency (0.2625 -> 0.2590),recorded consistency read,-0.0036 (1.35%),RECORDED
+GV5.3(b)-coarse,coarse unmasked-station RMS decreases (0/5) + pooled (0.1976 -> 0.2001),recorded (binding = medium),0/5, pooled +0.0024,RECORDED
+GV5.3(b)-coarse,coarse masked eta=0.96 RMS (0.2273 -> 0.2292),recorded-only (tip mask: expect ~no change),+0.00196,RECORDED
+GV5.3(b)-coarse,coarse masked eta=0.99 RMS (0.2841 -> 0.2871),recorded-only (tip mask: expect ~no change),+0.00292,RECORDED
+GV5.3(c)-coarse,coarse loose loop n_outer / converged,recorded,10 / False,RECORDED
+GV5.3(c)-coarse,coarse IBL residual floor / mdot_max first->last,recorded,5.368e-06 / 0.000e+00 -> 2.885e-01,RECORDED
+GV5.3(c)-coarse,coarse crossflow max|B|/max|A|,recorded,8.2789e+01 / 3.1635e+03 = 0.0262,RECORDED
+GV5.3(c)-coarse,coarse fp calls (continuation / stall-accepted) / wall,recorded,22 (1 / 10) / 1728s @8-thread session constraint, non-comparable,RECORDED
+GV5.3(a),medium Delta-cl_KJ (0.2819 -> 0.2757),DOWN > 2.5% A4 floor = PASS; <= 2.5% = RECORDED input-limited,-0.0062 (2.20%) input-limited (|dcl| <= A4 2.5% floor),RECORDED
+GV5.3(a),medium Delta-cl_p consistency (0.2773 -> 0.2706),recorded consistency read,-0.0067 (2.40%),RECORDED
+GV5.3(b),medium unmasked-station RMS decreases (1/5) + pooled (0.1288 -> 0.1299),>= 4/5 stations + pooled decrease = PASS,1/5, pooled +0.0010,FAIL
+GV5.3(b),medium masked eta=0.96 RMS (0.1448 -> 0.1470),recorded-only (tip mask: expect ~no change),+0.00219,RECORDED
+GV5.3(b),medium masked eta=0.99 RMS (0.2223 -> 0.2232),recorded-only (tip mask: expect ~no change),+0.00088,RECORDED
+GV5.3(c),medium loose loop n_outer / converged,recorded,10 / False,RECORDED
+GV5.3(c),medium IBL residual floor / mdot_max first->last,recorded,1.880e-06 / 0.000e+00 -> 1.060e-01,RECORDED
+GV5.3(c),medium crossflow max|B|/max|A|,recorded,2.5495e+01 / 4.6202e+02 = 0.0552,RECORDED
+GV5.3(c),medium fp calls (continuation / stall-accepted) / wall,recorded,22 (1 / 10) / 12479s @8-thread session constraint, non-comparable,RECORDED
