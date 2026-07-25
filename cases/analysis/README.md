@@ -242,6 +242,47 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `docs/design_track_v.md` §18) —
   `python cases/analysis/v5_2_rae2822/run.py` — ~43 min at 8 threads unloaded
   (2026-07-25 measurement; all four legs + the band-(a) pre-check included)
+- `v5_3_m6_cp/` — **Track V / V5** GV5.3 M6 wing direction+magnitude check vs
+  committed Cp (registered + opened + executed 2026-07-25, user-directed;
+  pre-registered before the first code change; addendum #1 before the
+  re-execution): the loose GV3.1 recipe verbatim on the GV5.0 wing case (tip
+  band z > 0.95·b_semi pinned + ṁ-masked) at TEST 2308 verbatim (M 0.8395,
+  α 3.06, Re_MAC 11.72e6, forced x_tr/c 0.05), the P14 transonic FP recipe
+  verbatim (M0.70 probe seed → the NEWTON_M6_RECIPE ramp imported from
+  `tests/test_p8_newton.py`, pressure Kutta; NO tip_taper so the k = 0 solve
+  anchors the committed P14 cl_p/cl_KJ 0.2628/0.2688 coarse + 0.2776/0.2823
+  medium — wiring guard W1 PASS both levels), **0 PASS / 1 FAIL / 17
+  RECORDED** — **band (b) honest FAIL** (medium binding): the viscous Cp does
+  NOT move toward the committed 7-station experiment — 1/5 unmasked stations
+  improved (only the root η = 0.20), pooled RMS 0.1288 → 0.1299 INCREASED
+  (coarse 0/5, pooled +0.0024), every |ΔRMS| < 0.05 flagged input-limited per
+  the pre-registered A4 Cp-scale annotation (a DIRECTION verdict; the
+  tip-masked η = 0.96/0.99 stations recorded-only, no anomaly); **band (a)
+  RECORDED input-limited**: Δcl_KJ −2.20 % medium / −1.03 % coarse, direction
+  DOWN both estimators (the expected viscous decambering) but under the A4
+  2.5 % floor, most of the medium move arriving with the late k = 9–10
+  separation-patch event (ds_max 0.0021 → 0.0039, mdot 0.007 → 0.106,
+  bounded, no runaway); (c) RECORDED: neither level converges ≤ 10 outer (the
+  GV5.0/GV5.2 loose-loop signature; medium a tight limit cycle k = 1–8 before
+  the k = 9 event), IBL residual floor 1.9e-6 medium, crossflow
+  max|B|/|A| 0.026/0.055, the pre-registered FP rescue chain load-bearing
+  (10/21 coarse, 10/22 medium stall-accepts); execution narrative: the first
+  execution's medium k = 0 FAILED W1 (the GV5.0 bridge's M0.5 short-circuit
+  returned the half-converged M0.70 probe seed and the Mach ramp never ran),
+  root-caused by a measured diagnostic (the P14 ramp from the same failed seed
+  lands on the anchored branch to 9 digits — NOT an 8-thread branch scatter)
+  and fixed under addendum #1; the reading = the 3-D counterpart of GV5.2 —
+  at transonic conditions the loose displacement-thickness feedback is too
+  weak to repair the inviscid-family mismatch, further reads belong to the
+  tight/augmented path (no follow-up opened, user adjudication); executed
+  under the temporary 8-thread session constraint (wall times non-comparable);
+  VERDICT + PRE_REGISTRATION (+1 addendum) + CSVs/PNGs in the dir, design
+  record `docs/design_track_v.md` §19) —
+  `python cases/analysis/v5_3_m6_cp/run.py` — coarse ~29 min / medium ~3.5 h
+  at 8 threads unloaded (2026-07-25 measurement; the per-level k = 0 ramp +
+  the loose loop + the section/RMS reads included; exit 1 = honest FAIL
+  present; a wiring-guard failure raises RuntimeError = recipe error;
+  `--levels` for partial re-runs)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS

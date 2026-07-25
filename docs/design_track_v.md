@@ -713,3 +713,72 @@ Re 6.5e6，两侧强制转捩 x_tr/c 0.03；coarse 记录、medium binding。
    调松环。V5 保持 OPEN；下一步 = GV5.3（M6 Cp）/ GV5.4（cost
    RECORDED）（用户 2026-07-24 定序）。全套件基线见三面 ledger 行
    （随 baseline commit 填入）。V4 重开触发保持挂起。
+
+## §19 GV5.3 —— M6 机翼方向+量级检查对 committed Cp：band (b) honest FAIL + band (a) input-limited（2026-07-25，0P/1F/17R）
+
+用户定序项（GV5.1d → GV5.5 → GV5.2–5.4）。预注册
+`cases/analysis/v5_3_m6_cp/PRE_REGISTRATION.md` 先于首行代码提交，
+addendum #1 先于重执行提交。问题：在 committed 实验条件（TEST 2308
+逐字 M 0.8395 / α 3.06，Re_MAC 11.72e6，两侧强制转捩 x_tr/c 0.05）下，
+松环 VII（GV3.1 配方逐字 + GV5.0 翼 case 逐字：翼尖带 z > 0.95·b_semi
+钉扎 + ṁ 遮蔽）是否把 (a) CL 从无黏基线向下推过 A4 地板、(b) 壁面 Cp
+向 committed 7 站实验靠近？FP driver = P14 跨声速配方逐字（M0.70 probe
+种子 → NEWTON_M6_RECIPE ramp 从 `tests/test_p8_newton.py` 导入，pressure
+Kutta，n_picard_seed=0；暖 outer 解；FP 侧**无 tip_taper** 使 k=0 解可
+直接对 committed P14 锚点）；coarse 记录、medium binding。全程 8 线程
+临时约束（壁时标记不可比）。
+
+1. **接线守卫（全过）+ 首次执行叙事**：W1 = k=0 无黏 cl 对 committed
+   P14 锚点（coarse 0.2628/0.2688、medium 0.2776/0.2823，1% 容差吸收
+   ΔM = 0.0005 标签差）两级过（k=0 cl_KJ 0.2685 / 0.2819）；W2 = 实验
+   侧向映射（每区 max-Cp 点在 x/c < 0.05 = LE 驻点；k=0 pooled RMS 选定
+   映射 0.95/0.63 << 翻转映射 2.65/2.68）两级过；W3（截面提取稀疏守卫）
+   未触发（7 站两级各侧 37–58 点）。**首次执行 medium k=0 未过 W1**
+   （cl 0.226）：driver 冷启动带出了 GV5.0 bridge M0.5 的短路（probe
+   种子不收敛就提前返回）——medium @8 线程 M0.70 种子停在 |R|~1e-6，
+   Mach ramp 根本没跑，k=0 成了半收敛 M0.70 态。实测诊断（同工作副本同
+   线程数）：**同一个失败种子**跑 P14 ramp 逐级收敛（0.70: 3 Newton →
+   6.4e-6 … 0.8395: 12 → 7.6e-15）落在锚定分支（0.27726/0.28188，与
+   本地 P14 缓存种子解 9 位一致）——**不是 8 线程分支散布**。addendum
+   #1 删短路（ramp 无条件跑；执行机制，不动 band/协议）。值得注意的是
+   循环本身曾从带毒种子 9 outer 收敛（k=1 暖解跳回 cl 0.277）——循环
+   动力学健康，问题只在基线种子。W1 按设计立功。
+2. **band (a) RECORDED input-limited**（medium binding，cl_KJ 读，
+   cl_p 一致性引用）：Δcl_KJ = 0.2819 → 0.2757 = **−2.20 %**（cl_p
+   −2.40 %，两估计量一致无分歧注记）；coarse −1.03 %/−1.35 %。方向
+   向下（物理上正确的黏性去弯度效应）但低于 A4 2.5 % 地板 → 预注册
+   "较小移动" 条款：RECORDED 标 input-limited（非 PASS 也非 FAIL）。
+   注意 medium 移动集中在最后两轮：k=1–8 钉在 Δcl ≈ −0.3 % 的紧极限
+   环，**k=9–10 晚期分离斑事件**（ds_max 0.0021 → 0.0039，
+   ds_change_rel 0.448，mdot 0.007 → 0.085 → 0.106）带来其余部分——
+   移动在 10-outer 配方帽处仍在增长。
+3. **band (b) honest FAIL**（medium binding）：5 个未遮蔽站仅根站
+   η=0.20 改善（−0.0019），其余 +0.0001…+0.0034；pooled RMS
+   **0.1288 → 0.1299 反升**（带要求 ≥4/5 且 pooled 下降）。coarse
+   0/5、pooled +0.0024 同向。所有 |ΔRMS| < 0.05 按预注册 A4 Cp 尺度
+   注释标 input-limited——**FAIL 是方向判**：黏性修正除根站边际外
+   处处不把 Cp 推向实验，反向移动的幅度小。翼尖遮蔽站（η=0.96/0.99）
+   按构造记录（Δ ≈ +0.001…+0.003，无大移异常）。叠加图显示原因：
+   无黏基线本身就是无黏族失配（LE 吸力峰太浅：实验 ≈ −1.0…−1.2 vs
+   计算 ≈ −0.8；激波偏后），该强度下的松环黏性修正几乎不扰动上翼面
+   曲线（虚线贴在实线上），加的小扰动在 4/5 站落在测量值的反侧。
+4. **(c) 收敛与 guards RECORDED**：两级均 ≤10 outer 不收敛（GV5.0
+   （M0.5）/GV5.2（2.5-D M≥0.725）同款松环签名——coarse ds_change_rel
+   振荡 0.09–0.67 伴 mdot 爬至 0.33；medium 紧极限环（ds_change_rel
+   0.010–0.025 不达 tol_ds 1e-3）后接 k=9 有界分离事件）；IBL 每个
+   outer 撞 100 迭代帽，残差地板 1.9e-6（medium）；横流
+   max|B|/max|A| = 0.026/0.055（GV5.0 类量级，无 3-D 失控）。预注册
+   FP 救援链两级承力：10/21（coarse）/ 10/22（medium）次 FP 调用在
+   诚实守卫平台上 stall-accept（各 1 次延拓调用；严格解始终首选；
+   逐次路径 + accept_reason 入 run.log）。壁时：coarse 1721 s +
+   medium 12479 s @8 线程。
+5. **物理读法**：band (b) FAIL 是 GV5.2 RAE2822 发现的 3-D 对应——
+   跨声速条件下松环位移厚度反馈太弱，修不动无黏族失配（LE 吸力不足、
+   激波偏后），其加的小扰动反而落在测量值反侧；band (a) 方向物理正确
+   但幅度在输入地板之下，且随分离斑事件仍在增长。与 GV5.2 联合的
+   结论：后续跨声速读数属于 **tight/augmented 耦合**，不再属于松环
+   调参。本 gate 未开跟进项（用户裁决）。
+6. **程序状态**：V5 保持 OPEN；下一步 = **GV5.4**（cost RECORDED，
+   用户 2026-07-24 定序）。全套件基线见三面 ledger 行（随 baseline
+   commit 填入；本 gate 无库/测试改动，计数沿用 GV5.2 的 642+25+2，
+   壁时重测）。V4 重开触发保持挂起。

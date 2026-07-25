@@ -121,8 +121,13 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   `cases/analysis/v5_2_rae2822/`: RAE2822 P1/P2 VII vs committed experiment — every
   computed shock 0.06–0.10 c downstream of the bracket; 1/4 legs converged; the loose
   displacement-thickness feedback is too weak at M ≥ 0.725 ⇒ the next transonic-VII
-  reads come from the tight/augmented path, not loose-loop tuning) and
-  GV5.3 anchored on committed Cp; V6 wake sheet; wing-body VII deferred)
+  reads come from the tight/augmented path, not loose-loop tuning) → **GV5.3 ✓
+  EXECUTED 2026-07-25** (band (b) honest FAIL + band (a) RECORDED input-limited,
+  `cases/analysis/v5_3_m6_cp/`: M6 wing TEST 2308 M0.8395/α3.06 vs the committed
+  7-station Cp — the viscous Cp does NOT move toward experiment (1/5 unmasked
+  stations + a pooled increase); Δcl_KJ −2.20 % DOWN but under the A4 floor; the
+  3-D counterpart of the GV5.2 reading) and GV5.4 cost; V6 wake sheet;
+  wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
   3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · **A2 ✓ CLOSED 2026-07-17** (TE/Kutta fidelity attribution,
