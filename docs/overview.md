@@ -351,7 +351,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   A1 conf_newton 逐字；#4 W1 锚从陈旧 A1 0.26918 重订 P14 探针 G8.2 锁 0.2646）。判读：
   预注册要记的诚实负结果——翼尺度增广 Newton 需要更强的（Schur-aware、(A,Ψ) 结构化）约化空间
   预条件，成本才读得进 ≤2× 带；EW-forcing 变体登记未开（用户裁决）。**V5 五 gate 全部执行完，
-  关闭待用户裁决**）；**V6 ◐ gate 全部执行完**（尾迹面片 IBL 修正：GV6.0 裁决 2026-07-25 = Option A
+  关闭待用户裁决**）；**V6 ✓ CLOSED 2026-07-25**（尾迹面片 IBL 修正：GV6.0 裁决 2026-07-25 = Option A
   conforming-only + producer (i)（LS 腿与求解尾迹 IBL 留作登记后续）→ **GV6.1 ✓ CLOSED
   2026-07-25**（6 PASS / 0 FAIL / 7 RECORDED，`cases/analysis/v6_1_wake_sheet/`：conforming
   尾迹面 δ* 源交付（`pyfp3d/viscous/wake_sheet.py` + `CouplingConfig.wake_transpiration`
@@ -367,8 +367,9 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   1.0c 保持钉死 MODEL CHOICE）；XFOIL 尾迹源 Option A 裁决（reference_data 不动，G3
   极曲线复现 inline）——方向一致（δ* 单调下降 32/32，H 2.0143→1.0760），速率不合
   （XFOIL 有效 0.454c vs 钉死 1.0c，照录不调），TE 锚偏低（0.00662 vs 0.01440/0.01191，
-  GV3.1 δ* caveat），下游 θ 0.695 vs 守恒构造（模型形式差）；**关闭待用户裁决**
-  （GV6.0 的 producer-(ii) 开启条件 = 实测显著性，照录读数 = 条件未满足））；
+  GV3.1 δ* caveat），下游 θ 0.695 vs 守恒构造（模型形式差）；**V6 ✓ CLOSED
+  2026-07-25**（关闭裁决 2026-07-25（用户）：照录读数 = 显著性条件未满足
+  → producer (ii) 不开启，GV6.0 条文））；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：

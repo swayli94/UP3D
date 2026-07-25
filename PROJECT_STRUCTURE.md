@@ -1384,8 +1384,8 @@ stronger (Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
 before cost reads into the ≤ ~2× band; the EW-forcing variant
 registered-not-opened (user adjudication); **V5 CLOSED — all five
 gates executed**;
-V4-reopen trigger considered, NOT invoked (stays parked); **V6 ◐ gates
-EXECUTED 2026-07-25 — GV6.0 RULED (Option A: conforming-only +
+V4-reopen trigger considered, NOT invoked (stays parked); **V6 ✓
+CLOSED 2026-07-25 — GV6.0 RULED (Option A: conforming-only +
 producer (i); the LS leg + the solved wake IBL = recorded follow-ups)
 · GV6.1 ✓ CLOSED (6 PASS / 0 FAIL / 7 RECORDED) · GV6.2 ✓ CLOSED
 (0 PASS / 0 FAIL / 24 RECORDED)** (conforming wake-sheet δ* source
@@ -1406,8 +1406,9 @@ in-line): direction agrees, rate 0.454 c vs 1.0 c recorded-not-tuned,
 TE anchor low (the GV3.1 δ* caveat); harness finding logged: numba
 cache-load is NOT bit-faithful to fresh-compile in
 `pyfp3d/viscous/` — bit-identity A/Bs must pin one cache mode on both
-legs, `results/ab_cache_mode_isolation.csv`; producer-(ii) opening =
-user adjudication per GV6.0); Track A — A1, A2,
+legs, `results/ab_cache_mode_isolation.csv`; producer (ii) NOT opened
+(the significance condition NOT met on the GV6.2 recorded reading,
+user-adjudicated 2026-07-25 per the GV6.0 clause)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),

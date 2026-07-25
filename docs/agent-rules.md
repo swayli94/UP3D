@@ -1,8 +1,9 @@
 # pyFP3D Agent Rules
 
-Current phase: **V6 ◐ gates EXECUTED 2026-07-25 (NEWEST; Track V
-wake-sheet IBL correction; close-out = the user's producer-(ii)
-adjudication per the GV6.0 ruling): GV6.2 measured effect ✓ CLOSED
+Current phase: **V6 ✓ CLOSED 2026-07-25 (NEWEST; Track V
+wake-sheet IBL correction; close-out adjudicated 2026-07-25 (user):
+the GV6.2 recorded reading = the significance condition NOT met →
+producer (ii) NOT opened): GV6.2 measured effect ✓ CLOSED
 2026-07-25 (0 PASS / 0 FAIL / 24 RECORDED;
 `cases/analysis/v6_2_measured_effect/` — the on/off effect Δ-cl
 +0.00015 (+0.0547 %) / TE-region max |ΔCp| 0.00250 sits at

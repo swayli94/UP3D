@@ -431,7 +431,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
 **Prereq:** P8 ✓ + P14 ✓ + V3. **Wing-body VII is explicitly OUT of V5 scope**
 (scope guards below).
 
-### V6 — Wake-sheet IBL correction ◐ GV6.1 ✓ · GV6.2 ✓ EXECUTED 2026-07-25 (close-out = the user's producer-(ii) adjudication per the GV6.0 ruling; continuation of V1's data layout, not an independent solver)
+### V6 — Wake-sheet IBL correction ✓ CLOSED 2026-07-25 (GV6.1 ✓ · GV6.2 ✓; close-out adjudicated 2026-07-25 (user): the GV6.2 recorded reading = the significance condition NOT met → producer (ii) NOT opened; continuation of V1's data layout, not an independent solver)
 
 Same 6 equations with wake closure relations; the wake unknowns were reserved in
 V1's layout. δ*_wake enters as the wake-sheet RHS mass source; TE thickness
@@ -486,8 +486,9 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
   tuned), the TE anchor low (0.00662 vs XFOIL 0.01440 / committed
   surface sum 0.01191 — the GV3.1 δ* caveat), XFOIL θ falls to 0.695
   downstream vs the conserved-θ construction (model-form). The
-  producer-(ii) opening decision = **user adjudication** (the GV6.0
-  ruling; the recorded reading = the significance condition NOT met).
+  producer-(ii) opening decision — **ADJUDICATED 2026-07-25 (user): the
+  significance condition NOT met → producer (ii) NOT opened; V6
+  ✓ CLOSED** (the GV6.0 ruling clause).
 
 **Design constraints (unchanged from DN2 §4.5):** TE kink absorbed by Drela
 local-basis adaptation; **straight wake + mass-transpiration relaxation, no
@@ -855,7 +856,9 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   Design record `docs/design_track_v.md` §20. Next = **V5 close-out —
   all five gates executed; user adjudication**. Executed under the
   temporary 8-thread session constraint.
-- V6 — ◐ (gates executed; close-out = the user's producer-(ii) adjudication)
+- V6 — ✓ CLOSED 2026-07-25 (GV6.1 ✓ / GV6.2 ✓ executed; close-out
+  adjudicated 2026-07-25 (user): the significance condition NOT met on the
+  GV6.2 recorded reading → producer (ii) NOT opened)
   — wake-sheet IBL correction, a continuation of V1's data layout (wake
   unknowns reserved). GV6.0 RULED 2026-07-25 (Option A: conforming-only +
   producer (i); the LS leg + solved wake IBL = recorded follow-ups), GV6.1 ✓
@@ -867,7 +870,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   input band = NOT significant, L-robust over the {0.5, 1.0, 2.0} c sweep
   (1.0 c stays pinned); the XFOIL wake direction check (Option A sourcing)
   AGREES on direction, rate 0.454 c vs pinned 1.0 c + TE-anchor/downstream-θ
-  model-form differences recorded. Producer (ii) opening = user adjudication
-  per the GV6.0 ruling (the recorded reading = the significance condition
-  NOT met). Straight wake + mass-transpiration relaxation, no geometric
-  relaxation.
+  model-form differences recorded. Producer (ii) NOT opened — adjudicated
+  2026-07-25 (user): the recorded reading = the GV6.0 significance
+  condition NOT met. Straight wake + mass-transpiration relaxation, no
+  geometric relaxation.

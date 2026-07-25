@@ -132,8 +132,8 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   block-Jacobi diverges, exact-BL Schur stalls 1/4; "measure before Schur" answered:
   the BL elimination is cheap (1.8 s), Krylov convergence is the bottleneck ⇒
   Schur-aware reduced-space preconditioning = the registered follow-up; **V5
-  CLOSED** — all five gates executed, user adjudication); **V6 wake sheet ◐
-  gates EXECUTED** — GV6.0 RULED 2026-07-25 (Option A: conforming-only +
+  CLOSED** — all five gates executed, user adjudication); **V6 wake sheet ✓
+  CLOSED 2026-07-25** — GV6.0 RULED (Option A: conforming-only +
   producer (i); the LS leg + solved wake IBL = recorded follow-ups) →
   **GV6.1 ✓ CLOSED 2026-07-25** (6P/0F/7R, `cases/analysis/v6_1_wake_sheet/`:
   the conforming wake-sheet δ* source shipped — (a)(i)/(a)(ii) δ*_wake = 0
@@ -144,7 +144,8 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   +0.00015 (+0.0547 %) / TE max |ΔCp| 0.00250 = 0.022×/0.051× the A4 band
   = NOT significant, L-robust over {0.5,1.0,2.0} c (1.0 c pinned); XFOIL
   wake Option A — direction agrees, rate 0.454 c vs 1.0 c recorded;
-  producer-(ii) opening = user adjudication); wing-body VII deferred)
+  producer (ii) NOT opened (the significance condition NOT met,
+  user-adjudicated 2026-07-25)); wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
   3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · **A2 ✓ CLOSED 2026-07-17** (TE/Kutta fidelity attribution,

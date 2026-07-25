@@ -379,8 +379,9 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   CHOICE; the `CouplingConfig.wake_l_rel_chords` plumbing, default = bit-identical, +1
   test); XFOIL wake direction AGREES (monotone δ* relaxation 32/32, H 2.0143→1.0760),
   rate disagrees (XFOIL effective 0.454 c vs pinned 1.0 c, recorded not tuned), TE anchor
-  low (0.00662 vs 0.01440/0.01191, the GV3.1 δ* caveat); producer-(ii) opening = user
-  adjudication per the GV6.0 ruling; VERDICT + PRE_REGISTRATION + CSVs/PNG in the dir) —
+  low (0.00662 vs 0.01440/0.01191, the GV3.1 δ* caveat); producer (ii) NOT opened
+  (the significance condition NOT met, user-adjudicated 2026-07-25) — V6 ✓ CLOSED;
+  VERDICT + PRE_REGISTRATION + CSVs/PNG in the dir) —
   `python cases/analysis/v6_2_measured_effect/run.py` — ~5 min at 8 threads (2026-07-25
   measurement; four medium loose legs ~69 s each + the XFOIL invocation; exit 0 = guards
   clean, all bands RECORDED)

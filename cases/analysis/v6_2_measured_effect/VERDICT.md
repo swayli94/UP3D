@@ -19,6 +19,10 @@
   at 0.022× (cl) / 0.051× (Cp) of the A4 input band — NOT significant
   vs the A4 input band; the producer-(ii) opening decision is the
   user's (GV6.0 ruling), this gate RECORDS.**
+- **Post-verdict adjudication 2026-07-25 (user)**: the recorded
+  reading accepted — the significance condition is NOT met →
+  **producer (ii) NOT opened; V6 ✓ CLOSED** (the GV6.0 ruling clause,
+  `docs/roadmap/track_v.md` V6).
 
 ## Result table
 
