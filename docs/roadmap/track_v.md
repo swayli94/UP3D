@@ -455,11 +455,18 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
   faces + slave→master folding IS the weak-form flux channel, currently
   unconsumed; the path-independent physics gaps = wake closures, TE
   confluence, the wake IBL state.)
-- [ ] **GV6.1 conforming sheet source (◐ OPENED 2026-07-25,
-  PRE_REGISTRATION committed before the first code change,
-  `cases/analysis/v6_1_wake_sheet/PRE_REGISTRATION.md`)**: δ*_wake enters via the
-  `constraints/wake.py` reduce RHS (Tᵀ b_wake); TE thickness continuity
-  asserted; δ*_wake = 0 **bit-identical**.
+- [x] **GV6.1 conforming sheet source (✓ CLOSED 2026-07-25 — 6 PASS /
+  0 FAIL / 7 RECORDED; PRE_REGISTRATION + the 2026-07-25 per-face ½ṁ
+  addendum committed before the first code change (`f4e90de`); VERDICT
+  `cases/analysis/v6_1_wake_sheet/VERDICT.md`)**: δ*_wake enters via the
+  `constraints/wake.py` reduce RHS (Tᵀ b_wake, ½ṁ per coincident face
+  copy); TE thickness continuity asserted (W2, every outer); δ*_wake = 0
+  **bit-identical** — (a)(i)/(a)(ii) PASS; (b) sign-pin MMS PASS
+  (antisym 0.81 %, jump 0.44 %, empirically pins the ½ factor); measured
+  on/off RECORDED for GV6.2: Δ-cl +0.00015, TE-region max |ΔCp| 0.00250.
+  Harness discipline recorded in the VERDICT: (a)(ii) runs BOTH legs
+  fresh-compile (numba cache-load is NOT bit-faithful to fresh-compile
+  in `pyfp3d/viscous/`; isolate3/4, `results/ab_cache_mode_isolation.csv`).
 - [ ] **GV6.2 measured effect**: wake-IBL on/off cl (and TE-region Cp) delta on
   the GV3.1 case, direction-checked against XFOIL's wake modelling; RECORDED
   with the A4 input band quoted.
@@ -830,9 +837,13 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   Design record `docs/design_track_v.md` §20. Next = **V5 close-out —
   all five gates executed; user adjudication**. Executed under the
   temporary 8-thread session constraint.
-- V6 — ☐ — wake-sheet IBL correction, a continuation of V1's data layout (wake
-  unknowns reserved). GV6.0 LS sheet-source design adjudication BEFORE code
-  (conforming needs no new mechanism; may close conforming-only), GV6.1
-  conforming sheet source + δ*_wake=0 bit-identity, GV6.2 measured on/off
-  effect. Straight wake + mass-transpiration relaxation, no geometric
-  relaxation.
+- V6 — ◐ — wake-sheet IBL correction, a continuation of V1's data layout (wake
+  unknowns reserved). GV6.0 RULED 2026-07-25 (Option A: conforming-only +
+  producer (i); the LS leg + solved wake IBL = recorded follow-ups), GV6.1 ✓
+  CLOSED 2026-07-25 (conforming sheet source + δ*_wake=0 bit-identity, 6
+  PASS / 0 FAIL / 7 RECORDED, VERDICT cases/analysis/v6_1_wake_sheet/) —
+  Next = **GV6.2 measured on/off effect vs the A4 band** (GV6.1 recorded
+  Δ-cl +0.00015 / TE-region max |ΔCp| 0.00250; the XFOIL wake-reference
+  sourcing question needs its own pre-registration — the committed CSVs
+  carry surface rows only). Straight wake + mass-transpiration relaxation,
+  no geometric relaxation.

@@ -218,7 +218,21 @@ pyfp3d/                    # Main package
 │   │                       #   te_outflow_pairs(case) TE↔upstream pairing;
 │   │                       #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
 │   │                       #   GV3.3 cases/analysis/v3_fuselage_smoke/,
-│   │                       #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23)
+│   │                       #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23);
+│   │                       #   [V6/GV6.1] CouplingConfig.wake_transpiration (default
+│   │                       #   OFF = legacy bit-identical) + run_loose_coupling wake=
+│   │                       #   hook: b_wake added into the wall body_source_rhs
+│   ├── wake_sheet.py     # ✓ [V6/GV6.1] conforming wake-sheet δ* source: wake
+│   │                       #   SurfaceMesh (V1 layout, 2nd instance) + open-chain
+│   │                       #   station table + master→slave fold pairing (W3 build
+│   │                       #   asserts); producer (i) prescribed δ*_wake (TE
+│   │                       #   confluence + straight-wake relaxation, L_rel = 1.0c
+│   │                       #   pinned, W2 1e-12 assert every call); two-sided
+│   │                       #   u_e,wake; b_wake = assemble over wake± with ½ṁ per
+│   │                       #   coincident face copy (2026-07-25 addendum — the Tᵀ
+│   │                       #   fold sums both copies, so ½ realizes [ρv_n] = ṁ);
+│   │                       #   GV6.1 6 PASS / 0 FAIL / 7 RECORDED, ✓ CLOSED
+│   │                       #   2026-07-25 (cases/analysis/v6_1_wake_sheet/)
 │   ├── tight.py          # ✓ [V5] fixed/linear operators of the augmented tight system:
 │   │                       #   W wall-load / S scatter / P pin-mask / L surface-divergence /
 │   │                       #   D closure-row / G per-zone u_e-recovery operators + the
@@ -594,6 +608,10 @@ tests/                     # Unit and gate tests
 │                                  #   Newton (line-search probe guard exercised green)
 ├── test_v5_tight_scaled.py        # ✓ [V5/GV5.1b] scaled+damped path: 8 tests = scaling
 │                                  #   identities + μ schedule + floor-stop + k1 smoke
+├── test_v6_wake_sheet.py          # ✓ [V6/GV6.1] wake-sheet W3 construction + producer
+│                                  #   identity (c) + zero-field (a)(i) bit-identity +
+│                                  #   sign-pin MMS (b) + (a)(ii) fresh-compile A/B vs
+│                                  #   the gate-free library + fold-pairing structure
 ├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
 ├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
 ├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
@@ -1362,7 +1380,22 @@ stronger (Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
 before cost reads into the ≤ ~2× band; the EW-forcing variant
 registered-not-opened (user adjudication); **V5 CLOSED — all five
 gates executed**;
-V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
+V4-reopen trigger considered, NOT invoked (stays parked); **V6 ◐ OPEN
+— GV6.0 RULED 2026-07-25 (Option A: conforming-only + producer (i);
+the LS leg + the solved wake IBL = recorded follow-ups) · GV6.1 ✓
+CLOSED 2026-07-25 (6 PASS / 0 FAIL / 7 RECORDED)** (conforming
+wake-sheet δ* source shipped: `pyfp3d/viscous/wake_sheet.py` + the
+`CouplingConfig.wake_transpiration` default-OFF hook = legacy
+bit-identical, `tests/test_v6_wake_sheet.py` (7); VERDICT
+`cases/analysis/v6_1_wake_sheet/VERDICT.md` — (a)(i)/(a)(ii)
+δ*_wake = 0 bit-identity PASS, (b) sign-pin MMS PASS (antisym
+0.81 %, jump 0.44 %, empirically pins the 2026-07-25 per-face ½ṁ
+addendum), (c) W2 TE-continuity every outer PASS, (d) RECORDED for
+GV6.2: Δ-cl +0.00015, TE-region max |ΔCp| 0.00250, L_rel = 1.0 c
+pinned; harness finding logged: numba cache-load is NOT bit-faithful
+to fresh-compile in `pyfp3d/viscous/` — bit-identity A/Bs must pin
+one cache mode on both legs,
+`results/ab_cache_mode_isolation.csv`)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
@@ -1371,7 +1404,17 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **644 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+Default suite: **651 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+V6 GV6.1 (the conforming wake-sheet δ* source: (a)(i)/(a)(ii) δ*_wake = 0
+bit-identity PASS — the (a)(ii) harness runs both legs fresh-compile, the
+numba cache-load infidelity discipline — (b) sign-pin MMS PASS empirically
+pinning the per-face ½ṁ addendum, (c) W2 TE-continuity every outer PASS;
+(d) Δ-cl +0.00015 / TE-region max |ΔCp| 0.00250 RECORDED for GV6.2);
+full-suite measured 651 @1606.31 s **@8 threads** (temporary 8-core session
+constraint, user-directed; NOT comparable to the 16-thread ledger entries);
++7 vs 644 = `tests/test_v6_wake_sheet.py` (7 new: W3 construction, the
+producer identity, the zero-field RHS, (a)(i) bit-identity, the sign-pin
+MMS, (a)(ii) fresh-compile A/B, the fold pairing). Previous 644:
 V5 GV5.4 (the augmented-step cost on M6 medium: band (a) RECORDED — the
 augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
 ≤ ~2× band; band (b) honest FAIL — the block preconditioner does NOT work

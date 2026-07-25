@@ -46,6 +46,12 @@ from pyfp3d.viscous.transpiration import (
     edge_velocity_per_zone,
     transpiration_from_delta_star,
 )
+from pyfp3d.viscous.wake_sheet import (
+    WakeSheetCase,
+    assemble_wake_sheet_rhs,
+    wake_edge_velocity,
+    wake_transpiration_source,
+)
 
 __all__ = [
     "CouplingConfig",
@@ -121,6 +127,10 @@ class CouplingConfig:
     te_extrapolate: bool = False  # GV5.5: TE-outflow row replacement
     # (first-order extrapolation on rows 0/2 at the TE nodes; default OFF
     # = legacy bit-identical). Airfoil cases only.
+    wake_transpiration: bool = False  # GV6.1: the wake-sheet delta* source
+    # (viscous/wake_sheet.py) added to the loose loop's body_source_rhs;
+    # default OFF = legacy bit-identical (W1). Requires the wake= case of
+    # run_loose_coupling. Airfoil (quasi-2D strip) cases only.
 
 
 # ---------------------------------------------------------------------------
@@ -699,6 +709,8 @@ class CouplingResult:
     history: List[Dict] = field(default_factory=list)
     ibl_info: Dict = field(default_factory=dict)
     driver_info: Dict = field(default_factory=dict)
+    wake_info: Dict = field(default_factory=dict)  # GV6.1: last outer's
+    # ds_wake_te / th_wake_te / mdot_wake_max ({} when the flag is OFF)
 
 
 def run_loose_coupling(
@@ -706,6 +718,7 @@ def run_loose_coupling(
     case: CouplingCase,
     config: CouplingConfig,
     probe: Optional[Callable[[np.ndarray, Optional[np.ndarray], int], Dict]] = None,
+    wake: Optional[WakeSheetCase] = None,
 ) -> CouplingResult:
     """The V3 loose loop.
 
@@ -713,12 +726,26 @@ def run_loose_coupling(
     probe(phi, gamma, k): optional per-iteration callback (k = 0 is the
         inviscid baseline) returning a dict merged into the history record
         -- cl/Cp logging lives in the caller, not here.
+    wake: the GV6.1 wake-sheet case (viscous/wake_sheet.py). Must be
+        provided exactly when config.wake_transpiration is set (a mismatch
+        raises -- no silent ignore either way). When active, each outer
+        iteration updates the prescribed delta*_wake from the current
+        wall-IBL state (TE confluence + straight-wake relaxation; the W2
+        TE-continuity assert runs every call) and ADDS the sheet source to
+        the wall RHS before the FP re-solve. Default None with the flag
+        OFF never enters the branch -- legacy bit-identical (W1).
 
     Convergence (GV3.2): max|ds_new - ds_prev| / max|ds_new| < tol_ds on
     the RAW successive IBL outputs (the fixed-point residual; the relaxed
     ds_hat is what the FP solve sees). The final FP re-solve still runs so
     the returned phi is consistent with the returned delta_star.
     """
+    if config.wake_transpiration != (wake is not None):
+        raise ValueError(
+            "config.wake_transpiration and the wake= case must be given "
+            "together (flag ON needs a WakeSheetCase; passing one with the "
+            "flag OFF would be silently ignored)"
+        )
     sm = case.sm
     mu = 1.0 / config.re_chord
     n_vol = case.n_volume
@@ -745,6 +772,7 @@ def run_loose_coupling(
     ue_surf = None
     converged = False
     ibl_info: Dict = {}
+    wake_info: Dict = {}
     k_done = 0
 
     for k in range(1, config.n_outer_max + 1):
@@ -878,6 +906,23 @@ def run_loose_coupling(
         m_dot = np.zeros(n_vol, dtype=np.float64)
         m_dot[sm.volume_node_of] = m_surf
         rhs = assemble_transpiration_rhs(case.nodes, case.wall_faces, m_dot)
+        if wake is not None:
+            # GV6.1 wake-sheet source: the prescribed delta*_wake updates
+            # from THIS outer's wall-IBL state (outs) and the SAME phi the
+            # wall u_e used (W2 TE-continuity asserts inside). Added into
+            # the body_source_rhs slot -- the T^T reduction of the FP
+            # driver folds the two sides' loads into the master rows.
+            ue_wake = wake_edge_velocity(case.nodes, wake, phi)
+            ds_wake, m_wake, wake_info = wake_transpiration_source(
+                wake,
+                case.stations,
+                outs,
+                ue_wake,
+                config.m_inf,
+                config.gamma_air,
+                config.chord,
+            )
+            rhs = rhs + assemble_wake_sheet_rhs(case.nodes, wake, m_wake)
         phi, gamma, dinfo = fp_solve(rhs, FpSeed(phi=phi, gamma=gamma))
         if dinfo.get("converged") is False:
             # a non-converged FP solve only feeds garbage forward (GV3.3
@@ -898,6 +943,12 @@ def run_loose_coupling(
             "ibl_converged": bool(ibl_info["converged"]),
             "ibl_final_residual": ibl_info["final_residual"],
         }
+        if wake is not None:
+            rec.update({
+                "ds_wake_te": wake_info["ds_te"],
+                "th_wake_te": wake_info["th_te"],
+                "mdot_wake_max": wake_info["mdot_wake_max"],
+            })
         rec.update(stag_note)
         if probe is not None:
             rec.update(probe(phi, gamma, k))
@@ -922,4 +973,5 @@ def run_loose_coupling(
         history=history,
         ibl_info=ibl_info,
         driver_info=dinfo if isinstance(dinfo, dict) else {},
+        wake_info=wake_info,
     )

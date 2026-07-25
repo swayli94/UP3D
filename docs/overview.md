@@ -351,8 +351,18 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   A1 conf_newton 逐字；#4 W1 锚从陈旧 A1 0.26918 重订 P14 探针 G8.2 锁 0.2646）。判读：
   预注册要记的诚实负结果——翼尺度增广 Newton 需要更强的（Schur-aware、(A,Ψ) 结构化）约化空间
   预条件，成本才读得进 ≤2× 带；EW-forcing 变体登记未开（用户裁决）。**V5 五 gate 全部执行完，
-  关闭待用户裁决**）；
-  V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
+  关闭待用户裁决**）；**V6 ◐ 开启**（尾迹面片 IBL 修正：GV6.0 裁决 2026-07-25 = Option A
+  conforming-only + producer (i)（LS 腿与求解尾迹 IBL 留作登记后续）→ **GV6.1 ✓ CLOSED
+  2026-07-25**（6 PASS / 0 FAIL / 7 RECORDED，`cases/analysis/v6_1_wake_sheet/`：conforming
+  尾迹面 δ* 源交付（`pyfp3d/viscous/wake_sheet.py` + `CouplingConfig.wake_transpiration`
+  默认 OFF = legacy 逐位一致）——(a)(i)/(a)(ii) δ*_wake = 0 逐位一致 PASS（(a)(ii) 方法论：
+  双腿 fresh-compile worktree 子进程——numba cache-load 与 fresh-compile 在
+  `pyfp3d/viscous/` 上**不**逐位一致，isolate3/4 实测，
+  `results/ab_cache_mode_isolation.csv`）；(b) 符号钉 MMS PASS（反对称 0.81 %、跳变 0.44 %，
+  经验钉住 2026-07-25 addendum 的每面 ½ṁ 配方）；(c) W2 TE 连续每 outer 成立；(d) 照录喂
+  GV6.2：Δ-cl +0.00015、TE 区 max |ΔCp| 0.00250、L_rel = 1.0c 钉死 MODEL CHOICE；下一步 =
+  GV6.2 实测效应 vs A4 带，XFOIL 尾迹参考源问题需自带预注册））；
+  V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
   四求解器统一计时插桩 + conforming×level-set × Picard×Newton 耗时基准） — **A2 ✓ 2026-07-17 关闭**（TE/Kutta 保真度归因，GA2.1–GA2.5）：**S1 定谳**——
@@ -385,7 +395,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **644 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V5 GV5.4
+现基线 **651 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V6 GV6.1
+执行**（conforming 尾迹面 δ* 源：(a)(i)/(a)(ii) δ*_wake = 0 逐位一致
+PASS——(a)(ii) 双腿 fresh-compile，numba cache-load 不实性纪律——(b) 符号钉
+MMS PASS 经验钉住每面 ½ṁ addendum，(c) W2 每 outer PASS，(d) Δ-cl +0.00015 /
+TE 区 max |ΔCp| 0.00250 照录——VERDICT
+`cases/analysis/v6_1_wake_sheet/VERDICT.md`）：全套件实测 651
+@1606.31 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比）；+7 vs 下档 644 = `tests/test_v6_wake_sheet.py`（7 新））。
+上一档 644+25+2（2026-07-25 Track V **V5 GV5.4
 执行**（M6 medium 增广步成本：band (a) RECORDED——增广步 22.93 s vs 无黏步
 3.05 s = 7.53×，高于 ≤~2× 带；band (b) honest FAIL——块预条件在 medium 不工作
 （block-Jacobi 发散、exact-BL Schur 1/4 步收敛）——VERDICT

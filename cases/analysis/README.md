@@ -359,6 +359,17 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   CSVs in the dir, design record `docs/design_track_v.md` §12) —
   `python cases/analysis/v5_tight_coupling/run.py --levels coarse` — coarse ~1 min / medium ~3 min
   (exit 1 = honest FAIL present)
+- `v6_1_wake_sheet/` — **Track V / V6** GV6.1 conforming wake-sheet δ* source (pre-registered
+  incl. the 2026-07-25 per-face ½ṁ_wake addendum committed before the first code change, **6 PASS /
+  0 FAIL / 7 RECORDED** — (a)(i)/(a)(ii) δ*_wake = 0 bit-identity PASS [(a)(ii) harness discipline:
+  BOTH legs fresh-compile worktree subprocesses — numba cache-load is NOT bit-faithful to
+  fresh-compile in `pyfp3d/viscous/`, isolate3/4 finding, `results/ab_cache_mode_isolation.csv`];
+  (b) sign-pin MMS PASS (antisym 0.81 %, jump 0.44 % — empirically pins the addendum's ½ factor);
+  (c) W2 TE-continuity held every outer; (d) RECORDED for GV6.2: Δ-cl +0.00015, TE-region max
+  |ΔCp| 0.00250, L_rel = 1.0 c pinned MODEL CHOICE; VERDICT + PRE_REGISTRATION (+1 addendum) +
+  CSVs/PNG in the dir) —
+  `python cases/analysis/v6_1_wake_sheet/run.py` — ~6 min at 8 threads (2026-07-25 measurement;
+  the two fresh-compile (a)(ii) worktree legs dominate; exit 1 = honest FAIL present)
 
 *(Rows for a2/b9/p14 added in A3 2026-07-18: they existed on disk but the
 table still listed only a1. Note two rows are NOT Track A — `b9_*` and
