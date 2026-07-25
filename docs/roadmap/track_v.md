@@ -439,14 +439,25 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
 
 **Gates:**
 
-- [ ] **GV6.0 design adjudication (BEFORE code, user-adjudicated)**: the LS-path
-  sheet-source mechanism. `pyfp3d/wake/` has **no sheet-surface integration
-  machinery** — the options are zero-isosurface polygon integration (new
-  geometry code) or a volume-band approximation (deviates from the "sheet RHS"
-  formulation). The conforming path needs NO new mechanism (explicit
-  `wake_minus/plus` faces + slave→master folding IS the weak-form flux channel).
-  V6 may close conforming-only; the LS leg then becomes a recorded follow-up.
-- [ ] **GV6.1 conforming sheet source**: δ*_wake enters via the
+- [x] **GV6.0 design adjudication (BEFORE code, user-adjudicated — OPENED
+  2026-07-25, RULED 2026-07-25 (user); document
+  `cases/analysis/v6_0_design_adjudication/DESIGN_ADJUDICATION.md`)**: the
+  LS-path sheet-source mechanism. **Ruling: Option A — V6 closes
+  conforming-only; the LS sheet-source leg = recorded follow-up (its own
+  pre-registration if/when opened). δ*_wake producer = (i) prescribed
+  (TE-continuity construction + straight-wake relaxation, pinned in the
+  GV6.1 pre-registration); the solved wake IBL (the "same 6 equations"
+  vision) = recorded follow-up producer (ii), opened only if the GV6.2
+  measured effect is significant vs the A4 input band.** Branch push + PR
+  deferred to bundle the adjudication + the GV6.1 pre-registration (user).
+  (Survey basis: `pyfp3d/wake/` has no sheet-surface integration machinery;
+  the conforming path needs NO new mechanism — explicit `wake_minus/plus`
+  faces + slave→master folding IS the weak-form flux channel, currently
+  unconsumed; the path-independent physics gaps = wake closures, TE
+  confluence, the wake IBL state.)
+- [ ] **GV6.1 conforming sheet source (◐ OPENED 2026-07-25,
+  PRE_REGISTRATION committed before the first code change,
+  `cases/analysis/v6_1_wake_sheet/PRE_REGISTRATION.md`)**: δ*_wake enters via the
   `constraints/wake.py` reduce RHS (Tᵀ b_wake); TE thickness continuity
   asserted; δ*_wake = 0 **bit-identical**.
 - [ ] **GV6.2 measured effect**: wake-IBL on/off cl (and TE-region Cp) delta on
