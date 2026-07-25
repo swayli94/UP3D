@@ -455,7 +455,9 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
   faces + slave→master folding IS the weak-form flux channel, currently
   unconsumed; the path-independent physics gaps = wake closures, TE
   confluence, the wake IBL state.)
-- [ ] **GV6.1 conforming sheet source**: δ*_wake enters via the
+- [ ] **GV6.1 conforming sheet source (◐ OPENED 2026-07-25,
+  PRE_REGISTRATION committed before the first code change,
+  `cases/analysis/v6_1_wake_sheet/PRE_REGISTRATION.md`)**: δ*_wake enters via the
   `constraints/wake.py` reduce RHS (Tᵀ b_wake); TE thickness continuity
   asserted; δ*_wake = 0 **bit-identical**.
 - [ ] **GV6.2 measured effect**: wake-IBL on/off cl (and TE-region Cp) delta on
