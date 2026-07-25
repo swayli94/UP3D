@@ -1,6 +1,27 @@
 # pyFP3D Agent Rules
 
-Current phase: **V6 ✓ CLOSED 2026-07-25 (NEWEST; Track V
+Current phase: **GV5.6 ✓ CLOSED 2026-07-25 (NEWEST; Track V / V5 —
+the GV5.4 registered Schur-aware preconditioner follow-up, opening
+user-adjudicated; 0 PASS / 1 FAIL / 17 RECORDED;
+`cases/analysis/v5_6_schur_prec/` — the GV5.4 system/seed/protocol
+verbatim, NO library change (W4 diff-scope clean, the suite baseline
+unchanged 652+25+2): rung 3 = exact-BL Schur + bdiag(AMG(Ŝ_φφ), M_Γ)
+with the explicitly assembled Ĉ = J_hB·D_BB⁻¹·J_Bh (per-node 6×6
+D_BB, n_fallback 0, t_corr 0.2 s, t_lu 1.8 s reproduced), rung 4 =
+block upper-triangular full-system; **band (b) honest FAIL** — the
+pre-registered hypothesis falsified in its naive form: the corrected
+AMG matrix catastrophically worse than plain AMG(J_φφ) (rung 3
+rel_res 0.664 @242 it vs GV5.4 rung-2's 2e-7..6e-5 stagnation band;
+rung 4 0.68 → 1.06, every step capped info=5); the coarse/medium
+split — rung 3 WORKS at coarse (5/5 converged, 120–209 it,
+RECORDED); **band (a) RECORDED** 23.88 s / 3.03 s = **7.87×** (≈
+GV5.4's 7.53×, recorded either way); guards W1/W2/W3 PASS first try
+(cl_p 0.26429 vs the P14 lock 0.2646 = 0.116 %; FD medians
+9.6e-12 / 7.3e-12 / 0; the IBL-floor trajectory intact, merit
+9.385e-9); the "AMG on a sparsified Schur" direction measured dead
+at wing scale — the inter-node (A,Ψ)-structured M_BB route + the
+EW-forcing variant registered-not-opened (user adjudication); the
+runner default 16 threads).** Previous: **V6 ✓ CLOSED 2026-07-25 (Track V
 wake-sheet IBL correction; close-out adjudicated 2026-07-25 (user):
 the GV6.2 recorded reading = the significance condition NOT met →
 producer (ii) NOT opened): GV6.2 measured effect ✓ CLOSED

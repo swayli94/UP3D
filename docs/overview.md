@@ -351,7 +351,18 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   A1 conf_newton 逐字；#4 W1 锚从陈旧 A1 0.26918 重订 P14 探针 G8.2 锁 0.2646）。判读：
   预注册要记的诚实负结果——翼尺度增广 Newton 需要更强的（Schur-aware、(A,Ψ) 结构化）约化空间
   预条件，成本才读得进 ≤2× 带；EW-forcing 变体登记未开（用户裁决）。**V5 五 gate 全部执行完，
-  关闭待用户裁决**）；**V6 ✓ CLOSED 2026-07-25**（尾迹面片 IBL 修正：GV6.0 裁决 2026-07-25 = Option A
+  关闭待用户裁决**）→ **GV5.6 ✓ CLOSED 2026-07-25**（0P/1F/17R，`cases/analysis/v5_6_schur_prec/`：
+  GV5.4 登记的 Schur-aware 预条件 follow-up，用户裁决开立；GV5.4 系统/种子/协议逐字、零库改动；
+  rung 3 = exact-BL Schur + bdiag(AMG(Ŝ_φφ), M_Γ) 显式装入稀疏化修正 Ĉ = J_hB·D_BB⁻¹·J_Bh
+  （每节点 6×6 D_BB = quasi-simultaneous 局部 BL 响应；n_fallback 0、t_corr 0.2 s、t_lu 1.8 s
+  复现），rung 4 = 块上三角全系统——**band (b) honest FAIL**：预注册假说以朴素形式被证伪，
+  corrected-AMG 矩阵在 medium 灾难性劣于纯 AMG(J_φφ)（rung 3 rel_res **0.664** @242 迭代 vs
+  GV5.4 rung-2 的 2e-7..6e-5 停滞带；rung 4 0.68→1.06 全打帽）；coarse/medium 分裂 = 解剖
+  （coarse rung 3 工作，5/5 收敛 120–209 迭代，RECORDED）；**band (a) RECORDED** 23.88/3.03 =
+  **7.87×**（≈ GV5.4 的 7.53×）；W1/W2/W3 一次过（cl_p 0.116 %；FD 中位 9.6e-12/7.3e-12/0；
+  IBL 地板轨迹完整）；"AMG on a sparsified Schur" 方向翼尺度实测死刑，节点间 (A,Ψ)-structured
+  M_BB 升级路线 + EW-forcing 变体登记未开（用户裁决）；runner 默认 16 线程）；**V6 ✓ CLOSED
+  2026-07-25**（尾迹面片 IBL 修正：GV6.0 裁决 2026-07-25 = Option A
   conforming-only + producer (i)（LS 腿与求解尾迹 IBL 留作登记后续）→ **GV6.1 ✓ CLOSED
   2026-07-25**（6 PASS / 0 FAIL / 7 RECORDED，`cases/analysis/v6_1_wake_sheet/`：conforming
   尾迹面 δ* 源交付（`pyfp3d/viscous/wake_sheet.py` + `CouplingConfig.wake_transpiration`

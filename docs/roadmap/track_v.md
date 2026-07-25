@@ -276,7 +276,7 @@ on hand — see the header reference pin; fetch it before opening V4, or skip).
 
 **Prereq:** V3.
 
-### V5 — Tight coupling: augmented Newton ✓ CLOSED 2026-07-25 · GV5.0 (16 RECORDED / 0 FAIL) · GV5.1 (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b/1c/1d · GV5.5 · GV5.2 · GV5.3 · GV5.4 (0 PASS / 1 FAIL / 17 RECORDED) — all five gates executed, close-out pending user adjudication
+### V5 — Tight coupling: augmented Newton ✓ CLOSED 2026-07-25 · GV5.0 (16 RECORDED / 0 FAIL) · GV5.1 (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b/1c/1d · GV5.5 · GV5.2 · GV5.3 · GV5.4 (0 PASS / 1 FAIL / 17 RECORDED) — all five gates executed, close-out pending user adjudication · **GV5.6 ✓ CLOSED 2026-07-25** (the GV5.4 registered Schur-aware preconditioner follow-up, user-adjudicated; 0 PASS / 1 FAIL / 17 RECORDED — the corrected-AMG direction measured dead at wing scale: rung 3 rel_res 0.664 vs GV5.4 rung-2's 2e-7..6e-5 stagnation band; rung 4 0.68 → 1.06; coarse rung 3 works, 5/5; cost 7.87× RECORDED)
 
 **Deliverable:** augmented (φ, Γ, BL) Newton on the P8/P14 machinery; coupling
 blocks J_φ,BL (∂ṁ/∂BL through the transpiration assembly) and J_BL,φ (∂u_e/∂φ
@@ -427,6 +427,34 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   the temporary 8-thread session constraint. Prereq: none
   beyond the committed diagnosis; the GV5.1c window read is informative
   but NOT binding for the opening.
+- [x] **GV5.6 Schur-aware reduced-space preconditioner — EXECUTED
+  2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED,
+  `cases/analysis/v5_6_schur_prec/`)** (the GV5.4 registered follow-up,
+  opening user-adjudicated; PRE_REGISTRATION committed `091f9fe` before
+  the first code change; system/seed/protocol = GV5.4 verbatim, NO
+  library change, W4 diff-scope clean): rung 3 = the exact-BL Schur
+  operator + bdiag(AMG(Ŝ_φφ), M_Γ), Ŝ_φφ = J_φφ − Ĉ_φφ with the
+  explicitly assembled Ĉ = J_hB·D_BB⁻¹·J_Bh (per-node 6×6 D_BB —
+  n_fallback 0, t_corr 0.2 s, t_lu 1.8 s reproduced); rung 4 = the block
+  upper-triangular full-system preconditioner. **(b) honest FAIL
+  (medium, binding)**: the pre-registered hypothesis FALSIFIED in its
+  naive form — the corrected AMG matrix is catastrophically worse than
+  plain AMG(J_φφ) (rung 3 rel_res **0.664** @242 iters vs GV5.4 rung-2's
+  2e-7..6e-5 stagnation band; rung 4 0.68 → 1.06, every step capped
+  info=5) — the coarse/medium split: rung 3 WORKS at coarse (5/5
+  converged, 120–209 iters, RECORDED); the D_BB-local (quasi-simultaneous)
+  correction adequate at coarse, destructive at medium (Ĉ_φφ ≈ doubles
+  the φ-block density: nnz(Ĉ) 597k, nnz(Ŝ) 1.56M). **(a) RECORDED**
+  23.88 s / 3.03 s = **7.87×** (above ≤ ~2×, recorded either way; ≈
+  GV5.4's 7.53×; every step capped-GMRES work). Guards W1/W2/W3 PASS
+  (cl_p 0.26429 vs the P14 lock 0.2646 = 0.116 %; FD medians 9.6e-12 /
+  7.3e-12 / 0; the IBL-floor trajectory intact, merit 9.385e-9). Reading:
+  the "AMG on a sparsified Schur" direction is measured dead at wing
+  scale (both block directions, D_BB-local physics); the escalation route
+  left = an inter-node (A,Ψ)-structured M_BB inside Ĉ — registered-not-opened
+  with the EW-forcing variant (user adjudication). Executed at the runner
+  default 16 threads (the GV5.4 8t numbers the non-binding cross-check).
+  Design record `docs/design_track_v.md` §21.
 
 **Prereq:** P8 ✓ + P14 ✓ + V3. **Wing-body VII is explicitly OUT of V5 scope**
 (scope guards below).
@@ -599,7 +627,9 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   augmented Newton stalls, or closed-body viscous cases enter scope
   before V5 lands.
 - V5 — ✓ CLOSED 2026-07-25 (all five gates executed; close-out pending user
-  adjudication) — tight coupling: augmented (φ, Γ, BL) Newton on
+  adjudication; **GV5.6 ✓ CLOSED 2026-07-25** — the GV5.4 registered
+  Schur-aware preconditioner follow-up, user-adjudicated: 0P/1F/17R, the
+  corrected-AMG direction measured dead at wing scale) — tight coupling: augmented (φ, Γ, BL) Newton on
   P8/P14. **Entry check GV5.0 ✓ EXECUTED 2026-07-23** (16 RECORDED / 0 FAIL;
   `cases/analysis/v5_m6_bridge/`): the bridge answer is that the loose loop is
   NOT sufficient on the 3-D lifting wing — coarse runs away on a root-upper-TE

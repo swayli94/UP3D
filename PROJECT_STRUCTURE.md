@@ -558,6 +558,11 @@ cases/                     # Test cases and reference data
 │   │                           #   work at medium — block-Jacobi diverges, exact-BL Schur
 │   │                           #   stalls 1/4; "measure before Schur": the BL elimination
 │   │                           #   is cheap (1.8 s), Krylov convergence is the bottleneck)
+│   ├── v5_6_schur_prec/        # [V5/GV5.6] Schur-aware reduced-space preconditioner
+│   │                           #   (the GV5.4 follow-up; band (b) honest FAIL: the
+│   │                           #   corrected-AMG direction measured dead at wing scale —
+│   │                           #   rung 3 rel_res 0.664 vs GV5.4's 2e-7..6e-5 stagnation;
+│   │                           #   coarse rung 3 works 5/5; band (a) 7.87× RECORDED)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -1383,7 +1388,27 @@ trajectory intact); reading: wing-scale augmented Newton needs a
 stronger (Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
 before cost reads into the ≤ ~2× band; the EW-forcing variant
 registered-not-opened (user adjudication); **V5 CLOSED — all five
-gates executed**;
+gates executed** → **GV5.6 ✓ CLOSED 2026-07-25 (0P/1F/17R,
+`cases/analysis/v5_6_schur_prec/`, design record
+`docs/design_track_v.md` §21)**: the GV5.4 registered Schur-aware
+preconditioner follow-up executed (user-adjudicated opening; the GV5.4
+system/seed/protocol verbatim, NO library change — W4 diff-scope
+clean, suite baseline unchanged) — rung 3 = exact-BL Schur +
+bdiag(AMG(Ŝ_φφ), M_Γ) with the explicitly assembled Ĉ =
+J_hB·D_BB⁻¹·J_Bh (per-node 6×6 D_BB = the quasi-simultaneous local BL
+response; n_fallback 0, t_corr 0.2 s, t_lu 1.8 s reproduced), rung 4 =
+block upper-triangular full-system; **band (b) honest FAIL**: the
+pre-registered hypothesis falsified in its naive form — the corrected
+AMG matrix catastrophically worse than plain AMG(J_φφ) at medium
+(rung 3 rel_res 0.664 @242 it vs GV5.4 rung-2's 2e-7..6e-5 stagnation
+band; rung 4 0.68 → 1.06, every step capped info=5); the
+coarse/medium split — rung 3 WORKS at coarse (5/5 converged, 120–209
+it, RECORDED); **band (a) RECORDED** 23.88 s / 3.03 s = 7.87× (≈
+GV5.4's 7.53×); guards W1/W2/W3 PASS (cl_p 0.116 % vs the P14 lock;
+FD medians 9.6e-12 / 7.3e-12 / 0; the IBL-floor trajectory intact);
+reading: the "AMG on a sparsified Schur" direction measured dead at
+wing scale — the inter-node (A,Ψ)-structured M_BB route + the
+EW-forcing variant registered-not-opened (user adjudication);
 V4-reopen trigger considered, NOT invoked (stays parked); **V6 ✓
 CLOSED 2026-07-25 — GV6.0 RULED (Option A: conforming-only +
 producer (i); the LS leg + the solved wake IBL = recorded follow-ups)

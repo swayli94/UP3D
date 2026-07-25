@@ -840,3 +840,50 @@ Schur" 问题：J_BL,BL 的直接消元到底多贵（决定 Schur 路线是否�
    gate 全部执行完 → CLOSED 2026-07-25**（close-out 待用户裁决）。
    全套件基线 642 → 644（+2 = 新 W4 回调测试）见三面 ledger 行。
    V4 重开触发保持挂起。
+
+## §21 GV5.6 —— Schur-aware 约化空间预条件器：corrected-AMG 路线实测死刑（2026-07-25，0 PASS / 1 FAIL / 17 RECORDED）
+
+GV5.4 登记的 follow-up，2026-07-25 用户裁决开立。预注册
+`cases/analysis/v5_6_schur_prec/PRE_REGISTRATION.md` 先于首行代码提交
+（`091f9fe`）；系统/种子/协议 = GV5.4 逐字（124,216-DOF W2 系统、A1
+conf_newton 种子链、rowcol 均衡、mu ≡ 0、N = 5 实测步、同 W1/W2/W3
+守卫 + D5 二元裁决）；**零库改动**（阶梯全部在 case runner 内，复用
+已提交的 `step_solve` 注入点；W4 = pyfp3d/tests diff 为空，套件基线
+不变 652+25+2）；runner 默认 16 线程（GV5.4 的 8t 数字仅作非约束
+对照）。
+
+1. **设计（rung 3 + escalation rung 4）**：rung 3 = GV5.4 rung-2 的
+   exact-BL Schur 算子逐字，但约化空间预条件换成
+   bdiag(AMG(Ŝ_φφ), M_Γ)，Ŝ_φφ = J_φφ − Ĉ_φφ 显式装入稀疏化 Schur
+   修正 Ĉ = J_hB·D_BB⁻¹·J_Bh——D_BB = J_BL,BL 的每节点 6×6 块对角
+   （(6,6)-BSR 视图提取；rcond 守卫 1e12 → 零安全对角 fallback；
+   物理上 = quasi-simultaneous 局部 BL 响应，即被跳过的 V4 路线以
+   预条件代数形式回归；(A,Ψ) 结构化指导经每节点整块兑现）。rung 4
+   = 块上三角全系统预条件（y_B = lu.solve(r_B)；y_h = P_hh(r_h −
+   J_hB·y_B)），两个耦合方向 + Schur-aware φ 循环都进预条件。
+2. **medium（binding）band (b) honest FAIL**：预注册的可证伪假说
+   以其朴素形式被**证伪**——rung 3 唯一一步 GMRES info=5 @242
+   迭代、rel_res **0.664**（对照 GV5.4 rung-2 同种子：首步收敛
+   2.66e-8 @277，其后停滞 2e-7..6e-5）——修正 AMG 矩阵在 medium
+   灾难性劣于纯 AMG(J_φφ)；rung 4 四步全部打帽 0.68 → 1.06（单调
+   恶化）⇒ NOT-WORKING。(a) RECORDED 23.88 s / 3.03 s = **7.87×**
+   （≤ ~2× 带上方，照录；≈ GV5.4 的 7.53×；全部步含 capped-GMRES
+   工作）。
+3. **coarse/medium 分裂 = 解剖**：coarse 上 rung 3 **工作**（5/5 步
+   info=0，120–209 迭代，rel_res ≤ 3.5e-9，无 escalation，
+   RECORDED）——D_BB-局部修正在 coarse 够用；medium 上 Ĉ_φφ 把 φ
+   块密度约翻倍（nnz(Ĉ) 597,154、nnz(Ŝ) 1,560,192），要么被丢弃的
+   节点间 BL 耦合在 medium 变为本质，要么 Ŝ 失掉让纯 AMG(J_φφ) 近乎
+   可用的代数性质。setup 开销无罪：t_corr 0.2 s（D_BB 求逆 + 三重
+   积）、t_amg 0.2 s、t_lu 1.8 s（GV5.4 的 "measure before Schur"
+   数字复现）、n_fallback = 0（10,205 个 6×6 块全部精确可逆）。
+4. **守卫与轨迹**：W1/W2/W3 一次过（cl_p 0.26429 vs P14 探针锁
+   0.2646 = 0.116 %；FD 中位 φ 9.6e-12 / Γ 7.3e-12 / BL 0）；IBL
+   地板轨迹完整（merit 钉 9.385e-9，λ ~ 1e-4，步全接受）；无
+   addendum（一次干净执行）。
+5. **判读与程序状态**："AMG on a sparsified Schur" 方向在翼尺度
+   实测死刑（两个块方向、D_BB-局部物理都测过）；剩余登记路线 =
+   Ĉ 内换节点间 (A,Ψ)-structured M_BB（站位条块逆 / ILU 型近似逆）
+   或放弃 corrected-AMG 形式，连同 EW-forcing 变体保持
+   registered-not-opened（用户裁决）。**GV5.6 ✓ CLOSED
+   2026-07-25**。

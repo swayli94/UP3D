@@ -318,6 +318,40 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/v5_4_cost/run.py` — ~25 min total at 8 threads
   unloaded (2026-07-25 measurement; both levels + the inviscid anchors +
   the FD guards included; exit 1 = honest FAIL present)
+- `v5_6_schur_prec/` — **Track V / V5** GV5.6 Schur-aware reduced-space
+  preconditioner for the augmented step (registered + opened + executed
+  2026-07-25, the GV5.4 registered follow-up opened by user adjudication;
+  pre-registered `091f9fe` before the first code change): the GV5.4
+  system/seed/protocol verbatim (the 124,216-DOF W2 system, the A1
+  conf_newton seed chain, rowcol scaling, mu ≡ 0, N = 5 measured steps,
+  NO library change — the committed `step_solve` injection point reused),
+  **0 PASS / 1 FAIL / 17 RECORDED** — **band (b) honest FAIL**: the
+  pre-registered hypothesis FALSIFIED in its naive form — rung 3 =
+  exact-BL Schur + bdiag(AMG(Ŝ_φφ), M_Γ) with the explicitly assembled
+  sparsified correction Ĉ = J_hB·D_BB⁻¹·J_Bh (per-node 6×6 D_BB; the
+  quasi-simultaneous local BL response) is catastrophically worse than
+  plain AMG(J_φφ) at medium (rel_res **0.664** @242 iters vs GV5.4
+  rung-2's 2e-7..6e-5 stagnation band), rung 4 (block upper-triangular,
+  both coupling directions) 0.68 → 1.06, every step capped info=5;
+  **band (a) RECORDED** 23.88 s / 3.03 s = **7.87×** (above ≤ ~2×,
+  recorded either way; ≈ GV5.4's 7.53×); the coarse/medium split = the
+  anatomy: rung 3 WORKS at coarse (5/5 converged, 120–209 iters,
+  RECORDED), the D_BB-local correction adequate at coarse, destructive at
+  medium (nnz(Ĉ) 597k, nnz(Ŝ_φφ) 1.56M ≈ double the φ block; t_corr
+  0.2 s, t_lu 1.8 s reproduced, n_fallback 0); guards W1/W2/W3 PASS first
+  try (cl_p 0.26429 vs the P14 lock 0.2646 = 0.116 %; FD medians 9.6e-12
+  / 7.3e-12 / 0; the IBL-floor trajectory intact, merit 9.385e-9); the
+  reading = the "AMG on a sparsified Schur" direction measured dead at
+  wing scale — the inter-node (A,Ψ)-structured M_BB escalation route +
+  the EW-forcing variant stay registered-not-opened (user adjudication);
+  executed at the runner default 16 threads (the GV5.4 8-thread numbers =
+  the non-binding cross-check); VERDICT + PRE_REGISTRATION + CSVs/PNGs in
+  the dir, design record `docs/design_track_v.md` §21) —
+  `python cases/analysis/v5_6_schur_prec/run.py` — ~21 min total at 16
+  threads (2026-07-25 measurement; the medium binding leg: seed 106 s +
+  IBL 1000 s + W3 + Newton 120 s; coarse ~3 min; exit 1 = honest FAIL
+  present; a wiring-guard failure raises RuntimeError = recipe error;
+  `--levels` for partial re-runs)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS
