@@ -1,0 +1,19 @@
+gate,metric,band,measured,verdict
+(a),augmented step wall coarse,<= ~2x the inviscid step (RECORDED either way),2.92s / 0.16s = 18.28x,RECORDED
+(b),block preconditioner working coarse,GMRES info=0 within budget on every step + accepted (D5),rung 1,RECORDED
+(c),DOFs coarse,RECORDED,n_free 10824 + n_st 83 + 6n_s 16140,RECORDED
+(c),seed blocks coarse,RECORDED,|F_phi| 2.24e-05 |F_gam| 1.60e-16 |F_BL| 6.03e-06; IBL floor 6.03e-06 (converged=False),RECORDED
+(c),inviscid anchor coarse,RECORDED,12 steps mean 0.16s (asm 0.02 pre 0.03 lin 0.10, 1 refactors),RECORDED
+(c),augmented phases coarse,RECORDED,asm 0.3s + setup 0.4s + linsolve 1.2s per step; termination cap,RECORDED
+(c),FD guard medians coarse,< 1e-6 (W3),phi 5.96e-12 gamma 9.91e-12 BL 1.30e-14,RECORDED
+(c),memory coarse,RECORDED,ru_maxrss 0.7 GB,RECORDED
+(c),wall coarse @8 threads,RECORDED,seed 8s + IBL 160s + newton 15s (non-comparable),RECORDED
+(a),augmented step wall medium,<= ~2x the inviscid step (RECORDED either way),22.93s / 3.05s = 7.53x,RECORDED
+(b),block preconditioner working medium,GMRES info=0 within budget on every step + accepted (D5),NOT-WORKING,FAIL
+(c),DOFs medium,RECORDED,n_free 62820 + n_st 166 + 6n_s 61230,RECORDED
+(c),seed blocks medium,RECORDED,|F_phi| 4.92e-05 |F_gam| 1.80e-16 |F_BL| 2.89e-06; IBL floor 2.89e-06 (converged=False),RECORDED
+(c),inviscid anchor medium,RECORDED,13 steps mean 3.05s (asm 0.12 pre 0.81 lin 2.05, 1 refactors),RECORDED
+(c),augmented phases medium,RECORDED,asm 1.1s + setup 2.1s + linsolve 14.6s per step; termination cap,RECORDED
+(c),FD guard medians medium,< 1e-6 (W3),phi 8.66e-12 gamma 7.34e-12 BL 0.00e+00,RECORDED
+(c),memory medium,RECORDED,ru_maxrss 1.7 GB,RECORDED
+(c),wall medium @8 threads,RECORDED,seed 107s + IBL 1032s + newton 115s (non-comparable),RECORDED
