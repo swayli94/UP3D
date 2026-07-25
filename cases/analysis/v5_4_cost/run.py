@@ -27,8 +27,9 @@ a0c2a5b BEFORE the first code change).
   preconditioner WORKING adjudicated (D5: GMRES info=0 within budget on
   every measured step of the rung + every step accepted + W3 passed);
   (c) diagnostics RECORDED. Wiring guards W1 (probe seed cl_p vs the
-  committed A1 0.26918, 1.5%) / W2 (DOF counts) / W3 (60-row sampled FD
-  ladder) raise = recipe error, not verdicts. Exits 1 iff (b) FAIL.
+  committed P14 probe lock 0.2646, 1.5% -- addendum #4) / W2 (DOF
+  counts) / W3 (60-row sampled FD ladder) raise = recipe error, not
+  verdicts. Exits 1 iff (b) FAIL.
 
 Run:  python cases/analysis/v5_4_cost/run.py [--levels coarse medium]
 """
@@ -98,10 +99,12 @@ RE_CHORD = RE_MAC / MAC                # per meter (meshes in NASA meters)
 X_TR = 0.05                            # forced transition, both sides
 TIP_FRAC = 0.05                        # tip mask = production tip_taper radius
 
-# committed probe-branch anchor (A1 conf_newton = NEWTON_M6_RECIPE with
-# the estimator default = probe, a1_m6_runs.csv; the 1.5% guard absorbs
-# the dM = 0.0005 dataset-vs-anchor label difference)
-A1_PROBE_CL_P = 0.26918
+# committed probe-branch anchor (addendum 2026-07-25 #4: the P14
+# cross-model table's "conforming probe (G8.2 lock)" row at M0.84 medium,
+# cross_model_medium_m084.csv -- the most recent committed probe reading;
+# the A1-era 0.26918 is stale, superseded. The 1.5% guard absorbs the
+# dM = 0.0005 label difference + the anchor's 4-digit precision)
+PROBE_LOCK_CL_P = 0.2646
 
 N_STEPS = 5                            # pre-registered measured steps
 GMRES_RTOL, GMRES_RESTART, GMRES_MAXITER = 1.0e-8, 60, 5
@@ -494,7 +497,7 @@ def run_level(level):
         raise RuntimeError(
             f"W1 wiring guard: the {level} probe ramp did not converge "
             "the final level -- recipe error, not a verdict")
-    rel = abs(cl_p / A1_PROBE_CL_P - 1.0)
+    rel = abs(cl_p / PROBE_LOCK_CL_P - 1.0)
     # addendum 2026-07-25 #1: the cl_p tolerance binds MEDIUM only (the
     # A1 anchor is a medium number; the coarse deviation = the committed
     # pressure mesh effect -5.35%, measured here -4.97%); the coarse
@@ -502,14 +505,14 @@ def run_level(level):
     if level == "medium" and rel > 0.015:
         raise RuntimeError(
             f"W1 wiring guard: {level} probe seed cl_p {cl_p:.6f} vs "
-            f"the committed A1 anchor {A1_PROBE_CL_P:.5f} (rel "
+            f"the committed P14 probe lock {PROBE_LOCK_CL_P:.5f} (rel "
             f"{rel:.3%} > 1.5%) -- recipe error, not a verdict")
     tag = (", medium-binding)"
            if level == "medium"
            else ", coarse RECORDED; cf. the committed pressure mesh "
                 "effect -5.35%)")
     print(f"    [W1 ok] probe seed cl_p {cl_p:.5f} (anchor "
-          f"{A1_PROBE_CL_P:.5f}, rel {rel:.3%}{tag}", flush=True)
+          f"{PROBE_LOCK_CL_P:.5f}, rel {rel:.3%}{tag}", flush=True)
 
     # -- the inviscid anchor (D6): the final level's step_records -------------
     sr = ramp["step_records"]

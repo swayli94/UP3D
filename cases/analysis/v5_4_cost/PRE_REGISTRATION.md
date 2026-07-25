@@ -278,3 +278,33 @@ band/verdict/guard-tolerance change):
   exists).
 - W1 is unchanged (final strict convergence AND, medium-binding,
   |cl_p − 0.26918| ≤ 1.5 %).
+
+---
+
+## Addendum 2026-07-25 #4 — W1 re-anchored to the P14-committed probe lock (guard anchor correction)
+
+Fourth execution (medium, the A1-verbatim chain): W1 fired AGAIN with
+the SAME value to all printed digits — cl_p 0.264293 (two different
+seed chains land on the same state ⇒ the offset is not a recipe-family
+artifact). Anchor archaeology:
+
+- `a1_m6_runs.csv` conf_newton cl_p **0.26918** — the A1-era reading
+  (A1 was a performance study, not a cl gate; the probe path's cl was
+  never re-locked there).
+- `p14_pressure_kutta/results/cross_model_medium_m084.csv` —
+  **conforming probe (G8.2 lock) cl_p 0.2646 / cl_KJ 0.2692** vs
+  pressure 0.2776/0.2823 vs level-set 0.2772/0.2813 (the same table
+  behind the committed V14.6 check "the PROBE path was 4.5 %/4.3 %
+  below LS"). The probe path evidently shifted ~1.7 % between the A1
+  era and the P14 re-lock (the P13/P14 Kutta-row work).
+- In-session (both chains): **0.264293** = 0.116 % below the P14-locked
+  0.2646 — today’s probe branch IS the P14-locked branch.
+
+Change (guard anchor correction — the tolerance is unchanged):
+
+- **W1 anchor**: 0.26918 (A1, stale) → **0.2646** (the P14-committed
+  probe G8.2 lock, `cross_model_medium_m084.csv`; the most recent
+  committed probe reading at M 0.84 medium). The 1.5 % tolerance now
+  absorbs the ΔM 0.0005 label difference AND the anchor’s 4-digit
+  precision. The A1 number stays quoted in the VERDICT as the stale
+  superseded reading.
