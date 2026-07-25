@@ -132,8 +132,15 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   block-Jacobi diverges, exact-BL Schur stalls 1/4; "measure before Schur" answered:
   the BL elimination is cheap (1.8 s), Krylov convergence is the bottleneck ⇒
   Schur-aware reduced-space preconditioning = the registered follow-up; **V5
-  CLOSED** — all five gates executed, user adjudication); V6 wake sheet;
-  wing-body VII deferred)
+  CLOSED** — all five gates executed, user adjudication); **V6 wake sheet ◐
+  OPEN** — GV6.0 RULED 2026-07-25 (Option A: conforming-only + producer (i);
+  the LS leg + solved wake IBL = recorded follow-ups) → **GV6.1 ✓ CLOSED
+  2026-07-25** (6P/0F/7R, `cases/analysis/v6_1_wake_sheet/`: the conforming
+  wake-sheet δ* source shipped — (a)(i)/(a)(ii) δ*_wake = 0 bit-identity PASS
+  ((a)(ii) both legs fresh-compile, the numba cache-load infidelity
+  discipline), (b) sign-pin MMS PASS empirically pinning the per-face ½ṁ
+  addendum, (c) W2 every outer PASS; Δ-cl +0.00015 / TE max |ΔCp| 0.00250
+  RECORDED for GV6.2); wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;
   3-D Newton is precond-bound, the 2.5-D seed headline does not transfer) · **A2 ✓ CLOSED 2026-07-17** (TE/Kutta fidelity attribution,

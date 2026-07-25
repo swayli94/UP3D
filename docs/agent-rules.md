@@ -1,6 +1,24 @@
 # pyFP3D Agent Rules
 
-Current phase: **V5 ✓ CLOSED 2026-07-25 (NEWEST; Track V tight
+Current phase: **V6 ◐ OPEN 2026-07-25 (NEWEST; Track V wake-sheet IBL
+correction): GV6.1 conforming wake-sheet δ* source ✓ CLOSED
+2026-07-25 (6 PASS / 0 FAIL / 7 RECORDED;
+`cases/analysis/v6_1_wake_sheet/` — the wake δ* enters the FP solve as
+a mass-transpiration sheet source on the wake cut faces, riding the V2
+channel into the loose loop's body_source_rhs
+(`pyfp3d/viscous/wake_sheet.py` + the `CouplingConfig.wake_transpiration`
+default-OFF hook = legacy bit-identical): (a)(i)/(a)(ii) δ*_wake = 0
+bit-identity PASS — the (a)(ii) harness runs BOTH legs fresh-compile
+because numba cache-load is NOT bit-faithful to fresh-compile in
+`pyfp3d/viscous/` (isolate3/4 finding,
+`results/ab_cache_mode_isolation.csv`); (b) sign-pin MMS PASS
+(antisym 0.81 %, jump 0.44 % — empirically pins the 2026-07-25
+addendum's per-face ½ṁ_wake recipe, committed before the first code
+change); (c) W2 TE-continuity held every outer; (d) RECORDED for
+GV6.2: Δ-cl +0.00015, TE-region max |ΔCp| 0.00250, L_rel = 1.0 c
+pinned MODEL CHOICE. Next = GV6.2 measured effect vs the A4 band; the
+XFOIL wake-reference sourcing question needs its own
+pre-registration).** Previous phase: **V5 ✓ CLOSED 2026-07-25 (Track V tight
 coupling — all five gates executed, close-out pending user
 adjudication): GV5.4 augmented-step cost on M6 medium ✓ EXECUTED
 2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED;
@@ -1297,8 +1315,29 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
    numbers, grep the moved values across docs/ and correct or annotate EVERY
    old-section quote in the same commit; the five-surface ritual only covers
    new sections. Full wording in CLAUDE.md workflow step 5.
+12. **Bit-identity A/B ⇒ ONE numba cache mode on both legs** (GV6.1
+    isolate3/4, 2026-07-25, measured): numba cache-load is NOT bit-faithful
+    to fresh-compile, and the infidelity lives entirely in
+    `pyfp3d/viscous/` (wiping only its `__pycache__` recovers the all-fresh
+    result EXACTLY; the SAME sources diverge ~1e-5 in φ at loose-loop outer
+    k ≥ 1 between fresh-compile and cache-load legs, k = 0 inviscid exact;
+    load-vs-load deterministic). An in-process (cache-warm) leg compared
+    against a fresh-worktree leg fails spuriously at ~1e-5 even for
+    identical sources — the GV6.1 (a)(ii) harness therefore runs BOTH legs
+    as fresh-compile worktree subprocesses. Evidence
+    `cases/analysis/v6_1_wake_sheet/results/ab_cache_mode_isolation.csv`.
 
-Baseline: **644 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V5
+Baseline: **651 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V6
+GV6.1 executed** (the conforming wake-sheet δ* source: (a)(i)/(a)(ii)
+δ*_wake = 0 bit-identity PASS — the (a)(ii) harness runs both legs
+fresh-compile, the numba cache-load infidelity discipline — (b) sign-pin
+MMS PASS empirically pinning the per-face ½ṁ addendum, (c) W2
+TE-continuity every outer PASS, (d) Δ-cl +0.00015 / TE max |ΔCp| 0.00250
+RECORDED — VERDICT `cases/analysis/v6_1_wake_sheet/VERDICT.md`);
+full-suite measured 651 @1606.31 s **@8 threads** (temporary 8-core session
+constraint, user-directed; NOT comparable to the 16-thread ledger entries);
++7 vs the 644 below = `tests/test_v6_wake_sheet.py` (7 new)).
+Previous: 644 passed + 25 skipped + 2 xfailed (2026-07-25, Track V **V5
 GV5.4 executed** (the augmented-step cost on M6 medium: band (a) RECORDED —
 the augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
 ≤ ~2× band; band (b) honest FAIL — the block preconditioner does NOT work

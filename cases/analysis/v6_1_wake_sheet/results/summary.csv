@@ -1,0 +1,14 @@
+band,metric,band,measured,verdict
+a-i,flag-ON zero field vs flag-OFF (coarse 3 outer),bit-identical phi/gamma,phi_equal=True gamma_equal=True,PASS
+a-ii,flag-OFF vs gate-free library @13916b5 (fresh-compile worktree legs, coarse 3 outer),bit-identical phi/gamma,phi_equal=True gamma_equal=True,PASS
+b,ejects-away sign at every probe,v+ > 0, v- < 0,sign_ok=True,PASS
+b,antisymmetry max|v+ + v-|/m0,<= 5%,0.0081,PASS
+b,jump max|(v+ - v-) - m0|/m0 (also pins the per-face 1/2 factor),<= 5%,0.0044,PASS
+c,W2 TE-continuity identity held at every outer (1e-12 rel, runtime assert),no assertion,3 outers clean,PASS
+d,cl flag OFF (final),recorded,0.28246,RECORDED
+d,cl flag ON (final),recorded,0.28261,RECORDED
+d,on/off Delta-cl (in-session A/B; committed GV3.1 medium fixed point NOT cross-run reproducible -- scatter caveat),recorded,+0.00015,RECORDED
+d,outer count ON vs OFF,recorded,3 vs 3,RECORDED
+d,m_wake scale max over outers,recorded,1.800e-02,RECORDED
+d,ds_wake_te / th_wake_te (final),recorded,6.61795e-03 / 4.47577e-03,RECORDED
+d,TE-region (x/c > 0.9) max |dCp| on/off,recorded,0.00250,RECORDED

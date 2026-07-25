@@ -1,0 +1,7 @@
+comparison,max|dphi| k0 (inviscid),k1,k2,k3 (final)
+D12 fresh-compile vs cache-load (same baseline sources),0.000e+00,6.530e-06,4.942e-06,8.308e-06
+D23 cache-load vs cache-load (determinism),0.000e+00,0.000e+00,0.000e+00,0.000e+00
+D24 cache-load: baseline vs GV6.1 code (flag OFF),0.000e+00,0.000e+00,0.000e+00,0.000e+00
+D15 fresh-compile: baseline vs GV6.1 code (flag OFF),0.000e+00,0.000e+00,0.000e+00,0.000e+00
+"isolate4 warm tree, only pyfp3d/viscous/__pycache__ wiped, vs all-fresh (r1)",,,,0.000e+00
+"isolate4 warm tree, only pyfp3d/viscous/__pycache__ wiped, vs all-load (r2)",,,,8.308e-06
