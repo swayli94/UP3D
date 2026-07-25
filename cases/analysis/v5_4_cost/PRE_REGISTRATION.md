@@ -244,3 +244,37 @@ never return early, never refuse). The seed's converged flag is logged.
 **W1 is untouched and remains the anchor guard**: the final level must
 converge strict AND (medium) cl_p within 1.5 % of the committed A1
 probe anchor — a wrong-branch landing is exactly what W1 catches.
+
+---
+
+## Addendum 2026-07-25 #3 — the probe seed chain IS A1's conf_newton verbatim (execution mechanics)
+
+Third execution (medium): the ramp converged strict (12 final steps —
+A1's own count) but W1 fired: cl_p 0.264293 vs the committed A1 anchor
+0.26918 (rel 1.816 % > 1.5 %). Root cause, read off
+`cases/analysis/a1_solver_bottleneck/run_a1_m6.py:286-292`: the
+committed probe anchor belongs to **A1's chain** — ONE
+`solve_newton_transonic(mc, wc, m_inf=0.84, alpha_deg=3.06,
+**NEWTON_M6_RECIPE)` call, the ramp Picard-seeding level 0 itself (no
+separate M0.70 Newton solve, no phi_init handoff) — while D2's seed
+wording borrowed the **pressure** chain's shape (a separate M0.70 probe
+solve → the ramp with n_picard_seed=0; the P14 cold-start idiom, the
+right chain for the pressure estimator whose anchor is P14's). The two
+chains land on nearby but distinct FP solution families (the M6
+transonic branch sensitivity, design.md Sec 12 risk 2): mine read
+1.8 % low in cl_p. A guard firing on a recipe-family mismatch is the
+guard working — the fix is to run the anchor's own chain, not to widen
+the guard.
+
+Change (execution mechanics only — D2's seed sentence is amended; no
+band/verdict/guard-tolerance change):
+
+- The inviscid probe seed = **A1's conf_newton verbatim**: one
+  `solve_newton_transonic` call with NEWTON_M6_RECIPE (the estimator
+  default = probe; the ramp Picard-seeds level 0; M 0.8395 per the
+  TEST 2308 dataset label — the ΔM 0.0005 vs A1's 0.84 is what the
+  pre-registered 1.5 % tolerance absorbs). The separate M0.70 Newton
+  solve is dropped (addendum #2 becomes moot — that seed no longer
+  exists).
+- W1 is unchanged (final strict convergence AND, medium-binding,
+  |cl_p − 0.26918| ≤ 1.5 %).

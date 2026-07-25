@@ -11,14 +11,17 @@ a0c2a5b BEFORE the first code change).
   (phi, Gamma, U) system on the GV5.0 wing case (~124k DOFs medium),
   PROBE Kutta (D1: the only wired F_Gamma row; identical size/sparsity;
   the inviscid anchor measured on the same probe branch). Seed = the
-  newton_tight semantics verbatim (D2): the probe NEWTON_M6_RECIPE ramp
-  (M0.70 probe seed -> ramp to 0.8395) + ONE standalone IBL solve (its
-  ~1e-6 floor expected). N = 5 augmented Newton steps, the linear step
-  swapped to GMRES with the block-preconditioner ladder on the row+col
-  equilibrated system (D4): rung 1 block-Jacobi (AMG-phi / exact-Gamma /
-  ILU-BL), rung 2 exact-BL Schur (the B14 pattern; escalation on GMRES
-  non-convergence or the 1800 s linsolve cap). The inviscid anchor = the
-  seed ramp's final-level step_records in-session (D6).
+  newton_tight semantics verbatim (D2): the A1 conf_newton chain
+  VERBATIM (addendum 2026-07-25 #3: ONE solve_newton_transonic with
+  NEWTON_M6_RECIPE, the ramp Picard-seeding level 0, the estimator
+  default = probe -- the committed probe anchor belongs to this chain)
+  + ONE standalone IBL solve (its ~1e-6 floor expected). N = 5 augmented
+  Newton steps, the linear step swapped to GMRES with the
+  block-preconditioner ladder on the row+col equilibrated system (D4):
+  rung 1 block-Jacobi (AMG-phi / exact-Gamma / ILU-BL), rung 2 exact-BL
+  Schur (the B14 pattern; escalation on GMRES non-convergence or the
+  1800 s linsolve cap). The inviscid anchor = the seed ramp's
+  final-level step_records in-session (D6).
 
   (a) cost ratio RECORDED vs <= ~2x (either way); (b) the block
   preconditioner WORKING adjudicated (D5: GMRES info=0 within budget on
@@ -65,7 +68,6 @@ from pyfp3d.solve.linear import (
 )
 from pyfp3d.solve.newton import (
     NewtonWorkspace,
-    solve_newton_lifting,
     solve_newton_transonic,
 )
 from pyfp3d.viscous import tight_driver as td
@@ -101,10 +103,6 @@ TIP_FRAC = 0.05                        # tip mask = production tip_taper radius
 # the dM = 0.0005 dataset-vs-anchor label difference)
 A1_PROBE_CL_P = 0.26918
 
-# the GV5.3 driver kw for the M0.70 probe seed (the bridge verbatim)
-M6_NEWTON_KW = dict(farfield_spanwise_gamma=True, precond="direct",
-                    direct_refactor_every=1000, n_newton_max=60)
-
 N_STEPS = 5                            # pre-registered measured steps
 GMRES_RTOL, GMRES_RESTART, GMRES_MAXITER = 1.0e-8, 60, 5
 LINSOLVE_CAP = 1800.0                  # s; a trip escalates the ladder
@@ -135,28 +133,18 @@ def _write_csv(name, header, rows):
 # ---------------------------------------------------------------------------
 
 def make_probe_seed(mc, wc):
+    """The A1 conf_newton chain VERBATIM (addendum 2026-07-25 #3): ONE
+    solve_newton_transonic with NEWTON_M6_RECIPE -- the ramp
+    Picard-seeds level 0 itself (no separate M0.70 Newton solve, no
+    phi_init handoff); the estimator default = probe at every level.
+    The committed probe anchor (W1) belongs to THIS chain."""
     t0 = time.perf_counter()
-    r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA,
-                              kutta_estimator="probe", **M6_NEWTON_KW)
-    print(f"    M0.70 probe seed: converged={r0['converged']} "
-          f"n_newton={r0['n_newton']} "
-          f"({time.perf_counter() - t0:.0f}s)", flush=True)
-    # addendum 2026-07-25 #2: a strict non-convergence of the M0.70 seed
-    # does NOT raise -- the ramp re-converges the stalled seed
-    # level-by-level (GV5.3 addendum-#1's measured evidence: the bridge's
-    # early-RETURN was the bug, not the seed's plateau); W1 (final
-    # strict + cl_p) remains the anchor guard
-    kw = dict(NEWTON_M6_RECIPE["newton_kw"],
-              kutta_estimator="probe", n_picard_seed=0,
-              phi_init=r0["phi"], gamma_init=r0["gamma"])
-    ramp_args = {k: v for k, v in NEWTON_M6_RECIPE.items()
-                 if k != "newton_kw"}
     r = solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
-                               newton_kw=kw, **ramp_args)
-    print(f"    ramp: converged={r['converged']} levels="
+                               **NEWTON_M6_RECIPE)
+    print(f"    A1 probe ramp: converged={r['converged']} levels="
           f"{[(lv[0], lv[1]) for lv in r['level_history']]} "
           f"({time.perf_counter() - t0:.0f}s)", flush=True)
-    return r0, r
+    return r
 
 
 # ---------------------------------------------------------------------------
@@ -495,9 +483,9 @@ def run_level(level):
           f"tris; tip-masked {int(case.outflow_pin_surf.sum())}",
           flush=True)
 
-    # -- the inviscid probe seed (D1/D2) + W1 --------------------------------
+    # -- the inviscid probe seed (D1/D2, addendum #3: A1 verbatim) + W1 --
     t_seed0 = time.perf_counter()
-    r0, ramp = make_probe_seed(mc, wc)
+    ramp = make_probe_seed(mc, wc)
     t_seed = time.perf_counter() - t_seed0
     f = wall_force_coefficients(mc.nodes, mc.elements, wall, ramp["phi"],
                                 alpha_deg=ALPHA, s_ref=s_ref, m_inf=M_INF)
