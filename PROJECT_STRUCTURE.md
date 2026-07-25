@@ -530,6 +530,12 @@ cases/                     # Test cases and reference data
 │   │                           #   (band (b) FAIL + the loose-recipe transonic-limit anatomy:
 │   │                           #   every computed shock 0.06–0.10c aft of the bracket, 1/4
 │   │                           #   legs converged; band (a) 9.46°/9.92° no fallback)
+│   ├── v5_3_m6_cp/             # [V5/GV5.3] M6 wing direction+magnitude check vs the
+│   │                           #   committed 7-station Cp (band (b) honest FAIL: the viscous
+│   │                           #   Cp does NOT move toward experiment, 1/5 stations + pooled
+│   │                           #   increase; band (a) RECORDED input-limited, Δcl_KJ −2.20 %
+│   │                           #   DOWN under the A4 floor; k=0 anchored to P14 via the W1
+│   │                           #   wiring guard)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -1308,8 +1314,25 @@ FP driver a pre-registered rescue chain (strict → Mach continuation →
 honesty-guarded stall acceptance) against the M ≥ 0.725 shock-cell
 plateaus; reading: the loose displacement-thickness feedback is too
 weak at M ≥ 0.725 ⇒ the next transonic-VII reads come from the
-tight/augmented path, not loose-loop tuning; next = GV5.3/5.4 (user
-sequencing 2026-07-24);
+tight/augmented path, not loose-loop tuning → **GV5.3 ✓ EXECUTED
+2026-07-25 (band (b) honest FAIL + band (a) RECORDED input-limited,
+0P/1F/17R, `cases/analysis/v5_3_m6_cp/`, design record
+`docs/design_track_v.md` §19)**: M6 wing TEST 2308 M0.8395/α3.06 vs the
+committed 7-station Cp — band (a): Δcl_KJ −2.20 % medium / −1.03 %
+coarse, direction DOWN both estimators but under the A4 2.5 % floor
+(input-limited; most of the medium move arrives with the late k = 9–10
+separation-patch event); **band (b) FAIL**: the viscous Cp does NOT
+move toward experiment — 1/5 unmasked stations improved, pooled RMS
+0.1288 → 0.1299 increased (coarse 0/5), every |ΔRMS| < 0.05 flagged
+input-limited (a direction verdict; tip-masked stations clean);
+neither level converges ≤ 10 outer (the GV5.0/GV5.2 signature); the
+FP rescue chain load-bearing (10/21, 10/22 stall-accepts); the k = 0
+inviscid baseline anchored to the committed P14 cl_KJ 0.2823/0.2688
+via the W1 wiring guard (the first-execution fire root-caused to a
+driver cold-start short-circuit — the ramp never ran — fixed under
+addendum #1; NOT an 8-thread branch scatter); reading: the 3-D
+counterpart of GV5.2 — further reads belong to the tight/augmented
+path; next = GV5.4 (user sequencing 2026-07-24);
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
@@ -1320,6 +1343,14 @@ hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
 Default suite: **642 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+V5 GV5.3 (the M6 wing direction+magnitude check vs committed Cp: band (b)
+honest FAIL — the viscous Cp does NOT move toward the committed 7-station
+experiment (1/5 unmasked stations + a pooled increase); band (a) RECORDED
+input-limited, Δcl_KJ −2.20 % DOWN under the A4 floor); full-suite measured
+642 @1233.89 s **@8 threads** (temporary 8-core session constraint,
+user-directed; NOT comparable to the 16-thread ledger entries); +0 vs 642 =
+no test changes (the gate added no library/test code; wall re-measured).
+Previous 642:
 V5 GV5.2 (the RAE2822 transonic VII vs committed experiment: band (b) FAIL +
 the loose-recipe transonic-limit anatomy — every computed shock 0.06–0.10 c
 downstream of the bracket, 1/4 legs converged); full-suite measured 642

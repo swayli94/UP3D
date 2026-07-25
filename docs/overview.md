@@ -319,8 +319,24 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   bisector-normal fallback（RAE 反弯度令两翼瓣同侧，仅在旧代码会抛错处触发）+ runner Cp 分侧换
   outward-normal 惯例 + FP driver 廉价→深救援链（严格 1e-10 → Mach 延拓 → honesty-guarded
   stall-accept，2/10→10/22 次/腿承力）；判读：M ≥ 0.725 处松环位移厚度反馈太弱/太慢，后续跨声速
-  VII 读数应走 tight/augmented 路径而非继续调松环）；下一步 = **GV5.3/5.4**（用户 2026-07-24
-  排序：GV5.1d → GV5.5 → GV5.2–5.4）；GV5.3 锚定 committed Cp——实验 CL 无 committed 来源）；
+  VII 读数应走 tight/augmented 路径而非继续调松环）→ **GV5.3 ✓ EXECUTED 2026-07-25**（band (b)
+  honest FAIL + band (a) RECORDED input-limited，0P/1F/17R，`cases/analysis/v5_3_m6_cp/`：M6 机翼
+  TEST 2308（M0.8395/α3.06，Re_MAC 11.72e6，x_tr/c 0.05）对 committed 7 站 Cp——松环 GV3.1 配方
+  逐字 + GV5.0 翼 case + P14 跨声速 FP 配方逐字（NEWTON_M6_RECIPE 导入），k=0 无黏基线经 W1
+  接线守卫锚定 committed P14 cl_KJ 0.2823（medium）/0.2688（coarse），两级过。**band (a)
+  RECORDED input-limited**：Δcl_KJ −2.20%（medium）/−1.03%（coarse）——方向向下（两估计量一致，
+  物理上正确的黏性去弯度效应）但低于 A4 2.5% 地板；medium 移动大半来自 k=9–10 晚期分离斑事件
+  （ds_max 0.0021→0.0039，mdot 0.007→0.106，有界无失控）。**band (b) honest FAIL**（medium
+  binding）：黏性 Cp **没有**向实验靠近——5 个未遮蔽站仅 1 站改善（根站 η=0.20），pooled RMS
+  0.1288→0.1299 反升（coarse 0/5、pooled +0.0024）；所有 |ΔRMS| < 0.05 按预注册 A4 Cp 尺度注释
+  标 input-limited——方向判 FAIL；翼尖遮蔽站（η=0.96/0.99）记录无异常。(c) RECORDED：两级均
+  ≤10 outer 不收敛（GV5.0/GV5.2 同款签名；medium k=1–8 紧极限环后接 k=9 事件）；IBL 残差地板
+  1.9e-6（medium）；预注册 FP 救援链承力（10/21、10/22 stall-accept）。执行叙事：首次执行
+  medium k=0 未过 W1（cl 0.226——GV5.0 bridge M0.5 短路把半收敛 M0.70 种子当终态、ramp 未跑），
+  实测诊断定位（同一种子跑 P14 ramp 落锚点 9 位一致——非 8 线程分支散布），addendum #1 修复；
+  循环本身曾从带毒种子 9 outer 收敛。判读：GV5.2 的 3-D 对应——跨声速下松环位移厚度反馈太弱，
+  修不动无黏族失配（LE 吸力不足、激波偏后）；后续读数走 tight/augmented 路径。未开跟进（用户
+  裁决））；下一步 = **GV5.4**（用户 2026-07-24 排序：GV5.1d → GV5.5 → GV5.2–5.4））；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -354,7 +370,14 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **642 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V5 GV5.2
+现基线 **642 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V5 GV5.3
+执行**（M6 机翼方向+量级检查对 committed Cp：band (b) honest FAIL——黏性 Cp **没有**
+向 committed 7 站实验靠近（1/5 未遮蔽站 + pooled 反升）；band (a) RECORDED
+input-limited，Δcl_KJ −2.20 % 向下但低于 A4 地板——VERDICT
+`cases/analysis/v5_3_m6_cp/VERDICT.md`）：全套件实测 642
+@1233.89 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比）；+0 vs 下档 642 = 无测试增减（本 gate 无库/测试代码改动；壁时重测））。
+上一档 642+25+2（2026-07-25 Track V **V5 GV5.2
 执行**（RAE2822 跨声速 VII vs committed 实验：band (b) FAIL + 松环配方极限解剖——
 所有计算激波在实验带下游 0.06–0.10c，4 腿仅 1 收敛——VERDICT
 `cases/analysis/v5_2_rae2822/VERDICT.md`）：全套件实测 642

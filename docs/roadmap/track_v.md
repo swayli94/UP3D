@@ -7,7 +7,7 @@
 > [roadmap.md](../roadmap.md); the human-readable status snapshot is
 > [overview.md](../overview.md).
 
-## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF) · GV5.2 ✓ 2026-07-25 band-(b) FAIL + the loose-recipe transonic-limit anatomy (1/4 legs converged; every computed shock 0.06–0.10 c aft of the experimental bracket)**)
+## Track V — Viscous–inviscid interaction (designed 2026-07-09/10; **V1 ✓ CLOSED 2026-07-22 · GV1.1 9P/2F** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23P/0F** · **V3 ✓ CLOSED 2026-07-22 · GV3.1/3.2 2P/4F/23R · GV3.3 0P/2F/7R** · **V4 ⊘ SKIPPED 2026-07-22** · **V5 ◐ OPEN 2026-07-23 · GV5.0 ✓ 16R/0F · GV5.1 ✓ 9P/1F/36R · IBL-floor diag ✓ 2026-07-24 14R · GV5.1b ✓ 2026-07-24 2P/0F/7R (1P/1F/7R as executed; (a)-medium cond-aware PASS adjudicated 2026-07-24) · GV5.1c ✓ 2026-07-24 2P/1F/7R (the above-band window read: NO slope-2 above the floor; mid-range stall) · GV5.1d ✓ 2026-07-24 2P/1F/7R (the near-band window read: NO basin adjacent to the floor either; the stall extends down to 24× floor) · GV5.5 ✓ 2026-07-24 2P/1F/9R (the TE-outflow row replacement does NOT break the floor — m2 5554×/245998× the floor, the pre-registered "worse" clause; flag stays default-OFF) · GV5.2 ✓ 2026-07-25 band-(b) FAIL + the loose-recipe transonic-limit anatomy (1/4 legs converged; every computed shock 0.06–0.10 c aft of the experimental bracket) · GV5.3 ✓ 2026-07-25 0P/1F/17R (band (b) honest FAIL — the loose viscous Cp does NOT move toward the committed M6 experiment: 1/5 unmasked stations + a pooled increase; band (a) RECORDED input-limited, Δcl_KJ −2.20 % DOWN under the A4 floor)**)
 
 Deliverable: `pyfp3d/viscous/` — Drela IBL3 6-equation integral boundary layer
 (δ, A, B, Ψ, C_τ1, C_τ2; surface Galerkin P1 FE on wall + wake sheet — **no
@@ -348,18 +348,28 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   runaway k = 4, §6 RECORDED) ⇒ **FAIL**; the loose recipe converges only
   1/4 legs (coarse P1) at these points — the displacement-thickness
   feedback is too weak at M ≥ 0.725 (motivates the tight/augmented path).
-- [ ] **GV5.3 M6 wing direction+magnitude check — anchored on the committed Cp
-  data** (re-anchored 2026-07-22, user-directed:
+- [x] **GV5.3 M6 wing direction+magnitude check — EXECUTED 2026-07-25,
+  band (b) honest FAIL + band (a) RECORDED input-limited
+  (`cases/analysis/v5_3_m6_cp/`)** (re-anchored 2026-07-22, user-directed:
   `cases/reference_data/onera_m6_experiment/` holds Cp only — no experimental
   CL value is committed, so this gate does NOT use the external "experiment ≈
-  0.26–0.27" figure). (a) CL moves **down** from the converged inviscid
-  baseline — **cl_KJ 0.2823 (medium, P14 pressure-Kutta) / 0.2866 (fine, P13
-  tapered)** — direction gated provided the move exceeds the A4 input floor
-  (2.5 % medium); a smaller move is RECORDED-only and flagged input-limited.
-  (b) Viscous Cp at the committed 7 span stations (`experiment-Cp.dat`, TEST
-  2308 M0.8395/α3.06): Cp RMS-to-experiment **decreases** vs the same-mesh
-  inviscid baseline (direction gated; band pre-registered at execution with the
-  A4 input band quoted; tip band masked per scope guards). (The pre-P14 "0.245
+  0.26–0.27" figure). (a) CL moves **down** from the same-mesh k = 0 inviscid
+  baseline (anchored to **cl_KJ 0.2823 medium, P14 pressure-Kutta** via the
+  W1 wiring guard): Δcl_KJ −2.20 % medium / −1.03 % coarse, direction DOWN
+  both estimators but under the A4 input floor (2.5 % medium) ⇒ RECORDED,
+  flagged input-limited (most of the medium move arrives with the late
+  k = 9–10 separation-patch event). (b) Viscous Cp at the committed 7 span
+  stations (`experiment-Cp.dat`, TEST 2308 M0.8395/α3.06): Cp RMS-to-experiment
+  does **NOT** decrease vs the same-mesh inviscid baseline — **1/5** unmasked
+  stations improved and the pooled RMS INCREASED 0.1288 → 0.1299 (coarse 0/5,
+  pooled +0.0024) ⇒ honest **FAIL** (direction verdict; every |ΔRMS| < 0.05
+  flagged input-limited per the pre-registered A4 Cp-scale annotation; the
+  tip-masked η = 0.96/0.99 stations recorded-only, no anomaly). Neither level
+  converges ≤ 10 outer (the GV5.0/GV5.2 loose-loop signature); the FP rescue
+  chain load-bearing (10/21, 10/22 stall-accepts); the first-execution medium
+  k = 0 wiring-guard fire root-caused to a driver short-circuit and fixed
+  under addendum #1. Reading: the 3-D counterpart of GV5.2 — further reads
+  belong to the tight/augmented path. (The pre-P14 "0.245
   vs 0.288" framing is superseded — see scope guards.)
 - [ ] **GV5.4 cost (RECORDED)**: augmented step wall-time ≤ ~2× the inviscid
   Newton step on M6 medium with the block preconditioner working; measured
@@ -718,6 +728,43 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   tuning. Design record `docs/design_track_v.md` §18. Next =
   **GV5.3/GV5.4** (user sequencing 2026-07-24). Executed under the
   temporary 8-thread session constraint (~43 min for 4 legs).
+- **GV5.3 M6 wing direction+magnitude check vs committed Cp — EXECUTED
+  2026-07-25 (band (b) honest FAIL + band (a) RECORDED input-limited,
+  0P/1F/17R, `cases/analysis/v5_3_m6_cp/`)**: the loose GV3.1 recipe on
+  the GV5.0 wing case at TEST 2308 (M 0.8395/α 3.06, Re_MAC 11.72e6,
+  x_tr/c 0.05), the P14 transonic FP recipe verbatim (NEWTON_M6_RECIPE
+  imported; the k = 0 inviscid baseline anchored to the committed P14
+  cl_KJ 0.2823 medium / 0.2688 coarse via the W1 wiring guard, PASS both
+  levels). **Band (a) RECORDED input-limited**: Δcl_KJ −2.20 % medium /
+  −1.03 % coarse — direction DOWN both estimators (cl_p −2.40 %/−1.35 %,
+  the expected viscous decambering) but under the A4 2.5 % floor; most
+  of the medium move arrives with the late k = 9–10 separation-patch
+  event (ds_max 0.0021 → 0.0039, mdot 0.007 → 0.106, bounded).
+  **Band (b) honest FAIL** (medium binding): the viscous Cp does NOT
+  move toward the committed 7-station experiment — 1/5 unmasked stations
+  improved (only the root η = 0.20), pooled RMS 0.1288 → 0.1299
+  INCREASED (coarse 0/5, pooled +0.0024); every |ΔRMS| < 0.05 flagged
+  input-limited per the pre-registered A4 Cp-scale annotation — a
+  DIRECTION verdict; the tip-masked η = 0.96/0.99 stations recorded-only
+  (no anomaly). (c) RECORDED: neither level converges ≤ 10 outer (the
+  GV5.0/GV5.2 signature — medium sits in a tight limit cycle k = 1–8
+  before the k = 9 event); the IBL residual floor 1.9e-6 medium; the
+  pre-registered FP rescue chain load-bearing (10/21 coarse, 10/22
+  medium stall-accepts; the unconditional P14 ramp after addendum #1).
+  Execution narrative: the first execution's medium k = 0 FAILED W1
+  (cl 0.226 — the GV5.0 bridge's M0.5 short-circuit returned the
+  half-converged M0.70 probe seed and the ramp never ran); root-caused
+  by a measured diagnostic (the P14 ramp from the same failed seed lands
+  on the anchored branch to 9 digits — NOT an 8-thread branch scatter)
+  and fixed under addendum #1; the loop itself converged 9 outer even
+  from the poisoned seed. Reading: the 3-D counterpart of GV5.2 — at
+  transonic conditions the loose displacement-thickness feedback is too
+  weak to repair the inviscid-family mismatch (shallow LE suction, aft
+  shock); further reads belong to the tight/augmented path, not more
+  loose-loop tuning. No follow-up opened (user adjudication). Design
+  record `docs/design_track_v.md` §19. Next = **GV5.4** (user sequencing
+  2026-07-24). Executed under the temporary 8-thread session constraint
+  (coarse 1721 s + medium 12479 s).
 - V6 — ☐ — wake-sheet IBL correction, a continuation of V1's data layout (wake
   unknowns reserved). GV6.0 LS sheet-source design adjudication BEFORE code
   (conforming needs no new mechanism; may close conforming-only), GV6.1
