@@ -1,11 +1,26 @@
 # pyFP3D Agent Rules
 
-Current phase: **V6 ◐ OPEN 2026-07-25 (NEWEST; Track V wake-sheet IBL
-correction): GV6.1 conforming wake-sheet δ* source ✓ CLOSED
-2026-07-25 (6 PASS / 0 FAIL / 7 RECORDED;
-`cases/analysis/v6_1_wake_sheet/` — the wake δ* enters the FP solve as
-a mass-transpiration sheet source on the wake cut faces, riding the V2
-channel into the loose loop's body_source_rhs
+Current phase: **V6 ✓ CLOSED 2026-07-25 (NEWEST; Track V
+wake-sheet IBL correction; close-out adjudicated 2026-07-25 (user):
+the GV6.2 recorded reading = the significance condition NOT met →
+producer (ii) NOT opened): GV6.2 measured effect ✓ CLOSED
+2026-07-25 (0 PASS / 0 FAIL / 24 RECORDED;
+`cases/analysis/v6_2_measured_effect/` — the on/off effect Δ-cl
++0.00015 (+0.0547 %) / TE-region max |ΔCp| 0.00250 sits at
+0.022×/0.051× the A4 input band = NOT significant, L-robust over
+L_rel ∈ {0.5, 1.0, 2.0} c via the new `CouplingConfig.
+wake_l_rel_chords` plumbing (default = bit-identical, +1 test = 8/8;
+1.0 c stays pinned MODEL CHOICE); the XFOIL wake reference sourced
+Option A (user ruling; `cases/reference_data/` untouched, G3 polar
+reproduction in-line): direction AGREES (XFOIL wake δ* monotone
+decreasing 32/32, H 2.0143 → 1.0760), the rate disagrees (XFOIL
+effective 0.454 c vs pinned 1.0 c, recorded not tuned), the TE anchor
+low (0.00662 vs 0.01440 / 0.01191, the GV3.1 δ* caveat), downstream θ
+0.695 vs the conserved-θ construction (model-form)). Previous: GV6.1
+conforming wake-sheet δ* source ✓ CLOSED 2026-07-25 (6 PASS / 0 FAIL /
+7 RECORDED; `cases/analysis/v6_1_wake_sheet/` — the wake δ* enters the
+FP solve as a mass-transpiration sheet source on the wake cut faces,
+riding the V2 channel into the loose loop's body_source_rhs
 (`pyfp3d/viscous/wake_sheet.py` + the `CouplingConfig.wake_transpiration`
 default-OFF hook = legacy bit-identical): (a)(i)/(a)(ii) δ*_wake = 0
 bit-identity PASS — the (a)(ii) harness runs BOTH legs fresh-compile
@@ -14,11 +29,7 @@ because numba cache-load is NOT bit-faithful to fresh-compile in
 `results/ab_cache_mode_isolation.csv`); (b) sign-pin MMS PASS
 (antisym 0.81 %, jump 0.44 % — empirically pins the 2026-07-25
 addendum's per-face ½ṁ_wake recipe, committed before the first code
-change); (c) W2 TE-continuity held every outer; (d) RECORDED for
-GV6.2: Δ-cl +0.00015, TE-region max |ΔCp| 0.00250, L_rel = 1.0 c
-pinned MODEL CHOICE. Next = GV6.2 measured effect vs the A4 band; the
-XFOIL wake-reference sourcing question needs its own
-pre-registration).** Previous phase: **V5 ✓ CLOSED 2026-07-25 (Track V tight
+change); (c) W2 TE-continuity held every outer).** Previous phase: **V5 ✓ CLOSED 2026-07-25 (Track V tight
 coupling — all five gates executed, close-out pending user
 adjudication): GV5.4 augmented-step cost on M6 medium ✓ EXECUTED
 2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED;

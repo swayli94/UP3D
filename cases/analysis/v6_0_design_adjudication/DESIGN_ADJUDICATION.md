@@ -214,3 +214,19 @@ geometry code and no deviation from the registered formulation.
 *Survey basis: two read-only codebase surveys dated 2026-07-25 (wake /
 constraints / transpiration machinery and viscous / case-layout / reference
 data), cited inline above. No files were modified for this document.*
+
+---
+
+## Addendum 2026-07-25 — V6 close-out adjudication (user)
+
+The GV6.2 measured effect came in NOT significant vs the A4 input band
+(0 PASS / 0 FAIL / 24 RECORDED,
+`cases/analysis/v6_2_measured_effect/VERDICT.md`: on/off Δ-cl +0.00015
+(+0.0547 %) = 0.022× the 2.5 % band; TE-region max |ΔCp| 0.00250 =
+0.051× the propagated δCp_A4 0.0493; L-robust over L_rel ∈ {0.5, 1.0,
+2.0} c; XFOIL wake direction agrees, rate/TE-anchor model-form
+differences recorded). Per §6's producer-(ii) clause ("opened only if
+the GV6.2 measured effect is significant vs the A4 input band"), the
+condition is NOT met — adjudicated 2026-07-25 (user): **producer (ii)
+NOT opened; V6 ✓ CLOSED**. The LS sheet-source leg remains a recorded
+follow-up (its own pre-registration if/when opened).

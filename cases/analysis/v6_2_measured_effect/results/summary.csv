@@ -1,0 +1,25 @@
+band,metric,band,measured,verdict
+a,cl flag OFF / ON (final, L_rel = 1.0 c),recorded,0.28246 / 0.28261,RECORDED
+a,on/off Delta-cl (abs + rel; in-process A/B -- the committed GV3.1 medium fixed point is NOT cross-run reproducible, the scatter caveat stands),recorded,+0.00015 (+0.0547%),RECORDED
+a,A4 quoting: |rel Delta-cl| vs the A4 medium peak u_e band,recorded,0.0547% vs 2.50% (ratio 0.022),RECORDED
+a,outer count ON vs OFF,recorded,3 vs 3,RECORDED
+a,m_wake scale max over outers (L_rel = 1.0 c),recorded,1.800e-02,RECORDED
+a,ds_TE / th_TE (ON final),recorded,6.61795e-03 / 4.47577e-03,RECORDED
+a,TE-region (x/c > 0.9) max |dCp| on/off + location,recorded,0.00250 at x/c 1.0000 upper,RECORDED
+a,A4 quoting: max|dCp| vs dCp_A4 = 2*(u_e/Uinf)_TE*0.025 (first-order propagation; (u_e/Uinf)_TE the OFF leg's TE-region max),recorded,0.00250 vs 0.0493 ((u_e/Uinf)_TE = 0.9861; ratio 0.051),RECORDED
+a,wall times per leg (8-thread session, NON-COMPARABLE),recorded,off 69s / on(1.0) 69s,RECORDED
+a,context anchors: GV6.1(d) prior smoke / GV3.1 inviscid-cl A4 floor,recorded,+0.00015 / 0.00250; inviscid cl 2.6% below XFOIL,RECORDED
+c,L_rel = 0.5 c: on/off Delta-cl,recorded,+0.00017 (+0.0615%),RECORDED
+c,L_rel = 0.5 c: TE-region max |dCp|,recorded,0.00173 at x/c 0.9307 upper,RECORDED
+c,L_rel = 0.5 c: outer count / wall (non-comparable),recorded,3 / 69s,RECORDED
+c,L_rel = 2.0 c: on/off Delta-cl,recorded,+0.00013 (+0.0464%),RECORDED
+c,L_rel = 2.0 c: TE-region max |dCp|,recorded,0.00363 at x/c 1.0000 upper,RECORDED
+c,L_rel = 2.0 c: outer count / wall (non-comparable),recorded,3 / 69s,RECORDED
+c,L_rel = 1.0 c stays the pinned MODEL CHOICE (the sweep records sensitivity, never tunes),recorded,unchanged,RECORDED
+b,XFOIL wake rows sourced (Option A; xtr005, the pinned binary at the committed conditions),recorded,33 rows, x/c [1.0001, 1.9999],RECORDED
+b,(i) XFOIL wake dstar direction: negative d(dstar)/ds steps / total (the producer relaxes monotone delta*_TE -> theta_TE by construction),recorded,32/32 (monotone_decreasing=True),RECORDED
+b,(ii) residual fraction (ds-th)/(ds_TE-th_TE) at x/c = 2.0: XFOIL vs producer (e^-1 at L_rel = 1.0 c),recorded,0.1105 vs 0.3650 (x/c 1.9999, our s 1.0080),RECORDED
+b,(ii') XFOIL effective relaxation length over [TE, TE+1c] (derived: -1/ln R),recorded,0.454 c vs pinned 1.0 c,RECORDED
+b,(iii) TE anchor: our ds*_TE/c (ON final) vs XFOIL first-wake dstar/c vs the committed surface-TE sum (xtr005; GV3.1 dstar caveat carried),recorded,0.00662 vs 0.01440 vs 0.01191,RECORDED
+b,(iv) downstream theta: XFOIL th(x/c=2)/th(TE) vs the producer's conserved-theta construction (model-form difference),recorded,0.6948 vs 1.0 (by construction),RECORDED
+b,XFOIL wake H at TE / at x/c=2 (H -> 1 relaxation),recorded,2.0143 / 1.0760,RECORDED

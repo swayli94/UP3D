@@ -21,6 +21,10 @@ Covers (the pre-registered +6):
      2026-07-25 -- so both legs must share one cache mode);
   6. the fold-pairing structural assert (W3): every minus-side load lands
      in its master row under T^T.
+  7. (GV6.2, +1) the CouplingConfig.wake_l_rel_chords plumbing: an
+     explicit 1.0 is bit-identical to the default, and a non-default
+     value reaches the producer through the loose loop (k=1 mdot
+     difference on the identical inviscid-seeded wall state).
 
 Runs in both lanes: default JIT and PYFP3D_NOJIT=1; the loose-loop / MMS /
 A-B legs are JIT-only (the V3 smoke precedent -- pure-Python numba
@@ -477,3 +481,41 @@ def test_fold_pairing_structural(naca_coarse_cut, wake_case):
     np.testing.assert_array_equal(b_red[vol], b_wake[vol] + b_wake[slave])
     np.testing.assert_array_equal(b_red[vol], 2.0 * b_wake[vol])
     assert np.all(b_red[vol] != 0.0)
+
+
+# ---------------------------------------------------------------------------
+# 7. GV6.2 wake_l_rel_chords plumbing (pre-registration
+#    cases/analysis/v6_2_measured_effect/PRE_REGISTRATION.md section 5)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(NOJIT, reason="loose-loop FP solves are JIT-lane only")
+def test_wake_l_rel_chords_plumbing(naca_coarse_cut, wake_case):
+    """CouplingConfig.wake_l_rel_chords reaches the producer through the
+    loose loop; the default preserves the GV6.1 behaviour bit-identically.
+
+    At outer k = 1 both runs consume the IDENTICAL inviscid-seeded wall
+    state (same k = 0 phi, deterministic), so any mdot_wake_max
+    difference there comes only from l_rel_chords -- broken plumbing
+    (the field silently ignored) gives a bit-identical k = 1 mdot."""
+    mc, wc = naca_coarse_cut
+    cfg = CouplingConfig(re_chord=RE, m_inf=M_INF, alpha_deg=ALPHA)
+    case = build_airfoil_case(
+        mc.nodes, mc.elements, mc.boundary_faces["wall"], cfg
+    )
+    driver = make_picard_lifting_driver(mc, wc, M_INF, ALPHA)
+
+    cfg_def = replace(cfg, n_outer_max=3, wake_transpiration=True)
+    res_def = run_loose_coupling(driver, case, cfg_def, wake=wake_case)
+
+    cfg_10 = replace(cfg_def, wake_l_rel_chords=1.0)
+    res_10 = run_loose_coupling(driver, case, cfg_10, wake=wake_case)
+    assert np.array_equal(res_def.phi, res_10.phi)
+    assert np.array_equal(res_def.gamma, res_10.gamma)
+
+    cfg_05 = replace(cfg_def, wake_l_rel_chords=0.5)
+    res_05 = run_loose_coupling(driver, case, cfg_05, wake=wake_case)
+    m_def = float(res_def.history[1]["mdot_wake_max"])
+    m_05 = float(res_05.history[1]["mdot_wake_max"])
+    assert m_def > 0.0 and m_05 > 0.0
+    assert m_05 != m_def
