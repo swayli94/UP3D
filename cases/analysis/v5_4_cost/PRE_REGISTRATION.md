@@ -220,3 +220,27 @@ medium W1 untouched):
   (raise = recipe error); cl_p is RECORDED with the mesh-effect
   cross-check (vs the committed pressure mesh effect −5.35 %) quoted in
   the VERDICT narrative.
+
+---
+
+## Addendum 2026-07-25 #2 — the M0.70 seed's strict non-convergence does not raise (execution mechanics)
+
+Second execution (medium): the M0.70 probe seed stalled at the 60-step
+cap (converged=False, 120 s) — the committed GV5.0/GV5.3 medium
+signature (the seed plateaus at |R| ~ 1e-6). The pre-registration's
+make-seed wording ("the ramp's level 0 re-converges only a converged
+seed family") contradicted GV5.3's **measured** evidence (GV5.3
+addendum #1: the NEWTON_M6_RECIPE ramp from the very same stalled-seed
+family re-converges level-by-level — 0.70: 3 Newton → 6.4e-6; …;
+0.8395: 12 → 7.6e-15 — onto the anchored branch to 9 printed digits;
+the bridge's early-RETURN was the bug, not the seed's strict
+non-convergence). Here the ramp is even smoother than GV5.3's case: the
+seed and every ramp level share the SAME probe estimator.
+
+Change (execution mechanics only — no band/protocol/verdict change):
+the M0.70 probe solve's non-convergence no longer raises; its (φ, Γ)
+seeds the ramp unconditionally (the actual GV5.3 addendum-#1 lesson:
+never return early, never refuse). The seed's converged flag is logged.
+**W1 is untouched and remains the anchor guard**: the final level must
+converge strict AND (medium) cl_p within 1.5 % of the committed A1
+probe anchor — a wrong-branch landing is exactly what W1 catches.

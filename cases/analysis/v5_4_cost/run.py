@@ -141,11 +141,11 @@ def make_probe_seed(mc, wc):
     print(f"    M0.70 probe seed: converged={r0['converged']} "
           f"n_newton={r0['n_newton']} "
           f"({time.perf_counter() - t0:.0f}s)", flush=True)
-    if not r0["converged"]:
-        raise RuntimeError(
-            "the M0.70 probe seed did not converge -- recipe error "
-            "(no short-circuit: the ramp's level 0 re-converges only a "
-            "converged seed family)")
+    # addendum 2026-07-25 #2: a strict non-convergence of the M0.70 seed
+    # does NOT raise -- the ramp re-converges the stalled seed
+    # level-by-level (GV5.3 addendum-#1's measured evidence: the bridge's
+    # early-RETURN was the bug, not the seed's plateau); W1 (final
+    # strict + cl_p) remains the anchor guard
     kw = dict(NEWTON_M6_RECIPE["newton_kw"],
               kutta_estimator="probe", n_picard_seed=0,
               phi_init=r0["phi"], gamma_init=r0["gamma"])
