@@ -276,7 +276,7 @@ on hand — see the header reference pin; fetch it before opening V4, or skip).
 
 **Prereq:** V3.
 
-### V5 — Tight coupling: augmented Newton ✓ CLOSED 2026-07-25 · GV5.0 (16 RECORDED / 0 FAIL) · GV5.1 (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b/1c/1d · GV5.5 · GV5.2 · GV5.3 · GV5.4 (0 PASS / 1 FAIL / 17 RECORDED) — all five gates executed, close-out pending user adjudication
+### V5 — Tight coupling: augmented Newton ✓ CLOSED 2026-07-25 · GV5.0 (16 RECORDED / 0 FAIL) · GV5.1 (9 PASS / 1 FAIL / 36 RECORDED) · GV5.1b/1c/1d · GV5.5 · GV5.2 · GV5.3 · GV5.4 (0 PASS / 1 FAIL / 17 RECORDED) — all five gates executed, close-out pending user adjudication · **GV5.6 ◐ OPENED 2026-07-25** (the GV5.4 registered Schur-aware preconditioner follow-up, user-adjudicated)
 
 **Deliverable:** augmented (φ, Γ, BL) Newton on the P8/P14 machinery; coupling
 blocks J_φ,BL (∂ṁ/∂BL through the transpiration assembly) and J_BL,φ (∂u_e/∂φ
@@ -427,6 +427,21 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   the temporary 8-thread session constraint. Prereq: none
   beyond the committed diagnosis; the GV5.1c window read is informative
   but NOT binding for the opening.
+- [ ] **GV5.6 Schur-aware reduced-space preconditioner** (**◐ OPENED
+  2026-07-25** — the GV5.4 registered follow-up opened by user
+  adjudication; PRE_REGISTRATION committed before the first code change
+  (`cases/analysis/v5_6_schur_prec/PRE_REGISTRATION.md`); system/seed/
+  protocol = GV5.4 verbatim, NO library change): rung 3 = the exact-BL
+  Schur operator with bdiag(AMG(Ŝ_φφ), M_Γ), Ŝ_φφ = J_φφ − Ĉ_φφ carrying
+  the explicitly assembled sparsified correction Ĉ = J_hB·D_BB⁻¹·J_Bh
+  (D_BB = the per-node 6×6 block-diagonal of J_BL,BL — the
+  quasi-simultaneous local BL response; the (A,Ψ)-structured per-node
+  block vs a scalar diagonal); escalation rung 4 = the block
+  upper-triangular full-system preconditioner (exact-BL inner solves +
+  the Schur-aware φ cycle). (a) cost ratio RECORDED either way vs ≤ ~2×;
+  (b) the WORKING binary (the GV5.4 D5 verbatim); (c) diagnostics
+  RECORDED. The EW-forcing variant + inter-node M_BB + pressure-row
+  wiring stay registered-not-opened.
 
 **Prereq:** P8 ✓ + P14 ✓ + V3. **Wing-body VII is explicitly OUT of V5 scope**
 (scope guards below).
@@ -599,7 +614,8 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   augmented Newton stalls, or closed-body viscous cases enter scope
   before V5 lands.
 - V5 — ✓ CLOSED 2026-07-25 (all five gates executed; close-out pending user
-  adjudication) — tight coupling: augmented (φ, Γ, BL) Newton on
+  adjudication; **GV5.6 ◐ OPENED 2026-07-25** — the GV5.4 registered
+  Schur-aware preconditioner follow-up, user-adjudicated) — tight coupling: augmented (φ, Γ, BL) Newton on
   P8/P14. **Entry check GV5.0 ✓ EXECUTED 2026-07-23** (16 RECORDED / 0 FAIL;
   `cases/analysis/v5_m6_bridge/`): the bridge answer is that the loose loop is
   NOT sufficient on the 3-D lifting wing — coarse runs away on a root-upper-TE

@@ -318,6 +318,27 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   `python cases/analysis/v5_4_cost/run.py` — ~25 min total at 8 threads
   unloaded (2026-07-25 measurement; both levels + the inviscid anchors +
   the FD guards included; exit 1 = honest FAIL present)
+- `v5_6_schur_prec/` — **Track V / V5** GV5.6 Schur-aware reduced-space
+  preconditioner for the augmented step (**◐ OPENED 2026-07-25**, the
+  GV5.4 registered follow-up opened by user adjudication; pre-registered
+  before the first code change): the GV5.4 system/seed/protocol verbatim
+  (the 124,216-DOF W2 system, the A1 conf_newton seed chain, rowcol
+  scaling, mu ≡ 0, N = 5 measured steps, NO library change — the
+  committed `step_solve` injection point reused) with rung 3 = the
+  exact-BL Schur operator + bdiag(AMG(Ŝ_φφ), M_Γ), Ŝ_φφ = J_φφ − Ĉ_φφ
+  carrying the explicitly assembled sparsified Schur correction Ĉ =
+  J_hB·D_BB⁻¹·J_Bh (D_BB = the per-node 6×6 block-diagonal of J_BL,BL —
+  the quasi-simultaneous local BL response, the (A,Ψ)-structured per-node
+  block); escalation rung 4 = the block upper-triangular full-system
+  preconditioner (exact-BL inner solves + the Schur-aware φ cycle); (a)
+  cost ratio RECORDED either way vs ≤ ~2×, (b) the GV5.4 D5 WORKING
+  binary, (c) diagnostics RECORDED; executed at the runner default 16
+  threads (the GV5.4 8-thread numbers = the non-binding cross-check);
+  the EW-forcing variant / inter-node M_BB / pressure-row wiring stay
+  registered-not-opened (PRE_REGISTRATION.md §7) —
+  `python cases/analysis/v5_6_schur_prec/run.py` — coarse shakedown +
+  medium binding, `--levels` for partial re-runs (exit 1 = honest FAIL
+  present; a wiring-guard failure raises RuntimeError = recipe error)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS
