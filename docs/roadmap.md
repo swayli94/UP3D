@@ -126,7 +126,13 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   `cases/analysis/v5_3_m6_cp/`: M6 wing TEST 2308 M0.8395/α3.06 vs the committed
   7-station Cp — the viscous Cp does NOT move toward experiment (1/5 unmasked
   stations + a pooled increase); Δcl_KJ −2.20 % DOWN but under the A4 floor; the
-  3-D counterpart of the GV5.2 reading) and GV5.4 cost; V6 wake sheet;
+  3-D counterpart of the GV5.2 reading) → **GV5.4 ✓ EXECUTED 2026-07-25** (0P/1F/17R,
+  `cases/analysis/v5_4_cost/`: augmented step 22.93 s vs inviscid 3.05 s = **7.53×**
+  above the ≤ ~2× band RECORDED; block preconditioner NOT-WORKING honest FAIL —
+  block-Jacobi diverges, exact-BL Schur stalls 1/4; "measure before Schur" answered:
+  the BL elimination is cheap (1.8 s), Krylov convergence is the bottleneck ⇒
+  Schur-aware reduced-space preconditioning = the registered follow-up; **V5
+  CLOSED** — all five gates executed, user adjudication); V6 wake sheet;
   wing-body VII deferred)
 - **A — verification & analysis** — [roadmap/track_a.md](roadmap/track_a.md) — created 2026-07-15 · **A1 ✓ CLOSED 2026-07-16**
   (GA1.1–GA1.5: 4-driver timing instrumentation + conforming-vs-level-set × Picard-vs-Newton cost benchmark;

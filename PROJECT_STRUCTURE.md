@@ -536,6 +536,12 @@ cases/                     # Test cases and reference data
 │   │                           #   increase; band (a) RECORDED input-limited, Δcl_KJ −2.20 %
 │   │                           #   DOWN under the A4 floor; k=0 anchored to P14 via the W1
 │   │                           #   wiring guard)
+│   ├── v5_4_cost/              # [V5/GV5.4] augmented-step cost on M6 medium (band (a)
+│   │                           #   RECORDED 7.53× the inviscid step, above the ≤ ~2× band;
+│   │                           #   band (b) honest FAIL: the block preconditioner does NOT
+│   │                           #   work at medium — block-Jacobi diverges, exact-BL Schur
+│   │                           #   stalls 1/4; "measure before Schur": the BL elimination
+│   │                           #   is cheap (1.8 s), Krylov convergence is the bottleneck)
 │   ├── v5_ibl_floor/           # [V5] IBL-floor diagnosis (GV5.1 follow-up, 14 RECORDED:
 │   │                           #   raw cond mostly a scaling artifact + genuine scaled (A,Ψ)
 │   │                           #   stiffness 1e5–1e7 + TE-band (B,δ) floor residual inside J's range)
@@ -1223,8 +1229,8 @@ instantaneous switch), δ* H-family offset ≤ 27.9 % at x/c = 0.074, GV3.3
 tail-cone σ/μ 0.5533 / crossflow 0.2631 FAIL + loop NOT converged =
 measured stern instability — V4 skip criterion met by letter (GV3.2),
 counter-evidence logged (GV3.3) — **V4 ⊘ SKIPPED 2026-07-22** (user-directed;
-reopen trigger = V5 stall / pre-V5 closed-body scope)); **V5 ◐ OPEN
-2026-07-23 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL)** (M6 subsonic
+reopen trigger = V5 stall / pre-V5 closed-body scope)); **V5 ✓ CLOSED
+2026-07-25 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL)** (M6 subsonic
 loose-coupling bridge, VERDICT `cases/analysis/v5_m6_bridge/`: bridge answer
 = the loose loop is NOT sufficient on the 3-D lifting wing — coarse
 root-upper-TE separation-patch runaway ṁ_max ×12.4 (GV3.3-stern class),
@@ -1332,7 +1338,30 @@ via the W1 wiring guard (the first-execution fire root-caused to a
 driver cold-start short-circuit — the ramp never ran — fixed under
 addendum #1; NOT an 8-thread branch scatter); reading: the 3-D
 counterpart of GV5.2 — further reads belong to the tight/augmented
-path; next = GV5.4 (user sequencing 2026-07-24);
+path → **GV5.4 ✓ EXECUTED 2026-07-25 (0P/1F/17R,
+`cases/analysis/v5_4_cost/`, design record
+`docs/design_track_v.md` §20)**: augmented-step cost on the 124,216-DOF
+M6 medium W2 system (the GV5.1b scaled+damped driver + an injectable
+`step_solve` solve callback — library change, default None = splu
+bit-identical, +2 tests `tests/test_v5_tight_scaled.py`) — band (a)
+RECORDED: augmented step 22.93 s vs the in-session inviscid anchor
+3.05 s/step = **7.53×, above the ≤ ~2× reference band** (recorded
+either way per the registration; 4/5 steps carry capped-GMRES work;
+8-thread walls not comparable to 16-thread entries); **band (b) honest
+FAIL (D5)**: the block preconditioner does NOT work at medium —
+rung-1 block-Jacobi diverges (rel_res 5.75e4, the φ–BL off-diagonal
+coupling too strong), rung-2 exact-BL Schur converges 1/4 steps
+(2.66e-8 @277 it then stalls vs rtol 1e-8 @300 cap — pure AMG-φ
+cannot represent the J_hB·J_BB⁻¹·J_Bh Schur correction); "measure
+before Schur" answered: splu(J_BL,BL) setup 1.8 s (elimination cheap;
+Krylov convergence is the bottleneck), AMG-φ 0.2 s / ILU-BL 2.5 s;
+guards W1/W2/W3 PASS (cl_p 0.26429 vs the addendum-#4 P14-locked
+0.2646; FD median φ 8.7e-12 / Γ 7.3e-12 / BL 0; the IBL floor
+trajectory intact); reading: wing-scale augmented Newton needs a
+stronger (Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
+before cost reads into the ≤ ~2× band; the EW-forcing variant
+registered-not-opened (user adjudication); **V5 CLOSED — all five
+gates executed**;
 V4-reopen trigger considered, NOT invoked (stays parked)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
@@ -1342,7 +1371,15 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **642 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+Default suite: **644 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+V5 GV5.4 (the augmented-step cost on M6 medium: band (a) RECORDED — the
+augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
+≤ ~2× band; band (b) honest FAIL — the block preconditioner does NOT work
+at medium: block-Jacobi diverges, exact-BL Schur stalls 1/4); full-suite
+measured 644 @1230.61 s **@8 threads** (temporary 8-core session constraint,
+user-directed; NOT comparable to the 16-thread ledger entries); +2 vs 642 =
+`tests/test_v5_tight_scaled.py` (2 new: the `step_solve` callback wiring +
+the default-None splu bit-identity guard). Previous 642:
 V5 GV5.3 (the M6 wing direction+magnitude check vs committed Cp: band (b)
 honest FAIL — the viscous Cp does NOT move toward the committed 7-station
 experiment (1/5 unmasked stations + a pooled increase); band (a) RECORDED

@@ -1,0 +1,6 @@
+step,rung,t_setup,t_linsolve,n_inner,info,rel_res,cap_tripped,notes
+1,1,2.70,11.95,241,5,5.753e+04,False,t_amg=0.2,t_ilu=2.5
+2,2,2.00,14.47,277,0,2.656e-08,False,t_lu=1.8
+3,2,2.00,15.62,300,5,2.073e-07,False,t_lu=1.8
+4,2,2.01,15.44,300,5,6.128e-05,False,t_lu=1.8
+5,2,2.00,15.57,300,5,2.525e-06,False,t_lu=1.8

@@ -101,7 +101,7 @@ the last accepted step is recorded for the tol_ds = 1e-3 cross-check
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 import time
 
@@ -586,11 +586,15 @@ def equilibrate_rc(J: sp.csr_matrix):
 
 
 def scaled_damped_step(J: sp.csr_matrix, F: np.ndarray, mu: float,
-                       scaling: Optional[str] = None) -> np.ndarray:
+                       scaling: Optional[str] = None,
+                       solve: Optional[Callable] = None) -> np.ndarray:
     """(J~ + mu I) dy = -F~ via splu (sparsity preserved, no normal
     equations), unscaled dx = C dy. scaling="rowcol": J~ = R J C and
     F~ = R F (equilibrate_rc); scaling=None: J~ = J, F~ = F, C = I, so
-    mu = 0 recovers the undamped splu step exactly."""
+    mu = 0 recovers the undamped splu step exactly. solve (GV5.4): an
+    optional callback (A_csc, b) -> y with A y = b replacing the splu
+    line (the block-preconditioned GMRES injection point); None = the
+    committed splu, bit-identical."""
     if scaling == "rowcol":
         rn, cn, Js = equilibrate_rc(J)
         Fs = F / rn
@@ -599,9 +603,9 @@ def scaled_damped_step(J: sp.csr_matrix, F: np.ndarray, mu: float,
     else:
         raise ValueError(f"unknown scaling {scaling!r}")
     n = Js.shape[0]
-    d_y = -sla.splu(
-        (Js.tocsc() + mu * sp.eye(n, format="csc")).tocsc()
-    ).solve(Fs)
+    A = (Js.tocsc() + mu * sp.eye(n, format="csc")).tocsc()
+    d_y = -(sla.splu(A).solve(Fs) if solve is None
+            else np.asarray(solve(A, Fs), dtype=np.float64))
     return d_y if cn is None else d_y / cn
 
 
@@ -617,6 +621,7 @@ def newton_tight(
     scaling: Optional[str] = None,
     lm_damping: bool = False,
     floor_stop: bool = False,
+    step_solve: Optional[Callable] = None,
 ) -> Dict:
     """The augmented Newton loop on the full state (PRE_REGISTRATION
     convergence protocol): seed = the pack base x0 (inviscid-converged
@@ -653,6 +658,12 @@ def newton_tight(
     pre-registered floor-reached termination (FloorStop). The DEFAULTS
     (scaling=None, lm_damping=False, floor_stop=False) keep the legacy
     path bit-for-bit (the committed GV5.1 runner reproduces).
+
+    GV5.4 (cases/analysis/v5_4_cost/PRE_REGISTRATION.md): step_solve is
+    an optional linear-solve callback (A, b) -> y with A y = b replacing
+    the splu step on BOTH paths (the block-preconditioned GMRES
+    injection; on the GV5.1b path it receives the SCALED + damped
+    system). None = the committed splu, bit-identical.
     """
     x = pack.x_base() if x0 is None else np.asarray(x0, dtype=np.float64).copy()
     t0 = time.perf_counter()
@@ -700,7 +711,11 @@ def newton_tight(
             n_it_done = it
             J = augmented_jacobian(pack, x)
             try:
-                d = -sla.splu(J.tocsc()).solve(F)
+                if step_solve is None:
+                    d = -sla.splu(J.tocsc()).solve(F)
+                else:
+                    d = -np.asarray(step_solve(J.tocsc(), F),
+                                    dtype=np.float64)
             except RuntimeError as exc:
                 raise RuntimeError(
                     f"tight Newton factorization failed at iteration {it}: {exc}"
@@ -780,7 +795,8 @@ def newton_tight(
             mu_retries = 0
             while True:
                 d = scaled_damped_step(
-                    J, F, mu if lm_damping else 0.0, scaling=scaling)
+                    J, F, mu if lm_damping else 0.0, scaling=scaling,
+                    solve=step_solve)
                 if not np.all(np.isfinite(d)):
                     raise RuntimeError(
                         f"tight Newton step non-finite at iteration {it}"

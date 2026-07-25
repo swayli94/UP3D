@@ -368,3 +368,49 @@ def test_k1_smoke(pack):
             else:
                 # f_gamma sits at machine zero in the committed history
                 assert abs(got) <= 1.0e-14
+
+
+# ---------------------------------------------------------------------------
+# the GV5.4 step_solve callback injection (cases/analysis/v5_4_cost/
+# PRE_REGISTRATION.md W4: the callback must leave the committed paths
+# bit-identical)
+# ---------------------------------------------------------------------------
+
+
+def test_step_solve_callback_equals_splu():
+    """scaled_damped_step with solve=<explicit splu> reproduces the
+    default bit-for-bit, unscaled and rowcol (the W4 unit guard)."""
+    J = _well_conditioned_j(seed=23)
+    F = np.random.default_rng(29).standard_normal(J.shape[0])
+
+    def cb(A, b):
+        return sla.splu(A).solve(b)
+
+    for scaling in (None, "rowcol"):
+        d_ref = td.scaled_damped_step(J, F, 0.0, scaling=scaling)
+        d_cb = td.scaled_damped_step(J, F, 0.0, scaling=scaling, solve=cb)
+        assert np.array_equal(d_cb, d_ref)
+
+
+def test_step_solve_callback_newton_mock(mock_system):
+    """newton_tight with step_solve=<explicit splu> reproduces the
+    default path bit-for-bit on the contracting mock model, legacy and
+    rowcol (the W4 loop guard)."""
+    n = 12
+    a = np.array(
+        [1.0, 2.0, 0.5, 4.0, 1.5, 2.5, 0.75, 3.0, 1.25, 1.75, 2.25, 0.9]
+    )
+    x_star = np.linspace(-0.5, 0.7, n)
+    x0 = x_star + np.linspace(0.3, -0.2, n)
+    mock_system(lambda x: a * (x - x_star), sp.csr_matrix(np.diag(0.5 * a)))
+
+    def cb(A, b):
+        return sla.splu(A).solve(b)
+
+    for kw in ({}, {"scaling": "rowcol"}):
+        ref = td.newton_tight(_MockPack(x0), max_iter=4, **kw)
+        got = td.newton_tight(_MockPack(x0), max_iter=4,
+                              step_solve=cb, **kw)
+        assert [h["merit"] for h in got["history"]] == [
+            h["merit"] for h in ref["history"]]
+        assert np.array_equal(got["x"], ref["x"])

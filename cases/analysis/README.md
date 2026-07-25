@@ -283,6 +283,41 @@ the committed PNG/CSV are the evidence. Roadmap gates:
   the loose loop + the section/RMS reads included; exit 1 = honest FAIL
   present; a wiring-guard failure raises RuntimeError = recipe error;
   `--levels` for partial re-runs)
+- `v5_4_cost/` — **Track V / V5** GV5.4 augmented-step cost on M6 medium
+  (registered + opened + executed 2026-07-25, user-directed; pre-registered
+  before the first code change; addenda #1–#4 before each (re-)execution):
+  the tight/augmented Newton path (the GV5.1b scaled+damped driver with an
+  injectable `step_solve` solve callback — a library change, default None =
+  splu bit-identical, +2 tests `tests/test_v5_tight_scaled.py`) measured on
+  the 124,216-DOF W2 system (62,820 φ + 166 Γ + 61,230 BL; the A1
+  conf_newton seed chain verbatim), **0 PASS / 1 FAIL / 17 RECORDED** —
+  **band (a) RECORDED**: augmented step 22.93 s vs the in-session inviscid
+  anchor 3.05 s/step = **7.53×, above the ≤ ~2× reference band** (recorded
+  either way per the registration; 4/5 augmented steps carry capped-GMRES
+  work, annotated; the A1 committed @16t 4.35 s/step quoted as the
+  non-binding cross-check only); **band (b) honest FAIL (D5)**: the block
+  preconditioner does NOT work at medium — rung-1 block-Jacobi (AMG-φ +
+  ILU-BL) diverges (rel_res 5.75e4, the φ–BL off-diagonal coupling too
+  strong for a block-diagonal approximation), rung-2 exact-BL Schur
+  converges 1/4 steps (2.66e-8 @277 iterations, then stalls vs rtol 1e-8
+  at the 300 cap — pure AMG-φ cannot represent the J_hB·J_BB⁻¹·J_Bh Schur
+  correction); the registered "measure before Schur" question answered:
+  splu(J_BL,BL) setup only 1.8 s (the elimination is cheap — Krylov
+  convergence is the bottleneck), AMG-φ setup 0.2 s / ILU-BL 2.5 s; guards
+  W1/W2/W3 PASS (cl_p 0.26429 vs the addendum-#4 P14-locked 0.2646 =
+  0.116 %; FD median φ 8.7e-12 / Γ 7.3e-12 / BL 0; the IBL floor
+  trajectory intact, merit pinned 9.35e-9); coarse shakedown: rung-2
+  working (RECORDED), ratio 20.58× (the 0.17 s inviscid step too small to
+  read); the reading = the pre-registered honest negative — wing-scale
+  augmented Newton needs a stronger (Schur-aware, (A,Ψ)-structured)
+  reduced-space preconditioner before cost reads into the ≤ ~2× band; the
+  EW-forcing variant registered-not-opened (user adjudication); executed
+  under the temporary 8-thread session constraint (wall times
+  non-comparable); VERDICT + PRE_REGISTRATION (+4 addenda) + CSVs/PNGs in
+  the dir, design record `docs/design_track_v.md` §20) —
+  `python cases/analysis/v5_4_cost/run.py` — ~25 min total at 8 threads
+  unloaded (2026-07-25 measurement; both levels + the inviscid anchors +
+  the FD guards included; exit 1 = honest FAIL present)
 - `v5_ibl_floor/` — **Track V / V5** IBL-floor diagnosis (the GV5.1 follow-up; RECORDED diagnostic study, no
   pass/fail bands; pre-registered 53bf904 before the first execution): dense SVD of J_BL,BL at the coarse +
   medium loose-converged states and the coarse k=1 fixture, **14 RECORDED** — the near-null cluster PERSISTS

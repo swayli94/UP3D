@@ -263,7 +263,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   无调参）；honest FAIL 局域化：cf 仅转捩后首站 +44%（XFOIL e^N 斜坡 vs 瞬时切换）、δ* H 族偏移 ≤27.9%；GV3.3
   旋成体三轮调试稳定化（尾带钉扎 + 钉扎带 ṁ 掩蔽 + FP 护栏），中段轴对称优秀、尾锥 σ/μ 0.55/横流 0.26 FAIL、
   环不收敛 = 实测尾部失稳——V4 跳过判据按字面满足（GV3.2），GV3.3 反方证据入台账，**V4 ⊘ 跳过
-  2026-07-22（用户定；重开触发 = V5 受挫或闭体粘性提前进范围）**）；**V5 ◐ OPEN 2026-07-23**
+  2026-07-22（用户定；重开触发 = V5 受挫或闭体粘性提前进范围）**）；**V5 ✓ CLOSED 2026-07-25**
   （**GV5.0 ✓ EXECUTED 16 RECORDED / 0 FAIL**，`cases/analysis/v5_m6_bridge/`：M6 亚声速松耦合桥——
   桥答案 = 松环在 3-D 升力翼上不够用：coarse 根部上翼面 TE 分离斑块（H 4–5.5）δ*↔ṁ↔u_e 失稳
   ṁ_max ×12.4（GV3.3 尾部同类），medium 加密消除斑块但留有界 δ* 极限环（2–12 %/k）不达 tol 1e-3；
@@ -336,7 +336,22 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   实测诊断定位（同一种子跑 P14 ramp 落锚点 9 位一致——非 8 线程分支散布），addendum #1 修复；
   循环本身曾从带毒种子 9 outer 收敛。判读：GV5.2 的 3-D 对应——跨声速下松环位移厚度反馈太弱，
   修不动无黏族失配（LE 吸力不足、激波偏后）；后续读数走 tight/augmented 路径。未开跟进（用户
-  裁决））；下一步 = **GV5.4**（用户 2026-07-24 排序：GV5.1d → GV5.5 → GV5.2–5.4））；
+  裁决））→ **GV5.4 ✓ EXECUTED 2026-07-25**（0P/1F/17R，`cases/analysis/v5_4_cost/`：
+  tight/augmented Newton 路径（GV5.1b scaled+damped driver + 可注入 `step_solve` 回调——库改动，
+  默认 None = splu 逐位一致）在 124,216-DOF W2 系统（62,820 φ + 166 Γ + 61,230 BL）上实测。
+  **band (a) RECORDED**：增广步 22.93 s vs 同 session 无黏锚 3.05 s/步 = **7.53×**，高于 ≤~2×
+  参考带（预注册照录；4/5 步含 capped-GMRES 工作已注明；8 线程壁时与 16 线程账目不可比）。
+  **band (b) honest FAIL（D5）——块预条件在 medium 不工作**：rung-1 块 Jacobi（AMG-φ + ILU-BL）
+  发散（rel_res 5.75e4，φ–BL 非对角耦合太强）；rung-2 exact-BL Schur 1/4 步收敛（2.66e-8 @277
+  迭代，之后停滞 vs rtol 1e-8 @300 上限——纯 AMG-φ 表不出 J_hB·J_BB⁻¹·J_Bh Schur 修正）。
+  "measure before Schur" 答案：splu(J_BL,BL) setup 仅 1.8 s（消元便宜，Krylov 收敛才是瓶颈）；
+  AMG-φ 0.2 s / ILU-BL 2.5 s。守卫：W1 cl_p 0.26429 vs addendum-#4 P14 锁 0.2646（0.116%），
+  W2/W3 过（FD 中位 φ 8.7e-12/Γ 7.3e-12/BL 0）；IBL 地板轨迹完整（merit 钉 9.35e-9）。
+  执行叙事：四个 addendum（#1 W1 容差只绑 medium；#2 M0.70 种子不收敛不 raise；#3 种子链 =
+  A1 conf_newton 逐字；#4 W1 锚从陈旧 A1 0.26918 重订 P14 探针 G8.2 锁 0.2646）。判读：
+  预注册要记的诚实负结果——翼尺度增广 Newton 需要更强的（Schur-aware、(A,Ψ) 结构化）约化空间
+  预条件，成本才读得进 ≤2× 带；EW-forcing 变体登记未开（用户裁决）。**V5 五 gate 全部执行完，
+  关闭待用户裁决**）；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段，V4–V6 尚无实现。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
 - **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
@@ -370,7 +385,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## 回归基线
 
-现基线 **642 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V5 GV5.3
+现基线 **644 passed + 25 skipped + 2 xfailed**（2026-07-25 Track V **V5 GV5.4
+执行**（M6 medium 增广步成本：band (a) RECORDED——增广步 22.93 s vs 无黏步
+3.05 s = 7.53×，高于 ≤~2× 带；band (b) honest FAIL——块预条件在 medium 不工作
+（block-Jacobi 发散、exact-BL Schur 1/4 步收敛）——VERDICT
+`cases/analysis/v5_4_cost/VERDICT.md`）：全套件实测 644
+@1230.61 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
+比）；+2 vs 下档 642 = `tests/test_v5_tight_scaled.py`（2 新：`step_solve` 回调
+接线 + 默认 None splu 逐位一致守卫））。
+上一档 642+25+2（2026-07-25 Track V **V5 GV5.3
 执行**（M6 机翼方向+量级检查对 committed Cp：band (b) honest FAIL——黏性 Cp **没有**
 向 committed 7 站实验靠近（1/5 未遮蔽站 + pooled 反升）；band (a) RECORDED
 input-limited，Δcl_KJ −2.20 % 向下但低于 A4 地板——VERDICT
