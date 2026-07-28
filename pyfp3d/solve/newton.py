@@ -39,10 +39,12 @@ apply. Eisenstat-Walker (choice 2) forcing keeps early Newton steps cheap.
 
 Globalization: plain full Newton steps (Lopez) with a SAFETY-ONLY
 backtracking line search on |R|^2 + |F|^2; no damping_theta anywhere (that
-is a Picard stabilizer -- it would destroy quadratic convergence); an
-optional consistent pseudo-transient term (ptc_dtau) is the fallback for
-hard transients. Transonic runs wrap this in the upward-only Mach
-continuation of solve_newton_transonic (M_crit and upwind_c held FIXED
+is a Picard stabilizer -- it would destroy quadratic convergence); no
+pseudo-transient term (phase two GS1.2b measured a SER-scheduled one to be
+strictly worse than plain Newton here, and removed the dormant fixed-shift
+`ptc_dtau` it replaced -- see
+docs/dev_phase_two/20260728-2030-s1-ptc.md). Transonic runs MAY wrap this in
+the upward-only Mach continuation of solve_newton_transonic (M_crit and upwind_c held FIXED
 within the ramp, Lopez Tables 4.7/4.8/4.13).
 """
 
@@ -283,11 +285,6 @@ class NewtonWorkspace:
         self.beta = None
         self.vals0_red = None
         self.V_red = None
-        # lumped element volumes on the free reduced dofs (ptc option)
-        m_lumped = np.zeros(self.op.n_nodes, dtype=np.float64)
-        np.add.at(m_lumped, np.asarray(self.op.elements).reshape(-1),
-                  np.repeat(self.op.V / 4.0, 4))
-        self.m_lumped_free = (self.con.T.T @ m_lumped)[self.free]
 
     def _reduce_ff_values(self, values: np.ndarray) -> np.ndarray:
         return np.asarray(values, dtype=np.float64)[self._ff_keep][self._ff_idx]
@@ -542,7 +539,6 @@ def solve_newton_lifting(
     gmres_restart: int = 60,
     gmres_maxiter: int = 10,
     line_search: bool = True,
-    ptc_dtau: Optional[float] = None,
     rtol_seed: float = 1e-7,
     tol_residual_loose: Optional[float] = None,
     tol_residual_rel: Optional[float] = None,
@@ -570,11 +566,9 @@ def solve_newton_lifting(
 
     `n_picard_seed` > 0 runs that many Picard outer iterations (loose
     tol) purely as an initial guess; `phi_init`/`gamma_init` (cut-mesh
-    phi) take precedence and skip the seed. `ptc_dtau` adds the CONSISTENT
-    pseudo-transient diag(m_lumped_free/dtau) to J_ff only -- it
-    multiplies dphi and vanishes at convergence, so the converged state is
-    exactly the Newton state (globalization fallback; default off; note it
-    breaks terminal quadratic convergence while active). `precond` "amg"
+    phi) take precedence and skip the seed.
+
+    `precond` "amg"
     builds the hierarchy on the SPD Picard block (rebuilt every
     `amg_rebuild_every` Newton steps), "ilu" factors J_ff itself.
 
@@ -953,8 +947,6 @@ def solve_newton_lifting(
         t0 = time.perf_counter()
         J_ff, B = ws.assemble_coupled(state, upwind_c, m_crit, rho_floor,
                                       frozen=frozen)
-        if ptc_dtau is not None:
-            J_ff = (J_ff + sp.diags(ws.m_lumped_free / ptc_dtau)).tocsr()
         timings["assembly"] += time.perf_counter() - t0
 
         # (K, F_elim) = the eliminated Kutta blocks. Probe: literally
@@ -1016,9 +1008,6 @@ def solve_newton_lifting(
                     A_pic = ws.op.assemble_matrix(state["rho_t"])
                     A_red = (ws.con.T.T @ (A_pic @ ws.con.T)).tocsr()
                     A_ff = A_red[ws.free][:, ws.free].tocsr()
-                    if ptc_dtau is not None:
-                        A_ff = (A_ff + sp.diags(
-                            ws.m_lumped_free / ptc_dtau)).tocsr()
                     _, M_pre = build_amg_preconditioner(A_ff)
             elif precond == "ilu":
                 M_pre = build_ilu_preconditioner(J_ff)
