@@ -860,7 +860,18 @@ def solve_subsonic_lifting(
         # the nonlinear residual too when tol_residual is given.
         res_ok = (tol_residual is None
                   or residual_history[-1] < tol_residual)
-        if kutta_converged and drho < tol_rho and res_ok:
+        # GS1.4 (phase two): a CLAMPED state is not a converged flow. Every
+        # other driver already refuses it -- solve_newton_lifting and
+        # solve_multivalued_newton by their tolerance test, and
+        # solve_transonic_lifting through its `physical` flag -- but this one
+        # reported converged=True with the speed limiter or the rho_tilde floor
+        # still binding, and it is the Picard SEED every other path starts
+        # from. Measured consequence (GS1.1 / GS1.7): the floor can host a
+        # machine-zero spurious solution 40 cells from the true one, and a
+        # clamped seed silently hands that branch to the caller.
+        clamped = (n_limited > 0
+                   or (int(upw.n_floored) if use_upwind else 0) > 0)
+        if kutta_converged and drho < tol_rho and res_ok and not clamped:
             converged = True
             break
 
@@ -887,6 +898,10 @@ def solve_subsonic_lifting(
         "n_nu_active": upw.n_supersonic if use_upwind else 0,
         "n_limited": n_limited,
         "n_floored": upw.n_floored if use_upwind else 0,
+        # GS1.4: one flag instead of two counters -- a clamped state is not a
+        # solution of the discrete equations, whatever the residual says.
+        "clamped": bool(n_limited > 0
+                        or (int(upw.n_floored) if use_upwind else 0) > 0),
         "n_cg_total": n_cg_total,
         "n_solves_total": n_solves_total,
     }

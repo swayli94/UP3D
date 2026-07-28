@@ -1117,6 +1117,9 @@ def solve_newton_lifting(
         "n_nu_active": state["n_nu_active"],
         "n_limited": state["n_limited"],
         "n_floored": state["n_floored"],
+        # GS1.4: one flag for callers -- this driver already REFUSES to report
+        # converged while clamped, but the counters were easy to ignore.
+        "clamped": bool(state["n_limited"] > 0 or state["n_floored"] > 0),
         "jacobian_nnz": getattr(ws.op, "newton_nnz", None),
         "n_term3_active": getattr(ws.op, "n_term3_active", None),
         "n_refactor": n_refactor,

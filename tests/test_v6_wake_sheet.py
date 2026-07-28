@@ -432,6 +432,19 @@ def _ab_leg(snippet, worktree, ref, out_npz, overlay_delta=False):
         )
 
 
+@pytest.mark.skip(reason=(
+    "RETIRED 2026-07-29 (phase two GS1.4): the premise is false. This "
+    "test A/Bs the loose-loop phi of HEAD against a pinned pre-V6 commit "
+    "and requires them to agree, but the loose loop is not reproducible "
+    "RUN TO RUN: the same commit executed twice on the same machine with "
+    "the same thread count differs by max relative 1.024 over 6104/6106 "
+    "nodes -- exactly the magnitude this test reports as a failure. "
+    "Attribution chain and the two-run measurement: "
+    "bench/s1_duct/check_loose_loop_determinism.py; round record "
+    "docs/dev_phase_two/20260729-0130-s1-clamp-not-silent.md 4.1. "
+    "The GV6.1 (a)(ii) EVIDENCE is unaffected -- it is committed in "
+    "cases/analysis/v6_1_wake_sheet/ -- but this live guard cannot mean "
+    "what it claims until the loose loop is made deterministic."))
 @pytest.mark.skipif(NOJIT, reason="loose-loop FP solves are JIT-lane only")
 @pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
 def test_ab_bit_identity_gate_free_library(tmp_path):
