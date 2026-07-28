@@ -61,6 +61,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from cases.demo._common import (CheckList, CRITICAL, MUTED, S1_BLUE, S2_AQUA,
                                 S3_YELLOW, S4_ROSE, apply_style, finish,
                                 write_csv)
+from pyfp3d._compat import trapezoid
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.meshgen.fuselage import FuselageParams
 from pyfp3d.meshgen.wing3d import B_SEMI, chord_at
@@ -92,7 +93,7 @@ def cl_kj_exposed(z, gamma, s_ref):
     o = np.argsort(z)
     zz = np.concatenate([z[o], [B_SEMI]])
     gg = np.concatenate([np.asarray(gamma)[o], [0.0]])
-    return 2.0 * float(np.trapezoid(gg, zz)) / s_ref
+    return 2.0 * float(trapezoid(gg, zz)) / s_ref
 
 
 def build(level):

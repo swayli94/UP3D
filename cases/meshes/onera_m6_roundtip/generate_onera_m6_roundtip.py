@@ -69,6 +69,14 @@ from pathlib import Path
 
 import numpy as np
 
+import sys
+from pathlib import Path
+
+# GS0.1: run standalone (`python cases/meshes/.../generate_*.py`) without
+# an editable install -- only the script directory is on sys.path by
+# default, so importing pyfp3d needs the repo root added explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 from pyfp3d.mesh.metrics import compute_aspect_ratios, compute_min_dihedral_angles
 from pyfp3d.mesh.reader import mesh_stats, write_mesh
 from pyfp3d.meshgen.wing3d import (

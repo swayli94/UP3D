@@ -28,6 +28,14 @@ from pathlib import Path
 
 import numpy as np
 
+import sys
+from pathlib import Path
+
+# GS0.1: run standalone (`python cases/meshes/.../generate_*.py`) without
+# an editable install -- only the script directory is on sys.path by
+# default, so importing pyfp3d needs the repo root added explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 from pyfp3d.mesh.reader import write_mesh, mesh_stats
 from pyfp3d.meshgen.extrude import extrude_single_layer
 from pyfp3d.meshgen.planar import naca0012_wake_2d
