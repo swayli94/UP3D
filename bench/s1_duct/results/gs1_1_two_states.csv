@@ -1,0 +1,3 @@
+state,converged,n_newton,res_final,x_shock,n_supersonic_bins,n_supersonic_runs,mach_max,mach_at_throat,mach_inlet,mach_exit,flux_min,flux_max,flux_mean_smooth,n_floored,nu_max,rho_tilde_min,delta_phi_imposed
+start@12(exact),True,5,1.2377439418292371e-12,11.9316,58,1,1.2725,0.9906,0.4012,0.4912,1.00089,1.00092,1.00091,0,0.6646,0.67034,19.31863
+start@10,True,20,9.177540209532847e-13,7.9827,20,1,1.0677,0.9906,0.4012,0.4938,1.00088,1.00092,1.00091,72,0.3133,0.05,19.31863
