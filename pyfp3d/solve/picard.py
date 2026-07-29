@@ -710,10 +710,17 @@ def solve_subsonic_lifting(
     # Jacobian, so the corrected density is the whole change here; sigma is
     # rebuilt from each iterate's own donor map -- the density is lagged in this
     # driver anyway, so there is nothing extra to freeze.
+    if entropy_correction and use_upwind and upw.weighted:
+        raise NotImplementedError(
+            "entropy_correction needs the walk flux's donor map; this call uses "
+            "the kernel-mode (weighted) flux, which builds no single donor map. "
+            "Pass upwind_weighted=False or entropy_correction=False.")
     ent = EntropyOperator(op.n_tets) if entropy_correction else None
     sigma_history = []
     if ent is not None and use_upwind:
-        rho = rho * ent.sigma(q2l, upw._upstream, m_inf, gamma_air)
+        # the donor map must be BUILT before it is read -- see
+        # UpwindOperator.upstream_map (reading the raw buffer here segfaulted)
+        rho = rho * ent.sigma(q2l, upw.upstream_map(grad), m_inf, gamma_air)
         sigma_history.append((float(ent.sigma_min), int(ent.n_shock),
                               float(ent.m1_max), bool(ent.converged)))
     if use_upwind:
@@ -819,8 +826,8 @@ def solve_subsonic_lifting(
             n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
             rho_new = density_field(q2l, m_inf, gamma_air)
             if ent is not None and use_upwind:
-                rho_new = rho_new * ent.sigma(q2l, upw._upstream, m_inf,
-                                              gamma_air)
+                rho_new = rho_new * ent.sigma(q2l, upw.upstream_map(grad),
+                                              m_inf, gamma_air)
                 sigma_history.append(
                     (float(ent.sigma_min), int(ent.n_shock),
                      float(ent.m1_max), bool(ent.converged)))

@@ -459,7 +459,8 @@ class NewtonWorkspace:
         defeated it and the caller must not report convergence (GS1.4
         clamp-not-silent contract).
         """
-        upstream = frozen[0] if frozen is not None else self.upw._upstream
+        upstream = (frozen[0] if frozen is not None
+                    else self.upw.upstream_map(state["grad"]))
         sig = self.ent.sigma(state["q2l"], upstream, self.m_inf,
                              self.gamma_air)
         self.sigma_frozen = sig.copy()

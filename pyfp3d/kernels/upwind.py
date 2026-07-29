@@ -849,6 +849,26 @@ class UpwindOperator:
         self.n_floored = int(np.count_nonzero(self._rho_tilde == rho_floor))
         return self._rho_tilde
 
+    def upstream_map(self, grad: np.ndarray) -> np.ndarray:
+        """The walk's donor map u(e) at `grad` (view into the workspace buffer).
+
+        Exists because reading `self._upstream` directly is a trap: the buffer is
+        `np.empty`, and it is only filled as a SIDE EFFECT of a walk-mode
+        `rho_tilde` / `rho_tilde_sensitivities` call. GS1b.3 read it before the
+        first such call in the Picard driver and got a SEGMENTATION FAULT -- numba
+        indexed arrays with uninitialised int64 garbage (found 2026-07-29 by
+        flipping the entropy default ON; the default-off tests could not reach
+        that path). Callers that need the map must ask for it.
+        """
+        if self.weighted:
+            raise NotImplementedError(
+                "upstream_map is defined for the walk flux (weighted=False); "
+                "the kernel-mode flux has a dense neighbourhood dependence and "
+                "builds no single donor map.")
+        upstream_elements(self.face_neighbors, self.centroids,
+                          self._nodes, self._elements, grad, self._upstream)
+        return self._upstream
+
     def freeze_upwind_state(
         self,
         grad: np.ndarray,

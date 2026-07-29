@@ -145,24 +145,68 @@ def test_transport_is_thread_order_independent():
     assert np.array_equal(out[0], out[1])
 
 
-# --------------------------------------------------------------- criterion D
-def test_d_default_off_is_bit_identical():
-    """D: entropy_correction=False must reproduce the legacy solve BITWISE.
+# ------------------------------------------ criterion D / the scope boundary
+def test_scope_boundary_no_shock_means_bit_identical():
+    """★ The SCOPE of the correction, proved rather than surveyed: with no
+    supersonic cell anywhere, ON and OFF are bit-identical.
 
-    Not a tolerance check: the flag is supposed to leave the arithmetic
-    untouched (the sigma scaling sits behind a boolean inside the sensitivity
-    sweeps rather than being written as a multiply by a ones-array), so
-    anything other than bit-equality is a defect in that claim.
+    sigma = p02/p01 is exactly 1.0 at and below M = 1 and the detector only fires
+    on a supersonic->subsonic donor transition, so a subcritical solve cannot see
+    the correction at all. That is what bounds the re-baselining: only committed
+    evidence with a supersonic zone can move.
     """
+    mc, wc = cut_wake(read_mesh(MESH))
+    kw = dict(m_inf=0.50, alpha_deg=ALPHA, upwind_c=1.5, m_crit=0.95,
+              precond="direct", n_newton_max=40)
+    off = solve_newton_lifting(mc, wc, entropy_correction=False, **kw)
+    on = solve_newton_lifting(mc, wc, entropy_correction=True, **kw)
+    assert float(np.sqrt(off["mach2_max"])) < 1.0, \
+        "the probe is supercritical -- it cannot test the no-shock null"
+    assert np.array_equal(off["phi"], on["phi"])
+    assert np.array_equal(off["gamma"], on["gamma"])
+    assert on["sigma_min"] == 1.0 and on["n_shock_cells"] == 0
+
+
+def test_the_switch_actually_switches_at_transonic():
+    """The companion to the null: where there IS a shock, ON and OFF must give
+    measurably different states (otherwise the flag is decorative)."""
     mc, wc = cut_wake(read_mesh(MESH))
     kw = dict(m_inf=M_INF, alpha_deg=ALPHA, upwind_c=1.5, m_crit=0.95,
               freeze_tol=1e-6, freeze_refresh_max=8, precond="direct",
               direct_refactor_every=4, n_newton_max=80)
+    off = solve_newton_lifting(mc, wc, entropy_correction=False, **kw)
+    on = solve_newton_lifting(mc, wc, entropy_correction=True, **kw)
+    assert off["sigma_min"] is None and on["sigma_min"] < 1.0
+    assert abs(float(on["gamma"][0]) / float(off["gamma"][0]) - 1.0) > 1e-3
+
+
+def test_off_path_is_deterministic():
+    """The OFF path must be bit-reproducible run to run, so it stays usable as
+    the isentropic reference leg of every ON/OFF comparison."""
+    mc, wc = cut_wake(read_mesh(MESH))
+    kw = dict(m_inf=M_INF, alpha_deg=ALPHA, upwind_c=1.5, m_crit=0.95,
+              freeze_tol=1e-6, freeze_refresh_max=8, precond="direct",
+              direct_refactor_every=4, n_newton_max=80,
+              entropy_correction=False)
     a = solve_newton_lifting(mc, wc, **kw)
-    b = solve_newton_lifting(mc, wc, entropy_correction=False, **kw)
+    b = solve_newton_lifting(mc, wc, **kw)
     assert np.array_equal(a["phi"], b["phi"])
-    assert np.array_equal(a["gamma"], b["gamma"])
     assert a["n_newton"] == b["n_newton"]
+
+
+def test_upstream_map_must_be_built_before_use():
+    """Regression for a SEGMENTATION FAULT (2026-07-29, found by flipping the
+    default ON): the Picard driver read UpwindOperator._upstream before any walk
+    had filled it -- uninitialised int64 garbage, which numba then used as array
+    indices. The operator now validates the map instead of crashing, and
+    `upstream_map(grad)` is the way to obtain one.
+    """
+    ent = EntropyOperator(4)
+    q2 = np.full(4, float(q2_at_mach(1.2, 0.8)))
+    with pytest.raises(ValueError, match="out of range"):
+        ent.sigma(q2, np.array([0, 1, 999999, 3]), 0.8)
+    with pytest.raises(ValueError, match="expected"):
+        ent.sigma(q2, np.array([0, 1]), 0.8)
 
 
 # --------------------------------------------------------------- criterion C

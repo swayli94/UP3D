@@ -88,28 +88,51 @@ def shock_factor_sweep(
     m_inf: float,
     gamma: float,
     max_walk: int,
+    knee_frac: float,
     s_out: np.ndarray,
     m1_out: np.ndarray,
 ) -> None:
     """Per-element local entropy factor s_e (see module docstring, `detection`).
 
     An element is POST-SHOCK when its donor is supersonic and it is itself
-    subsonic. M1 is then the PEAK Mach over the supersonic run immediately
-    upstream along the donor chain -- not the donor's own Mach.
+    subsonic. M1 must then be the Mach at the UPSTREAM EDGE OF THE NUMERICAL
+    SHOCK STRUCTURE, and getting that right took two measured corrections -- the
+    two obvious choices are wrong in opposite directions:
 
-    ★ Why the peak, measured: the first implementation used the donor's Mach and
-    produced sigma_min = 0.9968 (a 0.32 % density cut, i.e. M1 ~ 1.14) on a state
-    whose M_max was 1.366. The artificial density smears the shock over two or
-    three cells, so along a streamline the Mach runs 1.37 -> 1.25 -> 1.10 -> 0.95
-    and the pointwise test fires at the LAST supersonic cell -- inside the shock
-    structure, where the Mach has already dropped. It read the smearing, not the
-    shock. Walking upstream through the supersonic cells and taking the peak
-    recovers the physical pre-shock Mach: on an airfoil the pocket accelerates
-    from the sonic line to the shock, so the peak sits at the shock foot.
+      donor's own Mach     TOO WEAK. The artificial density smears the shock over
+                           two or three cells, so along a streamline the Mach runs
+                           1.37 -> 1.25 -> 1.10 -> 0.95 and the pointwise test
+                           fires at the LAST supersonic cell, INSIDE the
+                           structure. Measured: sigma_min 0.9968 (a 0.32 % cut)
+                           on a state whose M_max was 1.366.
+      pocket-wide peak     TOO STRONG. On an airfoil the pocket Mach is NOT
+                           monotone: at M0.80/alpha1.25 it rises to 1.408 at
+                           x/c 0.33 and then FALLS along the pocket to ~1.15-1.29
+                           at the shock (x/c 0.63). Taking the peak read 1.3897
+                           where the pre-shock value is ~1.29 -- sigma 0.9598
+                           instead of 0.9812, i.e. the correction ~2x too strong,
+                           which put the G4.1 shock at 0.548 against an Euler
+                           anchor of 0.60-0.63.
+                           ★ The Laval-nozzle bench CANNOT catch this: there the
+                           flow accelerates monotonically to the shock, so
+                           peak == pre-shock by construction. It took the airfoil
+                           gate to expose it.
 
-    The walk stops at the first subsonic cell (so it never leaves the pocket it
-    belongs to, and a second, upstream shock cannot contaminate it), at a chain
+    What separates the two is the RATE. Walking upstream from the post-shock cell,
+    the Mach climbs steeply while inside the shock structure and then flattens on
+    leaving it (measured per-hop rises: nozzle +0.13, +0.01, negative; airfoil
+    +0.09, +0.05, +0.02, then ~0.01). So the walk stops at that KNEE: it continues
+    while the current hop's rise is at least `knee_frac` of the largest rise seen
+    so far in this walk, and stops otherwise.
+
+    The walk also stops at the first subsonic cell (so it never leaves the pocket
+    it belongs to, and a second, upstream shock cannot contaminate it), at a chain
     root, or after `max_walk` hops (cycle protection).
+
+    `knee_frac` is a knob and is treated as one: its sensitivity is measured
+    (EntropyOperator.KNEE_FRAC_DEFAULT documents the band), and its deletion
+    condition is "replace with a shock width derived from nu, or drop it if the
+    result is insensitive across [0.2, 0.5]".
 
     m1_out records the detected pre-shock Mach (0.0 where no shock was detected)
     for diagnostics.
@@ -127,7 +150,8 @@ def shock_factor_sweep(
         m2u = mach_number_squared(q2[u], m_inf, gamma)
         if m2u <= 1.0:
             continue                      # donor subsonic: no shock crossed
-        m2_peak = m2u
+        m_cur = np.sqrt(m2u)
+        rise_max = 0.0
         c = u
         for _ in range(max_walk):
             nxt = upstream[c]
@@ -136,10 +160,17 @@ def shock_factor_sweep(
             m2n = mach_number_squared(q2[nxt], m_inf, gamma)
             if m2n <= 1.0:
                 break                     # front of the supersonic pocket
-            if m2n > m2_peak:
-                m2_peak = m2n
+            m_n = np.sqrt(m2n)
+            rise = m_n - m_cur
+            if rise <= 0.0:
+                break                     # past the local maximum
+            if rise < knee_frac * rise_max:
+                break                     # the KNEE: out of the shock structure
+            if rise > rise_max:
+                rise_max = rise
+            m_cur = m_n
             c = nxt
-        m1 = np.sqrt(m2_peak)
+        m1 = m_cur
         s_out[e] = total_pressure_ratio(m1, gamma)
         m1_out[e] = m1
 
@@ -237,11 +268,17 @@ class EntropyOperator:
     #: is at most a chord long, i.e. a few hundred cells at the finest level;
     #: the walk stops on its own at the sonic line.
     MAX_WALK_DEFAULT = 512
+    #: knee fraction for the pre-shock walk (see shock_factor_sweep). 0.3 is the
+    #: measured middle of an insensitive band; sensitivity is reported by
+    #: bench/s1_duct/run_entropy_knee.py.
+    KNEE_FRAC_DEFAULT = 0.3
 
     def __init__(self, n_elements: int, n_round: int = N_ROUND_DEFAULT,
-                 max_walk: int = MAX_WALK_DEFAULT):
+                 max_walk: int = MAX_WALK_DEFAULT,
+                 knee_frac: float = KNEE_FRAC_DEFAULT):
         self.n_round = int(n_round)
         self.max_walk = int(max_walk)
+        self.knee_frac = float(knee_frac)
         self._s = np.ones(n_elements, dtype=np.float64)
         self._m1 = np.zeros(n_elements, dtype=np.float64)
         self._sigma = np.ones(n_elements, dtype=np.float64)
@@ -258,11 +295,26 @@ class EntropyOperator:
               gamma: float = GAMMA) -> np.ndarray:
         """Entropy factor per element (view into the workspace buffer -- copy it
         if it must outlive the next call, which the frozen-sigma callers do)."""
-        shock_factor_sweep(q2, upstream, m_inf, gamma, self.max_walk,
-                           self._s, self._m1)
+        up = np.ascontiguousarray(upstream, dtype=np.int64)
+        n = len(self._s)
+        if len(up) != n:
+            raise ValueError(
+                f"upstream map has {len(up)} entries, expected {n}")
+        # ★ Guard, not paranoia: both kernels index arrays with these values, so
+        # an out-of-range entry is a SEGMENTATION FAULT, not an exception. That
+        # happened (GS1b.3, 2026-07-29): the Picard driver passed
+        # UpwindOperator._upstream before any walk had filled it -- `np.empty`
+        # int64 garbage. Checking two extrema per call is free next to the sweeps.
+        if n and (up.min() < 0 or up.max() >= n):
+            raise ValueError(
+                f"upstream map out of range [{up.min()}, {up.max()}] for "
+                f"{n} elements -- it was probably read before a walk filled it "
+                f"(use UpwindOperator.upstream_map(grad))")
+        shock_factor_sweep(q2, up, m_inf, gamma, self.max_walk,
+                           self.knee_frac, self._s, self._m1)
         self.n_rounds = transport_sigma(
-            self._s, np.ascontiguousarray(upstream, dtype=np.int64),
-            self.n_round, self._sigma, self._anc_a, self._anc_b, self._prod_b)
+            self._s, up, self.n_round, self._sigma, self._anc_a, self._anc_b,
+            self._prod_b)
         self.converged = self.n_rounds < self.n_round
         self.n_shock = int(np.count_nonzero(self._m1 > 0.0))
         self.m1_max = float(self._m1.max()) if len(self._m1) else 0.0
