@@ -1,0 +1,2 @@
+level,n_dof,upwind_c,m_reached,at_target,usable,gamma,cl_p,x_shock,m_max,res_final,n_halvings,n_solves,entropy,sigma_min,n_shock_cells,m1_detected,n_sigma_refresh,wall_s
+fine,82356,1.5,0.775,False,True,0.19341255,0.384615,0.5667932935616228,1.34434,1.3848275009421948e-13,4,29,True,0.9777876261040841,280,1.3089718015731475,11,680.9

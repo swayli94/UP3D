@@ -57,11 +57,15 @@ M_NEXT = 0.7700
 REFRESH_CAPS = (0, 8, 20)
 
 
-def solve(mc, wc, m, phi=None, gam=None, refresh_max=8, ent=True):
+def solve(mc, wc, m, phi=None, gam=None, refresh_max=None, ent=True):
+    # GS1b.5(a) is a measured negative and the cap policy was restored, with the
+    # cap now an internal constant (newton._SIGMA_REFRESH_MAX). The refresh_max
+    # argument is kept as a no-op so this script's recorded CSV columns stay
+    # readable against the run that produced them.
     kw = dict(m_inf=m, alpha_deg=ALPHA, upwind_c=C, m_crit=0.95,
               freeze_tol=1e-6, freeze_refresh_max=8, precond="direct",
               direct_refactor_every=4, n_newton_max=80,
-              entropy_correction=ent, entropy_refresh_max=refresh_max)
+              entropy_correction=ent)
     if phi is not None:
         kw.update(phi_init=phi, gamma_init=gam, n_picard_seed=0)
     return solve_newton_lifting(mc, wc, **kw)
@@ -108,8 +112,8 @@ def main():
         rep = shock_report(wall_cp_curve(mc, r["phi"], z=0.5 * dz,
                                         m_inf=M_NEXT), M_NEXT)
         hist = r["sigma_history"]
-        dmax = max((h[3] for h in hist), default=0.0)
-        nshock = sorted({h[1] for h in hist})
+        dmax = max((h[4] for h in hist), default=0.0)
+        nshock = sorted({h[2] for h in hist})
         rows.append(dict(
             level=LEVEL, m_inf=M_NEXT, refresh_max=cap, usable=usable(r),
             converged=bool(r["converged"]), clamped=r.get("clamped"),

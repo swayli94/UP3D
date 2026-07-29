@@ -97,6 +97,26 @@ class _EliminatedKuttaRow:
         return -sla.lu_solve(self._lu, self._Kp @ x)
 
 
+#: GS1b.5(a): how many times the frozen entropy factor is rebuilt during a solve.
+#: An ALGORITHMIC CONSTANT, deliberately not a driver argument -- roadmap
+#: principle 4 forbids permanent user-facing knobs, and this number is not a
+#: tuning dial: it stops a MEASURED limit cycle (the post-shock set flips one cell
+#: on alternate steps, max|dsigma| pinned at 2.9e-2, the residual stalled at
+#: ~5e-6, and because the churn keeps the residual moving the driver's stall
+#: detector never fires either).
+#:
+#: GS1b.5 tried to remove it by binding sigma's rebuild to the existing freeze
+#: machinery, and MEASURED that as a negative: rebuilding only at the freeze
+#: events leaves sigma stale and medium wanders to M_max 2.33, stopping 0.0075
+#: short of the target; rebuilding live and then pinning at the freeze (with a
+#: cycle detector replacing the count) fixes medium but breaks FINE, which stops
+#: 0.0125 short. This cap-based policy is the only one of the three that reaches
+#: the target at all three mesh levels -- least principled, empirically most
+#: robust, and the underlying churn is in the DONOR MAP (GS1b.4), which none of
+#: the three policies touches.
+_SIGMA_REFRESH_MAX = 8
+
+
 class NewtonWorkspace:
     """Per-case precomputation for the coupled Newton solve: operators,
     the free/Dirichlet split, the Kutta row K, and the per-Mach-level
@@ -596,7 +616,6 @@ def solve_newton_lifting(
     kutta_estimator: str = "probe",
     external_rhs: Optional[np.ndarray] = None,
     entropy_correction: bool = False,
-    entropy_refresh_max: int = 8,
     entropy_kwargs: Optional[dict] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
@@ -734,9 +753,9 @@ def solve_newton_lifting(
     ws.sigma_frozen = None
     ws.sigma_converged = True
     if entropy_kwargs:
-        # GS1b.4: rebuild the entropy workspace with non-default smoothing widths
-        # (the sensitivity sweep needs them per call, and a reused workspace must
-        # not keep a previous call's settings).
+        # GS1b.4: rebuild the entropy workspace with non-default smoothing/walk
+        # settings (the sensitivity sweeps need them per call, and a reused
+        # workspace must not keep a previous call's settings).
         ws.ent = EntropyOperator(ws.op.n_tets, **entropy_kwargs)
 
     # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
@@ -1149,7 +1168,7 @@ def solve_newton_lifting(
         gamma = gamma + lam * dgamma
         R_free, F, state = R_try, F_try, state_try
         merit = merit_try
-        if entropy_correction and n_sigma_refresh < entropy_refresh_max:
+        if entropy_correction and n_sigma_refresh < _SIGMA_REFRESH_MAX:
             # GS1b.3: refresh the frozen entropy factor from the ACCEPTED state
             # and re-evaluate, so the next step's residual, Jacobian and line
             # search all belong to one and the same (frozen-sigma) system --
@@ -1157,7 +1176,7 @@ def solve_newton_lifting(
             # the system that will actually be solved. One extra residual eval
             # per Newton step; the linear solve dominates by far.
             #
-            # ★ Why the refresh STOPS after `entropy_refresh_max` (measured, not
+            # ★ Why the refresh STOPS after _SIGMA_REFRESH_MAX (measured, not
             # precautionary): the post-shock SET is a discrete selection, and it
             # limit-cycles. On coarse M0.7875/alpha1.25 one cell flips in and out
             # of the set on alternate steps forever (n_shock 73 <-> 74,
