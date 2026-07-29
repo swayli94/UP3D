@@ -1,0 +1,3 @@
+level,n_dof,upwind_c,m_reached,at_target,usable,gamma,cl_p,x_shock,m_max,res_final,n_halvings,n_solves,entropy,sigma_min,n_shock_cells,m1_detected,n_sigma_refresh,wall_s
+coarse,6106,1.5,0.7875,True,True,0.18914978,0.372523,0.5635472735242614,1.36618,1.2428420676727879e-12,0,7,False,,,,0,3.4
+medium,21874,1.5,0.7875,True,True,0.26426176,0.523426,0.6737918816715445,1.40441,7.849324183338725e-11,0,7,False,,,,0,27.1
