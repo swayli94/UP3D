@@ -597,6 +597,7 @@ def solve_newton_lifting(
     external_rhs: Optional[np.ndarray] = None,
     entropy_correction: bool = False,
     entropy_refresh_max: int = 8,
+    entropy_kwargs: Optional[dict] = None,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -732,6 +733,11 @@ def solve_newton_lifting(
     # and so an enabled call rebuilds sigma from this level's own seed.
     ws.sigma_frozen = None
     ws.sigma_converged = True
+    if entropy_kwargs:
+        # GS1b.4: rebuild the entropy workspace with non-default smoothing widths
+        # (the sensitivity sweep needs them per call, and a reused workspace must
+        # not keep a previous call's settings).
+        ws.ent = EntropyOperator(ws.op.n_tets, **entropy_kwargs)
 
     # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
     # `jacobian`/`amg_setup`/`gmres` this driver has always reported --
