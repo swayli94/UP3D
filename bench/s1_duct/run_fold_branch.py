@@ -1,6 +1,27 @@
 """GS1b.1: is there a fold? Follow the solution branch in M_inf and measure
 dGamma/dM_inf and the existence boundary M_inf_max(h).
 
+★★ RETRACTED BY GS1b.2 Q4 (2026-07-29) -- READ THIS BEFORE QUOTING ANY
+`M_inf_max` FROM THIS SCRIPT OR ITS CSVs. The step refinement below is ONE-SHOT
+(the `refined` flag), so this walker reports "the branch ends" at the first
+failure it cannot refine past. `run_fold_anatomy.py` re-probed all three
+terminations with smaller steps, seeded from the very same converged last-good
+states, and EVERY ONE of them walks past:
+
+    medium C=1.5   "ends" 0.7925 -> reaches 0.8015 (dGamma/dM peaks ~42 then
+                                    FALLS to 11.4: Gamma turning over smoothly)
+    fine   C=1.5   "ends" 0.7700 -> reaches 0.7790
+    fine   C=3.0   "ends" 0.7500 -> reaches 0.7725
+
+So `M_inf_max` as measured here is a CONTINUATION STEP-SIZE limit, not a limit
+point, and GS1b.1's fold verdict is withdrawn. What survives is the slope
+measurement on converged states (dGamma/dM_inf at fixed M_inf grows with
+refinement), which is unaffected by the walker. The sound acceptance quantity is
+the three-level cl spread at a fixed condition -- `run_h_convergence_vs_C.py`.
+
+Use `run_h_convergence_vs_C.py::continue_to` for new continuation work: it halves
+the step repeatedly (up to 4 times) instead of once.
+
 Why this quantity and not a singular value (round file 1.1): the Schur
 complement of the Gamma row is rendering-dependent -- the probe's |1-b| vanishes
 even at SUBSONIC M0.5 where everything converges (0.0670/0.0454/0.0309) while
@@ -41,6 +62,10 @@ OUT = HERE / "results"
 OUT.mkdir(exist_ok=True)
 
 ALPHA = 1.25
+#: GS1b.2 Q2: the dissipation constant is a shock-WEAKENING knob, so sweeping it
+#: at fixed h answers "does weakening the shock move the fold?" without any
+#: entropy-correction code. Overridable from the command line.
+UPWIND_C = 1.5
 M_START = 0.72
 DM_COARSE = 0.01
 DM_REFINE = 0.0025
@@ -52,7 +77,7 @@ LEVELS = (("coarse", DM_COARSE, DM_REFINE),
 
 
 def solve_at(mc, wc, m_inf, phi_init=None, gamma_init=None):
-    kw = dict(m_inf=m_inf, alpha_deg=ALPHA, upwind_c=1.5, m_crit=0.95,
+    kw = dict(m_inf=m_inf, alpha_deg=ALPHA, upwind_c=UPWIND_C, m_crit=0.95,
               freeze_tol=1e-6, freeze_refresh_max=8, precond="direct",
               direct_refactor_every=4, n_newton_max=80)
     if phi_init is not None:
@@ -126,16 +151,31 @@ def walk(level, dm, dm_fine, rows):
 
 
 def main():
+    global UPWIND_C, LEVELS
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--upwind-c", type=float, default=UPWIND_C)
+    ap.add_argument("--levels", nargs="+", default=None,
+                    help="subset of coarse/medium/fine")
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    UPWIND_C = a.upwind_c
+    if a.levels:
+        LEVELS = tuple(l for l in LEVELS if l[0] in a.levels)
+    print(f"upwind_c = {UPWIND_C}, levels = {[l[0] for l in LEVELS]}",
+          flush=True)
     rows = []
     mmax = {}
     for level, dm, dmf in LEVELS:
         mmax[level] = walk(level, dm, dmf, rows)
 
-    with open(OUT / "gs1b_1_fold_branch.csv", "w", newline="") as fh:
+    name = a.out or (f"gs1b_1_fold_branch_C{UPWIND_C:g}.csv"
+                     if UPWIND_C != 1.5 else "gs1b_1_fold_branch.csv")
+    with open(OUT / name, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)
-    print("\nwrote", OUT / "gs1b_1_fold_branch.csv")
+    print("\nwrote", OUT / name)
 
     print("\n=== branch existence boundary ===")
     for level, _, _ in LEVELS:
