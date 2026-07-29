@@ -32,6 +32,7 @@ Probes (cheap, ~30 s total, coarse meshes only):
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -101,7 +102,22 @@ def collect():
 def diff(before_npz, after_npz):
     a = np.load(before_npz)
     b = np.load(after_npz)
-    keys = sorted(set(a.files) | set(b.files))
+    # ★ GS1b.3: the THREAD COUNT is part of the environment, not a detail.
+    # Measured 2026-07-29: comparing an 8-thread run against a 16-thread
+    # reference reports `gamma_wing` and `phi_wing` as moved (79 / 6470 values,
+    # 16 / 2 ULPs) with NO code change at all -- those probes run parallel
+    # kernels whose summation order follows the thread count. Attributing that
+    # to a code change is exactly the false attribution this tool exists to
+    # prevent, so a mismatch is now reported before the table.
+    ta = str(a["_n_threads"]) if "_n_threads" in a.files else "unrecorded"
+    tb = str(b["_n_threads"]) if "_n_threads" in b.files else "unrecorded"
+    if ta != tb or "unrecorded" in (ta, tb):
+        print(f"!! thread counts: before = {ta}, after = {tb}. Bit-identity is "
+              f"only meaningful at the SAME count -- 2-16 ULP differences in the "
+              f"parallel-kernel probes (phi_wing / gamma_wing) are expected "
+              f"across counts and are NOT a code change.\n")
+    keys = sorted(k for k in set(a.files) | set(b.files)
+                  if not k.startswith("_"))
     print(f"{'probe':18s} {'bitwise':>8s} {'n_diff':>9s} "
           f"{'max|d|':>11s} {'max rel':>10s} {'ULPs':>7s}")
     n_moved = 0
@@ -143,6 +159,9 @@ def main():
     out = Path(args.save)
     out.parent.mkdir(parents=True, exist_ok=True)
     data = collect()
+    data["_n_threads"] = np.array(
+        [int(os.environ.get("NUMBA_NUM_THREADS", 0)),
+         int(os.environ.get("OMP_NUM_THREADS", 0))])
     np.savez(out, **data)
     print(f"wrote {out} ({len(data)} probes)")
     for k, v in sorted(data.items()):

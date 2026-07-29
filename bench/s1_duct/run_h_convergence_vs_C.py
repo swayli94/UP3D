@@ -60,12 +60,17 @@ DM0 = {"coarse": 0.01, "medium": 0.01, "fine": 0.02}
 MAX_HALVINGS = 4
 LEVELS = ("coarse", "medium", "fine")
 C_LIST = (1.5, 3.0)
+#: GS1b.3 criteria F/G/H: --entropy runs the SAME protocol with the
+#: entropy-corrected density, so the three-level spread is compared like for
+#: like (same C, same condition, same adaptive continuation).
+ENTROPY = False
 
 
 def solve_at(mc, wc, m, C, phi=None, gam=None):
     kw = dict(m_inf=m, alpha_deg=ALPHA, upwind_c=C, m_crit=0.95,
               freeze_tol=1e-6, freeze_refresh_max=8, precond="direct",
-              direct_refactor_every=4, n_newton_max=80)
+              direct_refactor_every=4, n_newton_max=80,
+              entropy_correction=ENTROPY)
     if phi is not None:
         kw.update(phi_init=phi, gamma_init=gam, n_picard_seed=0)
     return solve_newton_lifting(mc, wc, **kw)
@@ -101,6 +106,21 @@ def continue_to(mc, wc, C, level, m_target):
 
 
 def main():
+    global ENTROPY, C_LIST, LEVELS
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--entropy", action="store_true")
+    ap.add_argument("--c-list", nargs="+", type=float, default=None)
+    ap.add_argument("--levels", nargs="+", default=None)
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    ENTROPY = bool(a.entropy)
+    if a.c_list:
+        C_LIST = tuple(a.c_list)
+    if a.levels:
+        LEVELS = tuple(a.levels)
+    print(f"entropy_correction = {ENTROPY}, C = {list(C_LIST)}, "
+          f"levels = {list(LEVELS)}")
     rows = []
     for C in C_LIST:
         print(f"\n########## C = {C} ##########", flush=True)
@@ -132,18 +152,26 @@ def main():
                 cl_p=round(f["cl"], 6), x_shock=rep["upper"].get("x_shock"),
                 m_max=round(float(np.sqrt(r["mach2_max"])), 5),
                 res_final=r["residual_history"][-1], n_halvings=halv,
-                n_solves=n_solve, wall_s=round(wall, 1)))
+                n_solves=n_solve, entropy=ENTROPY,
+                # GS1b.3 criterion H: the correction must NOT decay with h
+                sigma_min=r.get("sigma_min"),
+                n_shock_cells=r.get("n_shock_cells"),
+                m1_detected=r.get("m1_max"),
+                n_sigma_refresh=r.get("n_sigma_refresh"),
+                wall_s=round(wall, 1)))
             print(f"  {level:7s} C={C}: M_reached={m_reached:.5f} "
                   f"{'(TARGET)' if rows[-1]['at_target'] else '(SHORT)'} "
                   f"gamma={rows[-1]['gamma']:.6f} cl_p={rows[-1]['cl_p']:.5f} "
                   f"x_sh={rows[-1]['x_shock']} M_max={rows[-1]['m_max']} "
                   f"halvings={halv} solves={n_solve} ({wall:.0f}s)", flush=True)
 
-    with open(OUT / "gs1b_2_q5_h_convergence.csv", "w", newline="") as fh:
+    name = a.out or ("gs1b_3_h_convergence_entropy.csv" if ENTROPY
+                     else "gs1b_2_q5_h_convergence.csv")
+    with open(OUT / name, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)
-    print("\nwrote", OUT / "gs1b_2_q5_h_convergence.csv")
+    print("\nwrote", OUT / name)
 
     print(f"\n=== three-level cl_p at M {M_TARGET} / alpha {ALPHA} ===")
     for C in C_LIST:

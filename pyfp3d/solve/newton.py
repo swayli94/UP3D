@@ -58,6 +58,7 @@ import scipy.sparse.linalg as spla
 
 from pyfp3d.constraints.dirichlet import farfield_dirichlet, freestream_phi
 from pyfp3d.constraints.wake import WakeConstraint, kutta_targets
+from pyfp3d.kernels.entropy import EntropyOperator
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.kernels.upwind import UpwindOperator
 from pyfp3d.physics.isentropic import (
@@ -217,6 +218,17 @@ class NewtonWorkspace:
         self.op = PicardOperator(mesh_cut.nodes, mesh_cut.elements)
         self.upw = UpwindOperator(mesh_cut.nodes, mesh_cut.elements,
                                   weighted=False)
+        # GS1b.3 entropy correction (phase two, docs/dev_phase_two/
+        # 20260729-0700-s1b-entropy-implementation.md). `sigma_frozen` is None
+        # unless the driver enabled the correction; when set it is held FIXED
+        # across the residual, the Jacobian and the line search of one Newton
+        # step and refreshed between steps (refresh_sigma), because sigma
+        # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
+        # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
+        # unlike the piecewise-constant upstream selection.
+        self.ent = EntropyOperator(self.op.n_tets)
+        self.sigma_frozen = None
+        self.sigma_converged = True
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
         self.n_st = wc.n_stations
@@ -346,6 +358,13 @@ class NewtonWorkspace:
         lim = q2l == q2n
         n_limited = int(np.count_nonzero(~lim))
         rho = density_field(q2l, self.m_inf, self.gamma_air)
+        if self.sigma_frozen is not None:
+            # rho_s = sigma * rho_isen(q^2) (GS1b.3). The artificial-density
+            # blend downstream consumes `rho` as data, so the entropy factor
+            # needs no kernel change here; the JACOBIAN does need sigma
+            # separately (assemble_coupled) because the sweep computes
+            # drho/dq^2 analytically from q^2.
+            rho = rho * self.sigma_frozen
         if self.m_inf > 0.0 and frozen is not None:
             rho_t = self.upw.rho_tilde_frozen(
                 q2l, rho, frozen[0], frozen[1], self.m_inf, upwind_c,
@@ -419,10 +438,33 @@ class NewtonWorkspace:
         state = {
             "phi_red": phi_red, "phi_cut": phi_cut, "grad": grad,
             "q2l": q2l, "lim": lim, "rho": rho, "rho_t": rho_t,
+            "sigma": self.sigma_frozen,
             "n_limited": n_limited, "n_floored": n_floored,
             "nu_max": nu_max, "n_nu_active": n_nu_active,
         }
         return R_free, F, state
+
+    def refresh_sigma(self, state, frozen=None) -> bool:
+        """Recompute the frozen entropy factor from `state` (GS1b.3).
+
+        Called by the driver at the START of a Newton step, so the whole step
+        (residual, Jacobian, line search) shares one sigma. The donor map comes
+        from the freeze when the driver is in its frozen-assignment phase, and
+        otherwise from the live walk that the last `eval_residual` ran -- the
+        SAME map the flux used, which is the point: sigma and the flux must
+        share their notion of "upstream" or the entropy lands in the wrong
+        cells.
+
+        Returns the transport's convergence flag; False means a donor cycle
+        defeated it and the caller must not report convergence (GS1.4
+        clamp-not-silent contract).
+        """
+        upstream = frozen[0] if frozen is not None else self.upw._upstream
+        sig = self.ent.sigma(state["q2l"], upstream, self.m_inf,
+                             self.gamma_air)
+        self.sigma_frozen = sig.copy()
+        self.sigma_converged = self.ent.converged
+        return self.ent.converged
 
     def assemble_coupled(self, state, upwind_c: float, m_crit: float,
                          rho_floor: float, frozen=None):
@@ -433,11 +475,13 @@ class NewtonWorkspace:
             upstream = frozen[0]
             s_e, s_u = self.upw.rho_tilde_frozen_sensitivities(
                 state["q2l"], state["rho"], frozen[0], frozen[1],
-                self.m_inf, upwind_c, m_crit, self.gamma_air, rho_floor)
+                self.m_inf, upwind_c, m_crit, self.gamma_air, rho_floor,
+                sigma=state.get("sigma"))
         elif self.m_inf > 0.0:
             s_e, s_u, upstream = self.upw.rho_tilde_sensitivities(
                 state["grad"], state["q2l"], state["rho"], self.m_inf,
-                upwind_c, m_crit, self.gamma_air, rho_floor)
+                upwind_c, m_crit, self.gamma_air, rho_floor,
+                sigma=state.get("sigma"))
         else:
             n_tets = self.op.n_tets
             s_e = np.zeros(n_tets)
@@ -550,6 +594,8 @@ def solve_newton_lifting(
     tip_taper: Optional[np.ndarray] = None,
     kutta_estimator: str = "probe",
     external_rhs: Optional[np.ndarray] = None,
+    entropy_correction: bool = False,
+    entropy_refresh_max: int = 8,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -679,6 +725,12 @@ def solve_newton_lifting(
             "the NewtonWorkspace with the vector and pass workspace=... "
             "instead of forwarding external_rhs alongside it")
     ws.set_mach(m_inf)
+    # GS1b.3: a REUSED workspace may carry a sigma from a previous call (the
+    # transonic ramp hands the same workspace down the Mach levels). Clear it so
+    # a call with entropy_correction=False is bit-identical whatever ran before,
+    # and so an enabled call rebuilds sigma from this level's own seed.
+    ws.sigma_frozen = None
+    ws.sigma_converged = True
 
     # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
     # `jacobian`/`amg_setup`/`gmres` this driver has always reported --
@@ -742,6 +794,22 @@ def solve_newton_lifting(
                                         m_cap, rho_floor)
     timings["residual"] += time.perf_counter() - t0
     merit = float(R_free @ R_free + F @ F)
+
+    sigma_history = []             # (sigma_min, n_shock, m1_max, dsigma, conv)
+    n_sigma_refresh = 0
+    if entropy_correction:
+        # GS1b.3: the seed state is isentropic (sigma_frozen is None above), so
+        # build sigma from it and re-evaluate before the loop -- from here on
+        # every reported residual belongs to the entropy-corrected system.
+        ws.refresh_sigma(state, frozen=None)
+        sigma_history.append((float(ws.ent.sigma_min), int(ws.ent.n_shock),
+                              float(ws.ent.m1_max), 0.0,
+                              bool(ws.ent.converged)))
+        t0 = time.perf_counter()
+        R_free, F, state = ws.eval_residual(phi_free, gamma, upwind_c, m_crit,
+                                            m_cap, rho_floor)
+        timings["residual"] += time.perf_counter() - t0
+        merit = float(R_free @ R_free + F @ F)
 
     frozen = None
     n_freeze_refresh = 0
@@ -1074,11 +1142,57 @@ def solve_newton_lifting(
         gamma = gamma + lam * dgamma
         R_free, F, state = R_try, F_try, state_try
         merit = merit_try
+        if entropy_correction and n_sigma_refresh < entropy_refresh_max:
+            # GS1b.3: refresh the frozen entropy factor from the ACCEPTED state
+            # and re-evaluate, so the next step's residual, Jacobian and line
+            # search all belong to one and the same (frozen-sigma) system --
+            # and so the residual reported for the next step is the residual of
+            # the system that will actually be solved. One extra residual eval
+            # per Newton step; the linear solve dominates by far.
+            #
+            # ★ Why the refresh STOPS after `entropy_refresh_max` (measured, not
+            # precautionary): the post-shock SET is a discrete selection, and it
+            # limit-cycles. On coarse M0.7875/alpha1.25 one cell flips in and out
+            # of the set on alternate steps forever (n_shock 73 <-> 74,
+            # max|dsigma| pinned at 2.9e-2, sigma_min alternating in the 7th
+            # digit) and the residual stalls at ~5e-6 -- the same
+            # selection-churn limit cycle the project already knows from the
+            # level-set Newton (phase-one B15/B21): a discontinuous selection is
+            # not something Newton can resolve. Holding sigma after a few
+            # refreshes turns the tail into a FIXED smooth system, which Newton
+            # finishes quadratically -- exactly the existing freeze-the-selection
+            # discipline, applied to the same class of object. The state is then
+            # a frozen-sigma solution and the driver reports the final sigma
+            # delta so the caller can see how much it was frozen against.
+            sigma_prev = ws.sigma_frozen
+            ws.refresh_sigma(state, frozen=frozen)
+            sigma_delta = (0.0 if sigma_prev is None else
+                           float(np.max(np.abs(ws.sigma_frozen
+                                               - sigma_prev))))
+            n_sigma_refresh += 1
+            sigma_history.append(
+                (float(ws.ent.sigma_min), int(ws.ent.n_shock),
+                 float(ws.ent.m1_max), sigma_delta, bool(ws.ent.converged)))
+            rec["sigma_min"] = float(ws.ent.sigma_min)
+            rec["sigma_delta"] = sigma_delta
+            t0 = time.perf_counter()
+            R_free, F, state = ws.eval_residual(
+                phi_free, gamma, upwind_c, m_crit, m_cap, rho_floor,
+                frozen=frozen)
+            timings["residual"] += time.perf_counter() - t0
+            merit = float(R_free @ R_free + F @ F)
 
     if step_records:
         _close_step(step_records[-1])
     if converged and accept_reason is None:
         accept_reason = "tol"          # frozen-phase acceptance paths
+    if converged and not ws.sigma_converged:
+        # GS1b.3 + the GS1.4 clamp-not-silent contract: a donor cycle defeated
+        # the entropy transport, so sigma is garbage on part of the mesh and the
+        # residual being zero says nothing about the flow. Refuse to report
+        # convergence rather than hand back a state built on it.
+        converged = False
+        accept_reason = "sigma_transport_not_converged"
     q2n = state["q2l"]
     mach2_max = float(np.max(mach_squared_field(q2n, m_inf, gamma_air)))
     # Legacy aliases over the canonical buckets, so cases/demo/p8_newton keeps
@@ -1120,6 +1234,15 @@ def solve_newton_lifting(
         # GS1.4: one flag for callers -- this driver already REFUSES to report
         # converged while clamped, but the counters were easy to ignore.
         "clamped": bool(state["n_limited"] > 0 or state["n_floored"] > 0),
+        # GS1b.3 entropy-correction diagnostics (all None/empty when off)
+        "entropy_correction": bool(entropy_correction),
+        "sigma_history": sigma_history,
+        "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),
+        "n_shock_cells": (int(ws.ent.n_shock) if entropy_correction else None),
+        "m1_max": (float(ws.ent.m1_max) if entropy_correction else None),
+        "sigma_transport_converged": bool(ws.sigma_converged),
+        "n_sigma_refresh": n_sigma_refresh,
+        "sigma_delta_final": (sigma_history[-1][3] if sigma_history else None),
         "jacobian_nnz": getattr(ws.op, "newton_nnz", None),
         "n_term3_active": getattr(ws.op, "n_term3_active", None),
         "n_refactor": n_refactor,

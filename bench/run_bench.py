@@ -29,6 +29,7 @@ tolerance (see TOL below) -- that table is what a round's report quotes.
 """
 
 import argparse
+import os
 import csv
 import platform
 import sys
@@ -226,13 +227,32 @@ FIELDS = ["case", "n_dof", "nnz", "converged", "wall_s", "n_newton", "n_gmres",
           "cl_p", "cl_kj", "gamma_mean", "x_shock", "m_max",
           "t_residual_ms", "t_matrix_ms", "t_amg_setup_s", "t_cg_amg_s",
           "cg_iters", "cg_info", "t_splu_s", "splu_fill_ratio",
-          "t_splu_solve_ms", "t_precond", "t_linsolve", "error"]
+          "t_splu_solve_ms", "t_precond", "t_linsolve", "n_threads", "error"]
 
 
+#: ★ GS1b.3 (2026-07-29, measured): the timing metrics are wall clock, so a
+#: baseline taken at a different THREAD COUNT reports them as moved with no code
+#: change at all (8t vs the 16t runner default moved t_residual_ms by 85 %,
+#: t_precond / t_linsolve by 13-27 %). The count now travels in the CSV and
+#: `compare` says so up front -- the same fix bitcheck.py got the same day.
+#: Separately, and recorded because it was mis-attributable: the `wing/coarse`
+#: n_newton 17 -> 18 against the 2026-07-28 baseline is NOT an entropy-correction
+#: effect. Running this script at commit a2cb9c3 (before any GS1b.3 library
+#: change) also gives 18, with cl_p, gamma_mean, m_max and n_gmres identical. It
+#: traces to GS1.4, which made solve_subsonic_lifting refuse `converged` while
+#: clamped and so changed the Picard SEED the wing Newton starts from -- baseline
+#: staleness from an earlier round, not this one.
 def compare(new_rows, baseline_csv):
     with open(baseline_csv, newline="") as fh:
         base = {r["case"]: r for r in csv.DictReader(fh)}
     print(f"\n=== compare vs {baseline_csv} ===")
+    here = os.environ.get("NUMBA_NUM_THREADS", "unset")
+    there = next((r.get("n_threads") for r in base.values()
+                  if r.get("n_threads")), None)
+    if str(there) != str(here):
+        print(f"  !! threads: baseline {there or 'unrecorded'}, this run {here}"
+              f" -- TIMING metrics are not comparable across thread counts;"
+              f" read cl_p / gamma_mean / m_max / n_newton instead.")
     moved = 0
     for row in new_rows:
         b = base.get(row["case"])
@@ -335,6 +355,9 @@ def main():
     out = Path(args.out) if args.out else OUT / f"bench_{stamp}.csv"
     with open(out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=FIELDS, extrasaction="ignore")
+        nth = os.environ.get("NUMBA_NUM_THREADS", "unset")
+        for r in rows:
+            r.setdefault("n_threads", nth)
         w.writeheader()
         w.writerows(rows)
     print(f"\nwrote {out}")

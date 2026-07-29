@@ -31,6 +31,7 @@ import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
+from pyfp3d.kernels.entropy import EntropyOperator
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.kernels.upwind import UpwindOperator
 from pyfp3d.meshgen.extrude import extrude_single_layer
@@ -148,7 +149,8 @@ class DuctSystem:
 
     def __init__(self, mesh, m_inf: float, upwind_c: float = 1.5,
                  m_crit: float = 0.95, rho_floor: float = 0.05,
-                 gamma: float = GAMMA):
+                 gamma: float = GAMMA, entropy: bool = False,
+                 entropy_refresh_max: int = 8):
         self.mesh = mesh
         self.nodes = np.ascontiguousarray(mesh.nodes, dtype=np.float64)
         self.elements = np.ascontiguousarray(mesh.elements)
@@ -156,6 +158,16 @@ class DuctSystem:
         self.upw = UpwindOperator(self.nodes, self.elements, weighted=False)
         self.m_inf, self.C, self.m_crit = m_inf, upwind_c, m_crit
         self.rho_floor, self.gamma = rho_floor, gamma
+        # GS1b.3: the entropy-corrected density, with the SAME frozen-sigma
+        # semantics as pyfp3d.solve.newton (sigma held over a step, refreshed
+        # between steps, refresh stopped after a cap because the post-shock SET
+        # limit-cycles) -- so this bench measures the shipped mechanism, not a
+        # bench-local variant of it.
+        self.entropy = bool(entropy)
+        self.entropy_refresh_max = int(entropy_refresh_max)
+        self.ent = EntropyOperator(self.op.n_tets) if entropy else None
+        self.sigma = None
+        self.n_sigma_refresh = 0
 
         dir_nodes = np.unique(np.concatenate([
             mesh.boundary_faces["inlet"].ravel(),
@@ -169,10 +181,23 @@ class DuctSystem:
         grad, q2 = self.op.velocities(phi)
         grad, q2 = grad.copy(), q2.copy()
         rho = density_field(q2, self.m_inf, self.gamma)
+        if self.sigma is not None:
+            rho = rho * self.sigma
         rho_t = self.upw.rho_tilde(grad, q2, rho, self.m_inf, self.C,
                                    self.m_crit, self.gamma,
                                    self.rho_floor).copy()
         return grad, q2, rho, rho_t
+
+    def refresh_sigma(self, phi):
+        """Rebuild the frozen sigma from `phi` using the donor map of the walk
+        that the flux itself uses (upw._upstream is filled by state())."""
+        _, q2, _, _ = self.state(phi)
+        prev = self.sigma
+        sig = self.ent.sigma(q2, self.upw._upstream, self.m_inf, self.gamma)
+        self.sigma = sig.copy()
+        self.n_sigma_refresh += 1
+        return (0.0 if prev is None
+                else float(np.max(np.abs(self.sigma - prev))))
 
     def residual(self, phi):
         _, _, _, rho_t = self.state(phi)
@@ -183,6 +208,8 @@ class DuctSystem:
         """Damped Newton at frozen upstream selection (the shipped
         sensitivities). Returns (phi, info)."""
         phi = np.asarray(phi0, dtype=np.float64).copy()
+        if self.entropy:
+            self.refresh_sigma(phi)
         R, _ = self.residual(phi)
         hist = [float(np.max(np.abs(R[self.free])))]
         n_used = 0
@@ -221,6 +248,10 @@ class DuctSystem:
                                      residual_history=hist, n_newton=n_used)
                 rt, lam, trial = best
             phi = trial
+            if self.entropy and self.n_sigma_refresh < self.entropy_refresh_max:
+                self.refresh_sigma(phi)
+                Rt, _ = self.residual(phi)
+                rt = float(np.max(np.abs(Rt[self.free])))
             hist.append(rt)
             n_used = it + 1
             if verbose:

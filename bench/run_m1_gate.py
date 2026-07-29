@@ -41,6 +41,16 @@ LEVELS = ("coarse", "medium")
 
 
 def main():
+    # GS1b.3: --entropy re-runs the SAME gate with the entropy-corrected
+    # density. The three criteria, the condition, the C sweep and the recipe are
+    # untouched -- only the density law changes, so the FAIL recorded on
+    # 2026-07-29 stays directly comparable.
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--entropy", action="store_true")
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    print(f"entropy_correction = {a.entropy}")
     rows = []
     for level in LEVELS:
         path = REPO / f"cases/meshes/naca0012_2.5d/{level}.msh"
@@ -56,7 +66,7 @@ def main():
                     mc, wc, m_inf=M_INF, alpha_deg=ALPHA, upwind_c=C,
                     m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
                     precond="direct", direct_refactor_every=4,
-                    n_newton_max=80)
+                    n_newton_max=80, entropy_correction=a.entropy)
                 err = ""
             except Exception as exc:                           # noqa: BLE001
                 rows.append(dict(level=level, C=C, converged=False,
@@ -82,7 +92,15 @@ def main():
                   f"cl={rows[-1]['cl_p']} x_shock={rows[-1]['x_shock']} "
                   f"M_max={rows[-1]['m_max']}", flush=True)
 
-    with open(HERE / "results" / "m1_gate.csv", "w", newline="") as fh:
+    # ★ `bench/results/` is gitignored (it holds the big bitcheck npz dumps), so
+    # gate evidence goes to `bench/gate_results/`, which is TRACKED. Found
+    # 2026-07-29: the GS1.5 close-out round file claimed the M1 FAIL artifact was
+    # committed and it never was -- discipline #3 says a number living only in a
+    # .md is not evidence, and that was exactly the situation.
+    out_dir = HERE / "gate_results"
+    out_dir.mkdir(exist_ok=True)
+    out_csv = out_dir / ("m1_gate_entropy.csv" if a.entropy else "m1_gate.csv")
+    with open(out_csv, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in rows for k in r}))
         w.writeheader()
         w.writerows(rows)

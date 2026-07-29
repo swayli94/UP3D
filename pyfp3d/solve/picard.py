@@ -18,6 +18,7 @@ from typing import Dict, Optional
 
 import numpy as np
 
+from pyfp3d.kernels.entropy import EntropyOperator
 from pyfp3d.kernels.residual import assemble_residual, assemble_stiffness_matrix
 from pyfp3d.solve.linear import apply_dirichlet, solve_cg_amg
 from pyfp3d.solve.timing import finalize, new_timings, phase, snapshot, step_delta
@@ -457,6 +458,7 @@ def solve_subsonic_lifting(
     tol_residual: Optional[float] = None,
     farfield_spanwise_gamma: bool = False,
     body_source_rhs: Optional[np.ndarray] = None,
+    entropy_correction: bool = False,
 ) -> Dict[str, object]:
     """
     Lifting subsonic full-potential solve on a wake-cut mesh: NESTED
@@ -703,6 +705,17 @@ def solve_subsonic_lifting(
     grad, q2 = op.velocities(phi_cut)
     q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
     rho = density_field(q2l, m_inf, gamma_air)
+    # GS1b.3 entropy correction: rho_s = sigma * rho_isen with sigma = p02/p01
+    # at the pre-shock Mach (docs/dev_phase_two/20260729-0700-...). Picard has no
+    # Jacobian, so the corrected density is the whole change here; sigma is
+    # rebuilt from each iterate's own donor map -- the density is lagged in this
+    # driver anyway, so there is nothing extra to freeze.
+    ent = EntropyOperator(op.n_tets) if entropy_correction else None
+    sigma_history = []
+    if ent is not None and use_upwind:
+        rho = rho * ent.sigma(q2l, upw._upstream, m_inf, gamma_air)
+        sigma_history.append((float(ent.sigma_min), int(ent.n_shock),
+                              float(ent.m1_max), bool(ent.converged)))
     if use_upwind:
         rho_t = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
                               gamma_air).copy()
@@ -805,6 +818,12 @@ def solve_subsonic_lifting(
             q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
             n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
             rho_new = density_field(q2l, m_inf, gamma_air)
+            if ent is not None and use_upwind:
+                rho_new = rho_new * ent.sigma(q2l, upw._upstream, m_inf,
+                                              gamma_air)
+                sigma_history.append(
+                    (float(ent.sigma_min), int(ent.n_shock),
+                     float(ent.m1_max), bool(ent.converged)))
             if use_upwind:
                 rho_t_new = upw.rho_tilde(grad, q2l, rho_new, m_inf, upwind_c,
                                           m_crit, gamma_air).copy()
@@ -870,7 +889,11 @@ def solve_subsonic_lifting(
         # machine-zero spurious solution 40 cells from the true one, and a
         # clamped seed silently hands that branch to the caller.
         clamped = (n_limited > 0
-                   or (int(upw.n_floored) if use_upwind else 0) > 0)
+                   or (int(upw.n_floored) if use_upwind else 0) > 0
+                   # GS1b.3: a defeated entropy transport is a clamp-class
+                   # condition -- sigma is garbage on part of the mesh, so a
+                   # small density lag says nothing (GS1.4 contract).
+                   or (ent is not None and not ent.converged))
         if kutta_converged and drho < tol_rho and res_ok and not clamped:
             converged = True
             break
@@ -901,7 +924,15 @@ def solve_subsonic_lifting(
         # GS1.4: one flag instead of two counters -- a clamped state is not a
         # solution of the discrete equations, whatever the residual says.
         "clamped": bool(n_limited > 0
-                        or (int(upw.n_floored) if use_upwind else 0) > 0),
+                        or (int(upw.n_floored) if use_upwind else 0) > 0
+                        or (ent is not None and not ent.converged)),
+        # GS1b.3 diagnostics (empty / None when the correction is off)
+        "entropy_correction": bool(entropy_correction),
+        "sigma_history": sigma_history,
+        "sigma_min": (float(ent.sigma_min) if ent is not None else None),
+        "n_shock_cells": (int(ent.n_shock) if ent is not None else None),
+        "sigma_transport_converged": (True if ent is None
+                                      else bool(ent.converged)),
         "n_cg_total": n_cg_total,
         "n_solves_total": n_solves_total,
     }
