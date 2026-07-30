@@ -97,6 +97,7 @@ def solve_transonic_lifting(
     damping_theta: Optional[float] = TRANSONIC_DEFAULTS["damping_theta"],
     pseudo_dt: Optional[float] = None,
     tol_gamma: float = TRANSONIC_DEFAULTS["tol_gamma"],
+    tol_residual: float = 1e-8,
     n_picard_seed: int = TRANSONIC_DEFAULTS["n_picard_seed"],
     n_picard_eval: int = TRANSONIC_DEFAULTS["n_picard_eval"],
     max_gamma_evals: int = TRANSONIC_DEFAULTS["max_gamma_evals"],
@@ -331,7 +332,43 @@ def solve_transonic_lifting(
     out["mach_levels"] = levels
     out["n_picard_total"] = n_picard_total
     out["kutta_converged"] = mismatch < tol_gamma
-    out["converged"] = bool(physical and mismatch < tol_gamma)
+    #: GS1b.8 (phase two): the FIELD RESIDUAL is now part of `converged`.
+    #:
+    #: What this fixes, measured (GS1b.7): at NACA0012 coarse M0.80/alpha1.25 this
+    #: driver's terminal state carries |R| = 2.20e-04 against the coupled Newton's
+    #: 5.46e-12 -- EIGHT orders apart. The Newton, handed this state's phi, walks
+    #: off it in six steps back to its own answer, and the Newton's residual
+    #: evaluated AT this state is 2.198e-04: it is not a solution of the same
+    #: discrete equations. The shock sits 0.054c away from the converged one --
+    #: 2.7x the +-0.02 tolerance the M1 product criterion asks of a shock position.
+    #:
+    #: The old predicate (physical AND Kutta) was not an oversight: it has a name
+    #: in this module's docstring, the "P4 engineering-converged regime". The
+    #: definition was disclosed; its COST was never measured. So the flag is now
+    #: SPLIT, so that the two notions cannot impersonate one another:
+    #:   converged              physical AND Kutta AND |R| < tol_residual
+    #:   engineering_converged  the old semantics, under its own name
+    #: and `residual_final` / `not_converged_reason` say what was actually reached.
+    res_final = float(out["residual_history"][-1]
+                      if out.get("residual_history") else np.inf)
+    out["residual_final"] = res_final
+    out["engineering_converged"] = bool(physical and mismatch < tol_gamma)
+    out["converged"] = bool(physical and mismatch < tol_gamma
+                            and res_final < tol_residual)
+    if out["converged"]:
+        out["not_converged_reason"] = None
+    elif not physical:
+        out["not_converged_reason"] = (
+            f"not physical (mach2_max {r['mach2_max']:.3f}, "
+            f"n_limited {r['n_limited']}, n_floored {r['n_floored']})")
+    elif mismatch >= tol_gamma:
+        out["not_converged_reason"] = (
+            f"kutta mismatch {mismatch:.3e} >= tol_gamma {tol_gamma:.1e}")
+    else:
+        out["not_converged_reason"] = (
+            f"field residual {res_final:.3e} >= tol_residual "
+            f"{tol_residual:.1e} (the Picard shock plateau -- this state is NOT "
+            f"a solution of the discrete equations; see GS1b.7)")
     # `timings` inherited from dict(r) is the FINAL solve only -- the ramp
     # total is timings_total (A1; the same footgun the Newton ramp carries).
     out["level_results"] = level_results

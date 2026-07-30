@@ -63,12 +63,96 @@ reason 里写明"熵修正 ON 时进带（0.6186）"** —— 不移动靶子，
 
 ## 4. 改了什么
 
-（执行后填）
+| 文件 | 改动 |
+|---|---|
+| `pyfp3d/solve/continuation.py` | 新增 `tol_residual`（默认 **1e-8**）；把上报**拆成两个不会互相冒充的标志**：`converged`（physical **且** Kutta **且** `\|R\| < tol_residual`）与 `engineering_converged`（旧语义，显式命名）；新增 `residual_final` 与 `not_converged_reason`（后者直接写明"这是 Picard 的激波平台，此态不是离散方程的解，见 GS1b.7"） |
+| `tests/test_p4_transonic.py` | ★ G4.1 **改走 Newton 路径**（新 `_transonic_case_newton`）；旧 Picard 断言**保留**但改名为 `test_p4_picard_path_historical_regression`，显式标注**不是物理门**，只断言 `engineering_converged` + 激波质量 + 一条对 0.6041 的**漂移锁**，并断言它**不是**真收敛（若哪天它真收敛了，就该把它升回物理门）；`_assert_g41` 不再要求 Picard 的 `converged` 语义（由调用方各自断言） |
+| `cases/demo/p4_transonic/run_demo.py` | G4.1 的两行改读 `engineering_converged`，**新增一行记录真实场残差**；docstring 顶部加 **erratum**（committed 产物早于闸门，"converged"那一条已被取代，其余仍成立；重跑与 GS1b.6 的 B3 一起做） |
 
 ## 5. 结果
 
-（执行后填）
+### 5.1 E1 = PASS：闸门真的触发，且说明原因
+
+```
+跨声速 M0.80：converged=False  engineering_converged=True  residual_final=2.198e-04
+  reason: field residual 2.198e-04 >= tol_residual 1.0e-08 (the Picard shock
+          plateau -- this state is NOT a solution of the discrete equations)
+```
+
+### 5.2 E2 = PASS：健康路径不被打断
+
+```
+亚声速 M0.50：converged=True  engineering_converged=True  residual_final=3.858e-09
+```
+★ 但要记一笔**余量很窄**：3.858e-09 对 1e-8 只有 **2.6 倍**。所以这个默认值不是
+"随便挑一个宽的"——它刚好把亚声速放过、把跨声速平台挡住。若以后有亚声速算例落在
+1e-8 之上，**应当先查那个算例**，而不是放宽闸门。
+
+### 5.3 E3 = PASS：G4.1 走 Newton 后的定性由测量决定
+
+| | x_shock | 参考带 0.62 ± 0.03 |
+|---|---|---|
+| Newton **等熵**（当前默认） | **0.6581** | **带外**（+0.038） |
+| Newton **熵修正 ON** | **0.6186** | **带内**（−0.0014） |
+
+⇒ 按测量，G4.1 在当前默认下**不过**，标为 **strict xfail**，reason 里写明"熵修正 ON
+时进带（0.6186）"。**参考带一个字没动**（E5）。这与项目既有先例一致
+（G1.6 的 strict xfail、M1 保留为记录在案的 FAIL）：不移动靶子，也不让套件带一个红。
+
+★ 顺带一条值得记的读数：参考带本身含一个**有文献依据的 0–2% 弦长等熵后移余量**
+（Holst PAS 2000），而 Newton 收敛态的实测后移是 **+0.043 c（4.3%）** ——
+**比文献记的余量还大一倍**。也就是说我们这套离散（C = 1.5）的后移偏差超出那条带的设计范围。
+这条独立于熵修正，登记为观察。
+
+### 5.4 E4 = 影响面
+
+**全套（非门控）：`676 passed / 28 skipped / 3 xfailed`，0 失败**
+（本轮之前是 676 / 28 / **2**）。多出来的那个 xfailed 就是新的 Newton 路径 G4.1；
+passed 数不变是因为一个通过的测试（旧 `test_g41_transonic_coarse_smoke`）被替换成
+另一个通过的测试（Picard 历史回归）。⇒ **残差闸门没有打断任何非门控路径**
+（含 A1 的四处 M0.5 `converged` 断言）。
+
+**门控套件**：（执行中，约 1 h 50 m）
+
+### 5.5 E6 = demo 的处置
+
+P4 重型 demo（~40 min）**本轮不重跑**（预注册如此）。已做：脚本的 G4.1 两行改读
+`engineering_converged`、新增一行记录真实残差、docstring 顶部写入 erratum
+（committed 的 CSV/PNG 早于闸门："converged"那一条已被取代，其余仍成立；
+重跑与 GS1b.6 的 B3 一起做）。
 
 ## 6. 判定与下一步
+
+**两件裁决事项都已实现并测量；E1/E2/E3/E5/E6 达成，E4 的门控腿在跑。**
+
+| 判据 | 结果 |
+|---|---|
+| **E1** 闸门触发 | **PASS**（跨声速 `converged=False` + `residual_final` + 具体原因） |
+| **E2** 健康路径不断 | **PASS**（亚声速 `converged=True`，余量 2.6× —— 已记为需要注意的窄余量） |
+| **E3** G4.1 定性由测量决定 | **PASS**（等熵 0.6581 带外 ⇒ strict xfail；熵修正 ON 0.6186 带内，写进 reason） |
+| **E4** 影响面逐个归因 | 非门控 **676 / 28 / 3，0 失败**（多的 1 个 xfail 就是新门）；**门控腿执行中** |
+| **E5** 不改带/容差/工况/网格 | 遵守 |
+| **E6** demo 记录不重跑 | **PASS**（脚本改读 `engineering_converged` + 新增真实残差行 + docstring erratum） |
+
+**这一轮的三条可引用结论**：
+
+1. `solve_transonic_lifting` 现在**不会再把非解报成收敛**；旧语义仍可读，但必须叫它自己的名字
+   （`engineering_converged`）—— 两个概念不再能互相冒充；
+2. **G4.1 现在是一条建立在"真的是解"的状态上的物理门**，而它在当前默认（等熵）下
+   **如实不过**（0.6581 带外），熵修正 ON 时进带（0.6186）；
+3. ★ 参考带自带的等熵后移余量是 **0–2% 弦长**（Holst），而 Newton 收敛态的实测后移是
+   **4.3%** —— **超出那条带的设计范围一倍**。这条独立于熵修正，是对"我们这套离散在 C = 1.5
+   下的后移偏差"的一个新观察，登记备查。
+
+**下一步**：
+
+1. 门控腿跑完补齐 E4（每一个变红的都归因）；
+2. 然后回到 **GS1b.6 的 B3**（重型 demo 重算），现在有了明确的基准：**只用 Newton 路径**，
+   且 P4 的 committed 产物与 B3 一起重跑（E6 已埋好 erratum）；
+3. 默认值的裁决输入已经齐了：包线内几乎不动（M1a 三级 +0.91% → +0.67% 仍过）、
+   包线外方向正确且路径一致（≈ −0.04 c）、影响面 4 个锁、而**其中 G4.1 已经先一步
+   改成了"ON 时才过"的形状** —— 也就是说翻默认会让 G4.1 从 xfail 变 pass，
+   剩下三个 P8 锁需要与翻默认同一个 commit 重新锚定。
+
 
 （执行后填）
