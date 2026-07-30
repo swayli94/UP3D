@@ -98,8 +98,16 @@ def _write_g41_summary(case, level, artifacts_dir):
         w.writerow(["cl_kj", 2.0 * float(r["gamma"][0])])
         w.writerow(["gamma", float(r["gamma"][0])])
         w.writerow(["mach_max", float(np.sqrt(r["mach2_max"]))])
-        w.writerow(["kutta_mismatch", r["kutta_mismatch"]])
-        w.writerow(["n_picard_total", r["n_picard_total"]])
+        # GS1b.8: the same writer now serves BOTH paths, and they report different
+        # keys -- the Picard path has kutta_mismatch / n_picard_total, the coupled
+        # Newton has n_newton and a field-residual history. Write whatever the
+        # result actually carries rather than assuming one shape.
+        for key in ("kutta_mismatch", "n_picard_total", "residual_final",
+                    "engineering_converged", "n_newton", "converged"):
+            if key in r:
+                w.writerow([key, r[key]])
+        if r.get("residual_history"):
+            w.writerow(["residual_final_history", r["residual_history"][-1]])
         w.writerow(["n_limited", r["n_limited"]])
         w.writerow(["n_floored", r["n_floored"]])
 
@@ -210,20 +218,51 @@ def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
 
 
 @run_gates
+@pytest.mark.xfail(strict=True, reason=(
+    "Same re-spec as the coarse leg (GS1b.8): G4.1 runs on the coupled Newton path "
+    "because the Picard path's state is not a solution (GS1b.7). ★ Found while "
+    "verifying the coarse re-spec -- this MEDIUM leg was still asserting the "
+    "Euler-anchored band on the PICARD path and PASSING, i.e. a physics gate on a "
+    "non-converged state, exactly what the coarse leg was re-spec'd away from. "
+    "★★ And the medium leg xfails for a DIFFERENT and stronger reason than coarse, "
+    "measured 2026-07-30: with the isentropic default the coupled Newton does NOT "
+    "CONVERGE here at all (|R| 6.9e-06, x_shock 0.8819) -- consistent with the M1 "
+    "gate's recorded 'medium: 0 converged legs' -- whereas with the entropy "
+    "correction ON it CONVERGES (|R| 2.6e-13) and lands at x_shock 0.6146, INSIDE "
+    "the band (-0.0054 from centre). So this xfail flips to a pass on the day the "
+    "correction becomes the default, and the failing assertion today is the "
+    "convergence one, not the band one. Band NOT moved."))
 def test_g41_transonic_medium_gate(reference_mesh_dir, artifacts_dir):
-    """Gate G4.1 = V4 on the medium mesh."""
+    """Gate G4.1 = V4 on the medium mesh, on the Newton path (GS1b.8)."""
     from .conftest import REPO_ROOT
-    case = _transonic_case(
+    case = _transonic_case_newton(
         REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "medium.msh")
+    r = case["result"]
+    assert r["converged"] and not r["clamped"], (
+        f"Newton path not converged: |R| = {r['residual_history'][-1]:.2e}")
     _write_g41_summary(case, "medium", artifacts_dir)
     _assert_g41(case, reference_mesh_dir)
 
 
 @run_gates
 def test_g43_robustness_sweep(artifacts_dir):
-    """Gate G4.3: M in {0.74..0.82} x alpha in {0, 1.25} deg, ONE
-    parameter set (TRANSONIC_DEFAULTS), all levels of both continuation
-    passes converge with a physical field. V4.3 dashboard artifact."""
+    """Gate G4.3: M in {0.74..0.82} x alpha in {0, 1.25} deg, ONE parameter set
+    (TRANSONIC_DEFAULTS) -- a DRIVER-ROBUSTNESS sweep: does the Picard continuation
+    survive the envelope with a physical field? V4.3 dashboard artifact.
+
+    ★ GS1b.8 (2026-07-30): the assertion is on `engineering_converged`, the
+    explicitly named old semantics (physical + Kutta), because
+    solve_transonic_lifting's `converged` now also requires the FIELD RESIDUAL and
+    the transonic points sit on the Picard shock plateau (|R| ~ 2e-04; GS1b.7
+    measured that such a state is not a solution of the discrete equations). That
+    is the faithful reading of what this gate always measured -- it asks whether
+    the DRIVER survives the envelope, not whether the answer is right -- so the
+    true residual is now RECORDED per point in the summary CSV instead of being
+    implied by a flag that meant something weaker than its name.
+
+    The answer-quality gate lives on the Newton path
+    (test_g41_transonic_coarse_newton). A Newton-path version of this sweep is a
+    registered follow-up, not done here (ten more coupled solves)."""
     from .conftest import REPO_ROOT
     from pyfp3d.constraints.wake import kutta_targets  # noqa: F401
 
@@ -231,7 +270,8 @@ def test_g43_robustness_sweep(artifacts_dir):
     mc, wc = cut_wake(mesh)
     dz = float(np.ptp(mc.nodes[:, 2]))
 
-    rows = [("alpha_deg", "m_inf", "converged", "kutta_mismatch",
+    rows = [("alpha_deg", "m_inf", "engineering_converged", "converged",
+             "residual_final", "kutta_mismatch",
              "mach_max", "x_shock_upper", "cl", "n_limited")]
     results = {}
     for alpha in (0.0, 1.25):
@@ -246,7 +286,8 @@ def test_g43_robustness_sweep(artifacts_dir):
                 alpha_deg=alpha, s_ref=dz, m_inf=m,
             )
             results[(alpha, m)] = (r, rep, forces)
-            rows.append((alpha, m, r["converged"],
+            rows.append((alpha, m, r["engineering_converged"],
+                         r["converged"], f"{r['residual_final']:.3e}",
                          f"{r['kutta_mismatch']:.2e}",
                          f"{np.sqrt(r['mach2_max']):.3f}",
                          f"{rep['upper']['x_shock']:.4f}",
@@ -259,7 +300,8 @@ def test_g43_robustness_sweep(artifacts_dir):
     # The committed V4.3 dashboard is produced by the demo (see docstring).
 
     for (alpha, m), (r, rep, _f) in results.items():
-        assert r["converged"], f"alpha={alpha} M={m} did not converge"
+        assert r["engineering_converged"], (
+            f"alpha={alpha} M={m}: {r.get('not_converged_reason')}")
         assert r["n_limited"] == 0 and r["n_floored"] == 0
         assert not rep["upper"]["expansion_shock"]
         # smooth trend: shock exists for all supercritical lifting cases

@@ -112,7 +112,44 @@ passed 数不变是因为一个通过的测试（旧 `test_g41_transonic_coarse_
 另一个通过的测试（Picard 历史回归）。⇒ **残差闸门没有打断任何非门控路径**
 （含 A1 的四处 M0.5 `converged` 断言）。
 
-**门控套件**：（执行中，约 1 h 50 m）
+**门控套件：`2 failed / 700 passed / 2 skipped / 3 xfailed`，6589 s。**逐个归因：
+
+| 变红的 | 归因 |
+|---|---|
+| `test_b9_wingbody_conforming::test_laplace_lifting_loads_the_junction` | **既有失败**，`main` 上同样红（GS1b.6 §5.4 已归因），与本轮无关 |
+| `test_p4_transonic::test_g43_robustness_sweep` | ★ **本轮闸门造成，且是预期后果**：G4.3 断言"10/10 全部收敛"，而 `converged` 现在要求场残差，跨声速点都在 Picard 的激波平台上（\|R\| ~ 2e-04） |
+
+**G4.3 的处置**：它问的是"**驱动器**能不能在包线上跑下来"，不是"答案对不对"。
+所以断言改成它**实际测到的** `engineering_converged`，并把**每个点的真实残差**写进
+summary CSV（原来那个"收敛"是靠一个名字比含义强的标志暗示的）。答案质量的门在 Newton 路径上。
+Newton 路径版的这个 sweep 登记为待办（还要 10 次耦合求解），本轮不做。
+再跑：`tests/test_p4_transonic.py` 门控下 **3 passed / 1 xfailed**。
+
+### 5.4.1 ★★ 我自己漏了一处，验证时才发现，而 medium 的读数是这条线最强的证据
+
+改完 coarse 之后我以为完了。跑门控时看到 `test_g41_transonic_medium_gate` **通过**——
+它**还在 Picard 路径上**断言那条参考带，**正是我刚刚批评的"在未收敛态上立物理门"**，
+而且它"通过"只是因为 Picard 的 medium 激波恰好落在带内。已同样改到 Newton 路径。
+
+改完之后 medium 的实测（Newton，M0.80，参考带 0.62 ± 0.03）：
+
+| | converged | \|R\| | x_shock | 对带 |
+|---|---|---|---|---|
+| **等熵 OFF**（当前默认） | **False** | 6.9e-06 | 0.8819 | 带外 **+0.262** |
+| **熵修正 ON** | **True** | **2.6e-13** | **0.6146** | **带内 −0.0054** |
+
+⇒ **在 M1 的工况、medium 网格上：等熵的耦合 Newton 根本不收敛**
+（与 M1 门记录的"medium：0 条腿收敛"一致），**而熵修正把它变成一个收敛解、并且落进参考带。**
+这是熵修正到目前为止最强的单条证据 —— 它不只是把数字挪近，它让一个解不出来的工况解出来了。
+
+★ 因此 medium 那条 xfail 与 coarse **原因不同**（是**不收敛**，不是带外），
+xfail 的 reason 已按实测改写。两条都会在翻默认那天变成 pass。
+
+### 5.4.2 summary writer 改成路径无关
+
+`_write_g41_summary` 原来写死 `kutta_mismatch` / `n_picard_total`（Picard 才有的键），
+Newton 的返回值没有 ⇒ 会 KeyError。改成"写返回值里实际有的键"，并加写
+`residual_final` / `engineering_converged` / `n_newton`。
 
 ### 5.5 E6 = demo 的处置
 
@@ -130,7 +167,7 @@ P4 重型 demo（~40 min）**本轮不重跑**（预注册如此）。已做：�
 | **E1** 闸门触发 | **PASS**（跨声速 `converged=False` + `residual_final` + 具体原因） |
 | **E2** 健康路径不断 | **PASS**（亚声速 `converged=True`，余量 2.6× —— 已记为需要注意的窄余量） |
 | **E3** G4.1 定性由测量决定 | **PASS**（等熵 0.6581 带外 ⇒ strict xfail；熵修正 ON 0.6186 带内，写进 reason） |
-| **E4** 影响面逐个归因 | 非门控 **676 / 28 / 3，0 失败**（多的 1 个 xfail 就是新门）；**门控腿执行中** |
+| **E4** 影响面逐个归因 | **PASS** —— 非门控 **676 / 28 / 3，0 失败**；门控 **2 failed / 700 passed**，两个都已归因（1 个既有、1 个本轮闸门的预期后果，已按"驱动器健壮性"重新定性） |
 | **E5** 不改带/容差/工况/网格 | 遵守 |
 | **E6** demo 记录不重跑 | **PASS**（脚本改读 `engineering_converged` + 新增真实残差行 + docstring erratum） |
 
