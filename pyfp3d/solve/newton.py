@@ -97,6 +97,26 @@ class _EliminatedKuttaRow:
         return -sla.lu_solve(self._lu, self._Kp @ x)
 
 
+#: GS1b.9: when is the entropy factor SELF-CONSISTENT with its own solution, and
+#: how many outer epochs may be spent reaching that. Both are ALGORITHMIC CONSTANTS,
+#: not driver arguments (roadmap principle 4): they define "self-consistent", they
+#: are not tuning dials.
+#:
+#: Why this exists, measured: a converged solve satisfies R(phi; sigma_frozen) = 0
+#: while the state itself implies sigma(phi) != sigma_frozen, so the answer inherits
+#: WHERE sigma happened to be frozen -- which depends on the recipe. At medium
+#: M0.7875 two Newton recipes that agree to four decimals with the isentropic law
+#: (x_shock 0.6738 both) disagreed by 0.118 c with the correction on (0.6029 versus
+#: 0.4852). The fixed point of R(phi; sigma(phi)) = 0 is recipe-INDEPENDENT because
+#: it is a solution of the equation, so the driver iterates onto it.
+#:
+#: The tolerance is expressed RELATIVE to the correction's own size (1 - sigma_min):
+#: an absolute bound would be meaningless where the correction is weak (subcritical
+#: cases have 1 - sigma ~ 0.002) and far too loose where it is strong.
+_SIGMA_SELF_TOL_REL = 0.02
+_SIGMA_POLISH_MAX = 6
+
+
 #: GS1b.5(a): how many times the frozen entropy factor is rebuilt during a solve.
 #: An ALGORITHMIC CONSTANT, deliberately not a driver argument -- roadmap
 #: principle 4 forbids permanent user-facing knobs, and this number is not a
@@ -617,6 +637,7 @@ def solve_newton_lifting(
     external_rhs: Optional[np.ndarray] = None,
     entropy_correction: bool = False,
     entropy_kwargs: Optional[dict] = None,
+    _sigma_epoch: int = 0,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -1219,6 +1240,60 @@ def solve_newton_lifting(
         # convergence rather than hand back a state built on it.
         converged = False
         accept_reason = "sigma_transport_not_converged"
+    # ---- GS1b.9: sigma self-consistency polish -----------------------------
+    # A converged solve satisfies R(phi; sigma_frozen) = 0, but the state itself
+    # implies sigma(phi), and the two need not agree -- so the answer inherits WHERE
+    # sigma froze, which depends on the recipe (measured: 0.118 c of shock position
+    # at medium M0.7875 between two recipes that agree to four decimals with the
+    # isentropic law). The fixed point of R(phi; sigma(phi)) = 0 does not, because it
+    # is a solution of the equation. So: rebuild sigma from the terminal state and,
+    # if it moved by more than _SIGMA_SELF_TOL_REL of the correction's own size,
+    # re-solve WARM-STARTED from here -- whose seed sigma is exactly sigma(phi), one
+    # step of the self-consistency map. Recursion depth is bounded by
+    # _SIGMA_POLISH_MAX and every epoch's gap is reported.
+    sigma_self = None
+    if entropy_correction and converged and ws.sigma_frozen is not None:
+        sig_used = ws.sigma_frozen.copy()
+        ws.refresh_sigma(state, frozen=frozen)
+        gap = float(np.max(np.abs(ws.sigma_frozen - sig_used)))
+        scale = max(1.0 - float(sig_used.min()), 1e-12)
+        sigma_self = gap / scale
+        if (sigma_self > _SIGMA_SELF_TOL_REL
+                and _sigma_epoch < _SIGMA_POLISH_MAX):
+            if verbose:
+                print(f"  [sigma epoch {_sigma_epoch}: self-consistency "
+                      f"{sigma_self:.3e} rel -- re-solving warm]")
+            nxt = solve_newton_lifting(
+                mesh_cut, wc, m_inf=m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
+                gamma_air=gamma_air, vortex_center=vortex_center,
+                farfield_spanwise_gamma=farfield_spanwise_gamma,
+                upwind_c=upwind_c, m_crit=m_crit, m_cap=m_cap,
+                rho_floor=rho_floor, tol_residual=tol_residual,
+                tol_gamma=tol_gamma, n_newton_max=n_newton_max,
+                n_picard_seed=0, phi_init=state["phi_cut"], gamma_init=gamma,
+                amg_rebuild_every=amg_rebuild_every, precond=precond,
+                direct_refactor_every=direct_refactor_every,
+                direct_reuse_rtol=direct_reuse_rtol,
+                gmres_restart=gmres_restart, gmres_maxiter=gmres_maxiter,
+                line_search=line_search, rtol_seed=rtol_seed,
+                tol_residual_loose=tol_residual_loose,
+                tol_residual_rel=tol_residual_rel,
+                accept_on_stall=accept_on_stall, freeze_tol=freeze_tol,
+                freeze_refresh_max=freeze_refresh_max,
+                freeze_max_reverts=freeze_max_reverts, workspace=ws,
+                tip_taper=tip_taper, kutta_estimator=kutta_estimator,
+                external_rhs=external_rhs, entropy_correction=True,
+                entropy_kwargs=entropy_kwargs,
+                _sigma_epoch=_sigma_epoch + 1, verbose=verbose)
+            nxt["n_sigma_epochs"] = nxt.get("n_sigma_epochs", 0) + 1
+            nxt["sigma_self_consistency_history"] = (
+                [sigma_self] + list(nxt.get("sigma_self_consistency_history",
+                                            [])))
+            return nxt
+        # not recursing: restore the sigma the reported state was solved with, so
+        # the returned diagnostics describe THAT state and not the probe
+        ws.sigma_frozen = sig_used
+
     q2n = state["q2l"]
     mach2_max = float(np.max(mach_squared_field(q2n, m_inf, gamma_air)))
     # Legacy aliases over the canonical buckets, so cases/demo/p8_newton keeps
@@ -1268,6 +1343,12 @@ def solve_newton_lifting(
         "m1_max": (float(ws.ent.m1_max) if entropy_correction else None),
         "sigma_transport_converged": bool(ws.sigma_converged),
         "n_sigma_refresh": n_sigma_refresh,
+        # GS1b.9: how far the reported state is from sigma self-consistency,
+        # relative to the correction's own size, and how many epochs it took
+        "sigma_self_consistency": sigma_self,
+        "sigma_self_consistency_history": ([] if sigma_self is None
+                                           else [sigma_self]),
+        "n_sigma_epochs": 0,
         "sigma_delta_final": (sigma_history[-1][3] if sigma_history else None),
         "jacobian_nnz": getattr(ws.op, "newton_nnz", None),
         "n_term3_active": getattr(ws.op, "n_term3_active", None),
