@@ -49,19 +49,35 @@ os.makedirs(OUT, exist_ok=True)
 H_WALL_MED = 0.015
 BASE = dict(r_far=15.0 * MAC, tip_cap="flat", embed_wake=True)
 
-#: (tag, h_wall, h_edge). h_wake / h_far follow _level_params from h_wall.
+#: (tag, h_wall, h_le, h_te). h_wake / h_far follow _level_params from h_wall.
+#: ★ REVISED by addendum #1 (20260801-0400): the first version passed only h_edge,
+#: which sizes the LE *and TE* curves, so "LE x2" refined the tip trailing edge with
+#: it and read the P13 free-edge singularity instead (M_max 0.9557 -> 1.3945 at
+#: M_inf 0.5, 7 of the top 8 cells in the tip band). These legs hold h_te at its
+#: baseline so only the LE moves. L0p passes h_te explicitly and therefore takes the
+#: SPLIT-field code path at the baseline size -- it is the control for the split
+#: itself, not a re-run of L0.
 LEGS = (
-    ("L0_baseline", H_WALL_MED, 0.5 * H_WALL_MED),
-    ("L1_le_x2", H_WALL_MED, 0.25 * H_WALL_MED),
-    ("L2_le_x4", H_WALL_MED, 0.125 * H_WALL_MED),
-    ("L3_allscales", 0.010, 0.25 * H_WALL_MED),
+    ("L0p_split_control", H_WALL_MED, 0.5 * H_WALL_MED, 0.5 * H_WALL_MED),
+    ("L1p_le_x2", H_WALL_MED, 0.25 * H_WALL_MED, 0.5 * H_WALL_MED),
+    ("L2p_le_x4", H_WALL_MED, 0.125 * H_WALL_MED, 0.5 * H_WALL_MED),
+    ("L3p_allscales", 0.010, 0.25 * H_WALL_MED, 0.5 * 0.010),
 )
+#: addendum #1 A4: a leg past this wall time stops the SWEEP (the finer legs can only
+#: be worse). Deviation from A4's letter, recorded: the driver has no time-budget hook
+#: to abort a leg mid-solve, so the bound is enforced between legs and by capping the
+#: Newton steps below.
+COST_GATE_S = 1200.0
+#: also addendum #1 A4: L1's 2613 s was 60 capped Newton steps at several levels. 30
+#: still gives >2x the 14 steps the converging baseline needs, and halves a failing
+#: leg's cost. Recorded as a deviation from "the P14 recipe verbatim".
+N_NEWTON_MAX = 30
 #: the probe-leg baseline this sweep is measured against (20260801-0030)
 LE_UPPER_BASE = 0.2361
 
 
-def build(h_wall, h_edge):
-    return onera_m6_wing_mesh(h_wall=h_wall, h_edge=h_edge,
+def build(h_wall, h_edge, h_te=None):
+    return onera_m6_wing_mesh(h_wall=h_wall, h_edge=h_edge, h_te=h_te,
                               h_wake=3.0 * h_wall, h_far=120.0 * h_wall,
                               **BASE)
 
@@ -103,14 +119,21 @@ def le_geometry(mc):
 def main():
     exp = parse_experiment()
     rows = []
-    for tag, h_wall, h_edge in LEGS:
-        print(f"\n=== {tag}: h_wall={h_wall} h_edge={h_edge} ===", flush=True)
+    stop = None
+    for tag, h_wall, h_le, h_te in LEGS:
+        if stop:
+            print(f"\n=== {tag}: SKIPPED -- {stop}")
+            rows.append(dict(leg=tag, h_wall=h_wall, h_edge=h_le,
+                             h_te=h_te, note=f"skipped: {stop}"))
+            continue
+        print(f"\n=== {tag}: h_wall={h_wall} h_le={h_le} "
+              f"h_te={h_te} ===", flush=True)
         t0 = time.perf_counter()
         try:
-            mesh = build(h_wall, h_edge)
+            mesh = build(h_wall, h_le, h_te)
         except Exception as exc:                                  # noqa: BLE001
             print(f"  MESH GENERATION FAILED: {exc}")
-            rows.append(dict(leg=tag, h_wall=h_wall, h_edge=h_edge,
+            rows.append(dict(leg=tag, h_wall=h_wall, h_edge=h_le, h_te=h_te,
                              note=f"mesh gen failed: {exc}"))
             continue
         t_gen = time.perf_counter() - t0
@@ -125,10 +148,10 @@ def main():
 
         t0 = time.perf_counter()
         try:
-            r = solve(mc, wc, True)                       # entropy at default ON
+            r = solve(mc, wc, True, n_newton_max=N_NEWTON_MAX)
         except Exception as exc:                                  # noqa: BLE001
             print(f"  SOLVE FAILED: {exc}")
-            rows.append(dict(leg=tag, h_wall=h_wall, h_edge=h_edge,
+            rows.append(dict(leg=tag, h_wall=h_wall, h_edge=h_le, h_te=h_te,
                              n_nodes=len(mc.nodes), n_tets=len(mc.elements),
                              gen_s=round(t_gen, 1),
                              note=f"solve failed: {exc}"))
@@ -140,6 +163,24 @@ def main():
         print(f"  solve: conv={conv} |R|={res:.2e} n_newton={r['n_newton']} "
               f"n_limited={r['n_limited']} n_floored={r['n_floored']} "
               f"({wall:.0f}s)", flush=True)
+
+        # --- addendum #1 A3: M_max AND where the peak sits, every leg ------
+        from pyfp3d.mesh.metrics import precompute_element_geometry
+        from pyfp3d.meshgen.wing3d import chord_at, x_le
+        from pyfp3d.physics.isentropic import mach_number_squared
+        Bg, Vg = precompute_element_geometry(mc.nodes, mc.elements)
+        gg = np.einsum("eaj,ea->ej", Bg, phi[mc.elements])
+        m2 = mach_number_squared(np.einsum("ej,ej->e", gg, gg), M_INF)
+        cent = mc.nodes[mc.elements].mean(axis=1)
+        top8 = np.argsort(m2)[-8:][::-1]
+        zc = np.clip(cent[top8, 2], 0.0, B_SEMI)
+        xc8 = (cent[top8, 0] - np.array([x_le(z) for z in zc])) / np.array(
+            [chord_at(z) for z in zc])
+        n_le = int((np.abs(xc8) < 0.05).sum())
+        n_tip = int((cent[top8, 2] > 0.95 * B_SEMI).sum())
+        print(f"  A3 peak: M_max {np.sqrt(m2.max()):.4f} at x/c "
+              f"{xc8[0]:+.4f} eta {zc[0]/B_SEMI:.3f};  of the top 8: "
+              f"{n_le} near the LE, {n_tip} in the tip band", flush=True)
 
         curves = {e: section_cp_curve(mc, phi, eta=e, b_semi=B_SEMI,
                                       m_inf=M_INF) for e in ETAS}
@@ -170,7 +211,7 @@ def main():
                   f"lower {band[f'{name}_lower']:.4f}")
 
         rows.append(dict(
-            leg=tag, h_wall=h_wall, h_edge=h_edge,
+            leg=tag, h_wall=h_wall, h_edge=h_le, h_te=h_te,
             n_nodes=len(mc.nodes), n_tets=len(mc.elements),
             gen_s=round(t_gen, 1), solve_s=round(wall, 1),
             le_h_t=round(ht, 6), le_h_n=round(hn, 6),
@@ -186,7 +227,16 @@ def main():
             **{f"rms_eta{e:.2f}": round(per[e], 6) for e in ETAS},
             xshock_eta0p44=shock_report(curves[0.44], M_INF)["upper"].get(
                 "x_shock"),
-            cl_p=round(f["cl"], 6), cl_kj=round(clkj, 6), note=""))
+            m_max=round(float(np.sqrt(m2.max())), 5),
+            peak_xc=round(float(xc8[0]), 5),
+            peak_eta=round(float(zc[0] / B_SEMI), 5),
+            top8_near_le=n_le, top8_in_tip=n_tip,
+            cl_p=round(f["cl"], 6), cl_kj=round(clkj, 6),
+            over_budget=bool(wall > COST_GATE_S), note=""))
+        if wall > COST_GATE_S:
+            stop = (f"{tag} took {wall:.0f}s > the {COST_GATE_S:.0f}s cost gate "
+                    f"(addendum #1 A4); finer legs can only be worse")
+            print(f"  ⚠ {stop}", flush=True)
 
     with open(os.path.join(OUT, "le_response.csv"), "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in rows for k in r}))
@@ -196,7 +246,7 @@ def main():
 
     print("\n=== the registered reading ===")
     got = {r["leg"]: r for r in rows if r.get("band_LE_upper") is not None}
-    for tag, _, _ in LEGS:
+    for tag, *_ in LEGS:
         r = got.get(tag)
         if r is None:
             print(f"  {tag}: MISSING (recorded, never substituted)")
@@ -206,7 +256,7 @@ def main():
               f"({100*(v-LE_UPPER_BASE)/LE_UPPER_BASE:+.1f} %)  "
               f"h_t {r['le_h_t']:.5f} aniso {r['le_aniso']:.3f}  "
               f"{r['n_tets']} tets  {r['solve_s']:.0f}s")
-    vals = [got[t]["band_LE_upper"] for t, _, _ in LEGS if t in got]
+    vals = [got[t]["band_LE_upper"] for t, *_ in LEGS if t in got]
     if len(vals) < 2:
         print("  too few legs to read")
         return 0
@@ -229,7 +279,7 @@ def main():
               "is clearly better, it is the bulk pollution floor and the "
               "conclusion is that ALL SCALES must be refined, not the wall "
               "alone.")
-    l2, l3 = got.get("L2_le_x4"), got.get("L3_allscales")
+    l2, l3 = got.get("L2p_le_x4"), got.get("L3p_allscales")
     if l2 and l3:
         print(f"  floor check: L2 {l2['band_LE_upper']:.4f} vs L3 "
               f"{l3['band_LE_upper']:.4f} "

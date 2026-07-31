@@ -128,7 +128,7 @@ def band_rms(curves, exp, eta):
     return out
 
 
-def solve(mc, wc, entropy, kutta="probe"):
+def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
     """The P14 transonic recipe verbatim, entropy (and now the Kutta form) variable.
 
     ★ 2026-07-31: `kutta` was added after the first budget round measured its own cl
@@ -149,6 +149,9 @@ def solve(mc, wc, entropy, kutta="probe"):
     """
     kw = dict(NEWTON_M6_RECIPE)
     kw["newton_kw"] = dict(kw["newton_kw"], entropy_correction=entropy)
+    if n_newton_max is not None:
+        # recorded deviation from "the recipe verbatim" -- see the caller
+        kw["newton_kw"]["n_newton_max"] = int(n_newton_max)
     if kutta == "pressure":
         r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA,
                                   entropy_correction=entropy, **M6_NEWTON_KW)

@@ -207,6 +207,7 @@ def onera_m6_wing_mesh(
     h_far: Optional[float] = None,
     h_wake: Optional[float] = None,
     h_edge: Optional[float] = None,
+    h_te: Optional[float] = None,
     r_far: float = 15.0 * MAC,
     name: str = "onera_m6",
     algorithm3d: int = 1,
@@ -237,6 +238,17 @@ def onera_m6_wing_mesh(
         h_wake: size on the wake sheet (default 3 h_wall)
         h_edge: size on the LE/TE edges (default 0.5 h_wall; the TE value
                 also controls the Kutta-probe neighborhood resolution)
+        h_te: size on the TE edge alone. None (default) keeps the SINGLE
+                combined LE+TE distance field, i.e. every committed family is
+                bit-identical; giving a value splits LE and TE into two
+                Threshold fields so they can be refined independently.
+                ★ Added 2026-08-01 because a phase-two sweep that meant to
+                refine only the LE refined the TE with it and read the WING-TIP
+                TRAILING-EDGE singularity instead (the P13 free edge, B30/B31):
+                at M_inf 0.5, M_max went 0.9557 -> 1.3945 with 7 of the top 8
+                cells in the tip band, and a direct M0.70 solve pinned the
+                m_cap. Round file
+                docs/dev_phase_two/20260801-0400-gs21-addendum1.md.
         tip_cap: "flat" (M1, default -- planar cap, sharp convex edge) or
                 "round" (M5 -- half body of revolution, no edge)
         h_tip: size on the rounded cap (default 0.25 h_wall, so it scales
@@ -410,7 +422,12 @@ def onera_m6_wing_mesh(
                   np.array([x_le(B_SEMI), 0.0, B_SEMI]))
         te_pts = (np.array([x_te(0.0), 0.0, 0.0]),
                   np.array([x_te(B_SEMI), 0.0, B_SEMI]))
-        edge_curves = _curves_on_segment(*le_pts) + _curves_on_segment(*te_pts)
+        le_curves = _curves_on_segment(*le_pts)
+        te_curves = _curves_on_segment(*te_pts)
+        # h_te None => ONE combined field, exactly as before (bit-identical)
+        edge_groups = ([(le_curves + te_curves, h_edge)] if h_te is None
+                       else [(le_curves, h_edge), (te_curves, h_te)])
+        edge_curves = le_curves + te_curves
 
         # --- graded size fields (M0 policy: pure background field) --------
         field = gmsh.model.mesh.field
@@ -438,13 +455,15 @@ def onera_m6_wing_mesh(
         field.setNumber(t_wake, "DistMax", 1.2)
 
         thresholds = [t_wall, t_wake]
-        if edge_curves:
+        for curves, size in edge_groups:
+            if not curves:
+                continue
             f_edge = field.add("Distance")
-            field.setNumbers(f_edge, "CurvesList", edge_curves)
+            field.setNumbers(f_edge, "CurvesList", curves)
             field.setNumber(f_edge, "Sampling", 400)
             t_edge = field.add("Threshold")
             field.setNumber(t_edge, "InField", f_edge)
-            field.setNumber(t_edge, "SizeMin", h_edge)
+            field.setNumber(t_edge, "SizeMin", size)
             field.setNumber(t_edge, "SizeMax", h_far)
             field.setNumber(t_edge, "DistMin", 0.02)
             field.setNumber(t_edge, "DistMax", 0.3)
