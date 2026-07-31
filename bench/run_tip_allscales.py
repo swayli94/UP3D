@@ -54,6 +54,7 @@ os.makedirs(OUT, exist_ok=True)
 TAPER_FORM, TAPER_RC_FRAC = "vanish_smooth", 0.05
 #: (tag, h_wall, h_le, h_te). T1 reuses L3p's cached mesh by construction.
 LEGS = (
+    ("Tm1_coarse_taper", 0.030, 0.015, 0.015),
     ("T0_baseline_taper", 0.015, 0.0075, 0.0075),
     ("T1_allscales_taper", 0.010, 0.00375, 0.005),
     ("T2_allscales2_taper", 0.0075, 0.001875, 0.00375),
@@ -85,10 +86,53 @@ def solve_tapered(mc, wc):
     return solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **kw)
 
 
+def load_prior():
+    """Rows recorded by an earlier invocation, so a leg already measured need not be
+    re-solved just to complete a sequence. Merged rows are LABELLED
+    (from_prior_run=True) -- the pre-registration's order is "run the cheap legs
+    first and evaluate the prediction against the RECORDED T1", not "quietly reuse
+    numbers"."""
+    path = os.path.join(OUT, "tip_allscales.csv")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path) as fh:
+        for row in csv.DictReader(fh):
+            if not row.get("band_LE_upper"):
+                continue
+            d = {}
+            for k, v in row.items():
+                if v in ("", None):
+                    d[k] = None
+                elif v in ("True", "False"):
+                    d[k] = v == "True"
+                else:
+                    try:
+                        d[k] = float(v)
+                    except ValueError:
+                        d[k] = v
+            d["leg"] = row["leg"]
+            d["from_prior_run"] = True
+            out[row["leg"]] = d
+    return out
+
+
 def main():
     exp = parse_experiment()
+    only = [t for t in os.environ.get("PYFP3D_TIP_LEGS", "").split(",") if t]
+    prior = load_prior()
     rows, stop = [], None
     for tag, h_wall, h_le, h_te in LEGS:
+        if only and tag not in only:
+            if tag in prior:
+                print(f"\n=== {tag}: taken from the PRIOR run "
+                      f"(LE upper {prior[tag]['band_LE_upper']:.4f}, "
+                      f"labelled from_prior_run) ===")
+                rows.append(prior[tag])
+            else:
+                print(f"\n=== {tag}: not selected and no prior row ===")
+                rows.append(dict(leg=tag, note="not selected this run"))
+            continue
         if stop:
             print(f"\n=== {tag}: SKIPPED -- {stop}")
             rows.append(dict(leg=tag, note=f"skipped: {stop}"))
@@ -149,6 +193,20 @@ def main():
                / np.array([chord_at(z) for z in zc]))
         n_tip = int((cent[top8, 2] > 0.95 * B_SEMI).sum())
         m_max = float(np.sqrt(m2.max()))
+        # ---- G1'a (20260801-1400): the check that actually matters is whether
+        # a singularity sits INSIDE the measured region. M3 reads eta 0.20-0.90;
+        # the tip singularity lives at eta > 0.95. So restrict M_max to eta<=0.92.
+        inb = cent[:, 2] <= 0.92 * B_SEMI
+        m_max_meas = float(np.sqrt(m2[inb].max())) if inb.any() else float("nan")
+        print(f"  G1'a contamination: M_max inside the measured region "
+              f"(eta<=0.92) = {m_max_meas:.4f}   [global {m_max:.4f}]",
+              flush=True)
+        # state saved so a later diagnostic never re-pays the solve (discipline #2)
+        try:
+            np.savez(os.path.join(SCRATCH, f"{tag}_state.npz"),
+                     phi=phi, gamma=np.asarray(r["gamma"]))
+        except Exception as exc:                                  # noqa: BLE001
+            print(f"  (state not saved: {exc})")
         g1 = (m_max < 1.6) or (n_tip <= 2)
         print(f"  G1 tip cure: M_max {m_max:.4f} (L0p {L0P['m_max']}), "
               f"{n_tip}/8 in the tip band (L0p {L0P['top8_in_tip']}), peak at "
@@ -192,6 +250,7 @@ def main():
             converged=conv, res_final=res, n_newton=r["n_newton"],
             n_limited=r["n_limited"], n_floored=r["n_floored"],
             m_max=round(m_max, 5), top8_in_tip=n_tip,
+            m_max_measured_region=round(m_max_meas, 5),
             peak_xc=round(float(xc8[0]), 5),
             peak_eta=round(float(zc[0] / B_SEMI), 5),
             g1_tip_cure="PASS" if g1 else "FAIL",
@@ -254,6 +313,30 @@ def main():
     rel = abs(best - base) / base
     print(f"\n  best {best:.4f} vs T0 {base:.4f} ({100*(best/base-1):+.1f} %), "
           f"monotone: {mono}")
+    # ---- P1 / P2: the pre-registered OUT-OF-SAMPLE predictions -----------
+    tm1 = got.get("Tm1_coarse_taper")
+    if tm1 is not None:
+        p1 = tm1["band_LE_upper"] >= 0.26
+        print(f"\n  P1 (coarse LE upper >= 0.26): "
+              f"{tm1['band_LE_upper']:.4f} -> {'HOLDS' if p1 else 'FALSIFIED'}")
+        tri = [got[t]["band_LE_upper"] for t in ("Tm1_coarse_taper",
+                                                "T0_baseline_taper",
+                                                "T1_allscales_taper")
+               if t in got]
+        p2 = len(tri) >= 2 and all(b <= a + 1e-9 for a, b in zip(tri, tri[1:]))
+        print(f"  P2 (coarse -> T0 -> T1 monotone): "
+              f"{' -> '.join(f'{v:.4f}' for v in tri)} -> "
+              f"{'HOLDS' if p2 else 'FALSIFIED'}")
+        if p1 and p2:
+            print("  => the out-of-sample prediction HOLDS: all-scales "
+                  "refinement behaves like a genuine convergence trend, so "
+                  "step one's negative was the fixed-bulk pollution floor.")
+        else:
+            print("  => the out-of-sample prediction is FALSIFIED: all-scales "
+                  "refinement is NOT the lever. Combined with step one, the "
+                  "only remaining suspect is the intrinsic P1 capability and "
+                  "D2's KILL CRITERION FIRES -- the semi-structured decision "
+                  "stays the user's.")
     if best <= 0.15 and mono:
         print("  => the LE error IS resolution-controlled once the tip is "
               "cured: step one's negative was P11's fixed-bulk pollution floor. "
