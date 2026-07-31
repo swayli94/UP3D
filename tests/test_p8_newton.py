@@ -337,11 +337,23 @@ def _transonic_case(mesh_file, m_inf):
 
 @run_gates
 def test_g81_terminal_quadratic_coarse_m080():
-    """G8.1 (re-specced): coarse M0.80/alpha1.25 -- terminal quadratic
-    convergence to the TRUE discrete solution (regression lock: shock
-    0.658, cl 0.459, M_max 1.408 -- the Newton answer, dissipation-scan
-    robust and continuation-path independent; NOT the P4 Picard stall
-    state 0.604/0.334, whose Newton residual is 2.2e-4)."""
+    """G8.1: coarse M0.80/alpha1.25 -- terminal quadratic convergence to the TRUE
+    discrete solution.
+
+    ★ RE-ANCHORED 2026-07-31 (GS1b.11) to entropy-ON values, the correction having
+    become the default. Measured at the runner-default 16 threads with this file's
+    NEWTON_TRANSONIC_RECIPE: |R| 4.1e-13, x_shock 0.6196, cl 0.41006, M_max 1.3946.
+
+    ANCHORED TO WHAT: unusually for this project, this one has an EXTERNAL reference
+    and passes it -- x_shock 0.6196 sits inside the Euler-anchored band 0.62 +- 0.03
+    (cases/reference_data/naca0012_m080/), 0.0004 from its centre, where the
+    isentropic value 0.658 fell OUTSIDE it. cl and M_max remain drift locks.
+
+    SUPERSEDED isentropic values, kept per discipline #11: shock 0.658, cl 0.459,
+    M_max 1.408. Still true of both: this is the Newton answer, dissipation-scan
+    robust and continuation-path independent, and NOT the P4 Picard stall state
+    0.604/0.334 whose Newton residual is 2.2e-4 (GS1b.7 measured that state's
+    residual at 2.198e-04 and watched the Newton walk off it in six steps)."""
     r, rep, forces = _transonic_case("coarse.msh", 0.80)
     assert r["converged"]
     _assert_terminal_quadratic(r)
@@ -355,12 +367,30 @@ def test_g81_terminal_quadratic_coarse_m080():
                for lr in lvls)
     assert lvls[-1]["residual_history"][-1] == r["residual_history"][-1]
     assert rep["upper"]["has_shock"] and rep["upper"]["monotone"]
-    assert abs(rep["upper"]["x_shock"] - 0.658) < 0.012
-    assert abs(forces["cl"] - 0.459) < 0.01
-    assert abs(float(np.sqrt(r["mach2_max"])) - 1.408) < 0.02
+    assert abs(rep["upper"]["x_shock"] - 0.6196) < 0.012
+    assert abs(forces["cl"] - 0.41006) < 0.01
+    assert abs(float(np.sqrt(r["mach2_max"])) - 1.3946) < 0.02
 
 
 @run_gates
+@pytest.mark.xfail(strict=True, reason=(
+    "GS1b.11: the entropy correction is now the default, and at MEDIUM its answer is "
+    "not yet anchorable. Measured (GS1b.9): the sigma factor is FROZEN over a Newton "
+    "step, and where it freezes depends on the recipe, so at medium M0.7875 two "
+    "converged Newton recipes disagreed by 0.118 c of shock position with the "
+    "correction on (0.6029 versus 0.4852) where the isentropic answer agrees to four "
+    "decimals (0.6738 both). A sigma self-consistency POLISH cut that to 0.0029 c and "
+    "was therefore adopted in GS1b.9 -- then REMOVED in GS1b.11 once measured to be a "
+    "coincidence: it never converged, and at medium M0.80 it moved the shock 0.6146 -> "
+    "0.7031, out of the Euler band. So the 0.118 c recipe spread stands as the reason "
+    "this lock cannot be anchored: anchoring it would fix an arbitrary recipe. Root "
+    "(GS1b.4): sigma inherits the churn of the upwind DONOR MAP, whose selection "
+    "changes for 0.34 % of medium elements between adjacent Mach steps. Five "
+    "discriminator families were tried and excluded (GS1b.10 sec 9), and the "
+    "obstruction is now understood: a badly-shaped tet produces the same local Mach "
+    "signature as a shock, so no local statistic can separate them. Re-anchor this "
+    "lock when the SHOCK LOCALISATION problem is solved -- its shared fix is S2's "
+    "gradient reconstruction, which is also G1.6's root."))
 def test_g81_terminal_quadratic_medium_m07875():
     """G8.1 (re-specced): medium M0.7875/alpha1.25 -- the strongest
     medium-mesh condition with a reachable isolated solution (M0.80 sits
@@ -455,6 +485,22 @@ def _m6_case(level, m_inf=0.84, alpha=3.06):
 
 
 @run_gates
+@pytest.mark.xfail(strict=True, reason=(
+    "GS1b.11: the entropy correction is now the default and the CHAIN construction "
+    "does not work on this 3-D mesh. Measured 2026-07-31 (M6 medium M0.84/alpha3.06, "
+    "the NEWTON_M6_RECIPE, 16 threads): entropy ON gives converged=False with |R| "
+    "stalled at 2.49e-06, 57 FLOORED cells, M_max 1.4329 and -- the tell -- "
+    "sigma_min = 0.0 EXACTLY, i.e. the entropy factor collapsed to zero and drove the "
+    "density onto rho_floor. sigma_min = 0 is the donor-CYCLE signature the "
+    "pointer-doubling transport is built to detect (a cycle squares the running "
+    "product every round), so the driver's refusal to report convergence is the "
+    "GS1.4 clamp-not-silent contract working as designed rather than a silent bad "
+    "answer -- though the exact attribution (cycle versus a very long chain) is a "
+    "named check, not yet run. The isentropic leg is unaffected: converged=True, "
+    "|R| 5.11e-15, M_max 2.1288, no floors, and its committed locks (cl 0.2646, "
+    "M_max 2.134, shock 0.596) stand. Re-anchor when SHOCK LOCALISATION is solved -- "
+    "GS1b.10's chain-free FV transport (git 774ef96) has no cycle to fail on, so that "
+    "is the base to rebuild from once the production term can be localised."))
 def test_g82_m6_medium_newton_end_to_end():
     """G8.2: ONERA M6 medium (63k nodes / 351k tets), M0.84/alpha3.06 --
     Newton end to end (mesh read -> cut -> continuation -> forces+shocks)

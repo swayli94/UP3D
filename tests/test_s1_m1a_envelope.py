@@ -43,14 +43,32 @@ M_INF, ALPHA = 0.72, 1.25
 
 #: measured 2026-07-28 on DESKTOP-N6UP769 (16 threads), target-Mach direct
 #: Newton (no Mach ramp -- GS1.2b), upwind_c 1.5, freeze_tol 1e-6.
+#: ★ RE-ANCHORED 2026-07-31 (GS1b.11): the entropy correction became the DEFAULT, so
+#: these are entropy-ON values. Measured at the runner-default 16 threads with this
+#: file's own recipe (solve_newton_lifting direct at M0.72, upwind_c 1.5, m_crit 0.95,
+#: freeze_tol 1e-6, precond direct).
+#:
+#: ANCHORED TO WHAT: this is a DRIFT LOCK, not a correctness claim -- M0.72 has no
+#: external reference in this project. What carries external meaning is the
+#: three-level CONSISTENCY criterion below (medium -> fine < 1 %), and it IMPROVED:
+#: +0.91 % isentropic -> +0.63 % with the correction.
+#:
+#: SUPERSEDED isentropic values, kept per discipline #11 rather than overwritten:
+#:     coarse cl 0.242797  x_shock 0.28742  m_max 1.1359
+#:     medium cl 0.253351  x_shock 0.29150  m_max 1.1540
+#:     fine   cl 0.255662  x_shock 0.28753  m_max 1.1658   RICHARDSON_CL 0.25631
+#: The moves are +0.08 % / -0.04 % / -0.28 % in cl; the fine one exceeds CL_RTOL,
+#: which is why this re-anchor was necessary (and why GS1b.6's "flipping the default
+#: would not break the M1a lock" was imprecise -- it held for the consistency
+#: criterion, not for the absolute locks).
 LOCK = {
-    "coarse": dict(cl=0.242797, x_shock=0.28742, m_max=1.1359),
-    "medium": dict(cl=0.253351, x_shock=0.29150, m_max=1.1540),
-    "fine": dict(cl=0.255662, x_shock=0.28753, m_max=1.1658),
+    "coarse": dict(cl=0.242997, x_shock=0.28706, m_max=1.1356),
+    "medium": dict(cl=0.253237, x_shock=0.29075, m_max=1.1537),
+    "fine": dict(cl=0.254823, x_shock=0.28358, m_max=1.1650),
 }
 CL_RTOL = 2.0e-3          # 0.2 %: well inside run-to-run scatter, far below
 #                           the physics changes this is meant to catch
-RICHARDSON_CL = 0.25631
+RICHARDSON_CL = 0.25511   # was 0.25631 isentropic; convergence ratio 6.45
 
 run_fine = pytest.mark.skipif(
     os.environ.get("PYFP3D_TRANSONIC_GATES", "0") != "1",

@@ -97,24 +97,6 @@ class _EliminatedKuttaRow:
         return -sla.lu_solve(self._lu, self._Kp @ x)
 
 
-#: GS1b.9: when is the entropy factor SELF-CONSISTENT with its own solution, and
-#: how many outer epochs may be spent reaching that. Both are ALGORITHMIC CONSTANTS,
-#: not driver arguments (roadmap principle 4): they define "self-consistent", they
-#: are not tuning dials.
-#:
-#: Why this exists, measured: a converged solve satisfies R(phi; sigma_frozen) = 0
-#: while the state itself implies sigma(phi) != sigma_frozen, so the answer inherits
-#: WHERE sigma happened to be frozen -- which depends on the recipe. At medium
-#: M0.7875 two Newton recipes that agree to four decimals with the isentropic law
-#: (x_shock 0.6738 both) disagreed by 0.118 c with the correction on (0.6029 versus
-#: 0.4852). The fixed point of R(phi; sigma(phi)) = 0 is recipe-INDEPENDENT because
-#: it is a solution of the equation, so the driver iterates onto it.
-#:
-#: The tolerance is expressed RELATIVE to the correction's own size (1 - sigma_min):
-#: an absolute bound would be meaningless where the correction is weak (subcritical
-#: cases have 1 - sigma ~ 0.002) and far too loose where it is strong.
-_SIGMA_SELF_TOL_REL = 0.02
-_SIGMA_POLISH_MAX = 6
 
 
 #: GS1b.5(a): how many times the frozen entropy factor is rebuilt during a solve.
@@ -634,8 +616,15 @@ def solve_newton_lifting(
     tip_taper: Optional[np.ndarray] = None,
     kutta_estimator: str = "probe",
     external_rhs: Optional[np.ndarray] = None,
-    entropy_correction: bool = False,
-    _sigma_epoch: int = 0,
+    #: GS1b.11 (2026-07-31, user-adjudicated): the entropy-corrected density
+    #: is the DEFAULT. It is the physically correct relation (rho_s =
+    #: (p02/p01)*rho_isen makes the FP jump reproduce Rankine-Hugoniot
+    #: exactly), it lands the M0.80 coarse shock inside the Euler-anchored
+    #: band where the isentropic law falls outside it, and at medium M0.80 it
+    #: turns a NON-CONVERGING solve into a converged in-band one. The switch
+    #: stays because low-subsonic work may legitimately want it off and
+    #: because it is the tool for ON/OFF comparisons.
+    entropy_correction: bool = True,
     verbose: bool = False,
 ) -> Dict[str, object]:
     """
@@ -1234,58 +1223,20 @@ def solve_newton_lifting(
         # convergence rather than hand back a state built on it.
         converged = False
         accept_reason = "sigma_transport_not_converged"
-    # ---- GS1b.9: sigma self-consistency polish -----------------------------
-    # A converged solve satisfies R(phi; sigma_frozen) = 0, but the state itself
-    # implies sigma(phi), and the two need not agree -- so the answer inherits WHERE
-    # sigma froze, which depends on the recipe (measured: 0.118 c of shock position
-    # at medium M0.7875 between two recipes that agree to four decimals with the
-    # isentropic law). The fixed point of R(phi; sigma(phi)) = 0 does not, because it
-    # is a solution of the equation. So: rebuild sigma from the terminal state and,
-    # if it moved by more than _SIGMA_SELF_TOL_REL of the correction's own size,
-    # re-solve WARM-STARTED from here -- whose seed sigma is exactly sigma(phi), one
-    # step of the self-consistency map. Recursion depth is bounded by
-    # _SIGMA_POLISH_MAX and every epoch's gap is reported.
+    # ---- GS1b.9's sigma self-consistency polish: REMOVED (GS1b.11) ------------
+    # It re-solved warm-started until sigma stopped moving, and it is gone because it
+    # was MEASURED to be a coincidence, not a mechanism. It never converged (GS1b.9
+    # P2 FAIL: the self-consistency gap oscillated 0.35-1.22 and always exhausted the
+    # epoch cap, because sigma -> phi -> sigma is not a contraction while sigma rides
+    # the donor map's churn). So "running six epochs" landed wherever the limit cycle
+    # happened to put it: at medium M0.7875 that happened to be consistent between
+    # recipes (recipe spread 0.118 c -> 0.0029 c, which is what recommended it), but at
+    # medium M0.80 it moved the shock 0.6146 -> 0.7031, i.e. 0.0885 c and OUT of the
+    # Euler-anchored band it had been inside. Six extra solves to drive a
+    # non-convergent iteration to an arbitrary point is worse than stating the
+    # limitation: the recipe dependence is now RECORDED in the medium locks' xfail
+    # reasons instead of being washed away by a procedure.
     sigma_self = None
-    if entropy_correction and converged and ws.sigma_frozen is not None:
-        sig_used = ws.sigma_frozen.copy()
-        ws.refresh_sigma(state, frozen=frozen)
-        gap = float(np.max(np.abs(ws.sigma_frozen - sig_used)))
-        scale = max(1.0 - float(sig_used.min()), 1e-12)
-        sigma_self = gap / scale
-        if (sigma_self > _SIGMA_SELF_TOL_REL
-                and _sigma_epoch < _SIGMA_POLISH_MAX):
-            if verbose:
-                print(f"  [sigma epoch {_sigma_epoch}: self-consistency "
-                      f"{sigma_self:.3e} rel -- re-solving warm]")
-            nxt = solve_newton_lifting(
-                mesh_cut, wc, m_inf=m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
-                gamma_air=gamma_air, vortex_center=vortex_center,
-                farfield_spanwise_gamma=farfield_spanwise_gamma,
-                upwind_c=upwind_c, m_crit=m_crit, m_cap=m_cap,
-                rho_floor=rho_floor, tol_residual=tol_residual,
-                tol_gamma=tol_gamma, n_newton_max=n_newton_max,
-                n_picard_seed=0, phi_init=state["phi_cut"], gamma_init=gamma,
-                amg_rebuild_every=amg_rebuild_every, precond=precond,
-                direct_refactor_every=direct_refactor_every,
-                direct_reuse_rtol=direct_reuse_rtol,
-                gmres_restart=gmres_restart, gmres_maxiter=gmres_maxiter,
-                line_search=line_search, rtol_seed=rtol_seed,
-                tol_residual_loose=tol_residual_loose,
-                tol_residual_rel=tol_residual_rel,
-                accept_on_stall=accept_on_stall, freeze_tol=freeze_tol,
-                freeze_refresh_max=freeze_refresh_max,
-                freeze_max_reverts=freeze_max_reverts, workspace=ws,
-                tip_taper=tip_taper, kutta_estimator=kutta_estimator,
-                external_rhs=external_rhs, entropy_correction=True,
-                _sigma_epoch=_sigma_epoch + 1, verbose=verbose)
-            nxt["n_sigma_epochs"] = nxt.get("n_sigma_epochs", 0) + 1
-            nxt["sigma_self_consistency_history"] = (
-                [sigma_self] + list(nxt.get("sigma_self_consistency_history",
-                                            [])))
-            return nxt
-        # not recursing: restore the sigma the reported state was solved with, so
-        # the returned diagnostics describe THAT state and not the probe
-        ws.sigma_frozen = sig_used
 
     q2n = state["q2l"]
     mach2_max = float(np.max(mach_squared_field(q2n, m_inf, gamma_air)))
@@ -1336,12 +1287,9 @@ def solve_newton_lifting(
         "m1_max": (float(ws.ent.m1_max) if entropy_correction else None),
         "sigma_transport_converged": bool(ws.sigma_converged),
         "n_sigma_refresh": n_sigma_refresh,
-        # GS1b.9: how far the reported state is from sigma self-consistency,
-        # relative to the correction's own size, and how many epochs it took
+        # GS1b.9's self-consistency probe is retired with its polish (GS1b.11); the
+        # key kept as None so callers that read it do not KeyError.
         "sigma_self_consistency": sigma_self,
-        "sigma_self_consistency_history": ([] if sigma_self is None
-                                           else [sigma_self]),
-        "n_sigma_epochs": 0,
         "sigma_delta_final": (sigma_history[-1][3] if sigma_history else None),
         "jacobian_nnz": getattr(ws.op, "newton_nnz", None),
         "n_term3_active": getattr(ws.op, "n_term3_active", None),

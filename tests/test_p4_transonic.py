@@ -178,8 +178,14 @@ def test_p4_picard_path_historical_regression(reference_mesh_dir, artifacts_dir)
     path in test_g41_transonic_coarse_newton.
     """
     from .conftest import REPO_ROOT
+    # ★ GS1b.11: entropy_correction is now the DEFAULT, and this test exists to lock the
+    # HISTORICAL (isentropic Picard) behaviour, so it pins the flag OFF explicitly. With
+    # the default it reads 0.5633 instead of 0.6041 -- a correct move, not a drift, and
+    # exactly the use the switch was kept for (the user's 2026-07-30 ruling that the
+    # correction stays switchable).
     case = _transonic_case(
-        REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
+        REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh",
+        entropy_correction=False)
     _write_g41_summary(case, "coarse", artifacts_dir)
     r, up = case["result"], case["shock"]["upper"]
     assert r["engineering_converged"], r.get("not_converged_reason")
@@ -195,16 +201,11 @@ def test_p4_picard_path_historical_regression(reference_mesh_dir, artifacts_dir)
         f"0.6041 (GS1b.7)")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "G4.1 re-spec'd onto the coupled Newton path (GS1b.8, user ruling 2026-07-30) "
-    "because the Picard path's state is not a solution (GS1b.7). On the CONVERGED "
-    "Newton state the ISENTROPIC shock sits at 0.6581, outside the Euler-anchored "
-    "band 0.62 +/- 0.03 -- the band itself already includes a documented 0-2% chord "
-    "aft allowance for isentropic FP (Holst PAS 2000), and the measured aft bias is "
-    "larger than that. With the entropy correction ON the same state reads 0.6186, "
-    "INSIDE the band, so this becomes a PASS when entropy_correction becomes the "
-    "default. The band is NOT moved (GS1b.8 criterion E5); this xfail records the "
-    "isentropic model's measured limitation, exactly as G1.6's strict xfail does."))
+#: ★ The GS1b.8 xfail is GONE: it said "this becomes a PASS when entropy_correction
+#: becomes the default", and after GS1b.11 flipped it that prediction held --
+#: x_shock 0.6073 at coarse, inside the Euler-anchored band 0.62 +- 0.03 (-0.0127 from
+#: its centre), where the isentropic value 0.6581 fell outside. Recorded because a
+#: prediction that is checked is worth more than one that is quietly dropped.
 def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
     """Gate G4.1 on the Newton path: the shock position of a state that IS a
     solution, against the Euler-anchored reference band."""
@@ -218,20 +219,12 @@ def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
 
 
 @run_gates
-@pytest.mark.xfail(strict=True, reason=(
-    "Same re-spec as the coarse leg (GS1b.8): G4.1 runs on the coupled Newton path "
-    "because the Picard path's state is not a solution (GS1b.7). ★ Found while "
-    "verifying the coarse re-spec -- this MEDIUM leg was still asserting the "
-    "Euler-anchored band on the PICARD path and PASSING, i.e. a physics gate on a "
-    "non-converged state, exactly what the coarse leg was re-spec'd away from. "
-    "★★ And the medium leg xfails for a DIFFERENT and stronger reason than coarse, "
-    "measured 2026-07-30: with the isentropic default the coupled Newton does NOT "
-    "CONVERGE here at all (|R| 6.9e-06, x_shock 0.8819) -- consistent with the M1 "
-    "gate's recorded 'medium: 0 converged legs' -- whereas with the entropy "
-    "correction ON it CONVERGES (|R| 2.6e-13) and lands at x_shock 0.6146, INSIDE "
-    "the band (-0.0054 from centre). So this xfail flips to a pass on the day the "
-    "correction becomes the default, and the failing assertion today is the "
-    "convergence one, not the band one. Band NOT moved."))
+#: ★ Also un-xfailed by GS1b.11, but NOT smoothly -- worth recording. The GS1b.8 reason
+#: predicted a pass, then GS1b.9's sigma polish (added afterwards) moved this leg to
+#: x_shock 0.7031, OUT of the band, and the A3 prediction check caught it. Removing the
+#: polish -- which had never converged, so its apparent benefit was a coincidence --
+#: brings this leg to x_shock 0.6006, INSIDE the band (-0.0194 from centre), and the
+#: isentropic leg here does not converge at all.
 def test_g41_transonic_medium_gate(reference_mesh_dir, artifacts_dir):
     """Gate G4.1 = V4 on the medium mesh, on the Newton path (GS1b.8)."""
     from .conftest import REPO_ROOT

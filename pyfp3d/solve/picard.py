@@ -458,7 +458,15 @@ def solve_subsonic_lifting(
     tol_residual: Optional[float] = None,
     farfield_spanwise_gamma: bool = False,
     body_source_rhs: Optional[np.ndarray] = None,
-    entropy_correction: bool = False,
+    #: GS1b.11 (2026-07-31, user-adjudicated): the entropy-corrected density
+    #: is the DEFAULT. It is the physically correct relation (rho_s =
+    #: (p02/p01)*rho_isen makes the FP jump reproduce Rankine-Hugoniot
+    #: exactly), it lands the M0.80 coarse shock inside the Euler-anchored
+    #: band where the isentropic law falls outside it, and at medium M0.80 it
+    #: turns a NON-CONVERGING solve into a converged in-band one. The switch
+    #: stays because low-subsonic work may legitimately want it off and
+    #: because it is the tool for ON/OFF comparisons.
+    entropy_correction: bool = True,
 ) -> Dict[str, object]:
     """
     Lifting subsonic full-potential solve on a wake-cut mesh: NESTED

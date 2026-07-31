@@ -98,6 +98,11 @@ def solve_transonic_lifting(
     pseudo_dt: Optional[float] = None,
     tol_gamma: float = TRANSONIC_DEFAULTS["tol_gamma"],
     tol_residual: float = 1e-8,
+    #: GS1b.11: forwarded to every Picard solve this driver makes. The correction is
+    #: the DEFAULT (None means "use solve_subsonic_lifting's default"); pass False to
+    #: reproduce the historical isentropic behaviour, which is what the P4 Picard-path
+    #: regression does.
+    entropy_correction: Optional[bool] = None,
     n_picard_seed: int = TRANSONIC_DEFAULTS["n_picard_seed"],
     n_picard_eval: int = TRANSONIC_DEFAULTS["n_picard_eval"],
     max_gamma_evals: int = TRANSONIC_DEFAULTS["max_gamma_evals"],
@@ -232,6 +237,8 @@ def solve_transonic_lifting(
         upwind_sigma_p_frac=upwind_sigma_p_frac,
         upwind_nbr_depth=upwind_nbr_depth,
         tol_rho=1e-6, n_picard_max=n_picard_seed,
+        **({} if entropy_correction is None
+           else {"entropy_correction": entropy_correction}),
         forcing=TRANSONIC_DEFAULTS["forcing_seed"], rtol=rtol, maxiter=maxiter,
         farfield_spanwise_gamma=farfield_spanwise_gamma,
     )
@@ -262,6 +269,8 @@ def solve_transonic_lifting(
             phi_init=phi_seed, gamma_fixed=g, rtol=rtol, maxiter=maxiter,
             farfield_spanwise_gamma=farfield_spanwise_gamma,
             omega_rho=omr,
+            **({} if entropy_correction is None
+               else {"entropy_correction": entropy_correction}),
         ), t0)
 
     for m in levels[1:]:
