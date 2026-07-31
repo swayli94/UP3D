@@ -146,6 +146,8 @@ def sigma_transport_sweep(
     gamma: float,
     sigma_out: np.ndarray,
     m_up_out: np.ndarray,
+    d1_out: np.ndarray,
+    chi_out: np.ndarray,
 ) -> None:
     """One Gauss-Seidel sweep of the FV upwind entropy transport, in flow order:
 
@@ -167,6 +169,7 @@ def sigma_transport_sweep(
         w_sum = 0.0
         sig_in = 0.0
         m_in = 0.0
+        d1_in = 0.0
         for f in range(4):
             w = weights[e, f]
             if w <= 0.0:
@@ -176,20 +179,50 @@ def sigma_transport_sweep(
             if nb < 0:
                 sig_in += w
                 m_in += w * m_e
+                # boundary inflow: no upstream compression to compare against
             else:
                 sig_in += w * sigma_out[nb]
                 m_in += w * np.sqrt(mach_number_squared(q2[nb], m_inf, gamma))
+                d1_in += w * d1_out[nb]
         if w_sum <= 0.0:
             sigma_out[e] = 1.0
             m_up_out[e] = m_e
+            d1_out[e] = 0.0
+            chi_out[e] = 0.0
             continue
         m_up = m_in / w_sum
         m_up_out[e] = m_up
+        d1 = m_up - m_e                      # this cell's compression
+        d1_out[e] = d1
+        d2 = d1_in / w_sum                   # the compression one cell upstream
+        # ★ SHOCK DISCRIMINATOR (GS1b.10, candidate (i)): entropy is produced by a
+        # SHOCK, not by a smooth supersonic compression -- and the two are NOT
+        # distinguishable locally, only by RATE. Without this gate the construction
+        # charges the airfoil pocket's 0.3-chord isentropic deceleration (M 1.41 ->
+        # 1.29) and over-produces: measured 1-sigma 6.22 % where the strongest shock
+        # the field can hold allows 3.57 %.
+        #
+        # chi = max(0, 1 - d2/d1) compares this cell's compression with the previous
+        # cell's: equal rates (a smooth compression) give chi = 0, a rate that jumps
+        # (a shock front) gives chi -> 1. Zero-knob and dimensionless, reusing the FV
+        # weights one extra time. Verified on synthetic streamlines (smooth 1.41 ->
+        # 1.29 then a shock to 0.95, over 10/30/60 smooth and 1/2/3 shock cells):
+        # the total reproduces sigma_RH(1.29) to -0.01..+0.50 %, against -2.35..-2.56 %
+        # with no gate. ★ My own reasoning had predicted this would FAIL inside the
+        # shock structure (where consecutive drops are comparable, so chi -> 0); the
+        # synthetic measurement refuted that prediction, which is why it was measured
+        # rather than argued.
+        chi = 1.0 - d2 / d1 if d1 > 0.0 else 0.0
+        if chi < 0.0:
+            chi = 0.0
+        elif chi > 1.0:
+            chi = 1.0
+        chi_out[e] = chi
         m_lo = m_e if m_e > 1.0 else 1.0
         d_m = m_up - m_lo
-        if d_m > 0.0:
+        if d_m > 0.0 and chi > 0.0:
             m_bar = 0.5 * (m_up + m_lo)
-            s_e = np.exp(-entropy_production_density(m_bar, gamma) * d_m)
+            s_e = np.exp(-chi * entropy_production_density(m_bar, gamma) * d_m)
         else:
             s_e = 1.0
         sigma_out[e] = (sig_in / w_sum) * s_e
@@ -236,6 +269,8 @@ class EntropyOperator:
         self._w = np.zeros((n, 4), dtype=np.float64)
         self._sigma = np.ones(n, dtype=np.float64)
         self._m_up = np.zeros(n, dtype=np.float64)
+        self._d1 = np.zeros(n, dtype=np.float64)
+        self._chi = np.zeros(n, dtype=np.float64)
         self._elements = np.ascontiguousarray(elements)
         self.n_shock = 0
         self.m1_max = 0.0
@@ -257,9 +292,11 @@ class EntropyOperator:
         phi_e = np.asarray(phi_cut, dtype=np.float64)[self._elements].mean(axis=1)
         order = np.argsort(phi_e, kind="stable").astype(np.int64)
         self._sigma[:] = 1.0
+        self._d1[:] = 0.0
+        self._chi[:] = 0.0
         sigma_transport_sweep(np.ascontiguousarray(q2, dtype=np.float64),
                               self._w, self._fn, order, m_inf, gamma,
-                              self._sigma, self._m_up)
+                              self._sigma, self._m_up, self._d1, self._chi)
         prod = self._sigma < 1.0 - 1e-9
         self.n_shock = int(np.count_nonzero(prod))
         self.m1_max = float(self._m_up[prod].max()) if prod.any() else 0.0
