@@ -483,7 +483,17 @@ class NewtonWorkspace:
         """
         upstream = (frozen[0] if frozen is not None
                     else self.upw.upstream_map(state["grad"]))
-        sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air)
+        # ★ state["lim"] is load-bearing, not defensive: refresh_sigma hands the
+        # m_cap-LIMITED field q2l, so without the mask the knee walk reads the CAP
+        # as a physical pre-shock Mach. Measured at M6 medium before the fix:
+        # m1_max = 2.9999999999999996 = m_cap, giving s = sigma_RH(3.0) = 0.32834,
+        # which the pointer-doubling transport squared to sigma_min = exactly 0.0
+        # over a donor cycle -- 57 floored cells, |R| 2.49e-06 un-converged (the
+        # G8.2 signature; the two collapse routes are locked in
+        # tests/test_s1b_entropy.py). Pre-registered
+        # docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
+        sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air,
+                             lim=state["lim"])
         self.sigma_frozen = sig.copy()
         self.sigma_converged = self.ent.converged
         return self.ent.converged

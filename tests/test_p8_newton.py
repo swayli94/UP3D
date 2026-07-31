@@ -485,22 +485,6 @@ def _m6_case(level, m_inf=0.84, alpha=3.06):
 
 
 @run_gates
-@pytest.mark.xfail(strict=True, reason=(
-    "GS1b.11: the entropy correction is now the default and the CHAIN construction "
-    "does not work on this 3-D mesh. Measured 2026-07-31 (M6 medium M0.84/alpha3.06, "
-    "the NEWTON_M6_RECIPE, 16 threads): entropy ON gives converged=False with |R| "
-    "stalled at 2.49e-06, 57 FLOORED cells, M_max 1.4329 and -- the tell -- "
-    "sigma_min = 0.0 EXACTLY, i.e. the entropy factor collapsed to zero and drove the "
-    "density onto rho_floor. sigma_min = 0 is the donor-CYCLE signature the "
-    "pointer-doubling transport is built to detect (a cycle squares the running "
-    "product every round), so the driver's refusal to report convergence is the "
-    "GS1.4 clamp-not-silent contract working as designed rather than a silent bad "
-    "answer -- though the exact attribution (cycle versus a very long chain) is a "
-    "named check, not yet run. The isentropic leg is unaffected: converged=True, "
-    "|R| 5.11e-15, M_max 2.1288, no floors, and its committed locks (cl 0.2646, "
-    "M_max 2.134, shock 0.596) stand. Re-anchor when SHOCK LOCALISATION is solved -- "
-    "GS1b.10's chain-free FV transport (git 774ef96) has no cycle to fail on, so that "
-    "is the base to rebuild from once the production term can be localised."))
 def test_g82_m6_medium_newton_end_to_end():
     """G8.2: ONERA M6 medium (63k nodes / 351k tets), M0.84/alpha3.06 --
     Newton end to end (mesh read -> cut -> continuation -> forces+shocks)
@@ -516,15 +500,48 @@ def test_g82_m6_medium_newton_end_to_end():
     caps the same run measures ~333 s (oversubscription costs ~33%,
     measured A/B 2026-07-11); with them 252 s (G8.2 closure run), ~145 s
     since the G10.2 intermediate_tol promotion (same final-level
-    solution, recipe comment above)."""
+    solution, recipe comment above).
+
+    ★ RE-ANCHORED 2026-07-31 to the ENTROPY-CORRECTED default, and the GS1b.11
+    strict xfail REMOVED. That xfail recorded a real defect -- entropy ON gave
+    converged=False, |R| stalled at 2.49e-06, 57 floored cells and sigma_min = 0.0
+    EXACTLY -- which is now fixed at its root: refresh_sigma was handing the
+    m_cap-LIMITED speed field to the entropy walk, so a limited cell's recovered
+    "pre-shock Mach" was the cap itself (m1_max read exactly 2.9999999999999996) and
+    sigma_RH(3.0) = 0.32834 entered the chain product. Pre-registered and measured in
+    docs/dev_phase_two/20260731-2000 / -2200; the guard is locked by
+    tests/test_s1b_entropy.py's mcap group.
+
+    That xfail also left a named-but-unrun check -- cycle versus a very long chain --
+    and it is now RUN: both routes are measured and locked. Separate capped shocks
+    along an acyclic chain multiply one 0.32834 factor each (twelve give 1.570e-06,
+    transport still converged); a capped shock inside a DONOR CYCLE gives exactly 0.0
+    with converged=False, since pointer doubling squares the product every round. M6
+    medium read exactly 0.0, so it was the CYCLE route -- the name was right.
+
+    Measured post-fix (16 threads, 142 s, 14 Newton steps): converged, |R| 6.63e-15,
+    Kutta |F| 2.08e-16, 0 limited / 0 floored, cl_p 0.263888, M_max 2.10709, shocks
+    0.59582 / 0.53914 / 0.34225, sigma_min 0.73247, m1_max 1.97516 over 2901 shock
+    cells. The bands below are re-centred on those; the SUPERSEDED isentropic anchors
+    are cl_p 0.2646, M_max 2.134, shocks 0.596 / 0.541 / 0.362 (the eta = 0.90 one
+    had only 0.0002 of margin left inside its own tolerance, which is why this is a
+    re-anchor and not a "still passes").
+
+    ⚠ REGISTERED, not resolved: m1_max 1.975 at M_inf 0.84 means the walk finds a
+    pre-shock Mach near 2 somewhere, and this recipe carries no tip_taper, so that is
+    very likely the P13 wing-tip free-edge singularity rather than a physical shock --
+    i.e. the correction may be charging entropy to a NUMERICAL artefact. That is the
+    registered shock-localisation problem resurfacing; it does not affect this fix
+    (which strictly removes a non-physical input) but it must not be read as
+    validation of the correction's magnitude here."""
     r, forces, shocks, wall = _m6_case("medium")
     assert r["converged"]
     _assert_terminal_quadratic(r)
     assert r["n_limited"] == 0 and r["n_floored"] == 0
     assert r["F_history"][-1] < 1e-12                   # coupled Kutta
     assert wall < 300.0, f"G8.2 budget: {wall:.0f} s >= 300 s"
-    assert abs(forces["cl"] - 0.2646) < 0.005            # regression lock
-    assert abs(float(np.sqrt(r["mach2_max"])) - 2.134) < 0.05
-    assert abs(shocks[0.44] - 0.596) < 0.02
-    assert abs(shocks[0.65] - 0.541) < 0.02
-    assert abs(shocks[0.90] - 0.362) < 0.02
+    assert abs(forces["cl"] - 0.263888) < 0.005            # regression lock
+    assert abs(float(np.sqrt(r["mach2_max"])) - 2.10709) < 0.05
+    assert abs(shocks[0.44] - 0.59582) < 0.02
+    assert abs(shocks[0.65] - 0.53914) < 0.02
+    assert abs(shocks[0.90] - 0.34225) < 0.02

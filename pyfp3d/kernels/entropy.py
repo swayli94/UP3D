@@ -71,6 +71,7 @@ Jacobian genuinely inexact rather than exact-almost-everywhere.
 """
 
 import os
+from typing import Optional
 
 import numba
 import numpy as np
@@ -111,6 +112,7 @@ def shock_factor_sweep(
     gamma: float,
     max_walk: int,
     knee_frac: float,
+    lim: np.ndarray,
     s_out: np.ndarray,
     m1_out: np.ndarray,
 ) -> None:
@@ -156,6 +158,27 @@ def shock_factor_sweep(
     condition is "replace with a shock width derived from nu, or drop it if the
     result is insensitive across [0.2, 0.5]".
 
+    `lim[e]` is True where the element's q2 was NOT touched by the m_cap limiter
+    (the `lim = q2l == q2n` convention of NewtonWorkspace.eval_residual). Where it
+    is False the system has ALREADY declared that cell's speed non-physical, so no
+    entropy production may be computed from it: the walk stops there, and a
+    post-shock cell whose own or whose donor's speed was limited gets s = 1.0.
+
+    ★ That guard is not a safety belt, it is the fix for a measured default-path
+    defect (pre-registered 20260731-2000, evidence bench/gate_results/m3_budget.csv).
+    refresh_sigma passes the LIMITED field q2l, so at a limited cell the recovered
+    "pre-shock Mach" was the cap itself -- m1_max read exactly 2.9999999999999996 at
+    M6 medium -- giving s = sigma_RH(3.0) = 0.32834, a 67 % density cut invented out
+    of a limiter. Two measured routes then carry that to a collapse (both locked in
+    tests/test_s1b_entropy.py::test_mcap_the_mechanism_itself_is_locked): separate
+    capped shocks along an ACYCLIC chain multiply one factor each (twelve give
+    1.570e-06, transport still converged), while a capped shock inside a DONOR CYCLE
+    goes to exactly 0.0 with converged=False, because pointer doubling squares the
+    accumulated product every round. M6 medium read sigma_min exactly 0.0, so it was
+    the cycle route -- hence "the G8.2 donor-cycle signature" -- with 57 floored
+    cells and |R| stalled at 2.49e-06. M6 coarse is healthy only because its Newton
+    states have no limited cells at all (its PICARD seed does: 595 of them).
+
     m1_out records the detected pre-shock Mach (0.0 where no shock was detected)
     for diagnostics.
     """
@@ -166,9 +189,13 @@ def shock_factor_sweep(
         u = upstream[e]
         if u == e:
             continue
+        if not lim[e]:
+            continue                      # own speed non-physical: no correction
         m2e = mach_number_squared(q2[e], m_inf, gamma)
         if m2e >= 1.0:
             continue                      # still supersonic: not post-shock
+        if not lim[u]:
+            continue                      # donor speed non-physical (m_cap)
         m2u = mach_number_squared(q2[u], m_inf, gamma)
         if m2u <= 1.0:
             continue                      # donor subsonic: no shock crossed
@@ -179,6 +206,8 @@ def shock_factor_sweep(
             nxt = upstream[c]
             if nxt == c:
                 break                     # chain root
+            if not lim[nxt]:
+                break                     # limited: stop before reading the cap
             m2n = mach_number_squared(q2[nxt], m_inf, gamma)
             if m2n <= 1.0:
                 break                     # front of the supersonic pocket
@@ -307,6 +336,10 @@ class EntropyOperator:
         self._anc_a = np.zeros(n_elements, dtype=np.int64)
         self._anc_b = np.zeros(n_elements, dtype=np.int64)
         self._prod_b = np.ones(n_elements, dtype=np.float64)
+        #: the inert all-true limiter mask for `sigma(lim=None)`. Same reasoning
+        #: as UpwindOperator._sigma_ones: numba specialises on the argument TYPE,
+        #: so passing None would force a second compilation of the hot sweep.
+        self._lim_ones = np.ones(n_elements, dtype=np.bool_)
         self.n_shock = 0
         self.m1_max = 0.0
         self.sigma_min = 1.0
@@ -314,9 +347,19 @@ class EntropyOperator:
         self.converged = True
 
     def sigma(self, q2: np.ndarray, upstream: np.ndarray, m_inf: float,
-              gamma: float = GAMMA) -> np.ndarray:
+              gamma: float = GAMMA, lim: Optional[np.ndarray] = None
+              ) -> np.ndarray:
         """Entropy factor per element (view into the workspace buffer -- copy it
-        if it must outlive the next call, which the frozen-sigma callers do)."""
+        if it must outlive the next call, which the frozen-sigma callers do).
+
+        `lim` is the m_cap limiter mask (True = this element's q2 was NOT limited),
+        i.e. NewtonWorkspace.eval_residual's `lim = q2l == q2n`. Passing it is what
+        keeps the correction off cells whose speed the system has already declared
+        non-physical -- see shock_factor_sweep. `lim=None` means "nothing was
+        limited" and reproduces the pre-20260731-2000 behaviour bit for bit; it is
+        the control leg of that round's A/B, and callers with a real limiter mask
+        should pass it.
+        """
         up = np.ascontiguousarray(upstream, dtype=np.int64)
         n = len(self._s)
         if len(up) != n:
@@ -332,8 +375,15 @@ class EntropyOperator:
                 f"upstream map out of range [{up.min()}, {up.max()}] for "
                 f"{n} elements -- it was probably read before a walk filled it "
                 f"(use UpwindOperator.upstream_map(grad))")
+        if lim is None:
+            lm = self._lim_ones
+        else:
+            lm = np.ascontiguousarray(lim, dtype=np.bool_)
+            if len(lm) != n:
+                raise ValueError(
+                    f"lim mask has {len(lm)} entries, expected {n}")
         shock_factor_sweep(q2, up, m_inf, gamma, self.max_walk,
-                           self.knee_frac, self._s, self._m1)
+                           self.knee_frac, lm, self._s, self._m1)
         self.n_rounds = transport_sigma(
             self._s, up, self.n_round, self._sigma, self._anc_a, self._anc_b,
             self._prod_b)

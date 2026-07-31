@@ -6,7 +6,8 @@ vs the default strict path, on the two committed Newton recipes:
   (b) NACA0012 medium, M0.7875 / alpha 1.25 -- NEWTON_TRANSONIC_RECIPE
       (G8.1 regression locks: shock 0.674, cl 0.523, M_max 1.404)
   (a) ONERA M6 medium,  M0.84   / alpha 3.06 -- NEWTON_M6_RECIPE
-      (G8.2 regression locks: cl 0.2646, M_max 2.134,
+      (G8.2 regression locks, RE-ANCHORED 2026-07-31 to the
+      entropy-corrected default: cl 0.263888, M_max 2.10709,
        shocks 0.596 / 0.541 / 0.362 at eta 0.44 / 0.65 / 0.90)
 
 Acceptance (pre-registered in roadmap.md P10): ALL regression locks
@@ -233,12 +234,15 @@ def main():
             c = section_cp_curve(mc, v["result"]["phi"], eta=eta,
                                  b_semi=B_SEMI, m_inf=0.84)
             shocks[eta] = shock_report(c, 0.84)["upper"]["x_shock"]
+        # ★ RE-ANCHORED 2026-07-31 to the entropy-corrected default (m_cap guard,
+        # docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md). SUPERSEDED
+        # isentropic: 0.2646 / 2.134 / 0.596 / 0.541 / 0.362.
         v["locks"] = [
-            ("cl", forces["cl"], 0.2646, 0.005),
-            ("M_max", float(np.sqrt(v["result"]["mach2_max"])), 2.134, 0.05),
-            ("shock eta 0.44", shocks[0.44], 0.596, 0.02),
-            ("shock eta 0.65", shocks[0.65], 0.541, 0.02),
-            ("shock eta 0.90", shocks[0.90], 0.362, 0.02),
+            ("cl", forces["cl"], 0.263888, 0.005),
+            ("M_max", float(np.sqrt(v["result"]["mach2_max"])), 2.10709, 0.05),
+            ("shock eta 0.44", shocks[0.44], 0.59582, 0.02),
+            ("shock eta 0.65", shocks[0.65], 0.53914, 0.02),
+            ("shock eta 0.90", shocks[0.90], 0.34225, 0.02),
         ]
         level_rows += per_level_rows("m6_medium", tag, v)
     b, a = variants["default"], variants["adaptive"]

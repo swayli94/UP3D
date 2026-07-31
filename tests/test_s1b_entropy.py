@@ -260,3 +260,128 @@ def test_c_jacobian_is_fd_exact_for_the_frozen_sigma_system():
     assert spread > 10.0, (
         f"the error does not scale with eps (spread {spread:.2f}) -- that is a "
         f"MISSING TERM, not FD roundoff: {rels}")
+
+
+# ---------------------------------------------------------------------------
+# the m_cap guard (pre-registered
+# docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md; the defect it fixes
+# was measured on M6 medium: m1_max = m_cap exactly, sigma_min = 0.0, 57 floored
+# cells, |R| 2.49e-06 un-converged -- the G8.2 signature). All four were verified
+# FAILING against the pre-fix kernel before being committed.
+# ---------------------------------------------------------------------------
+
+M_CAP = 3.0                    # NewtonWorkspace.eval_residual's default
+
+
+def _q2(mach, m_inf=0.8):
+    return np.array([float(q2_at_mach(m, m_inf)) for m in mach])
+
+
+def test_mcap_limited_donor_gets_no_correction():
+    """A post-shock cell whose donor's speed was LIMITED must not be corrected.
+
+    Pre-fix this read the cap as a physical pre-shock Mach and returned
+    sigma_RH(3.0) ~ 0.328 -- a 67 % density cut invented out of a limiter.
+    """
+    q2 = _q2([M_CAP, 0.80])
+    lim = np.array([False, True])          # the donor was limited
+    ent = EntropyOperator(2)
+    sig = ent.sigma(q2, np.array([0, 0]), 0.8, lim=lim).copy()
+    assert sig[1] == 1.0, "a limited donor must produce no entropy correction"
+    assert ent.m1_max == 0.0
+    assert ent.sigma_min == 1.0
+
+
+def test_mcap_walk_stops_at_a_limited_cell():
+    """The knee walk must stop BEFORE reading a limited cell's Mach.
+
+    Chain: 3.00 (limited) -> 1.30 -> 1.20 -> 0.85. M1 must be 1.30, the last
+    physical value, not the cap.
+    """
+    q2 = _q2([M_CAP, 1.30, 1.20, 0.85])
+    lim = np.array([False, True, True, True])
+    ent = EntropyOperator(4)
+    sig = ent.sigma(q2, np.array([0, 0, 1, 2]), 0.8, lim=lim).copy()
+    assert_rel_close(ent.m1_max, 1.30)
+    assert_rel_close(sig[3], total_pressure_ratio(1.30))
+
+
+def test_mcap_chain_product_does_not_collapse():
+    """A run of capped cells feeding a subsonic cell must produce no correction.
+
+    Note what this construction does and does not contain: the detector fires only
+    where a SUBSONIC cell has a SUPERSONIC donor, so eleven capped cells in a row
+    are one shock, worth a single sigma_RH(3.0) = 0.32834 factor pre-fix -- not
+    0.32834**11. My first version of this test asserted the latter and failed,
+    which is how the mechanism got measured properly; the two ways sigma actually
+    reaches 0 are locked in test_mcap_the_mechanism_itself_is_locked.
+    """
+    n = 12
+    mach = np.array([M_CAP] * (n - 1) + [0.85])
+    lim = np.array([False] * (n - 1) + [True])
+    ent = EntropyOperator(n)
+    sig = ent.sigma(_q2(mach), np.arange(-1, n - 1).clip(0), 0.8,
+                    lim=lim).copy()
+    assert sig.min() == 1.0, f"sigma collapsed to {sig.min()!r}"
+
+
+def test_mcap_lim_none_is_the_all_true_control():
+    """lim=None must reproduce an explicit all-true mask BITWISE (it is the
+    control leg of the round's A/B, so it may not drift from it)."""
+    q2 = _q2([1.05, 1.37, 1.25, 1.10, 0.95, 0.85])
+    up = np.array([0, 0, 1, 2, 3, 4])
+    a = EntropyOperator(6).sigma(q2, up, 0.8).copy()
+    b = EntropyOperator(6).sigma(q2, up, 0.8,
+                                 lim=np.ones(6, dtype=bool)).copy()
+    assert np.array_equal(a, b)
+
+
+def test_mcap_lim_length_is_validated():
+    ent = EntropyOperator(4)
+    with pytest.raises(ValueError, match="lim mask has 3 entries"):
+        ent.sigma(_q2([1.3, 1.2, 0.9, 0.8]), np.array([0, 0, 1, 2]), 0.8,
+                  lim=np.ones(3, dtype=bool))
+
+
+def test_mcap_the_mechanism_itself_is_locked():
+    """Lock the two MEASURED routes from a limited cell to a collapsed sigma.
+
+    The other mcap tests fail against the pre-fix library with a TypeError (the
+    argument did not exist), which demonstrates less than it looks like. This one
+    drives both routes through the SHIPPED API, since lim=None reproduces the
+    pre-fix path exactly:
+
+      (A) separate capped shocks along one ACYCLIC chain multiply, one
+          sigma_RH(3.0) = 0.32834 factor each: twelve of them give 1.570e-06 and
+          the transport still reports converged.
+      (B) a capped shock inside a DONOR CYCLE gives exactly 0.0 with
+          converged=False -- pointer doubling squares the accumulated product
+          every round, so 0.32834 underflows.
+
+    M6 medium pre-fix read sigma_min exactly 0.0, so it was route (B); m1_max
+    there was the cap itself, which is what the guard removes at the root. That
+    attribution is why "the G8.2 donor-cycle signature" is the right name for it.
+    """
+    # (A) acyclic: 12 separate capped shocks
+    k = 12
+    mach, up = [], []
+    for i in range(k):
+        mach += [M_CAP, 0.85]
+        up += [max(2 * i - 1, 0), 2 * i]
+    ent_a = EntropyOperator(len(mach))
+    a = ent_a.sigma(_q2(np.array(mach)), np.array(up), 0.8).copy()
+    assert_rel_close(a.min(), total_pressure_ratio(M_CAP) ** k, rtol=1e-9)
+    assert ent_a.converged, "an acyclic chain must not exhaust the transport"
+
+    # (B) the same shock inside a 3-cycle: exact zero, and NOT reported converged
+    q2_b, up_b = _q2(np.array([M_CAP, 0.85, 0.90])), np.array([2, 0, 1])
+    ent_b = EntropyOperator(3)
+    b = ent_b.sigma(q2_b, up_b, 0.8).copy()
+    assert b.min() == 0.0
+    assert not ent_b.converged, (
+        "a donor cycle must be reported, not silently returned as a solution")
+
+    # and with the guard, neither route fires at all
+    guarded = EntropyOperator(3).sigma(
+        q2_b, up_b, 0.8, lim=np.array([False, True, True])).copy()
+    assert guarded.min() == 1.0

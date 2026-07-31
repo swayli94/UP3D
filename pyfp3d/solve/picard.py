@@ -711,7 +711,9 @@ def solve_subsonic_lifting(
     else:
         phi_cut = freestream_phi(mesh_cut.nodes, alpha_deg, u_inf)
     grad, q2 = op.velocities(phi_cut)
-    q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
+    q2n = q2 / u_inf**2
+    q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
+    q2_lim_mask = q2l == q2n       # True = NOT limited (the newton.py convention)
     rho = density_field(q2l, m_inf, gamma_air)
     # GS1b.3 entropy correction: rho_s = sigma * rho_isen with sigma = p02/p01
     # at the pre-shock Mach (docs/dev_phase_two/20260729-0700-...). Picard has no
@@ -728,7 +730,13 @@ def solve_subsonic_lifting(
     if ent is not None and use_upwind:
         # the donor map must be BUILT before it is read -- see
         # UpwindOperator.upstream_map (reading the raw buffer here segfaulted)
-        rho = rho * ent.sigma(q2l, upw.upstream_map(grad), m_inf, gamma_air)
+        # BACKPORT of the newton.py m_cap guard (discipline #9, pre-registered
+        # 20260731-2000): without the mask the knee walk reads the CAP as a
+        # physical pre-shock Mach on any limited cell, giving s = sigma_RH(m_cap)
+        # which the chain product drives to 0. Measured on the Newton path at M6
+        # medium; this path has the identical exposure since it also passes q2l.
+        rho = rho * ent.sigma(q2l, upw.upstream_map(grad), m_inf, gamma_air,
+                              lim=q2_lim_mask)
         sigma_history.append((float(ent.sigma_min), int(ent.n_shock),
                               float(ent.m1_max), bool(ent.converged)))
     if use_upwind:
@@ -830,12 +838,15 @@ def solve_subsonic_lifting(
 
         with phase(timings, "residual"):
             grad, q2 = op.velocities(phi_cut)
-            q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
-            n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
+            q2n = q2 / u_inf**2
+            q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
+            q2_lim_mask = q2l == q2n
+            n_limited = int(np.count_nonzero(~q2_lim_mask))
             rho_new = density_field(q2l, m_inf, gamma_air)
             if ent is not None and use_upwind:
                 rho_new = rho_new * ent.sigma(q2l, upw.upstream_map(grad),
-                                              m_inf, gamma_air)
+                                              m_inf, gamma_air,
+                                              lim=q2_lim_mask)
                 sigma_history.append(
                     (float(ent.sigma_min), int(ent.n_shock),
                      float(ent.m1_max), bool(ent.converged)))

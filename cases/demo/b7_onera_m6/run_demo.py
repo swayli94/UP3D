@@ -98,6 +98,12 @@ ETAS = (0.44, 0.65, 0.90)
 # Committed baselines (roadmap P5 / P8 ledgers; cases/demo/p5_onera_m6/results/).
 P5 = {"cl_kj": 0.24788, "shocks": (0.596, 0.570, 0.425),
       "gamma_root": 0.097, "gamma_tip": 0.0206, "m_max": 1.398}
+# ⚠ ERRATUM 2026-07-31 (phase-two 20260731-2200): the P8 medium shocks and
+# M_max below are PRE-entropy-correction values. The gate itself was re-anchored
+# to 0.59582 / 0.53914 / 0.34225, M_max 2.10709; cl_kj / cl_p (coarse) were NOT
+# re-measured that round, so this reference row is left as recorded and flagged
+# rather than partially updated. Regenerating it is the deferred GS1b.6 batch-3
+# heavy-demo recompute.
 P8 = {"cl_kj": 0.2692, "cl_p": 0.2560, "shocks": (0.596, 0.541, 0.362),
       "m_max": 2.13}
 
