@@ -165,7 +165,9 @@ class DuctSystem:
         # bench-local variant of it.
         self.entropy = bool(entropy)
         self.entropy_refresh_max = int(entropy_refresh_max)
-        self.ent = EntropyOperator(self.op.n_tets) if entropy else None
+        self.ent = (EntropyOperator(self.nodes, self.elements,
+                                    self.upw.face_neighbors)
+                    if entropy else None)
         self.sigma = None
         self.n_sigma_refresh = 0
 
@@ -191,9 +193,12 @@ class DuctSystem:
     def refresh_sigma(self, phi):
         """Rebuild the frozen sigma from `phi` using the donor map of the walk
         that the flux itself uses (upw._upstream is filled by state())."""
-        _, q2, _, _ = self.state(phi)
+        grad, q2 = self.op.velocities(phi)
+        grad = grad.copy()
         prev = self.sigma
-        sig = self.ent.sigma(q2, self.upw._upstream, self.m_inf, self.gamma)
+        # GS1b.10: chain-free signature (velocity for the FV inflow weights, phi for
+        # the flow ordering)
+        sig = self.ent.sigma(q2, grad, phi, self.m_inf, self.gamma)
         self.sigma = sig.copy()
         self.n_sigma_refresh += 1
         return (0.0 if prev is None

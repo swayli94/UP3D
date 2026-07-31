@@ -266,7 +266,8 @@ class NewtonWorkspace:
         # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
         # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
         # unlike the piecewise-constant upstream selection.
-        self.ent = EntropyOperator(self.op.n_tets)
+        self.ent = EntropyOperator(mesh_cut.nodes, mesh_cut.elements,
+                                   self.upw.face_neighbors)
         self.sigma_frozen = None
         self.sigma_converged = True
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
@@ -499,10 +500,12 @@ class NewtonWorkspace:
         defeated it and the caller must not report convergence (GS1.4
         clamp-not-silent contract).
         """
-        upstream = (frozen[0] if frozen is not None
-                    else self.upw.upstream_map(state["grad"]))
-        sig = self.ent.sigma(state["q2l"], upstream, self.m_inf,
-                             self.gamma_air)
+        # GS1b.10: no donor map any more -- the FV transport takes the velocity
+        # (for continuous inflow weights) and phi (for the flow ordering that makes
+        # one sweep exact). `frozen` is irrelevant to sigma now, which is exactly
+        # the point: sigma no longer inherits the flux's discrete selection.
+        sig = self.ent.sigma(state["q2l"], state["grad"], state["phi_cut"],
+                             self.m_inf, self.gamma_air)
         self.sigma_frozen = sig.copy()
         self.sigma_converged = self.ent.converged
         return self.ent.converged
@@ -636,7 +639,6 @@ def solve_newton_lifting(
     kutta_estimator: str = "probe",
     external_rhs: Optional[np.ndarray] = None,
     entropy_correction: bool = False,
-    entropy_kwargs: Optional[dict] = None,
     _sigma_epoch: int = 0,
     verbose: bool = False,
 ) -> Dict[str, object]:
@@ -773,11 +775,7 @@ def solve_newton_lifting(
     # and so an enabled call rebuilds sigma from this level's own seed.
     ws.sigma_frozen = None
     ws.sigma_converged = True
-    if entropy_kwargs:
-        # GS1b.4: rebuild the entropy workspace with non-default smoothing/walk
-        # settings (the sensitivity sweeps need them per call, and a reused
-        # workspace must not keep a previous call's settings).
-        ws.ent = EntropyOperator(ws.op.n_tets, **entropy_kwargs)
+
 
     # Canonical Track-A schema (solve/timing.py) PLUS the three legacy keys
     # `jacobian`/`amg_setup`/`gmres` this driver has always reported --
@@ -1283,7 +1281,6 @@ def solve_newton_lifting(
                 freeze_max_reverts=freeze_max_reverts, workspace=ws,
                 tip_taper=tip_taper, kutta_estimator=kutta_estimator,
                 external_rhs=external_rhs, entropy_correction=True,
-                entropy_kwargs=entropy_kwargs,
                 _sigma_epoch=_sigma_epoch + 1, verbose=verbose)
             nxt["n_sigma_epochs"] = nxt.get("n_sigma_epochs", 0) + 1
             nxt["sigma_self_consistency_history"] = (
