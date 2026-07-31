@@ -35,7 +35,8 @@ from pyfp3d.post.section_cut import section_cp_curve                # noqa: E402
 from pyfp3d.post.shock import shock_report                          # noqa: E402
 from pyfp3d.post.surface import (cl_kj_3d, planform_area,           # noqa: E402
                                  wall_force_coefficients)
-from pyfp3d.solve.newton import solve_newton_transonic              # noqa: E402
+from pyfp3d.solve.newton import (solve_newton_lifting,               # noqa: E402
+                                 solve_newton_transonic)
 from tests.test_p8_newton import NEWTON_M6_RECIPE                   # noqa: E402
 
 OUT = os.path.join(HERE, "gate_results")
@@ -54,6 +55,10 @@ P14_ANCHOR = {"coarse": (0.262778, 0.268813),
               "medium": (0.277628, 0.282263)}
 M6_NEWTON_KW = dict(farfield_spanwise_gamma=True, precond="direct",
                     direct_refactor_every=1000, n_newton_max=60)
+#: (entropy, kutta) legs. The probe legs are the first round's; the
+#: pressure legs are what the committed P14 anchor actually used.
+LEGS = ((False, "probe"), (True, "probe"),
+        (False, "pressure"), (True, "pressure"))
 
 
 def parse_experiment(path=EXP_FILE):
@@ -123,8 +128,17 @@ def band_rms(curves, exp, eta):
     return out
 
 
-def solve(mc, wc, entropy):
-    """The P14 transonic recipe verbatim, entropy the only variable.
+def solve(mc, wc, entropy, kutta="probe"):
+    """The P14 transonic recipe verbatim, entropy (and now the Kutta form) variable.
+
+    ★ 2026-07-31: `kutta` was added after the first budget round measured its own cl
+    4.8 % below the committed P14 anchor and traced that to the estimator, not to the
+    seed. NEWTON_M6_RECIPE inherits the library default "probe", while the committed
+    P14 M0.84 anchor was produced with "pressure" -- and P14's own headline was that
+    the probe path sits 4.5 % / 4.3 % BELOW the pressure and level-set answers at
+    exactly this condition. The pressure leg follows P14's recipe: level 0 is seeded
+    from a PROBE Newton solve at M0.70, because the quadratic Kutta row has a smaller
+    basin and the transonic driver only cold-seeds level 0.
 
     NEWTON_M6_RECIPE already carries its own newton_kw, so the flag is MERGED into
     it rather than passed alongside -- passing a second newton_kw is a TypeError,
@@ -135,6 +149,11 @@ def solve(mc, wc, entropy):
     """
     kw = dict(NEWTON_M6_RECIPE)
     kw["newton_kw"] = dict(kw["newton_kw"], entropy_correction=entropy)
+    if kutta == "pressure":
+        r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA,
+                                  entropy_correction=entropy, **M6_NEWTON_KW)
+        kw["newton_kw"].update(kutta_estimator="pressure", phi_init=r0["phi"],
+                               gamma_init=r0["gamma"], n_picard_seed=0)
     for k, v in M6_NEWTON_KW.items():
         assert kw["newton_kw"][k] == v, (
             f"the P14 recipe's newton_kw[{k}] = {kw['newton_kw'][k]} no longer "
@@ -160,10 +179,10 @@ def main(levels=("coarse",)):
             continue
         mc, wc = cut_wake(read_mesh(path))
         s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
-        for entropy in (False, True):
-            tag = "ON" if entropy else "OFF"
+        for entropy, kutta in LEGS:
+            tag = ("ON" if entropy else "OFF") + f"/{kutta}"
             t0 = time.perf_counter()
-            r = solve(mc, wc, entropy)
+            r = solve(mc, wc, entropy, kutta)
             wall = time.perf_counter() - t0
             phi = np.asarray(r["phi"])
             gamma = np.atleast_1d(np.asarray(r["gamma"]))
@@ -238,7 +257,8 @@ def main(levels=("coarse",)):
             print(f"  B4 cl_p {f['cl']:.6f}  cl_KJ {float(clkj):.6f}  "
                   f"(P14 anchors {P14_ANCHOR.get(level)})")
             rows.append(dict(
-                level=level, entropy=tag, converged=bool(r.get("converged")),
+                level=level, entropy=tag, kutta=kutta,
+                converged=bool(r.get("converged")),
                 res_final=res, wall_s=round(wall, 1),
                 pooled_rms_5=round(pool, 6),
                 allpoint_rms_5=round((all_ss / max(all_n, 1)) ** 0.5, 6),
@@ -261,7 +281,8 @@ def main(levels=("coarse",)):
 
     print("\n=== the registered reading (R1 -> R2 -> R3) ===")
     for level in levels:
-        off, on = pooled.get((level, "OFF")), pooled.get((level, "ON"))
+        off = pooled.get((level, "OFF/probe"))
+        on = pooled.get((level, "ON/probe"))
         if off is None or on is None:
             print(f"  {level}: incomplete pair -- recorded, not hidden")
             continue
@@ -274,11 +295,16 @@ def main(levels=("coarse",)):
             print(f"  R1 {level}: OFF {off:.4f} vs committed {ref}: "
                   f"{100*rel:+.2f} %  {'OK' if abs(rel) < 0.05 else 'DRIFT'}")
         r2 = next(r["r2_validity"] for r in rows
-                  if r["level"] == level and r["entropy"] == "ON")
+                  if r["level"] == level and r["entropy"] == "ON/probe")
         d = on - off
         print(f"  R2 {level}: {r2}")
         print(f"  {level} pooled RMS  OFF {off:.4f} -> ON {on:.4f}  "
               f"(delta {d:+.4f})")
+        for k in ("OFF/pressure", "ON/pressure"):
+            v = pooled.get((level, k))
+            if v is not None:
+                print(f"  ★ {level} {k}: pooled RMS {v:.4f}  "
+                      f"(vs OFF/probe {off:.4f}: {v - off:+.4f})")
         if r2 != "PASS":
             print("  R3: NOT applied -- the ON leg failed the validity gate, so "
                   "this delta is the 3-D donor-cycle defect, not an entropy "
