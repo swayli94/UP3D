@@ -266,8 +266,7 @@ class NewtonWorkspace:
         # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
         # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
         # unlike the piecewise-constant upstream selection.
-        self.ent = EntropyOperator(mesh_cut.nodes, mesh_cut.elements,
-                                   self.upw.face_neighbors)
+        self.ent = EntropyOperator(self.op.n_tets)
         self.sigma_frozen = None
         self.sigma_converged = True
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
@@ -500,12 +499,9 @@ class NewtonWorkspace:
         defeated it and the caller must not report convergence (GS1.4
         clamp-not-silent contract).
         """
-        # GS1b.10: no donor map any more -- the FV transport takes the velocity
-        # (for continuous inflow weights) and phi (for the flow ordering that makes
-        # one sweep exact). `frozen` is irrelevant to sigma now, which is exactly
-        # the point: sigma no longer inherits the flux's discrete selection.
-        sig = self.ent.sigma(state["q2l"], state["grad"], state["phi_cut"],
-                             self.m_inf, self.gamma_air)
+        upstream = (frozen[0] if frozen is not None
+                    else self.upw.upstream_map(state["grad"]))
+        sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air)
         self.sigma_frozen = sig.copy()
         self.sigma_converged = self.ent.converged
         return self.ent.converged
