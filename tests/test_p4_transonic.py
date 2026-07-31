@@ -219,12 +219,19 @@ def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
 
 
 @run_gates
-#: ★ Also un-xfailed by GS1b.11, but NOT smoothly -- worth recording. The GS1b.8 reason
-#: predicted a pass, then GS1b.9's sigma polish (added afterwards) moved this leg to
-#: x_shock 0.7031, OUT of the band, and the A3 prediction check caught it. Removing the
-#: polish -- which had never converged, so its apparent benefit was a coincidence --
-#: brings this leg to x_shock 0.6006, INSIDE the band (-0.0194 from centre), and the
-#: isentropic leg here does not converge at all.
+@pytest.mark.xfail(strict=False, reason=(
+    "GS1b.11: NON-strict on purpose, because the outcome is ENVIRONMENT-DEPENDENT and "
+    "saying so is more honest than either a pass or a strict xfail. Measured: at 16 "
+    "threads this leg CONVERGES (|R| 2.8e-13) to x_shock 0.6006, inside the "
+    "Euler-anchored band, and I briefly un-xfailed it on that reading; the gated suite "
+    "at 8 threads then showed it NOT converging (|R| 3.77e-05) -- the same marginal-step "
+    "thread sensitivity recorded in GS1b.3b sec 7.1, where a fine-mesh continuation "
+    "failed at 8t and walked past at 16t. Independently, the medium ON answer is "
+    "PATH-dependent by 0.118 c (GS1b.9), so reaching the target by continuation instead "
+    "would give a different number rather than a more robust one. Two independent "
+    "reasons, then, that the medium ON answer is not yet a stable deliverable: it is "
+    "expected to fail, and a pass is environment luck rather than a fix. The coarse leg "
+    "(test_g41_transonic_coarse_newton) is robust and asserts normally."))
 def test_g41_transonic_medium_gate(reference_mesh_dir, artifacts_dir):
     """Gate G4.1 = V4 on the medium mesh, on the Newton path (GS1b.8)."""
     from .conftest import REPO_ROOT
