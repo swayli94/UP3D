@@ -1,0 +1,5 @@
+h_edge,h_wall,leg,note
+0.0075,0.015,L0_baseline,mesh gen failed: libGLU.so.1: cannot open shared object file: No such file or directory
+0.00375,0.015,L1_le_x2,mesh gen failed: libGLU.so.1: cannot open shared object file: No such file or directory
+0.001875,0.015,L2_le_x4,mesh gen failed: libGLU.so.1: cannot open shared object file: No such file or directory
+0.00375,0.01,L3_allscales,mesh gen failed: libGLU.so.1: cannot open shared object file: No such file or directory
