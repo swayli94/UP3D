@@ -42,6 +42,9 @@ from run_m3_budget import (BANDS, ETAS, M_INF, ALPHA, N_UNMASKED,    # noqa: E40
                            station_rms)
 
 OUT = os.path.join(HERE, "gate_results")
+SCRATCH = os.environ.get(
+    "PYFP3D_SCRATCH",
+    "/tmp/claude-1000/-home-lrz-codes-UP3D/3c5b43c4-b62c-4a09-b4da-9b9c7128d43e/scratchpad")
 os.makedirs(OUT, exist_ok=True)
 
 #: the committed medium's own parameters (cases/meshes/onera_m6/
@@ -129,8 +132,21 @@ def main():
         print(f"\n=== {tag}: h_wall={h_wall} h_le={h_le} "
               f"h_te={h_te} ===", flush=True)
         t0 = time.perf_counter()
+        # cache probe meshes: L2p alone costs 133 s to generate and a re-run
+        # should not pay it again. Scratch, never cases/meshes/.
+        cache = os.path.join(SCRATCH, f"{tag}.msh")
         try:
-            mesh = build(h_wall, h_le, h_te)
+            if os.path.exists(cache):
+                from pyfp3d.mesh.reader import read_mesh
+                mesh = read_mesh(cache)
+                print(f"  [cached mesh] {cache}", flush=True)
+            else:
+                mesh = build(h_wall, h_le, h_te)
+                try:
+                    from pyfp3d.mesh.reader import write_mesh
+                    write_mesh(mesh, cache)
+                except Exception as exc:                          # noqa: BLE001
+                    print(f"  (mesh not cached: {exc})")
         except Exception as exc:                                  # noqa: BLE001
             print(f"  MESH GENERATION FAILED: {exc}")
             rows.append(dict(leg=tag, h_wall=h_wall, h_edge=h_le, h_te=h_te,

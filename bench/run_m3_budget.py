@@ -148,6 +148,14 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
     single source of truth for the solver settings.
     """
     kw = dict(NEWTON_M6_RECIPE)
+    # ★ the drift guard runs on the RECIPE, before any intentional override --
+    # otherwise a deliberate, recorded deviation (n_newton_max below) trips the
+    # very check that exists to catch UNintended drift. It did exactly that on
+    # 2026-08-01 and cost a four-leg sweep, which is the argument for the order.
+    for k, v in M6_NEWTON_KW.items():
+        assert kw["newton_kw"][k] == v, (
+            f"the P14 recipe's newton_kw[{k}] = {kw['newton_kw'][k]} no longer "
+            f"matches GV5.3's recorded {v} -- the comparison basis moved")
     kw["newton_kw"] = dict(kw["newton_kw"], entropy_correction=entropy)
     if n_newton_max is not None:
         # recorded deviation from "the recipe verbatim" -- see the caller
@@ -157,10 +165,6 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
                                   entropy_correction=entropy, **M6_NEWTON_KW)
         kw["newton_kw"].update(kutta_estimator="pressure", phi_init=r0["phi"],
                                gamma_init=r0["gamma"], n_picard_seed=0)
-    for k, v in M6_NEWTON_KW.items():
-        assert kw["newton_kw"][k] == v, (
-            f"the P14 recipe's newton_kw[{k}] = {kw['newton_kw'][k]} no longer "
-            f"matches GV5.3's recorded {v} -- the comparison basis moved")
     return solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **kw)
 
 
