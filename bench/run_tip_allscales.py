@@ -55,6 +55,9 @@ TAPER_FORM, TAPER_RC_FRAC = "vanish_smooth", 0.05
 #: (tag, h_wall, h_le, h_te). T1 reuses L3p's cached mesh by construction.
 LEGS = (
     ("Tm1_coarse_taper", 0.030, 0.015, 0.015),
+    # addendum #1 (20260801-2300): the fourth point that makes the three-parameter
+    # offset fit over-determined, so D-a's floor gets a degree of freedom behind it
+    ("Tp5_h020_taper", 0.020, 0.010, 0.010),
     ("T0_baseline_taper", 0.015, 0.0075, 0.0075),
     ("T1_allscales_taper", 0.010, 0.00375, 0.005),
     ("T2_allscales2_taper", 0.0075, 0.001875, 0.00375),
