@@ -287,10 +287,12 @@ def main():
           f"{L0P['m_max']}, tip-band {t0r['top8_in_tip']}/8 vs "
           f"{L0P['top8_in_tip']}/8)")
     if t0r["g1_tip_cure"] != "PASS":
-        print("  => the taper does NOT cure this singularity on the M6 wing "
-              "alone. Per the pre-registration the refinement legs are NOT "
-              "readable as P11's lever; that is this round's conclusion.")
-        return 0
+        print("  => G1 (the 20260801-0800 threshold gate) FAILS. That gate is "
+              "SUPERSEDED by 20260801-1400's G1' after being recorded as a "
+              "design error (it counted a tip LEADING-edge peak as the tip "
+              "TRAILING-edge singularity), so it no longer short-circuits the "
+              "reading -- but it is printed, and G2 below stays unclaimed per "
+              "the original ruling. The live test is P1/P2.")
     base = t0r["band_LE_upper"]
     print(f"  G2 baseline (SAME recipe, T0): LE upper {base:.4f}   "
           f"[step one's no-taper L0p was {L0P['le_upper']}]")
