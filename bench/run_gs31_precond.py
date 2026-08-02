@@ -86,6 +86,10 @@ FIELDS = ("cl_p", "cl_kj", "le_upper", "pooled", "m_max")
 #: selections, and each state is an exact root of its own frozen system -- which is why
 #: both report |R| ~ 1e-14).
 EW_TIGHT = 1e-10
+#: calibration ladder. The CRITERION is unchanged (reproduce direct to 1e-8); this
+#: finds the LOOSEST forcing that still meets it, which is engineering calibration of a
+#: knob, not fitting the criterion to the answer. Run with PYFP3D_GS31_EW=1e-6,1e-5.
+EW_LADDER = [float(x) for x in os.environ.get("PYFP3D_GS31_EW", "").split(",") if x]
 
 
 def solve_with(mc, wc, precond):
@@ -95,6 +99,9 @@ def solve_with(mc, wc, precond):
         nk.pop("direct_refactor_every", None)     # a direct-only knob
     if precond == "amg_tight":
         nk.update(ew_eta0=EW_TIGHT, ew_eta_max=EW_TIGHT)
+    elif precond.startswith("amg_ew"):
+        e = float(precond.split("amg_ew")[1])
+        nk.update(ew_eta0=e, ew_eta_max=e)
     taper = tip_taper_factors(wc.station_z, B_SEMI, TAPER_FORM,
                               TAPER_RC_FRAC * B_SEMI)
     r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA, **nk)
@@ -171,6 +178,7 @@ def main():
         # the speedup grows with mesh size, so which setting -- if any -- passes
         # both is decided at the LARGEST leg, not the cheapest.
         plan = [("direct", 0), ("amg", 0), ("amg_tight", 0)]
+        plan += [(f"amg_ew{e:g}", 0) for e in EW_LADDER]
         if tag == "Tp5":
             plan.insert(1, ("direct", 1))
         for precond, rep in plan:
