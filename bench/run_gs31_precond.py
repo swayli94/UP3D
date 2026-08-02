@@ -78,11 +78,23 @@ TOL, SPEEDUP = 1e-8, 3.0
 FIELDS = ("cl_p", "cl_kj", "le_upper", "pooled", "m_max")
 
 
+#: the amg path is an INEXACT Newton -- Eisenstat-Walker with ew_eta0 = ew_eta_max =
+#: 1e-2, i.e. each linear solve is converged to only ~1 %. `direct` solves exactly. So
+#: "amg_tight" clamps the forcing to 1e-10 and asks the discriminating question: does the
+#: direct-vs-amg gap shrink SMOOTHLY with the linear tolerance (then it is linear-solve
+#: inexactness) or does it stay put / jump (then the two paths froze DIFFERENT upwind
+#: selections, and each state is an exact root of its own frozen system -- which is why
+#: both report |R| ~ 1e-14).
+EW_TIGHT = 1e-10
+
+
 def solve_with(mc, wc, precond):
     nk = dict(M6_NEWTON_KW)
-    nk["precond"] = precond
-    if precond == "amg":
+    nk["precond"] = "amg" if precond.startswith("amg") else precond
+    if precond.startswith("amg"):
         nk.pop("direct_refactor_every", None)     # a direct-only knob
+    if precond == "amg_tight":
+        nk.update(ew_eta0=EW_TIGHT, ew_eta_max=EW_TIGHT)
     taper = tip_taper_factors(wc.station_z, B_SEMI, TAPER_FORM,
                               TAPER_RC_FRAC * B_SEMI)
     r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA, **nk)
@@ -154,7 +166,11 @@ def main():
         print(f"\n=== {tag}: {len(mc.elements)} tets ===", flush=True)
         got[tag] = {}
         # the determinism control: direct twice on the cheapest leg only
-        plan = [("direct", 0), ("amg", 0)]
+        # amg_tight on EVERY leg: Tp5 showed the two criteria pull against each
+        # other (loose amg 2.49x but 2e-4 drift; tight amg 1e-13 but 1.23x), and
+        # the speedup grows with mesh size, so which setting -- if any -- passes
+        # both is decided at the LARGEST leg, not the cheapest.
+        plan = [("direct", 0), ("amg", 0), ("amg_tight", 0)]
         if tag == "Tp5":
             plan.insert(1, ("direct", 1))
         for precond, rep in plan:
@@ -204,6 +220,27 @@ def main():
             sp = d["wall"] / a["wall"]
             print(f"  --- speed {d['wall']:.0f}s -> {a['wall']:.0f}s = {sp:.2f}x "
                   f"-> {'>=3x OK' if sp >= SPEEDUP else 'below 3x, recorded'}")
+        at = got[tag].get(("amg_tight", 0))
+        if d and a and at:
+            w_loose = max(abs(a[k]-d[k])/max(abs(d[k]),1e-30) for k in FIELDS)
+            w_tight = max(abs(at[k]-d[k])/max(abs(d[k]),1e-30) for k in FIELDS)
+            print(f"  --- EW forcing 1e-2 -> {EW_TIGHT:.0e}: worst rel "
+                  f"{w_loose:.2e} -> {w_tight:.2e} "
+                  f"({w_loose/max(w_tight,1e-30):.0f}x tighter)  "
+                  f"wall {a['wall']:.0f}s -> {at['wall']:.0f}s")
+            if w_tight <= TOL:
+                print("      => the gap IS linear-solve inexactness; amg reaches "
+                      "1e-8 with tight forcing, and the flip is possible at that "
+                      "setting (speed then read from amg_tight, not amg)")
+            elif w_tight > 0.1 * w_loose:
+                print("      => the gap does NOT follow the linear tolerance: the "
+                      "two paths froze DIFFERENT upwind selections, so 1e-8 is "
+                      "unreachable by tightening and the criterion needs re-specifying "
+                      "on measurement, not preference")
+            else:
+                print("      => partial: shrinks with the tolerance but not to 1e-8 "
+                      "-- RECORDED, both mechanisms in play")
+
         d2 = got[tag].get(("direct", 1))
         if d and d2:
             bit = all(d[k] == d2[k] for k in FIELDS)
