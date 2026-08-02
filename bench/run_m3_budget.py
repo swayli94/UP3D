@@ -57,7 +57,7 @@ P14_ANCHOR = {"coarse": (0.262778, 0.268813),
 #: Updated 2026-08-02 with GS3.1's flip to amg -- the guard fired on the mismatch,
 #: which is the guard doing its job rather than an annoyance.
 M6_NEWTON_KW = dict(farfield_spanwise_gamma=True, precond="amg",
-                    n_newton_max=60)
+                    n_picard_seed=0, n_newton_max=60)
 #: (entropy, kutta) legs. The probe legs are the first round's; the
 #: pressure legs are what the committed P14 anchor actually used.
 LEGS = ((False, "probe"), (True, "probe"),

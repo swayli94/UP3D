@@ -461,10 +461,27 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: forcing, it is a CALIBRATION rather than a guarantee (1e-6 passed at 350 k and
 #: failed at 1.16 M), and the real cure for the underlying non-uniqueness is the
 #: freeze itself (B15/B21 churn).
+#: ★ GS3.3b 2026-08-02: n_picard_seed 5 -> 0 (SCOPED TO THIS RECIPE -- the library
+#: default stays 5, so no other call site moves). Measured on M6 medium M0.84: the
+#: Picard warm start costs 14.54 s = 28.3 % of the ramp's wall and buys ONE Newton
+#: step at level 0 (3 steps from freestream against 2 from the seed) with essentially
+#: the same total Krylov work (1957 vs 1907 GMRES). Dropping it takes the ramp from
+#: 50.83 s to 38.10 s, -25 %. It works because the ramp's FIRST level is subcritical
+#: (m_start 0.70), where Newton needs no help; do NOT carry this to a recipe whose
+#: first level is supercritical without re-measuring.
+#: ⚠ The answer shifts by 2.94e-05 relative (cl_p 0.263887564 -> 0.263881704). That is
+#: the freeze non-uniqueness this phase measured, not a degradation -- both states are
+#: exact roots of their own frozen system -- and it is inside the established
+#: 1e-8..1e-4 band. Adopted on the user's ruling of 2026-08-02.
+#: ★ Also measured and REJECTED: the audit's proposed "cheap linearised seed"
+#: (solve_laplace_lifting as phi_init) is far WORSE than no seed -- 103.5 s,
+#: NOT converged, cl_p 18 % off -- so a Laplace seed puts Newton in a bad basin.
+#: And a shallow Picard-2 seed is worthless: same wall, and level 0 needs 9 steps
+#: instead of 2. Evidence: bench/gate_results/gs33b_seed.csv.
 NEWTON_M6_RECIPE = dict(
     dm=0.05, dm_min=0.01, freeze_tol=1e-6, intermediate_tol=1e-5,
     newton_kw=dict(freeze_refresh_max=8, precond="amg", n_newton_max=60,
-                   farfield_spanwise_gamma=True),
+                   n_picard_seed=0, farfield_spanwise_gamma=True),
 )
 
 

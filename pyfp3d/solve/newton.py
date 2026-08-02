@@ -601,7 +601,11 @@ def solve_newton_lifting(
     rho_floor: float = 0.05,
     phi_init: Optional[np.ndarray] = None,
     gamma_init: Optional[np.ndarray] = None,
-    n_picard_seed: int = 5,
+    # ★ GS3.3b PROBE 2026-08-02: 5 -> 0 to test whether no-seed is safe as the GLOBAL
+    # default (user's request). Measured on the M6 ramp it saves 25 % and costs one
+    # extra Newton step; whether that holds for STANDALONE cold calls -- which this
+    # default mostly serves -- is what the suite is being asked. Revert if it does not.
+    n_picard_seed: int = 0,
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
     tol_gamma: float = 1e-8,
