@@ -1,0 +1,6 @@
+{
+  "conf_naca_coarse": {
+    "envelope": 0.78,
+    "stopped": "NOT_CONVERGED"
+  }
+}
