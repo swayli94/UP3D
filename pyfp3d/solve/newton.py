@@ -605,21 +605,44 @@ def solve_newton_lifting(
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
     tol_gamma: float = 1e-8,
-    # ★ GS3.1 / DECISION-2026-08-02-precond.md: 1e-2 -> 1e-10 on BOTH, i.e. the
-    # measured `amg_tight` configuration. At 1e-2 the amg path is an inexact Newton
-    # whose different iterate path FREEZES A DIFFERENT upwind selection (measured:
-    # 8 of 145303 donors, 6 branches), so it converges exactly to the root of a
-    # DIFFERENT discrete system and the answer moves 1.3e-04 relative -- which the
-    # audit's "not a single digit changed" missed by comparing at six digits. At
-    # 1e-10 the four integral/RMS functionals reproduce the direct path to <= 2.6e-09
-    # on the 1.16 M-tet case at 4.00x its wall time (m_max, a max-norm point
-    # functional on the tip singularity, is excluded from the criterion by the
-    # 2026-08-02 user ruling). ⚠ The 1e-6 value tried first PASSED at 350 k and
-    # FAILED at 1.16 M -- the root-switching threshold moves with mesh size, so this
-    # is a calibration, not a guarantee; the real cure is the freeze (B15/B21 churn).
-    ew_eta0: float = 1e-10,
+    # ═══ ew_eta0 / ew_eta_max: READ THIS BEFORE CHANGING EITHER ═══
+    # Eisenstat-Walker forcing -- how accurately each Newton step's LINEAR system is
+    # solved. This is the single most consequential knob in this file, because it does
+    # NOT merely trade speed for linear-solve accuracy: an inexact iterate path can
+    # FREEZE A DIFFERENT UPWIND SELECTION, after which the solver converges exactly
+    # (|R| ~ 1e-14) to the root of a DIFFERENT discrete system. Measured directly
+    # (docs/dev_phase_two/20260802-0400): direct and amg-at-1e-2 froze selections
+    # differing in 8 of 145303 donors and 6 branches, and their answers differ by
+    # 1.3e-04 relative while BOTH report machine-precision residuals.
+    #
+    # Consequences to keep in mind when developing:
+    #  * The drift is a THRESHOLD, not a smooth function of the forcing. Measured on
+    #    M6 medium (63k dof): 1e-4 already agrees with `direct` to 7.7e-10, while 1e-2
+    #    is off by 1.4e-05. One decade of forcing moved agreement five decades.
+    #  * The threshold TIGHTENS WITH PROBLEM SIZE. 1e-4 suffices at 63k; at 350k
+    #    (tapered, pressure Kutta) 1e-4 fails and 1e-5 passes; at 1.16M even 1e-6
+    #    fails (2.3e-04) and only 1e-10 holds. So this default is a CALIBRATION on the
+    #    production-scale case, NOT a guarantee. A new mesh a few times larger can put
+    #    you on the wrong side of it.
+    #  * Therefore: any harness doing a BITWISE or 1e-8 A/B -- and this project relies
+    #    on those (the entropy m_cap defect was localised at 1e-16, the h_te field
+    #    split verified bitwise, the freeze mechanism settled on bitwise identity) --
+    #    must pass ew_eta0 = ew_eta_max = 1e-10 EXPLICITLY rather than trust the
+    #    default. That is the same "controls and tests declare what they need" rule
+    #    the roadmap records for precond="direct"; it is not a dual-path policy.
+    #  * If a committed number ever moves by ~1e-5 for no apparent reason, SUSPECT
+    #    THIS FIRST, and check it by re-running with 1e-10.
+    #
+    # Value history, with the measurement behind each (all on M6 medium M0.84, ramp,
+    # against `direct` = 125.4 s; full ladder in bench/gate_results/):
+    #   1e-2  (pre-2026-08-02) 35.4 s, 3.54x -- FAILS invariance at 1.4e-05
+    #   1e-10 (GS3.1, 2026-08-02) 67.6 s, 1.86x -- passes everywhere tested but misses
+    #         the M3b < 60 s product target on its own case
+    #   1e-6  (ADOPTED 2026-08-02, user ruling) 49.9 s, 2.51x, agreement 2.89e-12 --
+    #         meets M3b AND keeps the 1e-8 tool, with the 1.16M limitation above
+    ew_eta0: float = 1e-6,
     ew_gamma: float = 0.9,
-    ew_eta_max: float = 1e-10,
+    ew_eta_max: float = 1e-6,
     amg_rebuild_every: int = 2,
     precond: str = "amg",
     direct_refactor_every: int = 1,
