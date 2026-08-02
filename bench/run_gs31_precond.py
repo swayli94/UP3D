@@ -69,11 +69,15 @@ LEGS = {
 #: T1's direct leg is already measured and committed (tip_allscales.csv, 3950.4 s);
 #: re-paying 66 minutes to reproduce a number we hold would be discipline #2's exact
 #: prohibition. Merged with from_prior=True rather than silently reused.
-PRIOR_DIRECT = {
-    "T1": dict(wall=3950.4, cl_p=0.281065, cl_kj=0.284705, le_upper=0.175755,
-               pooled=0.100800, m_max=1.95570,
-               src="bench/gate_results/tip_allscales.csv"),
-}
+#: ★ EMPTIED 2026-08-02. The T1 entry above was hand-copied from a 4-6 decimal
+#: printout, and the script then computed "invariance" against it -- producing a
+#: spurious 2e-4 floor for EVERY configuration and a printed conclusion ("the paths
+#: froze different selections, 1e-8 unreachable") that was purely my rounding. Worse,
+#: it made the real question unanswerable: at T1 amg_tight matches direct to the 6
+#: stored digits, which is about 1e-6 relative and does NOT establish the 1e-8 the
+#: criterion asks for. Saving 66 minutes cost the adoption basis. A from_prior row must
+#: carry full precision or not exist.
+PRIOR_DIRECT = {}
 TOL, SPEEDUP = 1e-8, 3.0
 FIELDS = ("cl_p", "cl_kj", "le_upper", "pooled", "m_max")
 
