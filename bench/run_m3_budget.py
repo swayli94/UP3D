@@ -53,8 +53,11 @@ GV53_K0_POOLED = {"medium": 0.1288}
 #: P14 pressure-Kutta anchors (cl_p, cl_KJ), GV5.3's P14_ANCHOR verbatim
 P14_ANCHOR = {"coarse": (0.262778, 0.268813),
               "medium": (0.277628, 0.282263)}
-M6_NEWTON_KW = dict(farfield_spanwise_gamma=True, precond="direct",
-                    direct_refactor_every=1000, n_newton_max=60)
+#: mirrors NEWTON_M6_RECIPE's newton_kw and doubles as the drift guard in solve().
+#: Updated 2026-08-02 with GS3.1's flip to amg -- the guard fired on the mismatch,
+#: which is the guard doing its job rather than an annoyance.
+M6_NEWTON_KW = dict(farfield_spanwise_gamma=True, precond="amg",
+                    n_newton_max=60)
 #: (entropy, kutta) legs. The probe legs are the first round's; the
 #: pressure legs are what the committed P14 anchor actually used.
 LEGS = ((False, "probe"), (True, "probe"),

@@ -447,10 +447,23 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: 0.523) even with strict dm-halving retries -- loose seeds are
 #: contraindicated near the fold (the P8 "warm-start only from CONVERGED
 #: levels" trap in G10.2 form).
+#: ★ GS3.1 2026-08-02: precond "direct" -> "amg"
+#: (docs/dev_phase_two/DECISION-2026-08-02-precond.md). The library's EW forcing
+#: default was tightened to 1e-10 in the same change, and at that setting amg
+#: reproduces the direct path's cl_p / cl_KJ / LE-band RMS / pooled RMS to <= 2.6e-09
+#: on the 1.16 M-tet case -- seven orders inside every lock below -- while costing
+#: 4.00x LESS wall time (3806 s -> 950 s). `direct_refactor_every` is dropped with it:
+#: it is a direct-only knob (how long the stale LU may be reused) and means nothing
+#: to amg, so leaving it would be decorative.
+#: ⚠ Do NOT read this as "amg is equivalent to direct". At the OLD 1e-2 forcing it is
+#: not: the inexact iterate path freezes a different upwind selection (8 of 145303
+#: donors) and the answer moves 1.3e-04. The equivalence is bought by the 1e-10
+#: forcing, it is a CALIBRATION rather than a guarantee (1e-6 passed at 350 k and
+#: failed at 1.16 M), and the real cure for the underlying non-uniqueness is the
+#: freeze itself (B15/B21 churn).
 NEWTON_M6_RECIPE = dict(
     dm=0.05, dm_min=0.01, freeze_tol=1e-6, intermediate_tol=1e-5,
-    newton_kw=dict(freeze_refresh_max=8, precond="direct",
-                   direct_refactor_every=1000, n_newton_max=60,
+    newton_kw=dict(freeze_refresh_max=8, precond="amg", n_newton_max=60,
                    farfield_spanwise_gamma=True),
 )
 

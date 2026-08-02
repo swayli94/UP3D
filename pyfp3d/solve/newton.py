@@ -605,9 +605,21 @@ def solve_newton_lifting(
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
     tol_gamma: float = 1e-8,
-    ew_eta0: float = 1e-2,
+    # ★ GS3.1 / DECISION-2026-08-02-precond.md: 1e-2 -> 1e-10 on BOTH, i.e. the
+    # measured `amg_tight` configuration. At 1e-2 the amg path is an inexact Newton
+    # whose different iterate path FREEZES A DIFFERENT upwind selection (measured:
+    # 8 of 145303 donors, 6 branches), so it converges exactly to the root of a
+    # DIFFERENT discrete system and the answer moves 1.3e-04 relative -- which the
+    # audit's "not a single digit changed" missed by comparing at six digits. At
+    # 1e-10 the four integral/RMS functionals reproduce the direct path to <= 2.6e-09
+    # on the 1.16 M-tet case at 4.00x its wall time (m_max, a max-norm point
+    # functional on the tip singularity, is excluded from the criterion by the
+    # 2026-08-02 user ruling). ⚠ The 1e-6 value tried first PASSED at 350 k and
+    # FAILED at 1.16 M -- the root-switching threshold moves with mesh size, so this
+    # is a calibration, not a guarantee; the real cure is the freeze (B15/B21 churn).
+    ew_eta0: float = 1e-10,
     ew_gamma: float = 0.9,
-    ew_eta_max: float = 1e-2,
+    ew_eta_max: float = 1e-10,
     amg_rebuild_every: int = 2,
     precond: str = "amg",
     direct_refactor_every: int = 1,
