@@ -3,6 +3,5 @@ conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.5,1.25,CLEAN,True,0,0,2
 conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.6,1.25,CLEAN,True,0,0,3.1612095347209023e-13,4,0.84424,0.19231773,nan,2.3,
 conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.65,1.25,CLEAN,True,0,0,3.1401633850955144e-13,4,0.94537,0.20714822,nan,2.4,
 conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.7,1.25,CLEAN,True,0,0,3.646630926193201e-11,5,1.07167,0.22947733,nan,3.3,
-conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.75,1.25,CLEAN,True,0,0,2.57396826783287e-13,10,1.23664,0.27403717,nan,9.4,
-conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.78,1.25,CLEAN,True,0,0,7.709684075041643e-13,13,1.33556,0.3318383,nan,13.4,
-conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.8,1.25,NOT_CONVERGED,False,0,0,9.403371949823555e-08,60,1.39498,0.41126375,nan,167.7,
+conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.75,1.25,CLEAN,True,0,0,2.57396826783287e-13,10,1.23664,0.27403717,nan,9.3,
+conf_naca_coarse,conforming,naca2.5d,coarse,6106,16386,0.78,1.25,CLEAN,True,0,0,7.709684075041643e-13,13,1.33556,0.3318383,nan,13.2,

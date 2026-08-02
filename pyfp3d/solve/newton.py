@@ -601,10 +601,24 @@ def solve_newton_lifting(
     rho_floor: float = 0.05,
     phi_init: Optional[np.ndarray] = None,
     gamma_init: Optional[np.ndarray] = None,
-    # ★ GS3.3b PROBE 2026-08-02: 5 -> 0 to test whether no-seed is safe as the GLOBAL
-    # default (user's request). Measured on the M6 ramp it saves 25 % and costs one
-    # extra Newton step; whether that holds for STANDALONE cold calls -- which this
-    # default mostly serves -- is what the suite is being asked. Revert if it does not.
+    # ★ GS3.3b 2026-08-02: 5 -> 0, ADOPTED as the global default (user ruling).
+    # Evidence: the full ungated suite is unchanged at 683/29/2 and faster (826.75 s
+    # against 887 s), and the gated transonic set (test_p8_newton + test_p4_transonic,
+    # which carries M6 medium M0.84 and the NACA fold-zone family) is 13 passed /
+    # 2 xfailed. On the M6 medium ramp it takes 50.83 s -> 38.10 s, -25 %, at the cost
+    # of ONE extra Newton step at level 0 (3 from freestream against 2 from the seed)
+    # with essentially the same Krylov work (1957 vs 1907 GMRES).
+    # ⚠ WHAT THIS DOES NOT GUARANTEE. Coverage extends only as far as the suites reach.
+    # The reason no-seed works on the M6 ramp is that its FIRST level is subcritical
+    # (m_start 0.70), where Newton needs no help -- that reason does NOT hold for a
+    # recipe whose first level is supercritical, and such a case must be re-measured.
+    # The answer also shifts by 2.94e-05 (the freeze non-uniqueness measured this
+    # phase, not a degradation), so a seed is one more path variable for any bitwise
+    # A/B. Reverting is cheap and local: pass n_picard_seed=5 at the call site.
+    # ★ Also measured and rejected: a Laplace "cheap linearised seed" is far WORSE than
+    # none (103.5 s, non-converged, cl_p 18 % off), and a shallow Picard-2 seed is
+    # worthless (same wall, 9 Newton steps at level 0 against 3). Evidence:
+    # bench/gate_results/gs33b_seed.csv, docs/dev_phase_two/20260802-2300-noseed-global.md
     n_picard_seed: int = 0,
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
