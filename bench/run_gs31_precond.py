@@ -99,7 +99,16 @@ def solve_with(mc, wc, precond):
         nk.pop("direct_refactor_every", None)     # a direct-only knob
     if precond == "amg_tight":
         nk.update(ew_eta0=EW_TIGHT, ew_eta_max=EW_TIGHT)
+    elif precond.startswith("amg_cap"):
+        # ★ the SHIPPABLE form: press only the CAP (ew_eta_max), leaving ew_eta0 at
+        # its 1e-2 default so the first solve -- where _ew_forcing returns eta0
+        # unclamped because r_prev is None -- stays cheap. This keeps
+        # Eisenstat-Walker's adaptivity (eta = 0.9 (r/r_prev)^2) and changes only how
+        # LOOSE it is allowed to be, which is the knob that actually controls the
+        # drift. Measured separately from amg_ew* because "ship what you measured".
+        nk.update(ew_eta_max=float(precond.split("amg_cap")[1]))
     elif precond.startswith("amg_ew"):
+        # fixed forcing: eta0 = eta_max pins every solve and disables the adaptivity
         e = float(precond.split("amg_ew")[1])
         nk.update(ew_eta0=e, ew_eta_max=e)
     taper = tip_taper_factors(wc.station_z, B_SEMI, TAPER_FORM,
@@ -179,6 +188,9 @@ def main():
         # both is decided at the LARGEST leg, not the cheapest.
         plan = [("direct", 0), ("amg", 0), ("amg_tight", 0)]
         plan += [(f"amg_ew{e:g}", 0) for e in EW_LADDER]
+        plan += [(f"amg_cap{e:g}", 0)
+                 for e in [float(x) for x in
+                           os.environ.get("PYFP3D_GS31_CAP", "").split(",") if x]]
         if tag == "Tp5":
             plan.insert(1, ("direct", 1))
         for precond, rep in plan:
