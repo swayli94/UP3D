@@ -1,0 +1,10 @@
+cell,path,geom,level,n_nodes,n_tets,m_inf,alpha,status,converged,n_limited,n_floored,res_final,n_newton,m_max,cl_p,cl_kj,wall_s,m_attained,accept_reason,res_unfrozen,f_final,descent10,note
+conf_wing_coarse,conforming,m6wing,coarse,12978,55531,0.86,3.06,CLEAN_OVER_MMAX,True,0,0,9.548074736758556e-12,13,1.42943,0.26656571,0.27351533,5.8,0.86,tol,2.4623277890602576e-05,1.8041124150158794e-16,2575193.953,
+conf_wing_coarse,conforming,m6wing,coarse,12978,55531,0.88,3.06,CLEAN_OVER_MMAX,True,0,0,2.3788219952141297e-11,13,1.47594,0.27929483,0.28749417,5.7,0.88,tol,4.885798306024932e-05,1.8041124150158794e-16,2041250.137,
+conf_wb_coarse,conforming,wingbody,coarse,21625,90099,0.76,3.06,CLEAN_OVER_MMAX,True,0,0,1.3074282409217752e-12,9,1.40642,0.23738854,0.28454405,11.5,0.76,tol,4.2644286054369145e-06,4.64608867305506e-16,,
+conf_wb_coarse,conforming,wingbody,coarse,21625,90099,0.77,3.06,CLEAN_OVER_MMAX,True,0,0,4.862720736636652e-11,12,1.43518,0.23938405,0.28708092,12.0,0.77,tol,4.862720736636652e-11,5.221517662690189e-16,13306.408,
+ls_naca_coarse,level-set,naca2.5d,coarse,9890,29250,0.787,1.25,CLEAN,True,0,0,5.638867150992155e-11,54,1.35666,0.41225229,nan,16.5,0.787,assignment_cycle,1.761770879766568e-06,,31746.212,
+ls_naca_coarse,level-set,naca2.5d,coarse,9890,29250,0.793,1.25,CLEAN,True,0,0,6.355094228638336e-11,44,1.37993,0.45753766,nan,15.8,0.793,tol,6.355094228638336e-11,,2324.654,
+ls_wb_coarse,level-set,wingbody,coarse,14154,65621,0.534,3.06,CLEAN_OVER_MMAX,True,0,0,4.404654418976861e-11,14,1.41306,0.20831159,nan,16.3,0.534,tol,4.404654418976861e-11,,2596040.786,
+ls_wb_coarse,level-set,wingbody,coarse,14154,65621,0.567,3.06,CLEAN_OVER_MMAX,True,0,0,2.808775434459676e-11,14,1.52981,0.21105098,nan,17.2,0.567,tol,2.808775434459676e-11,,2666605.443,
+ls_wing_coarse,level-set,m6wing,coarse,9946,50605,0.86,3.06,CLEAN,True,0,0,9.945141671990898e-11,7,1.39433,0.27971276,nan,27.3,0.86,assignment_cycle,2.8345465253202216e-05,,,
