@@ -23,6 +23,23 @@ and the pre-registered control caught it -- see the BANDS note below.
 M 0.50 deliberately: fully subsonic, the artificial-density upwinding never arms, so any
 non-convergence there is not a transonic artefact.
 
+METRIC PRIORITY (user directive 2026-08-03), and why my first choice was wrong: I had proposed
+making spurious cd the PRIMARY metric, because at subsonic with no shock d'Alembert fixes its
+exact value at zero, so it measures discretisation error directly instead of through a ratio.
+That reference only exists in the shock-free subsonic corner -- and the target regime is
+transonic M 0.3-0.87, where cd is physically nonzero. I had picked a metric validated exactly
+where the solver is easy and undefined where it matters. So:
+
+  PRIMARY   cl (via R) and section Cp (via per-band R). Standard practice, and the two
+            quantities this project's gates are written against. The banded-Cp instrument
+            carries ~10 % uncertainty (see the BANDS note) -- do not read finer than that,
+            and cl has no exact reference, so R is all there is.
+  ANOMALY   cd. At subsonic with no shock the exact value IS zero, so cd is a bug detector
+            with a known answer: if it does not fall toward zero under refinement, that is a
+            located defect, not a convergence rate. Healthy baseline measured on the NACA
+            control: 0.008956 -> 0.004566 -> 0.001429, order 0.97 then 1.68. Once shocks are
+            present the test changes to "does cd converge to a stable value", not to zero.
+
 Outputs (TRACKED): bench/gate_results/alpha_discriminator.csv
                    bench/gate_results/alpha_discriminator_R.csv
 """
@@ -45,7 +62,8 @@ sys.path.insert(0, REPO)
 sys.path.insert(0, HERE)
 
 import run_capability_matrix as cap                                 # noqa: E402
-from pyfp3d.post.unified import section_cp                          # noqa: E402
+from pyfp3d.post.surface import planform_area                       # noqa: E402
+from pyfp3d.post.unified import section_cp, wall_forces              # noqa: E402
 
 OUT = os.path.join(HERE, "gate_results")
 CSV_PTS = os.path.join(OUT, "alpha_discriminator.csv")
@@ -134,7 +152,8 @@ def append(path, row, keys):
 
 
 PT_KEYS = ["geom", "path", "alpha", "level", "h_wall", "n_nodes", "status",
-           "converged", "res_final", "m_max", "cl_p", "cp_norm", "wall_s", "note"]
+           "converged", "res_final", "m_max", "cl_p", "cd_p", "sawtooth",
+           "wall_s", "note"]
 R_KEYS = ["geom", "path", "alpha", "band", "d1_cp", "d2_cp", "R_field",
            "R_first_order", "R_falsify_ceiling", "verdict", "d1_cl", "d2_cl",
            "R_cl", "note"]
@@ -151,7 +170,7 @@ def main():
         print(f"\n=== {geom} / {path}  levels {levels}  h {hs} "
               f"(p=1 -> R {r_first:.3f}, falsified at >= {r_max:.3f}) ===", flush=True)
         for a in alphas:
-            vecs, cls, ok = {}, {}, True
+            vecs, cls, cds, ok = {}, {}, {}, True
             for lv, h in zip(levels, hs):
                 mesh_path = os.path.join(REPO, "cases", "meshes", mdir, f"{lv}.msh")
                 if not os.path.exists(mesh_path):
@@ -190,14 +209,31 @@ def main():
                     clp, mmax = row["cl_p"], row["m_max"]
                 except Exception:                                  # noqa: BLE001
                     clp, mmax = float("nan"), float("nan")
-                vecs[lv], cls[lv] = v, clp
+                #: cd = the ANOMALY criterion (exact 0 here: subsonic, no shock). Not a
+                #: convergence measure -- see the metric-priority note in the docstring.
+                try:
+                    sref = planform_area(mesh.nodes, mesh.boundary_faces["wall"])
+                    f = wall_forces(mesh, alpha_deg=a, s_ref=sref, m_inf=m_eff, **kw)
+                    cdp = float(f["cd_pressure"])
+                except Exception:                                  # noqa: BLE001
+                    cdp = float("nan")
+                #: high-frequency content of the raw section Cp, so the sawtooth the
+                #: instrument has to survive is recorded per level rather than assumed.
+                try:
+                    x0 = np.asarray(v[etas[0]]["x_upper"])
+                    c0 = np.asarray(v[etas[0]]["cp_upper"])[np.argsort(x0)]
+                    saw = float(np.sqrt(np.mean(np.diff(c0, 2) ** 2)))
+                except Exception:                                  # noqa: BLE001
+                    saw = float("nan")
+                vecs[lv], cls[lv], cds[lv] = v, clp, cdp
                 print(f"  a{a:<5} {lv:11s} conv={conv} |R|={res:.2e} "
-                      f"M_max={mmax} cl_p={clp} ({wall:.0f}s)", flush=True)
+                      f"M_max={mmax} cl_p={clp} cd_p={cdp:.6f} saw={saw:.4f} "
+                      f"({wall:.0f}s)", flush=True)
                 append(CSV_PTS, dict(geom=geom, path=path, alpha=a, level=lv, h_wall=h,
                                      n_nodes=len(mesh.nodes),
                                      status="OK" if conv else "NOT_CONVERGED",
                                      converged=conv, res_final=res, m_max=mmax,
-                                     cl_p=clp, cp_norm=float("nan"),
+                                     cl_p=clp, cd_p=cdp, sawtooth=saw,
                                      wall_s=round(wall, 1), note=""), PT_KEYS)
             if not ok or len(vecs) < 3:
                 append(CSV_R, dict(geom=geom, path=path, alpha=a, band="-",
@@ -225,7 +261,13 @@ def main():
                                    verdict=verdict, d1_cl=round(d1c, 8),
                                    d2_cl=round(d2c, 8), R_cl=round(Rc, 5),
                                    note=""), R_KEYS)
-            print(f"     (cl R {Rc:.3f} -- secondary; identically 0 at alpha=0)",
+            #: cl R is PRIMARY at alpha > 0 and meaningless at alpha = 0 (cl == 0 by
+            #: symmetry). cd is the anomaly flag, never a rate.
+            cd_fall = all(cds[levels[i + 1]] < cds[levels[i]] for i in range(2))
+            print(f"     cl R {Rc:.3f} "
+                  f"{'(PRIMARY)' if a > 0 else '(void at alpha=0: cl == 0 by symmetry)'}"
+                  f"   cd {cds[lx]:.6f} -> {cds[lc]:.6f} -> {cds[lm]:.6f} "
+                  f"{'OK falling toward 0' if cd_fall else 'ANOMALY: not falling'}",
                   flush=True)
     print(f"\nwrote {CSV_PTS}\nwrote {CSV_R}")
     return 0
