@@ -1,6 +1,6 @@
 {
-  "conf_naca_coarse": {
+  "ls_naca_coarse": {
     "envelope": 0.78,
-    "stopped": "NOT_CONVERGED"
+    "stopped": "CLEAN_OVER_MMAX"
   }
 }

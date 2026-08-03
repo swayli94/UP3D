@@ -282,6 +282,22 @@ def measure(cell, path, geom, mdir, level, alpha, fn, m):
                     wall_s=round(time.perf_counter() - t0, 1),
                     note=f"{type(exc).__name__}: {exc}"), None
     wall = time.perf_counter() - t0
+    try:
+        return _postprocess(cell, path, geom, level, alpha, m, wall,
+                            mesh, op, r, phi, mvop)
+    except Exception as exc:                                        # noqa: BLE001
+        # ★ post-processing gets the SAME discipline as the solve. The first version
+        # left it outside the try, and a stale import in the level-set branch
+        # (wall_forces lives in post.unified, not post.surface) killed the whole
+        # multi-hour run at the first LS cell instead of recording one bad row.
+        return dict(cell=cell, path=path, geom=geom, level=level, m_inf=m,
+                    alpha=alpha, status="POSTPROC_ERROR",
+                    wall_s=round(wall, 1),
+                    note=f"{type(exc).__name__}: {exc}"), None
+
+
+def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
+                 mvop):
     if mvop is None:                                   # conforming
         mc, wc = mesh, op
         s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
@@ -303,11 +319,10 @@ def measure(cell, path, geom, mdir, level, alpha, fn, m):
         conv = bool(r["converged"]); nodes, tets = len(mc.nodes), len(mc.elements)
         geom_obj = (mc, wc, None)
     else:                                              # level-set
-        from pyfp3d.post.surface import wall_forces
         s_ref = planform_area(mesh.nodes, mesh.boundary_faces["wall"])
         mf = r.get("m_final", m)
         m_max = float(np.sqrt(np.max(mvop.element_mach2(phi, mf, 1.4, 1.0))))
-        f = wall_forces(mesh, mvop=mvop, phi_ext=phi, alpha_deg=alpha,
+        f = u_wall_forces(mesh, mvop=mvop, phi_ext=phi, alpha_deg=alpha,
                         s_ref=s_ref, m_inf=mf, wall_tag="wall")
         clkj = float("nan")
         lv = r["levels"][-1]
@@ -403,11 +418,34 @@ def plot_cell(cell):
     plt.close(fig)
 
 
+def done_cells():
+    """Cells whose ladder already TERMINATED in the CSV, so a resumed run skips them.
+    A cell is done if it has a non-CLEAN row (the ladder stopped) or a row at the
+    ladder's last Mach (it ran the whole way). Added after a post-processing bug
+    killed a multi-hour run -- resume must be cheap."""
+    if not os.path.exists(CSV):
+        return set()
+    seen = {}
+    for r in csv.DictReader(open(CSV)):
+        seen.setdefault(r["cell"], []).append(r)
+    out = set()
+    for c, rs in seen.items():
+        if any(r["status"] != "CLEAN" for r in rs) or \
+           any(abs(float(r["m_inf"]) - MACH_LADDER[-1]) < 1e-12 for r in rs):
+            out.add(c)
+    return out
+
+
 def main():
     only = [c for c in os.environ.get("PYFP3D_CAP_CELLS", "").split(",") if c]
+    already = done_cells()
+    if already:
+        print(f"resuming -- already terminated: {sorted(already)}", flush=True)
     summary = {}
     for cell, path, geom, mdir, level, alpha, fn in CELLS:
         if only and cell not in only:
+            continue
+        if cell in already and not only:
             continue
         print(f"\n=== {cell}  ({path}, {geom}, {level}, alpha {alpha}) ===",
               flush=True)
