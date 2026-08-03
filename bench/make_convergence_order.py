@@ -16,7 +16,7 @@ Ladders differ per family BY NECESSITY, and the reason is recorded with each:
 
 Outputs (TRACKED): bench/gate_results/convergence_order.csv
 """
-import csv, os, sys
+import csv, math, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "gate_results")
@@ -28,10 +28,37 @@ LAD = {("naca2.5d", "conforming"): ("xcoarse", "coarse", "medium", 0.040, 0.020,
        ("wingbody", "level-set"): ("xcoarse", "coarse", "medium", 0.044, 0.030, 0.015)}
 
 
+#: ★ THE PRIMARY READING IS `R = delta2/delta1`, NOT `order_p`. Read this before using p.
+#:
+#: p is a single-power fit to three points, and it is NOT reliable here -- not because of
+#: noise (the deltas are 5e-3..1.6e-2 against a ~1e-5..3e-5 frozen-selection scatter in cl,
+#: so 100-1000x above it) but because of MODEL FORM: if the error carries two components of
+#: different order, a one-term fit blends them, and different functionals blend them
+#: differently. Measured signature of exactly that: on the wing-body, cl_p gives p = 0.20
+#: while cl_KJ gives p = 0.45 on the same states.
+#:
+#: p also actively MISLEADS the ranking. It reported wing-body level-set at 0.72 against
+#: conforming at 0.20 -- suggesting one is 3.5x better -- when in R terms both are >= 1,
+#: i.e. both FALSIFIED, with no better or worse between them.
+#:
+#: R needs no power law to be useful:
+#:   * R is bounded above by the LADDER'S OWN p -> 0 limit,
+#:       R_max = ln(h_m/h_c) / ln(h_c/h_x),
+#:     so R >= R_max FALSIFIES convergence at any positive order without identifying it.
+#:     ★ R_max IS LADDER-SPECIFIC: 1.000 on a uniform 2x ladder but 1.810 on the
+#:     wing-body's 1.47/2.00 pair. I first wrote 1.0 as a universal threshold and thereby
+#:     called the wing-body "falsified" when its R = 1.24-1.69 sits BELOW its own 1.810 --
+#:     the same "criterion calibrated on one baseline, applied to a non-comparable one"
+#:     mistake this file already warns about for p. On a non-uniform ladder growing
+#:     differences are COMPATIBLE with a small positive order, because the second interval
+#:     is the bigger refinement step.
+#:   * on a uniform 2x ladder, first order means R = 0.5 exactly -- "the difference halves
+#:     when h halves" is then a direct reading, not a fit.
+#:   * a SIGN FLIP between delta1 and delta2 means the sequence is non-monotone: the
+#:     coarsest level is outside the asymptotic range and no order exists at all.
 def solve_p(d1, d2, hx, hc, hm):
-    """cl(h) = cl* + C h^p, fitted on three levels. None when no positive p fits --
-    which happens for a NON-MONOTONE sequence, and that is a result (the coarsest level is
-    outside the asymptotic range), not a missing number."""
+    """cl(h) = cl* + C h^p on three levels. SECONDARY -- see the note above. None when no
+    positive p fits, which happens for a non-monotone sequence."""
     if d1 == 0:
         return None
     R, rx, rm = d2 / d1, hx / hc, hm / hc
@@ -64,13 +91,28 @@ def main():
                 continue
             d1, d2 = b - a, c - b
             p = solve_p(d1, d2, hx, hc, hm)
+            R = d2 / d1 if d1 else float("nan")
+            flip = (d1 > 0) != (d2 > 0)
+            #: the ladder's own first-order value and its p -> 0 ceiling, both computed
+            #: from the h's rather than hard-coded -- see the R_max warning in the header.
+            r_first = (hm ** 1 - hc ** 1) / (hc ** 1 - hx ** 1)
+            r_max = math.log(hm / hc) / math.log(hc / hx)
+            verdict = ("non-monotone: coarsest level outside the asymptotic range"
+                       if flip else
+                       f"FALSIFIED: R >= this ladder's p->0 ceiling {r_max:.3f}"
+                       if R >= r_max else
+                       "first-order signature (R = this ladder's p=1 value)"
+                       if abs(R - r_first) < 0.05 * abs(r_first) else
+                       "converging, order far below first" if R > r_first
+                       else "converging, order at or above first")
             out.append(dict(geom=geom, path=path, m_inf=m, h_xcoarse=hx, h_coarse=hc,
                             h_medium=hm, cl_xcoarse=a, cl_coarse=b, cl_medium=c,
                             delta1=round(d1, 8), delta2=round(d2, 8),
+                            R=round(R, 4), R_first_order=round(r_first, 4),
+                            R_falsify_ceiling=round(r_max, 4), verdict=verdict,
                             order_p=(None if p is None else round(p, 4)),
                             monotone=abs(d2) < abs(d1),
-                            note=("non-monotone: coarsest level outside the asymptotic "
-                                  "range" if p is None else "")))
+                            note=("p is SECONDARY -- see the header note" )))
     p = os.path.join(OUT, "convergence_order.csv")
     with open(p, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(out[0]))
@@ -79,9 +121,13 @@ def main():
     print("\n=== reading ===")
     for (geom, path) in LAD:
         sel = [r for r in out if r["geom"] == geom and r["path"] == path]
-        ps = [r["order_p"] for r in sel if r["order_p"] is not None]
-        print(f"  {geom:10s} {path:11s} {len(sel)} Mach pts, "
-              f"p = {', '.join(f'{x:.2f}' for x in ps) if ps else 'not fittable'}")
+        rs = [r["R"] for r in sel]
+        print(f"  {geom:10s} {path:11s} R = "
+              f"{', '.join(f'{x:.3f}' for x in rs)}   "
+              f"(p=1 -> {sel[0]['R_first_order']}, falsified at >= "
+              f"{sel[0]['R_falsify_ceiling']})")
+        for v in dict.fromkeys(r["verdict"] for r in sel):
+            print(f"                            -> {v}")
     return 0
 
 
