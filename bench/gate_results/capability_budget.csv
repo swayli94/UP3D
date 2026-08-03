@@ -1,0 +1,2 @@
+cell,path,geom,level,n_nodes,n_tets,m_inf,alpha,status,converged,n_limited,n_floored,res_final,n_newton,m_max,cl_p,cl_kj,wall_s,m_attained,accept_reason,res_unfrozen,f_final,descent10,note
+ls_naca_medium,level-set,naca2.5d,medium,49716,148320,0.78,1.25,CLEAN,True,0,0,5.1301185521879233e-11,86,1.36502,0.43665625,nan,327.3,0.78,tol,5.1301185521879233e-11,,,RECIPE DEVIATION: n_newton_max 160 (matrix used 80)
