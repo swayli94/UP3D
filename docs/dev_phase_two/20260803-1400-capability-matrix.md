@@ -164,11 +164,39 @@ naca **0.173** —— naca **落在 wb 的散布区间内部**(比 conf_wb_mediu
 `ls_naca_medium` 的「还在以 800 倍/10 步下降但没时间了」是两种病,先前在 CSV 里
 长得一样。
 
+### 预算受限那一行:已重测,确证
+
+`ls_naca_medium` M0.78,**只把 `n_newton_max` 从 80 抬到 160**(网格、远场、
+`freeze_tol`、`n_seed`、斜坡全部逐字不变):
+
+```
+CLEAN  conv=True  n_newton=86  |R|=5.13e-11  m_attained=0.78  M_max=1.36502  cl_p=0.43666
+```
+
+**只多用了 6 步。** ⇒ 该格包线读作:**预注册配方下 M0.75,`n_newton_max`=160 下
+M0.78** —— 两半都报,不用后者替换前者。这是**记录为配方偏离**的
+(`capability_budget.csv`,偏离写在行内),矩阵原行原样保留,以免日后把加预算的数
+读成预注册配方的成绩。
+
+⚠ 但这个 M0.78 点深在折叠区:LS medium 的 cl_p 从 M0.75 的 0.2974 跳到 M0.78 的
+0.4367(ΔM 0.03 涨 47 %,dcl/dM ≈ 4.6)。按 discipline #4,该点只能用作
+**单网格回归锁**,**不得**用于网格收敛性结论。
+
+★ 顺带修掉一个实现缺陷:`descent10` 在 level-set 行上一直返回 `None` —— 我用的是
+按**斜坡层**的 `levels`(只有几项)而不是按 **Newton 步**的 `residual_history`
+(两条路径都有,LS 上 len=80)。**这个诊断在最先需要它的地方是死的。**
+
 ## 8. 未完成 / 下一步
 
-- `conf_naca_fine` M0.75 的 `descent10` 判别在跑。
-- **`ls_naca_medium` M0.78 加大 `n_newton_max` 重测** —— 证据说它会收敛,拿一个
-  **测出来的** CLEAN 点比一个裁决出来的有用;若成,该格包线 0.75 → 0.78。
-- 两处「钉死停滞」值得单独看:残差逐步完全相同、0 clamps、Kutta 机器零,
-  指向冻结选择的极限环而非物理。**这是下一阶段收敛能力的主要靶子。**
+- 两处「钉死停滞」是主要靶子:`conf_naca_coarse` M0.80(|R| 6 步完全不变
+  9.403e-08)与 `conf_naca_medium` M0.78(4.453e-06 不变)。0 clamps、Kutta 机器零、
+  σ 输运正常、n_newton 打满 —— **Newton 一步也没推进**,指向冻结选择的极限环
+  而非物理。**这是下一阶段收敛能力的首要目标。**
+- 另两行(`conf_wing_medium` M0.70、`conf_naca_fine` M0.75)是 1e-6 量级极限环振荡,
+  同族但形态不同。
+- `conf_wb_coarse` M0.78 α2.0 的 `sigma_transport_not_converged` 值得单查 ——
+  它是 S1b 熵修正的失效路径(donor 环),且是全矩阵唯一一例。
 - 阶梯限制照录:**无低于 M0.50 的档**;边界步长 0.02–0.03,包线只定位到该精度。
+- 网格生成在本环境不可用(gmsh `libGLU.so.1` 缺失),所以无法加密阶梯或补
+  M < 0.50 的档;持久修复是 `sudo apt install libglu1-mesa libopengl0 libglvnd0
+  libglx0`,留给用户执行(会改动其机器)。

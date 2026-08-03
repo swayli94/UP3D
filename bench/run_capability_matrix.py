@@ -351,8 +351,11 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
     #: discriminator between "ran out of iteration budget while converging" and
     #: "genuinely stalled" -- the two were indistinguishable in the first matrix, and
     #: they are completely different findings.
-    hist = np.asarray(r.get("residual_history", []) if mvop is None else
-                      [lv["residual_norm"] for lv in r["levels"]]).ravel()
+    #: ★ residual_history is the per-NEWTON-STEP history and exists on BOTH paths. The
+    #: first version used the level-set path's `levels` list instead, which is per RAMP
+    #: LEVEL -- a handful of entries -- so descent10 silently came back None on every
+    #: level-set row, i.e. the diagnostic was dead exactly where it was first needed.
+    hist = np.asarray(r.get("residual_history", [])).ravel()
     d10 = (float(hist[-11] / hist[-1]) if len(hist) >= 11 and hist[-1] > 0
            else float("nan"))
     fh = r.get("F_history")
