@@ -1,0 +1,7 @@
+geom,path,alpha,band,d1_cp,d2_cp,R_field,R_first_order,R_falsify_ceiling,verdict,d1_cl,d2_cl,R_cl,note
+naca2.5d,conforming,0.0,LE,0.07308731,0.0325844,0.44583,0.5,1.0,"converging, order at or above first",-0.00231019,0.00091315,-0.39527,
+naca2.5d,conforming,0.0,MID,0.01706203,0.00504574,0.29573,0.5,1.0,"converging, order at or above first",-0.00231019,0.00091315,-0.39527,
+naca2.5d,conforming,0.0,TE,0.01105581,0.0067612,0.61155,0.5,1.0,"converging, order far below first",-0.00231019,0.00091315,-0.39527,
+naca2.5d,conforming,1.25,LE,0.07667171,0.0365478,0.47668,0.5,1.0,first-order signature,0.00927604,0.00456745,0.49239,
+naca2.5d,conforming,1.25,MID,0.01777497,0.00578308,0.32535,0.5,1.0,"converging, order at or above first",0.00927604,0.00456745,0.49239,
+naca2.5d,conforming,1.25,TE,0.01119094,0.00682055,0.60947,0.5,1.0,"converging, order far below first",0.00927604,0.00456745,0.49239,

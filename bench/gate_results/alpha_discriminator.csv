@@ -1,0 +1,7 @@
+geom,path,alpha,level,h_wall,n_nodes,status,converged,res_final,m_max,cl_p,cp_norm,wall_s,note
+naca2.5d,conforming,0.0,xcoarse,0.04,1676,NOT_CONVERGED,False,1.5439318558389572e-11,0.62803,0.00236096,nan,0.6,
+naca2.5d,conforming,0.0,coarse,0.02,6106,OK,True,2.370558943709079e-11,0.6193,5.077e-05,nan,1.8,
+naca2.5d,conforming,0.0,medium,0.01,21874,OK,True,1.951276132979547e-11,0.62003,0.00096392,nan,6.6,
+naca2.5d,conforming,1.25,xcoarse,0.04,1676,OK,True,1.2083163626510374e-11,0.69087,0.16412326,nan,0.5,
+naca2.5d,conforming,1.25,coarse,0.02,6106,OK,True,2.6934103352320752e-11,0.68001,0.1733993,nan,1.9,
+naca2.5d,conforming,1.25,medium,0.01,21874,OK,True,2.5614136578327367e-11,0.67597,0.17796675,nan,7.4,
