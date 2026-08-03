@@ -119,6 +119,15 @@ LEVELS = {
     # without it (h_far 2.5 -> 3.6) so that {coarse_ss, medium, fine} is a
     # legitimate 2x refinement ladder in every length scale.
     "coarse_ss": _level_params(0.030, clamp_h_far=False),
+    #: ★ `xcoarse_ss` added 2026-08-03. Self-similar by necessity, like `coarse_ss`: with
+    #: the clamp, h_far would pin at 2.5 exactly as at the shipped `coarse`, giving a
+    #: first refinement interval with NO far-field refinement. The valid cheap ladder is
+    #: therefore {xcoarse_ss, coarse_ss, medium} -- a uniform 2x in every length, since
+    #: medium's 120 x 0.015 = 1.8 was never clamped either. Measured meshable: min
+    #: dihedral 4.49 deg / aspect 14.4 at h_wall 0.060 (and NON-monotone across the sweep
+    #: -- 6.56 / 8.20 / 10.81 / 3.47 / 4.49 at h 0.030..0.060 -- the sliver lottery this
+    #: family is known for, so treat a single reading as a draw, not a trend).
+    "xcoarse_ss": _level_params(0.060, clamp_h_far=False),
 }
 
 #: The only member set valid for a three-point grid-convergence / Richardson

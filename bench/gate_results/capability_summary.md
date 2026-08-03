@@ -9,18 +9,24 @@ Generated from the committed CSVs; no solve. `envelope` = highest ladder Mach th
 | conf_naca_coarse | 6106 | M0.78 | NOT_CONVERGED | 1.33556 | 0.3318383 | nan |
 | conf_naca_fine | 82356 | M0.70 | NOT_CONVERGED | 1.0906 | 0.23906101 | nan |
 | conf_naca_medium | 21874 | M0.75 | NOT_CONVERGED | 1.24239 | 0.27558582 | nan |
+| conf_naca_xcoarse | 1676 | M0.84 | ladder exhausted | 1.38329 | 0.36372663 | nan |
 | conf_wb_coarse | 21625 | M0.75 | CLEAN_OVER_MMAX | 1.37893 | 0.23549796 | 0.28214461 |
 | conf_wb_medium | 135051 | M0.65 | CLEAN_OVER_MMAX | 1.30655 | 0.22897814 | 0.27192428 |
 | conf_wb_xcoarse | 8947 | M0.84 | ladder exhausted | 1.30424 | 0.25116247 | 0.30378369 |
 | conf_wing_coarse | 12978 | M0.84 | ladder exhausted | 1.39756 | 0.25575642 | 0.26179515 |
+| conf_wing_coarse_ss | 11352 | M0.80 | CLEAN_OVER_MMAX | 1.37861 | 0.23807104 | 0.24326777 |
 | conf_wing_medium | 70663 | M0.65 | NOT_CONVERGED | 1.29614 | 0.21628836 | 0.21857026 |
+| conf_wing_xcoarse_ss | 2461 | M0.84 | ladder exhausted | 1.2147 | 0.25682767 | 0.26211096 |
 | ls_naca_coarse | 9890 | M0.78 | CLEAN_OVER_MMAX | 1.33045 | 0.37126797 | nan |
 | ls_naca_medium | 49716 | M0.75 | NOT_CONVERGED | 1.25956 | 0.29739024 | nan |
+| ls_naca_xcoarse | 1234 | M0.84 | ladder exhausted | 1.37399 | 0.40409257 | nan |
 | ls_wb_coarse | 14154 | M0.50 | CLEAN_OVER_MMAX | 1.29795 | 0.2058071 | nan |
 | ls_wb_medium | 101914 | **none** | CLEAN_OVER_MMAX | - | - | - |
 | ls_wb_xcoarse | 5571 | M0.50 | CLEAN_OVER_MMAX | 1.28271 | 0.1984433 | nan |
 | ls_wing_coarse | 9946 | M0.84 | ladder exhausted | 1.36843 | 0.26568456 | nan |
+| ls_wing_coarse_ss | 7282 | M0.84 | ladder exhausted | 1.3368 | 0.2578229 | nan |
 | ls_wing_medium | 59399 | M0.60 | CLEAN_OVER_MMAX | 1.38853 | 0.21936636 | nan |
+| ls_wing_xcoarse_ss | 1314 | M0.84 | ladder exhausted | 1.20553 | 0.24759069 | nan |
 
 ## Alpha-relaxed points (M_max < 1.4 kept; only alpha lowered)
 

@@ -1,10 +1,10 @@
 metric,value
 n_nodes,9457
 n_elements,46067
-total_volume,1824.074985838531
+total_volume,1824.0749858385311
 min_volume,2.1750652628064871e-07
-max_volume,10.765474903236768
-mean_volume,0.03959613141377843
+max_volume,10.76547490323677
+mean_volume,0.039596131413778435
 min_edge_length,0.0038538038545108716
 max_edge_length,6.09459262326722
 mean_edge_length,0.15403251209866184
@@ -17,5 +17,5 @@ n_farfield_faces,218
 n_symmetry_faces,1332
 n_wake_faces,3688
 h_wall,0.03
-gen_seconds,2.4
+gen_seconds,1.7
 quality_within_bounds,True

@@ -290,8 +290,31 @@ _CELLS_UNORDERED = [
      "onera_m6_wingbody_conforming", "xcoarse", ALPHA_M6, conf_wingbody),
     ("ls_wb_xcoarse", "level-set", "wingbody", "onera_m6_wingbody", "xcoarse",
      ALPHA_M6, ls_wingbody),
+    #: ★ the other two geometries' cheap levels, added after measuring each family's own
+    #: h_far clamp and meshability floor rather than reusing the wing-body's numbers.
+    #: NACA: h_wall 0.040 with the clamp OFF (clamped, h_far would pin at 3.0 exactly as
+    #: at coarse => a first interval with NO far-field refinement). This family has no
+    #: dihedral gate and correctly so -- a one-prism-layer 2.5-D extrusion runs aspect
+    #: ~100 at EVERY level including the shipped coarse, so the 3-D bound does not apply.
+    ("conf_naca_xcoarse", "conforming", "naca2.5d", "naca0012_2.5d", "xcoarse",
+     ALPHA_NACA, conf_wing),
+    ("ls_naca_xcoarse", "level-set", "naca2.5d", "naca0012_wakefree_2.5d",
+     "xcoarse", ALPHA_NACA, ls_naca),
+    #: M6 wing: the shipped `coarse` IS clamped (the P13/M1b defect), so it is OFF the
+    #: refinement ray and cannot sit in a convergence ladder. The valid cheap ladder is
+    #: {xcoarse_ss, coarse_ss, medium} -- hence coarse_ss cells here as well, not just
+    #: xcoarse. Uniform 2x in every length.
+    ("conf_wing_xcoarse_ss", "conforming", "m6wing", "onera_m6", "xcoarse_ss",
+     ALPHA_M6, conf_wing),
+    ("conf_wing_coarse_ss", "conforming", "m6wing", "onera_m6", "coarse_ss",
+     ALPHA_M6, conf_wing),
+    ("ls_wing_xcoarse_ss", "level-set", "m6wing", "onera_m6_wakefree",
+     "xcoarse_ss", ALPHA_M6, ls_wing),
+    ("ls_wing_coarse_ss", "level-set", "m6wing", "onera_m6_wakefree",
+     "coarse_ss", ALPHA_M6, ls_wing),
 ]
-_LEVEL_ORDER = {"xcoarse": 0, "coarse": 1, "medium": 2, "fine": 3}
+_LEVEL_ORDER = {"xcoarse": 0, "xcoarse_ss": 0, "coarse": 1, "coarse_ss": 1,
+                "medium": 2, "fine": 3}
 CELLS = sorted(_CELLS_UNORDERED, key=lambda c: (_LEVEL_ORDER[c[4]], c[0]))
 
 

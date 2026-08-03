@@ -70,17 +70,27 @@ R_FAR = 15.0 * MAC
 QUALITY_BOUNDS = {"min_dihedral_deg": 2.0, "max_aspect_ratio": 60.0}
 
 
-def _level_params(h_wall: float) -> dict:
+def _level_params(h_wall: float, clamp_h_far: bool = True) -> dict:
     """Same policy as the M1 family (one parameter per level)."""
     return dict(
         h_wall=h_wall,
         h_wake=3.0 * h_wall,
         h_edge=0.5 * h_wall,
-        h_far=min(2.5, 120.0 * h_wall),
+        h_far=(min(2.5, 120.0 * h_wall) if clamp_h_far else 120.0 * h_wall),
     )
 
 
 LEVELS = {
+    #: ★ `xcoarse_ss` added 2026-08-03. Self-similar by necessity, like `coarse_ss`: with
+    #: the clamp, h_far would pin at 2.5 exactly as at the shipped `coarse`, giving a
+    #: first refinement interval with NO far-field refinement. The valid cheap ladder is
+    #: therefore {xcoarse_ss, coarse_ss, medium} -- a uniform 2x in every length, since
+    #: medium's 120 x 0.015 = 1.8 was never clamped either. Measured meshable: min
+    #: dihedral 4.49 deg / aspect 14.4 at h_wall 0.060 (and NON-monotone across the sweep
+    #: -- 6.56 / 8.20 / 10.81 / 3.47 / 4.49 at h 0.030..0.060 -- the sliver lottery this
+    #: family is known for, so treat a single reading as a draw, not a trend).
+    "xcoarse_ss": _level_params(0.060, clamp_h_far=False),
+    "coarse_ss": _level_params(0.030, clamp_h_far=False),
     "coarse": _level_params(0.030),
     "medium": _level_params(0.015),
     "fine": _level_params(0.0075),
