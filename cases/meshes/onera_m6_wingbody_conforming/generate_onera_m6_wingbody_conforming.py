@@ -56,10 +56,13 @@ OUT_DIR = Path(__file__).resolve().parent
 # Same wall sizes as the M1/M5/M2 ladders (controlled A/B at equal h_wall).
 # coarse + medium ONLY -- the B9 scope (no fine; the conforming fine is the
 # recorded splu trap anyway).
-LEVELS = {"coarse": 0.030, "medium": 0.015}
+#: ★ `xcoarse` added 2026-08-03 -- see the rationale and the per-family h_far-clamp warning
+#: on the wake-free twin (cases/meshes/onera_m6_wingbody/generate_onera_m6_wingbody.py).
+#: Safe here for the same reason: this family scales h_far as 200*h_wall with no clamp.
+LEVELS = {"xcoarse": 0.044, "coarse": 0.030, "medium": 0.015}
 
 QUALITY_BOUNDS = {"min_dihedral_deg": 2.0, "max_aspect_ratio": 60.0}
-FUSELAGE_CREASE_MAX_DEG = {"coarse": 25.0, "medium": 15.0}
+FUSELAGE_CREASE_MAX_DEG = {"xcoarse": 40.0, "coarse": 25.0, "medium": 15.0}
 
 FUSELAGE = FuselageParams()
 
