@@ -1,6 +1,38 @@
 {
-  "ls_naca_coarse": {
-    "envelope": 0.78,
+  "ls_wb_coarse": {
+    "envelope": 0.5,
     "stopped": "CLEAN_OVER_MMAX"
+  },
+  "ls_wing_coarse": {
+    "envelope": 0.84,
+    "stopped": null
+  },
+  "conf_naca_medium": {
+    "envelope": 0.75,
+    "stopped": "NOT_CONVERGED"
+  },
+  "conf_wb_medium": {
+    "envelope": 0.65,
+    "stopped": "CLEAN_OVER_MMAX"
+  },
+  "conf_wing_medium": {
+    "envelope": 0.65,
+    "stopped": "NOT_CONVERGED"
+  },
+  "ls_naca_medium": {
+    "envelope": 0.75,
+    "stopped": "NOT_CONVERGED"
+  },
+  "ls_wb_medium": {
+    "envelope": null,
+    "stopped": "CLEAN_OVER_MMAX"
+  },
+  "ls_wing_medium": {
+    "envelope": 0.6,
+    "stopped": "CLEAN_OVER_MMAX"
+  },
+  "conf_naca_fine": {
+    "envelope": 0.7,
+    "stopped": "NOT_CONVERGED"
   }
 }

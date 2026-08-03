@@ -100,7 +100,18 @@ def append_row(row):
     head = not os.path.exists(CSV)
     keys = ["cell", "path", "geom", "level", "n_nodes", "n_tets", "m_inf",
             "alpha", "status", "converged", "n_limited", "n_floored",
-            "res_final", "n_newton", "m_max", "cl_p", "cl_kj", "wall_s", "note"]
+            "res_final", "n_newton", "m_max", "cl_p", "cl_kj", "wall_s",
+            # ★ added 2026-08-03 after the first matrix run: without these, DIFFERENT
+            # failure modes were indistinguishable in the CSV, and one row was found
+            # to be MISLABELLED. ls_naca_medium's "M0.78 NOT_CONVERGED" row actually
+            # held a state at m_attained = 0.765 -- the ramp never reached the
+            # requested Mach -- while res_final 1.58e-10 made it look like a
+            # near-tolerance miss. A row must never be able to claim a Mach the
+            # solver did not attain. (CLEAN rows were never affected: conv already
+            # requires |m_final - m| < 1e-9. The damage was bounded to non-CLEAN rows,
+            # which is why the envelope points stand.)
+            "m_attained", "accept_reason", "res_unfrozen", "f_final",
+            "descent10", "note"]
     with open(CSV, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=keys, extrasaction="ignore")
         if head:
@@ -332,12 +343,36 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
         nodes, tets = len(mesh.nodes), len(mesh.elements)
         geom_obj = (mesh, mvop, mf)
     status = classify(conv, n_lim, n_flr, m_max)
+    #: the Mach the solver ACTUALLY attained -- see the append_row note. Recorded
+    #: unconditionally so a non-converged row can never again be read as if it held a
+    #: state at the requested Mach.
+    m_att = float(r.get("m_last_converged", r.get("m_final", m)))
+    #: is the last-10-step residual descent still steep? This is the cheap
+    #: discriminator between "ran out of iteration budget while converging" and
+    #: "genuinely stalled" -- the two were indistinguishable in the first matrix, and
+    #: they are completely different findings.
+    hist = np.asarray(r.get("residual_history", []) if mvop is None else
+                      [lv["residual_norm"] for lv in r["levels"]]).ravel()
+    d10 = (float(hist[-11] / hist[-1]) if len(hist) >= 11 and hist[-1] > 0
+           else float("nan"))
+    fh = r.get("F_history")
     row = dict(cell=cell, path=path, geom=geom, level=level, n_nodes=nodes,
                n_tets=tets, m_inf=m, alpha=alpha, status=status,
                converged=conv, n_limited=n_lim, n_floored=n_flr,
                res_final=res, n_newton=nn, m_max=round(m_max, 5),
                cl_p=round(f["cl"], 8), cl_kj=round(clkj, 8),
-               wall_s=round(wall, 1), note="")
+               wall_s=round(wall, 1), m_attained=m_att,
+               accept_reason=r.get("accept_reason"),
+               res_unfrozen=r.get("residual_unfrozen"),
+               f_final=(float(np.asarray(fh).ravel()[-1]) if fh is not None
+                        and len(np.asarray(fh).ravel()) else None),
+               descent10=(round(d10, 3) if d10 == d10 else None), note="")
+    #: a CLEAN row that did not attain its own Mach would invalidate the envelope
+    #: table, so make that unrepresentable rather than trusting the driver flags to
+    #: stay consistent with each other.
+    if status.startswith("CLEAN") and abs(m_att - m) > 1e-9:
+        row["status"] = "MACH_NOT_ATTAINED"
+        row["note"] = f"clean at {m_att} but {m} was requested"
     return row, (geom_obj, phi, f)
 
 

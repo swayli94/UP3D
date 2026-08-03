@@ -1,0 +1,10 @@
+cell,path,geom,level,n_nodes,n_tets,m_inf,alpha,status,converged,n_limited,n_floored,res_final,n_newton,m_max,cl_p,cl_kj,wall_s,note
+conf_wb_coarse,conforming,wingbody,coarse,21625,90099,0.78,2.0,NOT_CONVERGED,False,0,0,9.051036250273239e-11,9,1.20465,0.15825476,0.18932159,13.8,
+conf_wb_coarse,conforming,wingbody,coarse,21625,90099,0.78,1.0,CLEAN,True,0,0,9.081461219899762e-14,6,1.12435,0.07965403,0.09499073,10.0,
+conf_wb_coarse,conforming,wingbody,coarse,21625,90099,0.78,0.5,CLEAN,True,0,0,3.027086072069222e-11,6,1.11316,0.04027861,0.04789176,9.9,
+ls_naca_coarse,level-set,naca2.5d,coarse,9890,29250,0.8,0.8,CLEAN,True,0,0,5.7696070143720135e-11,54,1.32989,0.30042557,nan,14.8,
+ls_wb_coarse,level-set,wingbody,coarse,14154,65621,0.6,2.0,CLEAN,True,0,0,4.7350567911053076e-11,14,1.15751,0.1396896,nan,16.5,
+conf_wb_medium,conforming,wingbody,medium,135051,679391,0.7,2.0,CLEAN,True,0,0,6.786300454335186e-11,14,1.27719,0.15403549,0.18287993,217.9,
+ls_wb_medium,level-set,wingbody,medium,101914,533129,0.5,2.0,CLEAN,True,0,0,9.236345022145542e-11,3,1.11531,0.14049558,nan,144.2,
+ls_wb_medium,level-set,wingbody,medium,101914,533129,0.5,0.0,CLEAN,True,0,0,9.877210160880168e-11,3,0.65712,5.454e-05,nan,128.9,
+ls_wing_medium,level-set,m6wing,medium,59399,329645,0.65,2.0,CLEAN,True,0,0,1.0169642905566434e-13,10,1.1555,0.14726354,nan,150.2,
