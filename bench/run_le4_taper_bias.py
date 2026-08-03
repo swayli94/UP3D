@@ -109,14 +109,16 @@ def trans_leg(mesh_path, form, r_c):
     t0 = time.perf_counter()
     seed = solve_newton_lifting(mc, wc, m_inf=cap.WB_MSTART, alpha_deg=ALPHA,
                                 **cap.CONF_SEED_KW)
-    nk = dict(cap.CONF_RAMP_NK, kutta_estimator="pressure")
+    #: ★ the seed goes INSIDE newton_kw, not as a top-level kwarg -- I first wrote
+    #: phi_init/gamma_init at the top level (guessed, not read) and every robustness leg
+    #: died with TypeError. conf_wingbody's own call is the reference.
+    nk = dict(cap.CONF_RAMP_NK, kutta_estimator="pressure",
+              phi_init=seed["phi"], gamma_init=seed["gamma"], n_picard_seed=0)
     if t is not None:
         nk["tip_taper"] = t
     r = solve_newton_transonic(mc, wc, m_inf=M_TRANS, alpha_deg=ALPHA,
                                m_start=cap.WB_MSTART, dm=cap.DM, dm_min=0.01,
                                freeze_tol=1e-5, intermediate_tol=1e-4,
-                               phi_init=np.asarray(seed["phi"]),
-                               gamma_init=np.asarray(seed["gamma"]),
                                newton_kw=nk)
     return mc, wc, r, time.perf_counter() - t0
 
