@@ -274,8 +274,24 @@ _CELLS_UNORDERED = [
      ALPHA_M6, ls_wingbody),
     ("ls_wb_medium", "level-set", "wingbody", "onera_m6_wingbody", "medium",
      ALPHA_M6, ls_wingbody),
+    #: ★ xcoarse added 2026-08-03. Effort moved off `fine`: it costs 345-1561 s per flow
+    #: point against coarse's 2.7-11.7 s, meaningless against the 2 CPU-min product
+    #: target, and it adds a third mesh level to conforming NACA -- the ONE combination
+    #: that already had three -- while five of the six geometry x wake-path combinations
+    #: had only two and so admitted no convergence order at all.
+    #:
+    #: h_wall = 0.044, the largest BOTH wing-body families accept. One level coarser
+    #: (0.060) does not lose accuracy, it BREAKS the mesh: min dihedral 19.50 -> 0.70 deg
+    #: and aspect ratio 108, because TIP_CAP_RADIUS = 0.0222 is a FIXED geometric scale
+    #: that h_wall 0.060 exceeds by 2.7x. Wing-body ONLY -- the NACA and M6-wing families
+    #: clamp h_far (min(3.0, 150h) and min(2.5, 120h)), so their xcoarse would have a
+    #: first interval that does not refine the far field AT ALL.
+    ("conf_wb_xcoarse", "conforming", "wingbody",
+     "onera_m6_wingbody_conforming", "xcoarse", ALPHA_M6, conf_wingbody),
+    ("ls_wb_xcoarse", "level-set", "wingbody", "onera_m6_wingbody", "xcoarse",
+     ALPHA_M6, ls_wingbody),
 ]
-_LEVEL_ORDER = {"coarse": 0, "medium": 1, "fine": 2}
+_LEVEL_ORDER = {"xcoarse": 0, "coarse": 1, "medium": 2, "fine": 3}
 CELLS = sorted(_CELLS_UNORDERED, key=lambda c: (_LEVEL_ORDER[c[4]], c[0]))
 
 

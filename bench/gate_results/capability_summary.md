@@ -11,12 +11,14 @@ Generated from the committed CSVs; no solve. `envelope` = highest ladder Mach th
 | conf_naca_medium | 21874 | M0.75 | NOT_CONVERGED | 1.24239 | 0.27558582 | nan |
 | conf_wb_coarse | 21625 | M0.75 | CLEAN_OVER_MMAX | 1.37893 | 0.23549796 | 0.28214461 |
 | conf_wb_medium | 135051 | M0.65 | CLEAN_OVER_MMAX | 1.30655 | 0.22897814 | 0.27192428 |
+| conf_wb_xcoarse | 8947 | M0.84 | ladder exhausted | 1.30424 | 0.25116247 | 0.30378369 |
 | conf_wing_coarse | 12978 | M0.84 | ladder exhausted | 1.39756 | 0.25575642 | 0.26179515 |
 | conf_wing_medium | 70663 | M0.65 | NOT_CONVERGED | 1.29614 | 0.21628836 | 0.21857026 |
 | ls_naca_coarse | 9890 | M0.78 | CLEAN_OVER_MMAX | 1.33045 | 0.37126797 | nan |
 | ls_naca_medium | 49716 | M0.75 | NOT_CONVERGED | 1.25956 | 0.29739024 | nan |
 | ls_wb_coarse | 14154 | M0.50 | CLEAN_OVER_MMAX | 1.29795 | 0.2058071 | nan |
 | ls_wb_medium | 101914 | **none** | CLEAN_OVER_MMAX | - | - | - |
+| ls_wb_xcoarse | 5571 | M0.50 | CLEAN_OVER_MMAX | 1.28271 | 0.1984433 | nan |
 | ls_wing_coarse | 9946 | M0.84 | ladder exhausted | 1.36843 | 0.26568456 | nan |
 | ls_wing_medium | 59399 | M0.60 | CLEAN_OVER_MMAX | 1.38853 | 0.21936636 | nan |
 
