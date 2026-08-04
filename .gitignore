@@ -123,3 +123,4 @@ cases/analysis/b23_junction_discriminator/meshes/*.msh
 
 bench/results/
 bench/gate_results/le10_cache/
+bench/gate_results/le14_cache/
