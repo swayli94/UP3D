@@ -122,3 +122,4 @@ cases/meshes/sphere_shell/h03_far10.msh
 cases/analysis/b23_junction_discriminator/meshes/*.msh
 
 bench/results/
+bench/gate_results/le10_cache/
