@@ -54,10 +54,20 @@ CASES = [
      ("xcoarse", "coarse", "medium"), (0.040, 0.020, 0.010)),
     ("naca2.5d", "level-set", "naca0012_wakefree_2.5d", cap.ls_naca, "flat",
      ("xcoarse", "coarse", "medium"), (0.040, 0.020, 0.010)),
-    ("m6wing", "conforming", "onera_m6", cap.conf_wing, "wing3d",
+    #: ★ FLAT-cap wing-alone ladders, kept as the superseded reference. wing3d records
+    #: P13/G13.3 measuring the flat cap DIVERGING under refinement (p = +0.321), so an order
+    #: computed on these has a false premise -- these rows exist to be compared against the
+    #: round-tip rows below, not to be quoted.
+    ("m6wing_flat", "conforming", "onera_m6", cap.conf_wing, "wing3d",
      ("xcoarse_ss", "coarse_ss", "medium"), (0.060, 0.030, 0.015)),
+    ("m6wing_flat", "level-set", "onera_m6_wakefree", cap.ls_wing, "wing3d",
+     ("xcoarse_ss", "coarse_ss", "medium"), (0.060, 0.030, 0.015)),
+    #: ★ ROUND-tip ladders (2026-08-04) -- the ones whose orders may be quoted, since the
+    #: tip is tangential with no edge and does not diverge under refinement.
+    ("m6wing", "conforming", "onera_m6_roundtip", cap.conf_wing, "wing3d",
+     ("xcoarse", "coarse", "medium"), (0.060, 0.030, 0.015)),
     ("m6wing", "level-set", "onera_m6_wakefree", cap.ls_wing, "wing3d",
-     ("xcoarse_ss", "coarse_ss", "medium"), (0.060, 0.030, 0.015)),
+     ("xcoarse_rt", "coarse_rt", "medium_rt"), (0.060, 0.030, 0.015)),
     ("wingbody", "conforming", "onera_m6_wingbody_conforming", cap.conf_wingbody,
      "wing3d", ("xcoarse", "coarse", "medium"), (0.044, 0.030, 0.015)),
     ("wingbody", "level-set", "onera_m6_wingbody", cap.ls_wingbody, "wing3d",
