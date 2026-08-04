@@ -26,7 +26,7 @@ import pytest
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
-from pyfp3d.meshgen.wing3d import B_SEMI, chord_at, x_le, x_te
+from pyfp3d.meshgen.wing3d import B_SEMI, TIP_CAP_RADIUS, chord_at, x_le, x_te
 from pyfp3d.viscous.coupling import CouplingConfig, build_wing_case
 from pyfp3d.viscous.transpiration import (
     assemble_transpiration_rhs,
@@ -54,8 +54,16 @@ def wing_case():
 
 
 def _local_xc(case):
+    #: ★ 2026-08-04: clip to the mesh's OWN max z, not to B_SEMI. build_wing_case uses
+    #: zc = clip(z, 0, z_tip) with z_tip = max(z); this helper had B_SEMI hard-coded, which was
+    #: identical on the flat-cap family (z_tip == B_SEMI) and diverges by TIP_CAP_RADIUS on the
+    #: round cap -- 5 of 3561 nodes then crossed x_tr in the reproduction but not in the
+    #: library. Pure formula mismatch between test and library, in the test.
+    #: (Two wrong readings of it first: I took the library to be "more correct about cap
+    #: nodes", then to be "keeping the cap laminar" -- my own new assertion refuted the second.
+    #: Reading build_wing_case is what settled it, and is what I should have done first.)
     x, z = case.sm.xyz[:, 0], case.sm.xyz[:, 2]
-    zc = np.clip(z, 0.0, B_SEMI)
+    zc = np.clip(z, 0.0, float(np.max(z)))
     return (x - x_le(zc)) / chord_at(zc)
 
 
@@ -65,11 +73,37 @@ def test_tip_mask_band(wing_case):
     _, _, _, case = wing_case
     z = case.sm.xyz[:, 2]
     z_tip = float(np.max(z))
-    assert z_tip == pytest.approx(B_SEMI, rel=1.0e-9)  # flat-cap family
+    #: ★ 2026-08-04: the round cap extends the wall past the planform semi-span. The cap is
+    #: the half body of revolution swept about the tip chord line, so its apex sits at
+    #: B_SEMI + TIP_CAP_RADIUS -- measured z_tip 1.21846 against B_SEMI 1.1963, a difference of
+    #: 0.02216 that matches TIP_CAP_RADIUS = 0.02217 to five digits. The old assertion said
+    #: "flat-cap family" in its own comment, i.e. it encoded the flat premise on purpose; with
+    #: wing3d's default now round, that premise is what changed.
+    #: The band definition below uses z_tip itself, so the MASK is unaffected -- which is why
+    #: this is re-anchored to the geometry rather than to a number.
+    assert B_SEMI <= z_tip <= B_SEMI + 1.05 * TIP_CAP_RADIUS, (
+        f"z_tip {z_tip:.5f} outside [B_SEMI, B_SEMI + TIP_CAP_RADIUS] -- the wall should "
+        f"end at the planform tip (flat) or at the cap apex (round)")
     expect = z > z_tip * (1.0 - TIP_FRAC)
     np.testing.assert_array_equal(case.outflow_pin_surf, expect)
     n_tip = int(case.outflow_pin_surf.sum())
-    assert 10 <= n_tip <= 0.2 * case.sm.n_node
+    #: ★ 2026-08-04: the 0.2 bound was calibrated on the FLAT cap and does not transfer.
+    #: MEASURED on coarse: flat gives 138 / 2607 wall nodes in the band (5.3 %), round gives
+    #: 969 / 3476 (27.9 %) -- and only 462 of those 969 sit ON the cap, so the round cap does
+    #: not merely add its own nodes, it refines the ADJACENT wing 3.7x too (507 against 138).
+    #: That is h_tip = 0.25*h_wall's size field diffusing inboard, i.e. real and explicable,
+    #: not a defect. So the bound is re-expressed as what the test actually means -- a band
+    #: that is resolved, spans a THIN slice of the span, and is not the whole wing -- rather
+    #: than as a node fraction that silently encodes one tip geometry.
+    z_in_band = z[case.outflow_pin_surf]
+    span_frac = float((z_in_band.max() - z_in_band.min())
+                      / (z.max() - z.min()))
+    assert n_tip >= 10, f"tip band has only {n_tip} nodes -- not resolved"
+    assert n_tip < 0.5 * case.sm.n_node, (
+        f"tip band holds {n_tip}/{case.sm.n_node} wall nodes -- that is not a band")
+    assert span_frac <= 1.1 * TIP_FRAC, (
+        f"tip band spans {span_frac:.3f} of the span, expected ~{TIP_FRAC} -- the band is "
+        "defined geometrically, so THIS is the invariant, not the node count")
 
 
 def test_inflow_band_excludes_tip(wing_case):
@@ -102,6 +136,8 @@ def test_transition_flags_local_chord(wing_case):
     expect = np.zeros(case.sm.n_node, dtype=np.int64)
     expect[(side == 1) & (xc_n >= cfg.x_tr_upper)] = 1
     expect[(side == -1) & (xc_n >= cfg.x_tr_lower)] = 1
+    #: the reproduction now matches the library exactly, because _local_xc clips to the
+    #: mesh's own max z as build_wing_case does -- see the note there.
     np.testing.assert_array_equal(case.turbulent_flags, expect)
     assert np.all(case.turbulent_flags[case.inflow_candidates] == 0)
 
