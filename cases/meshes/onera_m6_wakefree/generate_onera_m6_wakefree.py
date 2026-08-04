@@ -89,6 +89,11 @@ LEVELS = {
     #: dihedral 4.49 deg / aspect 14.4 at h_wall 0.060 (and NON-monotone across the sweep
     #: -- 6.56 / 8.20 / 10.81 / 3.47 / 4.49 at h 0.030..0.060 -- the sliver lottery this
     #: family is known for, so treat a single reading as a draw, not a trend).
+    #: ★ the ROUND-tip self-similar ladder (2026-08-04). clamp OFF so every length
+    #: halves; `_rt` so the flat files stay untouched.
+    "xcoarse_rt": _level_params(0.060, clamp_h_far=False),
+    "coarse_rt": _level_params(0.030, clamp_h_far=False),
+    "medium_rt": _level_params(0.015, clamp_h_far=False),
     "xcoarse_ss": _level_params(0.060, clamp_h_far=False),
     "coarse_ss": _level_params(0.030, clamp_h_far=False),
     "coarse": _level_params(0.030),
@@ -131,6 +136,17 @@ def generate_level(out_dir: Path, level: str, inspect: bool = True) -> Path:
         h_wall=p["h_wall"], h_far=p["h_far"], h_wake=p["h_wake"],
         h_edge=p["h_edge"], r_far=R_FAR,
         name=f"onera_m6_wakefree_{level}", embed_wake=False,
+        #: ★ round-tip variants carry the `_rt` suffix (2026-08-04, user directive: from here
+        #: on both the wing-alone and the wing-body work uses the round tip). The FLAT default
+        #: is kept for the existing level names because M4/B7 locks are anchored to those mesh
+        #: FILES; the round levels are new names writing new files, so nothing committed moves.
+        #: Why round at all: wing3d's own docstring records P13/G13.3 measuring the flat cap's
+        #: sharp convex edge DIVERGING under refinement (peak-Mach exponent p = +0.321) --
+        #: "it, and not the wake, is what still blocks 3D grid convergence" -- so any
+        #: refinement-based claim on a flat-cap mesh rests on a false premise. My own
+        #: capability-matrix convergence orders were computed on flat-cap wing-alone meshes,
+        #: which is why they are being recomputed on these.
+        tip_cap=("round" if level.endswith("_rt") else "flat"),
     )
     gen_seconds = time.perf_counter() - t0
     assert "wake" not in mesh.boundary_faces, "M4 mesh must carry no wake tag"
