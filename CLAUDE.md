@@ -88,6 +88,84 @@ resolve through one hop.
 
 @docs/agent-rules.md
 
+## Environment — run everything in `up3d` (added 2026-08-04, measured)
+
+    conda env create -f environment.yml      # or: conda env update -f environment.yml --prune
+    conda activate up3d
+    export PYTHONNOUSERSITE=1                # NOT optional -- see below
+
+`PYTHONNOUSERSITE=1` is load-bearing, not hygiene: **measured** that without it `import pyamg`
+FAILS inside `up3d`, because a `~/.local` pip pyamg shadows the env's own. With it set, all nine
+project imports resolve to the env. `.vscode/settings.json` and `.env` set it for IDE-launched
+runs; a shell run must export it.
+
+`scipy >= 1.12` is a **CODE REQUIREMENT**, not a preference: `pyfp3d/solve/linear.py` calls
+`spla.cg(..., rtol=...)` and `spla.gmres(..., rtol=...)` with no version shim, and `tol -> rtol`
+landed in scipy 1.12. Pinning scipy=1.11.4 "to keep the numerics identical" produced 81 failures
+and 50 errors, every one `TypeError: cg() got an unexpected keyword argument 'rtol'`.
+
+★ Do NOT work in anaconda `base`. It is self-inconsistent (scipy 1.11.4 whose `cg` has no `rtol`,
+a user-site pyamg 5.3.0 that needs scipy >= 1.12, and a half-removed user-site scipy), and it was
+inconsistent for a week without saying so -- the failure only surfaced when a code path finally
+imported pyamg. Two separate environment failures in one day came out of that mixture.
+
+## Reporting conventions fixed by measurement (2026-08-04)
+
+- **Quote the tip taper's bias.** Production is `tip_taper=("vanish_smooth", 0.05·b_semi)` on the
+  conforming wing-body and it costs **−1.3 % cl_p** (medium, measured −1.514 % at M0.50 and
+  −1.31 % at M0.84). It is a MODEL bias, so any reported wing-body lift carries it. It stays at
+  0.05: removing it fails M0.88 medium outright (6/6 clamps), and the cheaper r_c = 0.025 was not
+  adopted.
+- **The entropy correction is a model correction, NOT a stability trick.** It is default ON and
+  stays on. Describing it as buying robustness is wrong twice over: measured, it makes the peak
+  STRONGER (M²max 6.426 ON against 5.607 OFF), and its justification is that S1b measured the
+  M0.80 shock moving INTO the Euler anchor band where isentropic sat outside it.
+- **Round tip is the default; flat must be asked for by name.** `wing3d`'s `tip_cap` default is
+  `"round"`, standard level names build round, and flat is only reachable through explicit
+  `_flat` level names -- because P13/G13.3 measured the flat cap's sharp convex edge DIVERGING
+  under refinement (peak-Mach exponent p = +0.321), so any refinement-based claim on a flat-cap
+  mesh has a false premise. Measured consequence: the LE-band convergence order is 0.37 on flat
+  against 0.87 on round. Only P13 and M5, which exist to MEASURE flat, use the `_flat` levels.
+- **The canonical ladder is `(xcoarse, coarse, medium)`.** `fine` is out of every test and demo:
+  it costs 345-1561 s per flow point, is meaningless against the 2 CPU-min target, and only ever
+  added a third level where three already existed. `xcoarse` replaces it at the cheap end, which
+  is where the third level was actually missing.
+
+## Diagnosing a non-converged solve — CLASSIFY it, never report "conv=False"
+
+Measured 2026-08-04: labelling every failure `conv=False, |R|=…, n/m clamps` and then correlating
+it against a knob means a correlation analysis may be separating a MIXTURE OF DIFFERENT DISEASES
+with one number. Five hypotheses died to this in one day. The modes have distinct signatures and
+completely different fixes:
+
+| mode | signature | what to fix |
+|---|---|---|
+| clamping | `n_limited` (m_cap) or `n_floored` (rho_floor) > 0 — **and where those cells are** | physics/geometry |
+| limit cycle | residual oscillates, `descent10 ≈ 1`, residual values revisited | frozen-selection churn |
+| ill-conditioning | `n_gmres_stalled` > 0, GMRES iterations climbing | preconditioner |
+| line-search collapse | λ driven to ~0, steps rejected | globalisation |
+| σ-transport | `accept_reason = sigma_transport_not_converged` | entropy correction |
+
+`bench/run_le14_common_root.py::classify_failure` implements it; the solver's own `accept_reason`
+outranks any inferred signature. **A "budget_limited" leg (still descending, ran out of
+iterations) is NOT a failure** — mistaking one for a capability limit retracted a whole "dead
+band" finding.
+
+## Operating hazards that have cost real time (all measured)
+
+- **Read signatures and import paths; do not recall them.** Five wrong-from-memory calls in one
+  day, one of which (`phi_init` at the top level instead of inside `newton_kw`) killed all five
+  legs of a 40-minute run with TypeError.
+- **`pgrep`/`pkill -f <pattern>` matches YOUR OWN command line.** `pgrep -f "pytest tests/"`
+  reported "still running" for a job that had finished; `pkill -f run_le5_taper_coverage` killed
+  the invoking shell (exit 144) and lost the script it was writing. **Kill by PID**, and poll a
+  log's completion marker rather than the process table.
+- **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
+  `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
+  states in one day; the third was caught only by killing a fresh run 5 minutes in.
+- **Adding a mesh level means growing EVERY per-level dict**, not just `LEVELS` —
+  `FUSELAGE_CREASE_MAX_DEG` and `SEAM_MAX_DEG` each failed a generation AFTER meshing.
+
 ## Workflow
 
 1. Before coding: find the open gate in the current phase's docs/roadmap/ entry
