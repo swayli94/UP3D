@@ -13,6 +13,25 @@ root/symmetry termination, taper-as-the-recipe-gap). The two rounds that produce
 LE-11 and LE-12 -- localised and measured instead of testing a guess. So this round asks which
 MEASURABLE separates the known success/failure pattern, and lets that pick the mechanism.
 
+★★ FAILURE-MODE CLASSIFICATION FIRST -- a method gap the user identified, and it may invalidate
+the separation question itself. Every failure today has been recorded as "conv=False, |R| = ...,
+n/m clamps" and then correlated against a knob, without ever characterising WHAT fails. Five
+distinguishable modes have distinct signatures and completely different fixes:
+
+  local Mach too high / clamping   n_limited (m_cap) or n_floored (rho_floor) > 0, AND where
+                                   those cells sit -- tip, LE or TE
+  limit cycle                      residual oscillates with no trend (descent10 ~ 1, values
+                                   revisited)
+  ill-conditioning                 GMRES iteration counts climb, n_gmres_stalled > 0
+  line-search collapse             lambda driven to ~0, steps rejected
+  sigma-transport failure          accept_reason = sigma_transport_not_converged
+
+Lumping all five under one "not converged" label means any correlation analysis may be trying to
+separate a MIXTURE OF DIFFERENT DISEASES with one number -- which would explain why five
+mechanism hypotheses failed today. So each leg is classified before the separation question is
+asked, and if the three failures turn out to be different modes, "one common root cause" is the
+wrong question and that is the round's result.
+
 ★ THE DEAD BAND IS THE HYPOTHESIS-KILLER, and that makes the criterion sharp: any quantity
 MONOTONE in r_c cannot explain 0.025 OK / 0.030 FAIL / 0.0375 FAIL / 0.045 OK. A quantity only
 "explains" the pattern if it separates all three successes from all three failures with NO
@@ -77,9 +96,59 @@ M_TARGET, ALPHA = 0.88, 3.06
 #: r_c with its KNOWN outcome from LE-5/LE-7/LE-8, so the pattern is given, not discovered
 R_CS = [(0.0, False), (0.025, True), (0.030, False), (0.0375, False),
         (0.045, True), (0.05, True)]
-KEYS = ["r_c", "known_outcome", "converged", "n_limited", "n_floored",
-        "res_final", "A_dgdz_1", "A_dgdz_2", "A_dgdz_3", "B_gamma_tip",
-        "C_tip_res_peak", "D_m2_tip_max", "cl_p", "wall_s", "note"]
+KEYS = ["r_c", "known_outcome", "converged", "failure_mode", "mode_evidence",
+        "n_limited", "n_floored", "clamp_site", "res_final", "descent10",
+        "res_revisits", "n_gmres_stalled", "accept_reason", "f_final",
+        "A_dgdz_1", "A_dgdz_2", "A_dgdz_3", "B_gamma_tip",
+        "C_tip_res_peak", "D_m2_tip_max", "wall_s", "note"]
+
+
+def classify_failure(hist, clamps, fhist, gstall, areason, nlim, nflr):
+    """Which of the five failure modes is present? Signatures, not guesses.
+
+    Returns (mode, evidence). Modes are not exclusive in principle, so the first matching
+    signature in order of specificity wins and the evidence string carries the rest -- a leg
+    that both clamps and limit-cycles must not be silently filed as one of them.
+    """
+    ev = []
+    d10 = float("nan")
+    revisits = 0
+    if len(hist) >= 11 and hist[-1] > 0:
+        d10 = float(hist[-11] / hist[-1])
+    if len(hist) >= 6:
+        #: a limit cycle revisits residual VALUES; count near-exact repeats in the tail
+        tail = hist[-12:]
+        revisits = int(sum(1 for i in range(len(tail))
+                           for j in range(i + 1, len(tail))
+                           if tail[i] > 0
+                           and abs(tail[i] - tail[j]) <= 1e-12 * tail[i]))
+    if areason and areason not in ("None", "?", "nan"):
+        ev.append(f"accept_reason={areason}")
+    if nlim or nflr:
+        ev.append(f"clamps {nlim}/{nflr}")
+    if gstall:
+        ev.append(f"gmres_stalled={gstall}")
+    if d10 == d10:
+        ev.append(f"descent10={d10:.3f}")
+    if revisits:
+        ev.append(f"res_revisits={revisits}")
+    if len(fhist):
+        ev.append(f"F_final={float(fhist[-1]):.2e}")
+    #: order matters: a named accept_reason is the most specific statement the solver
+    #: itself makes, so it wins over inferred signatures
+    if areason and "sigma_transport" in areason:
+        mode = "sigma_transport"
+    elif gstall:
+        mode = "ill_conditioning"
+    elif nlim or nflr:
+        mode = "clamping"
+    elif revisits >= 2 or (d10 == d10 and 0.5 <= d10 <= 2.0):
+        mode = "limit_cycle"
+    elif d10 == d10 and d10 > 2.0:
+        mode = "budget_limited"
+    else:
+        mode = "unclassified"
+    return mode, "; ".join(ev), d10, revisits
 
 
 def main():
@@ -100,6 +169,11 @@ def main():
             d = np.load(npz)
             phi, gam, conv = d["phi"], d["gamma"], bool(d["conv"])
             nlim, nflr, res = int(d["nlim"]), int(d["nflr"]), float(d["res"])
+            hist = d["hist"] if "hist" in d else np.array([])
+            clamps = d["clamps"] if "clamps" in d else np.array([])
+            fhist = d["fhist"] if "fhist" in d else np.array([])
+            gstall = int(d["gstall"]) if "gstall" in d else 0
+            areason = str(d["areason"]) if "areason" in d else "?"
             wall = 0.0
         else:
             try:
@@ -121,6 +195,15 @@ def main():
                                  note=f"{type(exc).__name__}: {exc}"))
                 continue
             phi = np.asarray(r["phi"]); gam = np.asarray(r["gamma"])
+            #: ★ the diagnostic history, cached so the failure MODE can be classified without
+            #: a third re-solve. LE-10 cached only phi and LE-11 then could not reconstruct the
+            #: residual; LE-14's first launch repeated the omission for the history and was
+            #: killed 5 minutes in rather than paying for a fourth pass over these states.
+            hist = np.asarray(r.get("residual_history", []), dtype=float)
+            clamps = np.asarray(r.get("clamp_history", []), dtype=float)
+            fhist = np.asarray(r.get("F_history", []), dtype=float)
+            gstall = int(r.get("n_gmres_stalled") or 0)
+            areason = str(r.get("accept_reason"))
             m_att = float(r.get("m_last_converged", r.get("m_final", M_TARGET)))
             conv = bool(r["converged"]) and abs(m_att - M_TARGET) < 1e-9
             nlim = int(r.get("n_limited") or 0); nflr = int(r.get("n_floored") or 0)
@@ -129,7 +212,9 @@ def main():
             #: ★ gamma cached too -- LE-10 stored only phi and LE-11 then could not
             #: reconstruct the full residual. Same states, second re-solve avoided.
             np.savez_compressed(npz, phi=phi, gamma=gam, conv=conv,
-                                nlim=nlim, nflr=nflr, res=res)
+                                nlim=nlim, nflr=nflr, res=res, hist=hist,
+                                clamps=clamps, fhist=fhist, gstall=gstall,
+                                areason=areason)
 
         #: --- A: trailing vorticity |dGamma/dz| at the outermost stations -------
         o = np.argsort(wc.station_z)
@@ -148,11 +233,28 @@ def main():
         D = float(m2[tipm].max()) if np.any(tipm) else float("nan")
         C = float(np.abs(np.einsum("eaj,ej->ea", Bm, grad)).sum(axis=1)[tipm].max()
                   ) if np.any(tipm) else float("nan")
+        mode, ev, d10, revisits = classify_failure(hist, clamps, fhist, gstall,
+                                                   areason, nlim, nflr)
+        #: WHERE the clamped cells sit -- the mode alone does not say tip / LE / TE
+        site = "n/a"
+        if nlim or nflr:
+            hot = tipm & (m2 >= np.quantile(m2[tipm], 0.999)) if np.any(tipm) else tipm
+            xcs = cen[:, 0]
+            site = ("tip" if np.any(tipm) and m2[tipm].max() >= m2.max() * 0.999
+                    else f"elsewhere (argmax x={xcs[int(np.argmax(m2))]:.3f}, "
+                         f"z/b={cen[int(np.argmax(m2)), 2] / B_SEMI:.3f})")
         print(f"  r_c {rc:<7} known={known!s:5s} got={conv!s:5s} "
-              f"lim/flr={nlim}/{nflr}  A1={A[0]:.5f} A2={A[1]:.5f} "
-              f"A3={A[2]:.5f}  B={B:+.6f}  C={C:.4e}  D={D:.3f}"
+              f"MODE={mode:16s} site={site:12s}", flush=True)
+        print(f"           {ev}", flush=True)
+        print(f"           A1={A[0]:.5f} A2={A[1]:.5f} A3={A[2]:.5f}  "
+              f"B={B:+.6f}  C={C:.4e}  D={D:.3f}"
               f"{'' if wall == 0 else f'  ({wall:.0f}s)'}", flush=True)
         rows.append(dict(r_c=rc, known_outcome=known, converged=conv,
+                         failure_mode=mode, mode_evidence=ev, clamp_site=site,
+                         descent10=(round(d10, 4) if d10 == d10 else None),
+                         res_revisits=revisits, n_gmres_stalled=gstall,
+                         accept_reason=areason,
+                         f_final=(float(fhist[-1]) if len(fhist) else None),
                          n_limited=nlim, n_floored=nflr, res_final=res,
                          A_dgdz_1=round(A[0], 8), A_dgdz_2=round(A[1], 8),
                          A_dgdz_3=round(A[2], 8), B_gamma_tip=round(B, 8),
@@ -162,6 +264,16 @@ def main():
         w = csv.DictWriter(fh, fieldnames=KEYS, extrasaction="ignore")
         w.writeheader(); w.writerows(rows)
     print(f"\nwrote {CSV}")
+
+    print("\n=== failure modes first: is 'one common root cause' even the right question? ===")
+    modes = {r["r_c"]: r.get("failure_mode") for r in rows if not r["converged"]}
+    print(f"  failing legs: {modes}")
+    if len(set(modes.values())) > 1:
+        print("  ★ the failures are DIFFERENT MODES -- 'one common root cause' is the")
+        print("  wrong question, and any single quantity separating them would be")
+        print("  separating a mixture of diseases. Read the per-mode evidence instead.")
+    else:
+        print("  all failing legs share one mode, so a common quantity is worth seeking.")
 
     print("\n=== which quantity separates the pattern? ===")
     good = [r for r in rows if r["converged"]]
