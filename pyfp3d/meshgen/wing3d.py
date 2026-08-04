@@ -213,7 +213,19 @@ def onera_m6_wing_mesh(
     algorithm3d: int = 1,
     verbose: bool = False,
     embed_wake: bool = True,
-    tip_cap: str = "flat",
+    #: ★ DEFAULT FLIPPED flat -> round 2026-08-04 (user directive: no future test or study
+    #: uses the flat tip). The flat cap meets the upper/lower surfaces at a sharp convex edge,
+    #: an edge singularity in potential flow, and P13/G13.3 measured it DIVERGING under uniform
+    #: refinement (tip-cap peak-Mach exponent p = +0.321) -- "it, and not the wake, is what
+    #: still blocks 3D grid convergence". Measured consequence on the LE band's convergence
+    #: order (LE-1, M6 wing conforming, M0.50/alpha 3.06): flat p = 0.37 against round
+    #: p = 0.87, and the round value matches the 2.5-D NACA's 0.85 -- so "3-D converges worse
+    #: than 2-D at the LE" was the flat cap, not 3-D-ness.
+    #:
+    #: flat is still available and STILL NEEDED -- the P13 and M5 studies exist to measure it --
+    #: but it must now be asked for EXPLICITLY. That is the point of the flip: a caller who does
+    #: not think about the tip gets the geometry that does not diverge. I was that caller.
+    tip_cap: str = "round",
     h_tip: Optional[float] = None,
 ) -> Mesh:
     """Generate the ONERA M6 half-wing volume mesh with embedded wake sheet.

@@ -91,9 +91,9 @@ LEVELS = {
     #: family is known for, so treat a single reading as a draw, not a trend).
     #: ★ the ROUND-tip self-similar ladder (2026-08-04). clamp OFF so every length
     #: halves; `_rt` so the flat files stay untouched.
-    "xcoarse_rt": _level_params(0.060, clamp_h_far=False),
-    "coarse_rt": _level_params(0.030, clamp_h_far=False),
-    "medium_rt": _level_params(0.015, clamp_h_far=False),
+    #: flat variants, explicit and kept because the P13/M5 flat-vs-round studies need them
+    "coarse_flat": _level_params(0.030),
+    "medium_flat": _level_params(0.015),
     "xcoarse_ss": _level_params(0.060, clamp_h_far=False),
     "coarse_ss": _level_params(0.030, clamp_h_far=False),
     "coarse": _level_params(0.030),
@@ -146,7 +146,13 @@ def generate_level(out_dir: Path, level: str, inspect: bool = True) -> Path:
         #: refinement-based claim on a flat-cap mesh rests on a false premise. My own
         #: capability-matrix convergence orders were computed on flat-cap wing-alone meshes,
         #: which is why they are being recomputed on these.
-        tip_cap=("round" if level.endswith("_rt") else "flat"),
+        #: ★ 2026-08-04, second pass: the BASE level names are now ROUND and flat is only
+        #: reachable through an explicit `_flat` suffix. The first pass had it the other way
+        #: (base = flat, round under `_rt`), which left "coarse means flat" in place -- exactly
+        #: the trap the whole switch is meant to remove, since a reader who loads coarse.msh has
+        #: no way to see which tip they got. Round is the default reading now; flat has to be
+        #: asked for by name.
+        tip_cap=("flat" if level.endswith("_flat") else "round"),
     )
     gen_seconds = time.perf_counter() - t0
     assert "wake" not in mesh.boundary_faces, "M4 mesh must carry no wake tag"

@@ -131,7 +131,9 @@ LEVELS = {
 }
 
 #: Self-similar by construction -- every length scale halves per level.
-RICHARDSON_LADDER = ("coarse", "medium", "fine")
+#: ★ RE-SPEC 2026-08-04: (xcoarse, coarse, medium). `fine` is out of the canonical ladder
+#: -- see the note in cases/meshes/onera_m6/generate_onera_m6.py.
+RICHARDSON_LADDER = ("xcoarse", "coarse", "medium")
 
 
 def seam_crease_angles(mesh) -> np.ndarray:
