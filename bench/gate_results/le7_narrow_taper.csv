@@ -1,0 +1,4 @@
+form,r_c,m_inf,alpha,converged,m_attained,n_limited,n_floored,res_final,cl_p,wall_s,note
+vanish_smooth,0.025,0.88,3.06,True,0.88,0,0,1.660188226876577e-14,0.3052546284167629,414.4,
+vanish_linear,0.025,0.88,3.06,True,0.88,0,0,1.7847400852457933e-14,0.30511340410139076,417.4,
+vanish_smooth,0.0375,0.88,3.06,False,0.88,0,0,4.0252693398129794e-05,0.2771788736395136,1485.4,
