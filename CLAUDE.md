@@ -151,6 +151,26 @@ outranks any inferred signature. **A "budget_limited" leg (still descending, ran
 iterations) is NOT a failure** — mistaking one for a capability limit retracted a whole "dead
 band" finding.
 
+★ **`budget_limited` requires a MONOTONE tail, not just a descent ratio** (fixed 2026-08-05 after
+the reverse error): a residual ratio over a 10-step window is an artefact of where that window
+lands in a cycle. Measured — a period-3 limit cycle (9.037e-05 → 8.059e-05 → 4.026e-05,
+repeating to 4-5 figures) produced descent10 = 2.0021 and so fell on the `> 2.0` side of a
+threshold I had picked by hand, and that hand-picked number decided a published conclusion.
+Raising n_newton_max 60 → 200 left |R| BIT-IDENTICAL, which is what exposed it. Any fixed
+threshold is a CALIBRATION, not a guarantee — the same lesson as the EW forcing and the taper
+r_c. Validate a classifier change on cases whose answer is already known by measurement (here:
+the period-3 cycle, and LE-1's ls_naca_medium which converged in 6 more steps when uncapped).
+
+★ **`accept_reason` strings are solver-internal, and some are ACCEPT routes, not failures.**
+`assignment_cycle` means the live residual stopped improving across upwind-donor refreshes, so
+the driver accepts that Mach level at the selection-discontinuity floor (`newton_ls.py:745-750`).
+I read it as a failure mode from its name alone. Read the code before naming a mode.
+
+★ **σ-transport is an open lead, seen three times** (LE-4 `conf_wb_coarse` M0.78; p13
+round-tip coarse M0.5; LE-16 r_c = 0.0325 where |R| = 2.19e-14). In all three the flow and
+Kutta residuals are already satisfied and only the entropy correction's sigma transport has
+not settled, and all three are tip-related cases.
+
 ## Operating hazards that have cost real time (all measured)
 
 - **Read signatures and import paths; do not recall them.** Five wrong-from-memory calls in one

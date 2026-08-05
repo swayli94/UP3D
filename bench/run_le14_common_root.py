@@ -115,13 +115,30 @@ def classify_failure(hist, clamps, fhist, gstall, areason, nlim, nflr):
     revisits = 0
     if len(hist) >= 11 and hist[-1] > 0:
         d10 = float(hist[-11] / hist[-1])
+    monotone_tail = True
+    n_up = 0
     if len(hist) >= 6:
-        #: a limit cycle revisits residual VALUES; count near-exact repeats in the tail
+        #: ★ REVISIT TOLERANCE WIDENED and MONOTONICITY ADDED, 2026-08-05, because the
+        #: original pair of tests misclassified a textbook limit cycle as budget_limited.
+        #: MEASURED on the wing-body r_c = 0.0375 leg: the tail is a period-3 cycle,
+        #: 9.037e-05 -> 8.059e-05 -> 4.026e-05 repeating to 4-5 significant figures, and
+        #: raising n_newton_max 60 -> 200 left |R| and descent10 BIT-IDENTICAL. Two faults:
+        #:   (1) the 1e-12 relative revisit tolerance is far tighter than a cycle reproduces
+        #:       to in floating point over many steps, so `revisits` counted 0;
+        #:   (2) descent10 = 2.0021 is just "the cycle's high point is 2x its low point" --
+        #:       an artefact of WHERE the 10-step window lands in the period, with no
+        #:       bearing on convergence -- and it fell on the >2.0 side of a threshold I
+        #:       picked by hand. A hand-picked threshold decided a published conclusion.
+        #: So descent10 alone can no longer assign budget_limited: the tail must ALSO be
+        #: monotone. A cycle always fails that, whatever its window ratio.
         tail = hist[-12:]
-        revisits = int(sum(1 for i in range(len(tail))
-                           for j in range(i + 1, len(tail))
-                           if tail[i] > 0
-                           and abs(tail[i] - tail[j]) <= 1e-12 * tail[i]))
+        pos = tail[tail > 0]
+        revisits = int(sum(1 for i in range(len(pos))
+                           for j in range(i + 1, len(pos))
+                           if abs(pos[i] - pos[j]) <= 1e-4 * pos[i]))
+        d = np.diff(tail)
+        n_up = int(np.sum(d > 0))
+        monotone_tail = bool(np.all(d < 0))
     if areason and areason not in ("None", "?", "nan"):
         ev.append(f"accept_reason={areason}")
     if nlim or nflr:
@@ -132,6 +149,8 @@ def classify_failure(hist, clamps, fhist, gstall, areason, nlim, nflr):
         ev.append(f"descent10={d10:.3f}")
     if revisits:
         ev.append(f"res_revisits={revisits}")
+    if len(hist) >= 6:
+        ev.append(f"tail_monotone={monotone_tail} (n_up={n_up})")
     if len(fhist):
         ev.append(f"F_final={float(fhist[-1]):.2e}")
     #: order matters: a named accept_reason is the most specific statement the solver
@@ -142,9 +161,14 @@ def classify_failure(hist, clamps, fhist, gstall, areason, nlim, nflr):
         mode = "ill_conditioning"
     elif nlim or nflr:
         mode = "clamping"
-    elif revisits >= 2 or (d10 == d10 and 0.5 <= d10 <= 2.0):
+    elif revisits >= 2 or not monotone_tail:
+        #: a non-monotone tail IS a cycle, whatever descent10 says about it
         mode = "limit_cycle"
-    elif d10 == d10 and d10 > 2.0:
+    elif d10 == d10 and d10 > 2.0 and monotone_tail:
+        #: budget_limited now requires BOTH: still descending by a margin AND descending
+        #: monotonically. Validation case -- LE-1's ls_naca_medium was confirmed genuinely
+        #: budget-limited by measurement (raising the cap converged it in 6 more steps) and
+        #: its tail is 5.6e-07 -> 1.58e-10 strictly decreasing, so it still classifies here.
         mode = "budget_limited"
     else:
         mode = "unclassified"

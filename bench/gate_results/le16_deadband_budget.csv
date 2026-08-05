@@ -1,0 +1,5 @@
+r_c,le14_mode,n_newton_max,converged,m_attained,failure_mode,mode_evidence,n_limited,n_floored,res_final,descent10,n_newton,cl_p,wall_s,note
+0.0375,budget_limited,200,False,0.88,budget_limited,descent10=2.002; F_final=4.27e-08,0,0,4.025273843681701e-05,2.0021,200,0.2771789118852678,3136.3,
+0.03,clamping,200,False,0.88,clamping,clamps 9/52; descent10=5.216; F_final=8.23e-10,9,52,1.8102283479311057e-05,5.2158,200,0.289979831050716,2463.3,
+0.0325,untested,200,False,0.88,sigma_transport,accept_reason=sigma_transport_not_converged; descent10=3508277246.341; F_final=5.68e-16,0,0,2.1885576014405544e-14,3508277246.3407,38,0.30446993501297814,1599.7,
+0.035,untested,200,False,0.88,clamping,clamps 0/1; descent10=1.198; F_final=7.40e-14,0,1,4.7408388152685426e-05,1.1976,200,0.3043082361767551,4979.2,
