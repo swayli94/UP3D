@@ -29,8 +29,6 @@ Assertions use relative tolerances (phase-two decision D1); the committed
 values are drift references, NOT truth.
 """
 
-import os
-
 import numpy as np
 import pytest
 
@@ -61,18 +59,44 @@ M_INF, ALPHA = 0.72, 1.25
 #: which is why this re-anchor was necessary (and why GS1b.6's "flipping the default
 #: would not break the M1a lock" was imprecise -- it held for the consistency
 #: criterion, not for the absolute locks).
+#: ★★ GATE RE-SPEC 2026-08-05, user ruling. Recorded in full in
+#: docs/dev_phase_two/20260805-2330-m1a-respec.md, written BEFORE this edit as
+#: roadmap sec 5 requires. Summary of what changed and what it COST:
+#:
+#: The ladder moved from (coarse, medium, fine) to (xcoarse, coarse, medium) because
+#: `fine` was retired from all tests and demos on 2026-08-04. Measured consequence:
+#: NONE of the three original assertions survives the move, because the two windows
+#: are in DIFFERENT convergence regimes on this clean factor-2 ladder
+#: (h_wall 0.040 / 0.020 / 0.010 / 0.005):
+#:
+#:     window                    d2/cl_m    ratio    observed p    Richardson
+#:     coarse/medium/fine        +0.629 %   0.1556   2.68          0.255123
+#:     xcoarse/coarse/medium     +4.214 %   0.5056   0.98          0.263707
+#:
+#: so the retired window's extrapolation matched the committed 0.25511 to five
+#: digits while the new window overshoots by +3.4 %. The 1 %-level agreement and the
+#: Richardson assertion are therefore RETIRED, not loosened -- the criterion below
+#: measures different QUANTITIES rather than the same ones at a weaker threshold.
+#:
+#: The retired window's readings are kept as a historical MEASUREMENT (not a live
+#: gate) so "this solver reached p ~ 2.7 over h 0.02 -> 0.005" is not lost with the
+#: level: cl 0.242997 / 0.253237 / 0.254830 at coarse/medium/fine, seed 5.
 LOCK = {
-    "coarse": dict(cl=0.242997, x_shock=0.28706, m_max=1.1356),
-    "medium": dict(cl=0.253237, x_shock=0.29075, m_max=1.1537),
-    "fine": dict(cl=0.254823, x_shock=0.28358, m_max=1.1650),
+    "xcoarse": dict(cl=0.222742, m_max=1.0972),
+    "coarse": dict(cl=0.242984, m_max=1.1356),
+    "medium": dict(cl=0.253237, m_max=1.1537),
 }
+LADDER = ("xcoarse", "coarse", "medium")
 CL_RTOL = 2.0e-3          # 0.2 %: well inside run-to-run scatter, far below
 #                           the physics changes this is meant to catch
-RICHARDSON_CL = 0.25511   # was 0.25631 isentropic; convergence ratio 6.45
-
-run_fine = pytest.mark.skipif(
-    os.environ.get("PYFP3D_TRANSONIC_GATES", "0") != "1",
-    reason="the fine level is ~60 s; set PYFP3D_TRANSONIC_GATES=1")
+#: the re-spec's three criteria (sec 3 of the round file), with the out-of-envelope
+#: readings that show each one DISCRIMINATES -- at M0.80 the same three-level sequence
+#: gives d2 = -0.0666 (non-monotone), ratio -0.6003 and |d2/cl_m| 16.33 %.
+#: ★ Note which criterion does the work: at M0.80 all three levels CONVERGE with zero
+#: clamps (the 2026-08-05 cold-start seed fallback made that so), therefore
+#: "everything converged" is NOT the discriminator -- MONOTONICITY is.
+RATIO_MAX = 0.7           # measured 0.5065 in envelope, -0.6003 out
+D2_REL_MAX = 0.05         # measured 4.22 % in envelope, 16.33 % out
 
 
 def _solve(mesh_dir, level):
@@ -98,7 +122,7 @@ def mesh_dir():
     return REPO_ROOT / "cases" / "meshes"
 
 
-@pytest.mark.parametrize("level", ["coarse", "medium"])
+@pytest.mark.parametrize("level", LADDER)
 def test_m1a_level_lock(mesh_dir, level):
     """Each in-envelope level reproduces its committed cl, converges to a
     genuine solution, and carries no clamped cells."""
@@ -116,34 +140,34 @@ def test_m1a_level_lock(mesh_dir, level):
         "M_max moved out of the in-envelope range this lock is about")
 
 
-def test_m1a_coarse_to_medium_consistency(mesh_dir):
-    """The cheap half of the envelope statement: coarse -> medium must move cl
-    by less than 5 % (measured +4.35 %). Outside the envelope this number is
-    +40 %, so it is a real discriminator even without the fine level."""
-    _, cl_c = _solve(mesh_dir, "coarse")
-    _, cl_m = _solve(mesh_dir, "medium")
-    d = (cl_m - cl_c) / cl_c
-    assert 0.0 < d < 0.05, (
-        f"coarse->medium cl change {100 * d:+.2f} % outside (0, 5) % "
-        f"(measured +4.35 % on 2026-07-28)")
+def test_m1a_three_level_convergence(mesh_dir):
+    """★ The re-spec'd M1a criterion (2026-08-05): on (xcoarse, coarse, medium) the
+    sequence must be MONOTONE, CONTRACTING, and settled to under 5 % on the last step.
 
+    Each of the three discriminates out of envelope -- at M0.80 the same sequence gives
+    d2 = -0.0666, ratio -0.6003 and 16.33 % -- while "all three converged" does NOT,
+    since the cold-start seed fallback makes M0.80 converge too. So monotonicity is
+    what carries the statement, and it is asserted first.
 
-@run_fine
-def test_m1a_medium_to_fine_convergence(mesh_dir):
-    """The binding M1a criterion: medium -> fine cl change < 1 %, and the
-    convergence RATIO well below 1 (0.21 measured; >= 1 is divergence)."""
-    _, cl_c = _solve(mesh_dir, "coarse")
-    _, cl_m = _solve(mesh_dir, "medium")
-    r_f, cl_f = _solve(mesh_dir, "fine")
-    d1, d2 = cl_m - cl_c, cl_f - cl_m
-    assert abs(d2 / cl_m) < 0.01, (
-        f"medium->fine cl change {100 * d2 / cl_m:+.3f} % >= 1 %")
+    What this criterion no longer claims, and why, is in the LOCK comment above and in
+    docs/dev_phase_two/20260805-2330-m1a-respec.md sec 5.
+    """
+    cl = {}
+    for level in LADDER:
+        r, c = _solve(mesh_dir, level)
+        assert r["converged"] and r["n_limited"] == 0 and r["n_floored"] == 0, (
+            f"{level}: the sequence needs three genuine solutions")
+        cl[level] = c
+    d1 = cl["coarse"] - cl["xcoarse"]
+    d2 = cl["medium"] - cl["coarse"]
+    assert d1 > 0.0 and d2 > 0.0, (
+        f"NOT monotone: d1 = {d1:+.6f}, d2 = {d2:+.6f}. This is the criterion that "
+        f"separates in-envelope from out (M0.80 gives d2 = -0.0666)")
     ratio = d2 / d1
-    assert 0.0 < ratio < 0.4, (
-        f"convergence ratio {ratio:.3f} outside (0, 0.4) "
-        "(0.21 measured; >= 1 means divergence)")
-    rich = cl_f + d2 * ratio / (1.0 - ratio)
-    assert abs(rich - RICHARDSON_CL) < 0.01 * RICHARDSON_CL, (
-        f"Richardson extrapolation {rich:.5f} vs committed "
-        f"{RICHARDSON_CL:.5f}")
-    assert r_f["n_limited"] == 0 and r_f["n_floored"] == 0
+    assert 0.0 < ratio < RATIO_MAX, (
+        f"convergence ratio {ratio:.4f} outside (0, {RATIO_MAX}) "
+        f"(0.5065 measured in envelope; -0.6003 at M0.80)")
+    rel = abs(d2 / cl["medium"])
+    assert rel < D2_REL_MAX, (
+        f"last-step change {100 * rel:.3f} % >= {100 * D2_REL_MAX:.0f} % "
+        f"(4.22 % measured in envelope; 16.33 % at M0.80)")
