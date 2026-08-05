@@ -58,7 +58,10 @@ from pyfp3d.solve.newton import (solve_newton_lifting,              # noqa: E402
                                  solve_newton_transonic)
 from run_le14_common_root import classify_failure                   # noqa: E402
 
-CSV = os.path.join(HERE, "gate_results", "le16_deadband_budget.csv")
+#: a subset run writes its own file so the committed 4-leg baseline is not overwritten
+CSV = os.path.join(HERE, "gate_results",
+                   "le16_deadband_budget.csv" if not os.environ.get(
+                       "PYFP3D_LE16_ONLY") else "le16_deadband_sigmafix.csv")
 MP = os.path.join(REPO, "cases", "meshes", "onera_m6_wingbody_conforming",
                   "medium.msh")
 M_TARGET, ALPHA = 0.88, 3.06
@@ -66,6 +69,16 @@ N_NEWTON_RAISED = 200          # the committed CONF_RAMP_NK value is 60
 #: (r_c, what LE-14 classified it as)
 LEGS = [(0.0375, "budget_limited"), (0.030, "clamping"),
         (0.0325, "untested"), (0.035, "untested")]
+#: ★ 2026-08-05: set PYFP3D_LE16_ONLY to a comma-separated r_c list to re-run a subset.
+#: Added for the sigma-transport re-measurement: the fix
+#: (docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md) can only flip the
+#: verdict of a leg that was refused ON SIGMA, and 0.0325 is the only one -- the other
+#: three carry clamping or limit-cycle evidence, so for them the fix is a ~1e-11
+#: reassociation. Re-running all four costs 3.4 h; this leg alone is ~27 min.
+_only = os.environ.get("PYFP3D_LE16_ONLY", "")
+if _only:
+    _want = {float(x) for x in _only.split(",")}
+    LEGS = [lg for lg in LEGS if lg[0] in _want]
 KEYS = ["r_c", "le14_mode", "n_newton_max", "converged", "m_attained",
         "failure_mode", "mode_evidence", "n_limited", "n_floored", "res_final",
         "descent10", "n_newton", "cl_p", "wall_s", "note"]
@@ -112,6 +125,15 @@ def main():
             nlim, nflr)
         m_att = float(r.get("m_last_converged", r.get("m_final", M_TARGET)))
         conv = bool(r["converged"]) and abs(m_att - M_TARGET) < 1e-9
+        #: ★ a CONVERGED leg has no failure mode. Without this the row reads
+        #: "converged=True, failure_mode=limit_cycle": the classifier is a
+        #: failure classifier and its tail heuristics say something arbitrary
+        #: about a resolved trajectory. Measured on r_c = 0.0325 after the
+        #: sigma-transport fix (docs/dev_phase_two/
+        #: 20260805-0200-sigma-transport-root-cause.md), which flipped that leg
+        #: to converged and left the label behind.
+        if conv:
+            mode, ev = "", f"converged; accept_reason={r.get('accept_reason')!r}"
         sref = planform_area(mc.nodes, mc.boundary_faces["wall"])
         cl = wall_forces(mc, phi=np.asarray(r["phi"]), alpha_deg=ALPHA,
                         s_ref=sref, m_inf=M_TARGET)["cl"]

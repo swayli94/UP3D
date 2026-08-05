@@ -1,0 +1,2 @@
+r_c,le14_mode,n_newton_max,converged,m_attained,failure_mode,mode_evidence,n_limited,n_floored,res_final,descent10,n_newton,cl_p,wall_s,note
+0.0325,untested,200,True,0.88,limit_cycle,accept_reason=tol; descent10=3508277246.341; tail_monotone=False (n_up=1); F_final=5.68e-16,0,0,2.1885576014405544e-14,3508277246.3407,38,0.30446993501297814,1696.5,
