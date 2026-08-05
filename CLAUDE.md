@@ -293,8 +293,24 @@ M0.8395.
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **479 passed + 25 skipped +
-   2 xfailed** (2026-07-20, B25 inboard fragment clip, +6 passed =
+3. Full suite: `pytest tests/` — current baseline **700 passed + 28 skipped +
+   2 xfailed** (2026-08-06, measured 1769.56 s @16 threads). ★ The per-round
+   lineage lives in [docs/dev_phase_two/progress.md](docs/dev_phase_two/progress.md),
+   not here — phase two tracks it there, and this line had been left at the
+   phase-one 479 for two weeks.
+   ★★ **The GATED set is a separate obligation and it is currently in debt.**
+   17 test files carry `PYFP3D_TRANSONIC_GATES` markers and the full gated set has
+   NOT been run since the round-tip switch of 2026-08-04. That switch regenerated
+   `onera_m6` and `onera_m6_wakefree` as ROUND, while several gated files hold
+   absolute anchors measured on the FLAT cap — `test_b7_onera_m6.py`,
+   `test_b15_ls_newton_freeze.py`, `test_b22_ls_3d_anchors.py` (γ at rtol 1e-4,
+   deliberately tight) and `test_p5_onera_m6.py`. On 2026-08-06 running just
+   `test_p4_transonic` + `test_p8_newton` + `test_s1_m1a_envelope` found 2 of 2
+   capability locks red. Assume the rest carry bills until measured.
+   ★ Note `onera_m6_wakefree` has no `_flat` variants generated, so those tests
+   cannot fall back to the flat cap without regenerating meshes.
+   Superseded lineage (phase one): 479 passed + 25 skipped + 2 xfailed
+   (2026-07-20, B25 inboard fragment clip, +6 passed =
    `tests/test_b1_cut_elements.py::TestInboardFragmentClip` (4) + the same
    file's foot-preference lock (1) + `tests/test_m2_wingbody.py`'s
    waterline-extension lock (1);
