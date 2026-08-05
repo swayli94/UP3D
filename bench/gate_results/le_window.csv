@@ -1,0 +1,7 @@
+accept_reason,clamp_frac_LE_0_15,clamp_frac_MID_15_85,clamp_frac_TE_85_100,clamp_frac_offbody,converged,fallback_fired,h_far,leg,m_inf,m_last_converged,m_max,n_floored,n_lim_reconstructed,n_limited,n_shock_cells,n_tet,note,peak_q2,res_final,wall_s,x_of_peak_q2,x_shock_0.44,x_shock_0.65,x_shock_0.9
+,,,,,False,,2.4,base,0.6,,,,,,,,ValueError: upward ramp only: m_inf 0.6 < m_start 0.7 (design.md Sec 12 risk 2 -- never continue downward),,,,,,,
+,,,,,False,,1.2,far_x2,0.6,,,,,,,,ValueError: upward ramp only: m_inf 0.6 < m_start 0.7 (design.md Sec 12 risk 2 -- never continue downward),,,,,,,
+tol,0.0,0.0,0.0,0.0,True,False,2.4,base,0.7,,1.53584,0,0,0,214,187055,,3.59139,8.897548259419966e-13,320.2,1.1532,0.06470869387695907,0.07472138297450417,0.08495747647976354
+tol,0.0,0.0,0.0,0.0,True,False,1.2,far_x2,0.7,,1.75765,0,0,0,229,250685,,4.27885,6.359151851927123e-15,365.6,1.1379,0.0671348183113464,0.06930654073169137,0.08088156434213573
+tol,0.0,0.0,0.0,0.0,True,False,2.4,base,0.75,,1.67828,0,0,0,557,187055,,3.56334,2.1713624053000325e-11,357.1,1.1532,0.14896204303098987,0.16019949169639933,0.15307593122324956
+tol,0.0,0.0,0.0,0.0,True,False,1.2,far_x2,0.75,,1.98812,0,0,0,593,250685,,4.366,2.564630895625261e-12,443.4,1.1379,0.1503769519492186,0.19022641140721305,0.14810441573389022
