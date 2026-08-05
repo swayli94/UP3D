@@ -1,0 +1,7 @@
+accept_reason,clamp_frac_LE_0_15,clamp_frac_MID_15_85,clamp_frac_TE_85_100,clamp_frac_offbody,converged,failure_mode,first_clamped_step,level,m_inf,m_max,mode_evidence,n_floored,n_lim_reconstructed,n_limited,n_newton,n_picard_seed,peak_q2,ramp,res_final,tag,wall_s,x_of_peak_q2
+,0.0,0.8088,0.1672,0.024,False,clamping,3,medium,0.8,3.0,clamps 7265/758; descent10=0.049; tail_monotone=False (n_up=7); F_final=0.00e+00,758,7265,7265,35,0,8252885.03358,False,0.03287442023042297,m080_medium_seed0_noramp,29.9,0.7505
+tol,0.0,0.0,0.0,0.0,True,,49,medium,0.8,1.3745,accept_reason='tol',0,0,0,62,5,2.41667,False,2.854995790643492e-13,m080_medium_seed5_noramp,19.3,0.4493
+tol,0.0,0.0,0.0,0.0,True,,19,medium,0.8,1.30279,accept_reason='tol',0,0,0,64,0,2.23333,True,4.4948630430620496e-11,m080_medium_seed0_ramp,11.6,0.3571
+tol,0.0,0.0,0.0,0.0,True,,,medium,0.8,1.34308,accept_reason='tol',0,0,0,19,5,2.3364,True,1.668319248246024e-13,m080_medium_seed5_ramp,45.0,0.4187
+tol,0.0,0.0,0.0,0.0,True,,,coarse,0.8,1.39367,accept_reason='tol',0,0,0,28,0,2.46556,False,2.904495138539988e-13,m080_coarse_seed0_noramp,0.7,0.3309
+tol,0.0,0.0,0.0,0.0,True,,,medium,0.72,1.15372,accept_reason='tol',0,0,0,12,0,2.23806,False,2.0192314114675397e-13,m072_medium_seed0_noramp,2.3,0.1865

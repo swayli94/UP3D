@@ -60,10 +60,15 @@ from run_le14_common_root import classify_failure                   # noqa: E402
 CSV = os.path.join(HERE, "gate_results", "seed_exposure.csv")
 M_CAP = 3.0                        # solve_newton_lifting's default
 ALPHA = 1.25
-#: the M1 gate's recipe verbatim (bench/run_m1_gate.py)
+#: the M1 gate's recipe verbatim (bench/run_m1_gate.py). ★ alpha_deg is a DRIVER
+#: argument, not a newton_kw one -- the first version of this script put it in the
+#: dict and passed the dict as newton_kw, so the ramp legs died with
+#: "solve_newton_transonic() missing 1 required positional argument: 'alpha_deg'".
+#: Tenth wrong-from-structure call this phase; NK is the newton_kw subset.
 RECIPE = dict(alpha_deg=ALPHA, upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6,
               freeze_refresh_max=8, precond="direct", direct_refactor_every=4,
               n_newton_max=80)
+NK = {k: v for k, v in RECIPE.items() if k != "alpha_deg"}
 #: (tag, level, m_inf, seed, ramp) -- ramp=True goes through m_start 0.70, i.e. a
 #: SUBCRITICAL first level, which is the condition GS3.3b's comment names.
 LEGS = (
@@ -125,9 +130,9 @@ def main():
         t0 = time.perf_counter()
         if ramp:
             r = solve_newton_transonic(
-                mc, wc, m_inf=m_inf, m_start=0.70, dm=0.05, dm_min=0.01,
-                freeze_tol=1e-6, intermediate_tol=1e-4,
-                newton_kw=dict(RECIPE, n_picard_seed=seed))
+                mc, wc, m_inf=m_inf, alpha_deg=ALPHA, m_start=0.70, dm=0.05,
+                dm_min=0.01, freeze_tol=1e-6, intermediate_tol=1e-4,
+                newton_kw=dict(NK, n_picard_seed=seed))
         else:
             r = solve_newton_lifting(mc, wc, m_inf=m_inf,
                                      n_picard_seed=seed, **RECIPE)
