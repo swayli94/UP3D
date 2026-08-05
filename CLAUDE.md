@@ -166,10 +166,50 @@ the period-3 cycle, and LE-1's ls_naca_medium which converged in 6 more steps wh
 the driver accepts that Mach level at the selection-discontinuity floor (`newton_ls.py:745-750`).
 I read it as a failure mode from its name alone. Read the code before naming a mode.
 
-★ **σ-transport is an open lead, seen three times** (LE-4 `conf_wb_coarse` M0.78; p13
-round-tip coarse M0.5; LE-16 r_c = 0.0325 where |R| = 2.19e-14). In all three the flow and
-Kutta residuals are already satisfied and only the entropy correction's sigma transport has
-not settled, and all three are tip-related cases.
+★ **σ-transport: CLOSED 2026-08-05, and it was a false failure.** Seen three times (LE-4
+`conf_wb_coarse` M0.78; p13 round-tip coarse M0.5; LE-16 r_c = 0.0325 where |R| = 2.19e-14),
+always with the flow and Kutta residuals already satisfied. Root cause: a length-2 HARMLESS
+donor cycle (2 of 68624 and 2 of 90099 elements, s = 1 on both) can never satisfy
+`transport_sigma`'s termination test "every ancestor is a genuine root", so all 24
+pointer-doubling rounds burn and the caller refuses to report convergence per the GS1.4
+clamp-not-silent contract. The graph-theoretic acyclicity requirement comes ONLY from the
+entropy correction — the upwind density and Jacobian Term 3 read `upstream[e]` one hop and are
+indifferent to cycles — so that cycle was harmless until S1b introduced the correction.
+Fix: break harmless cycles (all s exactly 1) in a LOCAL COPY of the donor map, leave shocked
+cycles intact so they still collapse and are still refused, termination test unchanged.
+Measured A/B: acceptance flips False -> True while sigma_min and cl_p agree to 10 digits with
+identical refresh and step counts (`bench/gate_results/sigma_fix_verify{,_prefix}.csv`) —
+so it changes the VERDICT, not the numbers. Note:
+`docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
+Do not re-attribute this to the tip: the affected elements span the whole mesh (z/b 0.002-1.650).
+
+## ★★ Prove a kernel property with an independent ORACLE, not with cases you invented
+
+Measured 2026-08-05, at the cost of two wrong fixes in one round. Three candidate termination
+criteria for `transport_sigma`, and **both wrong ones passed every case I could think of**:
+
+| criterion | hand-built cases | random-graph oracle | outcome |
+|---|---|---|---|
+| "the product stopped moving" | ✗ collapse locks went red at once | — | reverted |
+| "`P[A[e]] == 1`" (the ancestor contributes nothing) | **✓ all green, incl. 5 cycle types** | **✗ failed 4 of 5 graphs** | reverted |
+| break harmless cycles in a copy | ✓ | ✓ | adopted |
+
+The second one drops a shock sitting further upstream than the finite segment it inspects. It
+survived the two collapse locks AND five cycle variants I built specifically to cover the case
+space. What killed it was a test that walks each donor chain hop by hop and compares — **sharing
+no code with the implementation** — on random graphs containing roots, long chains, a harmless
+cycle and a shocked one.
+
+So: for a kernel-level property (completeness, conservation, an accumulated path quantity),
+**write the brute-force oracle**. A live solve cannot substitute — it can only show that SOME
+criterion fired, never that an accumulation finished. And two traps inside the oracle itself,
+both of which I first misread as kernel bugs:
+- **do not demand bit-equality of a floating-point product** — the fast algorithm multiplies the
+  same factors in a different ORDER and multiplication is not associative (rtol 1e-12, not
+  `array_equal`);
+- **honour the kernel's stated preconditions in the generated data** — my random graph gave a
+  chain ROOT a shock factor < 1, which `shock_factor_sweep` cannot produce, and the documented
+  consequence looked like a defect.
 
 ## Operating hazards that have cost real time (all measured)
 

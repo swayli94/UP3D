@@ -122,6 +122,14 @@ P13 需要 `fine_flat` 的难题。
 ## 7. 未完成(按优先级)
 
 1. `environment.yml` 补 **pandas**;修 m5/p13/v5 的 round-tip 断言;查 a1 那条
+   > ★ **a1 那条已根因 2026-08-05**:`test_a1_instrumentation::test_conforming_picard` 的
+   > `other < 20% * wall` 断言在**numba 缓存冷**时必然失败(编译时间落进 `other`)——
+   > 删掉 `pyfp3d/kernels/__pycache__` 即**按需复现**(35.4% 未计入),热缓存立刻通过;
+   > 用**修复前**的熵内核冷跑同样失败(32.2%)⇒ **与任何一次改动无关,是这条断言本身的脆弱性**:
+   > 它断言的其实是**编译**,不是它要检查的账目完整性。**这也解释了为什么新建的 up3d 环境
+   > 会在这里报失败而热仓库不会** —— 新环境的缓存按定义全是冷的。修法:模块级 autouse
+   > fixture 先跑一次丢弃的求解把内核编译掉(本模块四个驱动共享 assembly/upwind/entropy/
+   > linear-solve 内核,一次即可);冷缓存下 `tests/test_a1_instrumentation.py` 现 **7/7 通过**。
 2. **LE-15**:用分类器分类 round-tip 的包线退步 —— §5 的"几何代价"结论**悬而未决**
 3. r_c = 0.0375 的**加预算重测** —— 决定"死带"是否存在
 4. round-tip 切换的 erratum 清单 + 五面收口(discipline #11)

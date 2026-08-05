@@ -43,6 +43,32 @@ def cut():
     return mc, wc
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _warm_the_jit(cut):
+    """★ Compile the kernels BEFORE anything here times a wall clock.
+
+    Root-caused 2026-08-05, after `test_conforming_picard` failed a full suite
+    run at "unaccounted time 1.706s is 29.3% of 5.815s wall". It reproduces
+    exactly on demand: delete pyfp3d/kernels/__pycache__ and this file fails
+    (35.4% unaccounted); run it again warm and it passes. numba compilation
+    lands in `other`, because it happens inside a phase-timed call but is not
+    that phase's work -- so the share bound was measuring COMPILATION, not the
+    faithfulness of the accounting it exists to check.
+
+    Measured to be pre-existing, not caused by any one change: with the
+    pre-2026-08-05 entropy kernel the same cold-cache run fails at 32.2%. This
+    is also why a freshly created conda env showed failures here that a warm
+    checkout does not -- a new env has cold caches by construction, which is
+    the "1 item still to investigate" left open in
+    docs/dev_phase_two/20260804-2148-le-round-tip-and-environment.md sec 7.
+
+    One throwaway solve is enough for every driver in this module: they share
+    the assembly, upwind, entropy and linear-solve kernels.
+    """
+    mc, wc = cut
+    solve_subsonic_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, n_picard_max=3)
+
+
 @pytest.fixture(scope="module")
 def mvop():
     mesh = read_mesh(MESH)
