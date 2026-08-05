@@ -33,24 +33,58 @@ from pyfp3d.post.section_cut import wall_cp_curve              # noqa: E402
 from pyfp3d.post.shock import shock_report                     # noqa: E402
 from pyfp3d.post.surface import wall_force_coefficients        # noqa: E402
 from pyfp3d.solve.newton import solve_newton_lifting           # noqa: E402
+sys.path.insert(0, str(HERE))
+from run_le14_common_root import classify_failure               # noqa: E402
 
 M_INF, ALPHA = 0.80, 1.25
 SHOCK_REF, SHOCK_TOL = 0.61, 0.02
 CS = (1.0, 1.5, 3.0)
 LEVELS = ("coarse", "medium")
+#: ★ THE SEED IS AN AXIS, added 2026-08-05, because it moved a published number.
+#: `solve_newton_lifting`'s n_picard_seed default went 5 -> 0 on 2026-08-02 ("noseed
+#: global"), and this script does not pass it, so it silently inherited the change.
+#: Measured consequence at M0.80 / alpha 1.25: coarse converges either way, but
+#: MEDIUM dies at the m_cap limiter with seed 0 (|R| 3.29e-02, M_max exactly 3.0,
+#: 7265 limited / 758 floored) and converges cleanly with seed 5 (|R| 2.85e-13,
+#: 0/0, x_shock 0.6006) -- reproducing GS1b.11's published 0.6073 / 0.6006 exactly.
+#: So the two seeds are BOTH measured here rather than one being chosen: 0 is what
+#: production ships, 5 is what the published M1 numbers were produced on, and the
+#: gap between them is itself the finding. The regression was invisible because the
+#: matching test (test_p4_transonic::test_g41_transonic_medium_gate) is gated AND
+#: xfail(strict=False) -- a non-strict xfail cannot detect a regression, and that
+#: one was made non-strict for an unrelated reason (thread dependence).
+SEEDS = (0, 5)
 
 
 def main():
-    # GS1b.3: --entropy re-runs the SAME gate with the entropy-corrected
-    # density. The three criteria, the condition, the C sweep and the recipe are
-    # untouched -- only the density law changes, so the FAIL recorded on
-    # 2026-07-29 stays directly comparable.
+    # ★ CALL-SITE DEBT FIXED 2026-08-05. This script used to take --entropy,
+    # defaulting to FALSE, so the plain invocation measured the ISENTROPIC density
+    # long after the entropy correction became the library default (GS1b.11,
+    # 2026-07-31). That is the same class of debt GS3.1 found for `precond`: the
+    # library default had moved and the call sites had not. So the default leg now
+    # passes NO density kwarg at all -- whatever the library ships is what M1 is
+    # measured against -- and the isentropic control has to be asked for by name.
+    #
+    # The old artifact is instructive about why this matters: gate_results/
+    # m1_gate_entropy.csv is dated 2026-07-29 15:15, which predates the sigma
+    # freeze binding (GS1b.5), the m_cap escape fix (GS1b.10/11) and the
+    # 2026-08-05 sigma-transport fix, and its medium legs show it -- C = 1.0
+    # clamped at M_max 3.0 with cl 0.055, C = 3.0 "converged" at cl 0.0708 against
+    # coarse's 0.370. Those numbers were never usable and the file kept them.
+    #
+    # gate_results/m1_gate.csv keeps its meaning (the isentropic-era record, which
+    # roadmap 2 deliberately preserves); the library-default leg writes its own
+    # file rather than overwriting it.
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--entropy", action="store_true")
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--density", choices=("default", "isentropic"),
+                    default="default",
+                    help="'default' passes no density kwarg (= production); "
+                         "'isentropic' is the control leg")
     a = ap.parse_args()
-    print(f"entropy_correction = {a.entropy}")
+    kw_density = {} if a.density == "default" else {"entropy_correction": False}
+    print(f"density = {a.density}"
+          f"{'' if kw_density else '  (library default, no kwarg passed)'}")
     rows = []
     for level in LEVELS:
         path = REPO / f"cases/meshes/naca0012_2.5d/{level}.msh"
@@ -59,38 +93,64 @@ def main():
             continue
         mc, wc = cut_wake(read_mesh(path))
         dz = float(np.ptp(mc.nodes[:, 2]))
-        for C in CS:
+        for seed in SEEDS:
+          for C in CS:
             t0 = time.perf_counter()
             try:
                 r = solve_newton_lifting(
                     mc, wc, m_inf=M_INF, alpha_deg=ALPHA, upwind_c=C,
                     m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
                     precond="direct", direct_refactor_every=4,
-                    n_newton_max=80, entropy_correction=a.entropy)
+                    n_newton_max=80, n_picard_seed=seed, **kw_density)
                 err = ""
             except Exception as exc:                           # noqa: BLE001
-                rows.append(dict(level=level, C=C, converged=False,
-                                 error=type(exc).__name__))
-                print(f"  {level} C={C}: FAILED {type(exc).__name__}",
-                      flush=True)
+                rows.append(dict(level=level, C=C, n_picard_seed=seed,
+                                 converged=False, error=type(exc).__name__))
+                print(f"  {level} seed={seed} C={C}: FAILED "
+                      f"{type(exc).__name__}", flush=True)
                 continue
+            #: ★ never report a bare conv=False (CLAUDE.md): the five modes have
+            #: different signatures and completely different fixes, and correlating
+            #: one label against a knob can be separating a MIXTURE of diseases.
+            #: A converged leg gets no mode -- the classifier is a FAILURE
+            #: classifier and says something arbitrary about a resolved trajectory.
+            hist = np.asarray(r.get("residual_history", []), dtype=float)
+            if r["converged"]:
+                mode, ev = "", f"accept_reason={r.get('accept_reason')!r}"
+            else:
+                mode, ev, _d10, _rv = classify_failure(
+                    hist, np.asarray(r.get("clamp_history", []), dtype=float),
+                    np.asarray(r.get("F_history", []), dtype=float),
+                    int(r.get("n_gmres_stalled") or 0),
+                    str(r.get("accept_reason")),
+                    int(r.get("n_limited") or 0), int(r.get("n_floored") or 0))
             rep = shock_report(wall_cp_curve(mc, r["phi"], z=0.5 * dz,
                                             m_inf=M_INF), M_INF)
             f = wall_force_coefficients(mc.nodes, mc.elements,
                                         mc.boundary_faces["wall"], r["phi"],
                                         alpha_deg=ALPHA, s_ref=dz,
                                         m_inf=M_INF)
-            rows.append(dict(level=level, C=C, converged=r["converged"],
+            rows.append(dict(level=level, C=C, n_picard_seed=seed,
+                             converged=r["converged"],
                              clamped=r.get("clamped"),
                              cl_p=round(f["cl"], 6),
                              x_shock=rep["upper"].get("x_shock"),
                              m_max=round(float(np.sqrt(r["mach2_max"])), 5),
                              res_final=r["residual_history"][-1],
+                             failure_mode=mode, mode_evidence=ev,
+                             n_limited=r.get("n_limited"),
+                             n_floored=r.get("n_floored"),
+                             accept_reason=r.get("accept_reason"),
+                             sigma_min=r.get("sigma_min"),
+                             n_shock_cells=r.get("n_shock_cells"),
+                             n_newton=len(hist),
                              wall_s=round(time.perf_counter() - t0, 1),
                              error=err))
-            print(f"  {level:7s} C={C:<4} conv={str(r['converged']):5s} "
+            print(f"  {level:7s} seed={seed} C={C:<4} "
+                  f"conv={str(r['converged']):5s} "
                   f"cl={rows[-1]['cl_p']} x_shock={rows[-1]['x_shock']} "
-                  f"M_max={rows[-1]['m_max']}", flush=True)
+                  f"M_max={rows[-1]['m_max']} |R|={rows[-1]['res_final']:.2e}"
+                  f"{'  MODE=' + mode if mode else ''}", flush=True)
 
     # ★ `bench/results/` is gitignored (it holds the big bitcheck npz dumps), so
     # gate evidence goes to `bench/gate_results/`, which is TRACKED. Found
@@ -99,13 +159,25 @@ def main():
     # .md is not evidence, and that was exactly the situation.
     out_dir = HERE / "gate_results"
     out_dir.mkdir(exist_ok=True)
-    out_csv = out_dir / ("m1_gate_entropy.csv" if a.entropy else "m1_gate.csv")
+    out_csv = out_dir / ("m1_gate.csv" if a.density == "isentropic"
+                         else "m1_gate_default.csv")
     with open(out_csv, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in rows for k in r}))
         w.writeheader()
         w.writerows(rows)
 
-    print("\n=== M1 criteria ===")
+    overall = True
+    for seed in SEEDS:
+        overall &= _criteria([r for r in rows if r.get("n_picard_seed") == seed],
+                             seed)
+    print(f"\nM1: {'PASS' if overall else 'FAIL'}")
+    return 0 if overall else 1
+
+
+def _criteria(rows, seed):
+    print(f"\n=== M1 criteria, n_picard_seed = {seed}"
+          f"{'  (library default)' if seed == 0 else '  (the published numbers)'}"
+          " ===")
     ok = True
     # (a) shock band, default C, both levels
     for level in LEVELS:
@@ -152,8 +224,7 @@ def main():
               f" = {100 * spread:.1f} % (< 3 %) -> {'PASS' if good else 'FAIL'}")
         ok &= bool(good)
 
-    print(f"\nM1: {'PASS' if ok else 'FAIL'}")
-    return 0 if ok else 1
+    return ok
 
 
 if __name__ == "__main__":
