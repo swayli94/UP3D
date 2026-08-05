@@ -219,6 +219,17 @@ def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
 
 
 @run_gates
+#: ★★ XPASSED 2026-08-06, and that is worth reading rather than celebrating. The
+#: cold-start seed fallback (pyfp3d/solve/newton.py, user ruling 2026-08-05) fixed the
+#: failure this xfail was covering: NACA0012 M0.80 medium cold with seed 0 used to die at
+#: m_cap (|R| 3.29e-02, 7265 limited / 758 floored) and now converges to 2.855e-13 with
+#: zero clamps. So this mark can probably be REMOVED -- but not blindly, because it was
+#: made non-strict for TWO reasons and only one of them is addressed: the seed failure is
+#: fixed, while GS1b.11's thread-dependence caveat and the medium answer's 0.118 c recipe
+#: dependence are NOT. Registered as a follow-up rather than removed here.
+#: ⚠ And the general lesson stands: a non-strict xfail CANNOT detect a regression -- it is
+#: satisfied by pass and by fail alike -- which is exactly why the seed regression sat
+#: here unnoticed from 2026-08-02 to 2026-08-05.
 @pytest.mark.xfail(strict=False, reason=(
     "GS1b.11: NON-strict on purpose, because the outcome is ENVIRONMENT-DEPENDENT and "
     "saying so is more honest than either a pass or a strict xfail. Measured: at 16 "

@@ -211,6 +211,65 @@ both of which I first misread as kernel bugs:
   chain ROOT a shock factor < 1, which `shock_factor_sweep` cannot produce, and the documented
   consequence looked like a defect.
 
+## Cold-start seed fallback, and the two levels of seed exposure (2026-08-05/06, measured)
+
+`solve_newton_lifting` retries ONCE with `n_picard_seed = _SEED_FALLBACK` (5) when three
+conditions hold together: no seed was requested, there is no warm start either, and the attempt
+ended clamped. Each is a measurement, not a guess. The failure it recovers is NOT "seed 0 is bad" —
+it is the CONJUNCTION of no seed, a cold start directly at a supercritical M∞, and a mesh fine
+enough to resolve the supersonic pocket. NACA0012 M0.80: coarse converges either way, medium dies
+with M_max exactly at m_cap (7265 limited / 758 floored) from Newton step 3, and the clamped cells
+sit 81 % in MID / 17 % in TE / **0 % at the LE** with the peak at x/c 0.75 — the shock, not the
+leading edge. A Mach ramp cures it at the same seed, because the previous level's converged
+solution does the seed's job: **ramp and seed are two implementations of one function.**
+
+- The success path is untouched BY CONSTRUCTION: GS1.4 already refuses to report a clamped state as
+  converged, so the trigger can never fire on a result a caller would have used.
+- The `phi_init is None` condition is what keeps the fallback OUT of a ramp's intermediate levels,
+  which warm-start from the last converged level and would be made WORSE by discarding that.
+- ★ **It does not fix the SOFT SHIFT.** A cold seed-0 solve can converge with zero clamps and still
+  land on a different solution — M1a's fine leg moved cl 0.254830 → 0.252930 and flipped a
+  criterion's sign. Nothing fires on that; it needs answer anchors, not a fallback.
+
+★ **A non-strict xfail CANNOT detect a regression** — it is satisfied by pass and by fail alike.
+The seed regression sat behind `xfail(strict=False)` from 2026-08-02 to 2026-08-05, and that mark
+had been made non-strict for an unrelated reason (thread dependence). If a lock must tolerate an
+environment-dependent outcome, record the outcome; do not hide the signal.
+
+★ **Guard REPORT code the way solver code is guarded.** Three losses in one day, all in reporting
+rather than numerics: a ~40-minute solve thrown away because `m_last_converged` came back None and
+the reporting line did `float(None)` with nothing cached (the FOURTH instance of the caching hazard
+below); a verdict loop that indexed a key legs which DIED do not have, crashing after the CSV was
+already written; and two legs lost to `m_inf < m_start`, which the transonic driver raises on.
+Corollary that paid off immediately: **cache before you report** — the G8.2 re-anchor's every number
+was then computed from the npz with zero re-solves.
+
+★ **`m_last_converged` / `m_final` are both None on a FAILED ramp.** The per-level `converged` flags
+live in `level_results`, so "the highest level that converged" must be read from there.
+
+## Mesh knobs are not orthogonal — measured, twice
+
+There is **no single-variable knob in `onera_m6_wing_mesh` that leaves the rest alone**:
+
+| knob | intended | measured contamination of the LE band |
+|---|---|---|
+| `h_wall` | bulk + surface | LE face count **+41.7 %** at fixed `h_edge` |
+| `h_far` | far field only | wall triangles 15094 → 15142, LE spacing **0.37 %** |
+
+So a strict 2×2 factorial on LE-vs-bulk is not constructible here. `h_far`'s contamination is ~100×
+smaller and can be BOUNDED using an LE-only arm as calibration (its 26.1 % spacing change is 70.8×
+larger), but a bound is not cleanliness — do not claim an arm is clean once its guard has failed.
+
+★ **`h_edge` sizes the LE *and* the TE.** Not splitting them makes an "LE refinement" read the P13
+tip free-edge singularity instead (GS2.1 addendum #1).
+
+★ **M6 at α 3.06 is NOT subcritical at M0.70** — measured M_max 1.5358 with 214 shock cells, which
+falsifies the load-bearing comment in `NEWTON_M6_RECIPE`. Measured in-window Machs where a shock
+exists AND refinement stays unclamped: **0.70 and 0.75**. And refinement drives the peak into
+`m_cap` at M0.75 too as soon as BOTH the LE and the far field are refined (dose-response: base
+1.678 → far 1.988 → LE 2.061 → both 3.000). So "refinement hits the limiter" is not specific to
+M0.8395.
+
 ## Operating hazards that have cost real time (all measured)
 
 - **Read signatures and import paths; do not recall them.** Five wrong-from-memory calls in one

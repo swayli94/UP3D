@@ -466,7 +466,18 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: Picard warm start costs 14.54 s = 28.3 % of the ramp's wall and buys ONE Newton
 #: step at level 0 (3 steps from freestream against 2 from the seed) with essentially
 #: the same total Krylov work (1957 vs 1907 GMRES). Dropping it takes the ramp from
-#: 50.83 s to 38.10 s, -25 %. It works because the ramp's FIRST level is subcritical
+#: 50.83 s to 38.10 s, -25 %.
+#: ★ ERRATUM 2026-08-06: the reason that follows is FALSE. Measured on the round-tip
+#: M6 wing at alpha 3.06, M0.70 carries M_max 1.5358 with 214 shock cells -- it is NOT
+#: subcritical (bench/gate_results/le_window.csv). What survives is the MEASUREMENT
+#: that a ramp cures the cold-start failure (|R| 4.49e-11 at seed 0,
+#: docs/dev_phase_two/20260805-2200-seed-exposure.md); what is refuted is this
+#: EXPLANATION of why. The actual mechanism is that the previous level's CONVERGED
+#: solution does the seed's job, which needs no claim about the first level being
+#: subsonic. Also note the sentence below promising "the library default stays 5, so
+#: no other call site moves": the 2026-08-02 global adoption made that false, and the
+#: scoping promise silently expiring is how the seed regression got in.
+#: It works because the ramp's FIRST level is subcritical
 #: (m_start 0.70), where Newton needs no help; do NOT carry this to a recipe whose
 #: first level is supercritical without re-measuring.
 #: ⚠ The answer shifts by 2.94e-05 relative (cl_p 0.263887564 -> 0.263881704). That is
@@ -486,6 +497,7 @@ NEWTON_M6_RECIPE = dict(
 
 
 def _m6_case(level, m_inf=0.84, alpha=3.06):
+    from pyfp3d.constraints.wake import tip_taper_factors
     from pyfp3d.meshgen.wing3d import B_SEMI
     from pyfp3d.post.section_cut import section_cp_curve
     from pyfp3d.post.shock import shock_report as _sr
@@ -499,8 +511,44 @@ def _m6_case(level, m_inf=0.84, alpha=3.06):
                     "cases/meshes/onera_m6/generate_onera_m6.py")
     t0 = time.perf_counter()
     mc, wc = cut_wake(read_mesh(p))
-    r = solve_newton_transonic(mc, wc, m_inf=m_inf, alpha_deg=alpha,
-                               **NEWTON_M6_RECIPE)
+    #: ★★ RE-ANCHORED 2026-08-05/06, user ruling. Full record in
+    #: docs/dev_phase_two/20260806-0600-g82-reanchor.md, written before this edit as
+    #: roadmap sec 5 requires. Why the production taper is now part of the case:
+    #:
+    #: onera_m6/medium.msh was regenerated on 2026-08-04 when the base level names
+    #: flipped flat -> round, and this recipe's anchors were measured on the FLAT cap.
+    #: Verified: medium_flat.msh reproduces the committed anchors to 5-6 digits (cl_p
+    #: 0.263882 vs 0.263888, M_max 2.10697 vs 2.10709) while the round mesh does not
+    #: converge -- so the failure was 100 % the mesh, not the solver.
+    #:
+    #: Measured on the round mesh at target 0.84, same recipe otherwise:
+    #:     no taper   -> NOT converged, |R| 3.13e-06, M_max 2.92867, highest converged
+    #:                   LEVEL 0.82 (0.70/0.75/0.80/0.82 pass, 0.84 fails twice), 2949 s
+    #:     with taper -> converged, |R| 6.155e-15, M_max 1.99687, 0/0 clamps, 341 s
+    #: so the ruling's "re-anchor to the highest Mach the round tip reaches" needs NO
+    #: reduction in Mach: the production configuration still reaches 0.84.
+    #:
+    #: ★ The shock position -- the only externally anchored quantity here (Euler band
+    #: 0.60-0.63) -- barely moves: eta 0.44 goes 0.59582 -> 0.59632, five ten-thousandths
+    #: of a chord. So this re-anchor moves MODEL quantities (cl, M_max), not the physical
+    #: location.
+    #:
+    #: ★★ And it resolves the concern this file registered right below: with no taper the
+    #: walk found a pre-shock Mach near 2 that was "very likely the P13 wing-tip free-edge
+    #: singularity rather than a physical shock", i.e. the entropy correction possibly
+    #: charging entropy to a NUMERICAL artefact. With the taper M_max drops to 1.99687
+    #: against the flat anchor's 2.10709. (A mitigation of the registered item, NOT a
+    #: claim that the tip singularity is solved -- P13 itself is untouched.)
+    #:
+    #: ⚠ cl_p rises +1.82 % vs the flat anchor while the taper ALONE lowers cl (-1.3 %
+    #: measured on the wing-body), so two effects are mixed -- mesh flat->round and
+    #: taper off->on -- and this round did NOT separate them, because the third leg it
+    #: would need (round, no taper, CONVERGED) does not exist. Recorded as a composite,
+    #: not attributed.
+    taper = tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth", 0.05 * B_SEMI)
+    kw = dict(NEWTON_M6_RECIPE)
+    kw["newton_kw"] = dict(kw["newton_kw"], tip_taper=taper)
+    r = solve_newton_transonic(mc, wc, m_inf=m_inf, alpha_deg=alpha, **kw)
     s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
     forces = wall_force_coefficients(
         mc.nodes, mc.elements, mc.boundary_faces["wall"], r["phi"],
@@ -569,9 +617,26 @@ def test_g82_m6_medium_newton_end_to_end():
     _assert_terminal_quadratic(r)
     assert r["n_limited"] == 0 and r["n_floored"] == 0
     assert r["F_history"][-1] < 1e-12                   # coupled Kutta
-    assert wall < 300.0, f"G8.2 budget: {wall:.0f} s >= 300 s"
-    assert abs(forces["cl"] - 0.263888) < 0.005            # regression lock
-    assert abs(float(np.sqrt(r["mach2_max"])) - 2.10709) < 0.05
-    assert abs(shocks[0.44] - 0.59582) < 0.02
-    assert abs(shocks[0.65] - 0.53914) < 0.02
-    assert abs(shocks[0.90] - 0.34225) < 0.02
+    #: ★ budget raised 300 -> 450 s as part of the 2026-08-06 re-spec, and the reason
+    #: is NOT the round tip: the FLAT leg measured 331 s in the same session and the
+    #: round+taper leg 341 s, so both exceed the old bound and this machine is simply
+    #: slower than the P8 record's CI reference of 301.66 s. 450 s leaves ~30 % over the
+    #: measured 341 s.
+    assert wall < 450.0, f"G8.2 budget: {wall:.0f} s >= 450 s"
+    #: re-anchored (round mesh + production taper). SUPERSEDED flat-cap anchors, kept
+    #: per discipline #11 rather than overwritten: cl 0.263888, M_max 2.10709,
+    #: shock(0.44) 0.59582 -- reproducible today on medium_flat.msh to 5-6 digits.
+    assert abs(forces["cl"] - 0.268691) < 0.005            # regression lock
+    assert abs(float(np.sqrt(r["mach2_max"])) - 1.99687) < 0.05
+    #: ★ the re-anchored shock positions, and their SPANWISE PATTERN is a consistency
+    #: check on the re-spec rather than three independent numbers: the change grows
+    #: monotonically outboard, which is exactly what a TIP model should do --
+    #:     eta 0.44   0.59582 -> 0.59632   (+0.0005 c)
+    #:     eta 0.65   0.53914 -> 0.54020   (+0.0011 c)
+    #:     eta 0.90   0.34225 -> 0.37144   (+0.0292 c)   <- nearest the tip, moves most
+    #: The inboard stations staying put is what makes "the physical location is
+    #: preserved" a measurement rather than a hope; eta 0.90 exceeding the old 0.02
+    #: tolerance is the taper doing its job on the tip loading, not drift.
+    assert abs(shocks[0.44] - 0.59632) < 0.02
+    assert abs(shocks[0.65] - 0.54020) < 0.02
+    assert abs(shocks[0.90] - 0.37144) < 0.02
