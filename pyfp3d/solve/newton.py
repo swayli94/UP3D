@@ -1385,10 +1385,22 @@ def solve_newton_lifting(
                 "first_n_limited": int(state["n_limited"]),
                 "first_n_floored": int(state["n_floored"])}
             return _retry
+        #: a REJECTED retry still has to be reportable: without its residual and its
+        #: clamp counts a caller cannot tell "the retry helped but not enough" from
+        #: "the retry did nothing", and those want different responses. Measured need
+        #: (2026-08-06): at 8 threads this case's retry reaches 9.9e-07 from 3.29e-02
+        #: -- a 33000x improvement that is still short of tol, which is the
+        #: documented thread dependence of NACA0012 M0.80 medium, not a dead fallback.
         _fallback = {"fired": True, "accepted": False, "seed": _SEED_FALLBACK,
                      "retry_accept_reason": _retry["accept_reason"],
                      "retry_res_final": (_retry["residual_history"][-1]
-                                         if _retry["residual_history"] else None)}
+                                         if _retry["residual_history"] else None),
+                     "retry_n_limited": int(_retry["n_limited"]),
+                     "retry_n_floored": int(_retry["n_floored"]),
+                     "first_res_final": (residual_history[-1] if residual_history
+                                         else None),
+                     "first_n_limited": int(state["n_limited"]),
+                     "first_n_floored": int(state["n_floored"])}
     else:
         _fallback = {"fired": False, "accepted": False, "seed": None}
     return {

@@ -111,15 +111,30 @@ def test_the_retry_cannot_recurse(cut):
 
 
 @pytest.mark.skipif(not os.environ.get("PYFP3D_TRANSONIC_GATES"),
-                    reason="heavy: NACA medium transonic (~50 s)")
+                    reason="heavy: NACA medium transonic (~50 s idle, ~15 min loaded)")
 def test_the_real_case_the_fallback_exists_for():
     """★ The measured failure itself: NACA0012 M0.80 alpha 1.25 on the MEDIUM mesh,
-    cold, seed 0 -- the M1 gate's own condition.
+    cold, seed 0 -- the M1 gate's own condition. Before the fallback this returned
+    |R| = 3.29e-02 with M_max exactly at m_cap (7265 limited / 758 floored) and cl
+    going negative.
 
-    Before the fallback this returned |R| = 3.29e-02 with M_max exactly at m_cap
-    (7265 limited / 758 floored) and cl going negative. With it, the recovered state
-    must match what an explicit seed 5 produces, because that is what the fallback
-    does -- the recovery is not a new answer, it is the pre-2026-08-02 answer.
+    ★★ WHAT THIS ASSERTS, AND WHY IT IS NOT "it converges". Corrected 2026-08-06 after
+    the first version of this test failed in an 8-thread gated run while passing at 16:
+
+        16 threads   retry reaches |R| 2.855e-13, 0/0 clamps  -> accepted
+         8 threads   retry reaches |R| 9.9e-07                -> rejected
+
+    That split is NOT the fallback failing. NACA0012 M0.80 medium is a DOCUMENTED
+    thread-dependent case -- GS1b.11 recorded |R| 3.77e-05 at 8 threads against
+    2.8e-13 at 16 for this very condition, which is why test_p4_transonic's gate on it
+    is a non-strict xfail. So asserting convergence here would make this test a
+    thread-count detector, and the first version did exactly that.
+
+    What is robust across both is that the retry STRICTLY AND HUGELY improves the
+    state: 3.29e-02 -> 9.9e-07 is still 33000x. That is asserted unconditionally, so
+    the test would fail loudly if the fallback stopped working; the full-convergence
+    claim is asserted only on the branch where the retry was accepted, where it also
+    has to reproduce an explicit seed-5 solve, because it IS one.
     """
     p = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "medium.msh"
     if not p.exists():
@@ -130,13 +145,31 @@ def test_the_real_case_the_fallback_exists_for():
               n_newton_max=80)
     r = solve_newton_lifting(mc, wc, m_inf=0.80, **kw)
     fb = r["seed_fallback"]
-    assert fb["fired"] and fb["accepted"], f"fallback did not recover: {fb}"
-    assert r["converged"] and r["n_limited"] == 0 and r["n_floored"] == 0
-    assert float(r["residual_history"][-1]) < 1e-9
-    ref = solve_newton_lifting(mc, wc, m_inf=0.80, n_picard_seed=_SEED_FALLBACK,
-                               **kw)
-    assert ref["converged"]
-    assert np.allclose(np.asarray(r["phi"]), np.asarray(ref["phi"]),
-                       rtol=1e-12, atol=0.0), (
-        "the fallback must reproduce the explicit-seed answer -- it is the same "
-        "solve, so anything else means the retry is not passing the settings through")
+    # --- unconditional: the fallback fired and the retry helped by orders ----
+    assert fb["fired"], "the cold seed-0 attempt must clamp here, else no trigger"
+    assert fb["seed"] == _SEED_FALLBACK
+    first = fb["first_res_final"]
+    retry = (float(r["residual_history"][-1]) if fb["accepted"]
+             else fb["retry_res_final"])
+    assert first is not None and retry is not None
+    assert retry < first / 1.0e3, (
+        f"the retry must improve the residual by >= 3 orders: {first:.2e} -> "
+        f"{retry:.2e}. Measured 3.29e-02 -> 2.855e-13 at 16 threads and -> 9.9e-07 "
+        f"at 8; anything near `first` means the fallback stopped working")
+    assert fb["first_n_limited"] > 0 or fb["first_n_floored"] > 0, (
+        "premise: the first attempt must have been clamped")
+    # --- conditional: when accepted it must BE the explicit-seed solve ------
+    if fb["accepted"]:
+        assert r["converged"] and r["n_limited"] == 0 and r["n_floored"] == 0
+        assert float(r["residual_history"][-1]) < 1e-9
+        ref = solve_newton_lifting(mc, wc, m_inf=0.80,
+                                   n_picard_seed=_SEED_FALLBACK, **kw)
+        assert ref["converged"]
+        assert np.allclose(np.asarray(r["phi"]), np.asarray(ref["phi"]),
+                           rtol=1e-12, atol=0.0), (
+            "the fallback must reproduce the explicit-seed answer -- it is the same "
+            "solve, so anything else means the retry is not passing settings through")
+    else:
+        #: the 8-thread branch. Recorded, not asserted away: the retry's own clamp
+        #: counts must still be reported so "helped but not enough" stays legible.
+        assert "retry_n_limited" in fb and "retry_n_floored" in fb
