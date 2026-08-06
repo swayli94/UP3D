@@ -1,3 +1,3 @@
-anchor_gamma,anchor_m_max,gamma,level,m_final,m_highest_converged,m_max,n_floored,n_levels,n_levels_converged,n_limited,res_final,target_reached,wall_s
-0.08493098,1.3684,0.08481378208520315,coarse,0.84,0.8200000000000001,2.66699,2,8,6,0,5.773159728050814e-14,False,182.2
-0.088343,2.4818,0.07232185061770016,medium,0.675,0.6625000000000001,6.747084,1,6,3,5,1.2256862191861728e-13,False,2034.6
+anchor_gamma,anchor_m_max,gamma,level,m_final,m_highest_clean,m_highest_converged,m_max,n_floored,n_levels,n_levels_converged,n_limited,res_final,target_reached,wall_s
+0.08493098,1.3684,0.08481378208520315,coarse,0.84,0.8200000000000001,0.8200000000000001,2.66699,2,8,6,0,5.773159728050814e-14,False,187.2
+0.088343,2.4818,0.07232185061770016,medium,0.675,,0.6625000000000001,6.747084,1,6,3,5,1.2256862191861728e-13,False,2263.0

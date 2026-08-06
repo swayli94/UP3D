@@ -270,6 +270,26 @@ exists AND refinement stays unclamped: **0.70 and 0.75**. And refinement drives 
 1.678 → far 1.988 → LE 2.061 → both 3.000). So "refinement hits the limiter" is not specific to
 M0.8395.
 
+## Never hand-copy a file git already tracks (2026-08-06, cost: the working tree)
+
+A background script swapped `pyfp3d/solve/newton.py` and `pyfp3d/kernels/entropy.py` to an older
+revision for an A/B, using `cp` to a backup path and `cp` back afterwards. Two layers failed at
+once: `$SC` was never defined INSIDE the heredoc'd script (it was an outer-shell variable and the
+heredoc was quoted), so the backup `cp` wrote to `/_n.py` and got Permission denied; and that script
+had no `set -e`, so it carried on and overwrote both library files, after which the restore `cp`
+failed too. The working tree sat at the old revision with 190 lines of committed work missing from
+it until `git checkout -- pyfp3d/` put it back.
+
+Nothing was lost, because the changes were COMMITTED — which is the whole point:
+
+- **the file is in git, so git is the backup.** `git checkout <rev> -- <paths>` to swap and
+  `git checkout -- <paths>` to restore; or `git stash`. A hand-rolled backup dance can fail its
+  first step and still proceed to its second, which is exactly what happened. Earlier A/Bs in this
+  same session used `git stash` correctly; this one regressed to `cp`.
+- **`set -euo pipefail` and `trap restore EXIT` in any script that mutates the tree.** With the
+  trap, the tree returns to HEAD however the script exits — including when it is killed.
+- **Commit before an A/B that touches library files.** That is what made this recoverable.
+
 ## Operating hazards that have cost real time (all measured)
 
 - **Read signatures and import paths; do not recall them.** Five wrong-from-memory calls in one
