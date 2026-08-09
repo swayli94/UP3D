@@ -447,7 +447,9 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    the demo and the matching assertion sat in a gated test until 2026-08-09.
    ★ **Phase TWO uses a different surface list**, because the phase-one docs below are
    frozen (docs/dev_phase_two/roadmap.md §8): (1) `docs/dev_phase_two/progress.md` — one
-   row; (2) that roadmap's **阶段进度概览 AND 产品指标追踪** tables; (3) the round file
+   row, plus **its own 阶段进度概览 and 产品指标追踪 tables** (they live in progress.md,
+   NOT in the roadmap); (2) `docs/dev_phase_two/roadmap.md` when a ruling or a stage
+   disposition moves; (3) the round file
    itself; (4) this file's **baseline line** when the suite count moves; (5)
    `docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
    capability claim. Steps 0 and 6 and the erratum checklist apply to both lists.
