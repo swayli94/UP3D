@@ -436,15 +436,22 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    dual-mesh + LS-Newton, B7 M6 3D) only run under `PYFP3D_TRANSONIC_GATES=1`
    and make up most of the skips. G8.3's CI reference is 301.66 s.
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
-5. **When a phase closes — the refresh checklist**
+5. **When a phase closes — the refresh checklist** (extended in A3 after the
+   2026-07-17 audit found 17 consistency defects, most of them close-out debt):
    ★ **Step 0, added 2026-08-09: run the FAST capability-lock tier** —
    `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py` (measured 10.7 min,
    7/7 green). The ungated suite does NOT cover the capability anchors; that is how
    seven gated failures accumulated unnoticed, one of them for seventeen days.
    ★ **Step 6, added 2026-08-09: when a criterion is RETIRED or re-specified, grep its
    numbers and wording across `tests/` too** — B28 retired the fuselage-lift premise in
-   the demo and the matching assertion sat in a gated test until 2026-08-09. (extended in A3 after the
-   2026-07-17 audit found 17 consistency defects, most of them close-out debt):
+   the demo and the matching assertion sat in a gated test until 2026-08-09.
+   ★ **Phase TWO uses a different surface list**, because the phase-one docs below are
+   frozen (docs/dev_phase_two/roadmap.md §8): (1) `docs/dev_phase_two/progress.md` — one
+   row; (2) that roadmap's **阶段进度概览 AND 产品指标追踪** tables; (3) the round file
+   itself; (4) this file's **baseline line** when the suite count moves; (5)
+   `docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
+   capability claim. Steps 0 and 6 and the erratum checklist apply to both lists.
+   For a **phase-one** close-out:
    tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
    **all five** surfaces, because each has gone stale at least once by being
    "obvious enough to skip":

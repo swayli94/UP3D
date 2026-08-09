@@ -143,7 +143,13 @@ def test_m6_coarse_ramp_anchor():
     "inside this very test. STRICT on purpose: if a future change makes a clean level "
     "appear, this must go RED so the capability gets re-anchored rather than silently "
     "improving. Readings are in MEDIUM_RECORDED and in "
-    "docs/dev_phase_two/20260806-1200-b22-respec.md."))
+    "docs/dev_phase_two/20260806-1200-b22-respec.md. "
+    "★★ D5 (2026-08-09, user): the level-set wake route is ABANDONED -- future development "
+    "is conforming only -- so read this as an ABANDONED-ROUTE record, not an open "
+    "obligation. It is one of the four strict xfails that exist because the production "
+    "round-tip meshes leave the LS path with no clamp-free state to anchor, and this whole "
+    "FILE is on phase three's deletion list "
+    "(docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2)."))
 @pytest.mark.skipif(not GATES, reason="heavy gated 3-D anchor (~35 min)")
 def test_m6_medium_ramp_anchor():
     """The M6 MEDIUM ramp — expected to have no clean level on the round tip."""

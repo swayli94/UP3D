@@ -53,6 +53,18 @@ test_b22_ls_3d_anchors  test_b31_tip_fringe  test_m2_wingbody
 | `test_b18_wingbody_transonic.py` | 翼身跨声速的两路径对照 |
 | ★ `test_v2_newton_rhs_channel.py` | **Track V(粘性)** 的 transpiration 通道走 LS 的 `b_base` |
 
+### 2b. ★ 四条 strict xfail 会随这些文件一起消失(不是欠账)
+
+| 位置 | 内容 |
+|---|---|
+| `test_b7_onera_m6.py` ×3 | M1 亚声速 / M1 跨声速 / M4 跨声速 —— 圆角网格上**无可锚状态** |
+| `test_b22_ls_3d_anchors.py` ×1 | M6 medium ramp —— **没有任何 0 clamp 的级**(M0.60 就 2/1,M_max 3.31 → M0.70 的 15.26) |
+
+它们**不是未结的义务**:按 D5,**没有人会去治 LS 的翼尖**(B31 的 LS 侧治法已测负,
+且 LS 驱动器**没有 `tip_taper` 参数**)。`strict=True` 的作用是**在删除之前把已记录的状态
+保持诚实** —— 一旦出现干净级就变红。两个文件都已在上面的删除清单里,所以这四条随文件一起走。
+★ 两个测试文件的注释里已就地写明这一点,避免有人读到"必须重锚"就去投入。
+
 ## 3. bench / demo
 
 | | 纯 LS(整删) | 混合(摘腿) |

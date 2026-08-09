@@ -254,6 +254,13 @@ P8_CL_KJ = 0.2692          # the Newton truth -- the lift reference
 #: roadmap sec 3 forbids turning an unsolvable condition into a passing gate. STRICT on
 #: purpose: if the LS tip is ever cured these must go RED and force a re-anchor rather
 #: than silently improving.
+#: ★★ D5 (2026-08-09, user): the level-set WAKE ROUTE IS ABANDONED -- future development is
+#: conforming only. So read these three xfails as an ABANDONED-ROUTE record, not as an open
+#: obligation: nobody is going to cure the LS tip (B31's LS-side tip cure is already measured
+#: negative, and the LS driver has no `tip_taper` parameter at all). Their strictness still
+#: earns its keep -- it keeps the recorded state honest until the file is removed -- and this
+#: file is on phase three's deletion list as a MIXED file whose LS legs come out
+#: (docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2), so the xfails go with them.
 ROUND_XFAIL_SUBSONIC = {"M1"}          # M4's subsonic leg still passes 5/5
 ROUND_XFAIL_TRANSONIC = {"M1", "M4"}
 
