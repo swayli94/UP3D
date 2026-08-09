@@ -270,6 +270,26 @@ exists AND refinement stays unclamped: **0.70 and 0.75**. And refinement drives 
 1.678 → far 1.988 → LE 2.061 → both 3.000). So "refinement hits the limiter" is not specific to
 M0.8395.
 
+## The gated set needs a cadence, and it now has one (2026-08-09, measured)
+
+The 17 gated files hold the project's absolute capability anchors and the FULL gated run cost
+**4 h 09** (2026-08-06, 8 threads under load), so in practice it was not run on any cadence. The
+consequence, measured: the first full gated run since the 2026-08-04 round-tip switch came back
+**7 failed**, and one of them (b9) had been red for **seventeen days**. Debt in the gated set is
+invisible by construction — the ungated suite stays green while capability locks rot.
+
+So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
+**measured at 644 s = 10.7 min, 7/7 green**. Run it at **every close-out**; run the full gated set at
+**phase boundaries**.
+
+★ The script prints WHAT IT DOES NOT COVER every time, with each exclusion's measured cost (b22
+medium ~35 min — note a strict xfail still RUNS the solve; p4 ~32 min; p5 45–75 min; b14/b15/b18
+heavy ramps). A fast tier mistaken for full coverage would recreate exactly the failure it exists to
+prevent, so that list is part of the output, not a comment.
+
+★ And `PYFP3D_TRANSONIC_GATES=1` is checked at entry: without it every gated lock SKIPS and the run
+reports a vacuous green.
+
 ## Retiring a criterion means grepping the TESTS, not just the demo (2026-08-09, measured)
 
 B28 retired the "the fuselage should carry almost no lift" premise on 2026-07-20 -- its own
@@ -392,7 +412,14 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    dual-mesh + LS-Newton, B7 M6 3D) only run under `PYFP3D_TRANSONIC_GATES=1`
    and make up most of the skips. G8.3's CI reference is 301.66 s.
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
-5. **When a phase closes — the refresh checklist** (extended in A3 after the
+5. **When a phase closes — the refresh checklist**
+   ★ **Step 0, added 2026-08-09: run the FAST capability-lock tier** —
+   `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py` (measured 10.7 min,
+   7/7 green). The ungated suite does NOT cover the capability anchors; that is how
+   seven gated failures accumulated unnoticed, one of them for seventeen days.
+   ★ **Step 6, added 2026-08-09: when a criterion is RETIRED or re-specified, grep its
+   numbers and wording across `tests/` too** — B28 retired the fuselage-lift premise in
+   the demo and the matching assertion sat in a gated test until 2026-08-09. (extended in A3 after the
    2026-07-17 audit found 17 consistency defects, most of them close-out debt):
    tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
    **all five** surfaces, because each has gone stale at least once by being
