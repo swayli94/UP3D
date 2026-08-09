@@ -270,6 +270,23 @@ exists AND refinement stays unclamped: **0.70 and 0.75**. And refinement drives 
 1.678 → far 1.988 → LE 2.061 → both 3.000). So "refinement hits the limiter" is not specific to
 M0.8395.
 
+## Retiring a criterion means grepping the TESTS, not just the demo (2026-08-09, measured)
+
+B28 retired the "the fuselage should carry almost no lift" premise on 2026-07-20 -- its own
+checks.csv says `<=5%-of-wing premise RETIRED (physical carryover; B23)` -- and replaced it with a
+CROSS-MODEL gap criterion, `|conf_out - LS_out| <= 15 % |conf_out|`, which passes at 7.0 % on medium.
+But `test_b9_wingbody_conforming.py` kept `abs(cl_f) < 0.15 * abs(cl_w)`: the retired premise, with
+the 15 % apparently borrowed from the new criterion's cross-model number. That test is GATED, so
+nobody ran it for seventeen days, and when it finally failed it looked like a regression.
+
+- **re-thresholding a retired premise re-imports it under a new number.** The fix is to remove the
+  assertion and RECORD the reading, pointing at where the live gate is.
+- **the five-surface close-out ritual needs a sixth item: grep the criterion's own numbers and
+  wording across `tests/`.** Demos and docs were covered; the tests were not.
+- ★ and read the WHOLE test before re-specifying it. Both b7 and b9 hid later assertions behind the
+  first failing one -- b7's transonic gate asserts five things and the log showed only the clamps;
+  b9's second layer only surfaced after the first was fixed.
+
 ## ★★ Swapping library files for an A/B: the index is the trap, and `git status` is not the check
 
 Two separate incidents on 2026-08-06/09, the second WORSE than the first because it reached a commit.
