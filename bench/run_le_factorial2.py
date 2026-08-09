@@ -51,14 +51,22 @@ from run_le_window import solve_at                                  # noqa: E402
 from run_m3_budget import BANDS, ETAS, N_UNMASKED, parse_experiment  # noqa: E402
 from run_seed_exposure import clamp_map                             # noqa: E402
 
-CSV = os.path.join(HERE, "gate_results", "le_factorial2.csv")
+#: ★ addendum #3: `PYFP3D_LE_HFAR` selects the far-field step of the refined arms, so
+#: the third round reuses this script rather than forking it. 1.2 was round two (whose
+#: all-scales leg hit m_cap); 1.8 is round three's milder step. The CRITERION is
+#: untouched -- only the leg moves -- and BOTH refined arms move together, because
+#: comparing a 1.2 displacement against a 1.8 one would be mixing step sizes.
+H_FAR_FINE = float(os.environ.get("PYFP3D_LE_HFAR", "1.8"))
+CSV = os.path.join(HERE, "gate_results",
+                   f"le_factorial2_hfar{H_FAR_FINE:g}.csv".replace(".", "p", 1)
+                   if H_FAR_FINE != 1.2 else "le_factorial2.csv")
 M_INF = 0.75                       # addendum #2: measured as the highest in-window Mach
 #: (tag, h_le, h_far). h_wall is 0.020 on every leg -- `build` fixes it -- so the only
 #: things that move are the LE spacing and the far field.
 LEGS = (("G00_base",     0.010,  2.4),
-        ("G10_faronly",  0.010,  1.2),
+        ("G10_faronly",  0.010,  H_FAR_FINE),
         ("G01_leonly",   0.0075, 2.4),
-        ("G11_both",     0.0075, 1.2))
+        ("G11_both",     0.0075, H_FAR_FINE))
 LEG_GATE_S = 500.0                 # addendum #2 (c), from step 0's measured 320-443 s
 TOTAL_GATE_S = 2000.0
 
@@ -82,6 +90,32 @@ def cp_at_exp_points(mc, phi, exp):
             out[(eta, side)] = (e["x"][m],
                                 np.interp(e["x"][m], c[f"x_{side}"],
                                           c[f"cp_{side}"]))
+    return out
+
+
+def band_err(cp_leg, exp):
+    """RMS of (Cp_leg - Cp_EXPERIMENT) per band -- addendum #4's RECORDED quantity.
+
+    Displacement (band_disp) says how much a refinement MOVES the solution; this says
+    whether it moves toward the experiment. The distinction is not academic here: GS2.1
+    measured LE refinement changing the ERROR by only -8.3 % while this round measures
+    the same direction DISPLACING the solution by 0.14332. Solution movement and error
+    reduction are demonstrably different quantities on this band.
+    """
+    acc = {}
+    for (eta, side), (x, cp) in cp_leg.items():
+        e = exp[eta]
+        m = e["upper"] == (side == "upper")
+        d = cp - e["cp"][m]
+        for name, lo, hi in BANDS:
+            b = (x >= lo) & (x < hi)
+            ss, nn = acc.get(f"{name}_{side}", (0.0, 0))
+            acc[f"{name}_{side}"] = (ss + float(np.sum(d[b] ** 2)), nn + int(b.sum()))
+    out = {}
+    for name, _, _ in BANDS:
+        for side in ("upper", "lower"):
+            ss, nn = acc.get(f"{name}_{side}", (0.0, 0))
+            out[f"{name}_{side}"] = (ss / nn) ** 0.5 if nn else float("nan")
     return out
 
 
@@ -165,6 +199,14 @@ def main():
 
     base = cps.get("G00_base")
     if base is not None:
+        #: addendum #4: the baseline's own error, so every leg's ΔE has a reference
+        eb = band_err(base, exp)
+        for r in rows:
+            if r["tag"] == "G00_base":
+                r.update({f"err_{k}": round(v, 6) for k, v in eb.items()})
+        print(f"\n  [addendum #4, RECORDED] base LE-upper error vs EXPERIMENT "
+              f"{eb['LE_upper']:.5f}  MID_up {eb['MID_upper']:.5f}  "
+              f"TE_up {eb['TE_upper']:.5f}")
         # G5: the zero test. Differencing the baseline against itself must be exactly 0.
         z = band_disp(base, base)
         assert all(v == 0.0 for k, v in z.items()), f"G5 zero test failed: {z}"
@@ -175,9 +217,15 @@ def main():
                 continue
             d = band_disp(c, base)
             row.update({f"disp_{k}": round(v, 6) for k, v in d.items()})
+            e = band_err(c, exp)
+            row.update({f"err_{k}": round(v, 6) for k, v in e.items()})
             print(f"  disp {row['tag']:14} LE_up {d['LE_upper']:.5f} "
                   f"LE_lo {d['LE_lower']:.5f} MID_up {d['MID_upper']:.5f} "
                   f"TE_up {d['TE_upper']:.5f} pooled {d['pooled']:.5f}")
+            print(f"  err  {row['tag']:14} LE_up {e['LE_upper']:.5f} "
+                  f"(base {eb['LE_upper']:.5f}, "
+                  f"{100*(e['LE_upper']-eb['LE_upper'])/eb['LE_upper']:+.1f} %)  "
+                  f"MID_up {e['MID_upper']:.5f} TE_up {e['TE_upper']:.5f}")
 
     keys = sorted({k for r in rows for k in r})
     with open(CSV, "w", newline="") as fh:
