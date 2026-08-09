@@ -270,6 +270,30 @@ exists AND refinement stays unclamped: **0.70 and 0.75**. And refinement drives 
 1.678 → far 1.988 → LE 2.061 → both 3.000). So "refinement hits the limiter" is not specific to
 M0.8395.
 
+## A guard must cover what the CONCLUSION claims, not what is easiest to check (2026-08-09)
+
+The LE factorial's guard G1 asked "did the far-field arm leave the rest alone?" and checked the
+SURFACE mesh: wall triangle count and LE-band tangential spacing, which moved 0.343 % -- reassuringly
+clean. It never checked the VOLUME. Measured afterwards, that same arm changed the median cell size
+at r = 1-2 MAC by **24 %** -- the mesh hugging the wing -- and the LE band's NORMAL spacing by 1.5 %.
+
+So `h_far` is not a far-field knob, it is a bulk-grading knob, and a conclusion of the form "the FAR
+FIELD controls the LE band" could not be supported by a guard that only looked at the skin. The
+criterion and every number survived; the attribution had to be rewritten to "the BULK MESH including
+near-body grading". Those point at different next steps, so it is not a wording quibble.
+
+★ It also flipped the reading of a second result: "refining the far field makes the error WORSE
+(+3.4 %)" is really "COARSENING THE NEAR BODY makes it worse", which is unsurprising rather than
+mysterious. A mis-scoped guard does not merely weaken a conclusion -- it can invert the sense of the
+one next to it.
+
+- **write the guard against the sentence you intend to publish.** If the claim is about the volume,
+  the guard measures the volume.
+- **a knob's name is not its scope.** Measure what it changed; `h_far`, `h_edge` (LE *and* TE) and
+  `h_wall` have all now been caught acting outside their names in this generator.
+- and the standing rule stays: there is NO clean single-variable mesh knob here, so a strict
+  factorial has to come from changing the generator, not from picking a better knob.
+
 ## The gated set needs a cadence, and it now has one (2026-08-09, measured)
 
 The 17 gated files hold the project's absolute capability anchors and the FULL gated run cost
