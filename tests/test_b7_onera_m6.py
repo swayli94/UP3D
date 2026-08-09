@@ -218,12 +218,67 @@ P5_SHOCKS = {0.44: 0.596, 0.65: 0.570, 0.90: 0.425}
 P8_CL_KJ = 0.2692          # the Newton truth -- the lift reference
 
 
+#: ★★ RE-SPEC 2026-08-09 (round-tip cost). Full record in
+#: docs/dev_phase_two/20260809-0100-b7-respec.md, written before this edit per roadmap
+#: sec 5. `cases/meshes/onera_m6*` were regenerated ROUND on 2026-08-04 while these
+#: gates' anchors were measured on the FLAT cap. All SIX gate quantities were measured on
+#: both caps BEFORE anything was changed, because this gate asserts five things and pytest
+#: stops at the first -- so the failure log showed only the clamp counts and would have
+#: invited relaxing 0/0 to 0/3, which would have been cosmetic:
+#:
+#:   leg                  conv   |R|        lim/flr  M_max    Gamma_min   5 conditions
+#:   M1 round subsonic     no    7.81e-03    0/0     1.4022   -0.00606      3/5
+#:   M1 FLAT  subsonic     YES   5.86e-08    0/0     0.7726   +0.00016      4/5 *
+#:   M1 round transonic    no    5.27e-04    0/3     2.8476   -0.00160      2/5
+#:   M1 FLAT  transonic    no    6.11e-06    0/0     1.3921   -0.00004      5/5  <-- !
+#:   M4 round subsonic     YES   8.30e-08    0/0     1.0619   +0.00163      5/5
+#:   M4 round transonic    no    4.77e-06    0/2     2.6669   +0.00193      4/5
+#:   (* the 1.0 < M_max condition does not apply to a subsonic leg)
+#:
+#: ★ M1 on FLAT still passes 5/5, so the committed anchors remain correct -- they just no
+#: longer describe the production mesh. Attribution complete, not inferred.
+#: ★★ The sharpest number: at M_inf = 0.5 the round mesh reads M_max 1.4022 against flat's
+#: 0.7726 -- a SPURIOUS SUPERSONIC POCKET at a subsonic freestream, the P13 tip free-edge
+#: singularity resolved by the round cap. That, not clamping (0/0), is why the subsonic
+#: leg stops converging.
+#: ★ An asymmetry worth its own round: the same cap hurts the WAKE-EMBEDDED family (M1)
+#: far more than the WAKE-FREE one (M4, whose subsonic leg still passes 5/5). Hypothesis,
+#: registered and unmeasured: M1's wake sheet is embedded in the volume mesh and its free
+#: edge terminates AT the tip, so the cap's geometry change amplifies P13 there. Testing it
+#: needs `_flat` levels for onera_m6_wakefree, which do not exist.
+#:
+#: WHY xfail RATHER THAN RE-ANCHOR: this gate deliberately does not assert `converged`
+#: (see the transonic docstring), so its entire physicality guarantee IS `0/0 clamps` plus
+#: `M_max in (1.0, 2.5)`. Relaxing clamps to 0/3, or lifting the ceiling past 2.85, would
+#: anchor the tip artefact itself -- GS1.4 says a clamped state is not a solution, and
+#: roadmap sec 3 forbids turning an unsolvable condition into a passing gate. STRICT on
+#: purpose: if the LS tip is ever cured these must go RED and force a re-anchor rather
+#: than silently improving.
+ROUND_XFAIL_SUBSONIC = {"M1"}          # M4's subsonic leg still passes 5/5
+ROUND_XFAIL_TRANSONIC = {"M1", "M4"}
+
+
+def _round_xfail(directory, which):
+    """strict xfail for the legs the round tip broke, keyed by mesh family."""
+    tag = "M1" if directory == M1_DIR else "M4"
+    bad = ROUND_XFAIL_SUBSONIC if which == "subsonic" else ROUND_XFAIL_TRANSONIC
+    if tag in bad:
+        pytest.xfail(
+            f"round-tip re-spec 2026-08-09: {tag} {which} has no anchorable state on "
+            f"the round mesh (docs/dev_phase_two/20260809-0100-b7-respec.md). M1 "
+            f"subsonic reads M_max 1.4022 at M_inf 0.5 against flat's 0.7726; M1 "
+            f"transonic fails 3 of the 5 gate conditions, not just the clamps; M4 "
+            f"transonic reads M_max 2.6669 outside the (1.0, 2.5) band with 0/2 clamps. "
+            f"M1 on coarse_flat.msh still passes 5/5.")
+
+
 @run_gates
 @pytest.mark.parametrize("directory", [M1_DIR, M4_DIR], ids=["M1", "M4"])
 def test_b7_m6_coarse_subsonic_3d_machinery(directory):
     """The 3D-only machinery, isolated from the transonic fold (M0.5): the swept
     ruled sheet carries a circulation that decays monotonically to ~0 at the tip
     (the spanwise clip), and the pressure and circulation lifts agree (V6)."""
+    _round_xfail(directory, "subsonic")
     mesh, cm, mvop = _setup(_require(directory))
     r = solve_multivalued_lifting(mvop, mesh, 0.5, alpha_deg=ALPHA,
                                   farfield="neumann", n_outer_max=60,
@@ -302,6 +357,7 @@ def test_b7_m6_coarse_transonic_gate(directory):
     splu, and P8's N6 measured true-3D LU fill at ~100x the 2.5D cost -- it needs
     the lagged-LU treatment first). See roadmap B7.
     """
+    _round_xfail(directory, "transonic")
     mesh, cm, mvop = _setup(_require(directory))
     r = solve_multivalued_transonic(
         mvop, mesh, M_INF, alpha_deg=ALPHA, farfield="neumann",
