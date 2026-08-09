@@ -47,6 +47,8 @@ CSV = os.path.join(HERE, "gate_results", "le_g1_volume.csv")
 #: the third factorial's four legs verbatim
 LEGS = (("G00_base", 0.010, 2.4), ("G10_faronly", 0.010, 1.8),
         ("G01_leonly", 0.0075, 2.4), ("G11_both", 0.0075, 1.8))
+#: ★ `cell_sizes` and `SHELLS` below are imported by run_farfield_arm.py, which applies
+#: the same radial-shell instrument to the domain-RADIUS arm (prereg 20260809-2000).
 #: radial shells (in MAC) over which the volume grading is compared. The wing sits near
 #: the origin, so these walk from "hugging the body" out toward the far field, and a
 #: grading change shows up as a shifted cell-size profile rather than a single number.
