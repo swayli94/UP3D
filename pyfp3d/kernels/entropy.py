@@ -263,20 +263,92 @@ def transport_sigma(
     -- each element becomes its OWN ancestor and looks exactly like a root --
     while the product keeps SQUARING every round (P[0] -> (s0*s1)^2 -> ^4 ...).
     A unit test with that donor map reported "converged" with a corrupted sigma
-    until the test was written. With the genuine-root test a cycle can never
-    settle, the round cap binds, and this returns n_round -- which the caller must
-    treat as "not converged" rather than use the numbers (the GS1.4
-    clamp-not-silent contract).
+    until the test was written.
 
-    Deterministic under threading: each round reads only the previous round's
-    buffers, so the result does not depend on scheduling (phase-one discipline
-    #12 -- a non-reproducible kernel breaks every A/B).
+    ★★ HARMLESS CYCLES ARE BROKEN FIRST (2026-08-05), which is what lets the
+    genuine-root test above stay exactly as it is.
+
+    A cycle can never satisfy that test, so before this the round cap always bound
+    and the caller refused to report convergence -- correct when the cycle carries
+    a shock, WRONG when it does not, and the wrong case is the common one.
+    Measured on two independent solves (docs/dev_phase_two/
+    20260805-0200-sigma-transport-root-cause.md): exactly 2 of 68624 and 2 of
+    90099 elements sat on a 2-cycle, with s == 1 on BOTH in both cases, so sigma
+    was already right (sigma_min 1.000000 and 0.993485, not a collapse's 0.0) --
+    and a solve at |R| = 8.85e-15 with zero clamped and zero shock cells was being
+    reported FAILED because of those two elements.
+
+    So a serial O(n) pass finds every cycle and, for those carrying NO shock,
+    makes one member a root IN A LOCAL COPY of the donor map. Only this function
+    sees the copy: the upwind density and the Newton Jacobian's Term 3 read
+    `upstream[e]` ONE hop and are indifferent to cycles, so they stay bit-
+    identical. "Carries no shock" needs no tolerance -- every s <= 1, so a product
+    of exactly 1.0 means every factor is exactly 1.0.
+
+    A cycle that DOES carry a shock is deliberately left intact: the doubling
+    squares its product to zero, the cap binds, and the caller still refuses. That
+    refusal is the GS1.4 clamp-not-silent contract and is locked by
+    tests/test_s1b_entropy.py::test_shocked_donor_cycle_is_still_refused.
+
+    ★ Two other criteria were implemented and MEASURED WRONG the same round,
+    which is why this one is structural rather than a cleverer stopping test:
+      "the product stopped moving" ACCEPTS a collapse, because a product squaring
+        toward zero reaches zero and then stops moving. Zero is the most stable
+        fixed point there is.
+      "P[A[e]] == 1", i.e. the ancestor contributes nothing, terminates EARLY: P[a]
+        covers the finite segment [a, A[a]), so it says the next 2^k hops are
+        shock-free, not that everything beyond them is. A shock further upstream is
+        silently dropped. Caught by the random-graph oracle test on 4 of 5 seeds.
+
+    Deterministic under threading: the cycle pass is serial, and each doubling
+    round reads only the previous round's buffers, so the result does not depend on
+    scheduling (phase-one discipline #12 -- a non-reproducible kernel breaks every
+    A/B).
 
     Returns the number of rounds taken (< n_round means converged).
     """
     n = len(s)
+    # ---- pass 1 (serial, O(n)): break HARMLESS cycles in a local copy ----
+    #: three n-sized scratch arrays allocated here rather than passed in, to keep
+    #: the signature -- and both direct callers in the tests -- unchanged. At
+    #: 90k elements that is ~1 MB against a Newton step measured in seconds.
+    up = upstream.copy()
+    state = np.zeros(n, dtype=np.int8)      # 0 unvisited / 1 on this path / 2 done
+    path = np.empty(n, dtype=np.int64)
+    pos = np.empty(n, dtype=np.int64)       # only read while state == 1, so no init
+    for start in range(n):
+        if state[start] != 0:
+            continue
+        k = 0
+        c = start
+        hit_cycle = False
+        while True:
+            if state[c] == 1:               # closed a cycle on the CURRENT path
+                hit_cycle = True
+                break
+            if state[c] == 2:               # ran into settled ground
+                break
+            state[c] = 1
+            pos[c] = k
+            path[k] = c
+            k += 1
+            if up[c] == c:                  # genuine root
+                break
+            c = up[c]
+        if hit_cycle:
+            clean = True
+            for i in range(pos[c], k):
+                if s[path[i]] != 1.0:       # exact: every s <= 1, so 1.0 means 1.0
+                    clean = False
+                    break
+            if clean:
+                up[path[pos[c]]] = path[pos[c]]     # one member becomes a root
+        for i in range(k):
+            state[path[i]] = 2
+
+    # ---- pass 2: pointer doubling on the (now acyclic where harmless) copy ----
     for e in prange(n):
-        anc_a[e] = upstream[e]
+        anc_a[e] = up[e]
         sigma_out[e] = s[e]
     for it in range(n_round):
         for e in prange(n):
@@ -286,7 +358,7 @@ def transport_sigma(
         n_unsettled = 0
         for e in prange(n):
             a = anc_b[e]
-            if upstream[a] != a:
+            if up[a] != a:
                 n_unsettled += 1      # a += reduction: the form numba supports
             anc_a[e] = a
             sigma_out[e] = prod_b[e]

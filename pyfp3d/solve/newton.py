@@ -586,6 +586,15 @@ def _ew_forcing(r_norm, r_norm_prev, eta_prev, eta0=1e-2, gamma_ew=0.9,
     return float(min(eta_max, max(eta, eta_floor)))
 
 
+#: Picard-seed strength used by the COLD-START FALLBACK inside solve_newton_lifting.
+#: A module constant and not a driver parameter, following the GS1b.5 precedent for
+#: `_SIGMA_REFRESH_MAX`: this is an algorithmic constant that exists to recover a
+#: MEASURED failure mode, not a tuning knob, and phase-two principle 4 forbids
+#: permanent default-off knobs. 5 is the pre-2026-08-02 default, i.e. the value every
+#: committed pre-flip result was produced with.
+_SEED_FALLBACK = 5
+
+
 def solve_newton_lifting(
     mesh_cut,
     wc,
@@ -601,7 +610,25 @@ def solve_newton_lifting(
     rho_floor: float = 0.05,
     phi_init: Optional[np.ndarray] = None,
     gamma_init: Optional[np.ndarray] = None,
-    n_picard_seed: int = 5,
+    # ★ GS3.3b 2026-08-02: 5 -> 0, ADOPTED as the global default (user ruling).
+    # Evidence: the full ungated suite is unchanged at 683/29/2 and faster (826.75 s
+    # against 887 s), and the gated transonic set (test_p8_newton + test_p4_transonic,
+    # which carries M6 medium M0.84 and the NACA fold-zone family) is 13 passed /
+    # 2 xfailed. On the M6 medium ramp it takes 50.83 s -> 38.10 s, -25 %, at the cost
+    # of ONE extra Newton step at level 0 (3 from freestream against 2 from the seed)
+    # with essentially the same Krylov work (1957 vs 1907 GMRES).
+    # ⚠ WHAT THIS DOES NOT GUARANTEE. Coverage extends only as far as the suites reach.
+    # The reason no-seed works on the M6 ramp is that its FIRST level is subcritical
+    # (m_start 0.70), where Newton needs no help -- that reason does NOT hold for a
+    # recipe whose first level is supercritical, and such a case must be re-measured.
+    # The answer also shifts by 2.94e-05 (the freeze non-uniqueness measured this
+    # phase, not a degradation), so a seed is one more path variable for any bitwise
+    # A/B. Reverting is cheap and local: pass n_picard_seed=5 at the call site.
+    # ★ Also measured and rejected: a Laplace "cheap linearised seed" is far WORSE than
+    # none (103.5 s, non-converged, cl_p 18 % off), and a shallow Picard-2 seed is
+    # worthless (same wall, 9 Newton steps at level 0 against 3). Evidence:
+    # bench/gate_results/gs33b_seed.csv, docs/dev_phase_two/20260802-2300-noseed-global.md
+    n_picard_seed: int = 0,
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
     tol_gamma: float = 1e-8,
@@ -671,6 +698,9 @@ def solve_newton_lifting(
     #: because it is the tool for ON/OFF comparisons.
     entropy_correction: bool = True,
     verbose: bool = False,
+    #: private: set only by the cold-start seed fallback near the return, to
+    #: stop it recursing. Not part of the public recipe.
+    _seed_retry: bool = False,
 ) -> Dict[str, object]:
     """
     Fully-coupled (phi_red, Gamma) Newton solve at ONE Mach level (module
@@ -775,6 +805,10 @@ def solve_newton_lifting(
     probe path) and kutta_weld_sign (the frozen B31 blend pin slope, None
     on the probe path and recorded under the pressure estimator).
     """
+    #: captured BEFORE any local is created, so it is exactly the arguments -- the
+    #: cold-start fallback near the return has to re-solve with EVERY setting
+    #: unchanged except the seed, and enumerating 40 parameters by hand would drift.
+    _call_args = dict(locals())
     if m_inf > 0.0 and upwind_c <= 0.0:
         raise ValueError(
             "the Newton driver runs with the walk upwind machinery active "
@@ -1296,7 +1330,81 @@ def solve_newton_lifting(
     timings["gmres"] = timings["linsolve"]
     timings["kutta"] = 0.0
     finalize(timings, time.perf_counter() - t_wall0)
+    # ---- COLD-START SEED FALLBACK (user ruling 2026-08-05) --------------------
+    #
+    # MEASURED mechanism (docs/dev_phase_two/20260805-2200-seed-exposure.md): the
+    # 2026-08-02 flip of n_picard_seed's default 5 -> 0 does not fail on its own. It
+    # fails on a CONJUNCTION -- no seed, AND a cold start directly at a supercritical
+    # M_inf, AND a mesh fine enough to resolve the supersonic pocket. NACA0012 M0.80:
+    # coarse converges either way; medium dies with M_max exactly at m_cap (7265
+    # limited / 758 floored) from Newton step 3, and the clamped cells sit 81 % in
+    # MID / 17 % in TE / 0 % at the LE with the peak at x/c 0.75 -- the shock, not the
+    # leading edge. Cold-starting supercritically overshoots inside the supersonic
+    # pocket before the density switch has a sensible field to act on.
+    #
+    # A Mach ramp cures it at the same seed, because the previous level's converged
+    # solution does the seed's job. Ramp and seed are two implementations of ONE
+    # function, so the fallback only has to cover the case where neither is present --
+    # which is what each condition below encodes, and each is that measurement:
+    #   n_picard_seed == 0                no seed was asked for;
+    #   phi_init is None and gamma_init   and no warm start either, i.e. a genuine
+    #     is None                         cold start. This is what keeps the fallback
+    #                                     OUT of a ramp's intermediate levels, which
+    #                                     warm-start from the last converged level and
+    #                                     would be made WORSE by discarding that;
+    #   clamped                           and the attempt ended clamped. GS1.4 already
+    #                                     refuses to report a clamped state as
+    #                                     converged, so this can never fire on a result
+    #                                     a caller would have used -- the success path
+    #                                     is untouched BY CONSTRUCTION, not by hope.
+    #
+    # The retry is accepted ONLY if it converges; otherwise the original is returned,
+    # because a failing default path should report its OWN diagnostics rather than a
+    # fallback's. `seed_fallback` records which happened either way.
+    #
+    # ⚠ What this does NOT fix, measured: the SOFT SHIFT. A cold seed-0 solve can
+    # converge with zero clamps and still land on a different solution -- M1a's fine
+    # leg moved cl 0.254830 -> 0.252930 and flipped a criterion's sign. Nothing here
+    # fires on that, because there is no failure to detect; that needs answer anchors.
+    _clamped = bool(state["n_limited"] > 0 or state["n_floored"] > 0)
+    if (_clamped and not _seed_retry and n_picard_seed == 0
+            and phi_init is None and gamma_init is None):
+        _kw = dict(_call_args)
+        _kw.pop("_seed_retry", None)
+        _kw["n_picard_seed"] = _SEED_FALLBACK
+        #: a fresh workspace -- the failed attempt's frozen selection is not a valid
+        #: starting point, and callers read `workspace` off whatever is returned.
+        _kw["workspace"] = None
+        _retry = solve_newton_lifting(_seed_retry=True, **_kw)
+        if _retry["converged"]:
+            _retry["seed_fallback"] = {
+                "fired": True, "accepted": True, "seed": _SEED_FALLBACK,
+                "first_res_final": (residual_history[-1] if residual_history
+                                    else None),
+                "first_accept_reason": accept_reason,
+                "first_n_limited": int(state["n_limited"]),
+                "first_n_floored": int(state["n_floored"])}
+            return _retry
+        #: a REJECTED retry still has to be reportable: without its residual and its
+        #: clamp counts a caller cannot tell "the retry helped but not enough" from
+        #: "the retry did nothing", and those want different responses. Measured need
+        #: (2026-08-06): at 8 threads this case's retry reaches 9.9e-07 from 3.29e-02
+        #: -- a 33000x improvement that is still short of tol, which is the
+        #: documented thread dependence of NACA0012 M0.80 medium, not a dead fallback.
+        _fallback = {"fired": True, "accepted": False, "seed": _SEED_FALLBACK,
+                     "retry_accept_reason": _retry["accept_reason"],
+                     "retry_res_final": (_retry["residual_history"][-1]
+                                         if _retry["residual_history"] else None),
+                     "retry_n_limited": int(_retry["n_limited"]),
+                     "retry_n_floored": int(_retry["n_floored"]),
+                     "first_res_final": (residual_history[-1] if residual_history
+                                         else None),
+                     "first_n_limited": int(state["n_limited"]),
+                     "first_n_floored": int(state["n_floored"])}
+    else:
+        _fallback = {"fired": False, "accepted": False, "seed": None}
     return {
+        "seed_fallback": _fallback,
         "phi": state["phi_cut"],
         "gamma": gamma,
         "converged": converged,

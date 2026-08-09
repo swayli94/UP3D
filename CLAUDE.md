@@ -270,6 +270,37 @@ exists AND refinement stays unclamped: **0.70 and 0.75**. And refinement drives 
 1.678 → far 1.988 → LE 2.061 → both 3.000). So "refinement hits the limiter" is not specific to
 M0.8395.
 
+## ★★ Swapping library files for an A/B: the index is the trap, and `git status` is not the check
+
+Two separate incidents on 2026-08-06/09, the second WORSE than the first because it reached a commit.
+
+**Incident 1 (working tree).** A script used `cp` for backups; `$SC` was undefined inside the
+heredoc so the backup failed, and the script had no `set -e` so it overwrote both library files
+anyway and could not restore them. Fixed by `git checkout -- pyfp3d/`.
+
+**Incident 2 (a COMMIT).** The "safe" replacement script used git — and still lost the work:
+
+    git checkout <rev> -- <paths>     # writes the INDEX *and* the worktree
+    git checkout -- <paths>           # restores from the INDEX -> the OLD content comes back
+
+so the old library stayed in the index, and a later `git add -A && git commit` baked it into
+`6819d38`, dropping 191 lines of committed work from HEAD. Two commits shipped with the regression
+before an unrelated import error exposed it.
+
+The rules that actually prevent this:
+
+- **restore with `git checkout HEAD -- <paths>`**, never bare `git checkout -- <paths>`, after a
+  `git checkout <rev> -- <paths>`. Or use `git stash` / `git worktree`, which never touch the index
+  for this purpose.
+- ★ **`git status` IS NOT THE VERIFICATION.** With index and worktree both holding the old content,
+  status can look unremarkable. Verify by **importing a sentinel from the module** —
+  `from pyfp3d.solve.newton import _SEED_FALLBACK` — and by running one fast test file. Do this after
+  EVERY swap script and again before any `git add -A`.
+- **`set -euo pipefail` plus `trap restore EXIT`** in any script that mutates tracked files — but put
+  `|| true` on commands EXPECTED to fail (a pytest leg that is supposed to be red will otherwise abort
+  the script under `pipefail`, which happened on the first attempt).
+- **Never `git add -A` in the same session as a file-swap script** without the sentinel check first.
+
 ## Never hand-copy a file git already tracks (2026-08-06, cost: the working tree)
 
 A background script swapped `pyfp3d/solve/newton.py` and `pyfp3d/kernels/entropy.py` to an older
