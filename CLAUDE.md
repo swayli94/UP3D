@@ -303,7 +303,10 @@ consequence, measured: the first full gated run since the 2026-08-04 round-tip s
 invisible by construction — the ungated suite stays green while capability locks rot.
 
 So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
-**measured at 644 s = 10.7 min, 7/7 green**. Run it at **every close-out**; run the full gated set at
+**measured at 644 s = 10.7 min, 7/7 green** — ★ and that cost holds ONLY with the thread caps
+pinned: the same script measured **2940 s = 49 min** uncapped on this 24-core box (2026-08-10),
+per group up to **20.7×**. The script now pins them itself and prints the resolved values with
+the load average, because one of its locks asserts a wall-clock budget. Run it at **every close-out**; run the full gated set at
 **phase boundaries**.
 
 ★ The script prints WHAT IT DOES NOT COVER every time, with each exclusion's measured cost (b22
