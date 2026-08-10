@@ -30,7 +30,7 @@ Solvers -- the best-known recipe per path (measured 2026-07-17):
     The flat-fragment wake is the B28-F1 finding: the fuselage out-band lift
     is cross-model-consistent ONLY between sheets at the same position (the
     tilted sheet's out-band deviation is a measured POSITION sensitivity,
-    not an error -- see cases/analysis/b28_cl_fus_flat_sheet/VERDICT.md).
+    not an error -- see bench/studies/b28_cl_fus_flat_sheet/VERDICT.md).
 
 Cross-model discipline (A2/V14.6): cl_KJ uses a demo-local EXPOSED-SPAN reducer
 (trapezoid over the actual junction..tip stations + tip closure, NO root
@@ -424,7 +424,7 @@ def run_level(level):
     # deviation (+43% vs the oracle) is a measured POSITION sensitivity
     # (flat-vs-tilted model difference), documented, not an error. TOL = 15%
     # = 1.5x the out-band quantity's own refinement noise (8-10%, anchored
-    # pre-run in cases/analysis/b28_cl_fus_flat_sheet/PRE_REGISTRATION.md).
+    # pre-run in bench/studies/b28_cl_fus_flat_sheet/PRE_REGISTRATION.md).
     cf_p, lf_p = cp["fus_parts"], lp["fus_parts"]
     gb94_gap = (abs(cf_p["out"] - lf_p["out"])
                 / max(abs(cf_p["out"]), 1e-12))

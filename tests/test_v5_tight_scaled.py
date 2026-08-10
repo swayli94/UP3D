@@ -1,5 +1,5 @@
 """Track V V5.1b -- the scaled + damped augmented Newton path (design:
-cases/analysis/v5_1b_scaled_newton/PRE_REGISTRATION.md; module under test:
+bench/studies/v5_1b_scaled_newton/PRE_REGISTRATION.md; module under test:
 pyfp3d/viscous/tight_driver.py -- the newton_tight
 scaling/lm_damping/floor_stop path plus the equilibrate_rc /
 scaled_damped_step / mu-schedule / FloorStop helpers).
@@ -30,7 +30,7 @@ gate only the transform + globalization layer:
   - the k=1 smoke (JIT lane only): the new path runs on the real
     pre-registered k=1 pack (finite iterates, a recorded mu per
     iteration), and the DEFAULT legacy path reproduces the committed
-    GV5.1 k1seed history (cases/analysis/v5_tight_coupling/results/
+    GV5.1 k1seed history (bench/studies/v5_tight_coupling/results/
     gv5_1_newton_history_coarse_k1seed.csv) -- the bit-for-bit guard on
     the untouched legacy branch.
 """
@@ -63,9 +63,7 @@ K1_JIT_ONLY = pytest.mark.skipif(
 REPO_ROOT = Path(__file__).parent.parent
 K1SEED_CSV = (
     REPO_ROOT
-    / "cases"
-    / "analysis"
-    / "v5_tight_coupling"
+    / "bench" / "studies" / "v5_tight_coupling"
     / "results"
     / "gv5_1_newton_history_coarse_k1seed.csv"
 )
@@ -396,7 +394,7 @@ def test_k1_smoke(pack):
 
 
 # ---------------------------------------------------------------------------
-# the GV5.4 step_solve callback injection (cases/analysis/v5_4_cost/
+# the GV5.4 step_solve callback injection (bench/studies/v5_4_cost/
 # PRE_REGISTRATION.md W4: the callback must leave the committed paths
 # bit-identical)
 # ---------------------------------------------------------------------------

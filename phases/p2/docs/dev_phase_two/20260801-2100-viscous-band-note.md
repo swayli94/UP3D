@@ -2,7 +2,7 @@
 
 轮次文件名:`20260801-2100-viscous-band-note.md`
 分支:`claude/phase-two-s2`
-**零新解** —— 全部来自 `cases/analysis/v5_3_m6_cp/results/cp_stations_{k0,final}_{level}.csv`
+**零新解** —— 全部来自 `bench/studies/v5_3_m6_cp/results/cp_stations_{k0,final}_{level}.csv`
 
 ---
 

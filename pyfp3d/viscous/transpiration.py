@@ -40,7 +40,7 @@ motion, RHS-only). Two pieces live here:
 
 Also ``edge_velocity_per_zone``: the per-zone u_e extraction discipline of
 A4 (LE/stagnation band linear+smoothed, elsewhere quadratic recovery;
-cases/analysis/a4_ue_error_band/VERDICT.md). Zone masks are caller-supplied
+phases/p1/cases/analysis/a4_ue_error_band/VERDICT.md). Zone masks are caller-supplied
 (V3 wires the actual zones); the default is all-quadratic.
 """
 
@@ -185,7 +185,7 @@ def edge_velocity_per_zone(
     """Per-zone wall tangential velocity u_e = grad_Gamma(phi), (n_nodes, 3)
     with NaN off-wall (the wall_tangential_gradient_quadratic convention).
 
-    A4 discipline (cases/analysis/a4_ue_error_band/VERDICT.md): quadratic
+    A4 discipline (phases/p1/cases/analysis/a4_ue_error_band/VERDICT.md): quadratic
     recovery (post/surface.py::wall_tangential_gradient_quadratic)
     everywhere except the LE/stagnation band, which takes the
     linear+smoothed path (per-triangle P1 gradients + crease-gated

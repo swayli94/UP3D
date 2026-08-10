@@ -39,7 +39,7 @@ drivers, plus a controlled 2×2 benchmark that measures where the wall clock goe
   existed before A1 changed (conforming Newton keeps its legacy
   `jacobian`/`amg_setup`/`gmres` keys, aliased over the canonical buckets, so
   `cases/demo/p8_newton` needs no re-run).
-- **Benchmark** (`cases/analysis/a1_solver_bottleneck/`): `run_a1.py` (ungated
+- **Benchmark** (`bench/studies/a1_solver_bottleneck/`): `run_a1.py` (ungated
   2.5-D NACA coarse, minutes) + `run_a1_m6.py` (gated 3-D ONERA M6 medium
   M0.84, ~1 h, `.npz`-cached). Both wake models on the SAME wake-embedded mesh
   for the headline 2×2 (isolates method from mesh), plus a dual-mesh leg on the
@@ -178,7 +178,7 @@ do not tune after seeing numbers):
   (deviation from the x/c∈[0.85,0.97] trend fit) is a P1 recovery artifact:
   shrinks under P6 passes / quadratic recovery / h, and exists on BOTH paths.
 
-**Deliverable** — `cases/analysis/a2_te_kutta_fidelity/`: `_metrics.py`
+**Deliverable** — `bench/studies/a2_te_kutta_fidelity/`: `_metrics.py`
 (shared metric/estimator implementations; correctness anchored by GA2.1's
 reproduction, no `pyfp3d/` edits at all), `run_a2.py` (zero-solve legs:
 harvests the P5/B7/A1 local `.npz` caches — L0 unified jitter table, L1 probe
@@ -443,7 +443,7 @@ that stood here is superseded: B9 closed 2026-07-17.)*
   resolved in title, checkbox AND ledger" was overstated — the `track_m.md` ledger row (and the roadmap.md/overview.md M lines) still read ◐
   until 2026-07-19.
 - A2 — ✓ — 2026-07-17 — TE/Kutta fidelity attribution: conforming Γ(z) jitter (S1) + TE Cp jump (S2), conforming vs level-set.
-  `cases/analysis/a2_te_kutta_fidelity/` (`_metrics.py` + `run_a2.py` zero-solve ~90 s + `run_a2_interventions.py` gated), figures
+  `bench/studies/a2_te_kutta_fidelity/` (`_metrics.py` + `run_a2.py` zero-solve ~90 s + `run_a2_interventions.py` gated), figures
   `a2_jitter/decay/te_gap/spike/intervention.png` + CSVs + checks.csv (22 passed) + checks_interventions.csv (4 passed). No `pyfp3d/` edits;
   suite untouched. **Findings (all in committed CSVs):** **S1 SETTLED — the Γ(z) jitter is a measurement-operator artifact of the
   per-station probe-difference Kutta target estimator, NOT flow content and NOT unclosed stations.** Proof chain:
@@ -458,7 +458,7 @@ that stood here is superseded: B9 closed 2026-07-17.)*
   estimator) → new **P14** (designed-not-started); A2 implements nothing.
 - A1 — ✓ — 2026-07-16 — Solver bottleneck study. Instrumentation `pyfp3d/solve/timing.py` + additive edits to the four drivers and four ramp
   wrappers (canonical `timings` schema, `step_records`, per-solve linear-algebra counts, per-level `wall_s`/`timings`/`timings_total`).
-  Benchmark `cases/analysis/a1_solver_bottleneck/` (`run_a1.py` ungated 2.5-D ~5 min, `run_a1_m6.py` gated 3-D ~52 min cold).
+  Benchmark `bench/studies/a1_solver_bottleneck/` (`run_a1.py` ungated 2.5-D ~5 min, `run_a1_m6.py` gated 3-D ~52 min cold).
   Tests `tests/test_a1_instrumentation.py` (7); suite 403+18+2. **Headline finding (mesh-scale dependent — quote WITH the mesh):
   in 3-D (M6 medium M0.84) BOTH Newton methods are PRECONDITIONER dominated (39.5% conforming / 42.6% LS, even with B12/B13 lagged LU;
   conforming Newton is 76.3% linear algebra), while the Picard warm-start seed — the 2.5-D headline at 71%/85% — falls to 13.7%/20.2%.

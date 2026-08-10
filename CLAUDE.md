@@ -517,7 +517,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    3. **docs/overview.md** (status bullet list + the regression-baseline lineage),
    4. **PROJECT_STRUCTURE.md** — the footer one-liner AND any directory tree
       the phase added files to (this is the one that silently rots),
-   5. the **`cases/demo/README.md` table row / `cases/analysis/README.md` bullet**
+   5. the **`cases/demo/README.md` table row / `bench/studies/README.md` bullet**
       for the new demo or study.
    Keep the commit phase-scoped.
    ★ **Backport check.** This codebase has TWO wake paths (conforming

@@ -44,8 +44,8 @@ inspection 与 6 个 phase-3 要用的 phase-two 文件。
 ## ★ 第三轮:15 个目录搬回原位(保留规则原来只算了一跳)
 
 全套复跑抓到 **2 failed**,机制是**传递依赖**:
-`tests/test_meshgen_rae2822.py` → `cases/analysis/v5_2_rae2822/run.py`(保留)
-→ `_load("gv3_run", "cases/analysis/v3_loose_coupling/run.py")`(**第二跳,被移走了**)。
+`tests/test_meshgen_rae2822.py` → `bench/studies/v5_2_rae2822/run.py`(保留)
+→ `_load("gv3_run", "bench/studies/v3_loose_coupling/run.py")`(**第二跳,被移走了**)。
 
 ⇒ 保留规则改为**传递闭包**,并且**判据先校验**:第一版闭包按"目录名出现在文本里"算,报 22 个,
 而全套实测只坏 1 个 ⇒ 太松(把注释里的提及也算了);改成只认**路径样字面量**
@@ -60,6 +60,13 @@ oracle 复验 **26 个文件里 0 处失败**;`b6_transonic` 回到原位后,**�
 处置是**删掉而不是指进归档** —— 按 D5 那条路线已放弃、phase 3 第一件事就是删它们,而
 **把一条活的收口门指进归档比没有这道门更糟**:它会跑、会绿、并为一条没人维护的路线断言能力。
 ⇒ 快层现在 **5 组、482 s、5/5 green**;conforming 锚点一条不少。
+
+## ★ 归档保持旧布局是故意的
+
+活的一侧在 2026-08-10 把 `cases/analysis/` **合并进了 `bench/studies/`**(使用者裁决:
+`bench/` 与 `cases/analysis/` 本是同一件事的两个家)。**归档不跟这次改名** ——
+`phases/p1/cases/analysis/` 保持原样,因为归档是**历史快照**,重命名它会让"当年长什么样"失真。
+所以看到两种路径不必奇怪:**活的在 `bench/studies/`,历史的在 `phases/p1/cases/analysis/`**。
 
 ## ★★ 归档脚本的可运行性:如实说
 

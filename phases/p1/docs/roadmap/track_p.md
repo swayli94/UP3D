@@ -1539,7 +1539,7 @@ continuation ~1 h).
 
 ### P14 — Probe-free conforming Kutta target: wall-adjacent-CV pressure-equality estimator ✓ CLOSED 2026-07-17 (user-directed open + close same day; G14.1–G14.7 all ✓; the conforming path now matches the level-set path on lift, Γ(z) smoothness, and TE Cp closure)
 
-> **Origin.** Track A / A2 (`cases/analysis/a2_te_kutta_fidelity/`, closed
+> **Origin.** Track A / A2 (`bench/studies/a2_te_kutta_fidelity/`, closed
 > 2026-07-17; [roadmap/track_a.md](track_a.md) A2, dossier
 > [demo_report/track_a.md](../demo_report/track_a.md#track-a--a2--tekutta-fidelity-z-jitter--te-cp-jump-casesanalysisa2_te_kutta_fidelity-2026-071617))
 > settled the cause of two long-standing conforming symptoms and routed the
@@ -1594,7 +1594,7 @@ Tier 1 — subsonic M0.5 milestone:
   non-degenerate and FD-exact at committed states + implied Γ* within the B4
   band: NACA incompressible pressure-vs-probe Γ **0.074%** (demo) / 0.01%
   (Stage-D at the converged probe state). Evidence:
-  `cases/analysis/p14_te_pressure_diag/results/` +
+  `bench/studies/p14_te_pressure_diag/results/` +
   `cases/demo/p14_pressure_kutta/results/checks.csv` +
   `tests/test_p14_te_pressure.py` (15). One firming correction: the
   "uniform-sign dF/dΓ diagonal" clause holds at CONVERGED states (Stage-D,
@@ -1773,7 +1773,7 @@ closure may need its own damping. Diagnostic-first at open: build the
 conforming TE control volumes and verify the recovered two-sided velocity is
 non-degenerate in Γ before wiring the residual.
 
-**Stage-D diagnostic — GO (2026-07-17, `cases/analysis/p14_te_pressure_diag/`,
+**Stage-D diagnostic — GO (2026-07-17, `bench/studies/p14_te_pressure_diag/`,
 20/20 checks, committed `results/diag_checks.csv` + `diag_states.csv`).**
 Retired at the diagnostic: (a) CV construction is clean on NACA coarse + M6
 coarse/medium — two-sided wall-adjacent fans never empty (min fan 1 element on
@@ -2253,13 +2253,13 @@ symptom by construction).
   with the model in place, redo the M6 3D three-point Richardson (G9.1's blocked task) under the P9 pre-registered bands.
   No solver/numerics changes; fine meshes gitignored; the ~34 min conforming fine M0.5 AMG solve is a one-shot cached artifact.
 - P14 — ✓ CLOSED 2026-07-17 (**opened + closed same day, user-directed**; G14.1–G14.7 all ✓; demo `cases/demo/p14_pressure_kutta/` 28 PASS,
-  diagnostic `cases/analysis/p14_te_pressure_diag/` 20/20; wiring scope = coupled Newton + `solve_laplace_lifting` only). **Result:
+  diagnostic `bench/studies/p14_te_pressure_diag/` 20/20; wiring scope = coupled Newton + `solve_laplace_lifting` only). **Result:
   the conforming path now matches the level-set path** — M0.84 medium cl_p/cl_KJ agree to 0.15%/0.34% (V14.6 cross-model), Γ(z) roughness
   0.0970→0.0043/0.0365→0.0024 (at/below the LS band), all-station TE Cp gap 0.2206→0.0040/0.1585→0.0024, TE spike 0.1143→0.0533 (below LS).
   G14.7 re-specced at close from the probe G8.2 locks to the level-set oracle (the +4.85% cl_KJ move is the finding —
   69% of P9's 0.019 gap was Kutta-estimator bias); residual ~0.05 shared P1 recovery floor and D=1.80 discriminator recorded, not closed. —
   **Probe-free conforming Kutta target: wall-adjacent-CV pressure-equality estimator (NEW 2026-07-17, from A2; appended, no renumber).**
-  A2 (`cases/analysis/a2_te_kutta_fidelity/`, closed 2026-07-17) proved two conforming symptoms are one estimator's fault:
+  A2 (`bench/studies/a2_te_kutta_fidelity/`, closed 2026-07-17) proved two conforming symptoms are one estimator's fault:
   **S1** the Γ(z) jitter is a measurement-operator artifact of the per-station probe-difference potential-jump Kutta target (fixed-Γ
   discriminator D=7.33/25.70 coarse/medium — the estimator regenerates the jitter from a smooth field; closure — F — /max — Γ —
   ≤ 0.6%, so not unclosed stations); **S2** the TE Cp jump is that same target being equal-*potential* not equal-*pressure* (same-estimator

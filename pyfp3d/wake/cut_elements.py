@@ -97,7 +97,7 @@ class CutElementMap:
             an LS wing-tip C-class cure -- C1 gives an inboard backflow
             -19.5%, C3 diverges on the coarse mesh (the sheet reaches q~14).
             RETAINED default 0.0 = bit-identical (evidence machinery; see
-            cases/analysis/b31_tip_termination/VERDICT.md); do NOT re-propose
+            phases/p1/cases/analysis/b31_tip_termination/VERDICT.md); do NOT re-propose
             as a tip cure without new evidence. Mechanics below:
             (B31 candidate C1, GB31.3): the tip test becomes
             q_cross <= span_length + outboard_fringe, so the sheet

@@ -15,7 +15,7 @@ when absent, M1 precedent):
     zero wall RHS identity (the loop's first-iteration no-op, GV2.1(b)).
 
 No coupled solve here (the GV5.0 gate evidence lives in
-cases/analysis/v5_m6_bridge/).
+bench/studies/v5_m6_bridge/).
 """
 
 import os

@@ -1,7 +1,7 @@
 """
 P14 demo -- probe-free conforming Kutta target: wall-adjacent-CV
 pressure-equality estimator (roadmap/track_p.md P14; A2 attribution;
-Stage-D diagnostic in cases/analysis/p14_te_pressure_diag/).
+Stage-D diagnostic in bench/studies/p14_te_pressure_diag/).
 
 Tier 1 (subsonic M0.5, always on):
   V14.1  NACA coarse Laplace: pressure vs probe closure (G14.1/G14.3 legs)
@@ -27,7 +27,7 @@ Tier 2 (transonic M0.84 = the A2 regime, PYFP3D_TRANSONIC_GATES=1):
          TE-gap and spike scalars): sections_probe_vs_pressure.png
 
 The TE-gap sweep and roughness metrics reuse the A2 pipeline verbatim
-(cases/analysis/a2_te_kutta_fidelity/_metrics.py). ★ Baseline caveat: A2
+(bench/studies/a2_te_kutta_fidelity/_metrics.py). ★ Baseline caveat: A2
 measured the TE gap TWO ways -- section-last-point (one station: 0.318/0.228
 conforming vs 0.009/0.002 LS = the 34x/133x headline) and the ALL-STATION
 sweep median (0.2206/0.1585 conforming). This demo runs the ALL-STATION
@@ -53,7 +53,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "cases/analysis/a2_te_kutta_fidelity"))
+sys.path.insert(0, str(REPO_ROOT / "bench/studies/a2_te_kutta_fidelity"))
 
 import matplotlib
 matplotlib.use("Agg")
@@ -80,7 +80,7 @@ from pyfp3d.solve.picard import solve_laplace_lifting              # noqa: E402
 OUT = HERE / "results"
 OUT.mkdir(exist_ok=True)
 MESHES = REPO_ROOT / "cases/meshes/onera_m6"
-A1_RES = REPO_ROOT / "cases/analysis/a1_solver_bottleneck/results"
+A1_RES = REPO_ROOT / "bench/studies/a1_solver_bottleneck/results"
 GATES = os.environ.get("PYFP3D_TRANSONIC_GATES", "0") == "1"
 
 ALPHA = 3.06

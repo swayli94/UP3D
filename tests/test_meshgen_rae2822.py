@@ -24,7 +24,7 @@ EXP_P1 = os.path.join(
     EXP_DIR, "ExpCase7_RAE2822_M0.725_AoA2.55_Rec6.5e6.dat")
 EXP_P2 = os.path.join(
     EXP_DIR, "Expe_RAE2822_M0.73_AoA3.19_Rec6.5e6.dat")
-RUN = os.path.join(ROOT, "cases", "analysis", "v5_2_rae2822", "run.py")
+RUN = os.path.join(ROOT, "bench", "studies", "v5_2_rae2822", "run.py")
 
 
 def _load_runner():

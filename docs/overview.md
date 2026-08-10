@@ -132,7 +132,7 @@ M_max 1.134235 到 6 位完全相同，步数不变，**+3.6% 墙钟**；那个�
 而不只是诊断量。★ 同一元素类第三次咬人（B8 的 ×5 度量伪影 → Jacobian → 现在是残差）。
 ★ **假设而非结论**：可能是 B18 翼身"随加密恶化"虚假袋（M_max 伪影 3.96）的贡献者之一；
 但测的是**纯机翼** M6，未证因果，已记下具名验证方案。**不予采纳**——改密度来源即改 R、
-会移动所有已收敛答案 ⇒ 单独立项。证据 `cases/analysis/c1_ls_jacobian_fd/`。
+会移动所有已收敛答案 ⇒ 单独立项。证据 `phases/p1/cases/analysis/c1_ls_jacobian_fd/`。
 
 **A3 已关闭（2026-07-18，用户指示）——响应 2026-07-17 Kimi 独立审查**
 （`docs/inspection/` 三份：文档一致性 17 项、代码审查 C1–C7/T1/T2/P1/P2、规划评估）。
@@ -264,7 +264,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   旋成体三轮调试稳定化（尾带钉扎 + 钉扎带 ṁ 掩蔽 + FP 护栏），中段轴对称优秀、尾锥 σ/μ 0.55/横流 0.26 FAIL、
   环不收敛 = 实测尾部失稳——V4 跳过判据按字面满足（GV3.2），GV3.3 反方证据入台账，**V4 ⊘ 跳过
   2026-07-22（用户定；重开触发 = V5 受挫或闭体粘性提前进范围）**）；**V5 ✓ CLOSED 2026-07-25**
-  （**GV5.0 ✓ EXECUTED 16 RECORDED / 0 FAIL**，`cases/analysis/v5_m6_bridge/`：M6 亚声速松耦合桥——
+  （**GV5.0 ✓ EXECUTED 16 RECORDED / 0 FAIL**，`bench/studies/v5_m6_bridge/`：M6 亚声速松耦合桥——
   桥答案 = 松环在 3-D 升力翼上不够用：coarse 根部上翼面 TE 分离斑块（H 4–5.5）δ*↔ṁ↔u_e 失稳
   ṁ_max ×12.4（GV3.3 尾部同类），medium 加密消除斑块但留有界 δ* 极限环（2–12 %/k）不达 tol 1e-3；
   ΔCL 双估计量下行（coarse −5.2 %/−4.8 %，medium −2.4 %/−2.1 % 输入受限）；横流首次活体 3-D 演习
@@ -276,11 +276,11 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   松耦合桥 ✓ EXECUTED 2026-07-23 16R/0F——桥答案 = 松环在 3-D 升力翼上不够，紧耦合动机证据；**GV5.1 ✓ EXECUTED 9P/1F/36R**——精确增广 (φ, Γ, BL) Newton 交付
   且两级 FD 验证（worst 甜点 2.2e-8 coarse / 5.1e-9 medium），二次尾段 HONEST FAIL = IBL 稳态残差在 cond(J_BL,BL)~4e10 近零流形上的内禀地板（standalone 伪时间
   同地板，非紧耦合缺陷），N_total 14/13 vs 松环 4/5；已提交 GV3.1 medium 不动点不可复现（IBL 地板轨迹散布，诊断已提交，HEAD 重生成种子经用户裁决接受）；**IBL 地板 follow-up 诊断
-  ✓ EXECUTED 2026-07-24**（14 RECORDED 无 band，`cases/analysis/v5_ibl_floor/`：近零簇在松环收敛态持续（S1 500/1236 cond 1.3e11、S2 1082/2460 cond 4.0e13、s1/s3 谱几乎重合），由湍流 (A,Ψ)
+  ✓ EXECUTED 2026-07-24**（14 RECORDED 无 band，`bench/studies/v5_ibl_floor/`：近零簇在松环收敛态持续（S1 500/1236 cond 1.3e11、S2 1082/2460 cond 4.0e13、s1/s3 谱几乎重合），由湍流 (A,Ψ)
   变量承载、mid-chord→TE 分布；原始 cond 4e10–4e13 主要是缩放 artifact（行列均衡 → 2e4/7e5/1e7、亚 1e-6 计数 501/500/1082 → 0/0/2、无精确零方向），均衡后余 1e5–1e7 真 (A,Ψ)
   刚度 = GV5.1b/GV5.4 的真正靶子；F_BL 地板住 TE 带 (B,δ) 方程且几乎全在 J 值域内；闭包地板活动集全空（假说死）、eps_diff ×4 地板仅移 ≤6 %（非人工粘性截断）、伪时间控制器触底
   （cfl 钉 cfl_min、残差自第 0 迭代冻结）= 公式化地板经控制器表现，单靠全局化过不了地板）；**GV5.1b ✓ EXECUTED 2026-07-24**
-  （2P/0F/7R 裁决后（执行时 1P/1F/7R 保留于 commit 1c55906），`cases/analysis/v5_1b_scaled_newton/`：scaled+damped 机构交付且精确——求解器内部行列均衡 + Levenberg 对角阻尼 +
+  （2P/0F/7R 裁决后（执行时 1P/1F/7R 保留于 commit 1c55906），`bench/studies/v5_1b_scaled_newton/`：scaled+damped 机构交付且精确——求解器内部行列均衡 + Levenberg 对角阻尼 +
   floor-reached 停止类，旗标默认关 = legacy 逐位，套件 28 green；medium 活体 e2 恒等式 1.96e-10 超自设 ≤1e-10 阈值
   = cond~1e10 下 SuperLU 主序舍入的机器地板（阈值非预注册，非代数错）——**2026-07-24 用户裁决 cond-aware 读 PASS**
   （tol = max(1e-10, 10·κ₁·eps)，κ₁~1e10 → ~1e-5 量级，4 个 decade 余量，VERDICT §3；run.py 阈值改由 κ₁ 一范数估计现算）；amended 种子自第 0 迭代即坐在
@@ -288,19 +288,19 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   同 merit 收官（9.074e-11 ≈ 9.025e-11，取代 GV5.1 的 10 步 λ-collapse 爬行）、coarse 末 merit 2.044e-10 < GV5.1
   2.068e-10 仍在降、k=1 standalone F_BL −31 %/merit 2.3× 更深、μ 拒绝重试 0 次——缩放是活性成分，阻尼臂惰性；
   窗口问题被重构为需 above-band 种子的协议 → **GV5.1c ✓ EXECUTED 2026-07-24**（2P/1F/7R，
-  `cases/analysis/v5_1c_above_band_window/`：标定 above-band δ 扰动种子（ε = 1e4 → 种子 F_BL ≈ 1e4× 地板带）真正读
+  `bench/studies/v5_1c_above_band_window/`：标定 above-band δ 扰动种子（ε = 1e4 → 种子 F_BL ≈ 1e4× 地板带）真正读
   地板前 slope-2 窗——**地板之上处处无二次收缩**：干净下降段全是线搜索封顶折半（λ = 0.5 → p = 1.00 构造值），
   随后中程停滞（F_BL ~ 3e-2 → 1.3e-2/2.2e-2，10 迭代内从未进带，距地板 4262×/12867×），binding medium
   median p = 0.56 honest FAIL；紧 Newton 的障碍不止地板——其上 3–4 个 decade 还有一道中程下降屏障；
   近带种子是否有局部二次盆 = 后续问题 → **GV5.1d ✓ EXECUTED 2026-07-24**（2P/1F/7R，
-  `cases/analysis/v5_1d_near_band_window/`：近带种子 T1 = [1e-4, 1e-3]（coarse 5.4×/medium 35× 带）
+  `bench/studies/v5_1d_near_band_window/`：近带种子 T1 = [1e-4, 1e-3]（coarse 5.4×/medium 35× 带）
   ——**地板紧邻处也无二次盆**：coarse 一次封顶折半后爬行（λ → 6e-5）至 24× 地板仍未进带，medium 首个
   接受步把 F_BL 推离带（6.0e-4 → 9.8e-4，merit 靠块再平衡换得）后爬行至 493×；binding medium
   median p = 1.17 honest FAIL；μ 拒绝重试第三次为 0——平坦/锯齿 merit 邻域向下延伸到距地板
   ~1.5 个 decade 内，盆地搜寻穷尽（GV5.1b/1c/1d））；μ 拒绝重试再为 0；band (a) PASS 两腿
   （cond-aware e2 容差本次预注册）；8 线程临时约束下执行（runner 默认 16，壁时标记）；medium 不动点在
   8 线程下再次散布（第 4 个不动点 cl 0.28245999，coarse 逐位一致））→ **GV5.5 ✓ EXECUTED 2026-07-24**
-  （2P/1F/9R，`cases/analysis/v5_5_te_floor/`：破地板独立项——路线 (a) 变体 V1 = TE 出流行替换
+  （2P/1F/9R，`bench/studies/v5_5_te_floor/`：破地板独立项——路线 (a) 变体 V1 = TE 出流行替换
   （δ 载体行 6i+0 / H 载体行 6i+2 一阶外推，精确雅可比行，默认 OFF flag）**不破地板**——变体系统在
   种子处残差 9.8/4.8（替换行测得 TE 自然跳量），伪时间全步拒 stalled，binding m2（V1 终态上的原系统
   残差）= 5554×（coarse）/ 245998×（medium，8 线程散布条款触发，用种子自身 flag-OFF 地板）——
@@ -309,7 +309,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   flag-ON coarse 红（cl_rel 2.62% > 2.5%，撞 10-outer 帽）/ medium 边际过（2.49%）；flag 保持默认
   OFF（legacy 逐位一致），升级阶梯（upwind 边界通量 (a)-变体 / 闭包正则化 (b)）保持登记未开——
   开启 = 用户裁决）→ **GV5.2 ✓ EXECUTED 2026-07-25**（band (b) FAIL + 松环跨声速配方极限解剖，
-  `cases/analysis/v5_2_rae2822/`：RAE2822 跨声速 VII vs committed 实验（P1 M0.725/α2.55、P2
+  `bench/studies/v5_2_rae2822/`：RAE2822 跨声速 VII vs committed 实验（P1 M0.725/α2.55、P2
   M0.73/α3.19，Re 6.5e6，x_tr/c 0.03）——band (a) TE 楔角 9.46°/9.92°（mesh-crease，A4 方法）vs
   12.91° 坐标拟合，quadratic 可用无 fallback；**band (b) FAIL**（medium binding：P1 终端
   x_shock 0.6288 在 [0.495,0.580] 外（腿不收敛 RECORDED），P2 k=4 transpiration 失控
@@ -320,7 +320,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   outward-normal 惯例 + FP driver 廉价→深救援链（严格 1e-10 → Mach 延拓 → honesty-guarded
   stall-accept，2/10→10/22 次/腿承力）；判读：M ≥ 0.725 处松环位移厚度反馈太弱/太慢，后续跨声速
   VII 读数应走 tight/augmented 路径而非继续调松环）→ **GV5.3 ✓ EXECUTED 2026-07-25**（band (b)
-  honest FAIL + band (a) RECORDED input-limited，0P/1F/17R，`cases/analysis/v5_3_m6_cp/`：M6 机翼
+  honest FAIL + band (a) RECORDED input-limited，0P/1F/17R，`bench/studies/v5_3_m6_cp/`：M6 机翼
   TEST 2308（M0.8395/α3.06，Re_MAC 11.72e6，x_tr/c 0.05）对 committed 7 站 Cp——松环 GV3.1 配方
   逐字 + GV5.0 翼 case + P14 跨声速 FP 配方逐字（NEWTON_M6_RECIPE 导入），k=0 无黏基线经 W1
   接线守卫锚定 committed P14 cl_KJ 0.2823（medium）/0.2688（coarse），两级过。**band (a)
@@ -336,7 +336,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   实测诊断定位（同一种子跑 P14 ramp 落锚点 9 位一致——非 8 线程分支散布），addendum #1 修复；
   循环本身曾从带毒种子 9 outer 收敛。判读：GV5.2 的 3-D 对应——跨声速下松环位移厚度反馈太弱，
   修不动无黏族失配（LE 吸力不足、激波偏后）；后续读数走 tight/augmented 路径。未开跟进（用户
-  裁决））→ **GV5.4 ✓ EXECUTED 2026-07-25**（0P/1F/17R，`cases/analysis/v5_4_cost/`：
+  裁决））→ **GV5.4 ✓ EXECUTED 2026-07-25**（0P/1F/17R，`bench/studies/v5_4_cost/`：
   tight/augmented Newton 路径（GV5.1b scaled+damped driver + 可注入 `step_solve` 回调——库改动，
   默认 None = splu 逐位一致）在 124,216-DOF W2 系统（62,820 φ + 166 Γ + 61,230 BL）上实测。
   **band (a) RECORDED**：增广步 22.93 s vs 同 session 无黏锚 3.05 s/步 = **7.53×**，高于 ≤~2×
@@ -351,7 +351,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   A1 conf_newton 逐字；#4 W1 锚从陈旧 A1 0.26918 重订 P14 探针 G8.2 锁 0.2646）。判读：
   预注册要记的诚实负结果——翼尺度增广 Newton 需要更强的（Schur-aware、(A,Ψ) 结构化）约化空间
   预条件，成本才读得进 ≤2× 带；EW-forcing 变体登记未开（用户裁决）。**V5 五 gate 全部执行完，
-  关闭待用户裁决**）→ **GV5.6 ✓ CLOSED 2026-07-25**（0P/1F/17R，`cases/analysis/v5_6_schur_prec/`：
+  关闭待用户裁决**）→ **GV5.6 ✓ CLOSED 2026-07-25**（0P/1F/17R，`phases/p1/cases/analysis/v5_6_schur_prec/`：
   GV5.4 登记的 Schur-aware 预条件 follow-up，用户裁决开立；GV5.4 系统/种子/协议逐字、零库改动；
   rung 3 = exact-BL Schur + bdiag(AMG(Ŝ_φφ), M_Γ) 显式装入稀疏化修正 Ĉ = J_hB·D_BB⁻¹·J_Bh
   （每节点 6×6 D_BB = quasi-simultaneous 局部 BL 响应；n_fallback 0、t_corr 0.2 s、t_lu 1.8 s
@@ -364,7 +364,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   M_BB 升级路线 + EW-forcing 变体登记未开（用户裁决）；runner 默认 16 线程）；**V6 ✓ CLOSED
   2026-07-25**（尾迹面片 IBL 修正：GV6.0 裁决 2026-07-25 = Option A
   conforming-only + producer (i)（LS 腿与求解尾迹 IBL 留作登记后续）→ **GV6.1 ✓ CLOSED
-  2026-07-25**（6 PASS / 0 FAIL / 7 RECORDED，`cases/analysis/v6_1_wake_sheet/`：conforming
+  2026-07-25**（6 PASS / 0 FAIL / 7 RECORDED，`bench/studies/v6_1_wake_sheet/`：conforming
   尾迹面 δ* 源交付（`pyfp3d/viscous/wake_sheet.py` + `CouplingConfig.wake_transpiration`
   默认 OFF = legacy 逐位一致）——(a)(i)/(a)(ii) δ*_wake = 0 逐位一致 PASS（(a)(ii) 方法论：
   双腿 fresh-compile worktree 子进程——numba cache-load 与 fresh-compile 在
@@ -372,7 +372,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   `results/ab_cache_mode_isolation.csv`）；(b) 符号钉 MMS PASS（反对称 0.81 %、跳变 0.44 %，
   经验钉住 2026-07-25 addendum 的每面 ½ṁ 配方）；(c) W2 TE 连续每 outer 成立）→
   **GV6.2 ✓ CLOSED 2026-07-25**（0 PASS / 0 FAIL / 24 RECORDED，
-  `cases/analysis/v6_2_measured_effect/`：实测开关效应 Δ-cl +0.00015（+0.0547 %）/
+  `bench/studies/v6_2_measured_effect/`：实测开关效应 Δ-cl +0.00015（+0.0547 %）/
   TE 区 max |ΔCp| 0.00250 = A4 输入带的 0.022×/0.051× = **不显著**，L_rel {0.5,1.0,2.0}c
   扫描下稳健（新增 `CouplingConfig.wake_l_rel_chords` plumbing，默认逐位一致，+1 测试；
   1.0c 保持钉死 MODEL CHOICE）；XFOIL 尾迹源 Option A 裁决（reference_data 不动，G3
@@ -418,7 +418,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 执行**（实测尾迹 IBL 开关效应 vs A4 带：Δ-cl +0.00015（+0.0547 %）/ TE 区
 max |ΔCp| 0.00250 = A4 输入带的 0.022×/0.051× = 不显著，L_rel {0.5,1.0,2.0}c
 扫描稳健；XFOIL 尾迹方向检查 Option A——方向一致，速率 0.454c vs 钉死 1.0c
-照录——VERDICT `cases/analysis/v6_2_measured_effect/VERDICT.md`）：全套件
+照录——VERDICT `bench/studies/v6_2_measured_effect/VERDICT.md`）：全套件
 实测 652 @1455.80 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程
 账目不可直接比）；+1 vs 下档 651 = `tests/test_v6_wake_sheet.py`（GV6.2
 `wake_l_rel_chords` plumbing 测试））。
@@ -427,13 +427,13 @@ max |ΔCp| 0.00250 = A4 输入带的 0.022×/0.051× = 不显著，L_rel {0.5,1.
 PASS——(a)(ii) 双腿 fresh-compile，numba cache-load 不实性纪律——(b) 符号钉
 MMS PASS 经验钉住每面 ½ṁ addendum，(c) W2 每 outer PASS，(d) Δ-cl +0.00015 /
 TE 区 max |ΔCp| 0.00250 照录——VERDICT
-`cases/analysis/v6_1_wake_sheet/VERDICT.md`）：全套件实测 651
+`bench/studies/v6_1_wake_sheet/VERDICT.md`）：全套件实测 651
 @1606.31 s **@8 线程**；+7 vs 下档 644 = `tests/test_v6_wake_sheet.py`（7 新））。
 上一档 644+25+2（2026-07-25 Track V **V5 GV5.4
 执行**（M6 medium 增广步成本：band (a) RECORDED——增广步 22.93 s vs 无黏步
 3.05 s = 7.53×，高于 ≤~2× 带；band (b) honest FAIL——块预条件在 medium 不工作
 （block-Jacobi 发散、exact-BL Schur 1/4 步收敛）——VERDICT
-`cases/analysis/v5_4_cost/VERDICT.md`）：全套件实测 644
+`bench/studies/v5_4_cost/VERDICT.md`）：全套件实测 644
 @1230.61 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
 比）；+2 vs 下档 642 = `tests/test_v5_tight_scaled.py`（2 新：`step_solve` 回调
 接线 + 默认 None splu 逐位一致守卫））。
@@ -441,43 +441,43 @@ TE 区 max |ΔCp| 0.00250 照录——VERDICT
 执行**（M6 机翼方向+量级检查对 committed Cp：band (b) honest FAIL——黏性 Cp **没有**
 向 committed 7 站实验靠近（1/5 未遮蔽站 + pooled 反升）；band (a) RECORDED
 input-limited，Δcl_KJ −2.20 % 向下但低于 A4 地板——VERDICT
-`cases/analysis/v5_3_m6_cp/VERDICT.md`）：全套件实测 642
+`bench/studies/v5_3_m6_cp/VERDICT.md`）：全套件实测 642
 @1233.89 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
 比）；+0 vs 下档 642 = 无测试增减（本 gate 无库/测试代码改动；壁时重测））。
 上一档 642+25+2（2026-07-25 Track V **V5 GV5.2
 执行**（RAE2822 跨声速 VII vs committed 实验：band (b) FAIL + 松环配方极限解剖——
 所有计算激波在实验带下游 0.06–0.10c，4 腿仅 1 收敛——VERDICT
-`cases/analysis/v5_2_rae2822/VERDICT.md`）：全套件实测 642
+`bench/studies/v5_2_rae2822/VERDICT.md`）：全套件实测 642
 @1245.33 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
 比）；+6 vs 下档 636 = `tests/test_meshgen_rae2822.py`（5）+
 `tests/test_p2_wake_cut.py::test_kutta_probes_cambered_te`（1））。
 上一档 636+25+2（2026-07-24 Track V **V5 GV5.5
 执行**（TE 带 (B,δ) 公式层破地板独立项：V1 TE 出流行替换**不破地板**——binding
 m2 = 5554×/245998× 地板，"变差"档；破坏峰值在 LE 吸力区而非 TE；flag 保持默认
-OFF——VERDICT `cases/analysis/v5_5_te_floor/VERDICT.md`）：全套件实测 636
+OFF——VERDICT `bench/studies/v5_5_te_floor/VERDICT.md`）：全套件实测 636
 @1402.11 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
 比）；+9 vs 下档 627 = `tests/test_v5_te_outflow.py`（9））。
 上一档 627+25+2（2026-07-24 Track V **V5 GV5.1d
 执行**（近带种子读地板紧邻处二次盆：同样无盆——近带种子立即停滞，coarse 爬至
 24× 地板未进带，medium 首步推离带；binding medium median p = 1.17 honest FAIL——
-VERDICT `cases/analysis/v5_1d_near_band_window/VERDICT.md`）：全套件实测 627
+VERDICT `bench/studies/v5_1d_near_band_window/VERDICT.md`）：全套件实测 627
 @1340.77 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
 比；壁时明显低于同线程数 GV5.1c 账目的 3903 s——机器/缓存条件不同，标记引用）；
 +7 vs 下档 620 = `tests/test_v5_near_band_seed.py`（7））。
 上一档 620+25+2（2026-07-24 Track V **V5 GV5.1c
 执行**（above-band 种子读地板前 slope-2 窗：地板之上无二次收缩——λ 封顶折半 +
 中程停滞，binding medium median p = 0.56 honest FAIL——VERDICT
-`cases/analysis/v5_1c_above_band_window/VERDICT.md`）：全套件实测 620 @3903.16 s
+`bench/studies/v5_1c_above_band_window/VERDICT.md`）：全套件实测 620 @3903.16 s
 **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接比，
 机器空载）；+9 vs 下档 611 = `tests/test_v5_above_band_seed.py`（9））。
 上一档 611+25+2（2026-07-24 Track V **V5 GV5.1b
 执行**（scaled+damped 增广 Newton：机构精确交付，band (b) 窗口问题重构——VERDICT
-`cases/analysis/v5_1b_scaled_newton/VERDICT.md`）：全套件实测 611 @6556.77 s
+`bench/studies/v5_1b_scaled_newton/VERDICT.md`）：全套件实测 611 @6556.77 s
 @16 线程（wall 受合租负载 ~70–80 污染，标记引用；GV5.1 时空载为 1537 s）；
 +8 vs 下档 603 = `tests/test_v5_tight_scaled.py`（8））。
 上一档 603+25+2（2026-07-23 Track V **V5 GV5.1 执行**（增广紧耦合 (φ, Γ, U)
 Newton：band (a) FD 精确性两级 PASS，band (b) 二次尾段被 IBL 地板挡住 HONEST
-FAIL——VERDICT `cases/analysis/v5_tight_coupling/VERDICT.md`）：全套件实测
+FAIL——VERDICT `bench/studies/v5_tight_coupling/VERDICT.md`）：全套件实测
 603 @1537.09 s @16 线程；+20 vs 下档 583 = `tests/test_v5_tight_jacobian.py`（8）+
 `tests/test_v5_tight_edge.py`（7）+ `tests/test_v5_tight_system.py`（5））。
 上一档 583+25+2（2026-07-23 Track V **V5 GV5.0 执行**（M6 亚声速松耦合桥，

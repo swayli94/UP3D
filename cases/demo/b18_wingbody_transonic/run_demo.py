@@ -63,7 +63,7 @@ Gates:
                      gate; M0.5 anchor, M0.75 medium and the coarse
                      M0.60 point are recorded.
   GB18.4 (RECORDED)  pocket attribution: the A side cites the committed B26
-                     evidence (cases/analysis/b26_ls_transonic_ceiling/
+                     evidence (bench/studies/b26_ls_transonic_ceiling/
                      results/g1_summary.csv + g1_peaks.csv -- the A-side
                      dying peak sits in the junction strip x ~ 2.1-2.25,
                      q ~ 0, next to the fuselage); the C-side dying peak is
@@ -516,7 +516,7 @@ def run_medium(coarse):
                "class + high-M Newton -- same class as the conforming stall. "
                "Flat-side junction corridor at M0.5 measured clean in B28 "
                "(corrM 0.64, n_sup 0). A-side source: committed "
-               "cases/analysis/b26_ls_transonic_ceiling/results/g1_summary.csv "
+               "bench/studies/b26_ls_transonic_ceiling/results/g1_summary.csv "
                "+ g1_peaks.csv", True)
 
     # GB18.5 fuselage lift: live conforming value at the medium transonic top

@@ -190,7 +190,7 @@ pyfp3d/                    # Main package
 ├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
 │   │                       #   GV1.1 9 PASS / 2 FAIL, V1 ✓ CLOSED 2026-07-22 (VERDICT
-│   │                       #   cases/analysis/v1_ibl3_standalone/VERDICT.md); V1 does NOT touch
+│   │                       #   bench/studies/v1_ibl3_standalone/VERDICT.md); V1 does NOT touch
 │   │                       #   solve/ (pure additive package) — V2 adds the solve/ RHS
 │   │                       #   channels, V3 the loose-coupling driver (coupling.py)
 │   ├── __init__.py
@@ -208,7 +208,7 @@ pyfp3d/                    # Main package
 │   │                       #   lumping) + wall-RHS Galerkin assembly (wall_correction template,
 │   │                       #   b = −load(ṁ) blowing-positive, sign pinned by GV2.1(a)) +
 │   │                       #   per-zone u_e extraction per A4; GV2.1 23 PASS / 0 FAIL,
-│   │                       #   V2 ✓ CLOSED 2026-07-22 (cases/analysis/v2_transpiration_channel/)
+│   │                       #   V2 ✓ CLOSED 2026-07-22 (bench/studies/v2_transpiration_channel/)
 │   ├── coupling.py       # ✓ [V3] loose viscous–inviscid coupling: CouplingCase builders
 │   │                       #   (airfoil: LE-band Dirichlet pinning + station chain; closed
 │   │                       #   body: nose+tail stagnation-band pinning, tail-ṁ masking;
@@ -216,9 +216,9 @@ pyfp3d/                    # Main package
 │   │                       #   run_loose_coupling outer loop (IBL→δ*→ṁ→FP→u_e);
 │   │                       #   [V5/GV5.5] CouplingConfig.te_extrapolate (default OFF) +
 │   │                       #   te_outflow_pairs(case) TE↔upstream pairing;
-│   │                       #   GV3.1/3.2 cases/analysis/v3_loose_coupling/,
-│   │                       #   GV3.3 cases/analysis/v3_fuselage_smoke/,
-│   │                       #   GV5.0 cases/analysis/v5_m6_bridge/ (✓ EXECUTED 2026-07-23);
+│   │                       #   GV3.1/3.2 bench/studies/v3_loose_coupling/,
+│   │                       #   GV3.3 phases/p1/cases/analysis/v3_fuselage_smoke/,
+│   │                       #   GV5.0 bench/studies/v5_m6_bridge/ (✓ EXECUTED 2026-07-23);
 │   │                       #   [V6/GV6.1] CouplingConfig.wake_transpiration (default
 │   │                       #   OFF = legacy bit-identical) + run_loose_coupling wake=
 │   │                       #   hook: b_wake added into the wall body_source_rhs;
@@ -234,7 +234,7 @@ pyfp3d/                    # Main package
 │   │                       #   coincident face copy (2026-07-25 addendum — the Tᵀ
 │   │                       #   fold sums both copies, so ½ realizes [ρv_n] = ṁ);
 │   │                       #   GV6.1 6 PASS / 0 FAIL / 7 RECORDED, ✓ CLOSED
-│   │                       #   2026-07-25 (cases/analysis/v6_1_wake_sheet/)
+│   │                       #   2026-07-25 (bench/studies/v6_1_wake_sheet/)
 │   ├── tight.py          # ✓ [V5] fixed/linear operators of the augmented tight system:
 │   │                       #   W wall-load / S scatter / P pin-mask / L surface-divergence /
 │   │                       #   D closure-row / G per-zone u_e-recovery operators + the
@@ -243,7 +243,7 @@ pyfp3d/                    # Main package
 │   └── tight_driver.py   # ✓ [V5] TightPack + block/augmented residual + Jacobian +
 │                           #   newton_tight (splu + P8/P14 backtracking; probe guard =
 │                           #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
-│                           #   2026-07-23 (cases/analysis/v5_tight_coupling/)
+│                           #   2026-07-23 (bench/studies/v5_tight_coupling/)
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -714,24 +714,40 @@ phases/                    # ★★ ARCHIVE of finished phases (reorganised 2026
                            #   committed CSV/PNG is the evidence. For a guaranteed-runnable
                            #   phase-1/2 tree: git worktree add ../up3d-prereorg d224223
 
-bench/                     # ✓ Measurement harness -- NOT tests. Each script answers one
-│                           #   pre-registered question and commits a CSV; a number that lives
-│                           #   only in prose is not evidence. 7 scripts kept here = the
-│                           #   dependency closure behind the five product metrics; the other
-│                           #   45 are in phases/p2/bench/.
-├── run_capability_locks.py  # ★ the FAST capability tier: 7 gated anchors, 670 s.
-│                           #   RUN AT EVERY CLOSE-OUT (ritual step 0). Pins the thread caps
-│                           #   itself -- one of its locks asserts a wall clock, and uncapped
-│                           #   the same set takes 2940 s. Prints WHAT IT DOES NOT COVER.
-├── run_m1_gate.py           # product metric M1, both n_picard_seed legs; exit 1 while it FAILS
+bench/                     # ✓ Measurement harness -- NOT tests. ★ The line between this and
+│                           #   one-off studies was only DRAWN on 2026-08-10: before that,
+│                           #   bench/ and cases/analysis/ were two homes for the same
+│                           #   activity, split by which phase invented them. Merged here by
+│                           #   user ruling. The criterion is NOT old-vs-new, it is WILL IT BE
+│                           #   RUN AGAIN. See bench/README.md.
+├── run_capability_locks.py  # ★ the FAST capability tier, ritual step 0: 5 groups, 482 s.
+│                           #   Pins its own thread caps (one lock asserts a wall clock) and
+│                           #   prints WHAT IT DOES NOT COVER every run.
+├── run_bench.py             # GS0.3 per-round drift detection vs baseline_2026-07-28.csv
+├── run_m1_gate.py           # product metric M1, both seed legs; exit 1 while it FAILS
 ├── run_m3_budget.py         # M3's per-band error budget (LE 69.6 % / MID 20.7 %)
-├── run_capability_matrix.py # 13 configurations x ladder = 78 points (the M5-adjacent read)
+├── run_capability_matrix.py # 13 configurations x ladder = 78 points (M5-adjacent)
 ├── run_g82_anchor_check.py  # G8.2's physics anchors when the wall-clock assert masks them
 ├── run_le14_common_root.py  # the failure CLASSIFIER (never report a bare conv=False)
+├── run_gs31_precond.py      # reproduces the precond/EW decision, which is LIVE and carries
+│                           #   refutation conditions -- testing them needs this script
+├── run_le_response.py       # LE response measurement (imported by the above)
 ├── bitcheck.py              # DEVELOPMENT-time bit-identity A/B (ruling D1 -- not a test)
-└── gate_results/            # ✓ STAYS HERE: committed CSVs, the evidence base for every
-                           #   phase-two claim, cited by path from the capability boundary.
-                           #   The archived scripts reach ACROSS to it.
+├── gate_results/            # ✓ committed CSVs for the recurring set; cited by path from the
+│                           #   capability boundary. Archived scripts reach ACROSS to it.
+└── studies/                 # ★ ONE-OFF registered studies, 20 gates, each self-contained:
+                           #   PRE_REGISTRATION.md -> execution -> VERDICT.md -> results/.
+                           #   The pre-registration is committed BEFORE the measurement it
+                           #   governs; that ordering is the point. 23 phase-1 chains are in
+                           #   phases/p1/cases/analysis/ -- the archive KEEPS the old layout
+                           #   on purpose, since renaming a historical snapshot falsifies it.
+
+cases/                     # inputs and demos only, now that analysis/ merged into bench/
+├── reference_data/        # ✓ external ground truth -- NEVER edit
+├── meshes/                # ✓ mesh generators + committed mesh statistics. ★ Two level-set-only
+│                           #   families cannot leave yet: four KEPT tests still read them, and
+│                           #   they go when phase 3 amputates those LS legs.
+└── demo/                  # ✓ per-phase self-checking demos with committed figures
 
 docs/                      # only what phase 3 needs; the phase-1 plan/evidence is in phases/p1
 ├── dev_phase_two/          # ★ six files kept:
@@ -1284,14 +1300,14 @@ B32 conforming tip_taper adopted — wing-body medium ceiling M0.79 → M0.84
 reached**, 2026-07-21/22); Track V —
 **V1 ✓ CLOSED 2026-07-22 · GV1.1 9 PASS / 2 FAIL** (IBL3 solver core
 shipped: `pyfp3d/viscous/` surface_mesh/closures/ibl3, standalone prescribed-u_e;
-VERDICT `cases/analysis/v1_ibl3_standalone/VERDICT.md` — (a) ×2 = closure-family
+VERDICT `bench/studies/v1_ibl3_standalone/VERDICT.md` — (a) ×2 = closure-family
 fixed point, (e) first-run outflow 2h grid mode FAIL → fixed by the D-HB
 streamwise-tensor stabilization ε_s=0.02 = PASS,
 (b)(c)(d) PASS); **V2 ✓ CLOSED 2026-07-22 · GV2.1 23 PASS / 0 FAIL /
 16 RECORDED** (transpiration coupling shipped: `pyfp3d/viscous/transpiration.py`
 δ*→ṁ operator + wall-RHS channels in solve_laplace / solve_subsonic(+lifting) /
 newton_lifting / ls_newton — `None` ⇒ legacy path bit-identical; VERDICT
-`cases/analysis/v2_transpiration_channel/VERDICT.md` — (a) MMS cylinder-blowing
+`bench/studies/v2_transpiration_channel/VERDICT.md` — (a) MMS cylinder-blowing
 convergence strict-decreasing, order 1.65/1.64 ≥ 1.0, (b) five-driver ṁ=0
 bit-identity, (c) FD Jacobian 6.6e-09–7.2e-08 < 1e-5); **V3 ✓ CLOSED
 2026-07-22 · GV3.1/GV3.2 2 PASS / 4 FAIL / 23 RECORDED · GV3.3 0 PASS /
@@ -1299,7 +1315,7 @@ bit-identity, (c) FD Jacobian 6.6e-09–7.2e-08 < 1e-5); **V3 ✓ CLOSED
 + committed XFOIL reference `cases/reference_data/naca0012_viscous_xfoil/`
 + BoR smoke generator `cases/meshes/fuselage_bor/`; IBL3 local-basis
 crossflow fix 25.9/0.15 → 1.8e-4/1.6e-3 en route; VERDICTs
-`cases/analysis/v3_loose_coupling/` + `cases/analysis/v3_fuselage_smoke/` —
+`bench/studies/v3_loose_coupling/` + `phases/p1/cases/analysis/v3_fuselage_smoke/` —
 Δcl PASS ratio 0.542 ∈ [0.5, 2.0], loose loop 4–5 outer iters at ω = 1.0
 incl. transonic M 0.72 record (4 iters, no tuning); honest FAILs localized:
 cf +44 % at the first post-trip station only (XFOIL e^N ramp vs
@@ -1309,7 +1325,7 @@ measured stern instability — V4 skip criterion met by letter (GV3.2),
 counter-evidence logged (GV3.3) — **V4 ⊘ SKIPPED 2026-07-22** (user-directed;
 reopen trigger = V5 stall / pre-V5 closed-body scope)); **V5 ✓ CLOSED
 2026-07-25 · GV5.0 ✓ EXECUTED (16 RECORDED / 0 FAIL)** (M6 subsonic
-loose-coupling bridge, VERDICT `cases/analysis/v5_m6_bridge/`: bridge answer
+loose-coupling bridge, VERDICT `bench/studies/v5_m6_bridge/`: bridge answer
 = the loose loop is NOT sufficient on the 3-D lifting wing — coarse
 root-upper-TE separation-patch runaway ṁ_max ×12.4 (GV3.3-stern class),
 medium patch refined away but bounded δ* limit cycle 2–12 %/k, tol 1e-3
@@ -1320,7 +1336,7 @@ wall-time polluted by external load, quoted flagged) · **GV5.1 ✓ EXECUTED
 2026-07-23 (9 PASS / 1 FAIL / 36 RECORDED)** (augmented tight (φ, Γ, BL)
 Newton shipped: `pyfp3d/viscous/tight.py` + `tight_driver.py`,
 `tests/v5_state.py` + 3 tight test files; VERDICT
-`cases/analysis/v5_tight_coupling/VERDICT.md`, design record
+`bench/studies/v5_tight_coupling/VERDICT.md`, design record
 `docs/design_track_v.md` §12 — band (a) FD exactness PASS both levels,
 worst sweet-spot 2.2e-8 coarse / 5.1e-9 medium; band (b) quadratic tail
 HONEST FAIL = the intrinsic floor of the steady IBL residual on the
@@ -1330,7 +1346,7 @@ standalone nor as polish, N_total 14/13 vs loose 4/5; finding: the
 committed GV3.1 medium fixed point is NOT reproducible — IBL-floor
 trajectory scatter, diagnosis committed, HEAD-regen seed user-accepted;
 IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED,
-`cases/analysis/v5_ibl_floor/`: raw cond 4e10–4e13 mostly a scaling
+`bench/studies/v5_ibl_floor/`: raw cond 4e10–4e13 mostly a scaling
 artifact (equilibrated 2e4/7e5/1e7, sub-1e-6 → 0/0/2, no exact null
 directions), genuine scaled (A, Ψ) stiffness 1e5–1e7 remains; the floor
 residual lives at the TE band (B, δ) equations inside J's range; closure
@@ -1338,7 +1354,7 @@ floors inactive; eps_diff ×4 ≤ 6 %; the pseudo-time controller bottoms
 out = a formulation floor globalization alone cannot pass); **GV5.1b ✓
 EXECUTED 2026-07-24 (2 PASS / 0 FAIL / 7 RECORDED adjudicated
 2026-07-24; 1P/1F/7R as executed, preserved in commit 1c55906,
-`cases/analysis/v5_1b_scaled_newton/`, design record
+`bench/studies/v5_1b_scaled_newton/`, design record
 `docs/design_track_v.md` §14)**: the scaled + damped machinery is
 delivered and exact (solver-internal row/column equilibration +
 Levenberg damping + floor-reached stop, flags default OFF = legacy
@@ -1353,7 +1369,7 @@ descending below GV5.1, k=1 standalone F_BL −31 % / merit 2.3× below,
 μ rejection-retries 0 (scaling the active ingredient); the window
 question reframed to an above-band-seed protocol → **GV5.1c ✓ EXECUTED
 2026-07-24 (2 PASS / 1 FAIL / 7 RECORDED,
-`cases/analysis/v5_1c_above_band_window/`, design record
+`bench/studies/v5_1c_above_band_window/`, design record
 `docs/design_track_v.md` §15)**: calibrated above-band seeds (δ×(1+ε),
 ε = 1e4 → F_BL ≈ 1e4× the floor band) — the pre-floor slope-2 window
 MEASURED: NO quadratic regime above the floor (λ = 0.5-capped halvings
@@ -1362,7 +1378,7 @@ reaching the band; binding medium median p = 0.56 honest FAIL; μ retries
 0 again; band (a) PASS with the cond-aware e2 tolerance pre-registered);
 the tight-Newton obstacle is bigger than the floor — a mid-range descent
 barrier 3–4 decades above it → **GV5.1d ✓ EXECUTED 2026-07-24 (2 PASS /
-1 FAIL / 7 RECORDED, `cases/analysis/v5_1d_near_band_window/`, design
+1 FAIL / 7 RECORDED, `bench/studies/v5_1d_near_band_window/`, design
 record `docs/design_track_v.md` §16)**: near-band seeds (T1 = [1e-4,
 1e-3]; coarse 5.42× / medium 35× the band) — NO quadratic basin
 adjacent to the floor either (coarse crawls to 24× floor, never
@@ -1371,7 +1387,7 @@ the band, then crawls to 493×; binding medium median p = 1.17 honest
 FAIL; μ retries 0 a third time) — the flat/ragged merit neighborhood
 extends down to within ~1.5 decades of the floor: basin hunting
 exhausted (GV5.1b/1c/1d) → **GV5.5 ✓ EXECUTED 2026-07-24 (2 PASS /
-1 FAIL / 9 RECORDED, `cases/analysis/v5_5_te_floor/`, design record
+1 FAIL / 9 RECORDED, `bench/studies/v5_5_te_floor/`, design record
 `docs/design_track_v.md` §17)**: the standalone TE-band (B, δ)
 formulation item — route (a) variant V1 = TE-outflow row replacement
 (rows 6i+0/6i+2 first-order extrapolation, exact Jacobian rows,
@@ -1383,7 +1399,7 @@ pre-registered "worse" clause; the damage peaks at the LE suction zone
 levels; the flag stays default-OFF (legacy bit-identical) and the
 escalation ladder stays registered-not-opened (opening = user's
 adjudication) → **GV5.2 ✓ EXECUTED 2026-07-25 (band (b) FAIL + the
-loose-recipe transonic-limit anatomy, `cases/analysis/v5_2_rae2822/`,
+loose-recipe transonic-limit anatomy, `bench/studies/v5_2_rae2822/`,
 design record `docs/design_track_v.md` §18)**: RAE2822 P1/P2 VII vs the
 committed experiment — band (a) TE wedge 9.46°/9.92° mesh-crease vs
 12.91° ordinate fit, quadratic available, no fallback; **band (b)
@@ -1400,7 +1416,7 @@ plateaus; reading: the loose displacement-thickness feedback is too
 weak at M ≥ 0.725 ⇒ the next transonic-VII reads come from the
 tight/augmented path, not loose-loop tuning → **GV5.3 ✓ EXECUTED
 2026-07-25 (band (b) honest FAIL + band (a) RECORDED input-limited,
-0P/1F/17R, `cases/analysis/v5_3_m6_cp/`, design record
+0P/1F/17R, `bench/studies/v5_3_m6_cp/`, design record
 `docs/design_track_v.md` §19)**: M6 wing TEST 2308 M0.8395/α3.06 vs the
 committed 7-station Cp — band (a): Δcl_KJ −2.20 % medium / −1.03 %
 coarse, direction DOWN both estimators but under the A4 2.5 % floor
@@ -1417,7 +1433,7 @@ driver cold-start short-circuit — the ramp never ran — fixed under
 addendum #1; NOT an 8-thread branch scatter); reading: the 3-D
 counterpart of GV5.2 — further reads belong to the tight/augmented
 path → **GV5.4 ✓ EXECUTED 2026-07-25 (0P/1F/17R,
-`cases/analysis/v5_4_cost/`, design record
+`bench/studies/v5_4_cost/`, design record
 `docs/design_track_v.md` §20)**: augmented-step cost on the 124,216-DOF
 M6 medium W2 system (the GV5.1b scaled+damped driver + an injectable
 `step_solve` solve callback — library change, default None = splu
@@ -1440,7 +1456,7 @@ stronger (Schur-aware, (A,Ψ)-structured) reduced-space preconditioner
 before cost reads into the ≤ ~2× band; the EW-forcing variant
 registered-not-opened (user adjudication); **V5 CLOSED — all five
 gates executed** → **GV5.6 ✓ CLOSED 2026-07-25 (0P/1F/17R,
-`cases/analysis/v5_6_schur_prec/`, design record
+`phases/p1/cases/analysis/v5_6_schur_prec/`, design record
 `docs/design_track_v.md` §21)**: the GV5.4 registered Schur-aware
 preconditioner follow-up executed (user-adjudicated opening; the GV5.4
 system/seed/protocol verbatim, NO library change — W4 diff-scope
@@ -1468,8 +1484,8 @@ producer (i); the LS leg + the solved wake IBL = recorded follow-ups)
 shipped: `pyfp3d/viscous/wake_sheet.py` + the
 `CouplingConfig.wake_transpiration` default-OFF hook = legacy
 bit-identical, `tests/test_v6_wake_sheet.py` (8); VERDICTs
-`cases/analysis/v6_1_wake_sheet/VERDICT.md` +
-`cases/analysis/v6_2_measured_effect/VERDICT.md` — GV6.1 (a)(i)/(a)(ii)
+`bench/studies/v6_1_wake_sheet/VERDICT.md` +
+`bench/studies/v6_2_measured_effect/VERDICT.md` — GV6.1 (a)(i)/(a)(ii)
 δ*_wake = 0 bit-identity PASS, (b) sign-pin MMS PASS (antisym
 0.81 %, jump 0.44 %, empirically pins the 2026-07-25 per-face ½ṁ
 addendum), (c) W2 TE-continuity every outer PASS; GV6.2 measured
@@ -1488,7 +1504,7 @@ user-adjudicated 2026-07-25 per the GV6.0 clause)); Track A — A1, A2,
 **A3 ✓ CLOSED 2026-07-18**, **A4
 RECORDED 2026-07-22** (wall u_e error-band study = Track-V input-quality
 prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
-`cases/analysis/a4_ue_error_band/`) (A3 = response
+`phases/p1/cases/analysis/a4_ue_error_band/`) (A3 = response
 to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of

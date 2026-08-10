@@ -112,7 +112,7 @@ progressing loose → tight coupling.
   invariant: crossflow unknowns (B, Ψ, C_τ2) ≈ 0 (structural lock); (e) surface
   refinement ×2: error drops, measured order recorded.
   **EXECUTED 2026-07-22 → 9 PASS / 2 FAIL** (pre-registered, no re-spec;
-  VERDICT + evidence `cases/analysis/v1_ibl3_standalone/`):
+  VERDICT + evidence `bench/studies/v1_ibl3_standalone/`):
   (a) FAIL ×2 — H +3.76 % at outflow and δ* exponent 0.5288, both the
   closure family's own fixed point H*≈2.7083 ≠ Blasius (Stage-2 finding,
   pre-registered as known risk); (b) PASS 0.07 %; (c) PASS P1/P2/P3;
@@ -157,7 +157,7 @@ independent of the LS-side (b)-class work — parallelizable.
   sketch's "δ* = 0 bit-identical" clause lives here now; (c) conforming Newton
   Jacobian stays EXACT under lagged ṁ (FD check).
   **EXECUTED 2026-07-22 → 23 PASS / 0 FAIL / 16 RECORDED** (pre-registered,
-  no re-spec; VERDICT + evidence `cases/analysis/v2_transpiration_channel/`):
+  no re-spec; VERDICT + evidence `bench/studies/v2_transpiration_channel/`):
   (a) relmax 2.1572e-02 > 6.8738e-03 > 2.2062e-03 strict decrease, measured
   orders 1.650/1.640 ≥ 1.0 — the transpiration sign convention pinned by the
   analytic match (a flipped sign lands at O(2)); (b) bit-identical on all
@@ -199,7 +199,7 @@ logically independent of V1; V3 needs both.
   pre-registered + two same-day addenda (cf compared in the freestream frame —
   XFOIL DUMP cf is freestream-normalized, our OUT_CF1 is local; Dirichlet
   inflow-band stations labeled `pinned`, excluded from all statistics);
-  VERDICT + evidence `cases/analysis/v3_loose_coupling/`, XFOIL reference +
+  VERDICT + evidence `bench/studies/v3_loose_coupling/`, XFOIL reference +
   generation script `cases/reference_data/naca0012_viscous_xfoil/`.
   **PASS Δcl**: cl 0.2844 → 0.2719, XFOIL's own decrement 0.0230, ratio
   0.542 ∈ [0.5, 2.0]. **FAIL cf** upper/lower worst +43.7 %/+44.8 % at the
@@ -289,7 +289,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
 
 - [x] **GV5.0 M6 subsonic loose-coupling bridge** (RECORDED, entry check; added
   2026-07-22, user-directed; **EXECUTED 2026-07-23, 16 RECORDED / 0 FAIL** —
-  evidence `cases/analysis/v5_m6_bridge/`: the loose loop does NOT converge
+  evidence `bench/studies/v5_m6_bridge/`: the loose loop does NOT converge
   ≤10 at either level — coarse: root-upper-TE separation patch (H 4–5.5)
   feedback runaway, ṁ_max ×12.4 (GV3.3-stern class); medium: refinement
   removes the patch (0 TE nodes H>3.5), runaway gone, but a bounded
@@ -313,7 +313,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   the GV3.1 case; outer iterations ≤ half the V3 loose loop. **EXECUTED
   2026-07-23, 9 PASS / 1 FAIL / 36 RECORDED** (pre-registered incl. Addenda
   1–2, amended seed = the loose-converged state, user-adjudicated; evidence
-  `cases/analysis/v5_tight_coupling/`, VERDICT + diagnosis committed) — (a) FD
+  `bench/studies/v5_tight_coupling/`, VERDICT + diagnosis committed) — (a) FD
   exactness **PASS** both levels (worst sweet-spot coarse 2.246e-8 seed /
   2.244e-8 endpoint, medium 5.074e-9 seed+endpoint; masked 0/1236 + 0/2460;
   veps omission ≤ 3.0e-8 scaled, decision 5); (b) quadratic tail **HONEST
@@ -336,7 +336,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   zone switch a smooth weighting; the choice is recorded in the gate.
 - [x] **GV5.2 2-D transonic VII vs experiment — EXECUTED 2026-07-25,
   band (b) FAIL + the loose-recipe transonic-limit anatomy
-  (`cases/analysis/v5_2_rae2822/`)**: RAE2822
+  (`bench/studies/v5_2_rae2822/`)**: RAE2822
   (`cases/reference_data/rae2822_experiment/`, M0.725/α2.55 + M0.73/α3.19,
   Re 6.5e6): shock location within a pre-registered band of experiment + Cp RMS
   recorded. The NEW 2.5-D RAE2822 mesh family
@@ -350,7 +350,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   feedback is too weak at M ≥ 0.725 (motivates the tight/augmented path).
 - [x] **GV5.3 M6 wing direction+magnitude check — EXECUTED 2026-07-25,
   band (b) honest FAIL + band (a) RECORDED input-limited
-  (`cases/analysis/v5_3_m6_cp/`)** (re-anchored 2026-07-22, user-directed:
+  (`bench/studies/v5_3_m6_cp/`)** (re-anchored 2026-07-22, user-directed:
   `cases/reference_data/onera_m6_experiment/` holds Cp only — no experimental
   CL value is committed, so this gate does NOT use the external "experiment ≈
   0.26–0.27" figure). (a) CL moves **down** from the same-mesh k = 0 inviscid
@@ -372,7 +372,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   belong to the tight/augmented path. (The pre-P14 "0.245
   vs 0.288" framing is superseded — see scope guards.)
 - [x] **GV5.4 cost — EXECUTED 2026-07-25 (0 PASS / 1 FAIL / 17
-  RECORDED, `cases/analysis/v5_4_cost/`)**: augmented step 22.93 s vs the
+  RECORDED, `bench/studies/v5_4_cost/`)**: augmented step 22.93 s vs the
   in-session inviscid anchor 3.05 s/step = **7.53×, above the ≤ ~2×
   reference band** (recorded either way per the registration; 4/5
   augmented steps carry capped-GMRES work, annotated; 8-thread session
@@ -396,7 +396,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   EXECUTED 2026-07-24 — 2 PASS / 1 FAIL / 9 RECORDED)**. Target: the
   steady-IBL residual floor (max-norm coarse 3.154e-6 / medium 1.710e-6,
   the committed loose-final floors) localized by the committed diagnosis
-  (`cases/analysis/v5_ibl_floor/` findings Q5 = design doc §13 item 3) in
+  (`bench/studies/v5_ibl_floor/` findings Q5 = design doc §13 item 3) in
   the **TE-band (B, δ) equations**, lying essentially entirely inside J's
   range — a formulation floor (Q7: the pseudo-time controller bottoms out
   with the residual frozen), not a solver limitation, and not crossable by
@@ -407,7 +407,7 @@ band, so exact Schur elimination may not pay: measure, don't assume).
   δ-carrier row 6i+0 `R = δ_i − δ_up`, H-carrier row 6i+2
   `R = H_i − H_up`, exact Jacobian rows, CSR in-pattern guard, default-OFF
   flag `te_extrapolate`; `te_outflow_pairs` supplied by the case layer).
-  **Outcome (cases/analysis/v5_5_te_floor/VERDICT.md): V1 does NOT break
+  **Outcome (bench/studies/v5_5_te_floor/VERDICT.md): V1 does NOT break
   the floor** — the variant system sees the amended seed at residual
   9.8/4.8 (the replaced rows measure the natural TE jump), the pseudo-time
   stalls (all steps rejected, cfl → 1e-3 floor), and the BINDING m2
@@ -486,7 +486,7 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
 - [x] **GV6.1 conforming sheet source (✓ CLOSED 2026-07-25 — 6 PASS /
   0 FAIL / 7 RECORDED; PRE_REGISTRATION + the 2026-07-25 per-face ½ṁ
   addendum committed before the first code change (`f4e90de`); VERDICT
-  `cases/analysis/v6_1_wake_sheet/VERDICT.md`)**: δ*_wake enters via the
+  `bench/studies/v6_1_wake_sheet/VERDICT.md`)**: δ*_wake enters via the
   `constraints/wake.py` reduce RHS (Tᵀ b_wake, ½ṁ per coincident face
   copy); TE thickness continuity asserted (W2, every outer); δ*_wake = 0
   **bit-identical** — (a)(i)/(a)(ii) PASS; (b) sign-pin MMS PASS
@@ -498,7 +498,7 @@ continuity δ_wake(TE) = δ*_upper + δ*_lower.
 - [x] **GV6.2 measured effect** (**✓ CLOSED 2026-07-25 — 0 PASS / 0 FAIL /
   24 RECORDED**; PRE_REGISTRATION committed before execution (`ab89483`),
   the XFOIL wake-reference sourcing RULED Option A (user); VERDICT
-  `cases/analysis/v6_2_measured_effect/VERDICT.md`): wake-IBL on/off cl (and
+  `bench/studies/v6_2_measured_effect/VERDICT.md`): wake-IBL on/off cl (and
   TE-region Cp) delta on
   the GV3.1 case, direction-checked against XFOIL's wake modelling; RECORDED
   with the A4 input band quoted.
@@ -587,7 +587,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
 - V1 — **✓ CLOSED 2026-07-22 · GV1.1 9 PASS / 2 FAIL** — IBL3
   solver core shipped (`viscous/surface_mesh.py`, `closures.py`, `ibl3.py`;
   wake unknowns reserved in the data layout). GV1.1 verdict + evidence:
-  `cases/analysis/v1_ibl3_standalone/VERDICT.md`; implementation record:
+  `bench/studies/v1_ibl3_standalone/VERDICT.md`; implementation record:
   `docs/design_track_v.md` §9. (a) ×2 accepted as recorded FAIL at closing
   (user-directed) = closure-family fixed point, FE matches the same-closure
   2-D march to <1e-4; (e) first-run
@@ -599,7 +599,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   (`viscous/transpiration.py`; conforming-Newton external-RHS channel +
   compressible-Picard RHS threading; LS rides the existing `b_base`). Gate
   GV2.1 (manufactured-blowing exactness + ṁ=0 bit-identity on all drivers +
-  FD) verdict + evidence: `cases/analysis/v2_transpiration_channel/VERDICT.md`
+  FD) verdict + evidence: `bench/studies/v2_transpiration_channel/VERDICT.md`
   — (a) orders 1.650/1.640 ≥ 1.0, sign pinned analytically; (b) five legs
   bit-identical; (c) Jacobian bit-invariant + FD exact under lagged ṁ.
 - V3 — **✓ CLOSED 2026-07-22 · GV3.1/GV3.2 2 PASS / 4 FAIL / 23 RECORDED ·
@@ -608,7 +608,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   outer loop; committed XFOIL reference
   `cases/reference_data/naca0012_viscous_xfoil/`; BoR smoke-mesh generator
   `cases/meshes/fuselage_bor/`). Gate verdicts + evidence:
-  `cases/analysis/v3_loose_coupling/VERDICT.md` (GV3.1/3.2 — PASS Δcl ratio
+  `bench/studies/v3_loose_coupling/VERDICT.md` (GV3.1/3.2 — PASS Δcl ratio
   0.542 ∈ [0.5, 2.0] vs XFOIL's own decrement, PASS loop convergence 5 iters
   ω = 1.0 (transonic M 0.72 record: 4 iters, no tuning); FAILs localized:
   cf +44 % at the first post-trip station only (XFOIL e^N ramp vs
@@ -631,7 +631,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   Schur-aware preconditioner follow-up, user-adjudicated: 0P/1F/17R, the
   corrected-AMG direction measured dead at wing scale) — tight coupling: augmented (φ, Γ, BL) Newton on
   P8/P14. **Entry check GV5.0 ✓ EXECUTED 2026-07-23** (16 RECORDED / 0 FAIL;
-  `cases/analysis/v5_m6_bridge/`): the bridge answer is that the loose loop is
+  `bench/studies/v5_m6_bridge/`): the bridge answer is that the loose loop is
   NOT sufficient on the 3-D lifting wing — coarse runs away on a root-upper-TE
   separation patch (ṁ_max ×12.4, the GV3.3-stern/Veldman class), medium
   resolves the patch away but sits in a bounded unconverged δ* cycle; ΔCL DOWN
@@ -641,7 +641,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   both TE natural outflow, root symmetry natural, tip band z > 0.95·b_semi
   pinned + ṁ-masked via the GV3.3 machinery) + `tests/test_v5_wing_case.py`
   (5). **GV5.1 ✓ EXECUTED 2026-07-23** (9 PASS / 1 FAIL / 36 RECORDED;
-  `cases/analysis/v5_tight_coupling/`, VERDICT + PRE_REGISTRATION Addenda
+  `bench/studies/v5_tight_coupling/`, VERDICT + PRE_REGISTRATION Addenda
   1–2): the exact augmented Newton is delivered and FD-verified at both
   levels (worst sweet-spot 2.2e-8 coarse / 5.1e-9 medium; new machinery
   `viscous/tight.py` + `viscous/tight_driver.py`, `tests/v5_state.py` + 3
@@ -654,7 +654,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   point is not reproducible (IBL-floor trajectory scatter; diagnosis
   committed; HEAD-regen seed user-accepted). **IBL-floor follow-up
   diagnosis ✓ EXECUTED 2026-07-24** (14 RECORDED, no bands;
-  `cases/analysis/v5_ibl_floor/`): the near-null cluster PERSISTS at the
+  `bench/studies/v5_ibl_floor/`): the near-null cluster PERSISTS at the
   loose-converged states, carried by the turbulent (A, Ψ) variables
   mid-chord → TE; the raw cond 4e10–4e13 is MOSTLY a scaling artifact
   (row+col equilibration → 2e4/7e5/1e7, sub-1e-6 count 501/500/1082 →
@@ -668,7 +668,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   that globalization alone cannot pass. **GV5.1b ✓ EXECUTED 2026-07-24**
   (2 PASS / 0 FAIL / 7 RECORDED adjudicated; 1 PASS / 1 FAIL / 7
   RECORDED as executed, preserved in commit 1c55906;
-  `cases/analysis/v5_1b_scaled_newton/`,
+  `bench/studies/v5_1b_scaled_newton/`,
   VERDICT + PRE_REGISTRATION committed 8b7793f): the scaled + damped
   Newton machinery is delivered and exact — solver-internal row/column
   equilibration + Levenberg diagonal damping + a floor-reached stop,
@@ -696,9 +696,9 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   answered: it needs an above-band seed (early loose iterate /
   perturbed δ*) = candidate GV5.1c; breaking the floor itself = the
   TE-band (B, δ) formulation work, queued. VERDICT
-  `cases/analysis/v5_1b_scaled_newton/VERDICT.md`, design record
+  `bench/studies/v5_1b_scaled_newton/VERDICT.md`, design record
   `docs/design_track_v.md` §14. **GV5.1c ✓ EXECUTED 2026-07-24**
-  (2 PASS / 1 FAIL / 7 RECORDED; `cases/analysis/v5_1c_above_band_window/`,
+  (2 PASS / 1 FAIL / 7 RECORDED; `bench/studies/v5_1c_above_band_window/`,
   VERDICT + PRE_REGISTRATION committed 1e90d59 pre-execution; the
   above-band-seed window read, user-directed): the above-band seeds
   delivered as pre-registered (the amended seed + δ×(1+ε) at the free
@@ -725,7 +725,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   0.28245999, unperturbed F_BL 1.824e-6 = 1.07× floor; coarse
   bit-identical). Design record `docs/design_track_v.md` §15.
   **GV5.1d ✓ EXECUTED 2026-07-24** (2 PASS / 1 FAIL / 7 RECORDED;
-  `cases/analysis/v5_1d_near_band_window/`, VERDICT + PRE_REGISTRATION
+  `bench/studies/v5_1d_near_band_window/`, VERDICT + PRE_REGISTRATION
   committed pre-execution; the near-band seed, user-directed): the
   seeds calibrated INTO the near-band windows as pre-registered (T1 =
   [1e-4, 1e-3]; coarse ε = 10 → F_BL 1.711e-4 = 5.42× the band,
@@ -749,7 +749,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   bit-identical). Design record `docs/design_track_v.md` §16. V5
   stays **OPEN**; the V4-reopen trigger stays parked.
 - **GV5.5 TE-band (B, δ) formulation — EXECUTED 2026-07-24 (2 PASS /
-  1 FAIL / 9 RECORDED, `cases/analysis/v5_5_te_floor/`)**: route (a)
+  1 FAIL / 9 RECORDED, `bench/studies/v5_5_te_floor/`)**: route (a)
   variant V1 = TE-outflow row replacement (first-order extrapolation on
   the δ-carrier row 6i+0 and the H-carrier row 6i+2, exact Jacobian rows,
   default-OFF flag `te_extrapolate`) does **NOT** break the floor — the
@@ -779,7 +779,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   (deferred, see scope guards).
 - **GV5.2 RAE2822 transonic VII vs committed experiment — EXECUTED
   2026-07-25 (band (b) FAIL + 3 recipe-limit RECORDED + 2
-  outside-envelope RECORDED, `cases/analysis/v5_2_rae2822/`)**: the
+  outside-envelope RECORDED, `bench/studies/v5_2_rae2822/`)**: the
   loose GV3.1 recipe (ω = 1.0, ≤ 10 outer, tol_ds = 1e-3) with the GV3.2
   Newton-driver protocol at the two dataset-labeled points (P1
   M 0.725/α 2.55, P2 M 0.73/α 3.19, Re 6.5e6, x_tr/c = 0.03). Band (a):
@@ -815,7 +815,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   temporary 8-thread session constraint (~43 min for 4 legs).
 - **GV5.3 M6 wing direction+magnitude check vs committed Cp — EXECUTED
   2026-07-25 (band (b) honest FAIL + band (a) RECORDED input-limited,
-  0P/1F/17R, `cases/analysis/v5_3_m6_cp/`)**: the loose GV3.1 recipe on
+  0P/1F/17R, `bench/studies/v5_3_m6_cp/`)**: the loose GV3.1 recipe on
   the GV5.0 wing case at TEST 2308 (M 0.8395/α 3.06, Re_MAC 11.72e6,
   x_tr/c 0.05), the P14 transonic FP recipe verbatim (NEWTON_M6_RECIPE
   imported; the k = 0 inviscid baseline anchored to the committed P14
@@ -851,7 +851,7 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   2026-07-24). Executed under the temporary 8-thread session constraint
   (coarse 1721 s + medium 12479 s).
 - **GV5.4 augmented-step cost on M6 medium — EXECUTED 2026-07-25 (0
-  PASS / 1 FAIL / 17 RECORDED, `cases/analysis/v5_4_cost/`)**: the
+  PASS / 1 FAIL / 17 RECORDED, `bench/studies/v5_4_cost/`)**: the
   tight/augmented Newton path (the GV5.1b scaled+damped driver with an
   injectable `step_solve` solve callback — a library change, default
   `None` = splu bit-identical) measured on the 124,216-DOF W2 system
@@ -893,9 +893,9 @@ the inviscid-discretization CL gap** — the inviscid baseline is now clean to �
   unknowns reserved). GV6.0 RULED 2026-07-25 (Option A: conforming-only +
   producer (i); the LS leg + solved wake IBL = recorded follow-ups), GV6.1 ✓
   CLOSED 2026-07-25 (conforming sheet source + δ*_wake=0 bit-identity, 6
-  PASS / 0 FAIL / 7 RECORDED, VERDICT cases/analysis/v6_1_wake_sheet/),
+  PASS / 0 FAIL / 7 RECORDED, VERDICT bench/studies/v6_1_wake_sheet/),
   GV6.2 ✓ CLOSED 2026-07-25 (0 PASS / 0 FAIL / 24 RECORDED, VERDICT
-  cases/analysis/v6_2_measured_effect/): the measured on/off effect Δ-cl
+  bench/studies/v6_2_measured_effect/): the measured on/off effect Δ-cl
   +0.00015 (+0.0547 %) / TE max |ΔCp| 0.00250 sits at 0.022×/0.051× the A4
   input band = NOT significant, L-robust over the {0.5, 1.0, 2.0} c sweep
   (1.0 c stays pinned); the XFOIL wake direction check (Option A sourcing)

@@ -221,7 +221,7 @@ data), cited inline above. No files were modified for this document.*
 
 The GV6.2 measured effect came in NOT significant vs the A4 input band
 (0 PASS / 0 FAIL / 24 RECORDED,
-`cases/analysis/v6_2_measured_effect/VERDICT.md`: on/off Δ-cl +0.00015
+`bench/studies/v6_2_measured_effect/VERDICT.md`: on/off Δ-cl +0.00015
 (+0.0547 %) = 0.022× the 2.5 % band; TE-region max |ΔCp| 0.00250 =
 0.051× the propagated δCp_A4 0.0493; L-robust over L_rel ∈ {0.5, 1.0,
 2.0} c; XFOIL wake direction agrees, rate/TE-anchor model-form

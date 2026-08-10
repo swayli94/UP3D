@@ -508,7 +508,7 @@ class TestM6WakeFree:
 
 
 # ---------------------------------------------------------------------------
-# B25 inboard fragment clip (cases/analysis/b25_inboard_fragment_clip):
+# B25 inboard fragment clip (phases/p1/cases/analysis/b25_inboard_fragment_clip):
 # the q >= 0 junction-station clip replaced by the conforming sheet's
 # fragment topology -- the sheet runs inboard until it hits the fuselage
 # surface (trace = waterline -> tail tip, ON the wall) or, aft of the body,
@@ -613,7 +613,7 @@ class TestInboardFragmentClip:
 # B28: WakeLevelSet sheet_direction -- the GEOMETRIC ruling direction split
 # from the physical (convection) direction. Default None = ruled along
 # ``direction`` (bit-identical); the knob exists for the cl_fus flat-vs-
-# tilted decoupling leg (cases/analysis/b28_cl_fus_flat_sheet).
+# tilted decoupling leg (bench/studies/b28_cl_fus_flat_sheet).
 # ---------------------------------------------------------------------------
 
 class TestSheetDirection:

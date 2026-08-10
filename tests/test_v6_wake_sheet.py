@@ -1,5 +1,5 @@
 """Track V V6 wake-sheet delta* source (binding: docs/roadmap/track_v.md
-GV6.1; pre-registration cases/analysis/v6_1_wake_sheet/PRE_REGISTRATION.md
+GV6.1; pre-registration bench/studies/v6_1_wake_sheet/PRE_REGISTRATION.md
 including the 2026-07-25 addendum; module under test:
 pyfp3d/viscous/wake_sheet.py).
 
@@ -443,7 +443,7 @@ def _ab_leg(snippet, worktree, ref, out_npz, overlay_delta=False):
     "bench/s1_duct/check_loose_loop_determinism.py; round record "
     "docs/dev_phase_two/20260729-0130-s1-clamp-not-silent.md 4.1. "
     "The GV6.1 (a)(ii) EVIDENCE is unaffected -- it is committed in "
-    "cases/analysis/v6_1_wake_sheet/ -- but this live guard cannot mean "
+    "bench/studies/v6_1_wake_sheet/ -- but this live guard cannot mean "
     "what it claims until the loose loop is made deterministic."))
 @pytest.mark.skipif(NOJIT, reason="loose-loop FP solves are JIT-lane only")
 @pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
@@ -510,7 +510,7 @@ def test_fold_pairing_structural(naca_coarse_cut, wake_case):
 
 # ---------------------------------------------------------------------------
 # 7. GV6.2 wake_l_rel_chords plumbing (pre-registration
-#    cases/analysis/v6_2_measured_effect/PRE_REGISTRATION.md section 5)
+#    bench/studies/v6_2_measured_effect/PRE_REGISTRATION.md section 5)
 # ---------------------------------------------------------------------------
 
 

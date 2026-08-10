@@ -467,7 +467,7 @@ def closure_node(state, q, rho, mu, mach, turbulent, c_l, out, dout, dout_e):
     family (forced-transition regime flag, D-TR). c_l: dissipation length
     constant (D-CT-2).
 
-    dout_e (GV5.1, the J_BL,phi piece of cases/analysis/v5_tight_coupling/
+    dout_e (GV5.1, the J_BL,phi piece of bench/studies/v5_tight_coupling/
     PRE_REGISTRATION.md decision 5): explicit partials w.r.t. the TWO
     derived edge scalars the packet interior depends on -- dout_e[:, 0] =
     d/dre_d, dout_e[:, 1] = d/de_prime -- HOLDING THE 6-STATE FIXED; the

@@ -1,7 +1,7 @@
 """
 GV5.2 deliverable: single-layer extruded RAE2822 quasi-2D mesh family
 (docs/roadmap/track_v.md V5 GV5.2; pre-registration
-cases/analysis/v5_2_rae2822/PRE_REGISTRATION.md).
+bench/studies/v5_2_rae2822/PRE_REGISTRATION.md).
 
 Geometry: the Cook, McDonald & Firmin (AGARD-AR-138) Table 6.1 measured
 ordinates, committed verbatim as rae2822.dat beside this script

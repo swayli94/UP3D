@@ -93,10 +93,10 @@ is not evidence** (the 2026-07-13 audit rule).
   medium ramp lagged 505 s vs schur **345 s = 1.47×**, precond share 45.8% → **1.8%**, γ **0.088343** both arms (\|Δγ\| 8.6e-13), 0
   fallbacks; anchor constants re-pinned to the B21 state (γ 0.088343 / M_max 2.4818). ⚠ this index row was MISSING from B14's close-out
   until B22 added it (the D9 close-out-debt class) — [track_b](demo_report/track_b.md)
-- **Track A** A1 solver bottleneck study — `cases/analysis/a1_solver_bottleneck/` — 11/11 (2.5-D) + 4/4 (gated 3-D) —
+- **Track A** A1 solver bottleneck study — `bench/studies/a1_solver_bottleneck/` — 11/11 (2.5-D) + 4/4 (gated 3-D) —
   closed 2026-07-16: GA1.1–GA1.5; 3-D Newton is precond-bound (the 2.5-D seed headline does not transfer);
   GA1.5 reproduces G8.2/B15 digit-for-digit and found 4 harness defects — [track_a](demo_report/track_a.md)
-- **Track A** A2 TE/Kutta fidelity — `cases/analysis/a2_te_kutta_fidelity/` — 22/22 (zero-solve) + 4/4 (gated intervention) —
+- **Track A** A2 TE/Kutta fidelity — `bench/studies/a2_te_kutta_fidelity/` — 22/22 (zero-solve) + 4/4 (gated intervention) —
   closed 2026-07-17: GA2.1–GA2.5; S1 Γ(z) jitter = a probe-difference Kutta-target measurement artifact (fixed-Γ discriminator D=7.33/25.70
   coarse/medium), not flow content; S2 TE Cp jump = potential-jump Kutta form error (34×/133× vs level-set) + P1 recovery artifact;
   fix routed to P14 (no `pyfp3d/` edits) — [track_a](demo_report/track_a.md)
@@ -208,7 +208,7 @@ is not evidence** (the 2026-07-13 audit rule).
   One secondary guardrail (out-of-band cl_fus carryover +135 %) oracle-attributed to the flat-vs-tilted sheet model difference —
   recorded non-blocking, P11 watch item. Chain closed: B23 → B24 → B25. Tests `TestInboardFragmentClip` (4) + M2/B1 locks —
   [track_b](demo_report/track_b.md)
-- **Track B** B26 post-cure LS transonic ceiling re-measured — `cases/analysis/b26_ls_transonic_ceiling/` —
+- **Track B** B26 post-cure LS transonic ceiling re-measured — `bench/studies/b26_ls_transonic_ceiling/` —
   pre-registered G1, B26-A (ceiling lift) — closed 2026-07-20: same-code A/C (default vs `inboard_clip` ), B18 recipe frozen verbatim, ~69
   min. **C medium m_last 0.50 → 0.7625** (five loose rungs + 0.7625 strict res 2.6e-11; dies 0.775);
   **C coarse 0.82 → 0.84 REACHED** (strict res 6.9e-11). Death cause flips (a)-pocket-rejection → **(b)-class high-M Newton stall with the
@@ -225,7 +225,7 @@ is not evidence** (the 2026-07-13 audit rule).
   conforming** (coarse 0.84 = 0.84; medium 0.7625 ≈ 0.79)"; Track V sheet-topology prerequisites in place —
   [track_b](demo_report/track_b.md)
 - **Track B** B29 flat-fragment = the wing-body LS production config — `cases/demo/b18_wingbody_transonic/` (+
-  `cases/analysis/b28_cl_fus_flat_sheet/VERDICT.md` §6, user-adjudicated) — closed 2026-07-20 (same branch as B28; no
+  `bench/studies/b28_cl_fus_flat_sheet/VERDICT.md` §6, user-adjudicated) — closed 2026-07-20 (same branch as B28; no
   `pyfp3d/` change): B18 LS production side C = `inboard_clip` + `sheet_direction=(1,0,0)` (NEW `ls_flat_*` caches; the B26
   tilted `ls_C_*` stale; A side tilted kept as the historical comparison; conforming bit-reproduce). Medium ceiling 0.7625 →
   **0.775** (dies 0.7875, a+dm; live peak M3.98 @ wing tip z=1.20 — GB18.4's C side now live); cross-model **M0.5 0.5 % /
@@ -243,7 +243,7 @@ is not evidence** (the 2026-07-13 audit rule).
   a structured icosphere shell with the SAME flat facets converges at order 1.67/1.98 and hits 2.14% max Cp at h≈0.036 ⇒ medium's 11.6% ≈
   **intrinsic P1-field capability at h=0.08** (geometric-crime share ≈0.2 pp). G1.6 xfail stays; route fork (Option C re-spec with measured
   passing form / isoparametric P2 layer / accept) = user's call — [track_p](demo_report/track_p.md)
-- **P14** pressure-equality Kutta estimator — `cases/demo/p14_pressure_kutta/` (+ diagnostic `cases/analysis/p14_te_pressure_diag/` 20/20) —
+- **P14** pressure-equality Kutta estimator — `cases/demo/p14_pressure_kutta/` (+ diagnostic `bench/studies/p14_te_pressure_diag/` 20/20) —
   28 PASS incl. gated M0.84 — 2026-07-17 CLOSED (opened + closed same day): A2's fix built and confirmed —
   S1+S2 both gone in one estimator swap — M0.84 Γ(z) roughness 0.0970→**0.0043** / 0.0365→**0.0024** (at/below the LS band), all-station raw
   TE Cp gap 0.2206→**0.0040** / 0.1585→**0.0024** (55×/67×; a same-day erratum corrected the first write-up's wrong-metric 0.318/0.228

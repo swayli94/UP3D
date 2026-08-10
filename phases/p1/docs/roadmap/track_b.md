@@ -536,7 +536,7 @@ pressure 3/4 steps, 0 lim/flr) ✓, GB9.2 (LS Picard converges both) ✓, GB9.3
   the open state a wing-body body-surface claim carries until P11/Option C.
   **★★ B28 erratum (2026-07-20): the "spurious lift ⇒ G1.6" reading is
   measured FALSE.** The pre-registered flat-fragment decoupling
-  (`cases/analysis/b28_cl_fus_flat_sheet/`) drags the LS sheet GEOMETRY flat
+  (`bench/studies/b28_cl_fus_flat_sheet/`) drags the LS sheet GEOMETRY flat
   at y=0 (`WakeLevelSet(sheet_direction=...)`, default None bit-identical)
   while physics convects with the flow: out-band cl_fus 0.0326 vs the
   conforming oracle 0.0351 (**7.25% ≤ 15% TOL**), where the flow-aligned
@@ -2236,7 +2236,7 @@ A side of every A/C comparison is the default path). Pre-registered
 **Trigger.** With the pocket cured (B25), does the B18 "junction-limited"
 LS ceiling move? Same-code A/C (default vs `inboard_clip`), the B18 recipe
 frozen verbatim, honest-stop ramp. Pre-registered
-(`cases/analysis/b26_ls_transonic_ceiling/`).
+(`bench/studies/b26_ls_transonic_ceiling/`).
 
 - [x] **GB26 ceiling-lift (B26-A):** C medium m_last **0.50 → 0.7625**
   (climbs five loose rungs 0.55–0.75 all 0–1 clamp + 0.7625 strict res
@@ -2501,7 +2501,7 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
   reading (0.0781/0.0565) retired per B28 (position sensitivity). Demo **8/8 PASS**; `test_b9_wingbody_ls` switched to the
   production wiring (flat+clip, 5/5 green).
 - B28 — ✓ — 2026-07-20 — **cl_fus decoupling + GB9.4 RE-SPEC — the "fuselage spurious lift" label retired** (executes B23 §(c);
-  pre-registered `cases/analysis/b28_cl_fus_flat_sheet/`). New `WakeLevelSet(sheet_direction=...)` knob decouples sheet GEOMETRY
+  pre-registered `bench/studies/b28_cl_fus_flat_sheet/`). New `WakeLevelSet(sheet_direction=...)` knob decouples sheet GEOMETRY
   drag-out from physics convection (default None bit-identical; `TestSheetDirection` 4 + b1/m2/v0 73 green). Decisive leg
   (medium α=3.06, strict conv res 9.0e-8): flat-fragment out-band cl_fus **0.0326 vs conforming oracle 0.0351 = 7.25% ≤ 15% TOL**,
   flow-aligned sheet 0.0504 = 35.3% ⇒ **F1: sheet-POSITION sensitivity, not an error**. cl_fus = physical carryover (~10% cl_p,

@@ -1,6 +1,6 @@
 """Track V V5 Stage 3 -- the augmented Newton system: full-system FD gate +
 coarse smoke Newton (binding: docs/roadmap/track_v.md GV5.1 + the
-2026-07-22 pre-registered FD note; design: cases/analysis/v5_tight_coupling/
+2026-07-22 pre-registered FD note; design: bench/studies/v5_tight_coupling/
 PRE_REGISTRATION.md; modules under test: pyfp3d/viscous/tight.py Stage-3
 operators and pyfp3d/viscous/tight_driver.py).
 

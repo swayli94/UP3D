@@ -177,7 +177,7 @@ backtracking merit = 伪时间残差 F_pt = R + w(G−G_old)（步长本就是 F
 
 门执行中抓到并按证据修正的三处实现问题（1–3），外加一项门暴露的
 离散稳定性缺陷（4）；均不改变 §2–§5 的方程与离散设计，只修正/细化
-实现与参考码或诚实记录。详见 `cases/analysis/v1_ibl3_standalone/VERDICT.md`。
+实现与参考码或诚实记录。详见 `bench/studies/v1_ibl3_standalone/VERDICT.md`。
 
 1. **PTC backtracking merit（§5.3 细化）**。`solve()` 的步长接受判据初版用
    纯稳态残差 |R|∞，但 Newton 步是伪时间残差 F_pt = R + w(G−G_old) 的
@@ -226,8 +226,8 @@ sys.path 锚定本 worktree 的 pyfp3d（site-packages editable 安装指向
 
 `viscous/coupling.py` 交付松耦合驱动（FP → u_e → IBL3 → δ* → ṁ → RHS →
 FP），设计不变，以下为执行中实测抓到的实现/边界条件问题与修正；门
-证据见 `cases/analysis/v3_loose_coupling/VERDICT.md`（GV3.1/3.2）与
-`cases/analysis/v3_fuselage_smoke/VERDICT.md`（GV3.3）。
+证据见 `bench/studies/v3_loose_coupling/VERDICT.md`（GV3.1/3.2）与
+`phases/p1/cases/analysis/v3_fuselage_smoke/VERDICT.md`（GV3.3）。
 
 1. **IBL3 局部基矢修复（`viscous/ibl3.py`）**。GV3.3 准备期发现 3-D 闭
    曲面上缘流/横流分量的局部基矢投影有系统误差，横流泄漏达
@@ -280,7 +280,7 @@ FP），设计不变，以下为执行中实测抓到的实现/边界条件问�
 
 GV5.0 入口检查（roadmap GV5.0，RECORDED）经 `viscous/coupling.py::
 build_wing_case` 把松耦合驱动铺到 3-D 升力翼壁面；门证据与诊断见
-`cases/analysis/v5_m6_bridge/VERDICT.md`。实现决策记录：
+`bench/studies/v5_m6_bridge/VERDICT.md`。实现决策记录：
 
 1. **3-D 翼 IBL 边界拓扑**。wake-cut 网格壁面：上下表面在 LE 共节点、
    TE 因切割复制 ⇒ 双侧 TE 线均为自然出流边界边；根部 z=0 截面是开
@@ -309,7 +309,7 @@ build_wing_case` 把松耦合驱动铺到 3-D 升力翼壁面；门证据与诊�
 ## 12. V5 实现记录（GV5.1 紧耦合增广 Newton，2026-07-23）
 
 GV5.1（roadmap GV5.1，9 PASS / 1 FAIL / 36 RECORDED）交付精确增广
-(φ, Γ, U) Newton；门证据与诊断见 `cases/analysis/v5_tight_coupling/`
+(φ, Γ, U) Newton；门证据与诊断见 `bench/studies/v5_tight_coupling/`
 （PRE_REGISTRATION + Addenda 1–2、VERDICT、summary.csv、
 `results/gv5_1_medium_seed_diagnosis.md`）。实现决策记录：
 
@@ -370,7 +370,7 @@ GV5.1（roadmap GV5.1，9 PASS / 1 FAIL / 36 RECORDED）交付精确增广
 
 ## 13. V5 实现记录（IBL 地板诊断 = GV5.1 follow-up，2026-07-24）
 
-诊断研究 `cases/analysis/v5_ibl_floor/`（预注册 53bf904 先于首次执行；
+诊断研究 `bench/studies/v5_ibl_floor/`（预注册 53bf904 先于首次执行；
 RECORDED 类、无 pass/fail 带；14 RECORDED；`run.py` 单 runner 从头
 再生成全部 artifact，`--states`/`--phases` 支持分相位续跑；执行证据
 `results/findings.md` + `results/summary.csv`）。三态：S1/S2 =
@@ -419,7 +419,7 @@ slope-2 窗口重定义为地板之前（地板已由本诊断钉死为公式性
 
 ## 14. V5 实现记录（GV5.1b scaled+damped Newton，2026-07-24）
 
-门禁 `cases/analysis/v5_1b_scaled_newton/`（预注册 8b7793f 先于首次
+门禁 `bench/studies/v5_1b_scaled_newton/`（预注册 8b7793f 先于首次
 执行；裁决后 **2 PASS / 0 FAIL / 7 RECORDED**——band (a) medium
 cond-aware 读 PASS，2026-07-24 用户裁决（VERDICT §3）；执行时读数
 1 PASS / 1 FAIL / 7 RECORDED 保留在 commit 1c55906；`run.py` 单
@@ -484,7 +484,7 @@ newton_history CSV，判决 `VERDICT.md`）。实现决策与结果：
 
 ## 15. V5 实现记录（GV5.1c above-band 种子：地板前 slope-2 窗实测，2026-07-24）
 
-门禁 `cases/analysis/v5_1c_above_band_window/`（预注册 1e90d59 先于首次
+门禁 `bench/studies/v5_1c_above_band_window/`（预注册 1e90d59 先于首次
 执行；**2 PASS / 1 FAIL / 7 RECORDED**；`run.py` 单 runner 从头再生成
 全部 artifact，协议 = GV5.1 amended 逐字 + 标定 δ 扰动；接线守卫两腿均过
 coarse 1.56e-12 / medium 1.54e-9；执行证据 `results/summary.csv` +
@@ -533,7 +533,7 @@ session；runner 默认 16 不动，约束经环境变量落地并记入 artifac
 
 ## 16. V5 实现记录（GV5.1d 近带种子：地板紧邻处无二次盆，2026-07-24）
 
-门禁 `cases/analysis/v5_1d_near_band_window/`（预注册先于首次执行；
+门禁 `bench/studies/v5_1d_near_band_window/`（预注册先于首次执行；
 **2 PASS / 1 FAIL / 7 RECORDED**；`run.py` 单 runner 从头再生成全部
 artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPORT
 不镜像；接线守卫两腿均过 coarse 1.56e-12 / medium 1.54e-9；执行证据
@@ -589,7 +589,7 @@ artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPO
 ## §17 GV5.5 —— TE 带 (B,δ) 公式层破地板：V1 TE 出流行替换执行记录（2026-07-24，2 PASS / 1 FAIL / 9 RECORDED）
 
 独立项（2026-07-24 用户定序：GV5.1d → GV5.5 → GV5.2–5.4）。预注册
-`cases/analysis/v5_5_te_floor/PRE_REGISTRATION.md` 先于首行代码提交；
+`bench/studies/v5_5_te_floor/PRE_REGISTRATION.md` 先于首行代码提交；
 路线选择在开工时按登记落定：**路线 (a) TE 自然出流离散先行**，行级
 变体 **V1 = TE 出流行替换**（δ 载体行 6i+0 `R = δ_i − δ_up`、H 载体行
 6i+2 `R = H_i − H_up` 一阶外推，精确雅可比行，CSR pattern 内构造守卫，
@@ -643,7 +643,7 @@ artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPO
 ## §18 GV5.2 —— RAE2822 跨声速 VII 对 committed 实验：band (b) FAIL + 松环配方极限解剖（2026-07-24→25，band (a)/(c)/(d) RECORDED）
 
 用户定序项（GV5.1d → GV5.5 → GV5.2–5.4）。预注册
-`cases/analysis/v5_2_rae2822/PRE_REGISTRATION.md` 先于首行代码提交，
+`bench/studies/v5_2_rae2822/PRE_REGISTRATION.md` 先于首行代码提交，
 addenda #1–#3 先于各自（重）执行提交。协议 = 松环 VII（GV3.1 配方逐字
 ω = 1.0、≤ 10 outer、tol_ds = 1e-3）+ GV3.2 跨声速 Newton driver 协议
 （NEWTON_ARGS 导入，不重造）；几何 = Cook/AGARD-AR-138 Table 6.1
@@ -717,7 +717,7 @@ Re 6.5e6，两侧强制转捩 x_tr/c 0.03；coarse 记录、medium binding。
 ## §19 GV5.3 —— M6 机翼方向+量级检查对 committed Cp：band (b) honest FAIL + band (a) input-limited（2026-07-25，0P/1F/17R）
 
 用户定序项（GV5.1d → GV5.5 → GV5.2–5.4）。预注册
-`cases/analysis/v5_3_m6_cp/PRE_REGISTRATION.md` 先于首行代码提交，
+`bench/studies/v5_3_m6_cp/PRE_REGISTRATION.md` 先于首行代码提交，
 addendum #1 先于重执行提交。问题：在 committed 实验条件（TEST 2308
 逐字 M 0.8395 / α 3.06，Re_MAC 11.72e6，两侧强制转捩 x_tr/c 0.05）下，
 松环 VII（GV3.1 配方逐字 + GV5.0 翼 case 逐字：翼尖带 z > 0.95·b_semi
@@ -786,7 +786,7 @@ Kutta，n_picard_seed=0；暖 outer 解；FP 侧**无 tip_taper** 使 k=0 解可
 ## §20 GV5.4 —— M6 medium 增广步成本实测：7.53× RECORDED + 块预条件 honest FAIL（2026-07-25，0P/1F/17R）
 
 用户定序末项（GV5.1d → GV5.5 → GV5.2–5.4）。预注册
-`cases/analysis/v5_4_cost/PRE_REGISTRATION.md` 先于首行代码提交，
+`bench/studies/v5_4_cost/PRE_REGISTRATION.md` 先于首行代码提交，
 addendum #1–#4 各先于对应（重）执行提交。问题（登记原文）：M6 medium
 上增广 Newton 步壁时能否读进 ≤ ~2× 无黏 Newton 步的参考带（块预条件
 工作的前提下；数值照录不论落点）？附带回答登记的 "measure before
@@ -844,7 +844,7 @@ Schur" 问题：J_BL,BL 的直接消元到底多贵（决定 Schur 路线是否�
 ## §21 GV5.6 —— Schur-aware 约化空间预条件器：corrected-AMG 路线实测死刑（2026-07-25，0 PASS / 1 FAIL / 17 RECORDED）
 
 GV5.4 登记的 follow-up，2026-07-25 用户裁决开立。预注册
-`cases/analysis/v5_6_schur_prec/PRE_REGISTRATION.md` 先于首行代码提交
+`phases/p1/cases/analysis/v5_6_schur_prec/PRE_REGISTRATION.md` 先于首行代码提交
 （`091f9fe`）；系统/种子/协议 = GV5.4 逐字（124,216-DOF W2 系统、A1
 conf_newton 种子链、rowcol 均衡、mu ≡ 0、N = 5 实测步、同 W1/W2/W3
 守卫 + D5 二元裁决）；**零库改动**（阶梯全部在 case runner 内，复用

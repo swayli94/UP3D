@@ -596,7 +596,7 @@ class MultivaluedOperator:
         that sensitivity on the wrong column and made J != dR/dphi there
         (measured: rel err 1.146e-01 on the affected probe directions vs
         6.33e-10 elsewhere, eps-independent across three decades --
-        `cases/analysis/c1_ls_jacobian_fd/`). Since B20 their density reads
+        `phases/p1/cases/analysis/c1_ls_jacobian_fd/`). Since B20 their density reads
         the MAIN field (patch below), so the maps coincide there too and the
         aux dependence is gone -- the split is kept because it encodes the
         invariant (columns follow the READ field), not a coincidence.

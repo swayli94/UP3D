@@ -1573,7 +1573,7 @@ every wing-body body-surface-pressure claim carries until P11/Option C.
 
 > **B28 erratum (2026-07-20):** the "G1.6 error" attribution above is measured
 > FALSE. The pre-registered flat-fragment decoupling
-> (`cases/analysis/b28_cl_fus_flat_sheet/`) isolates the wake-sheet geometry:
+> (`bench/studies/b28_cl_fus_flat_sheet/`) isolates the wake-sheet geometry:
 > with the LS sheet dragged flat at y=0 (`sheet_direction` knob, default
 > bit-identical), out-band cl_fus is 0.0326 vs the conforming oracle 0.0351
 > (**7.25% ≤ 15% TOL**); the flow-aligned sheet gives 0.0504 (35.3%). The
@@ -2036,7 +2036,7 @@ bit-identical** (every A side below is the default path). Tests
 
 ## B26 — Post-cure LS transonic ceiling re-measured: the pocket WAS the limiter (B26-A) (closed 2026-07-20)
 
-Pre-registered G1 `cases/analysis/b26_ls_transonic_ceiling/` (`g1_summary.csv`,
+Pre-registered G1 `bench/studies/b26_ls_transonic_ceiling/` (`g1_summary.csv`,
 `g1_levels.csv`, `g1_peaks.csv`, `g1_ceiling.png`). No `pyfp3d/` change;
 same-code A/C (default vs `inboard_clip`), the B18 recipe frozen verbatim,
 honest-stop ramp, ~69 min total solve.

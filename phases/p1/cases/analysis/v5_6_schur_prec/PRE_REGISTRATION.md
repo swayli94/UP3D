@@ -5,7 +5,7 @@ adjudicated 2026-07-25 (user)**: this gate opens the GV5.4 registered
 follow-up *"the design-doc's (A,Ψ)-structured BL treatment + a Schur-aware
 reduced-space preconditioner (the correction J_hB·J_BB⁻¹·J_Bh is what plain
 AMG-φ misses; the stagnation at 1e-7..1e-5 is its signature)"*
-(`cases/analysis/v5_4_cost/VERDICT.md` "Follow-ups"; `docs/roadmap/track_v.md`
+(`bench/studies/v5_4_cost/VERDICT.md` "Follow-ups"; `docs/roadmap/track_v.md`
 GV5.4 reading). The sibling registered follow-ups (the EW-forcing variant,
 the pressure-Kutta row wiring, stale-preconditioner productization) stay
 registered-not-opened (§7).
@@ -36,7 +36,7 @@ the honest negative is a pre-registered outcome, not a recipe failure.
 
 ## 2. Conditions, meshes, anchors
 
-Verbatim from GV5.4 (`cases/analysis/v5_4_cost/PRE_REGISTRATION.md` §2):
+Verbatim from GV5.4 (`bench/studies/v5_4_cost/PRE_REGISTRATION.md` §2):
 
 - **M6 medium binding**: `cases/meshes/onera_m6/medium.msh` (gitignored;
   regenerate with `cases/meshes/onera_m6/generate_onera_m6.py`). The

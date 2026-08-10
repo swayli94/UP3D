@@ -7,15 +7,14 @@ calibration bisection on a near-band synthetic response, and the
 imported-helper identity (the GV5.1c runner's helpers, imported not
 mirrored). The runner module is loaded by path (the case-runner loader
 precedent). Binding text:
-cases/analysis/v5_1d_near_band_window/PRE_REGISTRATION.md.
+bench/studies/v5_1d_near_band_window/PRE_REGISTRATION.md.
 """
 
 import importlib.util
 import os
 
 RUN = os.path.join(
-    os.path.dirname(__file__), "..", "cases", "analysis",
-    "v5_1d_near_band_window", "run.py")
+    os.path.dirname(__file__), "..", "bench", "studies", "v5_1d_near_band_window", "run.py")
 spec = importlib.util.spec_from_file_location("gv51d_run", RUN)
 gv51d = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gv51d)

@@ -12,10 +12,10 @@ the first phase: a shared timing-instrumentation layer on the four nonlinear
 drivers, then a controlled 2×2 benchmark (conforming vs level-set wake) ×
 (Picard vs Newton) that answers **where the wall clock goes**.
 
-**Reproduce.** `python cases/analysis/a1_solver_bottleneck/run_a1.py` (ungated
+**Reproduce.** `python bench/studies/a1_solver_bottleneck/run_a1.py` (ungated
 2.5-D, ~5 min, matplotlib Agg). Exit 0 = all checks pass; `results/checks.csv`
 holds each GA1 verdict. The gated 3-D leg is
-`PYFP3D_TRANSONIC_GATES=1 python cases/analysis/a1_solver_bottleneck/run_a1_m6.py`
+`PYFP3D_TRANSONIC_GATES=1 python bench/studies/a1_solver_bottleneck/run_a1_m6.py`
 (~52 min from cold: 149 s + 668 s + 2337 s; `.npz`-cached per method, so a
 re-run redraws figures in seconds — `PYFP3D_A1_RESOLVE=1` forces a re-solve).
 Verdicts land in `results/checks_m6.csv`. Both legs must run at the **16-thread
@@ -111,7 +111,7 @@ measured; the verdict string is in `results/verdict.txt`.
 
 ---
 
-## Track A / A1 — solver bottleneck study (`cases/analysis/a1_solver_bottleneck/`, 2026-07-15)
+## Track A / A1 — solver bottleneck study (`bench/studies/a1_solver_bottleneck/`, 2026-07-15)
 
 ### The instrumentation, and why it had to come first
 
@@ -301,7 +301,7 @@ A1 stops at measuring this. It does not propose or cost a fix.
   far field for the agreement check, and the M6 3-D leg uses neumann throughout
   (the B7 convention).
 
-## Track A / A2 — TE/Kutta fidelity: Γ(z) jitter + TE Cp jump (`cases/analysis/a2_te_kutta_fidelity/`, 2026-07-16/17)
+## Track A / A2 — TE/Kutta fidelity: Γ(z) jitter + TE Cp jump (`bench/studies/a2_te_kutta_fidelity/`, 2026-07-16/17)
 
 ### What A2 answers
 
@@ -318,7 +318,7 @@ measured, decomposed, committed findings. **A2 adds no physics and edits no
 
 ### Reproduce
 
-`python cases/analysis/a2_te_kutta_fidelity/run_a2.py` (zero-solve, ~90 s cold —
+`python bench/studies/a2_te_kutta_fidelity/run_a2.py` (zero-solve, ~90 s cold —
 harvests the P5/B7/A1 local `.npz` caches; level-set operator products cached to
 gitignored `results/a2_cache_*.npz`; `results/checks.csv` = 22 PASS). The S1
 verdict comes from the gated sibling

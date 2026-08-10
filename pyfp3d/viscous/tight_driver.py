@@ -1,6 +1,6 @@
 """Track V V5 Stage 3 -- the augmented (tight) Newton driver (binding:
 docs/roadmap/track_v.md GV5.1 + the 2026-07-22 pre-registered FD note;
-design: cases/analysis/v5_tight_coupling/PRE_REGISTRATION.md).
+design: bench/studies/v5_tight_coupling/PRE_REGISTRATION.md).
 
 The pre-registered full state, residual and Jacobian (PRE_REGISTRATION
 "System", "Jacobian blocks"):
@@ -229,7 +229,7 @@ def build_tight_pack(
     gamma, U, ue_surf, q, rho_e, mach_e, mu, n_cut, le_mask_vol).
 
     The Newton-leg constants default to the GV3.1 settings
-    (cases/analysis/v3_loose_coupling/run.py:67). Restrictions: the PROBE
+    (bench/studies/v3_loose_coupling/run.py:67). Restrictions: the PROBE
     kutta estimator only (the un-eliminated row [K, -I] is hard-coded),
     set_mach already called, ws.external_rhs None (the driver owns the
     attribute during evaluations).
@@ -532,11 +532,11 @@ def _block_max(pack: TightPack, F: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# GV5.1b scaled + damped linear step (cases/analysis/v5_1b_scaled_newton/
+# GV5.1b scaled + damped linear step (bench/studies/v5_1b_scaled_newton/
 # PRE_REGISTRATION.md): solver-internal only -- the assembled F/J are
 # bit-identical to GV5.1 (the FD verdicts stand); these helpers only
 # transform the assembled operators. Design inputs: the committed IBL-floor
-# diagnosis (cases/analysis/v5_ibl_floor/results/findings.md).
+# diagnosis (bench/studies/v5_ibl_floor/results/findings.md).
 # ---------------------------------------------------------------------------
 
 MU0 = 1.0e-6       # Levenberg-style damping, initial value
@@ -647,7 +647,7 @@ def newton_tight(
     "converged" or "cap" on the legacy path, plus "floor_reached" on the
     GV5.1b path.
 
-    GV5.1b (cases/analysis/v5_1b_scaled_newton/PRE_REGISTRATION.md):
+    GV5.1b (bench/studies/v5_1b_scaled_newton/PRE_REGISTRATION.md):
     scaling="rowcol" + lm_damping=True + floor_stop=True switch the
     linear step to the scaled + damped path -- per iteration R, C from
     the current J (equilibrate_rc), (R J C + mu I) dy = -R F by splu,
@@ -659,7 +659,7 @@ def newton_tight(
     (scaling=None, lm_damping=False, floor_stop=False) keep the legacy
     path bit-for-bit (the committed GV5.1 runner reproduces).
 
-    GV5.4 (cases/analysis/v5_4_cost/PRE_REGISTRATION.md): step_solve is
+    GV5.4 (bench/studies/v5_4_cost/PRE_REGISTRATION.md): step_solve is
     an optional linear-solve callback (A, b) -> y with A y = b replacing
     the splu step on BOTH paths (the block-preconditioned GMRES
     injection; on the GV5.1b path it receives the SCALED + damped

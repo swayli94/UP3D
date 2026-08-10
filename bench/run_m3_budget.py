@@ -6,7 +6,7 @@ interpretation rules R1-R4 -- in particular R2, the validity gate that decides w
 the entropy-ON leg is a physics reading at all or the G8.2 3-D donor-cycle defect
 reproducing.
 
-Extractor reused verbatim from cases/analysis/v5_3_m6_cp/run.py (same-extractor
+Extractor reused verbatim from bench/studies/v5_3_m6_cp/run.py (same-extractor
 discipline): the same committed experiment file, the same station_rms, the same seven
 stations with the first five outside the tip mask.
 

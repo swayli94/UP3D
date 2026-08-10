@@ -3,7 +3,7 @@
 Current phase: **GV5.6 ✓ CLOSED 2026-07-25 (NEWEST; Track V / V5 —
 the GV5.4 registered Schur-aware preconditioner follow-up, opening
 user-adjudicated; 0 PASS / 1 FAIL / 17 RECORDED;
-`cases/analysis/v5_6_schur_prec/` — the GV5.4 system/seed/protocol
+`phases/p1/cases/analysis/v5_6_schur_prec/` — the GV5.4 system/seed/protocol
 verbatim, NO library change (W4 diff-scope clean, the suite baseline
 unchanged 652+25+2): rung 3 = exact-BL Schur + bdiag(AMG(Ŝ_φφ), M_Γ)
 with the explicitly assembled Ĉ = J_hB·D_BB⁻¹·J_Bh (per-node 6×6
@@ -26,7 +26,7 @@ wake-sheet IBL correction; close-out adjudicated 2026-07-25 (user):
 the GV6.2 recorded reading = the significance condition NOT met →
 producer (ii) NOT opened): GV6.2 measured effect ✓ CLOSED
 2026-07-25 (0 PASS / 0 FAIL / 24 RECORDED;
-`cases/analysis/v6_2_measured_effect/` — the on/off effect Δ-cl
+`bench/studies/v6_2_measured_effect/` — the on/off effect Δ-cl
 +0.00015 (+0.0547 %) / TE-region max |ΔCp| 0.00250 sits at
 0.022×/0.051× the A4 input band = NOT significant, L-robust over
 L_rel ∈ {0.5, 1.0, 2.0} c via the new `CouplingConfig.
@@ -39,7 +39,7 @@ effective 0.454 c vs pinned 1.0 c, recorded not tuned), the TE anchor
 low (0.00662 vs 0.01440 / 0.01191, the GV3.1 δ* caveat), downstream θ
 0.695 vs the conserved-θ construction (model-form)). Previous: GV6.1
 conforming wake-sheet δ* source ✓ CLOSED 2026-07-25 (6 PASS / 0 FAIL /
-7 RECORDED; `cases/analysis/v6_1_wake_sheet/` — the wake δ* enters the
+7 RECORDED; `bench/studies/v6_1_wake_sheet/` — the wake δ* enters the
 FP solve as a mass-transpiration sheet source on the wake cut faces,
 riding the V2 channel into the loose loop's body_source_rhs
 (`pyfp3d/viscous/wake_sheet.py` + the `CouplingConfig.wake_transpiration`
@@ -54,7 +54,7 @@ change); (c) W2 TE-continuity held every outer).** Previous phase: **V5 ✓ CLOS
 coupling — all five gates executed, close-out pending user
 adjudication): GV5.4 augmented-step cost on M6 medium ✓ EXECUTED
 2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED;
-`cases/analysis/v5_4_cost/` — the tight/augmented Newton path (the
+`bench/studies/v5_4_cost/` — the tight/augmented Newton path (the
 GV5.1b scaled+damped driver + an injectable `step_solve` solve
 callback, a library change with default None = splu bit-identical)
 measured on the 124,216-DOF W2 system (62,820 φ + 166 Γ + 61,230
@@ -144,11 +144,11 @@ input-limited under the A4 2.5 % floor). Crossflow first live 3-D exercise:
 max|B|/|A| ≤ 0.072, quasi-2-D lock retained only at the LE pin. FP side
 clean throughout (every warm pressure-Kutta Newton converges). δ*(z) CSVs
 feed GV5.3's band pre-registration; tip mask validated at both levels.
-Evidence: `cases/analysis/v5_m6_bridge/` (PRE_REGISTRATION committed
+Evidence: `bench/studies/v5_m6_bridge/` (PRE_REGISTRATION committed
 f263424 before first execution; VERDICT + CSV/PNG). Medium wall-time
 polluted by external load — quoted flagged, not as solver cost.
 **GV5.1 ✓ EXECUTED 2026-07-23 (9 PASS / 1 FAIL / 36 RECORDED,
-`cases/analysis/v5_tight_coupling/`): the augmented (φ, Γ, BL) Newton
+`bench/studies/v5_tight_coupling/`): the augmented (φ, Γ, BL) Newton
 with exact coupling blocks is delivered** (new machinery
 `viscous/tight.py` + `viscous/tight_driver.py`, `tests/v5_state.py` +
 3 tight test files). Band (a) FD exactness PASS both levels (worst
@@ -167,12 +167,12 @@ reproducible — the loose medium trajectory is chaotic on the IBL floor
 (three code/env → three fixed points cl 0.2217/0.2719/0.2814; diagnosis
 `results/gv5_1_medium_seed_diagnosis.md`; HEAD-regen seed user-accepted,
 wiring guard |dcl_k0| ≤ 1e-8 PASS 1.309e-9). VERDICT
-`cases/analysis/v5_tight_coupling/VERDICT.md`, design record
+`bench/studies/v5_tight_coupling/VERDICT.md`, design record
 `docs/design_track_v.md` §12. The IBL-floor follow-up executed the next
 day (the paragraph below); the V4-reopen trigger was considered and NOT
 invoked.
 **IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24 (14 RECORDED, no
-bands, `cases/analysis/v5_ibl_floor/`, findings.md + run.py-regenerable
+bands, `bench/studies/v5_ibl_floor/`, findings.md + run.py-regenerable
 artifacts): the near-null cluster PERSISTS at the loose-converged states
 (S1 500/1236 <1e-6·σmax cond 1.3e11; S2 1082/2460 cond 4.0e13; the
 s1/s3 spectra overlap curve-for-curve) and is carried by the turbulent
@@ -194,7 +194,7 @@ paragraph below).
 **GV5.1b ✓ EXECUTED 2026-07-24 (2 PASS / 0 FAIL / 7 RECORDED
 adjudicated 2026-07-24; 1 PASS / 1 FAIL / 7 RECORDED as executed,
 preserved in commit 1c55906;
-`cases/analysis/v5_1b_scaled_newton/`, VERDICT + PRE_REGISTRATION
+`bench/studies/v5_1b_scaled_newton/`, VERDICT + PRE_REGISTRATION
 committed 8b7793f): the scaled + damped augmented Newton machinery is
 delivered and exact — and the window question is REFRAMED, not
 answered.** Solver-internal only (assembly bit-identical to GV5.1):
@@ -230,7 +230,7 @@ window) or the TE-band (B, δ) formulation work that breaks the floor
 itself; sequencing = the user's call; the V4-reopen trigger stays
 parked. Design record `docs/design_track_v.md` §14.
 **GV5.1c ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 7 RECORDED;
-`cases/analysis/v5_1c_above_band_window/`, VERDICT + PRE_REGISTRATION
+`bench/studies/v5_1c_above_band_window/`, VERDICT + PRE_REGISTRATION
 committed 1e90d59 pre-execution): the pre-floor slope-2 window is now
 MEASURED — NO quadratic regime anywhere above the floor.** Seeds
 delivered genuinely above-band as pre-registered (the amended seed +
@@ -260,7 +260,7 @@ user's sequencing call among GV5.1d / GV5.5 / GV5.2 / GV5.3 / GV5.4;
 the V4-reopen trigger stays parked. Design record
 `docs/design_track_v.md` §15.
 **GV5.1d ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 7 RECORDED;
-`cases/analysis/v5_1d_near_band_window/`, VERDICT + PRE_REGISTRATION
+`bench/studies/v5_1d_near_band_window/`, VERDICT + PRE_REGISTRATION
 committed pre-execution): the near-band window is now MEASURED — NO
 quadratic basin adjacent to the floor either.** Seeds delivered into
 the near-band windows as pre-registered (the GV5.1c protocol verbatim,
@@ -287,7 +287,7 @@ bit-identical). Next = the user's sequencing call among GV5.5 /
 GV5.2 / GV5.3 / GV5.4; the V4-reopen trigger stays parked. Design
 record `docs/design_track_v.md` §16.
 **GV5.5 ✓ EXECUTED 2026-07-24 (2 PASS / 1 FAIL / 9 RECORDED;
-`cases/analysis/v5_5_te_floor/`, VERDICT + PRE_REGISTRATION committed
+`bench/studies/v5_5_te_floor/`, VERDICT + PRE_REGISTRATION committed
 pre-execution, implementation + tests + runner committed): the first
 formulation-level TE treatment does NOT break the floor.** Route (a)
 variant V1 = TE-outflow row replacement (row 6i+0 δ-carrier / row 6i+2
@@ -317,7 +317,7 @@ user adjudication. Executed under the temporary 8-thread session
 constraint. Next = **GV5.2 / GV5.3 / GV5.4** (user sequencing
 2026-07-24). Design record `docs/design_track_v.md` §17.
 **GV5.2 ✓ EXECUTED 2026-07-25 (band (b) FAIL + the loose-recipe
-transonic-limit anatomy; `cases/analysis/v5_2_rae2822/`, PRE_REGISTRATION
+transonic-limit anatomy; `bench/studies/v5_2_rae2822/`, PRE_REGISTRATION
 + 3 execution addenda committed before each (re-)execution): the loose
 GV3.1 recipe + the GV3.2 Newton protocol does NOT reproduce the
 experimental shock at either RAE2822 point.** Conditions P1
@@ -358,7 +358,7 @@ the runaway). Design record `docs/design_track_v.md` §18.
 
 **GV5.3 ✓ EXECUTED 2026-07-25 (band (b) honest FAIL + band (a)
 RECORDED input-limited, 0 PASS / 1 FAIL / 17 RECORDED;
-`cases/analysis/v5_3_m6_cp/`, PRE_REGISTRATION + addendum #1 committed
+`bench/studies/v5_3_m6_cp/`, PRE_REGISTRATION + addendum #1 committed
 before the (re-)execution): the loose VII loop does NOT move the M6
 transonic Cp toward the committed experiment.** Condition TEST 2308
 verbatim (M 0.8395/α 3.06, Re_MAC 11.72e6, x_tr/c 0.05), the GV5.0
@@ -402,7 +402,7 @@ No follow-up opened (user adjudication). Executed under the temporary
 `docs/design_track_v.md` §19.
 
 **GV5.4 ✓ EXECUTED 2026-07-25 (0 PASS / 1 FAIL / 17 RECORDED;
-`cases/analysis/v5_4_cost/`, PRE_REGISTRATION + 4 addenda committed
+`bench/studies/v5_4_cost/`, PRE_REGISTRATION + 4 addenda committed
 before each (re-)execution): the augmented step costs 7.53× the
 inviscid step, and the block preconditioner does NOT work at
 medium.** The tight/augmented Newton path (the GV5.1b scaled+damped
@@ -462,7 +462,7 @@ the wing-tip sheet-termination singularity (B31), cured by the taper at
 re-pinned 0.2173 → **0.2143** (RECORDED); cross-model gaps **0.3 % (M0.65) /
 0.2 % (M0.75)** (`cross_model.csv`; M0.5 widens to 1.9 % from the taper
 anchor drop). demo **8/8 PASS**. no LS-side change. Evidence:
-`cases/analysis/b32_tip_taper_adoption/` + refreshed
+`phases/p1/cases/analysis/b32_tip_taper_adoption/` + refreshed
 `cases/demo/b18_wingbody_transonic/results/`.
 
 **B31 ✓ CLOSED 2026-07-22 (same branch as B30; user-adjudicated ①+④ from
@@ -488,7 +488,7 @@ step-semantics evaluation (evidence-only, CLOSED). Library changes this phase
 fade) are ALL default-off / bit-identical. Tests
 `tests/test_b31_pressure_taper.py` (13) + `tests/test_b31_tip_fringe.py`
 (19). Adoption exits user-adjudicated → B32. Evidence
-`cases/analysis/b31_tip_termination/`.
+`phases/p1/cases/analysis/b31_tip_termination/`.
 
 **B30 ✓ CLOSED 2026-07-21 (user-adjudicated; SAME branch
 `kimi/b30-transonic-ceiling-attribution`): (b)-class wing-body transonic
@@ -499,7 +499,7 @@ free-edge singularity + high-M Newton lim/flr oscillation**, NOT a
 wake-model-specific junction pocket (G2 census: the dying peaks co-locate at
 the wing TIP on both paths). The López artificial-dissipation lever is
 LS-part / CONF-fail (G3). ★ Named the **C-class tip cure → B31/B32**. no
-`pyfp3d/` change. Evidence `cases/analysis/b30_transonic_ceiling/`
+`pyfp3d/` change. Evidence `phases/p1/cases/analysis/b30_transonic_ceiling/`
 (g1_anchor / g2_census / g2_regions / g3_levers).
 
 **B29 ✓ CLOSED 2026-07-20 (same branch as B28; no
@@ -530,7 +530,7 @@ the conforming path. ★ **GB27.2 PASS** — the LS A/C ceiling legs BIT-reprodu
 the committed B26 anchors (C coarse reached 0.84; C medium m_last 0.7625 dies
 0.775 (b); A medium m_last 0.50 dies 0.5125 (a); A coarse m_last 0.82):
 336/336 rows bit-identical in
-`cases/analysis/b27_b18_demo_refresh/results/g27_consistency.csv`. ★ **GB27.3 —
+`phases/p1/cases/analysis/b27_b18_demo_refresh/results/g27_consistency.csv`. ★ **GB27.3 —
 cross-model UPGRADED**: M0.5 (2.6%, B9/B17) + **M0.65 medium 2.4% PASS (≤5%)**
 + M0.75 medium 2.5% RECORDED — all gaps in the ~2.5% B17 cl_p/cl_kj convention
 band; new conf medium 0.75 point (cl_p 0.2483, monotone cl(M)). ★
@@ -544,7 +544,7 @@ re-solve (no caches). ★ the pre-B27 `b18_sections_conf_medium.png` was
 silently EMPTY (`section_cp_curve` tuple→dict API drift, swallowed by
 `except: pass`) — fixed in the refresh. Evidence:
 `cases/demo/b18_wingbody_transonic/results/` +
-`cases/analysis/b27_b18_demo_refresh/` (PRE_REGISTRATION.md / VERDICT.md /
+`phases/p1/cases/analysis/b27_b18_demo_refresh/` (PRE_REGISTRATION.md / VERDICT.md /
 g27_consistency.csv); Track-B narrative re-based in
 [design_track_b.md](../phases/p1/docs/design_track_b.md) §22 (+ §18 erratum pointer). **Next
 phase = user's call** — recommended candidate: **(b)-class ceiling
@@ -568,7 +568,7 @@ same 3/3 clamps and the same Mmax 5.22; the pocket's true kill line on the A
 medium side is 0.55, Mmax 13.1 > freeze_max_clamped=8). ★ watch item: C-side
 cl_fus ≈ 0.076–0.078 ≈ ×2 the A side, the excess in the out-band component
 (0.057–0.068) → P11/curved-wall input. Evidence:
-`cases/analysis/b26_ls_transonic_ceiling/` (g1_summary.csv / g1_levels.csv /
+`bench/studies/b26_ls_transonic_ceiling/` (g1_summary.csv / g1_levels.csv /
 g1_peaks.csv / g1_ceiling.png + VERDICT.md).
 
 **P11 ✓ CLOSED 2026-07-19 (user-directed, opened +
@@ -792,7 +792,7 @@ solver's density, not just a diagnostic. Third bite from one element class
 contributor to B18's refinement-worsening wing-body pocket (M_max 3.96);
 wing-alone measurement, no causal link; named test recorded. **NOT adopted** —
 changing the density source changes R ⇒ its own phase. Evidence
-`cases/analysis/c1_ls_jacobian_fd/`.
+`phases/p1/cases/analysis/c1_ls_jacobian_fd/`.
 
 **A3 ✓ CLOSED 2026-07-18 (NEW, user-directed): response to the
 2026-07-17 independent Kimi inspection — docs consistency (17 findings) +
@@ -808,7 +808,7 @@ convergence rate (the LS Newton is a quasi-Newton in 3-D).** B6's FD gate could
 not see it (quasi-2D has no such elements); B7/B15's M6 gates are convergence
 gates, not FD gates. **RECORDED, NOT FIXED** — the side-aware column-mapping fix
 is a shipped-kernel change that would move committed step-count trajectories ⇒
-its own phase, user's call. Evidence `cases/analysis/c1_ls_jacobian_fd/`.
+its own phase, user's call. Evidence `phases/p1/cases/analysis/c1_ls_jacobian_fd/`.
 ★ **Backported two B15-era LS fixes the review found un-backported for three
 phases** (C2 selection-epoch fail-fast scoping, C3 `freeze_max_reverts` disarm)
 to `solve/newton.py` — both dormant on every committed run. ★ **Reader hardened
@@ -1177,14 +1177,14 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   step RECORDED above the ≤ ~2× band; block preconditioner
   NOT-WORKING honest FAIL — block-Jacobi diverges, exact-BL Schur
   stalls 1/4; 0P/1F/17R))** —
-  M6 subsonic loose-coupling bridge (`cases/analysis/v5_m6_bridge/`): the
+  M6 subsonic loose-coupling bridge (`bench/studies/v5_m6_bridge/`): the
   loose loop is NOT sufficient on the 3-D lifting wing (coarse: root-upper-TE
   separation-patch runaway ṁ_max ×12.4 = GV3.3-stern class; medium: patch
   refined away, bounded δ* limit cycle); ΔCL DOWN both estimators (medium
   −2.4 % input-limited); crossflow small (max|B|/|A| ≤ 0.072); tip mask
   validated; `viscous/coupling.py::build_wing_case` +
   `tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands;
-  GV5.1 (`cases/analysis/v5_tight_coupling/`): exact augmented (φ, Γ, BL)
+  GV5.1 (`bench/studies/v5_tight_coupling/`): exact augmented (φ, Γ, BL)
   Newton delivered + FD-verified both levels (2.2e-8 coarse / 5.1e-9
   medium); quadratic tail HONEST FAIL = the intrinsic IBL floor on the
   cond(J_BL,BL) ~ 4e10 near-null manifold (standalone pseudo-time stalls
@@ -1192,13 +1192,13 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   committed GV3.1 medium fixed point NOT reproducible (IBL-floor
   trajectory scatter, diagnosis committed, HEAD-regen seed
   user-accepted); IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24
-  (14 RECORDED, `cases/analysis/v5_ibl_floor/`): the raw cond mostly a
+  (14 RECORDED, `bench/studies/v5_ibl_floor/`): the raw cond mostly a
   scaling artifact (equilibrated 2e4/7e5/1e7, sub-1e-6 → 0/0/2, no
   exact null directions), the genuine scaled (A, Ψ) stiffness 1e5–1e7 +
   the TE-band (B, δ) floor residual inside J's range = the GV5.1b
   targets; the pseudo-time controller bottoms out at the floor; GV5.1b
   ✓ EXECUTED 2026-07-24 (2P/0F/7R adjudicated; 1P/1F/7R as executed,
-  `cases/analysis/v5_1b_scaled_newton/`):
+  `bench/studies/v5_1b_scaled_newton/`):
   the scaled + damped machinery is delivered and exact (row/column
   equilibration + Levenberg damping + floor-reached stop, flags default
   OFF = legacy bit-identical; `tests/test_v5_tight_scaled.py` (8),
@@ -1212,14 +1212,14 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   F_BL −31 % / merit 2.3× below, μ rejection-retries 0 (scaling the
   active ingredient); the window question reframed to an
   above-band-seed protocol → **GV5.1c ✓ EXECUTED 2026-07-24** (2P/1F/7R,
-  `cases/analysis/v5_1c_above_band_window/`): calibrated above-band seeds
+  `bench/studies/v5_1c_above_band_window/`): calibrated above-band seeds
   (ε = 1e4 → F_BL ≈ 1e4× the band) — the pre-floor slope-2 window
   MEASURED: NO quadratic regime above the floor (λ-capped halvings
   p = 1.00 by construction; mid-range stall at F_BL ~ 1e-2, never
   reaching the band; binding medium median p = 0.56 honest FAIL);
   the obstacle is bigger than the floor — a mid-range descent barrier
   3–4 decades above it → **GV5.1d ✓ EXECUTED 2026-07-24** (2P/1F/7R,
-  `cases/analysis/v5_1d_near_band_window/`): near-band seeds (T1 =
+  `bench/studies/v5_1d_near_band_window/`): near-band seeds (T1 =
   [1e-4, 1e-3]; 5.42×/35× the band) — NO quadratic basin adjacent to
   the floor either (coarse crawls to 24× floor, band never entered;
   medium's first step moves F_BL AWAY from the band, then crawls to
@@ -1227,14 +1227,14 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   third time): the flat/ragged merit neighborhood extends down to
   within ~1.5 decades of the floor — basin hunting exhausted
   (GV5.1b/1c/1d) → **GV5.5 ✓ EXECUTED 2026-07-24** (2P/1F/9R,
-  `cases/analysis/v5_5_te_floor/`): the TE-outflow row replacement (V1)
+  `bench/studies/v5_5_te_floor/`): the TE-outflow row replacement (V1)
   does NOT break the floor — binding m2 = 5554× (coarse) / 245998×
   (medium, scatter clause) the floor, the "worse" clause; the damage
   peaks at the LE suction zone, not the TE; flag default-OFF, the
   escalation ladder stays registered-not-opened (opening = user
   adjudication) → **GV5.2 ✓ EXECUTED 2026-07-25** (band (b) FAIL +
   the loose-recipe transonic-limit anatomy,
-  `cases/analysis/v5_2_rae2822/`): RAE2822 P1/P2 VII vs committed
+  `bench/studies/v5_2_rae2822/`): RAE2822 P1/P2 VII vs committed
   experiment — every computed shock 0.06–0.10 c downstream of the
   bracket (medium P1 terminal 0.6288 out of band, leg non-converged;
   medium P2 k = 4 runaway §6 RECORDED); 1/4 legs converged; band (a)
@@ -1243,7 +1243,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   too weak at M ≥ 0.725 ⇒ next transonic-VII reads from the
   tight/augmented path → **GV5.3 ✓ EXECUTED 2026-07-25** (band (b)
   honest FAIL + band (a) RECORDED input-limited, 0P/1F/17R,
-  `cases/analysis/v5_3_m6_cp/`): M6 wing TEST 2308 M0.8395/α3.06 vs the
+  `bench/studies/v5_3_m6_cp/`): M6 wing TEST 2308 M0.8395/α3.06 vs the
   committed 7-station Cp — the viscous Cp does NOT move toward
   experiment (1/5 unmasked stations + a pooled increase, every |ΔRMS|
   flagged input-limited; a direction verdict); Δcl_KJ −2.20 % DOWN but
@@ -1256,7 +1256,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   hand: Drela 2013 = AIAA 2013-2437 (`docs/references/`, gitignored).
   **V1 shipped + GV1.1 executed 2026-07-22** (`pyfp3d/viscous/`:
   surface_mesh/closures/ibl3 + 35 new tests; VERDICT
-  `cases/analysis/v1_ibl3_standalone/VERDICT.md`, implementation record
+  `bench/studies/v1_ibl3_standalone/VERDICT.md`, implementation record
   `docs/design_track_v.md` §9): (a) ×2 FAIL = closure-family fixed point
   H*≈2.7083 ≠ Blasius 2.59 (pre-registered known risk, no re-spec; accepted
   as recorded FAIL at V1 closing); (e)
@@ -1357,7 +1357,7 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
     against a fresh-worktree leg fails spuriously at ~1e-5 even for
     identical sources — the GV6.1 (a)(ii) harness therefore runs BOTH legs
     as fresh-compile worktree subprocesses. Evidence
-    `cases/analysis/v6_1_wake_sheet/results/ab_cache_mode_isolation.csv`.
+    `bench/studies/v6_1_wake_sheet/results/ab_cache_mode_isolation.csv`.
 
 Baseline: **651 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V6
 GV6.1 executed** (the conforming wake-sheet δ* source: (a)(i)/(a)(ii)
@@ -1365,7 +1365,7 @@ GV6.1 executed** (the conforming wake-sheet δ* source: (a)(i)/(a)(ii)
 fresh-compile, the numba cache-load infidelity discipline — (b) sign-pin
 MMS PASS empirically pinning the per-face ½ṁ addendum, (c) W2
 TE-continuity every outer PASS, (d) Δ-cl +0.00015 / TE max |ΔCp| 0.00250
-RECORDED — VERDICT `cases/analysis/v6_1_wake_sheet/VERDICT.md`);
+RECORDED — VERDICT `bench/studies/v6_1_wake_sheet/VERDICT.md`);
 full-suite measured 651 @1606.31 s **@8 threads** (temporary 8-core session
 constraint, user-directed; NOT comparable to the 16-thread ledger entries);
 +7 vs the 644 below = `tests/test_v6_wake_sheet.py` (7 new)).
@@ -1374,7 +1374,7 @@ GV5.4 executed** (the augmented-step cost on M6 medium: band (a) RECORDED —
 the augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
 ≤ ~2× band; band (b) honest FAIL — the block preconditioner does NOT work
 at medium: block-Jacobi diverges, exact-BL Schur stalls 1/4 — VERDICT
-`cases/analysis/v5_4_cost/VERDICT.md`); full-suite measured 644
+`bench/studies/v5_4_cost/VERDICT.md`); full-suite measured 644
 @1230.61 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +2 vs the 642
 below = `tests/test_v5_tight_scaled.py` (2 new: the `step_solve` callback
@@ -1384,7 +1384,7 @@ GV5.3 executed** (the M6 wing direction+magnitude check vs committed Cp:
 band (b) honest FAIL — the viscous Cp does NOT move toward the committed
 7-station experiment (1/5 unmasked stations + a pooled increase); band (a)
 RECORDED input-limited, Δcl_KJ −2.20 % DOWN under the A4 floor — VERDICT
-`cases/analysis/v5_3_m6_cp/VERDICT.md`); full-suite measured 642
+`bench/studies/v5_3_m6_cp/VERDICT.md`); full-suite measured 642
 @1233.89 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +0 vs the 642
 below = no test changes (the gate added no library/test code; wall
@@ -1393,7 +1393,7 @@ Previous: 642 passed + 25 skipped + 2 xfailed (2026-07-25, Track V **V5
 GV5.2 executed** (the RAE2822 transonic VII vs committed experiment: band (b)
 FAIL + the loose-recipe transonic-limit anatomy — every computed shock
 0.06–0.10 c downstream of the bracket, 1/4 legs converged — VERDICT
-`cases/analysis/v5_2_rae2822/VERDICT.md`); full-suite measured 642
+`bench/studies/v5_2_rae2822/VERDICT.md`); full-suite measured 642
 @1245.33 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +6 vs the 636
 below = `tests/test_meshgen_rae2822.py` (5) +
@@ -1402,7 +1402,7 @@ Previous: 636 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.5 executed** (the TE-band (B, δ) formulation item: the V1 TE-outflow row
 replacement does NOT break the floor — binding m2 5554×/245998× the floor,
 the "worse" clause; flag default-OFF — VERDICT
-`cases/analysis/v5_5_te_floor/VERDICT.md`); full-suite measured 636
+`bench/studies/v5_5_te_floor/VERDICT.md`); full-suite measured 636
 @1402.11 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +9 vs the 627
 below = `tests/test_v5_te_outflow.py` (9)).
@@ -1411,7 +1411,7 @@ GV5.1d executed** (the near-band window read: NO quadratic basin adjacent to
 the floor either — near-band seeds stall immediately, coarse crawling to 24×
 floor, medium's first step moving AWAY from the band; binding medium median
 p = 1.17 honest FAIL — VERDICT
-`cases/analysis/v5_1d_near_band_window/VERDICT.md`); full-suite measured 627
+`bench/studies/v5_1d_near_band_window/VERDICT.md`); full-suite measured 627
 @1340.77 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries; wall markedly below the
 GV5.1c-era 3903 s on the same thread count — machine/cache conditions differ,
@@ -1421,21 +1421,21 @@ Previous: 620 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1c executed** (the above-band window read: NO quadratic regime above the
 floor — λ-capped halvings + a mid-range stall, binding medium median p = 0.56
 honest FAIL — VERDICT
-`cases/analysis/v5_1c_above_band_window/VERDICT.md`); full-suite measured 620
+`bench/studies/v5_1c_above_band_window/VERDICT.md`); full-suite measured 620
 @3903.16 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries, machine idle); +9 vs the 611
 below = `tests/test_v5_above_band_seed.py` (9)).
 Previous: 611 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1b executed** (scaled+damped augmented Newton; machinery exact, band (b)
 window question reframed — VERDICT
-`cases/analysis/v5_1b_scaled_newton/VERDICT.md`); full-suite measured 611
+`bench/studies/v5_1b_scaled_newton/VERDICT.md`); full-suite measured 611
 @6556.77 s @16 threads (wall POLLUTED by co-tenant load ~70–80 — quote
 flagged, the GV5.1-era idle figure was 1537 s); +8 vs the 603 below =
 `tests/test_v5_tight_scaled.py` (8)).
 Previous: 603 passed + 25 skipped + 2 xfailed (2026-07-23, Track V **V5
 GV5.1 executed** (augmented tight (φ, Γ, U) Newton; band (a) FD exactness
 PASS both levels, band (b) quadratic tail HONEST FAIL on the IBL floor —
-VERDICT `cases/analysis/v5_tight_coupling/VERDICT.md`); full-suite measured
+VERDICT `bench/studies/v5_tight_coupling/VERDICT.md`); full-suite measured
 603 @1537.09 s @16 threads; +20 vs the 583 below =
 `tests/test_v5_tight_jacobian.py` (8) + `tests/test_v5_tight_edge.py` (7) +
 `tests/test_v5_tight_system.py` (5)).

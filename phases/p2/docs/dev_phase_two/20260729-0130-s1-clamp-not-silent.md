@@ -100,7 +100,7 @@ PYTHONPATH=. python -m pytest tests/ -q                                # 影响�
 
 处置：**该测试退役**（`@pytest.mark.skip`，reason 里写明完整归因链与证据脚本），
 两遍测量固化为 `bench/s1_duct/check_loose_loop_determinism.py`。
-GV6.1 (a)(ii) 的**证据本身不受影响**（committed 在 `cases/analysis/v6_1_wake_sheet/`），
+GV6.1 (a)(ii) 的**证据本身不受影响**（committed 在 `bench/studies/v6_1_wake_sheet/`），
 退役的是一个**声称的东西它做不到**的活守卫 —— 这正是原则 1 的要求。
 
 退役后：`tests/test_v6_wake_sheet.py` 7 passed / 1 skipped。

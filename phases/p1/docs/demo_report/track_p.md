@@ -1813,7 +1813,7 @@ pressure level as usual. This is the spec's "the nonlinear closure may need its
 own damping" risk landing in its mild form: a seeding rule, not a damping
 scheme.
 
-### Diagnostic-first (spec-mandated), `cases/analysis/p14_te_pressure_diag/`, 20/20
+### Diagnostic-first (spec-mandated), `bench/studies/p14_te_pressure_diag/`, 20/20
 
 Run BEFORE any wiring: CV construction clean on NACA coarse + M6
 coarse/medium (two-sided fans never empty — min fan 1 element on NACA, 2 on M6;

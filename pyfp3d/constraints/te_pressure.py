@@ -4,7 +4,7 @@ recovered-velocity / pressure-equality estimator (P14, routed from A2).
 
 The classic conforming target (constraints/wake.py::kutta_targets) reads the
 potential jump at ONE wall probe node per side, one edge off the TE. A2
-(cases/analysis/a2_te_kutta_fidelity, closed 2026-07-17) proved that probe
+(bench/studies/a2_te_kutta_fidelity, closed 2026-07-17) proved that probe
 estimator (a) MANUFACTURES the spanwise Gamma(z) jitter from a smooth field
 (fixed-Gamma discriminator D = 7.33/25.70 coarse/medium) and (b) enforces
 equal *potential* jump where the physical Kutta condition is equal

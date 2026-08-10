@@ -36,7 +36,7 @@ HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[4]
 DEMO = REPO_ROOT / "cases/demo/b18_wingbody_transonic/results"
 DEMO_REL = "cases/demo/b18_wingbody_transonic/results"
-B26 = REPO_ROOT / "phases/p1/cases/analysis/b26_ls_transonic_ceiling/results"
+B26 = REPO_ROOT / "phases/p1/bench/studies/b26_ls_transonic_ceiling/results"
 OUT = HERE / "results"
 OUT.mkdir(exist_ok=True)
 

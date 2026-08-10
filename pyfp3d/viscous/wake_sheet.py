@@ -1,8 +1,8 @@
 """Track V V6 -- the conforming wake-sheet delta* source (binding:
 docs/roadmap/track_v.md GV6.1; pre-registration
-cases/analysis/v6_1_wake_sheet/PRE_REGISTRATION.md including the
+bench/studies/v6_1_wake_sheet/PRE_REGISTRATION.md including the
 2026-07-25 addendum; GV6.0 ruling: Option A + producer (i),
-cases/analysis/v6_0_design_adjudication/DESIGN_ADJUDICATION.md).
+phases/p1/cases/analysis/v6_0_design_adjudication/DESIGN_ADJUDICATION.md).
 
 The wake displacement thickness enters the FP solve as a mass-transpiration
 sheet source on the wake cut faces, riding the V2 channel: b_wake is

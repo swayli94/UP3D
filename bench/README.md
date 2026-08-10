@@ -1,59 +1,52 @@
-# bench/ — phase-two drift detection and A/B tools
+# `bench/` —— 测量台(**不是测试**)
 
-Established by GS0.3 (see [../docs/dev_phase_two/roadmap.md](../docs/dev_phase_two/roadmap.md)).
-Every development round reports against these two tools.
+★★ **这条界 2026-08-10 才划清并写下来。** 在那之前 `bench/` 与 `cases/analysis/` 是
+**同一件事的两个家** —— 都是"一个脚本回答一个登记过的问题,并提交 CSV",区别只在
+**哪个阶段发明的**(phase 1 用 `cases/analysis/<门>/`,phase 2 另起 `bench/` 平铺)。
+使用者裁决:**合并到 `bench/`**。现在的界是:
 
-## 1. `run_bench.py` — the repeatable metric set
-
-Cheap (~2 min on 16 threads, coarse meshes only) so it can be run every round.
-
-```bash
-NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16 \
-    python bench/run_bench.py                       # -> bench/results/bench_<stamp>.csv + diff vs baseline
-python bench/run_bench.py --with-medium             # + the medium legs (~5 min more)
-```
-
-Three groups:
-
-| group | what it prices | why it is here |
+| | 是什么 | 判据 |
 |---|---|---|
-| `linalg/*` | one elliptic solve (AMG+CG), AMG setup, `splu` cost + fill, assembly | the algorithmic floor: the solver must be judged against its own ingredients, not against another language (audit §3.2) |
-| `airfoil/*` | NACA0012 M0.80 α1.25 at `upwind_c` = 1.0 / 1.5 / 3.0 | product metric **M1**: shock position and cl must stop depending on the dissipation constant (audit §3.1) |
-| `m1a/*` | NACA0012 **M0.72**/α1.25 (M_max ≈ 1.17) coarse + medium (+ fine under `--with-medium`) | product metric **M1a** (decision D3): the point INSIDE the measured h-convergent envelope (M_max ≲ 1.2). Unlike `airfoil/*` these rows are supposed to **stay put** — they lock what the solver can do today while GS1.6 widens the envelope |
-| `wing/*` | ONERA M6 M0.8395 α3.06, `precond` direct vs amg | keeps GS3.1 honest: same answer, less time (audit §3.3) |
+| **`bench/*.py`** | **反复重跑的台** | 每次开发轮/收口都可能再跑一遍;有基线,读的是**漂移** |
+| **`bench/studies/<门>/`** | **一次性的登记研究** | 回答一个门的问题,答完就是历史;目录内自带 `PRE_REGISTRATION.md` + `VERDICT.md` + `results/` |
+| **`bench/gate_results/`** | 反复重跑那一类的产物 | 被保留代码与 phase-3 文档按路径引用的 CSV |
 
-`bench/baseline_2026-07-28.csv` is the **frozen phase-two starting point**
-(measured on DESKTOP-N6UP769, WSL2, 16 threads). `--compare` prints every metric
-that moved beyond its tolerance: physics values 1e-6 relative, wall times 40 %
-(shared box), GMRES counts 25 %.
+**判据不是"新旧",是"会不会再跑"。** 按这条界,`run_bench.py` 与 `run_gs31_precond.py`
+在整理中一度被误归为一次性研究、**又搬回来了**:前者是 GS0.3 的**每轮漂移检测**(而且它的基线
+`baseline_2026-07-28.csv` 一直留在这里 —— 脚本走了基线留下,本身就是分类错了的证据);
+后者是 [`DECISION-2026-08-02-precond.md`](../docs/dev_phase_two/DECISION-2026-08-02-precond.md)
+的复现脚本,而那个决策**是活的**(EW forcing 1e-6 仍是默认)并写着**推翻条件** ——
+要检验推翻条件就需要这个脚本。
 
-⚠ The baseline is a **drift detector, not a truth reference** (roadmap principle 1).
-`airfoil/*` and `wing/*` values are known to be wrong against external data —
-that is exactly what S1/S2 are meant to change. When a round moves them ON
-PURPOSE, the round file records the move; the baseline is then re-frozen with a
-new date and the old one kept.
+## 反复重跑的那一类(本目录)
 
-## 2. `bitcheck.py` — development-time bit-identity A/B
+| 脚本 | 用途 | 实测成本 |
+|---|---|---|
+| ★ `run_capability_locks.py` | **快层能力锁**:收口仪式**第 0 步**。自己钉线程帽(它含一条墙钟断言),并把帽值与机器负载打印进输出;**每次都打印自己没覆盖什么** | **482 s,5/5 green** |
+| `run_bench.py` | GS0.3 的每轮漂移检测(linalg / kernels / solve 三组),对 `baseline_2026-07-28.csv` 做 A/B | ~2 min @16 线程 |
+| `run_m1_gate.py` | 产品指标 **M1**,两条 `n_picard_seed` 都测;**不达标就退出码 1** | ~6 min |
+| `run_m3_budget.py` | **M3** 的分带误差预算(LE 上 69.6% / MID 20.7%) | 分钟级 |
+| `run_capability_matrix.py` | 13 配置 × 阶梯 = **78 点**(M5 的相邻测量) | 小时级 |
+| `run_g82_anchor_check.py` | ★ 当墙钟断言遮住物理时,**不改测试**直接量 G8.2 的五条锚点 | ~2 min @8 线程 |
+| `run_le14_common_root.py` | **失败分类器** —— 永远不要只报 `conv=False`,五种模式有完全不同的修法 | 库函数 |
+| `run_gs31_precond.py` | 预条件子/EW forcing 决策的复现(**含推翻条件**) | 分钟级 |
+| `run_le_response.py` | LE 响应测量(被上面几个引用) | 分钟级 |
+| `bitcheck.py` | ★ **开发时**的位相同 A/B(裁决 D1) —— **不是永久测试** | 秒级 |
 
-Decision D1: bit identity is meaningful only on the same machine, same
-environment, before vs after an edit — so it is a tool, not a permanent test.
+## 一次性研究(`bench/studies/`)
 
-```bash
-python bench/bitcheck.py --save bench/results/bit_before.npz    # before editing
-# ... make the change ...
-python bench/bitcheck.py --save bench/results/bit_after.npz
-python bench/bitcheck.py --diff bench/results/bit_before.npz bench/results/bit_after.npz
-```
+20 个门的研究链,每个目录自带**预注册 → 执行 → 判定**。**预注册在它所管的测量之前提交** ——
+这个先后就是要点本身。另外 23 个 phase-1 的研究链在
+[`phases/p1/cases/analysis/`](../phases/p1/cases/analysis/)(整理时按"是否被现存代码读取"分开)。
 
-Ten probes: residual/matrix assembly, `rho_tilde` at a **subcritical** state
-(must stay bit-identical through any S1 change — ν = 0 there) and at a
-**supercritical** state (what S1 changes on purpose), the lifting Laplace solve,
-the coarse 2-D transonic Newton solve, and the coarse M6 wing solve.
-Exit code 0 = every probe bitwise identical.
+★ 归档里那批**保持旧布局**(`cases/analysis/`)是故意的:归档是**历史快照**,重命名它只会
+让"当年长什么样"失真。所以看到两种路径不必奇怪 —— 活的在 `bench/studies/`,历史的在
+`phases/p1/cases/analysis/`。
 
-Self-test 2026-07-28: two consecutive runs on the same machine gave 10/10
-bitwise identical probes, i.e. the solver is run-to-run deterministic here — so
-a `bitcheck` difference means the edit did it.
+## 纪律
 
-`bench/results/` is gitignored (npz are ~1 MB each); commit only the baseline CSV
-and quote numbers in the round file.
+- **一个数字只活在 .md 里就不算证据**(roadmap §3 原则 6)⇒ 每个脚本都提交 CSV。
+- ★ **墙钟类断言要钉线程帽**:同一次 M6 求解未钉帽 **566.6 s** / 钉 8 线程 **113.7 s**
+  (同一负载,5.0×)⇒ 不钉帽的计时门量的是**环境**,不是求解器。
+- ★ **不要 casually 重算贵的产物**:committed CSV 是权威;只有当真实的求解器/网格/参考改动会
+  移动那些数字、且你会提交刷新时才重跑。

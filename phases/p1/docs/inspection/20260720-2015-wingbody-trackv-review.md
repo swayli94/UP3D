@@ -95,7 +95,7 @@
 | 跨模型一致性 | colspan：M0.5 2.6%（B9/B17）· **M0.65 medium 2.4% PASS** · M0.75 2.5% RECORDED · coarse M0.6 2.1%（C 侧，欠解析）——gap 全 Mach 平在 ~2.5% = B17 cl_p↔cl_kj 口径差带 | | |
 
 证据：`cases/demo/b18_wingbody_transonic/results/checks.csv` 8/8（含 3 条 RECORDED 语义性
-PASS）、`cases/analysis/b26_ls_transonic_ceiling/results/g1_*.csv`、
+PASS）、`bench/studies/b26_ls_transonic_ceiling/results/g1_*.csv`、
 `cases/analysis/b27_b18_demo_refresh/results/g27_consistency.csv`（336/336 逐位）。
 配方：conforming 翼身 ramp 需 `freeze_tol=1e-5`（`run_demo.py:156`，coarse/medium 统一）；
 LS 需 `solve_multivalued_newton_transonic` + `CutElementMap(inboard_clip=make_inboard_clip(FUS))`

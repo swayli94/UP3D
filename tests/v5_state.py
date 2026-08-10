@@ -29,7 +29,7 @@ REPO_ROOT = Path(__file__).parent.parent
 NACA_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
 
 M_INF, ALPHA, RE = 0.5, 2.0, 3.0e6
-# the GV3.1 Newton-leg settings (cases/analysis/v3_loose_coupling/run.py:67)
+# the GV3.1 Newton-leg settings (bench/studies/v3_loose_coupling/run.py:67)
 UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR = 1.5, 0.95, 3.0, 0.05
 CASE_ARGS = dict(
     upwind_c=UPWIND_C,

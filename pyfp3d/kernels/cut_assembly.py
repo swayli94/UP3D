@@ -419,7 +419,7 @@ def newton_terms23_side_coo(op, side, u_inf=1.0):
     DOFs through the side density while the old code scattered that
     sensitivity onto a MAIN column, so J was not dR/dphi (rel err 1.146e-01 on
     the affected directions vs 6.33e-10 elsewhere;
-    `cases/analysis/c1_ls_jacobian_fd/`). Since B20 those elements read their
+    `phases/p1/cases/analysis/c1_ls_jacobian_fd/`). Since B20 those elements read their
     density from the MAIN field, so the maps agree there too; the split stays
     because it encodes the invariant (columns follow the READ field).
 

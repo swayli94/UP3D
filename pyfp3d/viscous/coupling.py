@@ -78,7 +78,7 @@ __all__ = [
 @dataclass
 class CouplingConfig:
     """Loose-coupling run parameters (GV3.1/GV3.2 conditions are pinned by
-    the PRE_REGISTRATION of cases/analysis/v3_loose_coupling/, not here).
+    the PRE_REGISTRATION of bench/studies/v3_loose_coupling/, not here).
 
     re_chord: Reynolds number per unit chord. Nondimensionalization follows
         the FP solver (u_inf = rho_inf = chord = 1), so the laminar

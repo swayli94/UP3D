@@ -87,12 +87,12 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   motivation measured; **GV5.1 ✓ EXECUTED 9P/1F/36R** — exact augmented Newton delivered, FD-verified
   both levels (2.2e-8/5.1e-9); quadratic tail HONEST FAIL = the intrinsic IBL floor (cond(J_BL,BL) ~ 4e10
   near-null manifold, not a coupling defect); **IBL-floor follow-up diagnosis ✓ EXECUTED 2026-07-24**
-  (14 RECORDED, `cases/analysis/v5_ibl_floor/`) — the raw cond is MOSTLY a scaling artifact (equilibrated
+  (14 RECORDED, `bench/studies/v5_ibl_floor/`) — the raw cond is MOSTLY a scaling artifact (equilibrated
   2e4/7e5/1e7, sub-1e-6 count → 0/0/2, no exact null directions); the genuine scaled (A, Ψ) stiffness
   1e5–1e7 + the TE-band (B, δ) floor residual inside J's range = the GV5.1b targets; the pseudo-time
   controller bottoms out at the floor (globalization alone insufficient)); **GV5.1b ✓ EXECUTED
   2026-07-24** (2P/0F/7R adjudicated; 1P/1F/7R as executed, preserved in commit 1c55906;
-  `cases/analysis/v5_1b_scaled_newton/`) — scaled+damped machinery delivered and
+  `bench/studies/v5_1b_scaled_newton/`) — scaled+damped machinery delivered and
   exact (equilibration + Levenberg + floor-reached stop, flags default OFF = legacy bit-identical; suite
   28 green; the medium live-seed e2 read on a non-pre-registered ≤1e-10 threshold = pivot-order
   machine floor through cond ~ 1e10, **adjudicated PASS 2026-07-24 (user) under the cond-aware read**
@@ -101,33 +101,33 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   medium floor_reached at iter 5 at the same merit (9.074e-11 ≈ 9.025e-11), coarse still descending
   below GV5.1 (2.044e-10 < 2.068e-10), k=1 standalone F_BL −31 % / merit 2.3× below, μ rejection-retries
   0 (scaling the active ingredient); the window question reframed to an above-band-seed protocol
-  → **GV5.1c ✓ EXECUTED 2026-07-24** (2P/1F/7R, `cases/analysis/v5_1c_above_band_window/`):
+  → **GV5.1c ✓ EXECUTED 2026-07-24** (2P/1F/7R, `bench/studies/v5_1c_above_band_window/`):
   calibrated above-band δ-perturbed seeds (ε = 1e4 → seed F_BL ≈ 1e4× the floor band) — the
   pre-floor slope-2 window MEASURED: NO quadratic regime above the floor (λ = 0.5-capped halvings
   p = 1.00 by construction; then a mid-range stall at F_BL ~ 1e-2, never reaching the band;
   binding medium median p = 0.56 honest FAIL); the obstacle is bigger than the floor — a
   mid-range descent barrier 3–4 decades above it → **GV5.1d ✓ EXECUTED 2026-07-24** (2P/1F/7R,
-  `cases/analysis/v5_1d_near_band_window/`): near-band seeds (T1 = [1e-4, 1e-3]; 5.4×/35× the
+  `bench/studies/v5_1d_near_band_window/`): near-band seeds (T1 = [1e-4, 1e-3]; 5.4×/35× the
   band) — NO quadratic basin adjacent to the floor either (coarse crawls to 24× floor, medium's
   first step moves AWAY from the band then crawls to 493×; binding medium median p = 1.17 honest
   FAIL; μ retries 0 a third time): the flat/ragged merit neighborhood extends down to within
   ~1.5 decades of the floor — basin hunting exhausted (GV5.1b/1c/1d)) → **GV5.5 ✓ EXECUTED
-  2026-07-24** (2P/1F/9R, `cases/analysis/v5_5_te_floor/`): the standalone TE-band (B, δ)
+  2026-07-24** (2P/1F/9R, `bench/studies/v5_5_te_floor/`): the standalone TE-band (B, δ)
   formulation item — route (a) variant V1 = TE-outflow row replacement does **NOT** break
   the floor (m2 = 5554×/245998× the floor, the pre-registered "worse" clause; the damage
   peaks at the LE suction zone, not the TE; flag stays default-OFF; escalation ladder
   stays registered-not-opened, opening = user's adjudication)) → **GV5.2 ✓ EXECUTED
   2026-07-25** (band (b) FAIL + the loose-recipe transonic-limit anatomy,
-  `cases/analysis/v5_2_rae2822/`: RAE2822 P1/P2 VII vs committed experiment — every
+  `bench/studies/v5_2_rae2822/`: RAE2822 P1/P2 VII vs committed experiment — every
   computed shock 0.06–0.10 c downstream of the bracket; 1/4 legs converged; the loose
   displacement-thickness feedback is too weak at M ≥ 0.725 ⇒ the next transonic-VII
   reads come from the tight/augmented path, not loose-loop tuning) → **GV5.3 ✓
   EXECUTED 2026-07-25** (band (b) honest FAIL + band (a) RECORDED input-limited,
-  `cases/analysis/v5_3_m6_cp/`: M6 wing TEST 2308 M0.8395/α3.06 vs the committed
+  `bench/studies/v5_3_m6_cp/`: M6 wing TEST 2308 M0.8395/α3.06 vs the committed
   7-station Cp — the viscous Cp does NOT move toward experiment (1/5 unmasked
   stations + a pooled increase); Δcl_KJ −2.20 % DOWN but under the A4 floor; the
   3-D counterpart of the GV5.2 reading) → **GV5.4 ✓ EXECUTED 2026-07-25** (0P/1F/17R,
-  `cases/analysis/v5_4_cost/`: augmented step 22.93 s vs inviscid 3.05 s = **7.53×**
+  `bench/studies/v5_4_cost/`: augmented step 22.93 s vs inviscid 3.05 s = **7.53×**
   above the ≤ ~2× band RECORDED; block preconditioner NOT-WORKING honest FAIL —
   block-Jacobi diverges, exact-BL Schur stalls 1/4; "measure before Schur" answered:
   the BL elimination is cheap (1.8 s), Krylov convergence is the bottleneck ⇒
@@ -143,12 +143,12 @@ the form "roadmap.md Track X / phase entry / ledger" resolves through the per-tr
   M_BB route + EW-forcing registered-not-opened); **V6 wake sheet ✓
   CLOSED 2026-07-25** — GV6.0 RULED (Option A: conforming-only +
   producer (i); the LS leg + solved wake IBL = recorded follow-ups) →
-  **GV6.1 ✓ CLOSED 2026-07-25** (6P/0F/7R, `cases/analysis/v6_1_wake_sheet/`:
+  **GV6.1 ✓ CLOSED 2026-07-25** (6P/0F/7R, `bench/studies/v6_1_wake_sheet/`:
   the conforming wake-sheet δ* source shipped — (a)(i)/(a)(ii) δ*_wake = 0
   bit-identity PASS ((a)(ii) both legs fresh-compile, the numba cache-load
   infidelity discipline), (b) sign-pin MMS PASS empirically pinning the
   per-face ½ṁ addendum, (c) W2 every outer PASS) → **GV6.2 ✓ CLOSED
-  2026-07-25** (0P/0F/24R, `cases/analysis/v6_2_measured_effect/`: Δ-cl
+  2026-07-25** (0P/0F/24R, `bench/studies/v6_2_measured_effect/`: Δ-cl
   +0.00015 (+0.0547 %) / TE max |ΔCp| 0.00250 = 0.022×/0.051× the A4 band
   = NOT significant, L-robust over {0.5,1.0,2.0} c (1.0 c pinned); XFOIL
   wake Option A — direction agrees, rate 0.454 c vs 1.0 c recorded;

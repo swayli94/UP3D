@@ -50,7 +50,7 @@ _GATE = str(__import__('pathlib').Path(__file__).resolve().parents[3]
 REPO = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, REPO)
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(REPO, "cases", "analysis", "v5_3_m6_cp"))
+sys.path.insert(0, os.path.join(REPO, "bench", "studies", "v5_3_m6_cp"))
 
 import run_capability_matrix as cap                                 # noqa: E402
 from pyfp3d.post.unified import section_cp                          # noqa: E402
