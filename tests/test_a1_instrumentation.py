@@ -24,11 +24,8 @@ from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.solve.continuation import solve_transonic_lifting
 from pyfp3d.solve.newton import solve_newton_lifting, solve_newton_transonic
-from pyfp3d.solve.newton_ls import solve_multivalued_newton
 from pyfp3d.solve.picard import solve_subsonic_lifting
-from pyfp3d.solve.picard_ls import solve_multivalued_lifting
 from pyfp3d.solve.timing import PHASES
-from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet
 
 REPO_ROOT = Path(__file__).parent.parent
 MESH = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh"
@@ -67,19 +64,6 @@ def _warm_the_jit(cut):
     """
     mc, wc = cut
     solve_subsonic_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, n_picard_max=3)
-
-
-@pytest.fixture(scope="module")
-def mvop():
-    mesh = read_mesh(MESH)
-    z = mesh.nodes[:, 2]
-    wls = WakeLevelSet(
-        np.array([[1.0, 0.0, z.min()], [1.0, 0.0, z.max()]]),
-        direction=(1.0, 0.0, 0.0),
-    )
-    cm = CutElementMap(mesh.nodes, mesh.elements, wls,
-                       wall_nodes=np.unique(mesh.boundary_faces["wall"]))
-    return mesh, MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
 
 
 def _assert_schema(t):
@@ -133,19 +117,6 @@ def _cn(cut):
     return solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA)
 
 
-def _lp(mvop):
-    mesh, mv = mvop
-    return solve_multivalued_lifting(mv, mesh, m_inf=M_INF, alpha_deg=ALPHA,
-                                     n_outer_max=80, tol_residual=1e-8,
-                                     farfield="vortex")
-
-
-def _ln(mvop):
-    mesh, mv = mvop
-    return solve_multivalued_newton(mv, mesh, m_inf=M_INF, alpha_deg=ALPHA,
-                                    n_seed=10, farfield="vortex")
-
-
 def test_conforming_picard(cut):
     r = _cp(cut)
     assert r["converged"]
@@ -169,35 +140,22 @@ def test_conforming_newton(cut):
     assert r["n_refactor"] == 0            # amg path, no splu
 
 
-def test_ls_picard(mvop):
-    r = _lp(mvop)
-    assert r["converged"]
-    _assert_schema(r["timings"])
-    _assert_step_records(r["step_records"], r["n_outer"])
-
-
-def test_ls_newton(mvop):
-    r = _ln(mvop)
-    assert r["converged"]
-    _assert_schema(r["timings"])
-    _assert_step_records(r["step_records"], r["n_newton"])
-    # A1 added the circulation trajectory the LS Newton never had
-    assert all("gamma_mean" in s for s in r["step_records"])
-
-
-def test_four_methods_agree(cut, mvop):
-    """The comparison is only meaningful if the four drivers converge to the
-    same circulation (GA1.3 at test scale): instrumentation did not perturb
-    any of them, and conforming vs level-set agree to the known <1% under a
-    matched far field."""
-    gammas = np.array([
-        float(_cp(cut)["gamma"][0]),
-        float(_cn(cut)["gamma"][0]),
-        float(_lp(mvop)["gamma"]),
-        float(_ln(mvop)["gamma"]),
-    ])
-    spread = float(np.ptp(gammas)) / float(np.mean(gammas))
-    assert spread < 0.01, f"gamma spread {spread:.4%} across methods: {gammas}"
+# ---------------------------------------------------------------------------
+# ★ THREE LS LEGS REMOVED 2026-08-10 (phase 3 task 1, ruling D5). They were
+# test_ls_picard, test_ls_newton and test_four_methods_agree.
+#
+# What is genuinely LOST, stated rather than glossed: A1's headline was a
+# FOUR-DRIVER comparison (conforming Picard/Newton x level-set Picard/Newton),
+# and test_four_methods_agree asserted all four converge to the same Gamma
+# within 1 %. With the level-set route abandoned there are only two drivers, so
+# that cross-model agreement becomes committed-CSV-only and is no longer
+# re-runnable -- exactly the cost ruling D5 recorded. The measured reading it
+# protected (in 3-D BOTH Newton paths are preconditioner-bound, ~40 % of wall)
+# lives in bench/studies/a1_solver_bottleneck/ and in the phase-one dossier.
+#
+# The instrumentation SCHEMA checks below and above are untouched: the timing
+# contract is asserted on the conforming drivers, which is what phase 3 ships.
+# ---------------------------------------------------------------------------
 
 
 # --- ramp wrappers: every level carries wall_s + timings, plus a total ----

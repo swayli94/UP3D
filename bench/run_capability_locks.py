@@ -55,7 +55,10 @@ for _v in THREAD_VARS:
 #: gate into an archive, which is worse than not having the gate: it would run, pass, and
 #: assert capability for a route nobody maintains. What they locked is recorded in
 #: phases/p2/docs/dev_phase_two/20260806-1200-b22-respec.md and the b9 re-spec round.
-#: ⇒ this tier is now 5 groups, not 7. The conforming anchors are all still here.
+#: ★ THIRD lock removed 2026-08-10 by phase 3 task 1: `test_b7_onera_m6.py` (the M6
+#: level-set 3-D machinery + transonic gate, whose three legs were the strict xfails)
+#: is archived with the route. ⇒ this tier is now 4 groups, all CONFORMING:
+#: M1a, the seed fallback, the wing-body conforming locks, and P8's G8.1/G8.2.
 LOCKS = (
     ("tests/test_s1_m1a_envelope.py",
      "M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05)"),
@@ -63,8 +66,6 @@ LOCKS = (
      "the cold-start seed fallback, incl. the real NACA M0.80 medium recovery"),
     ("tests/test_b9_wingbody_conforming.py",
      "wing-body conforming: junction loading, the B8 lift-loss detector"),
-    ("tests/test_b7_onera_m6.py",
-     "M6 LS 3-D machinery + transonic gate (3 legs strict-xfail since 2026-08-09)"),
     ("tests/test_p8_newton.py",
      "G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06)"),
 )
