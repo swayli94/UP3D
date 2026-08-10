@@ -698,6 +698,48 @@ artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.3/                 # Element coloring 3D render
 └── ...
 
+bench/                     # ✓ Phase-two measurement harness -- NOT tests. Each script
+│                           #   answers one pre-registered question and commits a CSV;
+│                           #   a number that lives only in prose is not evidence.
+├── run_capability_locks.py  # ★ the FAST capability tier: 7 gated anchors, 670 s.
+│                           #   RUN AT EVERY CLOSE-OUT (CLAUDE.md ritual step 0). Pins the
+│                           #   thread caps itself -- one of its locks asserts a wall clock,
+│                           #   and uncapped the same set takes 2940 s (measured 2026-08-10).
+│                           #   Prints WHAT IT DOES NOT COVER every run, with costs.
+├── run_m1_gate.py           # product metric M1, both n_picard_seed legs; exit 1 while it FAILS
+├── run_m3_budget.py         # M3's per-band error budget (LE 69.6 % / MID 20.7 %)
+├── run_capability_matrix.py # 13 configurations x ladder = 78 points (the M5-adjacent read)
+├── run_le*.py               # the LE-deficit line: window, factorials, G1 volume guard
+├── run_farfield_arm.py      # registered item 0: the domain-radius arm (verdict N)
+├── run_g82_anchor_check.py  # G8.2's physics anchors when the wall-clock assert masks them
+├── bitcheck.py              # DEVELOPMENT-time bit-identity A/B (ruling D1 -- not a test)
+└── gate_results/            # ✓ committed CSVs: the evidence base for every phase-two claim
+
+docs/
+├── dev_phase_two/          # ★ THE ACTIVE PLAN AND HISTORY (phase one below is frozen)
+│   ├── roadmap.md           #   the only authoritative phase-two plan: 5 product metrics,
+│   │                       #   8 principles, S0-S6, and the rulings D1-D5 (D5 = abandon
+│   │                       #   level-set; conforming only from here)
+│   ├── progress.md          #   one row per round (70 rounds) + the stage-status and
+│   │                       #   product-metric tracking tables
+│   ├── PHASE_TWO_CAPABILITY_BOUNDARY.md   # ★★ READ THIS FIRST when picking the project up:
+│   │                       #   what the solver can do, which routes are measured dead,
+│   │                       #   which deficits are unexplained, and what the evidence does
+│   │                       #   NOT cover
+│   ├── LEVELSET_DELETION_INVENTORY.md     # ★ phase three's first task, counted by AST:
+│   │                       #   9 library files / 4624 lines, 18 tests to delete + 8 to
+│   │                       #   amputate, and the three things that are not pure subtraction
+│   ├── DECISION-2026-08-02-precond.md     # a decision record with its refutation conditions
+│   └── yyyymmdd-hhmm-<name>.md            # one file per round: purpose / changes / tests /
+│                           #   results / next step. Pre-registrations are committed BEFORE
+│                           #   the measurement they govern -- that ordering is the point.
+├── inspection/             # independent audits (the 2026-07-28 full audit founds phase two)
+├── roadmap.md, roadmap/    # ⛔ PHASE ONE, FROZEN 2026-07-28. Technical facts still citable
+├── agent-rules.md          #   (cite as "phase one record"); NOT a plan any more.
+├── design.md, design_track_*.md            # theory and numerics reference (still current)
+├── demo_report.md, demo_report/            # phase-one evidence dossier
+└── analysis/, archive/     # dated snapshots; never a coding spec
+
 pyproject.toml            # ✓ Project metadata and dependencies
 setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
 CLAUDE.md                 # ✓ Claude Code project instructions (doc map + workflow; imports docs/agent-rules.md)
@@ -1442,7 +1484,32 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
-Default suite: **652 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
+★★ **PHASE TWO (2026-07-28 .. 2026-08-10) — read
+[docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
+first.** The whole block below this line is the PHASE-ONE footer, frozen with the
+phase-one docs on 2026-07-28 (docs/dev_phase_two/roadmap.md §8); its status verdicts
+are history, its technical facts stay citable as phase-one records.
+
+Phase-two baselines, measured:
+- always-on suite **700 passed + 28 skipped + 2 xfailed**, 0 failed
+  (1464 s @8 threads / 1669 s @16 threads — quote the thread count, it is not a
+  cosmetic detail: the same M6 solve measures 566.6 s uncapped against 113.7 s capped);
+- FAST capability tier **7/7 green, 670 s** (`bench/run_capability_locks.py`);
+- FULL gated set **720 passed + 2 skipped + 8 xfailed**, 0 failed (3 h 04) — the first
+  all-green since the 2026-08-04 round-tip switch, against 7 failed on 08-06, one of
+  which had been red for seventeen days because a retired premise was never grepped out
+  of the tests.
+- The 8 xfailed include **four deliberate strict xfails** (b7 ×3 + b22 medium): on the
+  production round-tip meshes those level-set gates have no clamp-free state to anchor,
+  and per ruling **D5** that route is ABANDONED — they are abandoned-route records, not
+  open obligations, and they go away with the files in phase three.
+- Phase two's own metric verdicts live in `docs/dev_phase_two/progress.md`'s tracking
+  table; the one that changes what to work on next is **M3a, measured UNREACHABLE for
+  an inviscid solver** (model floor 0.0516–0.0707 against a viscous experiment).
+
+---
+
+Default suite (PHASE ONE, frozen): **652 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V
 V6 GV6.2 (the measured wake-IBL on/off effect vs the A4 band: Δ-cl +0.00015
 (+0.0547 %) / TE max |ΔCp| 0.00250 = 0.022×/0.051× the A4 input band = NOT
 significant, L-robust over L_rel {0.5, 1.0, 2.0} c (1.0 c pinned); the XFOIL
