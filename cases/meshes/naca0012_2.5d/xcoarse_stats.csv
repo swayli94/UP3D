@@ -1,0 +1,14 @@
+metric,value
+n_nodes,1426
+n_elements,4044
+total_volume,55.4651287761796
+min_volume,1.0193430596114253e-05
+max_volume,0.48904788626205437
+mean_volume,0.01371541265484164
+min_edge_length,0.02764260386596848
+max_edge_length,7.996760653469589
+mean_edge_length,0.41383075800050934
+n_2d_triangles,1348
+n_wake_faces,248
+dz,0.08
+h_wall,0.04

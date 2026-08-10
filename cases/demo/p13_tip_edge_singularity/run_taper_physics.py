@@ -49,6 +49,7 @@ from cases.demo._common import (  # noqa: E402
     BASELINE, CRITICAL, CheckList, INK_2, S1_BLUE, S2_AQUA,
     apply_style, finish, plt, write_csv,
 )
+from pyfp3d._compat import trapezoid
 from pyfp3d.constraints.wake import tip_taper_factors  # noqa: E402
 from pyfp3d.mesh.reader import read_mesh  # noqa: E402
 from pyfp3d.mesh.wake_cut import cut_wake  # noqa: E402
@@ -182,9 +183,9 @@ def main():
         m_in = eta_b < 0.90
         g_in = np.interp(eta_b[m_in], eta, G)
         gb_in = base["gamma"][o][m_in]
-        dg_in = 100.0 * (np.trapezoid(g_in, eta_b[m_in])
-                         - np.trapezoid(gb_in, eta_b[m_in])) \
-            / np.trapezoid(gb_in, eta_b[m_in])
+        dg_in = 100.0 * (trapezoid(g_in, eta_b[m_in])
+                         - trapezoid(gb_in, eta_b[m_in])) \
+            / trapezoid(gb_in, eta_b[m_in])
         rows.append((tag(form, frac), f"{reach:.3f}", n_touch,
                      f"{float(d['cl_kj']):.4f}", f"{dcl:+.2f}",
                      f"{dg_in:+.2f}"))

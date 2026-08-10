@@ -1,0 +1,7 @@
+a_res_lt_1e4,b_mmax_in_band,c_gamma_min,c_gamma_min_ok,converged,d_gamma_tip,d_gamma_tip_ok,e_outboard_ok,e_outboard_rises,kind,m_max,n_floored,n_limited,residual_norm,tag,wall_s
+False,True,-0.006063,False,False,0.006063,True,True,0,subsonic,1.4022,0,0,0.007810370782834752,M1_round,50.2
+False,False,-0.001601,False,False,0.001601,True,True,0,transonic,2.84757,3,0,0.0005268995455480763,M1_round,1925.4
+True,False,0.000164,True,True,0.000164,True,True,0,subsonic,0.77265,0,0,5.857399898445692e-08,M1_flat,11.7
+True,True,-4.1e-05,True,False,4.1e-05,True,True,0,transonic,1.39215,0,0,6.11323377755317e-06,M1_flat,1487.2
+True,True,0.001634,True,True,0.001634,True,True,0,subsonic,1.06194,0,0,8.299208786866075e-08,M4_round,29.7
+True,False,0.001932,True,False,0.001932,True,True,0,transonic,2.66695,2,0,4.7737637022355825e-06,M4_round,1937.7

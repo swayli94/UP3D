@@ -1,0 +1,5 @@
+case,cl_p,converged,error,gamma_mean,m_max,n_dof,n_floored,n_gmres,n_levels,n_limited,n_newton_total,n_refactor,n_tets,precond,res_final,s_per_newton,t_assembly,t_cut_wake,t_linsolve,t_precond,t_residual,t_seed,wall_solve_s,wall_total_s
+m6_coarse_direct,0.256048,True,,0.08311,1.3975,12978,0,234,4,0,17,1,55531,direct,6.932471613845256e-12,0.396,0.32,0.64,2.3,1.08,0.15,2.43,6.73,7.53
+m6_coarse_amg,0.256048,True,,0.08311,1.3975,12978,0,217,4,0,17,0,55531,amg,7.588836251213618e-12,0.242,0.24,0.66,0.85,0.29,0.12,2.36,4.11,4.92
+m6_medium_direct,0.264637,True,,0.085048,2.1288,70663,0,375,4,0,18,1,350718,direct,6.52409697766539e-15,6.017,1.63,4.0,47.0,43.29,0.62,13.37,108.3,113.44
+m6_medium_amg,0.264637,True,,0.085048,2.1288,70663,0,636,4,0,18,0,350718,amg,6.8364101254106086e-15,1.761,1.71,3.8,12.22,2.08,0.55,13.55,31.7,36.58

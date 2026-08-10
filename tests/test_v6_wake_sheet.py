@@ -41,6 +41,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from ._tol import assert_rel_close
 from pyfp3d.constraints.wake import WakeConstraint
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.mesh.reader import read_mesh
@@ -431,13 +432,36 @@ def _ab_leg(snippet, worktree, ref, out_npz, overlay_delta=False):
         )
 
 
+@pytest.mark.skip(reason=(
+    "RETIRED 2026-07-29 (phase two GS1.4): the premise is false. This "
+    "test A/Bs the loose-loop phi of HEAD against a pinned pre-V6 commit "
+    "and requires them to agree, but the loose loop is not reproducible "
+    "RUN TO RUN: the same commit executed twice on the same machine with "
+    "the same thread count differs by max relative 1.024 over 6104/6106 "
+    "nodes -- exactly the magnitude this test reports as a failure. "
+    "Attribution chain and the two-run measurement: "
+    "bench/s1_duct/check_loose_loop_determinism.py; round record "
+    "docs/dev_phase_two/20260729-0130-s1-clamp-not-silent.md 4.1. "
+    "The GV6.1 (a)(ii) EVIDENCE is unaffected -- it is committed in "
+    "cases/analysis/v6_1_wake_sheet/ -- but this live guard cannot mean "
+    "what it claims until the loose loop is made deterministic."))
 @pytest.mark.skipif(NOJIT, reason="loose-loop FP solves are JIT-lane only")
 @pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
 def test_ab_bit_identity_gate_free_library(tmp_path):
-    """(a)(ii) / W1: the flag-OFF loose loop (this tree) is bit-identical
-    to the gate-free library (the pinned baseline commit), same
-    machine/threads, coarse 3 outer. Both legs are fresh-compile worktree
-    subprocesses (the isolate3/4 cache-mode discipline)."""
+    """(a)(ii) / W1: the flag-OFF loose loop (this tree) reproduces the
+    gate-free library (the pinned baseline commit) on the same machine,
+    coarse 3 outer. Both legs are fresh-compile worktree subprocesses (the
+    isolate3/4 cache-mode discipline).
+
+    GS0.2 / D1 (2026-07-28): the assertion was `np.array_equal` and it FAILED
+    during the audit's full-suite run while PASSING standalone on the same
+    commit and the same thread count (67 s, idle machine) -- the only
+    difference was concurrent load from other solver processes. The mechanism
+    was NOT root-caused (registered as an open question in
+    docs/dev_phase_two/20260728-1520-s0-foundation.md §6); per decision D1 the
+    permanent assertion is now a 1e-12 relative tolerance, which still pins
+    the phase-one claim (the flag adds no numerical effect: any real change
+    would be orders larger) without being a load-sensitive alarm."""
     snippet = tmp_path / "ab_leg.py"
     snippet.write_text(_AB_SNIPPET)
     head = _git("rev-parse", "HEAD")
@@ -449,8 +473,9 @@ def test_ab_bit_identity_gate_free_library(tmp_path):
         snippet, tmp_path / "current", head, tmp_path / "current.npz",
         overlay_delta=True,
     )
-    assert np.array_equal(cur["phi"], base["phi"])
-    assert np.array_equal(cur["gamma"], base["gamma"])
+    assert_rel_close(cur["phi"], base["phi"], msg="phi vs gate-free baseline")
+    assert_rel_close(cur["gamma"], base["gamma"],
+                     msg="gamma vs gate-free baseline")
 
 
 # ---------------------------------------------------------------------------

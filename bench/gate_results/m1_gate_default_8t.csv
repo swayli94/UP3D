@@ -1,0 +1,13 @@
+C,accept_reason,cl_p,clamped,converged,error,failure_mode,fallback_fired,fallback_seed,level,m_max,mode_evidence,n_floored,n_limited,n_newton,n_picard_seed,n_shock_cells,res_final,sigma_min,wall_s,x_shock
+1.0,tol,0.42473,False,True,,,False,,coarse,1.40521,accept_reason='tol',0,0,18,0,83,2.944963489033947e-13,0.973763981282776,1.4,0.6232798974799071
+1.5,tol,0.407978,False,True,,,False,,coarse,1.39367,accept_reason='tol',0,0,28,0,86,2.904495138539988e-13,0.9606541474646304,1.1,0.6194677102667253
+3.0,tol,0.377355,False,True,,,False,,coarse,1.34504,accept_reason='tol',0,0,14,0,79,4.924193351421044e-13,0.9797653300724334,0.9,0.6210061977710708
+1.0,tol,0.413008,False,True,,,False,,coarse,1.40199,accept_reason='tol',0,0,23,5,86,2.6927998229221763e-11,0.9493413832489739,4.2,0.6058305162933866
+1.5,tol,0.407108,False,True,,,False,,coarse,1.39345,accept_reason='tol',0,0,21,5,84,8.670928062013865e-13,0.9721305566366263,4.1,0.6072503529432096
+3.0,tol,0.377442,False,True,,,False,,coarse,1.34507,accept_reason='tol',0,0,13,5,79,3.7789129873649177e-13,0.9798103943618411,3.9,0.6210551231184764
+1.0,,0.8579,True,False,,clamping,True,5,medium,3.0,clamps 1135/0; descent10=0.057; tail_monotone=False (n_up=6); F_final=1.11e-16,0,1135,47,0,348,0.016295278454012924,0.4504200303527662,88.4,0.978697476777245
+1.5,,0.352693,True,False,,clamping,True,5,medium,3.0,clamps 4388/563; descent10=0.127; tail_monotone=False (n_up=4); F_final=2.22e-16,563,4388,29,0,468,0.01837431731129636,0.3577544449808492,60.9,0.8798247106444734
+3.0,,0.519284,False,False,,limit_cycle,False,,medium,1.39486,descent10=0.768; tail_monotone=False (n_up=3); F_final=0.00e+00,0,0,80,0,210,4.134295372418747e-07,0.9794937731435805,19.2,0.7044677545455508
+1.0,,0.68657,True,False,,clamping,False,,medium,3.0,clamps 4/1; descent10=1.283; tail_monotone=False (n_up=4); F_final=3.21e-14,1,4,80,5,277,1.008266099354662e-05,0.3651984177782841,56.9,0.9416727390008529
+1.5,,0.340114,False,False,,limit_cycle,False,,medium,1.53965,descent10=0.982; res_revisits=1; tail_monotone=False (n_up=3); F_final=2.78e-17,0,0,80,5,164,9.908574465717508e-07,0.9124745692390406,29.6,0.5737947433313576
+3.0,tol,0.289613,False,True,,,False,,medium,1.33197,accept_reason='tol',0,0,19,5,147,2.856796291088802e-13,0.8921649252338425,19.3,0.6135660358322691

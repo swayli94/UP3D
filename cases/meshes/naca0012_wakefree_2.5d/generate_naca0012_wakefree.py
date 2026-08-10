@@ -29,6 +29,14 @@ from pathlib import Path
 
 import numpy as np
 
+import sys
+from pathlib import Path
+
+# GS0.1: run standalone (`python cases/meshes/.../generate_*.py`) without
+# an editable install -- only the script directory is on sys.path by
+# default, so importing pyfp3d needs the repo root added explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 from pyfp3d.mesh.reader import write_mesh, mesh_stats
 from pyfp3d.meshgen.extrude import extrude_single_layer
 from pyfp3d.meshgen.planar import naca0012_wake_2d
@@ -38,12 +46,12 @@ CORRIDOR_ALPHA_DEG = (-6.0, 6.0)  # alpha-sweep envelope covered by the corridor
 CORRIDOR_N_LINES = 5
 
 
-def _level_params(h_wall: float) -> dict:
+def _level_params(h_wall: float, clamp_h_far: bool = True) -> dict:
     """Everything derived from the single wall-size parameter h (M0 policy)."""
     return dict(
         h_wall=h_wall,
         h_wake=3.0 * h_wall,
-        h_far=min(3.0, 150.0 * h_wall),
+        h_far=(min(3.0, 150.0 * h_wall) if clamp_h_far else 150.0 * h_wall),
         dist_min=0.1,
         dist_max=6.0,
         wake_dist_max=1.5,
@@ -53,6 +61,20 @@ def _level_params(h_wall: float) -> dict:
 
 
 LEVELS = {
+    #: ★ `xcoarse` added 2026-08-03 (effort moved off `fine`: it costs 345-1561 s per flow
+    #: point, and it adds a third level to the ONE combination that already had three,
+    #: while five of six geometry x wake-path combinations had only two and so admitted no
+    #: convergence order at all). h_wall 0.040 = a clean 2x step, and `clamp_h_far=False`
+    #: is LOAD-BEARING: with the clamp, h_far would pin at 3.0 exactly as at `coarse`, so
+    #: the first refinement interval would not refine the far field AT ALL and any order
+    #: read off it would be meaningless. (`coarse` itself sits exactly AT the clamp
+    #: threshold -- 150 x 0.020 = 3.0 -- so it is unclamped and the existing ladder is
+    #: clean.) The airfoil surface stays well resolved because n_half is floored at 80:
+    #: 100 points per side at coarse against 80 here, a 25 % reduction, not a 2x one.
+    #: NOTE this family has NO dihedral/aspect gate, and that is correct -- a
+    #: single-prism-layer 2.5-D extrusion has aspect ~100 BY CONSTRUCTION at every level
+    #: including the shipped coarse. Do not apply the 3-D families' 2.0 deg bound here.
+    "xcoarse": _level_params(0.040, clamp_h_far=False),
     "coarse": _level_params(0.020),
     "medium": _level_params(0.010),
     "fine": _level_params(0.005),

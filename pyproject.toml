@@ -31,6 +31,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# GS0.1: gmsh drives every mesh generator under cases/meshes/ and several
+# demos; it was declared only in environment.yml, so a pip-based install could
+# not regenerate the (gitignored) meshes. On a headless Linux box the gmsh
+# wheel also needs the system libraries libGLU.so.1 and libOpenGL.so.0 --
+# see README.md ("Headless Linux Workflow").
+mesh = [
+    "gmsh>=4.11",
+]
 viz = [
     "pyvista>=0.37",
     "vtk>=9.2",
@@ -41,17 +49,23 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0",
 ]
-all = ["pyfp3d[viz,dev]"]
+all = ["pyfp3d[mesh,viz,dev]"]
 
 [project.urls]
 Repository = "https://github.com/swayli94/UP3D"
 Documentation = "https://github.com/swayli94/UP3D/tree/main/docs"
 
-[tool.setuptools]
-packages = ["pyfp3d"]
+[tool.setuptools.packages.find]
+# GS0.1 (phase two): this used to be `packages = ["pyfp3d"]`, which lists ONLY
+# the top-level package -- the built wheel contained a single file
+# (pyfp3d/__init__.py) and every subpackage (solve, kernels, mesh, viscous,
+# post, ...) was missing, so `pip install .` produced a broken import while
+# running from the repo root happened to work. Verified by building a wheel
+# and listing it (audit 2026-07-28 §6.1).
+include = ["pyfp3d*"]
 
 [tool.setuptools.package-dir]
-pyfp3d = "pyfp3d"
+"" = "."
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

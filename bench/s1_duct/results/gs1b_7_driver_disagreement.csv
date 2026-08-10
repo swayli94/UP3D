@@ -1,0 +1,6 @@
+case,x_shock,cl_p,gamma,res_final,n_iter,note
+F1 Picard continuation,0.60414,0.357196,0.18189697,0.00021978315187056238,10464,(133s) kutta_conv=True
+F1 coupled Newton,0.65808,0.458974,0.23382646,5.460624241737623e-12,27,(3s) conv=True clamped=False
+F2 Newton seeded FROM Picard,0.65808,0.458974,0.23382646,3.056765869768903e-13,6,(0s) conv=True
+F1b Newton residual AT the Picard state,,,0.18189697,0.00021978315187056238,,|F_kutta|=1.498e-04
+F1b Newton residual AT the Newton state,,,0.23382646,5.460624241737623e-12,,|F_kutta|=0.000e+00

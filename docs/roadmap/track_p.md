@@ -870,8 +870,16 @@ internal note where it conflicts).**
       OPENBLAS_NUM_THREADS=16` (A/B measured 2026-07-11: without the
       BLAS/OMP caps the identical run is ~333 s, oversubscription on the
       16C/32T box costs ~33%; gated test 252 s with caps). Physics regression locks
-      around the measured Newton solution: cl_p 0.2646 ± 0.005, shocks
-      η44/65/90 = 0.596/0.541/0.362 ± 0.02, M_max 2.134 ± 0.05. Gated
+      around the measured Newton solution: **cl_p 0.263888 ± 0.005, shocks
+      η44/65/90 = 0.59582/0.53914/0.34225 ± 0.02, M_max 2.10709 ± 0.05**
+      (★ RE-ANCHORED 2026-07-31 to the entropy-corrected default by phase-two
+      `docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md`; the SUPERSEDED
+      isentropic anchors were cl_p 0.2646, 0.596/0.541/0.362, M_max 2.134 —
+      the η = 0.90 shock had only 0.0002 of margin left inside its own
+      tolerance, so this is a re-anchor and not a "still passes". The gate's
+      GS1b.11 strict xfail is removed: it recorded the m_cap-escape defect,
+      now fixed at its root, and its named-but-unrun "cycle versus long chain"
+      check is run and locked). Gated
       `test_g82_m6_medium_newton_end_to_end` + demo part 3.
 - [x] G8.3 full regression suite runtime < 10 min (CI budget) — closed
       2026-07-11: **301.66 s (5m02s)**, 182 passed + 8 skipped + 2 xfailed

@@ -54,6 +54,14 @@ from pathlib import Path
 
 import numpy as np
 
+import sys
+from pathlib import Path
+
+# GS0.1: run standalone (`python cases/meshes/.../generate_*.py`) without
+# an editable install -- only the script directory is on sys.path by
+# default, so importing pyfp3d needs the repo root added explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 from pyfp3d.mesh.reader import write_mesh, mesh_stats
 from pyfp3d.mesh.metrics import compute_aspect_ratios, compute_min_dihedral_angles
 from pyfp3d.meshgen.wing3d import B_SEMI, MAC, onera_m6_wing_mesh, x_te
@@ -62,17 +70,32 @@ R_FAR = 15.0 * MAC
 QUALITY_BOUNDS = {"min_dihedral_deg": 2.0, "max_aspect_ratio": 60.0}
 
 
-def _level_params(h_wall: float) -> dict:
+def _level_params(h_wall: float, clamp_h_far: bool = True) -> dict:
     """Same policy as the M1 family (one parameter per level)."""
     return dict(
         h_wall=h_wall,
         h_wake=3.0 * h_wall,
         h_edge=0.5 * h_wall,
-        h_far=min(2.5, 120.0 * h_wall),
+        h_far=(min(2.5, 120.0 * h_wall) if clamp_h_far else 120.0 * h_wall),
     )
 
 
 LEVELS = {
+    #: ★ `xcoarse_ss` added 2026-08-03. Self-similar by necessity, like `coarse_ss`: with
+    #: the clamp, h_far would pin at 2.5 exactly as at the shipped `coarse`, giving a
+    #: first refinement interval with NO far-field refinement. The valid cheap ladder is
+    #: therefore {xcoarse_ss, coarse_ss, medium} -- a uniform 2x in every length, since
+    #: medium's 120 x 0.015 = 1.8 was never clamped either. Measured meshable: min
+    #: dihedral 4.49 deg / aspect 14.4 at h_wall 0.060 (and NON-monotone across the sweep
+    #: -- 6.56 / 8.20 / 10.81 / 3.47 / 4.49 at h 0.030..0.060 -- the sliver lottery this
+    #: family is known for, so treat a single reading as a draw, not a trend).
+    #: ★ the ROUND-tip self-similar ladder (2026-08-04). clamp OFF so every length
+    #: halves; `_rt` so the flat files stay untouched.
+    #: flat variants, explicit and kept because the P13/M5 flat-vs-round studies need them
+    "coarse_flat": _level_params(0.030),
+    "medium_flat": _level_params(0.015),
+    "xcoarse_ss": _level_params(0.060, clamp_h_far=False),
+    "coarse_ss": _level_params(0.030, clamp_h_far=False),
     "coarse": _level_params(0.030),
     "medium": _level_params(0.015),
     "fine": _level_params(0.0075),
@@ -113,6 +136,23 @@ def generate_level(out_dir: Path, level: str, inspect: bool = True) -> Path:
         h_wall=p["h_wall"], h_far=p["h_far"], h_wake=p["h_wake"],
         h_edge=p["h_edge"], r_far=R_FAR,
         name=f"onera_m6_wakefree_{level}", embed_wake=False,
+        #: ★ round-tip variants carry the `_rt` suffix (2026-08-04, user directive: from here
+        #: on both the wing-alone and the wing-body work uses the round tip). The FLAT default
+        #: is kept for the existing level names because M4/B7 locks are anchored to those mesh
+        #: FILES; the round levels are new names writing new files, so nothing committed moves.
+        #: Why round at all: wing3d's own docstring records P13/G13.3 measuring the flat cap's
+        #: sharp convex edge DIVERGING under refinement (peak-Mach exponent p = +0.321) --
+        #: "it, and not the wake, is what still blocks 3D grid convergence" -- so any
+        #: refinement-based claim on a flat-cap mesh rests on a false premise. My own
+        #: capability-matrix convergence orders were computed on flat-cap wing-alone meshes,
+        #: which is why they are being recomputed on these.
+        #: ★ 2026-08-04, second pass: the BASE level names are now ROUND and flat is only
+        #: reachable through an explicit `_flat` suffix. The first pass had it the other way
+        #: (base = flat, round under `_rt`), which left "coarse means flat" in place -- exactly
+        #: the trap the whole switch is meant to remove, since a reader who loads coarse.msh has
+        #: no way to see which tip they got. Round is the default reading now; flat has to be
+        #: asked for by name.
+        tip_cap=("flat" if level.endswith("_flat") else "round"),
     )
     gen_seconds = time.perf_counter() - t0
     assert "wake" not in mesh.boundary_faces, "M4 mesh must carry no wake tag"

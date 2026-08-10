@@ -246,4 +246,13 @@ def test_g_b6_m080_coarse_neumann(mesh_dir):
     xs, cps = surface_curve_levelset(cp, "upper")
     sh = shock_metrics(xs, cps, 0.80)
     assert sh["has_shock"]
+    # ★ GS1b.11 ERRATUM (2026-07-31): 0.658 is the SUPERSEDED isentropic G8.1 lock;
+    # the conforming default is now entropy-corrected and reads 0.6196. This LS test
+    # still passes because the LEVEL-SET path is deliberately UNWIRED for the entropy
+    # correction (GS1b.3's backport decision: roadmap S5 deletes that path), so the LS
+    # side did not move -- but that means the two wake paths now run DIFFERENT DENSITY
+    # LAWS by default, and every cross-model comparison (B9's 0.4 %/0.6 % agreement,
+    # B27's cross-model rows) is now entropy-corrected conforming versus isentropic LS.
+    # Registered as an open item in docs/dev_phase_two/roadmap.md; the band below is
+    # left at the historical value rather than silently re-anchored to 0.6196.
     assert abs(sh["x_shock"] - 0.658) < 0.06

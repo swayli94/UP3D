@@ -1,16 +1,82 @@
-name: up3d-dev
+# pyFP3D development environment.
+#
+#   conda env create -f environment.yml        # first time
+#   conda env update -f environment.yml --prune   # after this file changes
+#   conda activate up3d
+#
+# WHY THE VERSIONS ARE PINNED, and not just listed. The previous version of this file named the
+# packages with no constraints and was never actually used -- work ran in anaconda `base` with
+# half the packages coming from conda and half from `pip --user`, and that mixture produced two
+# separate failures in one day:
+#
+#   1. `import gmsh` died on a missing libGLU.so.1, because the pip wheel does not carry its
+#      system OpenGL libraries. conda-forge's gmsh DOES pull them in as dependencies, so simply
+#      installing gmsh from here instead of pip removes that failure mode.
+#   2. `import pyamg` died with "cannot import name 'eye_array' from scipy.sparse": a
+#      pip --user pyamg 5.3.0 (needs scipy >= 1.12) shadowing conda's scipy 1.11.4. It had been
+#      in that broken state since 2026-07-28 and only surfaced on 2026-08-04, when a code path
+#      finally imported it -- an environment can be inconsistent for a week without saying so.
+#
+# So scipy and pyamg are pinned TOGETHER: pyamg >= 5.1 requires scipy >= 1.12, and stating both
+# means the solver refuses to build a broken combination instead of deferring the error to
+# whichever run first touches AMG. Same reasoning for numba/numpy, whose compatibility window is
+# narrow and whose mismatch shows up as a compile error deep inside a kernel.
+#
+# ★ pip is deliberately NOT used here. Every dependency comes from conda-forge so that one
+# solver sees all the constraints at once; a `pip install --user` on top of this reintroduces
+# exactly the shadowing that caused (2).
+
+name: up3d
 channels:
   - conda-forge
-  - defaults
+  - nodefaults          # keep `defaults` out: mixing it with conda-forge is how the
+                        # anaconda-scipy / conda-forge-pyamg split arose in the first place
+
 dependencies:
-  - numpy
-  - matplotlib
-  - pyamg
-  - meshio
-  - pyvista
-  - vtk
-  - numba
   - python=3.11
-  - gmsh
-  - scipy
-  - pytest
+
+  # --- core numerics ---
+  #
+  # ★ scipy >= 1.12 IS A CODE REQUIREMENT, not a preference. pyfp3d/solve/linear.py calls
+  # spla.cg(..., rtol=...) and spla.gmres(..., rtol=...) with no version shim, and the tol ->
+  # rtol rename landed in scipy 1.12. My first attempt at this file pinned scipy=1.11.4 to
+  # "keep the numerics identical", which produced 81 failures and 50 errors, all
+  # `TypeError: cg() got an unexpected keyword argument 'rtol'`. The premise was wrong: the
+  # committed evidence CANNOT have been produced on 1.11.4, because the code cannot run there.
+  #
+  # numpy and numba are left to the solver rather than pinned, because the version the evidence
+  # was actually produced on is no longer readable from this machine -- the environment that
+  # produced it has since become self-inconsistent (see the note above). So the honest procedure
+  # is: solve, run the full suite, and treat any numerical movement as a re-baseline to report
+  # rather than a pin to guess. numba's numpy window is the binding constraint anyway.
+  - scipy>=1.12
+  - numpy
+  - numba
+
+  # --- linear algebra used by the solver's preconditioners ---
+  #
+  # pyamg >= 5.2 needs scipy.sparse.eye_array, which the scipy floor above provides. GS3.1
+  # adopted AMG everywhere, so a pyamg that cannot import silently disables a production
+  # decision -- which is exactly what happened: a user-site pyamg 5.3.0 sitting over a scipy
+  # that could not satisfy it, inconsistent since 2026-07-28 and silent until a code path
+  # finally imported it on 2026-08-04.
+  - pyamg>=5.2
+
+  # --- mesh generation and I/O. gmsh from conda-forge brings its own OpenGL/OCC libs. ---
+  - gmsh>=4.11
+  - python-gmsh          # the Python API package; the bare `gmsh` package is the binary+libs
+  - meshio>=5.3
+
+  # --- visualisation / artifacts (all gates render headless: matplotlib Agg, PyVista off-screen)
+  - matplotlib-base>=3.7
+  - pyvista>=0.43
+  - vtk
+
+  # --- test and dev tooling ---
+  - pytest>=7.4
+  - pytest-timeout
+
+  # --- used by a few evidence/comparison helpers (tests/test_meshgen_rae2822.py) ---
+  #: found missing by the first full-suite run in this env: 2 ModuleNotFoundError, not a
+  #: numerical failure. Listed rather than left to whoever hits it next.
+  - pandas

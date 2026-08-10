@@ -9,6 +9,7 @@ from typing import Tuple
 
 import numpy as np
 
+from pyfp3d._compat import trapezoid
 from pyfp3d.mesh.metrics import compute_tet_volumes, element_gradients
 
 
@@ -453,7 +454,7 @@ def cl_kj_3d(
     if z[-1] < b_semi - tol:  # close to the tip where Gamma is pinned to 0
         z = np.concatenate((z, [b_semi]))
         g = np.concatenate((g, [0.0]))
-    return 2.0 * float(np.trapezoid(g, z)) / (u_inf * s_ref)
+    return 2.0 * float(trapezoid(g, z)) / (u_inf * s_ref)
 
 
 def wall_tangential_gradient(nodes: np.ndarray, wall_faces: np.ndarray, phi: np.ndarray) -> np.ndarray:

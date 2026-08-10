@@ -1,0 +1,26 @@
+{
+  "conf_naca_xcoarse": {
+    "envelope": 0.84,
+    "stopped": null
+  },
+  "conf_wing_xcoarse_ss": {
+    "envelope": 0.84,
+    "stopped": null
+  },
+  "ls_naca_xcoarse": {
+    "envelope": 0.84,
+    "stopped": null
+  },
+  "ls_wing_xcoarse_ss": {
+    "envelope": 0.84,
+    "stopped": null
+  },
+  "conf_wing_coarse_ss": {
+    "envelope": 0.8,
+    "stopped": "CLEAN_OVER_MMAX"
+  },
+  "ls_wing_coarse_ss": {
+    "envelope": 0.84,
+    "stopped": null
+  }
+}

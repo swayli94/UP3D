@@ -1,0 +1,7 @@
+level_m,converged_level,failure_mode,mode_evidence,n_limited,n_floored,res_final,descent10,res_revisits,n_newton,note
+0.6,True,clamping,accept_reason=assignment_cycle; clamps 2/1,2,1,1.27675647831893e-13,,0,4,
+0.65,True,clamping,accept_reason=assignment_cycle; clamps 3/1; descent10=326829454.248,3,1,7.902567489281864e-13,326829454.2484,0,15,
+0.7000000000000001,False,clamping,clamps 9/2; descent10=0.141,9,2,8.51288208920855e-06,0.1406,0,80,
+0.675,False,clamping,clamps 5/1; descent10=0.713,5,1,1.836308882730009e-13,0.7134,0,80,
+0.6625000000000001,True,clamping,accept_reason=assignment_cycle; clamps 4/1; descent10=2.420,4,1,1.0036416142611415e-13,2.4204,0,15,
+0.675,False,clamping,clamps 5/1; descent10=1.157,5,1,1.3322676295501878e-13,1.1575,0,80,

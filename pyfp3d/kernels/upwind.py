@@ -606,11 +606,21 @@ def rho_tilde_frozen_sensitivities_sweep(
     rho_floor: float,
     se_out: np.ndarray,
     su_out: np.ndarray,
+    sigma: np.ndarray,
+    use_sigma: bool,
 ) -> None:
     """Exact (s_e, s_u) of rho_tilde_frozen_sweep -- the same branch-wise
     formulas as rho_tilde_sensitivities_sweep with the branch forced by
     the freeze (and the sonic-threshold guard kept on nu', since the
-    clamped nu formula is still evaluated live)."""
+    clamped nu formula is still evaluated live).
+
+    `sigma`/`use_sigma` (GS1b.3): with the entropy correction the element
+    density is rho_s = sigma_e * rho_isen(q2_e), so the ANALYTIC derivative
+    computed here needs the same factor -- the caller's corrected `rho` array
+    fixes the jump terms but not drho, which is evaluated from q2. The scaling
+    sits behind `use_sigma` rather than being written as a multiply by a
+    ones-array so that the default path executes the SAME arithmetic
+    bit-for-bit (pre-registered criterion D)."""
     n = len(q2)
     mc2 = m_crit * m_crit
     for e in prange(n):
@@ -620,12 +630,16 @@ def rho_tilde_frozen_sensitivities_sweep(
             su_out[e] = 0.0
             continue
         drho_e = density_derivative_wrt_q_sq(q2[e], m_inf, gamma)
+        if use_sigma:
+            drho_e *= sigma[e]
         if b == 0:
             se_out[e] = drho_e
             su_out[e] = 0.0
             continue
         u = upstream[e]
         drho_u = density_derivative_wrt_q_sq(q2[u], m_inf, gamma)
+        if use_sigma:
+            drho_u *= sigma[u]
         djump = rho[e] - rho[u]
         if b == 1:
             m2 = mach_number_squared(q2[e], m_inf, gamma)
@@ -655,6 +669,8 @@ def rho_tilde_sensitivities_sweep(
     rho_floor: float,
     se_out: np.ndarray,
     su_out: np.ndarray,
+    sigma: np.ndarray,
+    use_sigma: bool,
 ) -> None:
     """P7: exact per-element sensitivities of the walk flux at FROZEN
     upstream selection (design.md §6.3 / López B.3–B.6),
@@ -681,13 +697,20 @@ def rho_tilde_sensitivities_sweep(
     with ρ' = dρ/dq² and, on the ACTIVE switch branch only (M² > M_c²),
     ν' = C·(M_c²/M⁴)·(dM²/dq²) > 0 (else 0 — the max(0,·) outer clamp).
     Must mirror rho_tilde_sweep's guarded ν form exactly so the FD check
-    against the shipped flux is meaningful."""
+    against the shipped flux is meaningful.
+
+    `sigma`/`use_sigma` (GS1b.3): see
+    rho_tilde_frozen_sensitivities_sweep -- rho_s = sigma_e*rho_isen(q2_e), so
+    the analytic ρ' needs the same factor; behind a flag so the default path is
+    bit-identical."""
     n = len(q2)
     mc2 = m_crit * m_crit
     for e in prange(n):
         u = upstream[e]
         rho_e = rho[e]
         drho_e = density_derivative_wrt_q_sq(q2[e], m_inf, gamma)
+        if use_sigma:
+            drho_e *= sigma[e]
         if u == e:
             # rho_tilde == rho_e (upwind term identically 0), but the
             # floor still applies to rho_e itself in rho_tilde_sweep.
@@ -714,6 +737,8 @@ def rho_tilde_sensitivities_sweep(
             su_out[e] = 0.0
             continue
         drho_u = density_derivative_wrt_q_sq(q2[u], m_inf, gamma)
+        if use_sigma:
+            drho_u *= sigma[u]
         djump = rho_e - rho_u
         if nu_e >= nu_u:
             # accelerating: nu tracks the element's own switch
@@ -776,6 +801,12 @@ class UpwindOperator:
         self._su = np.empty(n_tets, dtype=np.float64)
         # P8/N5 frozen-branch buffer (classify_upwind_branches)
         self._branch = np.empty(n_tets, dtype=np.int8)
+        #: GS1b.3: the inert argument for the sigma-scaled sensitivity
+        #: sweeps. Never read when use_sigma is False -- it exists only so
+        #: the njit signature stays monomorphic (numba specialises on the
+        #: argument TYPE, and passing None would force a second
+        #: compilation of the hot kernel).
+        self._sigma_ones = np.ones(n_tets, dtype=np.float64)
         self.nu_max = 0.0
         self.n_supersonic = 0
         self.n_floored = 0
@@ -817,6 +848,26 @@ class UpwindOperator:
         self.n_supersonic = int(np.count_nonzero(self.nu > 0.0))
         self.n_floored = int(np.count_nonzero(self._rho_tilde == rho_floor))
         return self._rho_tilde
+
+    def upstream_map(self, grad: np.ndarray) -> np.ndarray:
+        """The walk's donor map u(e) at `grad` (view into the workspace buffer).
+
+        Exists because reading `self._upstream` directly is a trap: the buffer is
+        `np.empty`, and it is only filled as a SIDE EFFECT of a walk-mode
+        `rho_tilde` / `rho_tilde_sensitivities` call. GS1b.3 read it before the
+        first such call in the Picard driver and got a SEGMENTATION FAULT -- numba
+        indexed arrays with uninitialised int64 garbage (found 2026-07-29 by
+        flipping the entropy default ON; the default-off tests could not reach
+        that path). Callers that need the map must ask for it.
+        """
+        if self.weighted:
+            raise NotImplementedError(
+                "upstream_map is defined for the walk flux (weighted=False); "
+                "the kernel-mode flux has a dense neighbourhood dependence and "
+                "builds no single donor map.")
+        upstream_elements(self.face_neighbors, self.centroids,
+                          self._nodes, self._elements, grad, self._upstream)
+        return self._upstream
 
     def freeze_upwind_state(
         self,
@@ -874,12 +925,18 @@ class UpwindOperator:
         m_crit: float,
         gamma: float = GAMMA,
         rho_floor: float = 0.05,
+        sigma: np.ndarray = None,
     ):
         """(s_e, s_u) of rho_tilde_frozen at the same frozen assignment
-        (views into the workspace buffers)."""
+        (views into the workspace buffers).
+
+        `sigma` (GS1b.3, default None = off): the entropy factor per element,
+        needed because the analytic drho/dq2 inside the sweep cannot see the
+        caller's corrected `rho`. None keeps the arithmetic bit-identical."""
         rho_tilde_frozen_sensitivities_sweep(
             q2, rho, upstream, branch, m_inf, m_crit, C, gamma, rho_floor,
-            self._se, self._su)
+            self._se, self._su,
+            self._sigma_ones if sigma is None else sigma, sigma is not None)
         return self._se, self._su
 
     def rho_tilde_sensitivities(
@@ -892,6 +949,7 @@ class UpwindOperator:
         m_crit: float,
         gamma: float = GAMMA,
         rho_floor: float = 0.05,
+        sigma: np.ndarray = None,
     ):
         """P7 (gate G7.3): exact ∂rho_tilde/∂q² sensitivities of the WALK
         flux at frozen upstream selection — the P8 Newton Term-2/Term-3
@@ -916,5 +974,7 @@ class UpwindOperator:
                           self._upstream)
         rho_tilde_sensitivities_sweep(q2, rho, self._upstream, m_inf,
                                       m_crit, C, gamma, rho_floor,
-                                      self._se, self._su)
+                                      self._se, self._su,
+                                      self._sigma_ones if sigma is None
+                                      else sigma, sigma is not None)
         return self._se, self._su, self._upstream

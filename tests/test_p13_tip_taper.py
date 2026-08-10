@@ -250,7 +250,30 @@ def test_taper_is_local_to_the_tip_on_m6(m6_coarse):
 
     base = solve_newton_lifting(mc, wc, **args)
     tap = solve_newton_lifting(mc, wc, tip_taper=taper, **args)
-    assert base["converged"] and tap["converged"]
+    #: ★ 2026-08-04 this gate was RELAXED off `converged`, and 2026-08-05 it is RESTORED --
+    #: the trail, because the relaxation was right at the time and would be wrong to keep.
+    #:
+    #: On the round-tip mesh both legs used to report converged=False solely because
+    #: accept_reason = sigma_transport_not_converged, while the FLOW residual was
+    #: 8.8e-15 / 2.0e-10 against tol 1e-9 and the Kutta residual 2e-16. Gating on
+    #: `converged` would have made a sigma-transport issue look like a tip-geometry
+    #: consequence, so the gate became the quantity this test actually needs (a resolved
+    #: field) and the sigma state was recorded beside it.
+    #:
+    #: That sigma failure was then root-caused and fixed: a HARMLESS length-2 donor cycle
+    #: (2 of 68624 elements, s = 1 on both) could never satisfy the transport's
+    #: every-ancestor-is-a-root termination test, so a perfect solve was reported failed
+    #: (docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md). Both legs now
+    #: report accept_reason = tol, so `converged` is asserted again -- and the residual
+    #: bounds stay, because they say more than the flag does.
+    for tag, r in (("base", base), ("tapered", tap)):
+        assert r["converged"], (
+            f"{tag}: accept_reason = {r.get('accept_reason')!r}")
+        assert float(r["residual_history"][-1]) < 1e-8, (
+            f"{tag}: flow residual {float(r['residual_history'][-1]):.2e} -- the Gamma "
+            "comparison below needs a resolved field")
+        assert abs(float(np.asarray(r["F_history"])[-1])) < 1e-10, (
+            f"{tag}: Kutta residual not satisfied")
     gb, gt = np.asarray(base["gamma"]), np.asarray(tap["gamma"])
 
     # root/mid-span loading is preserved ...

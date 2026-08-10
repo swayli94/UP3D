@@ -52,11 +52,42 @@ ALPHA = 3.06
 RAMP = dict(m_target=0.84, alpha_deg=ALPHA, farfield="neumann",
             n_seed=40, n_newton_max=80, tol_residual=1e-10)
 
-# The anchors. gamma/M_max as measured post-B21 (provenance in the docstring).
+#: ★★ RE-SPEC 2026-08-06. Full record in docs/dev_phase_two/20260806-1200-b22-respec.md,
+#: written before this edit as roadmap sec 5 requires. What happened and what it costs:
+#:
+#: `cases/meshes/onera_m6_wakefree/` was regenerated ROUND on 2026-08-04 while these
+#: anchors were measured on the FLAT cap, and the 2026-08-06 gated run failed both.
+#: Measured on the round meshes with the recipe otherwise untouched:
+#:
+#:   coarse   0.60/0.65/0.70/0.75/0.80/0.82 all converge with ZERO clamps; 0.84 fails
+#:            twice at 0/2. Highest CLEAN level = 0.82 (was 0.84 on flat).
+#:   medium   EVERY level is clamped, starting at M0.60 with 2/1, and M_max reads 3.31
+#:            at M0.60 rising to 15.26 at M0.70 -- the round cap RESOLVES the P13 tip
+#:            free-edge singularity. Highest converged = 0.6625 (4/1 clamps), and there
+#:            is NO level with n_limited == 0 at all.
+#:
+#: ★ Independently corroborated: LE-15 measured the same ramp by a different route and
+#: got the SAME per-level clamp counts -- 0.65 -> 3/1, 0.6625 -> 4/1, 0.675 -> 5/1,
+#: 0.70 -> 9/2 -- and the same convergence boundary. Not a one-off.
+#:
+#: ★ And unlike G8.2, this CANNOT be bought back with the production taper:
+#: solve_multivalued_newton_transonic has no tip_taper parameter at all (the taper
+#: scales the CONFORMING path's Kutta rows), and B31 measured the LS-side tip cure as
+#: closed-negative. So the round tip's cost on the level-set path is unrecoverable --
+#: a capability fork between the two paths.
+#:
+#: SUPERSEDED flat-cap anchors, kept per discipline #11 rather than deleted:
+#:     coarse gamma 0.08493098  M_max 1.3684   at M0.84
+#:     medium gamma 0.088343    M_max 2.4818   at M0.84
 ANCHORS = {
-    "coarse": dict(gamma=0.08493098, m_max=1.3684),
-    "medium": dict(gamma=0.088343, m_max=2.4818),
+    #: the highest level that converges CLEAN (zero clamps), which is what GS1.4 lets
+    #: us call a solution -- not merely the highest that "converged".
+    "coarse": dict(m_clean=0.82, gamma=0.08138231, m_max=2.43637),
 }
+#: measured capability readings for medium, RECORDED not asserted (see the xfail below)
+MEDIUM_RECORDED = dict(m_highest_converged=0.6625, gamma=0.07172634,
+                       m_max=5.62615, n_limited=4, n_floored=1,
+                       m_max_at_m060=3.31320, m_max_at_m070=15.25894)
 GAMMA_RTOL, MMAX_RTOL = 1e-4, 1e-3
 
 
@@ -77,31 +108,51 @@ def _ramp(level):
     return r
 
 
-def _assert_anchors(r, level):
-    a = ANCHORS[level]
-    assert r["target_reached"], (
-        f"M6 {level} ramp no longer reaches M0.84 (m_final={r['m_final']}) — "
-        "a capability re-baseline; see this file's docstring")
-    assert all(l["converged"] for l in r["levels"]), (
-        f"levels {[int(l['converged']) for l in r['levels']]}")
-    assert r["residual_history"][-1] < 1e-9
-    assert r["n_limited"] == 0, f"n_limited={r['n_limited']}"
-    assert r["n_floored"] <= 1, f"n_floored={r['n_floored']}"
-    assert np.isclose(r["gamma"], a["gamma"], rtol=GAMMA_RTOL, atol=0.0), (
-        f"gamma {r['gamma']:.8f} vs anchor {a['gamma']:.8f}")
-    m_max = float(np.sqrt(r["mach2_max"]))
-    assert np.isclose(m_max, a["m_max"], rtol=MMAX_RTOL, atol=0.0), (
-        f"M_max {m_max:.4f} vs anchor {a['m_max']:.4f}")
+def _clean_levels(r):
+    """Levels that converged with ZERO clamps. GS1.4: a clamped state is not a
+    solution, so "the highest level that converged" is the wrong thing to anchor --
+    on the round medium mesh EVERY level converges-with-clamps and none is clean."""
+    return [l for l in r["levels"]
+            if l["converged"] and not l["n_limited"] and not l["n_floored"]]
 
 
-@pytest.mark.skipif(not GATES, reason="heavy gated 3-D anchor (~35 s)")
+@pytest.mark.skipif(not GATES, reason="heavy gated 3-D anchor (~3 min)")
 def test_m6_coarse_ramp_anchor():
-    """The committed M6 COARSE M0.84 ramp anchors (post-B20/B21 state)."""
-    _assert_anchors(_ramp("coarse"), "coarse")
+    """The M6 COARSE ramp's highest CLEAN level and its state (round-tip re-spec)."""
+    r = _ramp("coarse")
+    a = ANCHORS["coarse"]
+    clean = _clean_levels(r)
+    assert clean, "no level converged with zero clamps -- there is nothing to anchor"
+    top = max(clean, key=lambda l: l["m_inf"])
+    assert abs(top["m_inf"] - a["m_clean"]) < 1e-9, (
+        f"highest CLEAN level {top['m_inf']:.4f} vs anchor {a['m_clean']} — a "
+        f"capability re-baseline; see docs/dev_phase_two/20260806-1200-b22-respec.md")
+    assert top["residual_norm"] < 1e-9, f"|R| = {top['residual_norm']:.2e}"
+    assert np.isclose(top["gamma"], a["gamma"], rtol=GAMMA_RTOL, atol=0.0), (
+        f"gamma {top['gamma']:.8f} vs anchor {a['gamma']:.8f}")
+    assert np.isclose(top["mach_max"], a["m_max"], rtol=MMAX_RTOL, atol=0.0), (
+        f"M_max {top['mach_max']:.5f} vs anchor {a['m_max']:.5f}")
 
 
-@pytest.mark.skipif(not GATES, reason="heavy gated 3-D anchor (~9 min)")
+@pytest.mark.xfail(strict=True, reason=(
+    "RE-SPEC 2026-08-06, measured: on the ROUND-tip wakefree medium mesh this ramp has "
+    "NO level with zero clamps -- M0.60 already carries 2 limited / 1 floored and M_max "
+    "3.31, rising to 15.26 at M0.70, because the round cap resolves the P13 tip "
+    "free-edge singularity. GS1.4 says a clamped state is not a solution, so there is "
+    "nothing here to anchor, and anchoring a clamped state would void that contract "
+    "inside this very test. STRICT on purpose: if a future change makes a clean level "
+    "appear, this must go RED so the capability gets re-anchored rather than silently "
+    "improving. Readings are in MEDIUM_RECORDED and in "
+    "docs/dev_phase_two/20260806-1200-b22-respec.md. "
+    "★★ D5 (2026-08-09, user): the level-set wake route is ABANDONED -- future development "
+    "is conforming only -- so read this as an ABANDONED-ROUTE record, not an open "
+    "obligation. It is one of the four strict xfails that exist because the production "
+    "round-tip meshes leave the LS path with no clamp-free state to anchor, and this whole "
+    "FILE is on phase three's deletion list "
+    "(docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2)."))
+@pytest.mark.skipif(not GATES, reason="heavy gated 3-D anchor (~35 min)")
 def test_m6_medium_ramp_anchor():
-    """The committed M6 MEDIUM M0.84 ramp anchors — the number that moved
-    silently through two re-baselines before this lock existed."""
-    _assert_anchors(_ramp("medium"), "medium")
+    """The M6 MEDIUM ramp — expected to have no clean level on the round tip."""
+    r = _ramp("medium")
+    assert _clean_levels(r), (
+        "a clean level appeared on the round medium mesh — re-anchor this test")

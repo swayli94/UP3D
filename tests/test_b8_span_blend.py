@@ -39,6 +39,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from ._tol import assert_rel_close
+
 from pyfp3d.constraints.wake import tip_taper_factors
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet
@@ -235,8 +237,10 @@ class TestHonestMach:
         _, q2l = base.op.velocities(phi_lo)
         m2l = mach_squared_field(q2l, M).copy()
         m2_side = base.own_side_field(m2u, m2l)
-        assert np.array_equal(np.nan_to_num(a[fix], nan=-1.0),
-                              np.nan_to_num(m2_side[fix], nan=-1.0))
+        # GS0.2/D1: the two sides are computed by DIFFERENT sweeps, so this
+        # is a mathematical identity, not a same-buffer identity -> relative
+        # tolerance, not np.array_equal (which failed at 1 ULP on a clean env).
+        assert_rel_close(a[fix], m2_side[fix], msg="side reading")
 
     def test_main_changes_only_mixed_plain(self, m6):
         mesh, _, cm, base, _ = m6
@@ -268,8 +272,7 @@ class TestHonestMach:
         fix = ~special & (side_e.min(axis=1) != side_e.max(axis=1))
         _, q2m = base.op.velocities(base.main_potential(phi))
         m2m = mach_squared_field(q2m, M)
-        assert np.array_equal(np.nan_to_num(b[fix], nan=-1.0),
-                              np.nan_to_num(m2m[fix], nan=-1.0))
+        assert_rel_close(b[fix], m2m[fix], msg="main reading")   # GS0.2/D1
 
     def test_bad_arg_raises(self, m6):
         _, _, _, base, _ = m6

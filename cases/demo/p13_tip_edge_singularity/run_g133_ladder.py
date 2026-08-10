@@ -70,7 +70,14 @@ MESH = REPO / "cases" / "meshes" / "onera_m6"
 # in the way -- the edge signal is geometric).
 ALPHA, M = 3.06, 0.5
 FORM, R_C_FRAC = "vanish_smooth", 0.05
-LADDER = ("coarse_ss", "medium", "fine")   # = generate_onera_m6.RICHARDSON_LADDER
+#: ★ 2026-08-04: FLAT levels, explicitly, and the new three-level ladder. Two changes and
+#: both are load-bearing. (1) `_flat`: onera_m6's base level names are now ROUND, so the
+#: old names would have made this script measure the ROUND cap while still reporting it as
+#: the flat-cap divergence -- silently, with no error. This script exists to measure the
+#: flat cap, so it must name it. (2) the ladder drops `fine` for `xcoarse_ss`, per the
+#: project-wide re-spec, which also means every level this needs is cheap to regenerate.
+#: The COMMITTED CSVs remain the historical (coarse_ss, medium, fine) measurement on flat.
+LADDER = ("xcoarse_ss_flat", "coarse_ss_flat", "medium_flat")
 
 TIP_AFT, TIP_Y = 0.30, 0.03
 

@@ -75,15 +75,32 @@ OUT_DIR = Path(__file__).resolve().parent
 
 # Same wall sizes as the M1 / M5 wing ladders, so the wing-body is a
 # controlled A/B against the wing-alone families at equal h_wall.
-LEVELS = {"coarse": 0.030, "medium": 0.015, "fine": 0.0075}
+#: ★ `xcoarse` added 2026-08-03. The capability matrix measured a fine level costing
+#: 345-1561 s per flow point against coarse's 2.7-11.7 s, which is meaningless against the
+#: 2 CPU-min product target -- while FIVE of the six geometry x wake-path combinations had
+#: only TWO mesh levels, so no convergence order was computable anywhere except conforming
+#: NACA (the one place a fine level already existed). An extra-coarse level therefore buys
+#: the third point exactly where it is missing, at the lowest cost, instead of where it was
+#: already present at the highest.
+#:
+#: It is safe to add HERE without touching h_far, and that is not luck: this family
+#: deliberately carries no h_far clamp (the M1b defect note above), so 0.060 -> 0.030 ->
+#: 0.015 refines every length by 2x. The same addition to the M6 WING or NACA families
+#: would be clamped (h_far 2.5 and 3.0 respectively) and would silently give a first
+#: interval that does not refine the far field AT ALL -- see the per-family analysis in the
+#: capability round note before adding xcoarse there.
+LEVELS = {"xcoarse": 0.044, "coarse": 0.030, "medium": 0.015, "fine": 0.0075}
 RICHARDSON_LADDER = ("coarse", "medium", "fine")
+#: the cheap ladder, for geometries where `fine` is unaffordable
+XCOARSE_LADDER = ("xcoarse", "coarse", "medium")
 
 QUALITY_BOUNDS = {"min_dihedral_deg": 2.0, "max_aspect_ratio": 60.0}
 
 #: The fuselage skin is a SMOOTH surface of revolution, so its crease angle is
 #: O(h * curvature) and must fall with refinement. A body-of-revolution seam
 #: (what fusing 4 primitives would leave) would park at a fixed angle instead.
-FUSELAGE_CREASE_MAX_DEG = {"coarse": 25.0, "medium": 15.0, "fine": 10.0}
+FUSELAGE_CREASE_MAX_DEG = {"xcoarse": 40.0, "coarse": 25.0, "medium": 15.0,
+                           "fine": 10.0}
 
 FUSELAGE = FuselageParams()
 

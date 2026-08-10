@@ -18,6 +18,7 @@ from typing import Dict, Optional
 
 import numpy as np
 
+from pyfp3d.kernels.entropy import EntropyOperator
 from pyfp3d.kernels.residual import assemble_residual, assemble_stiffness_matrix
 from pyfp3d.solve.linear import apply_dirichlet, solve_cg_amg
 from pyfp3d.solve.timing import finalize, new_timings, phase, snapshot, step_delta
@@ -457,6 +458,15 @@ def solve_subsonic_lifting(
     tol_residual: Optional[float] = None,
     farfield_spanwise_gamma: bool = False,
     body_source_rhs: Optional[np.ndarray] = None,
+    #: GS1b.11 (2026-07-31, user-adjudicated): the entropy-corrected density
+    #: is the DEFAULT. It is the physically correct relation (rho_s =
+    #: (p02/p01)*rho_isen makes the FP jump reproduce Rankine-Hugoniot
+    #: exactly), it lands the M0.80 coarse shock inside the Euler-anchored
+    #: band where the isentropic law falls outside it, and at medium M0.80 it
+    #: turns a NON-CONVERGING solve into a converged in-band one. The switch
+    #: stays because low-subsonic work may legitimately want it off and
+    #: because it is the tool for ON/OFF comparisons.
+    entropy_correction: bool = True,
 ) -> Dict[str, object]:
     """
     Lifting subsonic full-potential solve on a wake-cut mesh: NESTED
@@ -701,8 +711,34 @@ def solve_subsonic_lifting(
     else:
         phi_cut = freestream_phi(mesh_cut.nodes, alpha_deg, u_inf)
     grad, q2 = op.velocities(phi_cut)
-    q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
+    q2n = q2 / u_inf**2
+    q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
+    q2_lim_mask = q2l == q2n       # True = NOT limited (the newton.py convention)
     rho = density_field(q2l, m_inf, gamma_air)
+    # GS1b.3 entropy correction: rho_s = sigma * rho_isen with sigma = p02/p01
+    # at the pre-shock Mach (docs/dev_phase_two/20260729-0700-...). Picard has no
+    # Jacobian, so the corrected density is the whole change here; sigma is
+    # rebuilt from each iterate's own donor map -- the density is lagged in this
+    # driver anyway, so there is nothing extra to freeze.
+    if entropy_correction and use_upwind and upw.weighted:
+        raise NotImplementedError(
+            "entropy_correction needs the walk flux's donor map; this call uses "
+            "the kernel-mode (weighted) flux, which builds no single donor map. "
+            "Pass upwind_weighted=False or entropy_correction=False.")
+    ent = EntropyOperator(op.n_tets) if entropy_correction else None
+    sigma_history = []
+    if ent is not None and use_upwind:
+        # the donor map must be BUILT before it is read -- see
+        # UpwindOperator.upstream_map (reading the raw buffer here segfaulted)
+        # BACKPORT of the newton.py m_cap guard (discipline #9, pre-registered
+        # 20260731-2000): without the mask the knee walk reads the CAP as a
+        # physical pre-shock Mach on any limited cell, giving s = sigma_RH(m_cap)
+        # which the chain product drives to 0. Measured on the Newton path at M6
+        # medium; this path has the identical exposure since it also passes q2l.
+        rho = rho * ent.sigma(q2l, upw.upstream_map(grad), m_inf, gamma_air,
+                              lim=q2_lim_mask)
+        sigma_history.append((float(ent.sigma_min), int(ent.n_shock),
+                              float(ent.m1_max), bool(ent.converged)))
     if use_upwind:
         rho_t = upw.rho_tilde(grad, q2l, rho, m_inf, upwind_c, m_crit,
                               gamma_air).copy()
@@ -802,9 +838,18 @@ def solve_subsonic_lifting(
 
         with phase(timings, "residual"):
             grad, q2 = op.velocities(phi_cut)
-            q2l = limit_q2_field(q2 / u_inf**2, m_inf, m_cap, gamma_air)
-            n_limited = int(np.count_nonzero(q2l != q2 / u_inf**2))
+            q2n = q2 / u_inf**2
+            q2l = limit_q2_field(q2n, m_inf, m_cap, gamma_air)
+            q2_lim_mask = q2l == q2n
+            n_limited = int(np.count_nonzero(~q2_lim_mask))
             rho_new = density_field(q2l, m_inf, gamma_air)
+            if ent is not None and use_upwind:
+                rho_new = rho_new * ent.sigma(q2l, upw.upstream_map(grad),
+                                              m_inf, gamma_air,
+                                              lim=q2_lim_mask)
+                sigma_history.append(
+                    (float(ent.sigma_min), int(ent.n_shock),
+                     float(ent.m1_max), bool(ent.converged)))
             if use_upwind:
                 rho_t_new = upw.rho_tilde(grad, q2l, rho_new, m_inf, upwind_c,
                                           m_crit, gamma_air).copy()
@@ -860,7 +905,22 @@ def solve_subsonic_lifting(
         # the nonlinear residual too when tol_residual is given.
         res_ok = (tol_residual is None
                   or residual_history[-1] < tol_residual)
-        if kutta_converged and drho < tol_rho and res_ok:
+        # GS1.4 (phase two): a CLAMPED state is not a converged flow. Every
+        # other driver already refuses it -- solve_newton_lifting and
+        # solve_multivalued_newton by their tolerance test, and
+        # solve_transonic_lifting through its `physical` flag -- but this one
+        # reported converged=True with the speed limiter or the rho_tilde floor
+        # still binding, and it is the Picard SEED every other path starts
+        # from. Measured consequence (GS1.1 / GS1.7): the floor can host a
+        # machine-zero spurious solution 40 cells from the true one, and a
+        # clamped seed silently hands that branch to the caller.
+        clamped = (n_limited > 0
+                   or (int(upw.n_floored) if use_upwind else 0) > 0
+                   # GS1b.3: a defeated entropy transport is a clamp-class
+                   # condition -- sigma is garbage on part of the mesh, so a
+                   # small density lag says nothing (GS1.4 contract).
+                   or (ent is not None and not ent.converged))
+        if kutta_converged and drho < tol_rho and res_ok and not clamped:
             converged = True
             break
 
@@ -887,6 +947,18 @@ def solve_subsonic_lifting(
         "n_nu_active": upw.n_supersonic if use_upwind else 0,
         "n_limited": n_limited,
         "n_floored": upw.n_floored if use_upwind else 0,
+        # GS1.4: one flag instead of two counters -- a clamped state is not a
+        # solution of the discrete equations, whatever the residual says.
+        "clamped": bool(n_limited > 0
+                        or (int(upw.n_floored) if use_upwind else 0) > 0
+                        or (ent is not None and not ent.converged)),
+        # GS1b.3 diagnostics (empty / None when the correction is off)
+        "entropy_correction": bool(entropy_correction),
+        "sigma_history": sigma_history,
+        "sigma_min": (float(ent.sigma_min) if ent is not None else None),
+        "n_shock_cells": (int(ent.n_shock) if ent is not None else None),
+        "sigma_transport_converged": (True if ent is None
+                                      else bool(ent.converged)),
         "n_cg_total": n_cg_total,
         "n_solves_total": n_solves_total,
     }

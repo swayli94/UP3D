@@ -30,6 +30,8 @@ import os
 import numpy as np
 import pytest
 
+from ._tol import assert_rel_close
+
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.kernels.upwind import UpwindOperator, rho_tilde_sweep
 from pyfp3d.physics.isentropic import (
@@ -241,7 +243,9 @@ def test_subsonic_jacobian_shares_picard_pattern():
     # in general, but J must reduce to A when the sensitivities vanish.
     J0 = op.assemble_newton_jacobian(phi, rho_t, np.zeros_like(s_e),
                                      np.zeros_like(s_u), upstream)
-    assert np.array_equal(J0.data, A.data)
+    # GS0.2/D1: mathematical identity computed by two different
+    # kernels -> 1 ULP apart on some environments; relative tolerance.
+    assert_rel_close(J0.data, A.data, msg="J(s=0) vs Picard matrix")
 
 
 def test_limiter_mask_gates_the_chain():
@@ -267,7 +271,7 @@ def test_limiter_mask_gates_the_chain():
                                         lim_mask=all_limited)
     A = op.assemble_matrix(rho_t)
     assert op.n_term3_active == 0                # s_u fully masked
-    assert np.array_equal(J_lim.data, A.data)    # pure Term 1 remains
+    assert_rel_close(J_lim.data, A.data, msg="pure Term 1")   # GS0.2/D1
     assert np.array_equal(s_e, s_e_ref) and np.array_equal(s_u, s_u_ref)
 
 

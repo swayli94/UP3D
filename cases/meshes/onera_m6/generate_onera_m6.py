@@ -49,6 +49,14 @@ from pathlib import Path
 
 import numpy as np
 
+import sys
+from pathlib import Path
+
+# GS0.1: run standalone (`python cases/meshes/.../generate_*.py`) without
+# an editable install -- only the script directory is on sys.path by
+# default, so importing pyfp3d needs the repo root added explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 from pyfp3d.mesh.reader import write_mesh, mesh_stats
 from pyfp3d.mesh.metrics import compute_aspect_ratios, compute_min_dihedral_angles
 from pyfp3d.meshgen.wing3d import (
@@ -111,18 +119,49 @@ LEVELS = {
     # without it (h_far 2.5 -> 3.6) so that {coarse_ss, medium, fine} is a
     # legitimate 2x refinement ladder in every length scale.
     "coarse_ss": _level_params(0.030, clamp_h_far=False),
+    #: ★ FLAT reference levels (2026-08-04). Only P13/G13.3 (which MEASURES the flat cap's
+    #: tip-edge divergence, p = +0.321) and M5 (which compares round against flat) may use
+    #: these. Anything else wanting a tip is asking the wrong question -- the flat cap
+    #: diverges under refinement, so a refinement-based claim on it has a false premise.
+    "coarse_flat": _level_params(0.030),
+    "medium_flat": _level_params(0.015),
+    "fine_flat": _level_params(0.0075),
+    "coarse_ss_flat": _level_params(0.030, clamp_h_far=False),
+    "xcoarse_ss_flat": _level_params(0.060, clamp_h_far=False),
+    #: ★ `xcoarse_ss` added 2026-08-03. Self-similar by necessity, like `coarse_ss`: with
+    #: the clamp, h_far would pin at 2.5 exactly as at the shipped `coarse`, giving a
+    #: first refinement interval with NO far-field refinement. The valid cheap ladder is
+    #: therefore {xcoarse_ss, coarse_ss, medium} -- a uniform 2x in every length, since
+    #: medium's 120 x 0.015 = 1.8 was never clamped either. Measured meshable: min
+    #: dihedral 4.49 deg / aspect 14.4 at h_wall 0.060 (and NON-monotone across the sweep
+    #: -- 6.56 / 8.20 / 10.81 / 3.47 / 4.49 at h 0.030..0.060 -- the sliver lottery this
+    #: family is known for, so treat a single reading as a draw, not a trend).
+    "xcoarse_ss": _level_params(0.060, clamp_h_far=False),
 }
 
 #: The only member set valid for a three-point grid-convergence / Richardson
 #: study (P13/G13.3). medium and fine are the SAME meshes as in the shipped
 #: family -- only the coarse end had to be re-cut.
-RICHARDSON_LADDER = ("coarse_ss", "medium", "fine")
+#: ★ RE-SPEC 2026-08-04: the canonical ladder is (xcoarse_ss, coarse_ss, medium).
+#: `fine` is OUT -- no test or demo considers it any more (it costs 345-1561 s per flow
+#: point, meaningless against the 2 CPU-min target, and it only ever added a third level
+#: where three already existed). `xcoarse_ss` replaces it at the cheap end, which is where
+#: the third level was actually missing. Every constant that encoded the old ladder has to
+#: follow, or scripts keep asking for a mesh nobody generates.
+RICHARDSON_LADDER = ("xcoarse_ss", "coarse_ss", "medium")
 
 
 def generate_level(out_dir: Path, level: str, inspect: bool = True) -> Path:
     p = LEVELS[level]
     t0 = time.perf_counter()
+    #: ★ 2026-08-04, SECOND pass -- and it reverses the first. The first pass pinned this whole
+    #: family to flat so P13/M5 kept their reference, which left every conforming gate running on
+    #: the flat cap and would have needed 6-7 test files edited to point elsewhere. Inverting it
+    #: is strictly better: the STANDARD family name is round, so every consumer gets the
+    #: non-diverging geometry with no edit, and flat is reachable only through an explicit
+    #: `_flat` level name -- which is also what it is, a reference case, not a default.
     mesh = onera_m6_wing_mesh(
+        tip_cap=("flat" if level.endswith("_flat") else "round"),
         h_wall=p["h_wall"], h_far=p["h_far"], h_wake=p["h_wake"],
         h_edge=p["h_edge"], r_far=R_FAR, name=f"onera_m6_{level}",
     )

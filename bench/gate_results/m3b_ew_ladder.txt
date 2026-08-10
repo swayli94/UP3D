@@ -1,0 +1,15 @@
+
+M6 medium M0.84 ramp -- reference = direct; criterion 1e-8 on cl_p/cl_kj
+  direct (reference)        125.4s conv=True n=14 cl_p=0.263887564 cl_kj=0.268469142
+  amg EW 1e-10               67.6s conv=True n=14 cl_p=0.263887564 cl_kj=0.268469142
+  amg EW 1e-06               49.9s conv=True n=14 cl_p=0.263887564 cl_kj=0.268469142
+  amg EW 1e-05               46.0s conv=True n=14 cl_p=0.263887564 cl_kj=0.268469142
+  amg EW 0.0001              42.6s conv=True n=14 cl_p=0.263887564 cl_kj=0.268469141
+  amg EW 0.01                35.4s conv=True n=14 cl_p=0.263891284 cl_kj=0.268470933
+
+  EW        wall   speedup   worst rel vs direct   1e-8?   M3b<60s?
+  1e-10       67.6s   1.86x            7.03e-15   PASS   over
+  1e-06       49.9s   2.51x            2.89e-12   PASS   OK
+  1e-05       46.0s   2.73x            1.69e-11   PASS   OK
+  0.0001      42.6s   2.94x            7.66e-10   PASS   OK
+  0.01        35.4s   3.54x            1.41e-05   FAIL   OK

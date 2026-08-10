@@ -100,6 +100,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from cases.demo._common import (CheckList, CRITICAL, MUTED, S1_BLUE, S2_AQUA,
                                 S3_YELLOW, apply_style, finish, write_csv)
+from pyfp3d._compat import trapezoid
 from pyfp3d.constraints.wake import tip_taper_factors
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
@@ -238,7 +239,7 @@ def conf_ramp(level, mc, wc, m_target, m_start):
     clp = float(wall_forces(mc, phi=r["phi"], alpha_deg=ALPHA, s_ref=s_ref, m_inf=m_reached, wall_tag="wall")["cl"])
     g = np.asarray(r["gamma"]); zte = mc.nodes[wc.te_nodes, 2]
     o = np.argsort(zte); zz = np.concatenate([zte[o], [B_SEMI]]); gg = np.concatenate([g[o], [0.0]])
-    clkj = 2.0 * float(np.trapezoid(gg, zz)) / s_ref
+    clkj = 2.0 * float(trapezoid(gg, zz)) / s_ref
     mmax = float(np.sqrt(r.get("mach2_max", 0.0)))   # conforming solver reports it
     nlim, nflr = int(r["n_limited"]), int(r["n_floored"])
     np.savez(cache, phi=r["phi"], gamma=r["gamma"], clp=clp, clkj=clkj,

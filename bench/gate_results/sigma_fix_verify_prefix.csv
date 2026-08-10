@@ -1,0 +1,4 @@
+leg,case,m_inf,alpha,converged,accept_reason,res_flow,res_kutta,n_shock_cells,sigma_min,prefix_sigma_min,d_sigma_min,sigma_transport_converged,n_sigma_refresh,n_newton,cl_p,wall_s,prefix_note
+1,p13_m6_coarse_roundtip_base,0.5,3.06,False,sigma_transport_not_converged,8.846501729226904e-15,2.0816681711721685e-16,0,1.0,1.0,0.0,False,4,5,,2.1,"pre-fix: converged=False, accept_reason=sigma_transport_not_converged, |R| 8.8e-15/2.0e-10"
+1,p13_m6_coarse_roundtip_tapered,0.5,3.06,False,sigma_transport_not_converged,1.9997432233894406e-10,2.0122792321330962e-16,0,1.0,1.0,0.0,False,3,4,,0.9,"pre-fix: converged=False, accept_reason=sigma_transport_not_converged, |R| 8.8e-15/2.0e-10"
+2,conf_wb_coarse,0.78,2.0,False,sigma_transport_not_converged,9.051036875544507e-11,6.358195220323992e-15,186,0.9935058964220079,0.993485,2.089642200797659e-05,False,6,9,0.15825475687848276,14.8,"pre-fix: converged=False, accept_reason=sigma_transport_not_converged, |R| 9.05e-11 < tol 1e-10"

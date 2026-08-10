@@ -42,6 +42,25 @@ Standalone + self-checking:  python cases/demo/p4_transonic/run_demo.py
   full evidence (~40 min):        PYFP3D_TRANSONIC_GATES=1 python ...
 Outputs: cases/demo/p4_transonic/results/{*.png, *.csv, checks.csv}
 Exit code 0 iff every acceptance check passes.
+
+★★ ERRATUM 2026-07-30 (phase two, GS1b.7 / GS1b.8). The committed artifacts in
+results/ were produced BEFORE the field-residual gate existed, and they call this
+path's terminal state "converged". It is not: at coarse M0.80/alpha1.25 it carries
+|R| = 2.20e-04 against the coupled Newton's 5.46e-12, the Newton walks off it in six
+steps, and the Newton's residual evaluated at that state is 2.198e-04 -- it does not
+satisfy the discrete equations. Its shock also sits 0.054c from the converged one.
+Consequently:
+
+  * the G4.1 checklist rows now read `engineering_converged` (the explicitly named
+    old semantics) and a new row RECORDS the true field residual;
+  * the physics gate on the shock position MOVED to the coupled Newton path
+    (tests/test_p4_transonic.py::test_g41_transonic_coarse_newton), where the
+    isentropic value is 0.6581 -- outside the Euler-anchored band -- and the
+    entropy-corrected value is 0.6186, inside it;
+  * the committed results/ CSV and PNG are NOT regenerated in this round (the heavy
+    demo is ~40 min); they are superseded for the "converged" claim and stand for
+    everything else. Regenerate them together with the phase-one ON/OFF recompute
+    (GS1b.6 batch 3).
 """
 
 import csv
@@ -258,9 +277,21 @@ def part3_transonic(cl: CheckList, mc, wc):
     ax.legend()
     finish(fig, OUT, "g41_cp_shock.png")
 
-    cl.add("G4.1", "converged (physical + Kutta)", r["converged"],
+    # ★ GS1b.8 (2026-07-30): this row reads `engineering_converged` -- the
+    # explicitly named OLD semantics (physical + Kutta) -- because
+    # solve_transonic_lifting's `converged` now also requires the FIELD RESIDUAL
+    # (GS1b.7 measured that this path's state carries |R| 2.2e-04 against the
+    # Newton's 5.5e-12 and is not a solution of the discrete equations). The true
+    # residual is reported in its own row below. The COMMITTED artifacts in
+    # results/ predate this change -- see the erratum in this file's docstring.
+    cl.add("G4.1", "engineering-converged (physical + Kutta)",
+           r["engineering_converged"],
            "Gamma secant |F| < 2e-4, no limited cells",
-           bool(r["converged"]), note=f"{t_solve:.0f} s coarse")
+           bool(r["engineering_converged"]), note=f"{t_solve:.0f} s coarse")
+    cl.add("G4.1 residual", "field |R| at the terminal state",
+           f"{r['residual_final']:.2e}",
+           "RECORDED (the Picard shock plateau; not a solution -- GS1b.7)",
+           True, note=str(r.get("not_converged_reason") or "converged"))
     cl.add("G4.1", "upper shock x/c", f"{up['x_shock']:.3f}",
            f"{x_ref} +/- {tol} (ref band)",
            abs(up["x_shock"] - x_ref) <= tol)
@@ -313,8 +344,10 @@ def part4_refinement(cl: CheckList, coarse_case):
             ref[row["quantity"]] = (float(row["value"]), float(row["tolerance"]))
     x_ref, tol = ref["upper_shock_x_c"]
     up = rep["upper"]
-    cl.add("G4.1 medium", "converged (physical + Kutta)", r["converged"],
-           "Kutta |F| < 2e-4, no limited cells", bool(r["converged"]),
+    cl.add("G4.1 medium", "engineering-converged (physical + Kutta)",
+           r["engineering_converged"],
+           "Kutta |F| < 2e-4, no limited cells",
+           bool(r["engineering_converged"]),
            note=f"{t_solve:.0f} s medium")
     cl.add("G4.1 medium", "upper shock x/c", f"{up['x_shock']:.3f}",
            f"{x_ref} +/- {tol} (ref band)", abs(up["x_shock"] - x_ref) <= tol)

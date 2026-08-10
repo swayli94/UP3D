@@ -59,6 +59,7 @@ REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from cases.demo._common import CheckList, apply_style, finish, write_csv
+from pyfp3d._compat import trapezoid
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.meshgen.fuselage import FuselageParams, make_inboard_clip
@@ -103,7 +104,7 @@ def cl_kj_exposed(z, gamma, s_ref):
     zz, gg = z[o], gamma[o]
     zz = np.concatenate([zz, [B_SEMI]])
     gg = np.concatenate([gg, [0.0]])
-    return 2.0 * float(np.trapezoid(gg, zz)) / s_ref
+    return 2.0 * float(trapezoid(gg, zz)) / s_ref
 
 
 # --------------------------------------------------------------------------

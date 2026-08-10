@@ -129,10 +129,19 @@ class TestTheCapIsRound:
         code, M1's flat cap creases by ~90 deg and does NOT improve with
         refinement. Without this the M5 numbers have nothing to be better than.
         """
+        #: ★ 2026-08-04: the FLAT levels have to be NAMED. onera_m6's base level names now
+        #: build the ROUND cap (wing3d's default flipped flat -> round because P13/G13.3
+        #: measured the flat edge DIVERGING under refinement), so reading `coarse.msh` here
+        #: measured the round cap and reported 46.8 deg where the sharp edge should give ~90 --
+        #: i.e. this test would have silently become round-vs-round. I updated P13's and M5's
+        #: DEMO scripts for exactly this trap before flipping and missed this TEST; the
+        #: assertion is what caught it.
         d = _mesh_dir("onera_m6")
-        levels = [lv for lv in LEVELS if (d / f"{lv}.msh").exists()]
+        levels = [f"{lv}_flat" for lv in LEVELS
+                  if (d / f"{lv}_flat.msh").exists()]
         if not levels:
-            pytest.skip("onera_m6 (flat) meshes not generated")
+            pytest.skip("onera_m6 *_flat.msh not generated (run "
+                        "generate_onera_m6.py --level coarse_flat --level medium_flat)")
         for level in levels:
             seam = seam_crease(read_mesh(d / f"{level}.msh"))
             assert seam.max() > 80.0, (
@@ -270,13 +279,24 @@ def test_h_far_is_not_clamped():
         assert p["h_far"] == pytest.approx(120.0 * p["h_wall"], rel=1e-12), level
 
 
-def test_the_cap_is_off_by_default():
-    """`tip_cap` defaults to "flat": every existing mesh family, and every P5 /
-    P8-G8.2 / B7 / M1 lock anchored to one, must be bit-identical."""
+def test_the_cap_is_on_by_default():
+    """`tip_cap` defaults to "round" (flipped 2026-08-04) -- a caller who does not think
+    about the tip must get the geometry that does not DIVERGE under refinement.
+
+    The old form of this test asserted "flat", on the reasoning that every existing lock
+    anchored to a flat mesh had to stay bit-identical. That reasoning lost: P13/G13.3
+    measured the flat cap's sharp convex edge diverging at peak-Mach exponent p = +0.321, so
+    those locks were anchored to a geometry on which any refinement-based claim has a false
+    premise -- and the LE-band convergence order measured 0.37 on flat against 0.87 on round.
+    Re-anchoring was the cost of fixing the premise, not a reason to keep it.
+
+    flat is still reachable, and still needed, through explicit `_flat` level names -- P13
+    and M5 exist to MEASURE it.
+    """
     import inspect
 
     from pyfp3d.meshgen.wing3d import onera_m6_wing_mesh
 
     sig = inspect.signature(onera_m6_wing_mesh)
-    assert sig.parameters["tip_cap"].default == "flat"
+    assert sig.parameters["tip_cap"].default == "round"
     assert sig.parameters["h_tip"].default is None

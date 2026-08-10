@@ -1,6 +1,32 @@
 # UP3D
 Unstructured-mesh full-potential solver for 3D flows.
 
+## Install (read this first)
+
+```bash
+# solver + tests
+pip install -e ".[dev]"
+# add the mesh generators (gmsh) and headless 3-D rendering
+pip install -e ".[all]"
+```
+
+On a **headless Linux box (incl. WSL)** the `gmsh` wheel dlopens two system
+libraries that are not part of the wheel:
+
+```bash
+sudo apt-get install -y libglu1-mesa libopengl0     # libGLU.so.1, libOpenGL.so.0
+```
+
+Without them `import gmsh` fails with `OSError: libGLU.so.1: cannot open shared
+object file` and every mesh generator dies. If you cannot install system
+packages, download the two `.deb` files, extract them locally and point
+`LD_LIBRARY_PATH` at the extracted `usr/lib/x86_64-linux-gnu`.
+
+The `.msh` mesh files are gitignored; regenerate them with the scripts under
+`cases/meshes/*/generate_*.py` (all runnable standalone, no `PYTHONPATH`
+needed; the whole set takes ~3.5 min). Verified 2026-07-28: regenerated meshes
+are bit-identical to the ones the committed evidence was produced with.
+
 ## Tooling and Software Requirements
 
 The development plan in [docs/roadmap.md](docs/roadmap.md) is feasible on Linux

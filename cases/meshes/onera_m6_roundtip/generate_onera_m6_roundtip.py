@@ -69,6 +69,14 @@ from pathlib import Path
 
 import numpy as np
 
+import sys
+from pathlib import Path
+
+# GS0.1: run standalone (`python cases/meshes/.../generate_*.py`) without
+# an editable install -- only the script directory is on sys.path by
+# default, so importing pyfp3d needs the repo root added explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 from pyfp3d.mesh.metrics import compute_aspect_ratios, compute_min_dihedral_angles
 from pyfp3d.mesh.reader import mesh_stats, write_mesh
 from pyfp3d.meshgen.wing3d import (
@@ -91,7 +99,11 @@ SEAM_XI = (0.05, 0.95)
 #: M5 gate: the seam crease must be an O(h) artifact of faceting, not an edge.
 #: Bounds are set well inside the measured flat/round separation (92 deg vs
 #: 47/25/12), so a regression that reintroduced an edge would fire immediately.
-SEAM_MAX_DEG = {"coarse": 60.0, "medium": 35.0, "fine": 20.0}
+#: ★ xcoarse entry added with the level (2026-08-04). The seam-crease bound is an O(h)
+#: faceting budget, so it scales with the level -- 60 deg at coarse doubles to 120 at
+#: xcoarse. Missing this key is how the first xcoarse run died AFTER meshing: the gate
+#: lookup, not the geometry, failed. Every per-level dict has to grow with LEVELS.
+SEAM_MAX_DEG = {"xcoarse": 120.0, "coarse": 60.0, "medium": 35.0, "fine": 20.0}
 
 
 def _level_params(h_wall: float) -> dict:
@@ -106,14 +118,22 @@ def _level_params(h_wall: float) -> dict:
     )
 
 
+#: ★ `xcoarse` added 2026-08-04 (user directive: from here on BOTH the wing-alone and the
+#: wing-body work uses the round tip). This family is already self-similar -- h_far = 120*h_wall
+#: with NO clamp -- so its `coarse` is what the shipped onera_m6 family needs a `coarse_ss` for,
+#: and {xcoarse, coarse, medium} is a uniform 2x ladder in every length. h_wall 0.060 is the
+#: value measured meshable on the M6 wing (LE-2 era sweep: min dihedral 4.49 deg at 0.060).
 LEVELS = {
+    "xcoarse": _level_params(0.060),
     "coarse": _level_params(0.030),
     "medium": _level_params(0.015),
     "fine": _level_params(0.0075),
 }
 
 #: Self-similar by construction -- every length scale halves per level.
-RICHARDSON_LADDER = ("coarse", "medium", "fine")
+#: ★ RE-SPEC 2026-08-04: (xcoarse, coarse, medium). `fine` is out of the canonical ladder
+#: -- see the note in cases/meshes/onera_m6/generate_onera_m6.py.
+RICHARDSON_LADDER = ("xcoarse", "coarse", "medium")
 
 
 def seam_crease_angles(mesh) -> np.ndarray:

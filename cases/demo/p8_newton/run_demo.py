@@ -258,8 +258,16 @@ def part2(cl: CheckList):
 
 #: G8.2 physics regression locks = the measured M6 medium Newton solution
 #: (2026-07-11 N6 run; same lock-band semantics as the G8.1 constants)
-M6_LOCK = dict(cl_p=0.2646, shock44=0.596, shock65=0.541, shock90=0.362,
-               m_max=2.134)
+#: ★ RE-ANCHORED 2026-07-31 to the entropy-corrected DEFAULT (the m_cap guard,
+#: docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md; measured on this same
+#: recipe: cl_p 0.263888, M_max 2.10709, shocks 0.59582 / 0.53914 / 0.34225).
+#: SUPERSEDED isentropic values: cl_p 0.2646, M_max 2.134, shocks
+#: 0.596 / 0.541 / 0.362 (eta = 0.90 had only 0.0002 of tolerance margin left,
+#: so this is a re-anchor, not a "still passes"). ⚠ this demo's COMMITTED
+#: FIGURES were produced isentropically and are NOT regenerated here -- that is
+#: the deferred GS1b.6 batch-3 debt (heavy demo ON/OFF recompute).
+M6_LOCK = dict(cl_p=0.263888, shock44=0.59582, shock65=0.53914,
+               shock90=0.34225, m_max=2.10709)
 
 #: the N6 M6 recipe (tests/test_p8_newton.py::NEWTON_M6_RECIPE): N5 chain +
 #: lagged-LU direct steps (true-3D LU fill: 18.6 s/refactor at 63k dofs) +

@@ -19,6 +19,7 @@ Runs in both lanes: default JIT and PYFP3D_NOJIT=1.
 import numpy as np
 import pytest
 
+from pyfp3d._compat import trapezoid
 from pyfp3d.viscous import closures as C
 
 Q0 = 1.0
@@ -117,8 +118,8 @@ def test_laminar_thickness_independent_quadrature():
         C._lam_UW(eta[i], A, B, Psi, prof, dprof)
         U[i] = prof[0]
         W[i] = prof[1]
-    ds1_trap = np.trapezoid(1.0 - U, eta)
-    th11_trap = np.trapezoid(U * (1.0 - U), eta)
+    ds1_trap = trapezoid(1.0 - U, eta)
+    th11_trap = trapezoid(U * (1.0 - U), eta)
     out, _, _ = C.closure_scalar(LAM_3D, q=Q0, rho=RHO0, mu=MU0, turbulent=False)
     delta = LAM_3D[0]
     assert abs(out[C.OUT_DS1] / delta - ds1_trap) < 1.0e-6
