@@ -468,7 +468,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    disposition moves; (3) the round file
    itself; (4) this file's **baseline line** when the suite count moves; (5)
    `docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
-   capability claim. Steps 0 and 6 and the erratum checklist apply to both lists.
+   capability claim; ★ **(6) PROJECT_STRUCTURE.md** — added 2026-08-10 after checking it
+   and finding phase two absent from it ENTIRELY: neither `bench/` nor `docs/` was in the
+   directory tree and the footer baseline still read the phase-one 652, so ~70 round files
+   and every committed CSV were invisible to anyone navigating by that document. It is the
+   surface the phase-one ritual already flags as the one that silently rots, and leaving it
+   off the phase-two list is how it rotted again. Steps 0 and 6 and the erratum checklist
+   apply to both lists.
    For a **phase-one** close-out:
    tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
    **all five** surfaces, because each has gone stale at least once by being
