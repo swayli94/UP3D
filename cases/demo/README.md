@@ -1,5 +1,8 @@
 # Per-phase demo cases
 
+★★ **归档说明(2026-08-10)**:本目录只保留**仍被现存测试/脚本读取**的条目(9 个,共 33 个)。其余已移入 [`phases/p1/cases/demo/`](../../phases/p1/cases/demo/) —— **证据(CSV/PNG)仍被跟踪**,只是不在原位置。下表中指向已归档目录的行,链接已重定向。
+判定规则是可测的:**被保留代码读取 ⇒ phase 3 仍需要 ⇒ 留在原位**。
+
 One self-contained, self-checking demo per completed roadmap phase. Each
 `run_demo.py` regenerates every figure/CSV in its `results/` folder and
 verifies the phase's acceptance numbers (exit code 0 = all checks pass;

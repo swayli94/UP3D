@@ -7,6 +7,29 @@ workstation-scale (minutes for 1–3 M nodes).
 
 ## Document map (read the relevant one before coding)
 
+★★ **LAYOUT CHANGED 2026-08-10 — read this before following any path below.** Finished
+phases were archived into **`phases/p1/`** and **`phases/p2/`** (tracked, not gitignored, so
+the evidence stays in HEAD). The link targets in this map were repointed mechanically, so a
+line reading `[docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical,
+the file now lives in the archive.** What stayed in place is what phase 3 still needs, and the
+rule was measurable — *if a surviving test or script reads it, it stays*:
+
+- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **73 test files (every conforming
+  anchor)**; the 18 pure level-set test files are archived, since deleting them is phase 3's
+  first task;
+- `bench/` keeps the **7-module closure** behind the five product metrics **plus
+  `bench/gate_results/`** — the capability boundary cites those CSVs by path;
+- `cases/demo/` keeps **9 of 33** and `cases/analysis/` **10 of 33** subdirectories, the ones
+  kept tests actually read (e.g. `cases/demo/p11_curved_walls/`, which
+  `tests/test_laplace_sphere.py` reads for the LIVE G1.6 Option C gate);
+- `docs/` keeps overview, design, design_track_v, agent-rules, inspection/, and the **six
+  phase-three-facing** files in `docs/dev_phase_two/` (roadmap, progress, the capability
+  boundary, the level-set inventory, the precond decision record, the template).
+
+**Start here for phase 3:** [docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
+then [phases/README.md](phases/README.md) for what was archived and how to get a
+guaranteed-runnable phase-1/2 tree (`git worktree add ../up3d-prereorg d224223`).
+
 Docs were split by track on 2026-07-15; the old monolith paths remain as thin
 indexes, so historical references like "roadmap.md Track B" or "demo_report §P4"
 resolve through one hop.

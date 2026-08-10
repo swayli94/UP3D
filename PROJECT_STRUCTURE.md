@@ -698,47 +698,56 @@ artifacts/                 # Gate outputs (auto-generated, gitignored)
 ├── G0.3/                 # Element coloring 3D render
 └── ...
 
-bench/                     # ✓ Phase-two measurement harness -- NOT tests. Each script
-│                           #   answers one pre-registered question and commits a CSV;
-│                           #   a number that lives only in prose is not evidence.
+phases/                    # ★★ ARCHIVE of finished phases (reorganised 2026-08-10, base
+│                           #   commit d224223). TRACKED, not gitignored -- the evidence stays
+│                           #   in HEAD. Read phases/README.md first.
+├── p1/                    #   phase 1: 24 demo + 23 analysis evidence chains, the phase-1
+│                           #   roadmap/ and demo_report/, design_track_b.md, analysis/,
+│                           #   archive/, and the 18 PURE LEVEL-SET test files
+└── p2/                    #   phase 2: 45 bench scripts + s1_duct/, and 85 round files
+                           #   ★ What stayed in place is what a surviving test or script
+                           #   READS -- that rule is measurable, and it is why
+                           #   cases/demo/p11_curved_walls/ did not move (the live G1.6 gate
+                           #   reads it). Archived scripts had their repo-root depth, their
+                           #   moved-target path literals and their gate_results reference
+                           #   mechanically fixed and verified; they are provenance, and the
+                           #   committed CSV/PNG is the evidence. For a guaranteed-runnable
+                           #   phase-1/2 tree: git worktree add ../up3d-prereorg d224223
+
+bench/                     # ✓ Measurement harness -- NOT tests. Each script answers one
+│                           #   pre-registered question and commits a CSV; a number that lives
+│                           #   only in prose is not evidence. 7 scripts kept here = the
+│                           #   dependency closure behind the five product metrics; the other
+│                           #   45 are in phases/p2/bench/.
 ├── run_capability_locks.py  # ★ the FAST capability tier: 7 gated anchors, 670 s.
-│                           #   RUN AT EVERY CLOSE-OUT (CLAUDE.md ritual step 0). Pins the
-│                           #   thread caps itself -- one of its locks asserts a wall clock,
-│                           #   and uncapped the same set takes 2940 s (measured 2026-08-10).
-│                           #   Prints WHAT IT DOES NOT COVER every run, with costs.
+│                           #   RUN AT EVERY CLOSE-OUT (ritual step 0). Pins the thread caps
+│                           #   itself -- one of its locks asserts a wall clock, and uncapped
+│                           #   the same set takes 2940 s. Prints WHAT IT DOES NOT COVER.
 ├── run_m1_gate.py           # product metric M1, both n_picard_seed legs; exit 1 while it FAILS
 ├── run_m3_budget.py         # M3's per-band error budget (LE 69.6 % / MID 20.7 %)
 ├── run_capability_matrix.py # 13 configurations x ladder = 78 points (the M5-adjacent read)
-├── run_le*.py               # the LE-deficit line: window, factorials, G1 volume guard
-├── run_farfield_arm.py      # registered item 0: the domain-radius arm (verdict N)
 ├── run_g82_anchor_check.py  # G8.2's physics anchors when the wall-clock assert masks them
+├── run_le14_common_root.py  # the failure CLASSIFIER (never report a bare conv=False)
 ├── bitcheck.py              # DEVELOPMENT-time bit-identity A/B (ruling D1 -- not a test)
-└── gate_results/            # ✓ committed CSVs: the evidence base for every phase-two claim
+└── gate_results/            # ✓ STAYS HERE: committed CSVs, the evidence base for every
+                           #   phase-two claim, cited by path from the capability boundary.
+                           #   The archived scripts reach ACROSS to it.
 
-docs/
-├── dev_phase_two/          # ★ THE ACTIVE PLAN AND HISTORY (phase one below is frozen)
-│   ├── roadmap.md           #   the only authoritative phase-two plan: 5 product metrics,
-│   │                       #   8 principles, S0-S6, and the rulings D1-D5 (D5 = abandon
-│   │                       #   level-set; conforming only from here)
-│   ├── progress.md          #   one row per round (70 rounds) + the stage-status and
-│   │                       #   product-metric tracking tables
-│   ├── PHASE_TWO_CAPABILITY_BOUNDARY.md   # ★★ READ THIS FIRST when picking the project up:
-│   │                       #   what the solver can do, which routes are measured dead,
-│   │                       #   which deficits are unexplained, and what the evidence does
-│   │                       #   NOT cover
-│   ├── LEVELSET_DELETION_INVENTORY.md     # ★ phase three's first task, counted by AST:
-│   │                       #   9 library files / 4624 lines, 18 tests to delete + 8 to
-│   │                       #   amputate, and the three things that are not pure subtraction
-│   ├── DECISION-2026-08-02-precond.md     # a decision record with its refutation conditions
-│   └── yyyymmdd-hhmm-<name>.md            # one file per round: purpose / changes / tests /
-│                           #   results / next step. Pre-registrations are committed BEFORE
-│                           #   the measurement they govern -- that ordering is the point.
-├── inspection/             # independent audits (the 2026-07-28 full audit founds phase two)
-├── roadmap.md, roadmap/    # ⛔ PHASE ONE, FROZEN 2026-07-28. Technical facts still citable
-├── agent-rules.md          #   (cite as "phase one record"); NOT a plan any more.
-├── design.md, design_track_*.md            # theory and numerics reference (still current)
-├── demo_report.md, demo_report/            # phase-one evidence dossier
-└── analysis/, archive/     # dated snapshots; never a coding spec
+docs/                      # only what phase 3 needs; the phase-1 plan/evidence is in phases/p1
+├── dev_phase_two/          # ★ six files kept:
+│   ├── PHASE_TWO_CAPABILITY_BOUNDARY.md   # ★★ READ FIRST when picking the project up
+│   ├── LEVELSET_DELETION_INVENTORY.md     # ★ phase three's first task, counted by AST
+│   ├── roadmap.md, progress.md            #   the plan + the 70-round ledger and its tables
+│   ├── DECISION-2026-08-02-precond.md     #   a decision record with refutation conditions
+│   └── _TEMPLATE.md         #   the round-file format (pre-registrations are committed BEFORE
+│                           #   the measurement they govern -- that ordering is the point).
+│                           #   The 85 executed round files are in phases/p2/docs/dev_phase_two/
+├── design.md, design_track_v.md            # theory/numerics reference (current); track_b is
+│                           #   archived with the level-set route (ruling D5)
+├── agent-rules.md          # imported by CLAUDE.md via @; phase-one "Current phase" narrative
+│                           #   is frozen, the session disciplines still apply
+├── overview.md             # phase-one snapshot (frozen)
+└── inspection/             # independent audits -- the 2026-07-28 full audit founded phase two
 
 pyproject.toml            # ✓ Project metadata and dependencies
 setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
