@@ -55,7 +55,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from cases.demo._common import CheckList, apply_style, finish, write_csv

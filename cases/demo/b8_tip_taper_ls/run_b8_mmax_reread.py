@@ -34,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parents[5]
+REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 
 from pyfp3d.mesh.reader import read_mesh  # noqa: E402
@@ -46,7 +46,7 @@ from pyfp3d.wake import (  # noqa: E402
 OUT = Path(__file__).parent / "results"
 MESH = REPO / "cases" / "meshes"
 B7_RES = REPO / "cases" / "demo" / "b7_onera_m6" / "results"
-B6_RES = REPO / "phases/p1" / "cases" / "demo" / "b6_transonic" / "results"
+B6_RES = REPO / "cases" / "demo" / "b6_transonic" / "results"
 ALPHA_B7 = 3.06  # b7 run_demo.py
 
 

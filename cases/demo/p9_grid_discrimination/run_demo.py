@@ -41,7 +41,7 @@ import numpy as np
 #: shared helper as a bare `_common`, relying on its own directory being on sys.path.
 #: `cases/demo/_common.py` stays at the repo root by design (kept files stay in place),
 #: so the archived copy now uses the package path the other 26 already used.
-sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import matplotlib
 

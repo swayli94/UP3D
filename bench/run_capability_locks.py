@@ -47,6 +47,15 @@ for _v in THREAD_VARS:
 
 #: (node id, what it locks). Chosen for anchors that are cheap; the heavy RAMPS are in
 #: the excluded list below with their measured costs, so the trade-off is visible.
+#: ★★ TWO LOCKS REMOVED 2026-08-10 by the phases/ reorganisation, and this is a
+#: disposition, not an accident. `test_b9_wingbody_ls.py` and
+#: `test_b22_ls_3d_anchors.py::test_m6_coarse_ramp_anchor` were level-set locks, and ruling
+#: D5 abandoned that route -- both files are archived under phases/p1/tests/ and phase 3's
+#: first task deletes them. Keeping them here would have meant pointing a live close-out
+#: gate into an archive, which is worse than not having the gate: it would run, pass, and
+#: assert capability for a route nobody maintains. What they locked is recorded in
+#: phases/p2/docs/dev_phase_two/20260806-1200-b22-respec.md and the b9 re-spec round.
+#: ⇒ this tier is now 5 groups, not 7. The conforming anchors are all still here.
 LOCKS = (
     ("tests/test_s1_m1a_envelope.py",
      "M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05)"),
@@ -54,11 +63,8 @@ LOCKS = (
      "the cold-start seed fallback, incl. the real NACA M0.80 medium recovery"),
     ("tests/test_b9_wingbody_conforming.py",
      "wing-body conforming: junction loading, the B8 lift-loss detector"),
-    ("tests/test_b9_wingbody_ls.py", "wing-body level-set wiring"),
     ("tests/test_b7_onera_m6.py",
      "M6 LS 3-D machinery + transonic gate (3 legs strict-xfail since 2026-08-09)"),
-    ("tests/test_b22_ls_3d_anchors.py::test_m6_coarse_ramp_anchor",
-     "M6 LS coarse ramp: highest CLEAN level + gamma + M_max"),
     ("tests/test_p8_newton.py",
      "G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06)"),
 )
@@ -67,14 +73,14 @@ LOCKS = (
 #: green run as "the gated set passes" -- that conflation is what this file exists to
 #: prevent, and the numbers are from the 2026-08-06 full gated run and the re-spec rounds.
 NOT_COVERED = (
-    ("tests/test_b22_ls_3d_anchors.py::test_m6_medium_ramp_anchor",
+    ("phases/p1/tests/test_b22_ls_3d_anchors.py::test_m6_medium_ramp_anchor  [ARCHIVED]",
      "~35 min. strict-xfail since 2026-08-09, and the xfail still RUNS the solve"),
     ("tests/test_p4_transonic.py", "~32 min, dominated by the G4.1 medium gate"),
     ("tests/test_p5_onera_m6.py", "45-75 min from scratch (M6 medium continuation+polish)"),
-    ("tests/test_b14_schur_ls.py", "M6 medium Schur/lagged-LU arms"),
-    ("tests/test_b15_ls_newton_freeze.py", "the M6 medium M0.84 freeze ramp (~515 s idle)"),
+    ("phases/p1/tests/test_b14_schur_ls.py  [ARCHIVED]", "M6 medium Schur/lagged-LU arms"),
+    ("phases/p1/tests/test_b15_ls_newton_freeze.py  [ARCHIVED]", "the M6 medium M0.84 freeze ramp (~515 s idle)"),
     ("tests/test_b18_wingbody_transonic.py", "wing-body transonic ramps"),
-    ("tests/test_b6_transonic.py, test_b16/b17, test_b11, test_b19, test_p8_jacobian",
+    ("[ARCHIVED, except test_p8_jacobian] test_b6_transonic, test_b16/b17, test_b11, test_b19",
      "passed on 2026-08-06; cost not individually measured"),
 )
 
@@ -121,6 +127,8 @@ def main():
     print(f"\n  total {total:.0f} s ({total/60:.1f} min);  "
           f"{len(rows) - len(bad)}/{len(rows)} groups green")
     print(f"  wrote {CSV}")
+    print("\n  [ARCHIVED] = under phases/p1/ per ruling D5; deleted in phase 3, "
+          "not runnable from tests/")
     print("\n★ NOT covered by this tier -- a green run here is NOT 'the gated set passes':")
     for node, why in NOT_COVERED:
         print(f"    {node}\n        {why}")

@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(HERE))
 
 from wb28 import (B25_RESULTS, OUT, load_c_te_profile, load_mesh, measure_f1,

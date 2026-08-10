@@ -105,9 +105,9 @@ reach the isolated fold solution (why G8.1 re-specced the conforming path to
 Newton locks). The quantitative medium gate needs the **LS Newton** (post-B6
 re-derivation, design_track_b.md §5.5, explicitly deferred).
 
-![B6 stabilizer story: throttle / runaway / converge](../../cases/demo/b6_transonic/results/stabilizer_story.png)
-![B6 transonic Cp + shock, dual-mesh vs conforming](../../cases/demo/b6_transonic/results/transonic_cp_shock.png)
-![B6 A/B gap vs Mach](../../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
+![B6 stabilizer story: throttle / runaway / converge](../../../../cases/demo/b6_transonic/results/stabilizer_story.png)
+![B6 transonic Cp + shock, dual-mesh vs conforming](../../../../cases/demo/b6_transonic/results/transonic_cp_shock.png)
+![B6 A/B gap vs Mach](../../../../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
 
 > **Track-B renumber 2026-07-12.** Two renumbers landed the same day: a new **B4**
 > (TE control volume) was inserted, then the half-integer IDs were regularized

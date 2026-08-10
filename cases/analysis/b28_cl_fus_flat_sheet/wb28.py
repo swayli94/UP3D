@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 B23 = REPO_ROOT / "phases/p1/cases/analysis/b23_junction_discriminator"
 B24 = REPO_ROOT / "phases/p1/cases/analysis/b24_wake_inboard_end"
 B25 = REPO_ROOT / "phases/p1/cases/analysis/b25_inboard_fragment_clip"

@@ -444,8 +444,16 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **700 passed + 28 skipped +
-   2 xfailed** (2026-08-06, measured 1769.56 s @16 threads). ★ The per-round
+3. Full suite: `pytest tests/` — current baseline **538 passed + 16 skipped +
+   2 xfailed, 0 failed** (2026-08-10, measured 1019.09 s @8 threads under load ~14).
+   ★ The drop from 700 is the **phases/ reorganisation**, not a regression: the 18 pure
+   level-set test files moved to `phases/p1/tests/` (`testpaths = ["tests"]`, so they are no
+   longer collected), and ruling D5 abandons that route — phase 3 deletes them. Every
+   conforming anchor is still collected. The FAST tier is likewise **5 groups, not 7**
+   (measured **482 s, 5/5 green**): its two level-set locks were removed rather than
+   repointed into the archive, because a live close-out gate aimed at an archive would run,
+   pass, and assert capability for an unmaintained route.
+ ★ The per-round
    lineage lives in [docs/dev_phase_two/progress.md](docs/dev_phase_two/progress.md),
    not here — phase two tracks it there, and this line had been left at the
    phase-one 479 for two weeks.

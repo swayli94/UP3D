@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(HERE))
 

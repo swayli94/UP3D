@@ -45,7 +45,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(HERE))
 
@@ -79,7 +79,7 @@ XC_TARGETS = (0.92, 0.96, 0.98, 0.99, 0.995)
 MESHES = REPO_ROOT / "cases/meshes"
 P5_RES = REPO_ROOT / "cases/demo/p5_onera_m6/results"
 B7_RES = REPO_ROOT / "cases/demo/b7_onera_m6/results"
-A1_RES = REPO_ROOT / "phases/p1/cases/analysis/a1_solver_bottleneck/results"
+A1_RES = REPO_ROOT / "cases/analysis/a1_solver_bottleneck/results"
 P5_BASELINE_CSV = REPO_ROOT / "cases/demo/b7_onera_m6/p5_gamma_baseline.csv"
 
 # B7's committed roughness numbers (track_b.md B7 / b7 checks.csv) -- the

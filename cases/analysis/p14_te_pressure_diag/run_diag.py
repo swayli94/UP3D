@@ -36,9 +36,9 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "phases/p1/cases/analysis/a2_te_kutta_fidelity"))
+sys.path.insert(0, str(REPO_ROOT / "cases/analysis/a2_te_kutta_fidelity"))
 
 import _metrics as M                                        # noqa: E402
 from pyfp3d.constraints.dirichlet import farfield_dirichlet  # noqa: E402
@@ -53,7 +53,7 @@ OUT = HERE / "results"
 OUT.mkdir(exist_ok=True)
 MESHES = REPO_ROOT / "cases/meshes"
 P5_RES = REPO_ROOT / "cases/demo/p5_onera_m6/results"
-A1_RES = REPO_ROOT / "phases/p1/cases/analysis/a1_solver_bottleneck/results"
+A1_RES = REPO_ROOT / "cases/analysis/a1_solver_bottleneck/results"
 
 ALPHA_M6 = 3.06
 checks = []          # (check, value, criterion, ok)

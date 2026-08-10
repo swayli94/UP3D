@@ -72,7 +72,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parents[5]
+REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 from cases.demo._common import write_csv  # noqa: E402
 from pyfp3d.constraints.wake import tip_taper_factors  # noqa: E402

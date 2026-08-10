@@ -41,6 +41,26 @@ inspection 与 6 个 phase-3 要用的 phase-two 文件。
 | `p1/` | phase 1(Track P/M/B/V/A):24 个 demo + 23 个 analysis 证据链、phase-1 的 roadmap 与 demo_report、`design_track_b.md`、`analysis/`、`archive/`、**18 个纯 level-set 测试** |
 | `p2/` | phase 2:45 个 bench 脚本 + `s1_duct/`、**85 个轮次文件** |
 
+## ★ 第三轮:15 个目录搬回原位(保留规则原来只算了一跳)
+
+全套复跑抓到 **2 failed**,机制是**传递依赖**:
+`tests/test_meshgen_rae2822.py` → `cases/analysis/v5_2_rae2822/run.py`(保留)
+→ `_load("gv3_run", "cases/analysis/v3_loose_coupling/run.py")`(**第二跳,被移走了**)。
+
+⇒ 保留规则改为**传递闭包**,并且**判据先校验**:第一版闭包按"目录名出现在文本里"算,报 22 个,
+而全套实测只坏 1 个 ⇒ 太松(把注释里的提及也算了);改成只认**路径样字面量**
+`cases/(demo|analysis)/<name>/`,并断言它**必须包含那个已被实测证明会坏的** `v3_loose_coupling`,
+才拿来用。据此 **15 个目录搬回原位**(`cases/` 403 → 601,`phases/` 1023 → 825)。
+
+搬回不只是挪文件:那些目录里被改过的路径表达式要**反向还原**(41 处深度 + 归档前缀),
+oracle 复验 **26 个文件里 0 处失败**;`b6_transonic` 回到原位后,**归档文档里指向它的 3 处链接又断了**
+—— 移动是双向的,链接也得双向修。
+
+★ 同轮还修掉一处更隐蔽的破坏:**快层 `run_capability_locks.py` 有 2 条锁指向已归档的 LS 测试**。
+处置是**删掉而不是指进归档** —— 按 D5 那条路线已放弃、phase 3 第一件事就是删它们,而
+**把一条活的收口门指进归档比没有这道门更糟**:它会跑、会绿、并为一条没人维护的路线断言能力。
+⇒ 快层现在 **5 组、482 s、5/5 green**;conforming 锚点一条不少。
+
 ## ★★ 归档脚本的可运行性:如实说
 
 移动会打断脚本找路的方式,已**机械修好并验证**的有三类:

@@ -51,9 +51,9 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[4]
+REPO_ROOT = HERE.parents[2]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "phases/p1/cases/analysis/a2_te_kutta_fidelity"))
+sys.path.insert(0, str(REPO_ROOT / "cases/analysis/a2_te_kutta_fidelity"))
 
 import matplotlib
 matplotlib.use("Agg")
@@ -80,7 +80,7 @@ from pyfp3d.solve.picard import solve_laplace_lifting              # noqa: E402
 OUT = HERE / "results"
 OUT.mkdir(exist_ok=True)
 MESHES = REPO_ROOT / "cases/meshes/onera_m6"
-A1_RES = REPO_ROOT / "phases/p1/cases/analysis/a1_solver_bottleneck/results"
+A1_RES = REPO_ROOT / "cases/analysis/a1_solver_bottleneck/results"
 GATES = os.environ.get("PYFP3D_TRANSONIC_GATES", "0") == "1"
 
 ALPHA = 3.06

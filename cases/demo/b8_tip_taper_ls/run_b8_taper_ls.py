@@ -88,7 +88,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parents[5]
+REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 from cases.demo._common import (  # noqa: E402
     CRITICAL, CheckList, INK_2, S1_BLUE, S2_AQUA, S3_YELLOW,
