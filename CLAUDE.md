@@ -326,7 +326,10 @@ consequence, measured: the first full gated run since the 2026-08-04 round-tip s
 invisible by construction — the ungated suite stays green while capability locks rot.
 
 So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
-**measured at 644 s = 10.7 min, 7/7 green** — ★ and that cost holds ONLY with the thread caps
+**measured 2026-08-11 at 891 s = 14.8 min, 5/5 green** (was 644 s / 7 groups: three
+level-set locks left with the route in phase 3, and the conforming wing-body transonic
+ceiling lock was added — a capability lock kept OUT of this tier would run only in the
+2 h gated set, i.e. 6x less often than the tier it belongs to) — ★ and that cost holds ONLY with the thread caps
 pinned: the same script measured **2940 s = 49 min** uncapped on this 24-core box (2026-08-10),
 per group up to **20.7×**. The script now pins them itself and prints the resolved values with
 the load average, because one of its locks asserts a wall-clock budget. Run it at **every close-out**; run the full gated set at
@@ -444,44 +447,26 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **538 passed + 16 skipped +
-   2 xfailed, 0 failed** (2026-08-10, measured 1019.09 s @8 threads under load ~14).
-   ★ The drop from 700 is the **phases/ reorganisation**, not a regression: the 18 pure
-   level-set test files moved to `phases/p1/tests/` (`testpaths = ["tests"]`, so they are no
-   longer collected), and ruling D5 abandons that route — phase 3 deletes them. Every
-   conforming anchor is still collected. The FAST tier is likewise **5 groups, not 7**
-   (measured **482 s, 5/5 green**): its two level-set locks were removed rather than
-   repointed into the archive, because a live close-out gate aimed at an archive would run,
-   pass, and assert capability for an unmaintained route.
- ★ The per-round
-   lineage lives in [docs/dev_phase_two/progress.md](docs/dev_phase_two/progress.md),
-   not here — phase two tracks it there, and this line had been left at the
-   phase-one 479 for two weeks.
-   ★★ **The GATED set is a separate obligation and it is currently in debt.**
-   17 test files carry `PYFP3D_TRANSONIC_GATES` markers and the full gated set has
-   NOT been run since the round-tip switch of 2026-08-04. That switch regenerated
-   `onera_m6` and `onera_m6_wakefree` as ROUND, while several gated files hold
-   absolute anchors measured on the FLAT cap — `test_b7_onera_m6.py`,
-   `test_b15_ls_newton_freeze.py`, `test_b22_ls_3d_anchors.py` (γ at rtol 1e-4,
-   deliberately tight) and `test_p5_onera_m6.py`. On 2026-08-06 running just
-   `test_p4_transonic` + `test_p8_newton` + `test_s1_m1a_envelope` found 2 of 2
-   capability locks red. Assume the rest carry bills until measured.
-   ★ Note `onera_m6_wakefree` has no `_flat` variants generated, so those tests
-   cannot fall back to the flat cap without regenerating meshes.
-   Superseded lineage (phase one): 479 passed + 25 skipped + 2 xfailed
-   (2026-07-20, B25 inboard fragment clip, +6 passed =
-   `tests/test_b1_cut_elements.py::TestInboardFragmentClip` (4) + the same
-   file's foot-preference lock (1) + `tests/test_m2_wingbody.py`'s
-   waterline-extension lock (1);
-   measured 1100.63 s @16 threads;
-   the full lineage lives in [docs/overview.md](docs/overview.md), do not
-   re-grow it here). Skip
-   semantics: the M6 `.msh` are gitignored — 16 M1 tests skip until
-   `cases/meshes/onera_m6/generate_onera_m6.py` runs (~30 s); the wake-free
-   families likewise (M3 medium ~40 s, M4 ~12 s); the heavy transonic/Newton
-   gates (P4 medium + G4.3 sweep, P5, P8 G8.1/G8.2 + FD pocket, B6 M0.80
-   dual-mesh + LS-Newton, B7 M6 3D) only run under `PYFP3D_TRANSONIC_GATES=1`
-   and make up most of the skips. G8.3's CI reference is 301.66 s.
+3. Full suite: `pytest tests/` — current baseline **457 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-11, measured 930.97 s @8 threads under load).
+   ★ The drop from 538 is **phase 3 task 1: the level-set route was DELETED**
+   (ruling D5) — 9 library files / **4624 lines**, `pyfp3d/wake/` gone entirely,
+   `post/unified.py` collapsed onto its conforming half. Read the numbers as an
+   account that closes, not as "nothing broke":
+   - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
+     the new gated wing-body lock), i.e. the deletion subtracted only;
+   - GATED full set **466 passed + 1 skipped + 4 xfailed, 0 failed** (2:08:50 @8
+     threads), against 720/2/8 at 3:04:44 before: 208 archived gated items + 47 in
+     three archive files that no longer collect + 5 amputated legs − 1 new lock
+     = **259**, exactly the difference. The 4 strict xfails that vanished were the
+     level-set ones (b7 ×3 + b22 medium), archived with their files.
+   - FAST tier is **5 groups** (`bench/run_capability_locks.py`): its two level-set
+     locks went with the route, and the new wing-body transonic ceiling lock was
+     added — a lock outside this tier would run only in the 2 h gated set.
+   ★ `pyfp3d/wake` no longer exists: `from pyfp3d.wake import ...` is a hard error,
+   and that is the intended end state. Anything under `phases/p1/` still imports it
+   and is NOT runnable — the archive is a historical snapshot; a working tree is
+   `git worktree add ../up3d-prereorg d224223`.
 4. Numba debugging: `PYFP3D_NOJIT=1` swaps `@njit` for identity — print/pdb work.
 5. **When a phase closes — the refresh checklist** (extended in A3 after the
    2026-07-17 audit found 17 consistency defects, most of them close-out debt):
@@ -492,6 +477,10 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ **Step 6, added 2026-08-09: when a criterion is RETIRED or re-specified, grep its
    numbers and wording across `tests/` too** — B28 retired the fuselage-lift premise in
    the demo and the matching assertion sat in a gated test until 2026-08-09.
+   ★ **Phase THREE (opened 2026-08-11) records rounds in `docs/dev_phase_three/`**
+   (its own progress.md); the PLAN and rulings D1–D5 still live in
+   docs/dev_phase_two/roadmap.md, and docs/dev_phase_two/README.md holds the per-file
+   checklist for when those six files may move to `phases/p2/docs/`.
    ★ **Phase TWO uses a different surface list**, because the phase-one docs below are
    frozen (docs/dev_phase_two/roadmap.md §8): (1) `docs/dev_phase_two/progress.md` — one
    row, plus **its own 阶段进度概览 and 产品指标追踪 tables** (they live in progress.md,

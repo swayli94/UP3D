@@ -143,50 +143,7 @@ pyfp3d/                    # Main package
 │                           #   floor-free on branches 0–2 (driver reverts on divergence) —
 │                           #   the Newton finish phase on tie-degenerate prism meshes
 │                           #   Term-2/Term-3 physics factor (forward path byte-identical)
-│   └── cut_assembly.py   # ✓ [Track B/B2–B6] level-set CUT-element assembly (parallel to
-│                           #   jacobian.py; nothing here is imported by the conforming path):
-│                           #   multivalued_redirection_coo (the doubled assembly expressed as
-│                           #   a main→aux COLUMN redirection of the single-valued matrix),
-│                           #   continuity_closure_coo (B2 "weld" — reduces the extended system
-│                           #   EXACTLY to single-valued), wake_ls_coo (B3: the g₁+g₂ two-
-│                           #   component wake BC; DIMENSION-GENERAL — the spanwise jump
-│                           #   gradient is deliberately left FREE = the trailing-vortex DOF),
-│                           #   mass_conservation_coo, te_kutta_coo/_jacobian_coo/_residual
-│                           #   (B4: the NONLINEAR TE pressure-equality Kutta, factorized
-│                           #   (q_u+q_l)·(q_u−q_l)=0 with the mean s̄ frozen per outer),
-│                           #   newton_terms23_side_coo (B6-Newton: per-side Terms 2/3)
-├── wake/                 # ✓ [Track B] level-set EMBEDDED wake (design_track_b.md) — the
-│   │                       #   parallel path to mesh/wake_cut.py + constraints/wake.py; the
-│   │                       #   conforming solver imports NOTHING from here
 │   ├── __init__.py       #   exports WakeLevelSet / CutElementMap / MultivaluedOperator
-│   ├── levelset.py       # ✓ [B1] the wake sheet as a RULED level set over a TE polyline
-│   │                       #   (D9): per-segment OBLIQUE frame (v, d̂, n̂) — ★ on a swept wing
-│   │                       #   the span axis is NOT perpendicular to the wake direction, and an
-│   │                       #   orthogonal projection wrongly clipped ~60% of the M6 cut set
-│   │                       #   (measured, fixed, regression-pinned); update_direction() re-aims
-│   │                       #   the sheet at α without remeshing (the B10 free-wake capability)
-│   ├── cut_elements.py   # ✓ [B1] CutElementMap: the cut census + aux-DOF numbering.
-│   │                       #   ε side-shift for on-sheet nodes ("+", deterministic); the
-│   │                       #   below-TE fan is SUBTRACTED from the cut set (López p.57 — the
-│   │                       #   ε shift otherwise manufactures spurious cuts there and Γ
-│   │                       #   overshoots ~45%); ★ SPANWISE CLIP 0 ≤ q ≤ span_length ⇒ Γ(tip)=0
-│   │                       #   DISCRETELY (the LS analogue of the conforming free-edge rule);
-│   │                       #   beyond_tip_elems = the wake-PLANE crossings the clip rejects;
-│   │                       #   ✓ [B25] inboard_clip = the wing-body inboard-fragment clip (the
-│   │                       #   junction-pocket cure; default None bit-identical);
-│   │                       #   ⊘ [B31] outboard_fringe (LS wing-tip C-class candidates C1/C3) —
-│   │                       #   MEASURED NEGATIVE by GB31.3 (C1 inboard backflow −19.5% / C3 coarse
-│   │                       #   divergence); retained default 0.0 = bit-identical, evidence machine
-│   └── multivalued.py    # ✓ [B2–B6] MultivaluedOperator: extended-DOF assembly on the cut
-│                           #   mesh (assemble_matrix with closure="continuity"|"wake_ls"),
-│                           #   te_jump (= Γ per TE station), side_potentials / main_potential,
-│                           #   own_side_field; ✓ [B4] the wall-adjacent TE control volumes the
-│                           #   pressure-equality Kutta recovers q_u/q_l on (★ WALL-ADJACENT,
-│                           #   not the full element fan: full-fan gives Γ +11–15%, wall-adjacent
-│                           #   <1%); ✓ [B6] element_rho_tilde = PER-SIDE artificial density with
-│                           #   a SAME-SIDE-RESTRICTED upstream walk (the wake is a slip line —
-│                           #   density information must not cross it), newton_side_data (P7
-│                           #   sensitivities through the DOF indirection)
 ├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
 │   │                       #   GV1.1 9 PASS / 2 FAIL, V1 ✓ CLOSED 2026-07-22 (VERDICT
@@ -286,56 +243,9 @@ pyfp3d/                    # Main package
 │   │                       #   -- the 3D secant leaves the stiffest station under-circulated
 │   │                       #   and DIVERGES if pushed (INVESTIGATION_kutta_closure.md);
 │   │                       #   default 0 = P4 path bit-identical
-│   ├── picard_ls.py      # ✓ [Track B/B2–B6] the LEVEL-SET solve drivers (parallel to
-│   │                       #   picard.py + continuation.py; the conforming path never imports
-│   │                       #   them). solve_multivalued_laplace (B2) / solve_multivalued_lifting
-│   │                       #   (B3–B4: ★ IMPLICIT Kutta — NO Γ secant and no master–slave Γ; the
-│   │                       #   TE jump is carried by the aux DOFs and Γ EMERGES as a SOLUTION
-│   │                       #   MODE) / solve_multivalued_transonic (B6: Mach ramp, no Γ secant ⇒
-│   │                       #   the P5 st133-class per-station secant failure is structurally
-│   │                       #   impossible). farfield ∈ {"vortex" (default, B5's arbitrated
-│   │                       #   subsonic verdict), "neumann" (the López outlet — ★ the TRANSONIC
-│   │                       #   recipe: near the fold the live Γ→vortex loop has gain > 1; and
-│   │                       #   ★ the 3D/B7 recipe: the vortex is SPAN-UNIFORM with a y=0 branch
-│   │                       #   cut at every z, so on a wing it prescribes a jump no cut supports),
-│   │                       #   "freestream"}; damping_scope="supersonic" (★ the P4 whole-field
-│   │                       #   θ·diag does NOT transplant — a Jacobi smoother throttles the
-│   │                       #   circulation, which here is a solution mode); omega_rho (the
-│   │                       #   per-side cut-strip density limit-cycles); B_TRANSONIC_DEFAULTS.
-│   │                       #   ✓ [B11] precond=None|"ilu"|"amg" (None=spsolve, bit-identical
-│   │                       #   default): GMRES on the fused matrix — the §5.3 escape from the
-│   │                       #   splu wall. ★ ILU is the effective escape (spilu on the real
-│   │                       #   matrix, 434 iters coarse); AMG (SPD surrogate + aux↔host springs,
-│   │                       #   _amg_surrogate_preconditioner) STALLS on the wake_ls lifting
-│   │                       #   operator (measured) — Laplace-only. transonic inherits via **kwargs.
-│   │                       #   ✓ [B13] direct_refactor_every lagged-LU on the outer loop;
-│   │                       #   ✓ [B14] precond="schur" (the structural escape, schur_ls.py)
 │   ├── timing.py         # ✓ [A1] the canonical timings schema shared by all four nonlinear
 │   │                       #   drivers (seed/assembly/precond/linsolve/residual/kutta/other/wall)
 │   │                       #   + step_records; new_timings/snapshot/step_delta helpers
-│   ├── schur_ls.py       # ✓ [Track B/B14] SchurReducedSystem + main_block_preconditioner +
-│   │                       #   jaa_diagnostic: exact per-step elimination of the aux thin-strip
-│   │                       #   block (lu_aa = splu(J_aa), n_ext-sized, ms) + GMRES on the reduced
-│   │                       #   main-free operator with AMG on the SPD Picard block — NO springs
-│   │                       #   (the B11 surrogate's jump≈0 bias is structurally absent), no
-│   │                       #   full-size factorization. Shared by picard_ls + newton_ls
-│   │                       #   (precond="schur"); stalled reduced GMRES falls back to a full
-│   │                       #   spsolve in the same step (n_schur_fallback)
-│   ├── newton_ls.py      # ✓ [Track B/B6-Newton] solve_multivalued_newton: the LEVEL-SET Newton
-│   │                       #   (design_track_b.md §5.5). Exact Jacobian = Picard matrix +
-│   │                       #   per-side Terms 2/3 + the EXACT quadratic TE-Kutta derivative;
-│   │                       #   the wake-LS rows are LINEAR in φ (no correction); NO Γ DOF ⇒ no
-│   │                       #   Woodbury/elimination (the implicit Kutta removed the unknown).
-│   │                       #   FD-verified 1.3e-9; reaches machine-converged terminal-QUADRATIC
-│   │                       #   discrete FOLD solutions where the Picard only stalls.
-│   │                       #   splu by default; ✓ [B11] precond="ilu"|"amg" iterative escape
-│   │                       #   (true-3D LU fill is ~100× the 2.5D cost, P8/N6); ✓ [B12] lagged-LU
-│   │                       #   direct-reuse ported (direct_refactor_every, no Woodbury — no Γ
-│   │                       #   DOF); ✓ [B15] freeze-selection + solve_multivalued_newton_transonic
-│   │                       #   Mach ramp (B_NEWTON_M6_DEFAULTS); ✓ [B14] precond="schur"
-│   │                       #   (schur_ls.py, epoch-aware AMG invalidation)
-│   │                       #   ✓ [V2] wall_rhs injection via the existing b_base slot (main
-│   │                       #   DOFs = first mvop.n_main slots; None = bit-identical)
 │   └── newton.py         # ✓ [P8/N4] fully-coupled (φ_red, Γ) Newton driver (design.md §8.1):
 │                           #   NewtonWorkspace (free/dir split, Kutta row K, affine far-field
 │                           #   basis vals0_red + V_red·Γ via unit-Γ probing), ONE shared
@@ -389,7 +299,6 @@ pyfp3d/                    # Main package
     │                       #      wall_cp_curve() sectional Cp(x/c) upper/lower split;
     │                       #      ✓ [P5] section_cp_curve() derives the LOCAL chord/x_le from
     │                       #      the cut itself (swept, tapered planform)
-    ├── surface_ls.py     # ✓ [Track B/B3–B7] wall post-processing on the LEVEL-SET path — a TE
                             #      node carries TWO values, so wall triangles must be told WHICH
                             #      copy to read (★ D11, by the outward normal's lift-axis sign:
                             #      n_y > 0 = upper). Reading phi_main on both surfaces makes the
@@ -1122,7 +1031,18 @@ under refinement for solved fields.
 - **M0 closed** with it: wake-cut topology asserts sweep every wake-tagged mesh in
   cases/meshes/ (hard rule 7 test) and the G2.5 acceptance link is green.
 
-### ✓ Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓; B6 ◐ in progress)
+### ⛔ Track B — level-set embedded wake: **DELETED 2026-08-11** (ruling D5)
+
+★★ **This whole section describes a route that no longer exists in the tree.** Phase 3's
+first task deleted it: 9 library files / **4624 lines**, `pyfp3d/wake/` removed entirely,
+`post/unified.py` collapsed onto its conforming half. `from pyfp3d.wake import ...` is a
+hard error now. The text below is kept as the DESIGN RECORD of what was built and why --
+read it in the past tense; the code is in `phases/p1/` and in git history, and the
+measured reasons for abandoning it are in docs/dev_phase_two/roadmap.md ruling D5.
+Verdict: docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
+
+Original heading: *✓ Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓;
+B6 ◐ in progress)*
 
 A **parallel** wake representation: instead of duplicating nodes so the mesh conforms to the
 wake sheet (`mesh/wake_cut.py` + `constraints/wake.py`), the sheet is a **level set** and the
@@ -1509,6 +1429,17 @@ to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
 [docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
+★★★ **PHASE THREE opened 2026-08-11. Task 1 done: the LEVEL-SET ROUTE IS DELETED**
+(ruling D5) — 9 library files / **4624 lines**, `pyfp3d/wake/` gone, `post/unified.py`
+collapsed onto its conforming half. ONE wake route remains: `mesh/wake_cut.py` +
+`constraints/te_pressure.py` + `solve/newton.py` / `picard.py`, with `tip_taper`
+(B31/B32, carrying a **−1.3 % cl** model bias).
+Baselines after the deletion: always-on **457 passed / 12 skipped / 2 xfailed**, gated
+**466 / 1 / 4** (2:08:50), fast tier **5 groups**. Both accounts close item by item —
+docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
+⚠ `phases/p1/` still imports the deleted modules and is NOT runnable; the archive is a
+snapshot, and a working tree is `git worktree add ../up3d-prereorg d224223`.
+
 ★★ **PHASE TWO (2026-07-28 .. 2026-08-10) — read
 [docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
 first.** The whole block below this line is the PHASE-ONE footer, frozen with the

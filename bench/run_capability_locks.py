@@ -58,7 +58,8 @@ for _v in THREAD_VARS:
 #: ★ THIRD lock removed 2026-08-10 by phase 3 task 1: `test_b7_onera_m6.py` (the M6
 #: level-set 3-D machinery + transonic gate, whose three legs were the strict xfails)
 #: is archived with the route. ⇒ this tier is now 4 groups, all CONFORMING:
-#: M1a, the seed fallback, the wing-body conforming locks, and P8's G8.1/G8.2.
+#: M1a, the seed fallback, the wing-body conforming locks, P8's G8.1/G8.2, and
+#: (added 2026-08-11) the wing-body transonic ceiling -- 5 groups.
 LOCKS = (
     ("tests/test_s1_m1a_envelope.py",
      "M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05)"),
@@ -68,6 +69,15 @@ LOCKS = (
      "wing-body conforming: junction loading, the B8 lift-loss detector"),
     ("tests/test_p8_newton.py",
      "G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06)"),
+    #: ★ ADDED 2026-08-11, and the reason is worth stating: this lock was written in
+    #: phase 3 precisely so the conforming WING-BODY transonic capability (M0.84, cl_p
+    #: 0.2738, 0 clamps) has an alarm -- it had none, while the capability boundary
+    #: asserted it. Leaving it out of this tier would have meant a lock that runs only
+    #: in the 2 h gated set, i.e. 6x less often than the tier it belongs to. Measured
+    #: 652 s standalone; with the level-set locks gone this tier was down to 252 s, so
+    #: adding it lands the tier back at the ~15 min scale it was designed around.
+    ("tests/test_b32_wingbody_conforming_transonic.py",
+     "the conforming WING-BODY transonic ceiling: M0.84 reached, 0 clamps, cl_p"),
 )
 
 #: ★ WHAT THIS TIER DOES NOT COVER, with the measured reason. Read this before treating a
