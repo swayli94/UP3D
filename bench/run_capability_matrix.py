@@ -283,19 +283,16 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
         res = float(r["residual_history"][-1]); nn = int(r["n_newton"])
         conv = bool(r["converged"]); nodes, tets = len(mc.nodes), len(mc.elements)
         geom_obj = (mc, wc, None)
-    else:                                              # level-set
-        s_ref = planform_area(mesh.nodes, mesh.boundary_faces["wall"])
-        mf = r.get("m_final", m)
-        m_max = float(np.sqrt(np.max(mvop.element_mach2(phi, mf, 1.4, 1.0))))
-        f = u_wall_forces(mesh, mvop=mvop, phi_ext=phi, alpha_deg=alpha,
-                        s_ref=s_ref, m_inf=mf, wall_tag="wall")
-        clkj = float("nan")
-        lv = r["levels"][-1]
-        n_lim, n_flr = int(lv["n_limited"]), int(lv["n_floored"])
-        res = float(lv["residual_norm"]); nn = int(lv.get("n_newton", -1))
-        conv = bool(r.get("target_reached", False)) and abs(mf - m) < 1e-9
-        nodes, tets = len(mesh.nodes), len(mesh.elements)
-        geom_obj = (mesh, mvop, mf)
+    else:                                              # level-set: REMOVED
+        #: ★ phase 3 task 1 (ruling D5): the level-set branch of this dispatch is
+        #: gone with the route, and so are the 10 "level-set" CONFIGS rows. Kept as
+        #: an explicit raise rather than deleted silently, because the "path" column
+        #: still exists in the committed CSV and a stale caller passing "level-set"
+        #: must fail loudly instead of being scored as a conforming cell.
+        raise ValueError(
+            f"path={path!r}: the level-set route was deleted in phase 3 "
+            f"(ruling D5). Only conforming cells are measurable now; the "
+            f"pre-deletion 78-point matrix is in the committed CSV.")
     status = classify(conv, n_lim, n_flr, m_max)
     #: the Mach the solver ACTUALLY attained -- see the append_row note. Recorded
     #: unconditionally so a non-converged row can never again be read as if it held a
