@@ -1,9 +1,9 @@
 # pyFP3D 总览（快照 + 文档地图）
 
 > **快照日期：2026-07-22（B28–B32 收尾）。** 本文件是给人读的高层总览，**不是**权威进度源：
-> 阶段/gate 状态以 [roadmap.md](roadmap.md)（track 索引）+ [roadmap/](roadmap/)
+> 阶段/gate 状态以 [roadmap.md](../phases/p1/docs/roadmap.md)（track 索引）+ [roadmap/](../phases/p1/docs/roadmap)
 > 各 track 文件（含各自的进度台账）为准；当前阶段以 [agent-rules.md](agent-rules.md)
-> 为准；证据在 [demo_report.md](demo_report.md) 索引 + [demo_report/](demo_report/)。
+> 为准；证据在 [demo_report.md](../phases/p1/docs/demo_report.md) 索引 + [demo_report/](../phases/p1/docs/demo_report)。
 > 若本文件与它们冲突，以它们为准。gate 关闭时按 CLAUDE.md 工作流更新台账后，顺手刷新本文件。
 
 ## 一句话状态
@@ -195,7 +195,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 ## Track 状态表
 
-- **P — 求解器**（[roadmap/track_p.md](roadmap/track_p.md)） — P0–P9 ✓（P1 仅 G1.6 以 strict xfail 挂起）；P10 ◐（G10.2/G10.3 ✓）；P13 ◐（G13.1 ✓、
+- **P — 求解器**（[roadmap/track_p.md](../phases/p1/docs/roadmap/track_p.md)） — P0–P9 ✓（P1 仅 G1.6 以 strict xfail 挂起）；P10 ◐（G10.2/G10.3 ✓）；P13 ◐（G13.1 ✓、
   G13.2 conforming ✓、G13.3 亚声速 Richardson ✓ p=2.31） — G10.1（非升力 Newton 入口，无顺序约束）；G13.3 **跨声速阴性开放**（圆帽 fine 的 ramp 死于 M=0.75，
   site=尖 tip TE）；**P11 ✓ 2026-07-19 关闭（用户指示当日开+关；sphere 腿）**——G11.1 未达（曲面层 11.56%→11.33% = oracle 天花板；superparametric O(h) 风险触发）、
   G11.2 阴性+前提被驳（阶坍塌=固定中远场地板，E8 3.17×/1.89 阶；结构化壳平坦面片 ~2 阶）⇒ **G1.6 重归因为 P1 固有能力**，路线三岔口 **2026-07-22 裁决：Option C 重定规格 ADOPTED**（`TestG16Respec` PASS；字面 2%-max 保留 xfail）；P12 backlog；
@@ -215,10 +215,10 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   探针 **0.1143** → 压力 **0.0533**（2.1×），且**低于 LS 的 0.0743**。A2 对的部分：确有共有残余（~0.05 = 真正的恢复地板）；需修正的部分：
   conforming 相对 LS 的**超出量**也是 Kutta 形式误差（Kutta 错⇒TE 流场真的错，末点偏离趋势有物理原因，共模度量分不开）。旁证：P6 平滑在压力路径上不再有效（0.0533→0.0660→0.0626；
   A2 在探针路径上测的是 0.147→0.081）。**教训：别把上一相位的归因当结论带进新测量——去测。** 诚实记录：判别器 D=7.33→**1.80**（落在 A2 的 inconclusive 区，非 O(1)）
-- **M — 网格**（[roadmap/track_m.md](roadmap/track_m.md)） — M0、M1(+M1b 自相似阶梯)、M2、M3、M4、M5（圆顶翼尖盖）✓ — **M2 ✓（求解腿由 B9 于 2026-07-17 关闭；
+- **M — 网格**（[roadmap/track_m.md](../phases/p1/docs/roadmap/track_m.md)） — M0、M1(+M1b 自相似阶梯)、M2、M3、M4、M5（圆顶翼尖盖）✓ — **M2 ✓（求解腿由 B9 于 2026-07-17 关闭；
   台账勘误 2026-07-19——A3 曾称已改而 ledger 行仍 ◐）**：翼身网格 2026-07-13 交付；**机身+远场 2026-07-16 按用户指示重定规格并重生成**（5 倍翼根弦长、机翼居中、2 倍直径椭球机鼻、
   蒙皮 h_body=2h_wall + 两端按半径加密；**R_FAR 15→25 MAC**；★需 `Mesh.OptimizeNetgen` 治 sliver 抽签）；遗留验证项（交界最内 TE 节点 CV fan）在 track_m 记录
-- **B — level-set 尾迹**（[roadmap/track_b.md](roadmap/track_b.md)） — B1–B5、B7、B8（characterized-not-cured）、B9、B11–B32 ✓；
+- **B — level-set 尾迹**（[roadmap/track_b.md](../phases/p1/docs/roadmap/track_b.md)） — B1–B5、B7、B8（characterized-not-cured）、B9、B11–B32 ✓；
   B6 ◐（coarse gate ✓；medium 定量项由 GB15.4 补上，B21 恢复、B22 上锁） — **B16 ✓ 关闭 2026-07-17（用户指示，追加于 B15 之后；执行 B9 的 recorded follow-up）**：
   LS Newton 远场 BC 通用化——远场 aux DOF 钉扎。★ 翼身 LS-Newton churn 根因 = 近奇异远场 aux 块（尾迹片贯穿远场边界的 aux DOF 只受巨型外区单元的 wake-LS 行约束）：
   8 个远场 MAIN 行 max\|R\|=**84.457** 逐位复现，cond1 **9.1e18→8.70e6**（勘误 2026-07-19：旧文 6.36e18 是 CSV 前预跑值）。`farfield_aux="pin"`（默认，
@@ -254,7 +254,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   次级护栏带外 cl_fus +135% 经 oracle 归因 flat-vs-tilted 片模型差，记录不阻塞 → P11 监视。**B9 ✓ 关闭 2026-07-17（重定规格）**：
   翼身跨模型 LS+conforming 一致 0.4%/0.6%；GB9.4 XFAIL⇒G1.6（**B28 2026-07-20 更正**：cl_fus=尾流片位置敏感性，
   非 G1.6 误差；gate 重设为带外跨模型一致 ≤15%，medium 差 7.0% PASS，demo 8/8）。B10 搁置
-- **V — 粘性耦合**（[roadmap/track_v.md](roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC）；**V1 ✓ CLOSED
+- **V — 粘性耦合**（[roadmap/track_v.md](../phases/p1/docs/roadmap/track_v.md)） — 设计完整（Drela IBL3 + transpiration BC）；**V1 ✓ CLOSED
   2026-07-22**（GV1.1 9 PASS / 2 FAIL，(a)×2 = 闭包族不动点物理，recorded FAIL 接受）；**V2 ✓ CLOSED 2026-07-22**
   （GV2.1 23 PASS / 0 FAIL：cylinder Fourier blowing 对解析 relmax 严格降、阶 1.650/1.640，ṁ=0 五路驱动逐位一致，
   lagged ṁ 下 Newton Jacobian 逐位不变 + FD 6.6e-09–7.2e-08——transpiration 通道三路驱动全部打通）；**V3 ✓ CLOSED
@@ -383,7 +383,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   → producer (ii) 不开启，GV6.0 条文））；
   V6 尾迹面片；翼身 VII 延后至 LS 侧翼尖 cure）— 依赖 P6+A4（均已满足），预算等同一个 Track-P 阶段。
   参考文献在手：Drela 2013 = AIAA 2013-2437（`docs/references/` 本地，gitignored）
-- **A — 校验与分析**（[roadmap/track_a.md](roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
+- **A — 校验与分析**（[roadmap/track_a.md](../phases/p1/docs/roadmap/track_a.md)） — 2026-07-15 新建；**A1 ✓ 2026-07-16**（GA1.1–GA1.5：
   四求解器统一计时插桩 + conforming×level-set × Picard×Newton 耗时基准） — **A2 ✓ 2026-07-17 关闭**（TE/Kutta 保真度归因，GA2.1–GA2.5）：**S1 定谳**——
   conforming Γ(z) 逐站抖动是逐站探针差势跳 Kutta target **估计器**的测量伪影（fixed-Γ 判别量 D=7.33/25.70 coarse/medium，把抖动从光滑场里重新生出来；闭合残差 ≤0.6% 排除"未闭合"、
   抖动局域于 TE 邻层 0.02–0.07× 排除"流场"），**非流场内容**；**S2 分解**——TE Cp 突跳=势跳 Kutta 形式误差（conforming 独有,同估计器 34×/133× vs LS）+ P1 末点恢复伪影（两路共有）；
@@ -398,15 +398,15 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
 
 | 文档 | 职能 | 权威范围 | 何时更新 |
 |------|------|----------|----------|
-| [roadmap.md](roadmap.md) | track 索引 + working rules + gate 编号约定 | 各 track 一行状态 | track 状态行变化时 |
-| [roadmap/track_{p,m,b,v,a}.md](roadmap/) | 各 track 的 phase 条目 + gate 清单 + 进度台账 | **阶段/gate 状态的唯一权威** | gate 开/关时 |
+| [roadmap.md](../phases/p1/docs/roadmap.md) | track 索引 + working rules + gate 编号约定 | 各 track 一行状态 | track 状态行变化时 |
+| [roadmap/track_{p,m,b,v,a}.md](../phases/p1/docs/roadmap) | 各 track 的 phase 条目 + gate 清单 + 进度台账 | **阶段/gate 状态的唯一权威** | gate 开/关时 |
 | [design.md](design.md) | 理论与数值参考（方程、离散、内核规则、求解策略、V0–V6 验证阶梯） | 数值方法（conforming 路径 + 共享理论） | 方法/勘误变化时 |
-| [design_track_b.md](design_track_b.md) | Track B（level-set 尾迹）数值方案 + 逐阶段技术结论 | Track B 数值 | Track B 阶段推进时 |
-| [demo_report.md](demo_report.md) + [demo_report/](demo_report/) | 已关阶段的证据档案（每阶段一个自检 demo + 提交的图/CSV） | 证据；**无 committed 工件的断言不是证据** | 阶段关闭时加节 |
+| [design_track_b.md](../phases/p1/docs/design_track_b.md) | Track B（level-set 尾迹）数值方案 + 逐阶段技术结论 | Track B 数值 | Track B 阶段推进时 |
+| [demo_report.md](../phases/p1/docs/demo_report.md) + [demo_report/](../phases/p1/docs/demo_report) | 已关阶段的证据档案（每阶段一个自检 demo + 提交的图/CSV） | 证据；**无 committed 工件的断言不是证据** | 阶段关闭时加节 |
 | [agent-rules.md](agent-rules.md) | 每 session 注入的当前阶段 + 操作纪律（经 CLAUDE.md `@include`） | 当前阶段行 | 阶段变化时 |
 | overview.md（本文件） | 人读总览 + 文档地图 | 无（快照） | 顺手刷新 |
-| [analysis/](analysis/) | 分析/审查类报告（capability review 等），非规范文档 | 无（报告注明快照日期） | 新报告放这里 |
-| [archive/](archive/) | 历史归档（勿作规范；rule 11 同样适用） | 无 | 只进不改 |
+| [analysis/](../phases/p1/docs/analysis) | 分析/审查类报告（capability review 等），非规范文档 | 无（报告注明快照日期） | 新报告放这里 |
+| [archive/](../phases/p1/docs/archive) | 历史归档（勿作规范；rule 11 同样适用） | 无 | 只进不改 |
 | `docs/references/` | 外部文献（López dissertation PDF 等）；**gitignored、未纳入版本库** ⇒ 新 clone 不含此目录，而 design_track_b/track_b 大量按章节引用（"López eq. 3.33–3.34"、"López p.57"），需自备 PDF | — | — |
 
 已删除：`docs/STATUS.md`（2026-07-15，本文件取代）、`docs/discussion_notes/`

@@ -1125,8 +1125,8 @@ Two findings worth knowing before touching this code (both cost real time to dis
    damping must be localized to the supersonic rows; and near the fold the live Γ→far-field-vortex
    loop has **gain > 1** ⇒ the transonic/3D recipe is `farfield="neumann"` (the López outlet).
 
-Authoritative: [docs/design_track_b.md](docs/design_track_b.md) (numerics; §11 = the B7 3D gate)
-and [docs/roadmap.md](docs/roadmap.md) Track B (gates + ledger). Evidence: demos
+Authoritative: [docs/design_track_b.md](phases/p1/docs/design_track_b.md) (numerics; §11 = the B7 3D gate)
+and [docs/roadmap.md](phases/p1/docs/roadmap.md) Track B (gates + ledger). Evidence: demos
 `cases/demo/b3_levelset_lifting/`, `b4p5_farfield/`, `b6_transonic/`, `b7_onera_m6/`; tests
 `test_b1_cut_elements` / `test_b2_multivalued` / `test_b3_lifting` / `test_b4_te_control_volume` /
 `test_b45_farfield` / `test_b6_transonic` / `test_b6_newton` / `test_b7_onera_m6`.
@@ -1137,8 +1137,8 @@ are kept on purpose so the committed paths stay stable — that gate is now **B5
 
 > **This "Implementation Status" section is a P0–P2-era historical record and is NOT the
 > tracker.** "What phase are we in / what gate is open" lives ONLY in
-> [docs/roadmap.md](docs/roadmap.md) (progress ledger) and [docs/agent-rules.md](docs/agent-rules.md)
-> ("Current phase"); the per-phase evidence lives in [docs/demo_report.md](docs/demo_report.md).
+> [docs/roadmap.md](phases/p1/docs/roadmap.md) (progress ledger) and [docs/agent-rules.md](docs/agent-rules.md)
+> ("Current phase"); the per-phase evidence lives in [docs/demo_report.md](phases/p1/docs/demo_report.md).
 > P3–P10 and Track B/M all closed gates *after* the text above was written — read the roadmap,
 > not this list.
 
@@ -1231,7 +1231,7 @@ gate is the achievable measured criterion (`TestG16Respec` PASS); the literal 2%
 ## References
 
 - **Design & Theory:** [docs/design.md](docs/design.md)
-- **Roadmap & Gates:** [docs/roadmap.md](docs/roadmap.md)
+- **Roadmap & Gates:** [docs/roadmap.md](phases/p1/docs/roadmap.md)
 - **Agent Rules:** [docs/agent-rules.md](docs/agent-rules.md)
 - **Claude Code Instructions:** [CLAUDE.md](CLAUDE.md)
 
@@ -1240,7 +1240,7 @@ gate is the achievable measured criterion (`TestG16Respec` PASS); the literal 2%
 **Last updated:** 2026-07-18  
 **Status:** per-track status lives in [docs/overview.md](docs/overview.md)
 (human-readable snapshot) and the per-track trackers
-[docs/roadmap/](docs/roadmap/) (authoritative; docs were split by track
+[docs/roadmap/](phases/p1/docs/roadmap) (authoritative; docs were split by track
 2026-07-15 — docs/roadmap.md and docs/demo_report.md are now thin indexes).
 One-line summary: Track P — P0–P9 ✓ (P1: G1.6 open as a `strict=True` xfail;
 root cause RE-ATTRIBUTED by P11, see "Known gaps"), P10 ◐, **P11 ✓ CLOSED

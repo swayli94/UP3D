@@ -1,7 +1,7 @@
 # Track V — 粘性/无粘交互（VII）：数值设计参考
 
 > 状态：**设计参考文档**（2026-07-22，V1 开工时建立，随实现推进补充实测记录）。
-> 阶段/gate/进度以 [roadmap/track_v.md](roadmap/track_v.md) 为准，冲突时 roadmap 胜出。
+> 阶段/gate/进度以 [roadmap/track_v.md](../phases/p1/docs/roadmap/track_v.md) 为准，冲突时 roadmap 胜出。
 > 绑定参考：M. Drela, *Three-Dimensional Integral Boundary Layer Formulation for
 > General Configurations*, AIAA 2013-2437（本仓库
 > `docs/references/Drela_2013_IBL3_general_configurations.pdf`，以下简称"D13"，方程号

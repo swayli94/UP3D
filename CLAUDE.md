@@ -14,9 +14,9 @@ resolve through one hop.
 - [docs/overview.md](docs/overview.md) — human-readable snapshot: per-track
   status table, **document map** (which file is authoritative for what, and when
   to update it), regression-baseline lineage, long-standing open items.
-- [docs/roadmap.md](docs/roadmap.md) — **active tracker index**: working rules,
+- [docs/roadmap.md](phases/p1/docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
-  gate checklists and progress ledgers live in **[docs/roadmap/](docs/roadmap/)**
+  gate checklists and progress ledgers live in **[docs/roadmap/](phases/p1/docs/roadmap)**
   (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B32
   level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
   transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
@@ -52,14 +52,14 @@ resolve through one hop.
   errata wave). **Next phase = user's call.**)
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
-  [docs/design_track_b.md](docs/design_track_b.md) (it supersedes DN1).
+  [docs/design_track_b.md](phases/p1/docs/design_track_b.md) (it supersedes DN1).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12); §11 is a
   pointer to roadmap.md + docs/roadmap/ since 2026-07-15.
-- [docs/demo_report.md](docs/demo_report.md) — **evidence dossier index** (per-
+- [docs/demo_report.md](phases/p1/docs/demo_report.md) — **evidence dossier index** (per-
   phase directory table); the evidence sections live in
-  **[docs/demo_report/](docs/demo_report/)** (`track_p.md`, `track_m.md`,
+  **[docs/demo_report/](phases/p1/docs/demo_report)** (`track_p.md`, `track_m.md`,
   `track_b.md`, `track_a.md`): one self-checking demo per phase under `cases/demo/<phase>/`
   with committed figures + measured gate numbers. When a phase closes, add its
   demo section to the matching track file and a row to the index.
@@ -69,8 +69,8 @@ resolve through one hop.
   script, no CSV, no cached `.npz` — after a P11 ledger status had already been
   changed on its strength. If a run is too expensive to repeat, that is the
   reason to commit its CSV, not a reason to skip it.
-- [docs/analysis/](docs/analysis/) — analysis/review reports (capability
-  reviews etc.), dated snapshots, non-normative. [docs/archive/](docs/archive/)
+- [docs/analysis/](phases/p1/docs/analysis) — analysis/review reports (capability
+  reviews etc.), dated snapshots, non-normative. [docs/archive/](phases/p1/docs/archive)
   — historical archives (e.g. the pre-2026-07-15 agent-rules narrative);
   never a coding spec (rule 11). `docs/discussion_notes/` was **DELETED
   2026-07-14** (commit 0e4895a; history via

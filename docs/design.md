@@ -344,12 +344,12 @@ in loading for attached flow).
 
 **Designed alternative — Track B level-set wake (designed 2026-07-07; IN
 PROGRESS since 2026-07-11, largely delivered — B1–B8, B11–B13, B15 closed, B9
-next; status in [roadmap/track_b.md](roadmap/track_b.md)).** A level-set +
+next; status in [roadmap/track_b.md](../phases/p1/docs/roadmap/track_b.md)).** A level-set +
 multivalued-element (CutFEM-style) wake representation with an implicitly
 enforced Kutta condition (Γ emerges from the solution — no Γ DOF, no secant)
 replacing the conforming sheet + master–slave elimination above, so meshes need
 no pre-embedded wake surface (α sweeps without remeshing; multi-wake for
-wing–body). Numerics reference: [design_track_b.md](design_track_b.md)
+wing–body). Numerics reference: [design_track_b.md](../phases/p1/docs/design_track_b.md)
 (2026-07-11 López-dissertation cross-check; supersedes DN1 as the Track B design
 spec (DN1 lived in `discussion_notes/`, deleted 2026-07-14 — historical copy via
 `git show 8aa4aee:docs/discussion_notes/20260707_1505_levelset_wake_design.md`) — notably the original penalty Kutta is demoted to an optional diagnostic
@@ -1155,10 +1155,10 @@ second — otherwise model error and code error are confounded.
 
 ## 11. Development roadmap (moved to roadmap.md + docs/roadmap/)
 
-> The roadmap lives in [docs/roadmap.md](roadmap.md) (track index + working
-> rules) with one file per track under [docs/roadmap/](roadmap/): Track P (solver
+> The roadmap lives in [docs/roadmap.md](../phases/p1/docs/roadmap.md) (track index + working
+> rules) with one file per track under [docs/roadmap/](../phases/p1/docs/roadmap): Track P (solver
 > P0–P13), Track M (meshing M0–M5), Track B (level-set wake B1–B15; numerics
-> spec [design_track_b.md](design_track_b.md)), Track V (viscous–inviscid
+> spec [design_track_b.md](../phases/p1/docs/design_track_b.md)), Track V (viscous–inviscid
 > coupling V1–V4 — phase IDs distinct from the §10 validation-case IDs V0–V6).
 > The phase summary formerly duplicated in this section had drifted from the
 > tracker (it still used pre-renumber IDs: "P9 curved walls", "P10 backlog",

@@ -1,7 +1,7 @@
 # AGENTS.md — 跨 agent 协作规则（Kimi / Claude 共用）
 
 本文件是仓库级 agent 规则。项目工作规则仍以 [CLAUDE.md](CLAUDE.md)、
-[docs/agent-rules.md](docs/agent-rules.md)、[docs/roadmap.md](docs/roadmap.md)
+[docs/agent-rules.md](docs/agent-rules.md)、[docs/roadmap.md](phases/p1/docs/roadmap.md)
 为准；本文件只补充**多 agent 并行开发的 git 协作模式**。
 
 ## Git 协作模式（最高优先级）

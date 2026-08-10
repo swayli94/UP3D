@@ -14,8 +14,8 @@
 Spanwise-Γ smoothing does **not** fix the medium-gate trailing-edge M>2 spike.
 
 This is the lab-notebook record so the investigation is **not repeated**. The
-one-line conclusions live in [docs/roadmap.md](../../../docs/roadmap.md) P5
-OPEN block, [docs/demo_report.md](../../../docs/demo_report.md) P5 section, and
+one-line conclusions live in [docs/roadmap.md](../../../phases/p1/docs/roadmap.md) P5
+OPEN block, [docs/demo_report.md](../../../phases/p1/docs/demo_report.md) P5 section, and
 [docs/agent-rules.md](../../../docs/agent-rules.md); this file keeps the full
 method + per-test numbers + caveats behind them.
 

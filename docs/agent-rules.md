@@ -546,7 +546,7 @@ silently EMPTY (`section_cp_curve` tuple→dict API drift, swallowed by
 `cases/demo/b18_wingbody_transonic/results/` +
 `cases/analysis/b27_b18_demo_refresh/` (PRE_REGISTRATION.md / VERDICT.md /
 g27_consistency.csv); Track-B narrative re-based in
-[design_track_b.md](design_track_b.md) §22 (+ §18 erratum pointer). **Next
+[design_track_b.md](../phases/p1/docs/design_track_b.md) §22 (+ §18 erratum pointer). **Next
 phase = user's call** — recommended candidate: **(b)-class ceiling
 attribution** (LS+clip medium 0.775 vs conforming medium 0.80+: same
 mechanism? if yes the spend moves to the Newton robustness both paths share);
@@ -951,7 +951,7 @@ LS-Newton follow-up ("neumann res 1e43; freestream Newton 8 rows |R|≈84") is n
   surface is unmeshable), through-body sheet, Netgen OFF; `cut_wake` /
   constraints / P14 pressure-Kutta ALL unchanged; embed_wake=False bit-identical.
 
-**P14 results (evidence: [demo_report/track_p.md](demo_report/track_p.md) §P14).**
+**P14 results (evidence: [demo_report/track_p.md](../phases/p1/docs/demo_report/track_p.md) §P14).**
 S1 and S2 both die in one estimator swap: M0.84 Γ(z) roughness 0.0970 →
 **0.0043** (coarse) / 0.0365 → **0.0024** (medium) — at/below the level-set
 band; all-station raw TE Cp gap 0.2206 → **0.0040** / 0.1585 → **0.0024**
@@ -1042,7 +1042,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
 
 ## Track status (one line each; authority = docs/roadmap/*.md ledgers)
 
-- **Track P** ([track_p.md](roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
+- **Track P** ([track_p.md](../phases/p1/docs/roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
   xfail, root cause RE-ATTRIBUTED by P11) · P10 ◐ (G10.1 open) · **P11 ✓
   CLOSED 2026-07-19** (curved wall elements measured NEGATIVE; G1.6 =
   intrinsic P1 capability at h=0.08, not the wall crime; route fork = user's
@@ -1050,10 +1050,10 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   transonic NEGATIVE-open) · **P14 ✓ CLOSED 2026-07-17** (pressure-equality
   Kutta estimator, from A2 — S1 jitter + S2 TE Cp gap both gone, and the
   conforming path now matches level-set on lift; G14.1–G14.7 ✓).
-- **Track M** ([track_m.md](roadmap/track_m.md)): M0–M5 ✓; M2 solver leg CLOSED
+- **Track M** ([track_m.md](../phases/p1/docs/roadmap/track_m.md)): M0–M5 ✓; M2 solver leg CLOSED
   by B9 2026-07-17 (both wake models run on the wing-body; the conforming leg
   added a wake-embedded variant `onera_m6_wingbody_conforming/`).
-- **Track B** ([track_b.md](roadmap/track_b.md)): B1–B8, B11–B15 ✓ ·
+- **Track B** ([track_b.md](../phases/p1/docs/roadmap/track_b.md)): B1–B8, B11–B15 ✓ ·
   B6 ◐ (medium quantitative closed by GB15.4) · **B14 ✓ CLOSED 2026-07-17**
   (`precond="schur"` Schur-eliminated-aux + AMG(SPD Picard main block),
   `pyfp3d/solve/schur_ls.py`; the A1 precond bottleneck is GONE — M6 medium
@@ -1138,7 +1138,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   per-step refresh rolled back (ill-posed), ① conforming tip_taper adopted:
   wing-body medium ceiling M0.79 → **M0.84 reached** (cl_p 0.2738, 0 clamps),
   cl_p cost ≈ −1.3%, demo 8/8.
-- **Track V** ([track_v.md](roadmap/track_v.md)): **V1 ✓ CLOSED 2026-07-22 ·
+- **Track V** ([track_v.md](../phases/p1/docs/roadmap/track_v.md)): **V1 ✓ CLOSED 2026-07-22 ·
   GV1.1 9 PASS / 2 FAIL** · **V2 ✓ CLOSED 2026-07-22 · GV2.1 23 PASS / 0 FAIL**
   (cylinder Fourier blowing vs analytic, orders 1.650/1.640; ṁ=0 bit-identical
   on all five driver legs; Newton Jacobian bit-invariant + FD exact under
@@ -1267,7 +1267,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   ★ Traps logged in §9: PTC backtracking merit must be F_pt (not the steady
   residual); the site-packages editable install maps `pyfp3d` to the SIBLING
   worktree — standalone scripts must sys.path-anchor their own worktree.
-- **Track A** ([track_a.md](roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
+- **Track A** ([track_a.md](../phases/p1/docs/roadmap/track_a.md)): created 2026-07-15 · **A1 ✓**
   (2026-07-16, GA1.1–GA1.5; 4-driver timing instrumentation + cost benchmark) ·
   **A2 ✓** (CLOSED 2026-07-17, GA2.1–GA2.5; TE/Kutta fidelity attribution —
   **S1 conforming Γ(z) jitter = a per-station probe-difference Kutta-target
@@ -1283,7 +1283,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
 
 Human-readable snapshot + document map: [overview.md](overview.md). The pre-split
 narrative history of this file:
-[archive/agent-rules-2026-07-15.md](archive/agent-rules-2026-07-15.md) (archive,
+[archive/agent-rules-2026-07-15.md](../phases/p1/docs/archive/agent-rules-2026-07-15.md) (archive,
 not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
 
 ## Session disciplines (each one measured; citation in the named record)
