@@ -17,9 +17,19 @@ its measured failure while M1a locks the in-envelope capability.
     python bench/run_m1_gate.py        # ~6 min
 """
 import csv
+import os
 import sys
 import time
 from pathlib import Path
+
+#: ★ PIN THE THREADS before numpy/numba import (2026-08-10, measured): the same M6 solve
+#: took 566.6 s uncapped on 24 cores against 113.7 s capped at 8, same machine load --
+#: a 5.0x oversubscription penalty. This script reports per-leg wall times, so leaving the
+#: caps to the caller's shell makes those numbers unreproducible. `setdefault` so an
+#: explicit export still wins; the resolved values are printed below.
+THREAD_VARS = ("NUMBA_NUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS")
+for _v in THREAD_VARS:
+    os.environ.setdefault(_v, "8")
 
 import numpy as np
 
@@ -57,6 +67,12 @@ SEEDS = (0, 5)
 
 
 def main():
+    print("threads (per-leg wall times are reported, so this is part of the result): "
+          + ", ".join(f"{v}={os.environ[v]}" for v in THREAD_VARS))
+    try:
+        print(f"machine load average: {os.getloadavg()[0]:.1f} over {os.cpu_count()} cpus")
+    except OSError:                                   # pragma: no cover - non-Linux
+        pass
     # ★ CALL-SITE DEBT FIXED 2026-08-05. This script used to take --entropy,
     # defaulting to FALSE, so the plain invocation measured the ISENTROPIC density
     # long after the entropy correction became the library default (GS1b.11,
@@ -144,6 +160,14 @@ def main():
                              sigma_min=r.get("sigma_min"),
                              n_shock_cells=r.get("n_shock_cells"),
                              n_newton=len(hist),
+                             #: ★ pre-registered instrumentation (2026-08-10, rule R1):
+                             #: a seed-0 leg that converges may have been rescued by the
+                             #: clamped-triggered fallback, and without this flag that
+                             #: gets silently attributed to the SEED. Record which one
+                             #: did the work.
+                             fallback_fired=bool((r.get("seed_fallback") or {})
+                                                 .get("fired")),
+                             fallback_seed=(r.get("seed_fallback") or {}).get("seed"),
                              wall_s=round(time.perf_counter() - t0, 1),
                              error=err))
             print(f"  {level:7s} seed={seed} C={C:<4} "
