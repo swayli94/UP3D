@@ -18,10 +18,10 @@ progressing loose → tight coupling.
 > **★ 2026-07-22 re-spec (Track V opening, user-directed).** The phase entries
 > and gates below were re-specified against the shipped code state BEFORE any
 > implementation. Evidence base: the 2026-07-20 review
-> [20260720-2015-wingbody-trackv-review.md](../../../../docs/inspection/20260720-2015-wingbody-trackv-review.md)
+> [20260720-2015-wingbody-trackv-review.md](../inspection/20260720-2015-wingbody-trackv-review.md)
 > §3 (hooks audit: ~70 % of the solver-side hooks exist), the 2026-07-22
 > pre-Track-V audit
-> [20260722-0335-b28-b32-audit-pre-trackv.md](../../../../docs/inspection/20260722-0335-b28-b32-audit-pre-trackv.md)
+> [20260722-0335-b28-b32-audit-pre-trackv.md](../inspection/20260722-0335-b28-b32-audit-pre-trackv.md)
 > §5, and **A4** (u_e input error band,
 > `cases/analysis/a4_ue_error_band/VERDICT.md`). The pre-2026-07-22 GV1.1–GV1.3
 > sketch is **superseded** by the gates below (Track V had zero implementation,

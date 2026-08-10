@@ -821,7 +821,7 @@ or a measured no-op (C7b: 0 affected nodes on all six committed families).
 ★ Close-out ritual extended to **five surfaces + a backport check**
 (CLAUDE.md step 5, disciplines #9/#10) — the audit's 17 findings were mostly
 close-out debt. Suite **463 + 21 + 2** (+3 reader). Response report:
-[inspection/20260718-response-to-kimi-inspection.md](inspection/20260718-response-to-kimi-inspection.md).
+[inspection/20260718-response-to-kimi-inspection.md](../phases/p1/docs/inspection/20260718-response-to-kimi-inspection.md).
 
 **B18 ✓ CLOSED 2026-07-18 (NEW, user-directed; appended after
 B17; executes the GB16.6 debt): wing-body transonic (M0.84) — conforming reaches

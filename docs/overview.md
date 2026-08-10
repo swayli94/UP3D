@@ -19,7 +19,7 @@ tip_taper；cl_p 0.2738、0 钳制、代价 ≈ −1.3%）；(b) 类天花板归
 回滚（ill-posed switching）。B28（cl_fus 解耦 + GB9.4 重定规格，"机身虚假升力"标签退役）
 + B29（flat-fragment 升格翼身 LS 生产配置）于 2026-07-20 关闭。B31 新增的 Newton
 Gamma-pin 行 blend 已 FD 验证（`test_blend_jacobian_fd_phi/_gamma`）。审计报告见
-[inspection/20260722-0335-b28-b32-audit-pre-trackv.md](inspection/20260722-0335-b28-b32-audit-pre-trackv.md)。
+[inspection/20260722-0335-b28-b32-audit-pre-trackv.md](../phases/p1/docs/inspection/20260722-0335-b28-b32-audit-pre-trackv.md)。
 
 **P11 已关闭（2026-07-19，用户指示当日开+关；sphere 腿）——曲面壁元路线
 实测阴性，且 G1.6 被重归因。** ★★ 头条：经验证的曲面壁邻层（tet10 几何 + mapped-P1
@@ -147,7 +147,7 @@ gate 数字全部成立；退化的是收敛速率——3-D 下 LS Newton 是 qu
 reader C4/C5 加固（C4 是**静默**的：只命名部分物理面组会丢弃其余三角形，链条终点是
 **Γ(root) 被静默钉为 0** 且无任何报错）；C6/C7/P1/T1/T2/F0 修复；**零 pyfp3d/ 数值改动**。
 close-out 流程扩为**五个面 + backport check**。响应报告
-[inspection/20260718-response-to-kimi-inspection.md](inspection/20260718-response-to-kimi-inspection.md)。
+[inspection/20260718-response-to-kimi-inspection.md](../phases/p1/docs/inspection/20260718-response-to-kimi-inspection.md)。
 
 **B18 已关闭（2026-07-18，用户指示，追加于 B17 之后；执行 GB16.6 债）：翼身
 组合体跨声速 M0.84——conforming 到、level-set 交界受限**。翼身跨声速能力**不对称，这个

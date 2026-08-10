@@ -6,8 +6,12 @@
 **这不是**进度报告(那是 [progress.md](progress.md)),**不是**计划(那是 [roadmap.md](roadmap.md))。
 它只陈述**被测量支撑的**边界,并对每个数字标注它**依赖什么**。
 
-**权威口径**:每条都指到提交的产物(`bench/gate_results/*.csv`、`cases/analysis/`、测试文件)。
-一个只活在 .md 里的数字不算证据(roadmap §3 原则 6)。
+**权威口径**:每条都指到提交的产物,一个只活在 .md 里的数字不算证据(roadmap §3 原则 6)。
+★ **2026-08-10 的整理改了产物的位置,没改产物本身**:仍被保留代码读取的 CSV 留在
+`bench/gate_results/`(9 个),**其余 244 个 phase-2 产物在
+[`phases/p2/bench/gate_results/`](../../phases/p2/bench/gate_results/)**(含 `capability/` 的 189 个);
+phase-1 的证据链在 [`phases/p1/cases/`](../../phases/p1/cases/)。**全部仍被 git 跟踪** ——
+归档是目录重组,不是取消证据。
 
 ---
 

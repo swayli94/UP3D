@@ -21,6 +21,19 @@
 (能力边界按路径引用那些 CSV)、以及 `docs/` 的 overview / design / design_track_v / agent-rules /
 inspection 与 6 个 phase-3 要用的 phase-two 文件。
 
+## 第二轮再减(2026-08-10,同日)
+
+第一轮之后 `docs`/`bench` 里仍剩很多,**量了一下发现两处是我保守多留的**:
+
+| | 第一轮后 | 再减后 | 依据 |
+|---|---|---|---|
+| `bench/` | 255 | **19** | `gate_results/` 的 246 个里,**被保留代码点名的只有 7 个 CSV**,`capability/` 的 189 个**一个都没有** ⇒ 只留 9 个被代码或 phase-3 文档点名的 + `capability_summary.json`,其余 **244 个**入 `p2/bench/gate_results/` |
+| `docs/` | 31 | **23** | `inspection/` 的 21 个里 **8 个是 phase-1 审查报告** ⇒ 入 p1;留下 2026-07-28 的**奠基审计**及其 `20260728-audit/` 的 exp1–exp6(roadmap 把它当作 phase two 全部判断的基线) |
+| `cases/` | 403 | **403** | ★ **测出来必须留**:`onera_m6_wakefree` 与 `naca0012_wakefree_2.5d` 两个 LS 专用族**仍被 4 个保留测试引用**(`test_b1_cut_elements` / `test_b3_lifting` / `test_b45_farfield` / `test_b7_onera_m6` —— 删除清单里"摘腿"的那批),要等 phase 3 摘掉 LS 腿才能走;19 个保留的 demo/analysis 是自洽的证据单元 |
+
+★ 移走 244 个 CSV 之后,能力边界文件里"每条都指到提交的产物"那句话**就地更正**了产物的位置
+(两处都写明,并强调**全部仍被跟踪** —— 归档是目录重组,不是取消证据)。
+
 ## 目录
 
 | | 内容 |
