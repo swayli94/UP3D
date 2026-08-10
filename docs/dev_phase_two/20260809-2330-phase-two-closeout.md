@@ -55,7 +55,7 @@ roadmap §4 的 S6(战略后备)写着触发条件是:
 
 | | |
 |---|---|
-| 常开全套 | 见本轮 progress 行(8 线程,机器有他人负载 —— 墙钟不可比,只看计数) |
+| 常开全套 | ✓ **700 passed / 28 skipped / 2 xfailed,0 failed**(8 线程,1464.19 s)—— **与基线计数完全一致** ⇒ 本轮的文档/注释/bench 改动没有碰到任何测试。★ 机器有他人负载(load ≈ 14),**墙钟不与 16 线程的 1668.59 s 对比**,只看计数 |
 | 快层能力锁 | `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`(仪式第 0 步) |
 | 门控全套 | **2026-08-09 已跑过 720 passed / 2 skipped / 8 xfailed / 0 failed @3:04:44**;此后**未动库代码** ⇒ 不重跑(纪律 2:不casually 重算贵的产物) |
 

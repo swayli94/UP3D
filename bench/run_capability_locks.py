@@ -26,6 +26,25 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, ".."))
 CSV = os.path.join(HERE, "gate_results", "capability_locks.csv")
 
+#: ★★ PIN THE THREADS (added 2026-08-10, measured -- this tier shipped without it and
+#: the omission produced a false red on its first real use). One of the locks here,
+#: G8.2, asserts a WALL-CLOCK budget, and `test_p8_newton`'s own docstring records the
+#: protocol that number was measured under: NUMBA_NUM_THREADS *and* OMP_NUM_THREADS
+#: *and* OPENBLAS_NUM_THREADS all capped (CLAUDE.md discipline 1; uncapped measured
+#: ~333 s against 252 s capped on the reference box). This script left the caps to
+#: whatever shell invoked it, so a timing GATE was reading the caller's environment.
+#: Measured cost of the omission, same test, same machine load (average 14.3):
+#:     uncapped (24 cores, oversubscribed)   566.6 s   FAIL
+#:     capped at 8 threads                   113.7 s   PASS   <- 5.0x
+#: The physics anchors were bit-identical in both, so the red was purely environmental
+#: (bench/gate_results/g82_anchor_check.csv). `setdefault` so an explicit export still
+#: wins -- and the resolved values are PRINTED, because a timing gate whose environment
+#: is not on the record is not reproducible.
+THREAD_VARS = ("NUMBA_NUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS")
+DEFAULT_THREADS = "8"
+for _v in THREAD_VARS:
+    os.environ.setdefault(_v, DEFAULT_THREADS)
+
 #: (node id, what it locks). Chosen for anchors that are cheap; the heavy RAMPS are in
 #: the excluded list below with their measured costs, so the trade-off is visible.
 LOCKS = (
@@ -65,7 +84,15 @@ def main():
         print("★ PYFP3D_TRANSONIC_GATES=1 is required, else every gated lock SKIPS "
               "and this reports a vacuous green.")
         return 2
-    print("capability locks, FAST tier -- run this at every close-out\n")
+    print("capability locks, FAST tier -- run this at every close-out")
+    print("  threads (G8.2 asserts a wall-clock budget, so this is part of the result): "
+          + ", ".join(f"{v}={os.environ[v]}" for v in THREAD_VARS))
+    try:
+        print(f"  machine load average: {os.getloadavg()[0]:.1f} over "
+              f"{os.cpu_count()} cpus")
+    except OSError:                                   # pragma: no cover - non-Linux
+        pass
+    print()
     rows, t_all = [], time.perf_counter()
     for node, what in LOCKS:
         t0 = time.perf_counter()

@@ -314,6 +314,19 @@ prevent, so that list is part of the output, not a comment.
 ★ And `PYFP3D_TRANSONIC_GATES=1` is checked at entry: without it every gated lock SKIPS and the run
 reports a vacuous green.
 
+★★ **Put a wall-clock assert LAST in its test** (2026-08-10, measured, cost ~20 min of diagnosis).
+G8.2's `assert wall < 450.0` sat ABOVE its physics anchors, so when the fast tier hit a loaded machine
+the leg reported red at 588 s with cl, M_max and the three shock positions **never evaluated** — the
+b7/b9 trap again (first failing assert hides the rest). Measured afterwards via `_m6_case` from a bench
+script (no test edit): every physics anchor reproduces the committed value to six decimals — cl
+**0.268691**, M_max 1.996867, shocks 0.596316/0.540203/0.371440 — and **the same solve then took 109 s**,
+against 588 s half an hour earlier on the same box (load average 22 → 15). **A 5.4× spread with a
+bit-identical answer** ⇒ a fixed wall-clock bound is a CALIBRATION of the machine, not a statement about
+the solver (same family as the EW forcing, the taper `r_c`, and the `descent10` threshold). Keep it as a
+gate — a real 2× regression must still fail — but order it after the physics, and read a red as a timing
+reading until the physics above it has passed. Evidence `bench/gate_results/g82_anchor_check.csv`,
+regenerable by `bench/run_g82_anchor_check.py`.
+
 ## Retiring a criterion means grepping the TESTS, not just the demo (2026-08-09, measured)
 
 B28 retired the "the fuselage should carry almost no lift" premise on 2026-07-20 -- its own

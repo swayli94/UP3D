@@ -1,0 +1,7 @@
+anchor,measured,committed,tol,abs_diff,pass_
+cl,0.26869125,0.268691,0.005,2.5e-07,True
+m_max,1.99686678,1.99687,0.05,3.22e-06,True
+x_shock_0.44,0.59631583,0.59632,0.02,4.17e-06,True
+x_shock_0.65,0.5402034,0.5402,0.02,3.4e-06,True
+x_shock_0.90,0.37143987,0.37144,0.02,1.3e-07,True
+wall_s,108.9,450.0,(upper bound),,True

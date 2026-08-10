@@ -617,12 +617,6 @@ def test_g82_m6_medium_newton_end_to_end():
     _assert_terminal_quadratic(r)
     assert r["n_limited"] == 0 and r["n_floored"] == 0
     assert r["F_history"][-1] < 1e-12                   # coupled Kutta
-    #: ★ budget raised 300 -> 450 s as part of the 2026-08-06 re-spec, and the reason
-    #: is NOT the round tip: the FLAT leg measured 331 s in the same session and the
-    #: round+taper leg 341 s, so both exceed the old bound and this machine is simply
-    #: slower than the P8 record's CI reference of 301.66 s. 450 s leaves ~30 % over the
-    #: measured 341 s.
-    assert wall < 450.0, f"G8.2 budget: {wall:.0f} s >= 450 s"
     #: re-anchored (round mesh + production taper). SUPERSEDED flat-cap anchors, kept
     #: per discipline #11 rather than overwritten: cl 0.263888, M_max 2.10709,
     #: shock(0.44) 0.59582 -- reproducible today on medium_flat.msh to 5-6 digits.
@@ -640,3 +634,29 @@ def test_g82_m6_medium_newton_end_to_end():
     assert abs(shocks[0.44] - 0.59632) < 0.02
     assert abs(shocks[0.65] - 0.54020) < 0.02
     assert abs(shocks[0.90] - 0.37144) < 0.02
+    #: ★★ The budget is asserted LAST, on purpose, and it was moved here on 2026-08-10.
+    #: It used to sit above the physics anchors, and that ordering turned a machine-load
+    #: spike into a report with the physics UNMEASURED -- pytest stops at the first
+    #: failing assert, so a 588 s reading hid whether cl, M_max and the three shock
+    #: positions were still in band. b7 and b9 sprang exactly that trap on 2026-08-09
+    #: (both had later assertions hidden behind the first). Nothing about the threshold
+    #: changed; only the order, so a slow machine can no longer suppress the physics.
+    #:
+    #: ★ And the reading that forced this: the SAME solve measured 588 s and then 109 s
+    #: within half an hour on this box (load average 22 -> 15), with the answer
+    #: bit-reproducing the committed anchors to six decimals -- cl 0.268691, M_max
+    #: 1.996867, shocks 0.596316 / 0.540203 / 0.371440
+    #: (bench/gate_results/g82_anchor_check.csv). A 5.4x spread on one machine means a
+    #: fixed wall-clock bound is a CALIBRATION of the machine, not a guarantee about the
+    #: solver -- the same lesson as the EW forcing, the taper r_c and the descent10
+    #: threshold. It is kept as a gate because a real 2x regression must still fail, but
+    #: a red here is a timing reading first and a capability claim only after the
+    #: physics above has passed.
+    #:
+    #: budget raised 300 -> 450 s in the 2026-08-06 re-spec, and NOT because of the
+    #: round tip: the FLAT leg measured 331 s in the same session and the round+taper leg
+    #: 341 s, so both exceed the old bound and this machine is simply slower than the P8
+    #: record's CI reference of 301.66 s. 450 s leaves ~30 % over the measured 341 s.
+    assert wall < 450.0, (
+        f"G8.2 budget: {wall:.0f} s >= 450 s. Physics anchors above all PASSED, so this "
+        f"is a timing reading; check machine load before treating it as a regression.")
