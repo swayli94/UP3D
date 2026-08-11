@@ -131,7 +131,8 @@ def band_rms(curves, exp, eta):
     return out
 
 
-def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True):
+def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
+          probe_seed=0):
     """The P14 transonic recipe verbatim, entropy (and now the Kutta form) variable.
 
     ★ 2026-07-31: `kutta` was added after the first budget round measured its own cl
@@ -190,14 +191,22 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True):
         # recorded deviation from "the recipe verbatim" -- see the caller
         kw["newton_kw"]["n_newton_max"] = int(n_newton_max)
     if kutta == "pressure":
+        #: ★ `probe_seed` is a DELIBERATE, RECORDED deviation applied AFTER the drift guard --
+        #: the pattern this script already establishes for n_newton_max. Mutating M6_NEWTON_KW
+        #: instead (my first attempt) makes the guard fire, correctly, because that dict IS the
+        #: guard's target and a mutated one is indistinguishable from unintended drift.
+        #: ★★ The seed goes HERE and not at ramp level 0: level 0 receives phi_init, which makes
+        #: its own n_picard_seed inert, so seeding it would produce bit-identical legs
+        #: (pre-registration 20260813-0300 addendum #1).
         r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA,
-                                  entropy_correction=entropy, **M6_NEWTON_KW)
+                                  entropy_correction=entropy,
+                                  **dict(M6_NEWTON_KW, n_picard_seed=probe_seed))
         kw["newton_kw"].update(kutta_estimator="pressure", phi_init=r0["phi"],
                                gamma_init=r0["gamma"], n_picard_seed=0)
     return solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **kw)
 
 
-def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None):
+def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0):
     exp = parse_experiment()
     # GV5.3's W2 experiment-side guard, kept: a station whose max Cp is not at the
     # LE would mean the side mapping is broken and every RMS below is meaningless.
@@ -218,7 +227,8 @@ def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None):
         for entropy, kutta in legs:
             tag = ("ON" if entropy else "OFF") + f"/{kutta}"
             t0 = time.perf_counter()
-            r = solve(mc, wc, entropy, kutta, taper=taper)
+            r = solve(mc, wc, entropy, kutta, taper=taper,
+                      probe_seed=probe_seed)
             wall = time.perf_counter() - t0
             phi = np.asarray(r["phi"])
             gamma = np.atleast_1d(np.asarray(r["gamma"]))
