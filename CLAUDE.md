@@ -206,6 +206,31 @@ so it changes the VERDICT, not the numbers. Note:
 `docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
 Do not re-attribute this to the tip: the affected elements span the whole mesh (z/b 0.002-1.650).
 
+## ★★ Four criterion defects in four rounds, all the same shape (2026-08-12, measured)
+
+Phase three's sigma rounds produced a criterion defect EVERY round, and every one was found after
+the measurement rather than before it. They are one mistake wearing four hats:
+
+| round | the defect | what it let through |
+|---|---|---|
+| sigma selection | **one-sided bands** -- only contemplated the control being WORSE | a reversed, family-consistent result could only land in "no direction" |
+| sigma strength | **unbalanced panel** -- compared spreads across theta without fixing the converged-seed set | "non-monotone" was triggered by a set-SIZE artefact (the dying seed was the outlier) |
+| soft membership | **absolute threshold** (<= 5 %) on families whose baselines differ 150x | an 8.8x DEGRADATION scored as PASS |
+| magnitude-preserving | **an OUTPUT treated as an INPUT** -- "match sigma_min back to legacy" | the target was unhittable BY CONSTRUCTION, so the binding leg could only read J3 |
+
+The common sentence: **the criterion did not cover the domain of the quantity it compares.** So
+before registering a band, run it against these four questions:
+
+1. **Is it one-sided?** State where the OPPOSITE outcome would land.
+2. **Does the independent variable change which samples EXIST?** If yes, fix the sample set first --
+   a spread over a shrinking set is not comparable -- and never report a spread over fewer than two
+   converged legs as "small"; call it UNDEFINED.
+3. **Is the threshold absolute where the baselines differ?** Make it relative to each arm's own
+   baseline, or an improvement cannot be told from a tolerated regression.
+4. **Is the quantity being matched an INPUT or an OUTPUT?** "Restore X to its baseline" is only
+   well-posed if X is something you set. `sigma_min` is a diagnostic of the CONVERGED STATE, so
+   when the state moves the target moves with it.
+
 ## ★★ Prove a kernel property with an independent ORACLE, not with cases you invented
 
 Measured 2026-08-05, at the cost of two wrong fixes in one round. Three candidate termination

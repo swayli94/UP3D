@@ -193,7 +193,7 @@ class NewtonWorkspace:
                  tip_taper: Optional[np.ndarray] = None,
                  kutta_estimator: str = "probe",
                  external_rhs: Optional[np.ndarray] = None,
-                 sigma_soft_eps: float = 0.0):
+                 sigma_soft_eps: float = 0.0, sigma_soft_q: float = 1.0):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -249,7 +249,8 @@ class NewtonWorkspace:
         # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
         # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
         # unlike the piecewise-constant upstream selection.
-        self.ent = EntropyOperator(self.op.n_tets, soft_eps=sigma_soft_eps)
+        self.ent = EntropyOperator(self.op.n_tets, soft_eps=sigma_soft_eps,
+                                   soft_q=sigma_soft_q)
         self.sigma_frozen = None
         self.sigma_converged = True
         #: the donor map the last sigma refresh used (record only -- see refresh_sigma)
@@ -777,6 +778,12 @@ def solve_newton_lifting(
     #: Shaped on the precedent in the same kernel family: the artificial-density switch has always
     #: been a ramp (m_crit), and only this test was hard.
     sigma_soft_eps: float = 0.0,
+    #: ★ magnitude-recovery exponent for the soft membership ramp (pre-registered 20260812-1700).
+    #: 1.0 = the plain ramp of the previous round; q < 1 restores the correction's magnitude while
+    #: keeping the ramp continuous, which is what separates "the jump caused the seed dependence"
+    #: from "there was simply less correction left to be sensitive to". Inert when
+    #: sigma_soft_eps = 0.
+    sigma_soft_q: float = 1.0,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -901,7 +908,8 @@ def solve_newton_lifting(
                              tip_taper=tip_taper,
                              kutta_estimator=kutta_estimator,
                              external_rhs=external_rhs,
-                             sigma_soft_eps=sigma_soft_eps)
+                             sigma_soft_eps=sigma_soft_eps,
+                             sigma_soft_q=sigma_soft_q)
     elif ws.kutta_estimator != kutta_estimator:
         raise ValueError(
             f"workspace was built with kutta_estimator="
@@ -1548,6 +1556,7 @@ def solve_newton_lifting(
         # GS1b.3 entropy-correction diagnostics (all None/empty when off)
         "entropy_correction": bool(entropy_correction),
         "sigma_soft_eps": float(sigma_soft_eps),
+        "sigma_soft_q": float(sigma_soft_q),
         "sigma_history": sigma_history,
         "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),
         "n_shock_cells": (int(ws.ent.n_shock) if entropy_correction else None),

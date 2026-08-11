@@ -116,6 +116,7 @@ def shock_factor_sweep(
     s_out: np.ndarray,
     m1_out: np.ndarray,
     soft_eps: float = 0.0,
+    soft_q: float = 1.0,
 ) -> None:
     """Per-element local entropy factor s_e (see module docstring, `detection`).
 
@@ -262,7 +263,13 @@ def shock_factor_sweep(
         if w_soft == 1.0:
             s_out[e] = s_full
         else:
-            s_out[e] = 1.0 - w_soft * (1.0 - s_full)
+            #: ★ `soft_q` (pre-registered 20260812-1700): the exponent that separates "the jump was
+            #: the cause" from "the correction just got weaker". q = 1 is the plain ramp; q < 1 pushes
+            #: partial weights back toward 1, RESTORING the magnitude while staying continuous.
+            #: Both endpoints stay exact (0^q = 0, 1^q = 1), so the default-inert guarantee and the
+            #: endpoint tests are untouched.
+            w_eff = w_soft if soft_q == 1.0 else w_soft ** soft_q
+            s_out[e] = 1.0 - w_eff * (1.0 - s_full)
         m1_out[e] = m1
 
 
@@ -439,7 +446,7 @@ class EntropyOperator:
     def __init__(self, n_elements: int, n_round: int = N_ROUND_DEFAULT,
                  max_walk: int = MAX_WALK_DEFAULT,
                  knee_frac: float = KNEE_FRAC_DEFAULT,
-                 soft_eps: float = 0.0):
+                 soft_eps: float = 0.0, soft_q: float = 1.0):
         self.n_round = int(n_round)
         self.max_walk = int(max_walk)
         self.knee_frac = float(knee_frac)
@@ -449,6 +456,10 @@ class EntropyOperator:
         self.soft_eps = float(soft_eps)
         if self.soft_eps < 0.0:
             raise ValueError(f"soft_eps must be >= 0, got {self.soft_eps}")
+        #: ★ magnitude-recovery exponent, only meaningful with soft_eps > 0. 1.0 = the plain ramp.
+        self.soft_q = float(soft_q)
+        if not 0.0 < self.soft_q <= 1.0:
+            raise ValueError(f"soft_q must be in (0, 1], got {self.soft_q}")
         self._s = np.ones(n_elements, dtype=np.float64)
         self._m1 = np.zeros(n_elements, dtype=np.float64)
         self._sigma = np.ones(n_elements, dtype=np.float64)
@@ -502,7 +513,8 @@ class EntropyOperator:
                 raise ValueError(
                     f"lim mask has {len(lm)} entries, expected {n}")
         shock_factor_sweep(q2, up, m_inf, gamma, self.max_walk,
-                           self.knee_frac, lm, self._s, self._m1, self.soft_eps)
+                           self.knee_frac, lm, self._s, self._m1, self.soft_eps,
+                           self.soft_q)
         self.n_rounds = transport_sigma(
             self._s, up, self.n_round, self._sigma, self._anc_a, self._anc_b,
             self._prod_b)
