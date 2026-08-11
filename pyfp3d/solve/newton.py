@@ -192,8 +192,7 @@ class NewtonWorkspace:
                  farfield_spanwise_gamma: bool = False,
                  tip_taper: Optional[np.ndarray] = None,
                  kutta_estimator: str = "probe",
-                 external_rhs: Optional[np.ndarray] = None,
-                 sigma_scale: float = 1.0):
+                 external_rhs: Optional[np.ndarray] = None):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -249,7 +248,7 @@ class NewtonWorkspace:
         # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
         # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
         # unlike the piecewise-constant upstream selection.
-        self.ent = EntropyOperator(self.op.n_tets, sigma_scale=sigma_scale)
+        self.ent = EntropyOperator(self.op.n_tets)
         self.sigma_frozen = None
         self.sigma_converged = True
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
@@ -698,12 +697,6 @@ def solve_newton_lifting(
     #: stays because low-subsonic work may legitimately want it off and
     #: because it is the tool for ON/OFF comparisons.
     entropy_correction: bool = True,
-    #: ★★ TEMPORARY INSTRUMENT (see kernels/entropy.py::EntropyOperator.sigma_scale): dials the
-    #: correction's magnitude for a dose-response measurement. 1.0 = production, BIT-IDENTICAL by
-    #: construction; 0.0 = sigma identically 1. Pre-registered with its own removal criterion in
-    #: docs/dev_phase_three/20260812-0300-sigma-strength-prereg.md -- it is expected to be DELETED
-    #: when that round's verdict is written.
-    sigma_scale: float = 1.0,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -827,8 +820,7 @@ def solve_newton_lifting(
                              vortex_center, farfield_spanwise_gamma,
                              tip_taper=tip_taper,
                              kutta_estimator=kutta_estimator,
-                             external_rhs=external_rhs,
-                             sigma_scale=sigma_scale)
+                             external_rhs=external_rhs)
     elif ws.kutta_estimator != kutta_estimator:
         raise ValueError(
             f"workspace was built with kutta_estimator="
@@ -1442,7 +1434,6 @@ def solve_newton_lifting(
         "clamped": bool(state["n_limited"] > 0 or state["n_floored"] > 0),
         # GS1b.3 entropy-correction diagnostics (all None/empty when off)
         "entropy_correction": bool(entropy_correction),
-        "sigma_scale": float(sigma_scale),
         "sigma_history": sigma_history,
         "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),
         "n_shock_cells": (int(ws.ent.n_shock) if entropy_correction else None),

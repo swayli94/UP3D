@@ -456,12 +456,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **472 passed + 12 skipped +
-   2 xfailed, 0 failed** (2026-08-12, measured 495.39 s @8 threads; +4 =
-   `tests/test_s1b_entropy.py`'s locks on the TEMPORARY `sigma_scale` instrument,
-   which are scheduled to be deleted with it — see
-   docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6).
-   Previous: **468 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **468 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-12). ★ It went 468 → 472 → 468 in one day and that is
+   an account closing, not churn: the +4 were the TEMPORARY `sigma_scale` instrument's
+   locks, and they were deleted WITH the instrument at its registered expiry
+   (docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
+   "in case we need it again" is how temporary knobs become permanent.
+   Same count as: **468 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-11, measured 494.47 s @8 threads on a quiet box;
    the 930.97 s recorded below was the same 8 threads UNDER LOAD — a 1.9x spread on
    wall time with the same result, so quote suite walls flagged, never as a cost).

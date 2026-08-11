@@ -398,26 +398,10 @@ class EntropyOperator:
 
     def __init__(self, n_elements: int, n_round: int = N_ROUND_DEFAULT,
                  max_walk: int = MAX_WALK_DEFAULT,
-                 knee_frac: float = KNEE_FRAC_DEFAULT,
-                 sigma_scale: float = 1.0):
+                 knee_frac: float = KNEE_FRAC_DEFAULT):
         self.n_round = int(n_round)
         self.max_walk = int(max_walk)
         self.knee_frac = float(knee_frac)
-        #: ★★ TEMPORARY INSTRUMENT, scheduled for deletion. `sigma_scale` (theta) dials the
-        #: correction's MAGNITUDE so a dose-response can be measured:
-        #:     sigma_eff = 1 - theta * (1 - sigma_accumulated)
-        #: It exists because there is no strength knob to sweep -- sigma is physics (the
-        #: Rankine-Hugoniot total-pressure ratio) and `entropy_correction` is a bool, so
-        #: ON/OFF gives two points and two points cannot separate "sigma causes the
-        #: non-uniqueness" from "these are two different models". Pre-registered in
-        #: docs/dev_phase_three/20260812-0300-sigma-strength-prereg.md, which also fixes the
-        #: REMOVAL criterion in advance (the B20 precedent: a knob built solely to make an A/B
-        #: measurable is deleted on adoption, because leaving an internal inconsistency behind
-        #: a switch ships a defect as an option).
-        #: theta = 1.0 is the default and is BIT-IDENTICAL BY CONSTRUCTION -- see sigma().
-        self.sigma_scale = float(sigma_scale)
-        if not 0.0 <= self.sigma_scale <= 1.0:
-            raise ValueError(f"sigma_scale must be in [0, 1], got {self.sigma_scale}")
         self._s = np.ones(n_elements, dtype=np.float64)
         self._m1 = np.zeros(n_elements, dtype=np.float64)
         self._sigma = np.ones(n_elements, dtype=np.float64)
@@ -475,14 +459,6 @@ class EntropyOperator:
         self.n_rounds = transport_sigma(
             self._s, up, self.n_round, self._sigma, self._anc_a, self._anc_b,
             self._prod_b)
-        #: ★ The short-circuit is LOAD-BEARING, not an optimisation: `1 - 1.0*(1 - sigma)` is
-        #: NOT bit-identical to `sigma` in floating point (0.9812 -> 0.9811999999999999), so a
-        #: branchless blend would silently move every committed number at the DEFAULT setting.
-        #: Bit-identity at theta = 1 has to come from not touching the array, not from the
-        #: algebra happening to be exact.
-        if self.sigma_scale != 1.0:
-            self._sigma *= self.sigma_scale
-            self._sigma += 1.0 - self.sigma_scale
         self.converged = self.n_rounds < self.n_round
         self.n_shock = int(np.count_nonzero(self._m1 > 0.0))
         self.m1_max = float(self._m1.max()) if len(self._m1) else 0.0

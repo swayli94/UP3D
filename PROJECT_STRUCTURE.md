@@ -1482,9 +1482,9 @@ the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
 collapsed onto its conforming half. ONE wake route remains: `mesh/wake_cut.py` +
 `constraints/te_pressure.py` + `solve/newton.py` / `picard.py`, with `tip_taper`
 (B31/B32, carrying a **−1.3 % cl** model bias).
-Baselines: always-on **472 passed / 12 skipped / 2 xfailed** (2026-08-12, 495 s @8
-threads; +4 = the temporary `sigma_scale` instrument's locks, deleted with it).
-Previous: **468 passed / 12 skipped / 2 xfailed** (2026-08-11, 494 s @8
+Baselines: always-on **468 passed / 12 skipped / 2 xfailed** (2026-08-12; it went
+468 → 472 → 468 in one day -- the +4 were the temporary `sigma_scale` instrument's locks
+and were deleted with it at its registered expiry). Earlier the same count (2026-08-11, 494 s @8
 threads quiet; +11 = `tests/test_meshgen_structured.py`, closing the structured
 generator's zero-coverage debt). After the level-set deletion it was **457 / 12 / 2**, gated
 **466 / 1 / 4** (2:08:50), fast tier **5 groups**. Both accounts close item by item —
