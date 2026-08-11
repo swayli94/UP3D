@@ -131,7 +131,7 @@ def band_rms(curves, exp, eta):
     return out
 
 
-def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
+def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True):
     """The P14 transonic recipe verbatim, entropy (and now the Kutta form) variable.
 
     ★ 2026-07-31: `kutta` was added after the first budget round measured its own cl
@@ -151,6 +151,32 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
     single source of truth for the solver settings.
     """
     kw = dict(NEWTON_M6_RECIPE)
+    #: ★★ STALENESS FIXED 2026-08-13 (pre-registered
+    #: docs/dev_phase_three/20260813-0900-m3-remeasure-prereg.md). This script never applied the
+    #: production tip_taper -- `grep -c tip_taper` was 0 -- although B32/G8.2 adopted it on
+    #: 2026-08-05, and `cases/meshes/onera_m6/medium.msh` was regenerated on 2026-08-04 as a ROUND
+    #: tip. Round tip WITHOUT the taper is the configuration measured to die (CLAUDE.md: removing the
+    #: taper fails M0.88 medium outright, 6/6 clamps; and test_p8_newton's own comment records that
+    #: "the third leg it would need -- round, no taper, CONVERGED -- does not exist"). Measured here:
+    #: without it, the medium ramp fails entirely on HEAD (m_final None, |R| 8.8e-07, cl_p 0.2493
+    #: against the 2026-07-31 CSV's 0.2765).
+    #: ★ The taper carries a MODEL bias of -1.3 % cl_p, so any lift reported from this script now
+    #: carries it and must say so.
+    #: taper=False reproduces the historical (flat-tip-era) configuration and is kept only for that.
+    if taper:
+        from pyfp3d.constraints.wake import tip_taper_factors
+        #: construction identical to tests/test_p8_newton.py::_m6_case -- not re-derived.
+        #: ★ R2 of the registration: pinned by an assert against that function's own source, so a
+        #: future change there is caught here instead of silently splitting the two paths.
+        import inspect
+        from tests import test_p8_newton as _p8
+        _src = inspect.getsource(_p8._m6_case)
+        assert 'tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth", 0.05 * B_SEMI)' in _src, (
+            "the production taper construction in test_p8_newton::_m6_case has changed -- this "
+            "script's copy is no longer verbatim (registration R2)")
+        kw["newton_kw"] = dict(kw["newton_kw"],
+                               tip_taper=tip_taper_factors(wc.station_z, B_SEMI,
+                                                           "vanish_smooth", 0.05 * B_SEMI))
     # ★ the drift guard runs on the RECIPE, before any intentional override --
     # otherwise a deliberate, recorded deviation (n_newton_max below) trips the
     # very check that exists to catch UNintended drift. It did exactly that on
@@ -171,7 +197,7 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
     return solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **kw)
 
 
-def main(levels=("coarse",)):
+def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None):
     exp = parse_experiment()
     # GV5.3's W2 experiment-side guard, kept: a station whose max Cp is not at the
     # LE would mean the side mapping is broken and every RMS below is meaningless.
@@ -189,10 +215,10 @@ def main(levels=("coarse",)):
             continue
         mc, wc = cut_wake(read_mesh(path))
         s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
-        for entropy, kutta in LEGS:
+        for entropy, kutta in legs:
             tag = ("ON" if entropy else "OFF") + f"/{kutta}"
             t0 = time.perf_counter()
-            r = solve(mc, wc, entropy, kutta)
+            r = solve(mc, wc, entropy, kutta, taper=taper)
             wall = time.perf_counter() - t0
             phi = np.asarray(r["phi"])
             gamma = np.atleast_1d(np.asarray(r["gamma"]))
@@ -283,11 +309,15 @@ def main(levels=("coarse",)):
                 r2_validity=("n/a" if not entropy
                              else ("PASS" if r2_ok else "FAIL"))))
 
-    with open(os.path.join(OUT, "m3_budget.csv"), "w", newline="") as fh:
+    #: ★ G3-class hazard avoided by construction: the 2026-07-31 CSV is the HISTORICAL artifact for
+    #: the flat-tip / no-taper configuration and the capability boundary cites it (annotated as
+    #: superseded). A taper run therefore writes its OWN file and never overwrites it.
+    _name = out_name or ("m3_budget_head.csv" if taper else "m3_budget.csv")
+    with open(os.path.join(OUT, _name), "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in rows for k in r}))
         w.writeheader()
         w.writerows(rows)
-    print("\nwrote", os.path.join(OUT, "m3_budget.csv"))
+    print("\nwrote", os.path.join(OUT, _name))
 
     print("\n=== the registered reading (R1 -> R2 -> R3) ===")
     for level in levels:
