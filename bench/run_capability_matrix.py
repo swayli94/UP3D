@@ -61,11 +61,6 @@ from pyfp3d.post.surface import (cl_kj_3d, planform_area,           # noqa: E402
                                  wall_force_coefficients)
 from pyfp3d.solve.newton import (solve_newton_lifting,              # noqa: E402
                                  solve_newton_transonic)
-from pyfp3d.solve.newton_ls import (B_NEWTON_M6_DEFAULTS,           # noqa: E402
-                                    solve_multivalued_newton,
-                                    solve_multivalued_newton_transonic)
-from pyfp3d.wake import (CutElementMap, MultivaluedOperator,        # noqa: E402
-                         WakeLevelSet)
 from tests.test_p8_newton import NEWTON_M6_RECIPE                   # noqa: E402
 
 OUT = os.path.join(HERE, "gate_results")
@@ -170,77 +165,17 @@ def conf_wingbody(mesh_path, m, alpha):
     return mc, wc, r, np.asarray(r["phi"]), None
 
 
-def _ls_single(mvop, mesh, m, alpha, ramp_kw):
-    """Single-level LS solve, wrapped so the caller reads it like a ramp result
-    (levels[-1] + m_final + target_reached). Only the keys the ramp shares are
-    forwarded -- ramp-only knobs (n_seed, intermediate_tol, freeze_max_clamped,
-    dm...) are dropped rather than guessed at."""
-    keep = ("farfield", "farfield_aux", "freeze_tol", "freeze_refresh_max",
-            "n_newton_max", "direct_refactor_every", "tol_residual")
-    kw = {k: v for k, v in ramp_kw.items() if k in keep}
-    r = solve_multivalued_newton(mvop=mvop, mesh=mesh, m_inf=m,
-                                 alpha_deg=alpha, **kw)
-    return dict(phi_ext=r["phi_ext"], m_final=m, target_reached=r["converged"],
-                levels=[dict(n_limited=r["n_limited"], n_floored=r["n_floored"],
-                             residual_norm=r["residual_history"][-1],
-                             n_newton=r["n_newton"])])
-
-
-def _ls_op(mesh, te_line, alpha, flat=False, clip=None):
-    a = np.radians(alpha)
-    wls = WakeLevelSet(te_line, direction=(np.cos(a), np.sin(a), 0.0),
-                       sheet_direction=(1.0, 0.0, 0.0) if flat else None)
-    cm = CutElementMap(mesh.nodes, mesh.elements, wls,
-                       wall_nodes=np.unique(mesh.boundary_faces["wall"]),
-                       inboard_clip=clip)
-    return MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
-
-
-def ls_wing(mesh_path, m, alpha):
-    mesh = read_mesh(mesh_path)
-    te = np.array([[x_te(0.0), 0.0, 0.0], [x_te(B_SEMI), 0.0, B_SEMI]])
-    mvop = _ls_op(mesh, te, alpha)
-    if m <= LS_WING_MSTART:
-        r = _ls_single(mvop, mesh, m, alpha, LS_WING_KW)
-    else:
-        r = solve_multivalued_newton_transonic(mvop=mvop, mesh=mesh,
-                                               m_target=m, alpha_deg=alpha,
-                                               **LS_WING_KW,
-                                               **B_NEWTON_M6_DEFAULTS)
-    return mesh, mvop, r, np.asarray(r["phi_ext"]), mvop
-
-
-def ls_wingbody(mesh_path, m, alpha):
-    from pyfp3d.meshgen.wingbody import te_polyline
-    mesh = read_mesh(mesh_path)
-    mvop = _ls_op(mesh, te_polyline(FUS), alpha, flat=True,
-                  clip=make_inboard_clip(FUS))
-    if m <= WB_MSTART:
-        r = _ls_single(mvop, mesh, m, alpha, LS_RAMP_KW)
-    else:
-        r = solve_multivalued_newton_transonic(mvop=mvop, mesh=mesh,
-                                               m_target=m, alpha_deg=alpha,
-                                               m_start=WB_MSTART, dm=DM,
-                                               **LS_RAMP_KW)
-    return mesh, mvop, r, np.asarray(r["phi_ext"]), mvop
-
-
-def ls_naca(mesh_path, m, alpha):
-    mesh = read_mesh(mesh_path)
-    z = mesh.nodes[:, 2]
-    te = np.array([[1.0, 0.0, z.min()], [1.0, 0.0, z.max()]])
-    mvop = _ls_op(mesh, te, 0.0)
-    kw = dict(farfield="vortex", freeze_tol=1e-4, n_seed=30, n_newton_max=80,
-              direct_refactor_every=1000)
-    if m <= WB_MSTART:
-        r = _ls_single(mvop, mesh, m, alpha, kw)
-    else:
-        r = solve_multivalued_newton_transonic(mvop=mvop, mesh=mesh,
-                                               m_target=m, alpha_deg=alpha,
-                                               m_start=WB_MSTART, dm=DM, **kw)
-    return mesh, mvop, r, np.asarray(r["phi_ext"]), mvop
-
-
+# ---------------------------------------------------------------------------
+# ★ LEVEL-SET CELLS REMOVED 2026-08-10 (phase 3 task 1, ruling D5). What went:
+# _ls_single / _ls_op / ls_wing / ls_wingbody plus the 10 "level-set" CONFIGS rows.
+#
+# ★★ ERRATUM OBLIGATION, stated here because a number depends on it: the
+# capability boundary quotes this script's "13 configurations x ladder = 78 points,
+# 72/78 converged, 0/78 clamps". That reading INCLUDED the level-set cells, so the
+# committed CSV stays valid as a PRE-DELETION measurement while this script can no
+# longer reproduce it -- going forward it measures the conforming cells only. The
+# boundary is annotated accordingly; the number was not silently re-scoped.
+# ---------------------------------------------------------------------------
 #: (cell, path, geom, mesh dir, level, alpha, solver)
 #: ★ ORDERED coarse -> medium -> fine, deliberately: this run is hours long, and if it
 #: is interrupted the matrix should be COMPLETE at one refinement level rather than
@@ -262,18 +197,6 @@ _CELLS_UNORDERED = [
      "coarse", ALPHA_M6, conf_wingbody),
     ("conf_wb_medium", "conforming", "wingbody", "onera_m6_wingbody_conforming",
      "medium", ALPHA_M6, conf_wingbody),
-    ("ls_naca_coarse", "level-set", "naca2.5d", "naca0012_wakefree_2.5d",
-     "coarse", ALPHA_NACA, ls_naca),
-    ("ls_naca_medium", "level-set", "naca2.5d", "naca0012_wakefree_2.5d",
-     "medium", ALPHA_NACA, ls_naca),
-    ("ls_wing_coarse", "level-set", "m6wing", "onera_m6_wakefree", "coarse",
-     ALPHA_M6, ls_wing),
-    ("ls_wing_medium", "level-set", "m6wing", "onera_m6_wakefree", "medium",
-     ALPHA_M6, ls_wing),
-    ("ls_wb_coarse", "level-set", "wingbody", "onera_m6_wingbody", "coarse",
-     ALPHA_M6, ls_wingbody),
-    ("ls_wb_medium", "level-set", "wingbody", "onera_m6_wingbody", "medium",
-     ALPHA_M6, ls_wingbody),
     #: ★ xcoarse added 2026-08-03. Effort moved off `fine`: it costs 345-1561 s per flow
     #: point against coarse's 2.7-11.7 s, meaningless against the 2 CPU-min product
     #: target, and it adds a third mesh level to conforming NACA -- the ONE combination
@@ -288,8 +211,6 @@ _CELLS_UNORDERED = [
     #: first interval that does not refine the far field AT ALL.
     ("conf_wb_xcoarse", "conforming", "wingbody",
      "onera_m6_wingbody_conforming", "xcoarse", ALPHA_M6, conf_wingbody),
-    ("ls_wb_xcoarse", "level-set", "wingbody", "onera_m6_wingbody", "xcoarse",
-     ALPHA_M6, ls_wingbody),
     #: ★ the other two geometries' cheap levels, added after measuring each family's own
     #: h_far clamp and meshability floor rather than reusing the wing-body's numbers.
     #: NACA: h_wall 0.040 with the clamp OFF (clamped, h_far would pin at 3.0 exactly as
@@ -298,8 +219,6 @@ _CELLS_UNORDERED = [
     #: ~100 at EVERY level including the shipped coarse, so the 3-D bound does not apply.
     ("conf_naca_xcoarse", "conforming", "naca2.5d", "naca0012_2.5d", "xcoarse",
      ALPHA_NACA, conf_wing),
-    ("ls_naca_xcoarse", "level-set", "naca2.5d", "naca0012_wakefree_2.5d",
-     "xcoarse", ALPHA_NACA, ls_naca),
     #: M6 wing: the shipped `coarse` IS clamped (the P13/M1b defect), so it is OFF the
     #: refinement ray and cannot sit in a convergence ladder. The valid cheap ladder is
     #: {xcoarse_ss, coarse_ss, medium} -- hence coarse_ss cells here as well, not just
@@ -308,10 +227,6 @@ _CELLS_UNORDERED = [
      ALPHA_M6, conf_wing),
     ("conf_wing_coarse_ss", "conforming", "m6wing", "onera_m6", "coarse_ss",
      ALPHA_M6, conf_wing),
-    ("ls_wing_xcoarse_ss", "level-set", "m6wing", "onera_m6_wakefree",
-     "xcoarse_ss", ALPHA_M6, ls_wing),
-    ("ls_wing_coarse_ss", "level-set", "m6wing", "onera_m6_wakefree",
-     "coarse_ss", ALPHA_M6, ls_wing),
 ]
 _LEVEL_ORDER = {"xcoarse": 0, "xcoarse_ss": 0, "coarse": 1, "coarse_ss": 1,
                 "medium": 2, "fine": 3}
@@ -368,19 +283,16 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
         res = float(r["residual_history"][-1]); nn = int(r["n_newton"])
         conv = bool(r["converged"]); nodes, tets = len(mc.nodes), len(mc.elements)
         geom_obj = (mc, wc, None)
-    else:                                              # level-set
-        s_ref = planform_area(mesh.nodes, mesh.boundary_faces["wall"])
-        mf = r.get("m_final", m)
-        m_max = float(np.sqrt(np.max(mvop.element_mach2(phi, mf, 1.4, 1.0))))
-        f = u_wall_forces(mesh, mvop=mvop, phi_ext=phi, alpha_deg=alpha,
-                        s_ref=s_ref, m_inf=mf, wall_tag="wall")
-        clkj = float("nan")
-        lv = r["levels"][-1]
-        n_lim, n_flr = int(lv["n_limited"]), int(lv["n_floored"])
-        res = float(lv["residual_norm"]); nn = int(lv.get("n_newton", -1))
-        conv = bool(r.get("target_reached", False)) and abs(mf - m) < 1e-9
-        nodes, tets = len(mesh.nodes), len(mesh.elements)
-        geom_obj = (mesh, mvop, mf)
+    else:                                              # level-set: REMOVED
+        #: ★ phase 3 task 1 (ruling D5): the level-set branch of this dispatch is
+        #: gone with the route, and so are the 10 "level-set" CONFIGS rows. Kept as
+        #: an explicit raise rather than deleted silently, because the "path" column
+        #: still exists in the committed CSV and a stale caller passing "level-set"
+        #: must fail loudly instead of being scored as a conforming cell.
+        raise ValueError(
+            f"path={path!r}: the level-set route was deleted in phase 3 "
+            f"(ruling D5). Only conforming cells are measurable now; the "
+            f"pre-deletion 78-point matrix is in the committed CSV.")
     status = classify(conv, n_lim, n_flr, m_max)
     #: the Mach the solver ACTUALLY attained -- see the append_row note. Recorded
     #: unconditionally so a non-converged row can never again be read as if it held a

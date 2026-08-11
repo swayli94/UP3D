@@ -13,7 +13,8 @@ re-litigated without evidence.
 
 import numpy as np
 
-from pyfp3d.post.surface import wall_tangential_gradient, wall_tangential_gradient_quadratic
+from pyfp3d.post.surface import (cl_kj_3d, wall_tangential_gradient,
+                                 wall_tangential_gradient_quadratic)
 
 
 def _flat_quadratic_patch(n=9, spacing=0.1):
@@ -138,3 +139,23 @@ def test_quadratic_recovery_sphere_medium_mesh_regression(mesh_dir):
         f"quadratic recovery-only error ({err_quad.max():.4f}) should be well under "
         f"1/10 of the linear scheme's ({err_lin.max():.4f}) on an exact input"
     )
+
+# ---------------------------------------------------------------------------
+# ★ RELOCATED here 2026-08-10 from tests/test_b7_onera_m6.py, which was archived
+# with the level-set route (phase 3 task 1, ruling D5). This test is PURELY
+# analytic -- no mesh, no level set -- and it exercises cl_kj_3d, which lives in
+# pyfp3d/post/surface.py, so this file is its natural home. The body is moved
+# BYTE-FOR-BYTE: a relocation, not a rewrite, because this round subtracts only.
+# ---------------------------------------------------------------------------
+
+
+def test_cl_kj_3d_elliptic_sanity():
+    """cl_kj_3d on an analytic elliptic Gamma(z) reproduces the closed form
+    CL = 2 * (pi/4) * G0 * b_semi / s_ref. Pins the B7 lift reduction to the
+    same helper the conforming P5 path uses (no Track-B copy)."""
+    b, g0, s_ref = 1.1963, 0.1, 0.7532
+    z = np.linspace(0.0, b, 60)
+    g = g0 * np.sqrt(np.clip(1.0 - (z / b) ** 2, 0.0, None))
+    cl = cl_kj_3d(g, z, s_ref=s_ref, b_semi=b)
+    exact = 2.0 * (np.pi / 4.0) * g0 * b / s_ref
+    assert abs(cl - exact) / exact < 5e-3, (cl, exact)

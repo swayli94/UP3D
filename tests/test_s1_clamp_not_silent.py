@@ -13,9 +13,11 @@ floor >= 0.02 (docs/dev_phase_two/20260728-1640-s1-shock-bench.md 4.4).
 A clamp is an algebraic override: where it binds, the element no longer
 discretises the full-potential equation, so "the residual is zero" says nothing
 about the flow. Every driver must therefore refuse to call such a state
-converged. `solve_newton_lifting`, `solve_multivalued_newton` and
-`solve_transonic_lifting` already did; `solve_subsonic_lifting` -- the Picard
-SEED the other paths start from -- did not, and GS1.4 fixed that.
+converged. `solve_newton_lifting` and `solve_transonic_lifting` already did;
+`solve_subsonic_lifting` -- the Picard SEED the other paths start from -- did
+not, and GS1.4 fixed that. (The list also named the level-set
+`solve_multivalued_newton`; that route was abandoned by ruling D5 and deleted in
+phase 3, so it is dropped from the sentence -- the CONTRACT is unchanged.)
 
 These tests lock the contract, not a number.
 """

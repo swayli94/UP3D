@@ -105,9 +105,9 @@ reach the isolated fold solution (why G8.1 re-specced the conforming path to
 Newton locks). The quantitative medium gate needs the **LS Newton** (post-B6
 re-derivation, design_track_b.md §5.5, explicitly deferred).
 
-![B6 stabilizer story: throttle / runaway / converge](../../../../cases/demo/b6_transonic/results/stabilizer_story.png)
-![B6 transonic Cp + shock, dual-mesh vs conforming](../../../../cases/demo/b6_transonic/results/transonic_cp_shock.png)
-![B6 A/B gap vs Mach](../../../../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
+![B6 stabilizer story: throttle / runaway / converge](../../cases/demo/b6_transonic/results/stabilizer_story.png)
+![B6 transonic Cp + shock, dual-mesh vs conforming](../../cases/demo/b6_transonic/results/transonic_cp_shock.png)
+![B6 A/B gap vs Mach](../../cases/demo/b6_transonic/results/ab_gap_vs_mach.png)
 
 > **Track-B renumber 2026-07-12.** Two renumbers landed the same day: a new **B4**
 > (TE control volume) was inserted, then the half-integer IDs were regularized
@@ -153,8 +153,8 @@ meshes.** This is the concrete justification for the dual-mesh rule:
 Left: the M3 wake-free quasi-2D layer — note there is no wake line in the
 topology, only a size-field corridor. Right: the M4 wake-free ONERA M6 corridor.
 
-![M3 wake-free quasi-2D layer](../../../../cases/meshes/naca0012_wakefree_2.5d/coarse_layer.png)
-![M4 wake-free ONERA M6 wake corridor](../../../../cases/meshes/onera_m6_wakefree/coarse_wake_corridor.png)
+![M3 wake-free quasi-2D layer](../../cases/meshes/naca0012_wakefree_2.5d/coarse_layer.png)
+![M4 wake-free ONERA M6 wake corridor](../../cases/meshes/onera_m6_wakefree/coarse_wake_corridor.png)
 
 M3 coarse: 29,250 tets, corridor median edge 0.0595 vs an h_wake target of 0.06.
 M4 coarse/medium: 50,605 / 329,645 tets — **within 6–9% of the M1 counts at equal
@@ -373,7 +373,7 @@ Coarse NACA0012, M0.5, α = 2°, on **both** Track B mesh families, with the far
 radius swept over R ∈ {15, 30, 60, 120}c. Γ vs R, one panel per family, against the
 conforming reference and its ±2% B3 band:
 
-![B5 far-field domain-size study](../../../../cases/demo/b4p5_farfield/results/farfield_domain_study.png)
+![B5 far-field domain-size study](../../cases/demo/b4p5_farfield/results/farfield_domain_study.png)
 
 **Result** (M0 embedded shown; the M3 wake-free family agrees to the third digit):
 

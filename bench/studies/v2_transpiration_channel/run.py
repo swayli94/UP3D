@@ -38,14 +38,12 @@ import numpy as np
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.solve.newton import NewtonWorkspace, solve_newton_lifting
-from pyfp3d.solve.newton_ls import solve_multivalued_newton
 from pyfp3d.solve.picard import (
     solve_laplace,
     solve_subsonic,
     solve_subsonic_lifting,
 )
 from pyfp3d.viscous.transpiration import assemble_transpiration_rhs
-from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet
 
 from tests.mesh_utils import (
     cylinder_blowing_m_dot,
@@ -204,22 +202,13 @@ def gate_b():
                                       **CASE_ARGS),
          ["phi", "gamma", "residual_history"])
 
-    # leg 5: LS Newton (NACA coarse, M0.3, wall_rhs=zeros)
-    z = naca.nodes[:, 2]
-    wls = WakeLevelSet(
-        np.array([[1.0, 0.0, z.min()], [1.0, 0.0, z.max()]]),
-        direction=(1.0, 0.0, 0.0))
-    cm = CutElementMap(naca.nodes, naca.elements, wls,
-                       wall_nodes=np.unique(naca.boundary_faces["wall"]))
-    mvop = MultivaluedOperator(naca.nodes, naca.elements, cm, levelset=wls)
-    ls_args = dict(m_inf=M_SUB, alpha_deg=ALPHA, farfield="neumann",
-                   n_seed=10, n_newton_max=15)
-    _leg("GV2.1(b)", "ls_newton",
-         lambda: solve_multivalued_newton(mvop=mvop, mesh=naca, **ls_args),
-         lambda: solve_multivalued_newton(mvop=mvop, mesh=naca,
-                                          wall_rhs=np.zeros(len(naca.nodes)),
-                                          **ls_args),
-         ["phi_ext", "residual_history"])
+    # ★ leg 5 (LS Newton, GV2.1(b)) REMOVED 2026-08-10 -- phase 3 task 1,
+    # ruling D5. The ṁ=0 bit-identity property it checked is asserted on the
+    # conforming legs above (and in tests/test_v2_newton_rhs_channel.py), so
+    # the transpiration channel keeps its exactness evidence; what is lost is
+    # the check that the LS `b_base` slot carries it too, and that slot is
+    # deleted with the route. The committed GV2.1 verdict keeps the 5-leg
+    # reading as the record.
 
 
 # ---------------------------------------------------------------------------

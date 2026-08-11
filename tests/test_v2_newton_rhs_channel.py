@@ -31,9 +31,7 @@ import pytest
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.solve.newton import NewtonWorkspace, solve_newton_lifting
-from pyfp3d.solve.newton_ls import solve_multivalued_newton
 from pyfp3d.viscous.transpiration import assemble_transpiration_rhs
-from pyfp3d.wake import CutElementMap, MultivaluedOperator, WakeLevelSet
 
 REPO_ROOT = Path(__file__).parent.parent
 NACA_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
@@ -209,48 +207,13 @@ def test_newton_external_rhs_forwarded_with_workspace_guard(naca_coarse_cut,
 
 
 # ---------------------------------------------------------------------------
-# LS Newton (solve/newton_ls.py b_base slot)
+# ★ LS leg REMOVED 2026-08-10 (phase 3 task 1, ruling D5: the level-set wake route
+# is abandoned). It asserted two properties, and BOTH are already asserted on the
+# conforming path IN THIS FILE -- which is why removing it costs the viscous
+# transpiration channel no lock:
+#     test_ls_wall_rhs_zero_bit_identical -> test_newton_zero_external_rhs_bit_identical
+#     test_ls_wall_rhs_nonzero_live       -> test_newton_external_rhs_solves_consistently
+# The inventory's step 4 said to WRITE a conforming equivalent first; reading the
+# file showed it already existed, so that step was a checked premise, not work.
+# The removed leg is in phases/p1/tests/ history (git show <rev>:tests/...).
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture(scope="module")
-def ls_case():
-    mesh = read_mesh(NACA_DIR / "coarse.msh")
-    z = mesh.nodes[:, 2]
-    wls = WakeLevelSet(
-        np.array([[1.0, 0.0, z.min()], [1.0, 0.0, z.max()]]),
-        direction=(1.0, 0.0, 0.0),
-    )
-    cm = CutElementMap(mesh.nodes, mesh.elements, wls,
-                       wall_nodes=np.unique(mesh.boundary_faces["wall"]))
-    mvop = MultivaluedOperator(mesh.nodes, mesh.elements, cm, levelset=wls)
-    return mesh, mvop
-
-
-LS_ARGS = dict(m_inf=0.3, alpha_deg=2.0, farfield="neumann",
-               n_seed=10, n_newton_max=15)
-
-
-def test_ls_wall_rhs_zero_bit_identical(ls_case):
-    """GV2.1(b) LS leg: wall_rhs=zeros into the b_base slot is
-    bit-identical to the channel-absent default."""
-    mesh, mvop = ls_case
-    a = solve_multivalued_newton(mvop=mvop, mesh=mesh, **LS_ARGS)
-    b = solve_multivalued_newton(mvop=mvop, mesh=mesh,
-                                 wall_rhs=np.zeros(len(mesh.nodes)),
-                                 **LS_ARGS)
-    assert np.array_equal(a["phi_ext"], b["phi_ext"])
-    assert a["residual_history"] == b["residual_history"]
-
-
-def test_ls_wall_rhs_nonzero_live(ls_case):
-    """A nonzero wall_rhs rides b_base into the solve: shifted solution,
-    still converged."""
-    mesh, mvop = ls_case
-    rhs = _wall_load(mesh.nodes, mesh.boundary_faces["wall"], 0.005)
-    a = solve_multivalued_newton(mvop=mvop, mesh=mesh, **LS_ARGS)
-    c = solve_multivalued_newton(mvop=mvop, mesh=mesh, wall_rhs=rhs,
-                                 **LS_ARGS)
-    assert c["converged"]
-    assert c["residual_history"][-1] < 1e-8
-    assert not np.array_equal(a["phi_ext"], c["phi_ext"])
