@@ -801,6 +801,10 @@ def solve_newton_lifting(
     #: which is what makes it the only available experiment that varies capture-uniformity alone.
     #: NO new knob: the candidate set is every refresh with a defined delta.
     capture_select: bool = False,
+    #: the RECORDED control arm: score candidates by the raw |dsigma| instead of the relative one.
+    #: Registered as a control precisely because it is biased (addendum #1) -- keeping it makes the
+    #: bias documented evidence rather than a claim made in passing.
+    capture_select_abs: bool = False,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -1400,11 +1404,21 @@ def solve_newton_lifting(
             #: ★ candidate tracking. The FIRST refresh has no predecessor, so its delta is 0.0 by
             #: construction and it is NOT a candidate -- admitting it would make "smallest delta"
             #: trivially select the first refresh regardless of how unsettled it was.
-            if sigma_prev is not None and (ws.sigma_best_delta is None
-                                          or sigma_delta < ws.sigma_best_delta):
-                ws.sigma_best = ws.sigma_frozen.copy()
-                ws.sigma_best_delta = float(sigma_delta)
-                ws.sigma_best_index = int(n_sigma_refresh)
+            #: ★★ RELATIVE delta, per addendum #1 of the pre-registration, which was written after a
+            #: smoke test showed the ABSOLUTE rule is biased toward WEAK corrections: |dsigma| is
+            #: minimised by refreshes where sigma is barely acting -- i.e. the early ones, before the
+            #: shock has formed -- and it duly selected refresh 2 with sigma_min 0.98975, landing on
+            #: x_shock 0.5601 against the isentropic 0.5605. Normalising by (1 - sigma_min) makes a
+            #: barely-acting refresh score LARGE instead of small, which removes the bias without
+            #: adding a knob (1e-12 is division protection, not a calibration). `capture_select_abs`
+            #: keeps the biased rule available as the recorded control arm.
+            if sigma_prev is not None:
+                _act = max(1.0 - float(ws.ent.sigma_min), 1e-12)
+                _score = sigma_delta if capture_select_abs else sigma_delta / _act
+                if ws.sigma_best_delta is None or _score < ws.sigma_best_delta:
+                    ws.sigma_best = ws.sigma_frozen.copy()
+                    ws.sigma_best_delta = float(_score)
+                    ws.sigma_best_index = int(n_sigma_refresh)
             sigma_history.append(
                 (float(ws.ent.sigma_min), int(ws.ent.n_shock),
                  float(ws.ent.m1_max), sigma_delta, bool(ws.ent.converged)))
@@ -1595,6 +1609,7 @@ def solve_newton_lifting(
         "sigma_soft_eps": float(sigma_soft_eps),
         "sigma_soft_q": float(sigma_soft_q),
         "capture_select": bool(capture_select),
+        "capture_select_abs": bool(capture_select_abs),
         "capture_adopted_index": capture_adopted_index,
         "capture_adopted_delta": capture_adopted_delta,
         "capture_n_refresh": n_sigma_refresh,
