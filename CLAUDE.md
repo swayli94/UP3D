@@ -230,6 +230,14 @@ before registering a band, run it against these four questions:
 4. **Is the quantity being matched an INPUT or an OUTPUT?** "Restore X to its baseline" is only
    well-posed if X is something you set. `sigma_min` is a diagnostic of the CONVERGED STATE, so
    when the state moves the target moves with it.
+5. ★★ **Are the two numbers I am comparing THE SAME THING?** Added 2026-08-13 after the M6 triage
+   hit this family FOUR TIMES IN ONE ROUND: cross-PIPELINE (P14's anchor against the script's own
+   output), cross-LEVEL (a function's `levels=("coarse",)` DEFAULT against the evidence's medium),
+   cross-PROVENANCE (an 8-thread run against a 16-thread committed row) and cross-TIME (a HEAD run
+   against a reference produced before three recorded recipe changes). Before comparing, check that
+   both sides come from the same pipeline, the same level, the same thread count and the same code.
+   ★ All four were caught by a guard that STOPPED the round rather than by reading the numbers —
+   which is the argument for writing an instrument check with a hard stop into every registration.
 
 ## ★★ Prove a kernel property with an independent ORACLE, not with cases you invented
 
