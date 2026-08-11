@@ -609,6 +609,8 @@ def airfoil_surface_distribution(
     coords: np.ndarray,
     n_stations: int,
     le_cluster: float = 0.8,
+    local_window: Optional[Tuple[float, float]] = None,
+    local_factor: float = 1.0,
 ) -> np.ndarray:
     """Resample a closed airfoil polyline: CLUSTER AT THE LE, COARSEN AT THE TE.
 
@@ -628,6 +630,23 @@ def airfoil_surface_distribution(
     ⚠ This changes the wall point distribution relative to the unstructured family, which is
     generated straight from `naca0012_coordinates`. Any A/B between the families must say so:
     matching the wall DOF COUNT no longer implies matching their placement.
+
+    ★★ `local_window = (x0, x1)` with `local_factor > 1` adds LOCAL chordwise refinement inside
+    that chord band on BOTH surfaces, and is the one capability task 3 needs
+    (docs/dev_phase_three/20260811-1500-task3-refinement-paradox-prereg.md): refine ONLY the
+    shock band and leave everything else alone, so "the shock region's resolution" can be
+    separated from "the global cell count". Phase two could never run that leg -- all four of its
+    generator knobs were measured out of scope -- so it could only refine globally and could not
+    attribute the result.
+
+    The refinement is applied by warping the arclength parameter, so the station COUNT is
+    unchanged: points are taken FROM outside the window and given TO it. That is deliberate --
+    holding the count fixed means the leg cannot be confounded with a global DOF change, which is
+    the whole point of the comparison. ⚠ The corollary, stated because it is a real limitation:
+    outside the window the spacing gets COARSER, so this knob is not "window-only" in the
+    bit-identical sense G0 demands of the others; what it guarantees is a fixed count and a
+    monotone, measurable redistribution. The task-3 guard therefore checks the SIGN and the
+    magnitude of the change inside and outside, not bit-identity, and says so.
     """
     c = np.asarray(coords, dtype=np.float64)
     if np.allclose(c[0], c[-1]):
@@ -648,6 +667,23 @@ def airfoil_surface_distribution(
     u = t + a * np.sin(2.0 * np.pi * t) / (2.0 * np.pi)      # in [0, 1], clustered at u = 1/2
     #: stretch u so that u = 1/2 lands on the real LE arclength
     s = np.where(u <= 0.5, u * (s_le / 0.5), s_le + (u - 0.5) * ((1.0 - s_le) / 0.5))
+    #: ★ local chordwise refinement: warp s toward the window's arclength interval. Implemented
+    #: on the ARC parameter (not on x) so both surfaces are treated identically and the TE stays
+    #: put; `local_factor` is the density multiplier inside the window.
+    if local_window is not None and local_factor != 1.0:
+        x0, x1 = float(local_window[0]), float(local_window[1])
+        if not (x1 > x0):
+            raise ValueError(f"local_window must be increasing, got {local_window}")
+        if local_factor <= 0.0:
+            raise ValueError(f"local_factor must be > 0, got {local_factor}")
+        #: density rho(s) = 1 inside the window scaled by local_factor, 1 elsewhere; then s is
+        #: replaced by the inverse of the normalised cumulative density, evaluated on a fine grid
+        sg = np.linspace(0.0, 1.0, 20001)
+        xg = np.interp(sg, s_ref, ref[:, 0])
+        rho = np.where((xg >= x0) & (xg <= x1), local_factor, 1.0)
+        cum = np.concatenate([[0.0], np.cumsum(0.5 * (rho[1:] + rho[:-1]) * np.diff(sg))])
+        cum /= cum[-1]
+        s = np.interp(s, cum, sg)                            # more points where rho is larger
     out = np.empty((n_stations, 2), dtype=np.float64)
     out[:, 0] = np.interp(s, s_ref, ref[:, 0])
     out[:, 1] = np.interp(s, s_ref, ref[:, 1])

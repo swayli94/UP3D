@@ -447,8 +447,15 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **457 passed + 12 skipped +
-   2 xfailed, 0 failed** (2026-08-11, measured 930.97 s @8 threads under load).
+3. Full suite: `pytest tests/` — current baseline **468 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-11, measured 494.47 s @8 threads on a quiet box;
+   the 930.97 s recorded below was the same 8 threads UNDER LOAD — a 1.9x spread on
+   wall time with the same result, so quote suite walls flagged, never as a cost).
+   ★ +11 vs the 457 below = `tests/test_meshgen_structured.py` (phase 3 task 3):
+   `pyfp3d/meshgen/structured.py` had ZERO tests/ coverage — G0's bit-identical
+   single-variable knobs, the one thing route (A) actually delivered, were asserted
+   only by a bench script, i.e. on no cadence. Same gap round 2b closed for the
+   conforming wing-body transonic lock.
    ★ The drop from 538 is **phase 3 task 1: the level-set route was DELETED**
    (ruling D5) — 9 library files / **4624 lines**, `pyfp3d/wake/` gone entirely,
    `post/unified.py` collapsed onto its conforming half. Read the numbers as an
