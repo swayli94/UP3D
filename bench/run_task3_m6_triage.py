@@ -55,9 +55,14 @@ from tests.test_p8_newton import NEWTON_M6_RECIPE                   # noqa: E402
 
 CSV = os.path.join(HERE, "gate_results", "task3_m6_triage.csv")
 SEEDS = (0, 5, 12)
-LEVEL = "coarse"
-#: committed P14 coarse anchors -- guard G-R, and the source of the 0.5 % band
-P14_COARSE = (0.262778, 0.268813)
+#: ★ addendum #2: MEDIUM, not coarse. The committed gate_results/m3_budget.csv says level = medium
+#: on all four rows -- I had read the `main(levels=("coarse",))` DEFAULT instead of the EVIDENCE.
+LEVEL = "medium"
+#: ★ addendum #2: the reference is THIS pipeline's own committed ON/pressure row, not P14's anchor.
+#: P14 is a different pipeline and this script has no committed coarse row at all, so the original
+#: guard compared against something this leg never produced ("quote the one your pipeline ran").
+REF_ROW = dict(cl_p=0.276527, cl_kj=0.281179,
+               rms_LE_upper=0.235615, rms_LE_lower=0.092155)
 CL_TOL_PCT, LE_TOL_PCT = 0.5, 2.5
 LEG_GATE_S = 600.0
 
@@ -131,7 +136,10 @@ def main():
           f"threads {os.environ['NUMBA_NUM_THREADS']}\n")
 
     rows = []
-    for arm, ramp in (("A_ramp", True), ("B_direct", False)):
+    #: ★ addendum #2: arm B (direct medium) is DEFERRED -- a medium ramp is already ~515 s, close to
+    #: the 600 s per-leg gate, and a direct medium solve would likely burn 80 steps for a
+    #: RECORDED-only return. Whether to spend it is decided AFTER arm A says something.
+    for arm, ramp in (("A_ramp", True),):
         for seed in SEEDS:
             t0 = time.perf_counter()
             try:
@@ -173,16 +181,20 @@ def _read(rows):
     A = [r for r in rows if r["arm"] == "A_ramp"]
     conv = [r for r in A if r.get("converged")]
 
-    print("\n=== G-R (instrument): the seed-0 ramp leg must reproduce the committed P14 coarse ===")
+    print("\n=== G-R: the seed-0 medium leg must reproduce THIS pipeline's own committed ON/pressure row ===")
     m = [r for r in A if r["seed"] == 0 and r.get("converged")]
     if not m:
         print("  ★ seed 0 did not converge -- cannot check the instrument. STOP (kill clause 1).")
         return 1
-    d_p = 100.0 * abs(m[0]["cl_p"] - P14_COARSE[0]) / P14_COARSE[0]
-    d_k = 100.0 * abs(m[0]["cl_kj"] - P14_COARSE[1]) / P14_COARSE[1]
-    print(f"  cl_p {m[0]['cl_p']:.6f} vs {P14_COARSE[0]} = {d_p:.3f} %   "
-          f"cl_KJ {m[0]['cl_kj']:.6f} vs {P14_COARSE[1]} = {d_k:.3f} %   (tol {CL_TOL_PCT} %)")
-    if max(d_p, d_k) > CL_TOL_PCT:
+    devs = {}
+    for k, want in REF_ROW.items():
+        got = m[0].get(k)
+        devs[k] = None if got is None else 100.0 * abs(got - want) / abs(want)
+        print(f"  {k:14} {_f(got)} vs {want}  = "
+              f"{'-' if devs[k] is None else format(devs[k], '.3f') + ' %'}")
+    worst_cl = max(v for k, v in devs.items() if k.startswith("cl") and v is not None)
+    print(f"  worst cl deviation {worst_cl:.3f} %   (tol {CL_TOL_PCT} %)")
+    if worst_cl > CL_TOL_PCT:
         print("  -> ★ G-R FAIL: this is not the production path. Kill clause 1 -- stop.")
         return 1
     print("  -> G-R PASS")
