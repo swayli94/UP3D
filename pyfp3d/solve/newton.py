@@ -257,6 +257,16 @@ class NewtonWorkspace:
         self.upstream_sigma = None
         #: per-refresh post-shock SET membership, newest last, capped (record only)
         self.shock_set_history = []
+        #: ★★ capture-SELECTION state (pre-registered 20260812-2100). The freeze currently adopts
+        #: the LAST refresh, and the measured m1_max trajectory shows the last one is often the
+        #: WORST (seed 0: ... 1.49, 1.33, 1.95 -- a transient spike, frozen forever). These hold the
+        #: candidate whose |dsigma| was smallest, so the driver can adopt THAT one instead.
+        #: ★ Selection, not smoothing: the adopted array is one refresh's own output UNCHANGED, so
+        #: the correction's MAGNITUDE is untouched by construction -- averaging or relaxing would
+        #: weaken it and re-import the confound the previous round was spent removing.
+        self.sigma_best = None
+        self.sigma_best_delta = None
+        self.sigma_best_index = None
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
         self.n_st = wc.n_stations
@@ -784,6 +794,13 @@ def solve_newton_lifting(
     #: from "there was simply less correction left to be sensitive to". Inert when
     #: sigma_soft_eps = 0.
     sigma_soft_q: float = 1.0,
+    #: ★★ capture SELECTION (pre-registered 20260812-2100). False = today: the freeze keeps the LAST
+    #: refresh. True = adopt the refresh whose |dsigma| was smallest, i.e. the quietest state rather
+    #: than whichever one the budget happened to land on. It changes WHICH computed sigma is frozen
+    #: and never the sigma formula, so the correction's magnitude is untouched by construction --
+    #: which is what makes it the only available experiment that varies capture-uniformity alone.
+    #: NO new knob: the candidate set is every refresh with a defined delta.
+    capture_select: bool = False,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -995,6 +1012,9 @@ def solve_newton_lifting(
 
     sigma_history = []             # (sigma_min, n_shock, m1_max, dsigma, conv)
     n_sigma_refresh = 0
+    _capture_adopted = False
+    capture_adopted_index = None
+    capture_adopted_delta = None
     if entropy_correction:
         # GS1b.3: the seed state is isentropic (sigma_frozen is None above), so
         # build sigma from it and re-evaluate before the loop -- from here on
@@ -1340,6 +1360,15 @@ def solve_newton_lifting(
         gamma = gamma + lam * dgamma
         R_free, F, state = R_try, F_try, state_try
         merit = merit_try
+        #: ★★ the adoption point: the refresh budget has just run out, so THIS is the moment the
+        #: freeze becomes permanent. Swapping in the quietest candidate makes the residual jump once
+        #: here -- pre-registered as EXPECTED and judged by F2, not to be explained away later.
+        if (entropy_correction and capture_select and n_sigma_refresh >= _SIGMA_REFRESH_MAX
+                and not _capture_adopted and ws.sigma_best is not None):
+            ws.sigma_frozen = ws.sigma_best.copy()
+            _capture_adopted = True
+            capture_adopted_index = ws.sigma_best_index
+            capture_adopted_delta = ws.sigma_best_delta
         if entropy_correction and n_sigma_refresh < _SIGMA_REFRESH_MAX:
             # GS1b.3: refresh the frozen entropy factor from the ACCEPTED state
             # and re-evaluate, so the next step's residual, Jacobian and line
@@ -1368,6 +1397,14 @@ def solve_newton_lifting(
                            float(np.max(np.abs(ws.sigma_frozen
                                                - sigma_prev))))
             n_sigma_refresh += 1
+            #: ★ candidate tracking. The FIRST refresh has no predecessor, so its delta is 0.0 by
+            #: construction and it is NOT a candidate -- admitting it would make "smallest delta"
+            #: trivially select the first refresh regardless of how unsettled it was.
+            if sigma_prev is not None and (ws.sigma_best_delta is None
+                                          or sigma_delta < ws.sigma_best_delta):
+                ws.sigma_best = ws.sigma_frozen.copy()
+                ws.sigma_best_delta = float(sigma_delta)
+                ws.sigma_best_index = int(n_sigma_refresh)
             sigma_history.append(
                 (float(ws.ent.sigma_min), int(ws.ent.n_shock),
                  float(ws.ent.m1_max), sigma_delta, bool(ws.ent.converged)))
@@ -1557,6 +1594,10 @@ def solve_newton_lifting(
         "entropy_correction": bool(entropy_correction),
         "sigma_soft_eps": float(sigma_soft_eps),
         "sigma_soft_q": float(sigma_soft_q),
+        "capture_select": bool(capture_select),
+        "capture_adopted_index": capture_adopted_index,
+        "capture_adopted_delta": capture_adopted_delta,
+        "capture_n_refresh": n_sigma_refresh,
         "sigma_history": sigma_history,
         "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),
         "n_shock_cells": (int(ws.ent.n_shock) if entropy_correction else None),
