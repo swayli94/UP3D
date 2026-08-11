@@ -132,7 +132,7 @@ def band_rms(curves, exp, eta):
 
 
 def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
-          probe_seed=0):
+          probe_seed=0, taper_rc=0.05):
     """The P14 transonic recipe verbatim, entropy (and now the Kutta form) variable.
 
     ★ 2026-07-31: `kutta` was added after the first budget round measured its own cl
@@ -175,9 +175,15 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
         assert 'tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth", 0.05 * B_SEMI)' in _src, (
             "the production taper construction in test_p8_newton::_m6_case has changed -- this "
             "script's copy is no longer verbatim (registration R2)")
+        #: ★ `taper_rc` is the production radius as a fraction of b_semi. 0.05 IS production and is
+        #: the default, so every existing call is unchanged. Swept in the tip-gate round
+        #: (pre-registration 20260813-2100) because the taper RADIUS is the only existing knob that
+        #: changes the tip treatment's strength without touching anything else -- which makes it a
+        #: dose-response on the quantity being explained rather than a proxy for it.
         kw["newton_kw"] = dict(kw["newton_kw"],
                                tip_taper=tip_taper_factors(wc.station_z, B_SEMI,
-                                                           "vanish_smooth", 0.05 * B_SEMI))
+                                                           "vanish_smooth",
+                                                           taper_rc * B_SEMI))
     # ★ the drift guard runs on the RECIPE, before any intentional override --
     # otherwise a deliberate, recorded deviation (n_newton_max below) trips the
     # very check that exists to catch UNintended drift. It did exactly that on
@@ -206,7 +212,8 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
     return solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **kw)
 
 
-def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0):
+def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0,
+         taper_rc=0.05):
     exp = parse_experiment()
     # GV5.3's W2 experiment-side guard, kept: a station whose max Cp is not at the
     # LE would mean the side mapping is broken and every RMS below is meaningless.
@@ -228,7 +235,7 @@ def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0)
             tag = ("ON" if entropy else "OFF") + f"/{kutta}"
             t0 = time.perf_counter()
             r = solve(mc, wc, entropy, kutta, taper=taper,
-                      probe_seed=probe_seed)
+                      probe_seed=probe_seed, taper_rc=taper_rc)
             wall = time.perf_counter() - t0
             phi = np.asarray(r["phi"])
             gamma = np.atleast_1d(np.asarray(r["gamma"]))
