@@ -435,6 +435,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
   reported "still running" for a job that had finished; `pkill -f run_le5_taper_coverage` killed
   the invoking shell (exit 144) and lost the script it was writing. **Kill by PID**, and poll a
   log's completion marker rather than the process table.
+  ★★ **"Kill by PID" is not enough if you SEARCH for the PID** (2026-08-11, measured, cost one
+  shell): `PID=$(ps -eo pid,args | grep "[r]un_task3_sigma_selection.py" | awk '{print $1}')`
+  then `kill $PID` killed the invoking shell — because that shell's own argv contained the
+  pattern (the script name appeared elsewhere in the same compound command), and the `[r]`
+  bracket trick **only hides the grep process, never the parent shell**. The heredoc that was
+  supposed to apply a fix never ran. ⇒ **capture the PID at LAUNCH — `cmd & echo $! > pidfile`**
+  — and check liveness with `kill -0 $(cat pidfile)`. Never search for a PID by pattern.
 - **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
   `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
   states in one day; the third was caught only by killing a fresh run 5 minutes in.

@@ -64,6 +64,20 @@ LEVELS = ("coarse", "medium")
 #: xfail(strict=False) -- a non-strict xfail cannot detect a regression, and that
 #: one was made non-strict for an unrelated reason (thread dependence).
 SEEDS = (0, 5)
+#: ★★ A THIRD seed, opt-in via --third-seed (phase 3, 2026-08-11). Two seeds cannot see solution
+#: NON-UNIQUENESS: measured at M0.80/alpha1.25 the discrete problem has SEVERAL roots and the seed
+#: picks one, with cl_p spreading 23-32 % across {0, 5, 12} at a BIT-IDENTICAL mesh -- 8-11x the
+#: 3 % of criteria (b)/(c). Seeds 0 and 5 happen to agree on coarse (0.02-2.76 %), so the gate's
+#: own sampling is blind to it. Evidence:
+#: docs/dev_phase_three/20260811-2100-task3-nonuniqueness-verdict.md.
+#:
+#: It is OPT-IN, and that is a recorded deviation from the registration's letter (addendum #2): the
+#: default invocation must stay byte-compatible with the committed m1_gate_default.csv, which the
+#: capability boundary cites. A --third-seed run writes its own file.
+#:
+#: ★ Seed 12 is DIAGNOSTIC ONLY -- it never enters the PASS/FAIL. Letting it vote would re-spec
+#: M1, and the previous round handed M1's specification to the user.
+THIRD_SEED = 12
 
 
 def main():
@@ -93,12 +107,17 @@ def main():
     # file rather than overwriting it.
     import argparse
     ap = argparse.ArgumentParser()
+    ap.add_argument("--third-seed", action="store_true",
+                    help=f"also run n_picard_seed={THIRD_SEED} as a DIAGNOSTIC (never votes on "
+                         f"PASS/FAIL) and write to a separate CSV; two seeds cannot see solution "
+                         f"non-uniqueness")
     ap.add_argument("--density", choices=("default", "isentropic"),
                     default="default",
                     help="'default' passes no density kwarg (= production); "
                          "'isentropic' is the control leg")
     a = ap.parse_args()
     kw_density = {} if a.density == "default" else {"entropy_correction": False}
+    seeds = SEEDS + ((THIRD_SEED,) if a.third_seed else ())
     print(f"density = {a.density}"
           f"{'' if kw_density else '  (library default, no kwarg passed)'}")
     rows = []
@@ -109,7 +128,7 @@ def main():
             continue
         mc, wc = cut_wake(read_mesh(path))
         dz = float(np.ptp(mc.nodes[:, 2]))
-        for seed in SEEDS:
+        for seed in seeds:
           for C in CS:
             t0 = time.perf_counter()
             try:
@@ -183,19 +202,67 @@ def main():
     # .md is not evidence, and that was exactly the situation.
     out_dir = HERE / "gate_results"
     out_dir.mkdir(exist_ok=True)
-    out_csv = out_dir / ("m1_gate.csv" if a.density == "isentropic"
-                         else "m1_gate_default.csv")
+    #: ★ guard G3: never overwrite a committed record. m1_gate.csv's numbers are cited BY VALUE
+    #: in the capability boundary (isentropic +101.4 % / 36.1 %), so a --third-seed run -- which
+    #: has a different row count -- goes to its own file.
+    _stem = "m1_gate" if a.density == "isentropic" else "m1_gate_default"
+    out_csv = out_dir / f"{_stem}{'_3seed' if a.third_seed else ''}.csv"
     with open(out_csv, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in rows for k in r}))
         w.writeheader()
         w.writerows(rows)
 
+    _cross_seed_diagnostic(rows, seeds)
+
     overall = True
+    #: ★ SEEDS, not `seeds`: the third seed is diagnostic and must not be able to move the verdict
     for seed in SEEDS:
         overall &= _criteria([r for r in rows if r.get("n_picard_seed") == seed],
                              seed)
-    print(f"\nM1: {'PASS' if overall else 'FAIL'}")
+    print(f"\nM1: {'PASS' if overall else 'FAIL'}"
+          f"{'   (seed %d ran as a DIAGNOSTIC and did not vote)' % THIRD_SEED if a.third_seed else ''}")
     return 0 if overall else 1
+
+
+def _cross_seed_diagnostic(rows, seeds):
+    """RECORDED, never a criterion: how far apart do the seeds land on the SAME mesh?
+
+    ★ This exists because the data was already here and nothing looked at it. `_criteria` evaluates
+    each seed's (a)/(b)/(c) separately and never asks whether the seeds AGREE -- so on the committed
+    coarse rows, seed 0 and seed 5 differ by 2.76 % in cl_p at C=1.0, which is 92 % of the entire
+    3 % budget of criteria (b) and (c), and that number was never printed. Same family as the
+    project's own "a non-strict xfail cannot detect a regression": a criterion that does not look
+    at something cannot fail on it.
+
+    A spread needs TWO converged seeds or it is UNDEFINED -- reporting an under-populated spread as
+    a small one is the vacuous-PASS mistake this project has already made once.
+    """
+    print(f"\n=== cross-seed consistency at a FIXED mesh (RECORDED -- not a criterion) ===")
+    print(f"  seeds run: {list(seeds)}   (M1's verdict uses {list(SEEDS)} only)")
+    print(f"  {'level':8}{'C':>5}{'conv':>7}{'cl_p spread':>14}{'rel %':>9}"
+          f"{'x_shock spread':>16}")
+    worst = 0.0
+    for level in LEVELS:
+        for C in CS:
+            m = [r for r in rows if r.get("level") == level and r.get("C") == C]
+            good = [r for r in m if r.get("converged") and r.get("cl_p") is not None]
+            if len(good) < 2:
+                print(f"  {level:8}{C:>5}{len(good):>4}/{len(m):<2}{'UNDEFINED':>14}"
+                      f"{'-':>9}{'UNDEFINED':>16}")
+                continue
+            cl = [float(r["cl_p"]) for r in good]
+            xs = [float(r["x_shock"]) for r in good if r.get("x_shock") is not None]
+            dcl = max(cl) - min(cl)
+            rel = 100.0 * dcl / max(abs(sum(cl) / len(cl)), 1e-12)
+            worst = max(worst, rel)
+            dxs = (max(xs) - min(xs)) if len(xs) >= 2 else None
+            print(f"  {level:8}{C:>5}{len(good):>4}/{len(m):<2}{dcl:>14.6f}{rel:>9.2f}"
+                  f"{('-' if dxs is None else f'{dxs:.4f}'):>16}")
+    print(f"  worst cross-seed cl_p spread: {worst:.2f} %   "
+          f"(criteria (b) and (c) both work at 3 %)")
+    if worst > 3.0:
+        print("  ★ the seed alone exceeds the (b)/(c) budget -- at a FIXED mesh, so it is not a")
+        print("    resolution question. RECORDED: this does NOT change M1's verdict above.")
 
 
 def _criteria(rows, seed):

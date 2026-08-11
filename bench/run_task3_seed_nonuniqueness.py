@@ -119,8 +119,21 @@ def main():
     print("\n=== seed-induced spread at a FIXED mesh (this is the reading) ===")
     for tag, _, _, _ in BLOCKS:
         rs = [r for r in rows if r["block"] == tag]
-        xs = [r["x_shock"] for r in rs if r["x_shock"] is not None]
-        cls = [r["cl"] for r in rs]
+        #: ★★ DEFECT FIXED 2026-08-12: these two lines had NO `converged` filter, so the first
+        #: published run's spreads were computed over states that included CLAMPED GARBAGE (e.g. an
+        #: unstructured-coarse leg at x_shock 0.8818 with 2600/580 clamps). That inflated the
+        #: unstructured coarse x_shock spread 0.0122 -> 0.2745 (22x) and manufactured a 0.3060
+        #: spread for unstructured medium, where NOTHING converges and the spread is UNDEFINED.
+        #: The hybrid numbers were unaffected (3/3 converged there), so the round's core reading
+        #: survives -- but its "family-independent, and the unstructured family is worse" extension
+        #: was REFUTED by this fix. A spread over non-solutions is not a spread over solutions.
+        good = [r for r in rs if r["converged"]]
+        xs = [r["x_shock"] for r in good if r["x_shock"] is not None]
+        cls = [r["cl"] for r in good]
+        if len(cls) < 2:
+            print(f"  {tag:16} converged {len(good)}/{len(rs)}   spread UNDEFINED "
+                  f"(fewer than two converged seeds -- NOT 'a small spread')")
+            continue
         conv = sum(r["converged"] for r in rs)
         print(f"  {tag:16} converged {conv}/{len(rs)}   x_shock spread "
               f"{(max(xs)-min(xs)) if xs else float('nan'):.4f} c   "
