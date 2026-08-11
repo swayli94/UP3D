@@ -1,0 +1,2 @@
+arm,cl_kj,cl_p,converged,error,frozen_in_transient,m1_max,m_final,m_last,n_floored,n_limited,probe_cl,res_final,rms_LE_lower,rms_LE_upper,rms_MID_lower,rms_MID_upper,rms_TE_lower,rms_TE_upper,seed,selection_churn,sigma_min,wall_s
+A_ramp,0.2564905374540985,0.2493361359651052,False,,True,2.7329181936025515,,,1,0,,8.798778327161785e-07,0.10604346156620433,0.29532493408733784,0.04570665573744215,0.1615872476798687,0.035474614095361755,0.14857550797573066,0,False,0.41209030481184505,622.1

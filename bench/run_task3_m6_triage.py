@@ -30,9 +30,14 @@ import os
 import sys
 import time
 
-os.environ.setdefault("NUMBA_NUM_THREADS", "8")
-os.environ.setdefault("OMP_NUM_THREADS", "8")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "8")
+#: ★ addendum #3: SIXTEEN, matching run_m3_budget.py's own setdefault and therefore the provenance
+#: of the committed reference row. The first execution used 8 and compared its result against a
+#: 16-thread committed number -- a cross-provenance comparison, the third instance of that family in
+#: this round. The 8-thread arm is kept as RECORDED (its own finding: the production leg does NOT
+#: converge on M6 medium at 8 threads) in gate_results/task3_m6_triage_8t.csv.
+os.environ.setdefault("NUMBA_NUM_THREADS", "16")
+os.environ.setdefault("OMP_NUM_THREADS", "16")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "16")
 
 import numpy as np
 
@@ -53,7 +58,8 @@ from run_m3_budget import (ALPHA, B_SEMI, BANDS, ETAS, M6_NEWTON_KW, M_INF,  # n
                            band_rms, parse_experiment)
 from tests.test_p8_newton import NEWTON_M6_RECIPE                   # noqa: E402
 
-CSV = os.path.join(HERE, "gate_results", "task3_m6_triage.csv")
+CSV = os.path.join(HERE, "gate_results",
+                   f"task3_m6_triage_{os.environ['NUMBA_NUM_THREADS']}t.csv")
 SEEDS = (0, 5, 12)
 #: ★ addendum #2: MEDIUM, not coarse. The committed gate_results/m3_budget.csv says level = medium
 #: on all four rows -- I had read the `main(levels=("coarse",))` DEFAULT instead of the EVIDENCE.
