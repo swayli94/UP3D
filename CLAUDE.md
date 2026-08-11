@@ -326,7 +326,9 @@ consequence, measured: the first full gated run since the 2026-08-04 round-tip s
 invisible by construction — the ungated suite stays green while capability locks rot.
 
 So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
-**measured 2026-08-11 at 891 s = 14.8 min, 5/5 green** (was 644 s / 7 groups: three
+**measured 2026-08-11 TWICE at the same 8 threads on the same box: 891 s and
+564 s, both 5/5 green** (keep both: a 1.6x spread with an identical result is the
+same wall-clock-is-a-calibration lesson as G8.2's 5.4x) (was 644 s / 7 groups: three
 level-set locks left with the route in phase 3, and the conforming wing-body transonic
 ceiling lock was added — a capability lock kept OUT of this tier would run only in the
 2 h gated set, i.e. 6x less often than the tier it belongs to) — ★ and that cost holds ONLY with the thread caps

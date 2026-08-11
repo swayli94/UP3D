@@ -661,8 +661,11 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
 │                           #   activity, split by which phase invented them. Merged here by
 │                           #   user ruling. The criterion is NOT old-vs-new, it is WILL IT BE
 │                           #   RUN AGAIN. See bench/README.md.
-├── run_capability_locks.py  # ★ the FAST capability tier, ritual step 0: 5 groups, 891 s
-│                           #   measured 2026-08-11 (the 482 s here was pre-wing-body-lock).
+├── run_capability_locks.py  # ★ the FAST capability tier, ritual step 0: 5 groups, measured
+│                           #   TWICE on 2026-08-11 at the same 8 threads on the same box:
+│                           #   891 s and 564 s, both 5/5 green. Keep both -- a 1.6x spread with
+│                           #   an identical result is the standing lesson that a wall clock is a
+│                           #   CALIBRATION of the machine, not a reading of the solver.
 │                           #   Pins its own thread caps (one lock asserts a wall clock) and
 │                           #   prints WHAT IT DOES NOT COVER every run.
 ├── run_bench.py             # GS0.3 per-round drift detection vs baseline_2026-07-28.csv
