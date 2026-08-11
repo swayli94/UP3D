@@ -53,7 +53,7 @@ def build(level: str):
         h_wall_normal=p["h_wall_normal"], growth=GROWTH)
     mesh = extrude_single_layer(pts, tris, edges, dz=p["dz"],
                                name=f"cylinder_hex_{level}")
-    return mesh, info
+    return mesh, info, (pts, tris, edges)
 
 
 def wall_facet_normal_error(mesh) -> dict:
@@ -75,6 +75,33 @@ def wall_facet_normal_error(mesh) -> dict:
                 normal_err_mean_deg=float(ang.mean()))
 
 
+def write_inspection_png(path, points2d, triangles, edge_groups, level, r_far):
+    """Headless artifact (hard rule: every visual gate needs one; matplotlib Agg).
+
+    ★ Added 2026-08-11 after the user pointed out this family shipped WITHOUT one while every
+    sibling family has its `*_layer.png`. Two panels: the full domain, and a near-wall zoom --
+    the zoom is the one that matters here, because the whole claim of route (A) is about the
+    ORTHOGONAL graded near-wall layer, and that is invisible at domain scale.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 6))
+    colors = {"wall": "tab:red", "farfield": "tab:blue"}
+    for ax, lim in zip(axes, [r_far * 1.05, 1.35]):
+        ax.triplot(points2d[:, 0], points2d[:, 1], triangles,
+                   linewidth=0.25, color="0.6")
+        for tag, edges in edge_groups.items():
+            for seg in points2d[np.asarray(edges)]:
+                ax.plot(seg[:, 0], seg[:, 1], color=colors.get(tag, "k"), linewidth=1.2)
+        ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim); ax.set_aspect("equal")
+    axes[0].set_title(f"cylinder_hex_2.5d {level}: structured O-grid + tags")
+    axes[1].set_title("near-wall zoom -- the orthogonal graded layer (wall=red)")
+    fig.savefig(path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--level", action="append", choices=sorted(LEVELS))
@@ -82,7 +109,7 @@ def main():
     a = ap.parse_args()
     levels = sorted(LEVELS) if a.all else (a.level or ["coarse", "medium"])
     for level in levels:
-        mesh, info = build(level)
+        mesh, info, planar = build(level)
         path = OUT_DIR / f"{level}.msh"
         write_mesh(mesh, path)
         st = mesh_stats(mesh)
@@ -99,6 +126,8 @@ def main():
         row.update(wall_facet_normal_error(mesh))
         row.update({f"stats_{k}": v for k, v in st.items()
                     if isinstance(v, (int, float))})
+        write_inspection_png(OUT_DIR / f"{level}_layer.png", planar[0], planar[1],
+                             planar[2], level, R_FAR)
         with open(OUT_DIR / f"{level}_stats.csv", "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(row)); w.writeheader(); w.writerow(row)
         print(f"  {level:7} n_theta {info['n_theta']:>4} n_radial {info['n_radial']:>3} "
