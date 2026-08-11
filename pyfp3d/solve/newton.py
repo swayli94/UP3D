@@ -251,6 +251,8 @@ class NewtonWorkspace:
         self.ent = EntropyOperator(self.op.n_tets)
         self.sigma_frozen = None
         self.sigma_converged = True
+        #: the donor map the last sigma refresh used (record only -- see refresh_sigma)
+        self.upstream_sigma = None
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
         self.n_st = wc.n_stations
@@ -494,6 +496,15 @@ class NewtonWorkspace:
         # docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
         sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air,
                              lim=state["lim"])
+        #: ★ RECORD ONLY -- no switch, no numerical effect (one int64 copy). The map this refresh
+        #: actually used cannot be recovered afterwards: a FROZEN step uses the freeze's map while
+        #: an unfrozen one uses the live walk's, and the docstring above is explicit that sigma and
+        #: the flux must share their notion of "upstream". So recomputing it later would answer a
+        #: question about a DIFFERENT map. Recording it is the same discipline the project already
+        #: imposes on the side-field density source: every consumer of that path must state and
+        #: record where its input came from. Consumed by
+        #: bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
+        self.upstream_sigma = np.asarray(upstream).copy()
         self.sigma_frozen = sig.copy()
         self.sigma_converged = self.ent.converged
         return self.ent.converged
