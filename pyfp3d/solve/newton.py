@@ -192,7 +192,8 @@ class NewtonWorkspace:
                  farfield_spanwise_gamma: bool = False,
                  tip_taper: Optional[np.ndarray] = None,
                  kutta_estimator: str = "probe",
-                 external_rhs: Optional[np.ndarray] = None):
+                 external_rhs: Optional[np.ndarray] = None,
+                 sigma_soft_eps: float = 0.0):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -248,7 +249,7 @@ class NewtonWorkspace:
         # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
         # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
         # unlike the piecewise-constant upstream selection.
-        self.ent = EntropyOperator(self.op.n_tets)
+        self.ent = EntropyOperator(self.op.n_tets, soft_eps=sigma_soft_eps)
         self.sigma_frozen = None
         self.sigma_converged = True
         #: the donor map the last sigma refresh used (record only -- see refresh_sigma)
@@ -768,6 +769,14 @@ def solve_newton_lifting(
     #: stays because low-subsonic work may legitimately want it off and
     #: because it is the tool for ON/OFF comparisons.
     entropy_correction: bool = True,
+    #: ★★ Part 3 of the sigma-freeze round (pre-registered addendum #1 of
+    #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md). Width, in M^2 units, of a
+    #: CONTINUOUS ramp replacing the post-shock membership test's two hard switches -- the measured
+    #: source of the selection limit cycle (a cell on the sonic line flips on an infinitesimal phi
+    #: change while its factor JUMPS by 1 - sigma_RH). 0.0 = the hard test = today, BIT-IDENTICAL.
+    #: Shaped on the precedent in the same kernel family: the artificial-density switch has always
+    #: been a ramp (m_crit), and only this test was hard.
+    sigma_soft_eps: float = 0.0,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -891,7 +900,8 @@ def solve_newton_lifting(
                              vortex_center, farfield_spanwise_gamma,
                              tip_taper=tip_taper,
                              kutta_estimator=kutta_estimator,
-                             external_rhs=external_rhs)
+                             external_rhs=external_rhs,
+                             sigma_soft_eps=sigma_soft_eps)
     elif ws.kutta_estimator != kutta_estimator:
         raise ValueError(
             f"workspace was built with kutta_estimator="
@@ -1537,6 +1547,7 @@ def solve_newton_lifting(
         "clamped": bool(state["n_limited"] > 0 or state["n_floored"] > 0),
         # GS1b.3 entropy-correction diagnostics (all None/empty when off)
         "entropy_correction": bool(entropy_correction),
+        "sigma_soft_eps": float(sigma_soft_eps),
         "sigma_history": sigma_history,
         "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),
         "n_shock_cells": (int(ws.ent.n_shock) if entropy_correction else None),

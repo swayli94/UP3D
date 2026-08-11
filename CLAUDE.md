@@ -456,11 +456,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **474 passed + 12 skipped +
-   2 xfailed, 0 failed** (2026-08-12): the full suite measured **468 @469.74 s @8 threads**,
-   plus the **6** `tests/test_s1b_entropy.py::TestSigmaFreezeReport` asserts measured in
-   isolation — they are pure-Python read-outs over a synthetic history, non-interacting
-   (the same bookkeeping the G1.6 re-spec used for its +3).
+3. Full suite: `pytest tests/` — current baseline **479 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-12) = **474 measured in full @478.40 s @8 threads** plus the
+   **5** `tests/test_s1b_entropy.py::TestSoftMembership` asserts measured in isolation
+   (pure kernel calls on a two-element chain, non-interacting — the bookkeeping the G1.6
+   re-spec used). ★ The 474 itself had been carried as 468 + 6 by arithmetic and is now
+   measured directly, which is why it is quoted as a measurement here.
    ★ Earlier the same day it went 468 → 472 → 468 and that is
    an account closing, not churn: the +4 were the TEMPORARY `sigma_scale` instrument's
    locks, and they were deleted WITH the instrument at its registered expiry

@@ -625,3 +625,58 @@ class TestSigmaFreezeReport:
         r = _sigma_freeze_report(_hist(n_shocks=[74], deltas=[0.9]))
         assert r["n_refresh"] == 1
         assert r["frozen_in_transient"] is False and r["selection_churn"] is False
+
+
+# --- the soft post-shock membership ramp (phase 3 Part 3, 2026-08-12) --------------------------
+# The measured reason it exists: the membership test was a HARD switch, so a cell on the sonic line
+# flipped on an infinitesimal change in phi while its factor JUMPED by 1 - sigma_RH(M1). max|dsigma|
+# pinned at exactly that jump, periods 2 to 5, and with the refresh cap removed 0 of 9 legs
+# converged. The artificial-density switch next door has always been a ramp (m_crit); only this test
+# was hard. Verdict: docs/dev_phase_three/20260812-1500-soft-membership-verdict.md.
+
+def _pair(m_donor, m_self, m_inf=0.8):
+    """Donor -> self, one hop. Returns (q2, upstream) for a two-element chain."""
+    q2 = np.array([float(q2_at_mach(m_donor, m_inf)), float(q2_at_mach(m_self, m_inf))])
+    return q2, np.array([0, 1 - 1])  # element 1's donor is element 0; element 0 is its own root
+
+
+class TestSoftMembership:
+    def test_soft_eps_zero_is_bit_identical(self):
+        """★ BY CONSTRUCTION via the explicit short-circuit, not because the algebra is exact:
+        `1 - 1.0*(1 - s)` is NOT bit-identical to `s` in floating point, so a branchless blend
+        would have moved out-of-band cells at the DEFAULT setting."""
+        q2, up = _pair(1.30, 0.80)
+        hard = EntropyOperator(2).sigma(q2, up, 0.8).copy()
+        soft0 = EntropyOperator(2, soft_eps=0.0).sigma(q2, up, 0.8).copy()
+        assert np.array_equal(hard, soft0)
+        assert hard.min() < 1.0, "premise: this pair must actually be charged"
+
+    def test_deep_inside_the_band_reproduces_the_hard_answer_exactly(self):
+        """Both endpoints must agree with the hard switch, or the ramp is a different model rather
+        than a smoothing of the same one. Donor well supersonic and self well subsonic."""
+        q2, up = _pair(1.40, 0.70)
+        hard = EntropyOperator(2).sigma(q2, up, 0.8).copy()
+        soft = EntropyOperator(2, soft_eps=0.05).sigma(q2, up, 0.8).copy()
+        assert np.array_equal(hard, soft), "w_u = w_e = 1 must take the short-circuit"
+
+    def test_outside_the_band_is_exactly_one_on_both_sides(self):
+        for m_donor, m_self in ((0.90, 0.80), (1.30, 1.20)):
+            q2, up = _pair(m_donor, m_self)
+            soft = EntropyOperator(2, soft_eps=0.05).sigma(q2, up, 0.8).copy()
+            assert np.all(soft == 1.0), f"donor {m_donor} self {m_self} should not be charged"
+
+    def test_inside_the_band_the_charge_is_partial_and_monotone_in_eps(self):
+        """A cell just barely subsonic gets a PARTIAL charge, and a wider band means a smaller
+        weight for the same cell -- which is the whole point: no jump."""
+        #: self at M^2 = 1 - 0.01 -> inside a 0.05 band, outside a 0.005 band
+        m_self = float(np.sqrt(0.99))
+        q2, up = _pair(1.40, m_self)
+        hard = EntropyOperator(2).sigma(q2, up, 0.8).copy().min()
+        s_narrow = EntropyOperator(2, soft_eps=0.02).sigma(q2, up, 0.8).copy().min()
+        s_wide = EntropyOperator(2, soft_eps=0.10).sigma(q2, up, 0.8).copy().min()
+        assert hard < s_narrow < 1.0, "the hard switch charges FULLY; the narrow band partially"
+        assert s_narrow < s_wide < 1.0, "a wider band gives this cell a smaller weight"
+
+    def test_negative_soft_eps_raises(self):
+        with pytest.raises(ValueError, match="soft_eps"):
+            EntropyOperator(2, soft_eps=-0.01)
