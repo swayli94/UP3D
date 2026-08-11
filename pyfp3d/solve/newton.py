@@ -253,6 +253,8 @@ class NewtonWorkspace:
         self.sigma_converged = True
         #: the donor map the last sigma refresh used (record only -- see refresh_sigma)
         self.upstream_sigma = None
+        #: per-refresh post-shock SET membership, newest last, capped (record only)
+        self.shock_set_history = []
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
         self.n_st = wc.n_stations
@@ -505,6 +507,14 @@ class NewtonWorkspace:
         #: record where its input came from. Consumed by
         #: bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
         self.upstream_sigma = np.asarray(upstream).copy()
+        #: ★ RECORD ONLY, BOUNDED. The post-shock SET is the object the freeze exists to pin, so
+        #: "which cells flip in and out" is the primary datum for diagnosing selection churn --
+        #: and `sigma_history` only carries the COUNT. Bounded at 128 entries because a Mach ramp
+        #: reuses one workspace across levels and an unbounded list would grow with the ramp.
+        #: Consumed by bench/run_task3_sigma_freeze.py (pre-registration 20260812-1100).
+        self.shock_set_history.append(np.flatnonzero(self.ent._m1 > 0.0))
+        if len(self.shock_set_history) > 128:
+            del self.shock_set_history[0]
         self.sigma_frozen = sig.copy()
         self.sigma_converged = self.ent.converged
         return self.ent.converged
@@ -604,6 +614,56 @@ def _ew_forcing(r_norm, r_norm_prev, eta_prev, eta0=1e-2, gamma_ew=0.9,
 #: permanent default-off knobs. 5 is the pre-2026-08-02 default, i.e. the value every
 #: committed pre-flip result was produced with.
 _SEED_FALLBACK = 5
+
+
+#: threshold for "sigma was still moving when it was frozen". FIXED IN ADVANCE by the
+#: pre-registration at 1e-3, on this reasoning: the measured selection churn pins max|dsigma| at
+#: 1.0e-2 to 6.7e-2 (one cell's on/off jump), while a settled tail should drive it to zero, so 1e-3
+#: sits about a decade below the churn and well above the settled floor. ★ It is a CALIBRATION and
+#: is treated as one: the raw value is always reported next to the flag.
+_SIGMA_DELTA_SETTLED = 1e-3
+#: churn window and the maximum number of distinct post-shock counts that still reads as "a small
+#: recurring set". Both fixed in advance.
+_CHURN_WINDOW, _CHURN_MAX_DISTINCT = 10, 3
+
+
+def _sigma_freeze_report(sigma_history):
+    """Read the two sigma-freeze signatures off the history the driver already collects.
+
+    Pure read-out: it performs no measurement of its own and moves no number. `sigma_history`
+    entries are (sigma_min, n_shock, m1_max, sigma_delta, transport_converged).
+    """
+    out = dict(n_refresh=len(sigma_history), last_sigma_delta=None, tail_n_shock=None,
+               churn_period=None, frozen_in_transient=False, selection_churn=False,
+               tau_settled=_SIGMA_DELTA_SETTLED)
+    if not sigma_history:
+        return out
+    tail = sigma_history[-_CHURN_WINDOW:]
+    deltas = [float(h[3]) for h in tail]
+    counts = [int(h[1]) for h in tail]
+    out["last_sigma_delta"] = deltas[-1]
+    out["tail_n_shock"] = ";".join(map(str, counts))
+
+    #: (P-A) still moving when pinned. The first refresh has no predecessor, so a single-refresh
+    #: history cannot say anything -- reported as False with n_refresh so a caller can tell the
+    #: difference between "settled" and "unknown".
+    if len(sigma_history) >= 2:
+        out["frozen_in_transient"] = bool(deltas[-1] > _SIGMA_DELTA_SETTLED)
+
+    #: (P-B) the SET is flipping: a small recurring value set that actually moves, with the delta
+    #: not decaying. ★ All four together -- "it looks like it oscillates" is not a criterion.
+    if len(tail) >= 4:
+        distinct = sorted(set(counts))
+        small = len(distinct) <= _CHURN_MAX_DISTINCT and len(counts) > len(distinct)
+        moving = len(distinct) > 1
+        not_decaying = min(deltas) > 1e-8 and deltas[-1] >= 0.1 * max(deltas)
+        out["selection_churn"] = bool(small and moving and not_decaying)
+        for p in range(1, 6):
+            if len(counts) > p and all(counts[i] == counts[i - p]
+                                       for i in range(p, len(counts))):
+                out["churn_period"] = p
+                break
+    return out
 
 
 def solve_newton_lifting(
@@ -1414,6 +1474,37 @@ def solve_newton_lifting(
                      "first_n_floored": int(state["n_floored"])}
     else:
         _fallback = {"fired": False, "accepted": False, "seed": None}
+    #: ================= sigma-freeze honesty report (phase 3, 2026-08-12) =================
+    #: ★ Two SEPARATE signatures, deliberately not merged into one index: they are two different
+    #: diseases wanting OPPOSITE treatments, and merging them is how a mixture gets correlated
+    #: against a single number (the failure that killed five hypotheses in one phase-two day).
+    #:
+    #:   frozen_in_transient  sigma was pinned while it was still MOVING -- _SIGMA_REFRESH_MAX
+    #:                        ran out before the field settled. Measured consequence: the answer
+    #:                        inherits a dependence on where the iteration happened to be, worth
+    #:                        32 % in cl across Picard seeds at M0.80/alpha1.25.
+    #:   selection_churn      the post-shock SET is flipping. MEASURED with the cap removed:
+    #:                        periods 2/3/4/5 on 5 of 9 legs, with max|dsigma| PINNED at a
+    #:                        constant equal to one cell's on/off jump (1.55e-2 <-> a cell at
+    #:                        M1 1.27), and 0 of 9 legs converge. So the freeze is load-bearing.
+    #:
+    #: ★ This REPORTS; it does not refuse. Promoting it to a refusal (like
+    #: sigma_transport_not_converged) is a CONTRACT change that could turn committed capability
+    #: anchors red, so the trigger rate on those anchors is measured first and the promotion is
+    #: the user's call. Pre-registration: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md.
+    #: ★ tau is a CALIBRATION, not a guarantee (the EW forcing / taper r_c / descent10 lesson), so
+    #: the raw last delta is reported alongside the flag and the verdict reports sensitivity.
+    _sig_report = _sigma_freeze_report(sigma_history)
+    if _sig_report["frozen_in_transient"] or _sig_report["selection_churn"]:
+        _msg = ", ".join(k for k in ("frozen_in_transient", "selection_churn")
+                         if _sig_report[k])
+        print(f"  [pyfp3d] sigma-freeze WARNING: {_msg}  "
+              f"(last |dsigma| {_sig_report['last_sigma_delta']}, "
+              f"tail n_shock {_sig_report['tail_n_shock']}, "
+              f"period {_sig_report['churn_period']}) -- the entropy correction riding this "
+              f"answer was frozen at a state the field has since left; see result["
+              f"'sigma_freeze_report']")
+
     return {
         "seed_fallback": _fallback,
         "phi": state["phi_cut"],
@@ -1432,6 +1523,7 @@ def solve_newton_lifting(
         "froze": frozen is not None,
         "n_freeze_refresh": n_freeze_refresh,
         "residual_unfrozen": residual_unfrozen,
+        "sigma_freeze_report": _sig_report,
         "n_assignment_stale": n_assignment_stale,
         "assignment_cycle": assignment_cycle,
         "n_freeze_reverts": n_freeze_reverts,

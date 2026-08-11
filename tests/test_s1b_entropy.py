@@ -555,3 +555,73 @@ def test_mcap_the_mechanism_itself_is_locked():
     guarded = EntropyOperator(3).sigma(
         q2_b, up_b, 0.8, lim=np.array([False, True, True])).copy()
     assert guarded.min() == 1.0
+
+
+# --- the sigma-freeze honesty report (phase 3, 2026-08-12) -------------------------------------
+# ★ These lock the round's DELIVERABLE. `_sigma_freeze_report` is a pure read-out over the history
+# the driver already collects, so it is testable without a solve -- and a deliverable with no test
+# is the debt this project has now paid for twice (the conforming wing-body lock, and structured.py's
+# zero coverage). The four-part churn test in particular must stay four-part: "it looks like it
+# oscillates" is not a criterion, and the project has already published a conclusion off a period-3
+# cycle that fooled a hand-picked threshold.
+
+def _hist(sigma_mins=None, n_shocks=None, deltas=None):
+    """Build a sigma_history: entries are (sigma_min, n_shock, m1_max, sigma_delta, converged)."""
+    n = len(n_shocks)
+    sigma_mins = sigma_mins or [0.98] * n
+    return [(sigma_mins[i], n_shocks[i], 1.3, deltas[i], True) for i in range(n)]
+
+
+class TestSigmaFreezeReport:
+    def test_settled_tail_triggers_nothing(self):
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[74] * 10, deltas=[1e-2, 5e-3, 1e-3, 3e-4, 1e-4,
+                                              3e-5, 1e-5, 3e-6, 1e-6, 1e-9])
+        r = _sigma_freeze_report(h)
+        assert r["frozen_in_transient"] is False, "a decayed last delta is not a transient freeze"
+        assert r["selection_churn"] is False, "a CONSTANT n_shock is not churn"
+
+    def test_still_moving_when_frozen_is_flagged(self):
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[74] * 10, deltas=[1e-2] * 9 + [0.53])
+        r = _sigma_freeze_report(h)
+        assert r["frozen_in_transient"] is True
+        assert r["last_sigma_delta"] == pytest.approx(0.53)
+
+    def test_period_2_churn_is_flagged_with_its_period(self):
+        """The measured hybrid signature: n_shock alternating 148/154 with a PINNED delta."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[148, 154] * 5, deltas=[1.02e-2] * 10)
+        r = _sigma_freeze_report(h)
+        assert r["selection_churn"] is True
+        assert r["churn_period"] == 2
+
+    def test_period_3_churn_is_flagged_and_its_period_reported(self):
+        """The comment's own condition reproduced: 75;74;74 repeating, delta pinned at 1.55e-2.
+
+        ★ The period must come out 3, not 2 -- the project lost a published conclusion to a
+        period-3 cycle whose descent ratio landed on the wrong side of a hand-picked threshold."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[75, 74, 74] * 4, deltas=[1.55e-2] * 12)
+        r = _sigma_freeze_report(h)
+        assert r["selection_churn"] is True
+        assert r["churn_period"] == 3
+
+    def test_a_decaying_delta_is_not_churn_even_while_the_set_moves(self):
+        """★ The four conditions are an AND. A set that still moves while the correction is
+        converging is a tail transient, not a limit cycle -- flagging it would make the warning
+        useless by firing on healthy solves."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[148, 154] * 5,
+                  deltas=[1e-2, 5e-3, 2e-3, 1e-3, 5e-4, 2e-4, 1e-4, 5e-5, 2e-5, 1e-9])
+        r = _sigma_freeze_report(h)
+        assert r["selection_churn"] is False
+
+    def test_short_or_empty_history_says_unknown_rather_than_clean(self):
+        """A single refresh has no predecessor, so it cannot say 'settled'. The count is reported
+        so a caller can tell "quiet" from "could not know" -- the vacuous-PASS lesson."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        assert _sigma_freeze_report([])["n_refresh"] == 0
+        r = _sigma_freeze_report(_hist(n_shocks=[74], deltas=[0.9]))
+        assert r["n_refresh"] == 1
+        assert r["frozen_in_transient"] is False and r["selection_churn"] is False
