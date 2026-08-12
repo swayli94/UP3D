@@ -51,8 +51,14 @@ INVISCID_CSV = os.path.join(HERE, "gate_results", "task3_selfconvergence.csv")
 #: the same leg as this phase's rounds
 M_INF, ALPHA = 0.8395, 3.06
 RE_MAC, X_TR, TIP_FRAC = 11.72e6, 0.05, 0.05
-LEVELS = (("S2", 0.0300, "rnd_0.03_0.015_0.015_3.6.msh"),
-          ("S0", 0.0600, "rnd_0.06_0.03_0.03_7.2.msh"))
+#: ★ 20260816-0200 round: S2 then S4 in ONE process so the two wall clocks share load and threads
+#: (wall clock is a calibration -- the project has recorded a 5.4x spread on identical physics).
+#: S0 is carried from the previous round's committed CSV and labelled cross-run.
+LEVELS = tuple(
+    x for x in (("S2", 0.0300, "rnd_0.03_0.015_0.015_3.6.msh"),
+                ("S4", 0.0150, "rnd_0.015_0.0075_0.0075_1.8.msh"),
+                ("S0", 0.0600, "rnd_0.06_0.03_0.03_7.2.msh"))
+    if x[0] in os.environ.get("PYFP3D_S4_LEVELS", "S2,S4").split(","))
 #: phase-one values, quoted as ORDER-OF-MAGNITUDE references only
 P1_REF, P2_REF = 9.0, 0.072
 P1_BAND, P2_MAX = (4.0, 20.0), 0.15
@@ -76,6 +82,10 @@ def main():
     print(f"load average: {os.getloadavg()}")
     print("★ G-U: crossflow ratio read from bench/studies/v5_m6_bridge/run.py:235-247 --")
     print("   live = ~tip;  a = max|U[live,1]|;  b = max|U[live,2]|;  tip: z > z_tip*(1-0.05)\n")
+    la0 = os.getloadavg()
+    #: ★ G-R is built on NON-TIMING quantities: wall clock is not reproducible (5.4x recorded),
+    #: so the chain of custody uses S2's surface node count and P2 ratio instead.
+    GR_S2 = dict(n_node_surf=3557, p2_ratio=0.1471)
     rows, t_all = [], time.perf_counter()
 
     for tag, h, mesh_name in LEVELS:
@@ -161,6 +171,23 @@ def main():
                          n_tip_masked=int(tip.sum())))
         print()
 
+    la1 = os.getloadavg()
+    print(f"★ G-L load average: before {la0} -> after {la1}")
+    lr = max(la1[0], 1e-9) / max(la0[0], 1e-9)
+    if lr > 2.0 or lr < 0.5:
+        print("  ★ G-L: load moved by more than 2x -- TIMINGS POLLUTED, the trend is RECORDED "
+              "only, not judged (kill clause 4).")
+    s2 = next((r for r in rows if r["level"] == "S2" and r.get("ibl_ok")), None)
+    if s2 is not None:
+        okn = s2["n_node_surf"] == GR_S2["n_node_surf"]
+        okp = abs(s2["p2_ratio"] - GR_S2["p2_ratio"]) <= 5e-5
+        print(f"★ G-R (non-timing): S2 surface nodes {s2['n_node_surf']} vs "
+              f"{GR_S2['n_node_surf']} / P2 {s2['p2_ratio']:.4f} vs {GR_S2['p2_ratio']} -> "
+              f"{'PASS' if okn and okp else chr(9733) + ' FAIL'}")
+        if not (okn and okp):
+            print("  -> STOP: not the same leg (kill clause 3).")
+            _write(rows)
+            return 1
     _write(rows)
     ok = [r for r in rows if r.get("ibl_ok")]
     if not ok:
