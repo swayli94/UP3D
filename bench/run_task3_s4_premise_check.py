@@ -57,17 +57,32 @@ RE_MAC, X_TR, TIP_FRAC = 11.72e6, 0.05, 0.05
 LEVELS = tuple(
     x for x in (("S2", 0.0300, "rnd_0.03_0.015_0.015_3.6.msh"),
                 ("S4", 0.0150, "rnd_0.015_0.0075_0.0075_1.8.msh"),
-                ("S0", 0.0600, "rnd_0.06_0.03_0.03_7.2.msh"))
-    if x[0] in os.environ.get("PYFP3D_S4_LEVELS", "S2,S4").split(","))
+                ("S0", 0.0600, "rnd_0.06_0.03_0.03_7.2.msh"),
+                #: ★ 20260816-0600: the REPEAT leg. G-L2 replaces the defective load proxy by
+                #: measuring the property it was for -- repeatability -- with S4 sandwiched
+                #: between two S2 legs in ONE process.
+                ("S2r", 0.0300, "rnd_0.03_0.015_0.015_3.6.msh"))
+    if x[0] in os.environ.get("PYFP3D_S4_LEVELS", "S2,S4,S2r").split(","))
 #: phase-one values, quoted as ORDER-OF-MAGNITUDE references only
 P1_REF, P2_REF = 9.0, 0.072
 P1_BAND, P2_MAX = (4.0, 20.0), 0.15
-TOTAL_GATE_S = 900.0
+#: ★ DEFECT FIXED 20260816: the registration for the repeatability round set this to 2400 s, but the
+#: constant was left at 900 from the first premise round -- so the REPEAT leg (S2r) was skipped by my
+#: own stale gate and G-L2 could not be evaluated. Implementation-versus-registration mismatch, mine.
+TOTAL_GATE_S = 2400.0
 
 
 def inviscid_wall(tag):
     """G-P: the inviscid wall clock must come from THIS phase's own committed CSV, with the path
-    printed. Phase one's 115 s is cross-time and cross-pipeline and may not substitute."""
+    printed. Phase one's 115 s is cross-time and cross-pipeline and may not substitute.
+
+    ★ DEFECT FIXED 20260816 (the SECOND self-inflicted blocker in this round, both in the
+    report/instrument layer -- the project's own lesson is to guard report code the way solver code is
+    guarded): the repeat leg is S2 BY CONSTRUCTION, so its inviscid reference is S2's row. The phi path
+    already stripped the trailing 'r'; this lookup did not, so the leg died on kill clause 3 after 17
+    minutes of compute.
+    """
+    tag = tag.rstrip("r")
     with open(INVISCID_CSV) as fh:
         for r in csv.DictReader(fh):
             if r["leg"] == tag:
@@ -92,7 +107,8 @@ def main():
         if time.perf_counter() - t_all > TOTAL_GATE_S:
             print(f"★ total gate exceeded before {tag} (kill clause 4)")
             break
-        ppath = os.path.join(FB.SCRATCH, f"phi_{tag}.npz")
+        #: ★ the repeat leg is S2 by construction -- same phi, same mesh, same knobs
+        ppath = os.path.join(FB.SCRATCH, f"phi_{tag.rstrip(chr(114))}.npz")
         mpath = os.path.join(FB.SCRATCH, mesh_name)
         if not (os.path.exists(ppath) and os.path.exists(mpath)):
             print(f"★ {tag}: phi or mesh cache missing -- STOP (kill clause 1; no re-solve)")
@@ -157,6 +173,13 @@ def main():
         print(f"     pointwise |B|/|A| median {np.median(pw):.4f}  p90 {np.percentile(pw, 90):.4f}"
               f"  max {pw.max():.4f}")
 
+        #: ★ CACHE BEFORE YOU REPORT: last round did not store U, which is exactly why the
+        #: B-field question could not be answered without re-running. Columns per the G-U read:
+        #: 1 = A (streamwise), 2 = B (crossflow).
+        upath = os.path.join(FB.SCRATCH, f"U_{tag}.npz")
+        np.savez(upath, U=U, xyz=sm.xyz, tip=tip)
+        print(f"  G-cache: U written to {upath.split(chr(47))[-1]}  U {U.shape}")
+
         #: --- P1: the cost ratio -----------------------------------------------------------------
         p1 = ibl_s / inv_s
         print(f"  P1 cost: one IBL {ibl_s:.1f} s / inviscid {inv_s:.1f} s = {p1:.2f}x   "
@@ -172,11 +195,23 @@ def main():
         print()
 
     la1 = os.getloadavg()
-    print(f"★ G-L load average: before {la0} -> after {la1}")
-    lr = max(la1[0], 1e-9) / max(la0[0], 1e-9)
-    if lr > 2.0 or lr < 0.5:
-        print("  ★ G-L: load moved by more than 2x -- TIMINGS POLLUTED, the trend is RECORDED "
-              "only, not judged (kill clause 4).")
+    #: ★★ G-L2 REPLACES G-L. The old guard read load average, which INCLUDES this process, so it
+    #: measured its own effect and could never pass a compute-heavy round (defect #8, the third
+    #: self-reference this session). The new guard measures the property the old one was for --
+    #: repeatability -- by comparing the two S2 legs that sandwich S4. It reads only its own two
+    #: wall clocks and no global state, so it is not self-referential (G-B, declared in advance).
+    print(f"  (load average before {la0[0]:.2f} -> after {la1[0]:.2f}; RECORDED only -- it "
+          f"includes this process, which is why it is no longer a guard)")
+    t_a = next((r["ibl_s"] for r in rows if r["level"] == "S2" and r.get("ibl_ok")), None)
+    t_b = next((r["ibl_s"] for r in rows if r["level"] == "S2r" and r.get("ibl_ok")), None)
+    judgeable = False
+    if t_a is None or t_b is None:
+        print("★ G-L2: no repeat leg -> the trend stays UNJUDGED")
+    else:
+        rel = abs(t_b - t_a) / t_a
+        judgeable = rel <= 0.10
+        print(f"★ G-L2 (repeatability): S2 {t_a:.1f} s -> S2r {t_b:.1f} s = {100 * rel:+.1f} % "
+              f"-> {chr(9733) + chr(9733) + ' PASS, the trend MAY be judged' if judgeable else chr(9733) + ' FAIL, timings not repeatable to 10 %: trend stays UNJUDGED'}")
     s2 = next((r for r in rows if r["level"] == "S2" and r.get("ibl_ok")), None)
     if s2 is not None:
         okn = s2["n_node_surf"] == GR_S2["n_node_surf"]
@@ -196,6 +231,9 @@ def main():
         return 0
     b = ok[0]                       #: the finest usable level is the binding one
     print("=== the verdict (binding = the finest usable level) ===")
+    if not judgeable:
+        print("  ★ G-L2 did not pass -> the LEVEL TREND is not judged; the Q bands below are")
+        print("    read on the binding level only, as in the previous round.")
     print(f"  level {b['level']}   P1 = {b['p1_ratio']:.2f}x (band {P1_BAND})   "
           f"P2 = {b['p2_ratio']:.4f} (band <= {P2_MAX})")
     if b["p1_ratio"] > 100.0 or b["p1_ratio"] < 1.0:
