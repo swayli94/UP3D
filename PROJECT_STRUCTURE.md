@@ -686,6 +686,30 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
 │                           #   scopes it (M0.72 unique; alpha=0 nearly unique) and classifies
 │                           #   every non-converged leg
 ├── run_task3_local_window_guard.py  # [task 3] the local-refinement window's guard
+│   # ★★ the rest of task 3's harness, added here 2026-08-16 (27 run_task3_*/run_hex_* scripts and
+│   #    30 committed CSVs in gate_results/ -- this document had listed only the first four):
+├── run_task3_sigma_selection.py, run_task3_sigma_strength.py,
+│   run_task3_sigma_charge_count.py, run_task3_sigma_freeze.py,
+│   run_task3_soft_membership.py, run_task3_magnitude_preserving.py,
+│   run_task3_capture_selection.py       # the seven sigma rounds; the TEMPORARY sigma_scale knob
+│                           #   they used was DELETED at its registered expiry, with its tests
+├── run_task3_m6_triage.py, run_m3_budget.py (extended)  # the staleness triage: the "LE band is
+│                           #   70 % of M3's budget" number was EXPIRED and is retired
+├── run_task3_le_registration.py, run_task3_tip_gate.py,
+│   run_task3_le_offset_scatter.py       # the LE line: chordwise misregistration refuted, the tip
+│                           #   refuted with a proxy-free gate, the error split into scatter+offset
+├── run_task3_fixed_budget.py, run_task3_nearbody_axis.py  # allocation at a fixed cell budget:
+│                           #   a real ~17 % lever that SATURATES; also the shared mesh builder,
+│                           #   guards and search that every later task-3 script imports
+├── run_task3_selfconvergence.py, run_task3_common_pointset.py,
+│   run_task3_nonconv_discriminator.py, run_task3_tipstations_mechanism.py,
+│   run_task3_shape_and_taper.py, run_task3_alignment_spanwise.py,
+│   run_task3_nearsingular_partition.py  # ★ the self-convergence chain: d_self GROWS with
+│                           #   refinement at the LE upper surface, which invalidated the
+│                           #   extrapolation behind "changing the mesh cannot solve M3"
+├── run_task3_s4_premise_check.py        # ★ the turn to product metrics: S4's two founding
+│                           #   premises re-measured on HEAD (cost ratio, crossflow), plus the
+│                           #   level trend behind ruling-grade decisions about GS4.1
 ├── run_gs31_precond.py      # reproduces the precond/EW decision, which is LIVE and carries
 │                           #   refutation conditions -- testing them needs this script
 ├── run_le_response.py       # LE response measurement (imported by the above)
@@ -715,6 +739,26 @@ docs/                      # only what phase 3 needs; the phase-1 plan/evidence 
 │   └── _TEMPLATE.md         #   the round-file format (pre-registrations are committed BEFORE
 │                           #   the measurement they govern -- that ordering is the point).
 │                           #   The 85 executed round files are in phases/p2/docs/dev_phase_two/
+├── dev_phase_three/        # ★★ THE ACTIVE PHASE (added here 2026-08-16 -- this document is the
+│                           #   surface the close-out ritual flags as the one that silently rots,
+│                           #   and it had carried only phase 3's FIRST round until now).
+│                           #   63 round files, one pre-registration + one verdict per round, each
+│                           #   pre-registration committed BEFORE the code it governs.
+│   ├── progress.md          # ★ THE INDEX: one row per round (33 rows), plus the task ①②③ status
+│   ├── 20260811-*           #   task ① delete the level-set route; task ② hexahedral body-fitted
+│   │                        #   mesh (Q1 donor determinism, Q2 wall accuracy -- both FAIL, ruling
+│   │                        #   D6 stopped the route)
+│   ├── 20260811..0813-*     #   task ③ part 1: the refinement paradox, non-uniqueness, and seven
+│   │                        #   sigma rounds (selection / strength / charge count / freeze / soft
+│   │                        #   membership / magnitude-preserving / capture) -- the sigma line
+│   │                        #   closed with a trade-off statement in the capability boundary
+│   ├── 20260813..0815-*     #   task ③ part 2: the M6 LE line -- staleness triage, chordwise
+│   │                        #   registration, tip gate, offset-vs-scatter, isoparametric-P2
+│   │                        #   read-only assessment, fixed-budget allocation, self-convergence
+│   ├── 20260815..0816-*     #   task ③ part 3: the non-convergence discriminator chain, then the
+│   │                        #   turn to product metrics -- S4's premise check, its cost trend, and
+│   │                        #   20260816-1000-gs41-initiation.md (a proposal, not an opened gate)
+│   └── (the level-set deletion verdict is 20260811-0100)
 ├── design.md, design_track_v.md            # theory/numerics reference (current); track_b is
 │                           #   archived with the level-set route (ruling D5)
 ├── agent-rules.md          # imported by CLAUDE.md via @; phase-one "Current phase" narrative
