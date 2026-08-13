@@ -515,8 +515,20 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    account that closes, not as "nothing broke":
    - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
      the new gated wing-body lock), i.e. the deletion subtracted only;
-   - GATED full set **466 passed + 1 skipped + 4 xfailed, 0 failed** (2:08:50 @8
-     threads), against 720/2/8 at 3:04:44 before: 208 archived gated items + 47 in
+   - ★★ **GATED full set RE-MEASURED at the phase-3 close-out (2026-08-16): 488 passed +
+     1 skipped + 3 xfailed + 1 XPASSED, 0 failed, 1:11:48 @16 threads.** Read it as an
+     account that closes on all four numbers: the ungated suite is 479 + 12 + 2, the gated
+     run unlocks **11** skips, and **9 became passed (479 + 9 = 488), 1 became xfailed
+     (2 -> 3) and 1 became XPASSED** -- 9 + 1 + 1 = 11 exactly.
+     ★★★ And the xpass needs no investigation, because the mark's own reason predicts it:
+     `test_p4_transonic::test_g41_transonic_medium_gate` is non-strict ON PURPOSE because the
+     outcome is ENVIRONMENT-DEPENDENT -- its text records "at 16 threads this leg CONVERGES
+     (|R| 2.8e-13) ... the gated suite at 8 threads then showed it NOT converging (|R|
+     3.77e-05)". I ran at 16 threads and the 466-baseline ran at 8, so the ONLY non-pass/fail
+     difference from that baseline is the one test whose mark says it flips with thread count.
+     ⇒ no regression, and **a gated count must always be quoted with its thread count**.
+   - the 2026-08-11 GATED reading it supersedes: **466 passed + 1 skipped + 4 xfailed,
+     0 failed** (2:08:50 @8 threads), against 720/2/8 at 3:04:44 before: 208 archived gated items + 47 in
      three archive files that no longer collect + 5 amputated legs − 1 new lock
      = **259**, exactly the difference. The 4 strict xfails that vanished were the
      level-set ones (b7 ×3 + b22 medium), archived with their files.
