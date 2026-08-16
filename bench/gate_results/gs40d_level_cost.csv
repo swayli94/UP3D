@@ -1,0 +1,3 @@
+converged,level,m_final,m_last_converged,mesh_sha,n_floored,n_levels,n_limited,n_nodes,n_tets,note,res_final,t_mesh_s,target_reached,wall_s
+True,xcoarse,0.88,0.88,59a88610ee10,0,9,0,8947,33459,,7.932813700660997e-14,0.5,True,3.3
+True,coarse,0.88,0.88,0793df1b2dc3,0,9,0,21625,90099,,3.403672178211239e-11,1.3,True,13.3
