@@ -119,6 +119,36 @@ def append_row(row):
             #      returns converged=False), and the CLEAN guard now checks explicitly.
             "m_attained", "accept_reason", "res_unfrozen", "f_final",
             "descent10", "note"]
+
+    #: ★★ GS4.0 R1 (2026-08-16). This appended blind. The schema grew from 18 to 24
+    #: fields on 2026-08-03, the header is written ONLY when the file is absent, and
+    #: the committed CSV predates the growth -- so the next run would have written
+    #: 24-field rows under a 19-field header and silently produced a file whose
+    #: columns no longer mean what the header says. That is the same family as
+    #: "are the two numbers I am comparing the same thing?", one layer down: are the
+    #: two ROWS even the same schema?
+    #:
+    #: Refuse loudly rather than repair, for two reasons the project has already
+    #: paid for: rewriting the header would REWRITE COMMITTED EVIDENCE in place (the
+    #: G3 hazard -- run_m3_budget was made to write its own filename precisely to
+    #: avoid this), and silently starting a second file would split one measurement
+    #: across two artifacts with no pointer between them. The operator decides.
+    if not head:
+        with open(CSV, newline="") as fh:
+            existing = next(csv.reader(fh), [])
+        if existing != keys:
+            missing = [k for k in keys if k not in existing]
+            raise SystemExit(
+                f"★ {CSV} has a {len(existing)}-column header but this script now "
+                f"writes {len(keys)} columns; appending would put fields under the "
+                f"wrong names.\n  columns this file has never seen: {missing}\n"
+                "  Pick one, deliberately:\n"
+                "    (a) move the committed CSV aside under a dated name and let this "
+                "run start a fresh file (the pre-deletion matrix stays citable);\n"
+                "    (b) point CSV at a new filename for this run.\n"
+                "  Do NOT rewrite the existing header in place -- that edits committed "
+                "evidence.")
+
     with open(CSV, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=keys, extrasaction="ignore")
         if head:

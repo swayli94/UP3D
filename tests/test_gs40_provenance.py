@@ -279,6 +279,40 @@ class TestCapabilityLockNodePaths:
         with pytest.raises(SystemExit, match="rotted"):
             mod._check_node_paths()
 
+    def test_capability_matrix_refuses_a_stale_schema(self, tmp_path,
+                                                      monkeypatch):
+        """R1: appending 24-field rows under a 19-field header.
+
+        The schema grew 18 -> 24 fields on 2026-08-03 and the header is written
+        only when the file is absent, so the next run against the committed CSV
+        would have produced a file whose columns no longer mean what its header
+        says. Verified to fire on the REAL committed CSV before this lock was
+        written -- it names exactly the five columns added that day.
+        """
+        import csv as _csv
+        import importlib.util
+        from pathlib import Path
+        p = Path(__file__).parent.parent / "bench" / "run_capability_matrix.py"
+        spec = importlib.util.spec_from_file_location("_capmatrix", p)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        stale = tmp_path / "stale.csv"
+        stale.write_text("cell,path,geom\na,b,c\n")
+        monkeypatch.setattr(mod, "CSV", str(stale))
+        with pytest.raises(SystemExit, match="appending would put fields"):
+            mod.append_row({"cell": "x"})
+
+        #: and the good path still works: a fresh file writes its own header and
+        #: round-trips. A refusal that also blocked legitimate runs would be the
+        #: cure being worse than the disease.
+        fresh = tmp_path / "fresh.csv"
+        monkeypatch.setattr(mod, "CSV", str(fresh))
+        mod.append_row({"cell": "x", "m_inf": 0.8})
+        mod.append_row({"cell": "y", "m_inf": 0.7})
+        rows = list(_csv.DictReader(fresh.open()))
+        assert len(rows) == 2 and rows[0]["cell"] == "x"
+
     def test_cannot_pass_by_being_empty(self, monkeypatch):
         """The 8th question: what does this criterion give on an empty sample?
 

@@ -529,8 +529,10 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **499 passed + 12 skipped +
-   2 xfailed, 0 failed** (2026-08-16, **measured in full @477.27 s @8 threads**, GS4.0).
+3. Full suite: `pytest tests/` — current baseline **500 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-17, **measured in full @465.24 s @8 threads**, GS4.0 + the
+   R1 addendum). ★ 499 + 1 = the capability-matrix stale-schema lock.
+   Previous within GS4.0: **499 + 12 + 2** (@477.27 s @8 threads).
    ★ +20 vs the 479 below = `tests/test_gs40_provenance.py` (the GS4.0 instrument locks:
    the ramp honesty fields, the mesh manifest, the fast tier's node-list check). **Skipped
    and xfailed did not move**, which is the point: GS4.0 was an instrument round and had no
