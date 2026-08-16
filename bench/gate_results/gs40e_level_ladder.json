@@ -1,0 +1,9 @@
+{
+  "verdict": "K-FIXED (k*=1 on every binding level -- topological, transferable)",
+  "per_level": {
+    "xcoarse": "PEAK k*=P1",
+    "coarse": "PEAK k*=P1",
+    "medium": "PEAK k*=P1"
+  },
+  "wall_s": 217.2
+}
