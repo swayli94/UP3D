@@ -582,6 +582,15 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    (its own progress.md); the PLAN and rulings D1–D5 still live in
    docs/dev_phase_two/roadmap.md, and docs/dev_phase_two/README.md holds the per-file
    checklist for when those six files may move to `phases/p2/docs/`.
+   ★★★ **Phase THREE CLOSED 2026-08-16** (ruling D7; all three tasks on `main` — ① via PR #26,
+   ②③ via PR #27 `d5efe53`). **PHASE 4'S SINGLE ENTRY POINT IS
+   [docs/dev_phase_three/20260816-1000-gs41-initiation.md](docs/dev_phase_three/20260816-1000-gs41-initiation.md)**
+   — read its §0 before anything else: it is self-contained by design (handover baselines, the items
+   D7 assigned forward, the six things that must not be silently changed, and the two measured
+   conclusions GS4.1 must carry — **P1 = 6.07× now but crosses the band's floor at the next level**,
+   and **the crossflow a 2-D strip discards is a REAL trailing-edge structure**, J = 10× the null).
+   ★ It stays where it is; phase 4's own progress.md **links** it rather than copying it — a copied
+   entry point forks from its original, which is the failure this project has logged repeatedly.
    ★ **Phase TWO uses a different surface list**, because the phase-one docs below are
    frozen (docs/dev_phase_two/roadmap.md §8): (1) `docs/dev_phase_two/progress.md` — one
    row, plus **its own 阶段进度概览 and 产品指标追踪 tables** (they live in progress.md,
