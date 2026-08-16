@@ -686,8 +686,8 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
 │                           #   scopes it (M0.72 unique; alpha=0 nearly unique) and classifies
 │                           #   every non-converged leg
 ├── run_task3_local_window_guard.py  # [task 3] the local-refinement window's guard
-│   # ★★ the rest of task 3's harness, added here 2026-08-16 (27 run_task3_*/run_hex_* scripts and
-│   #    30 committed CSVs in gate_results/ -- this document had listed only the first four):
+│   # ★★ the rest of task 3's harness, added here 2026-08-16 (29 run_task3_*/run_hex_* scripts and
+│   #    32 committed CSVs in gate_results/ -- this document had listed only the first four):
 ├── run_task3_sigma_selection.py, run_task3_sigma_strength.py,
 │   run_task3_sigma_charge_count.py, run_task3_sigma_freeze.py,
 │   run_task3_soft_membership.py, run_task3_magnitude_preserving.py,
@@ -742,9 +742,9 @@ docs/                      # only what phase 3 needs; the phase-1 plan/evidence 
 ├── dev_phase_three/        # ★★ THE ACTIVE PHASE (added here 2026-08-16 -- this document is the
 │                           #   surface the close-out ritual flags as the one that silently rots,
 │                           #   and it had carried only phase 3's FIRST round until now).
-│                           #   63 round files, one pre-registration + one verdict per round, each
+│                           #   68 round files, one pre-registration + one verdict per round, each
 │                           #   pre-registration committed BEFORE the code it governs.
-│   ├── progress.md          # ★ THE INDEX: one row per round (33 rows), plus the task ①②③ status
+│   ├── progress.md          # ★ THE INDEX: one row per round (36 rows), plus the task ①②③ status
 │   ├── 20260811-*           #   task ① delete the level-set route; task ② hexahedral body-fitted
 │   │                        #   mesh (Q1 donor determinism, Q2 wall accuracy -- both FAIL, ruling
 │   │                        #   D6 stopped the route)
