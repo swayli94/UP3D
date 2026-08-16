@@ -1,0 +1,17 @@
+{
+  "bytes": 400072,
+  "extra": {
+    "generator": "cases/meshes/onera_m6_roundtip/generate_onera_m6_roundtip.py",
+    "note": "stamped at GS4.0 from the pre-existing local mesh (mtime 2026-08-04); regeneration must reproduce this sha256"
+  },
+  "n_nodes": 2194,
+  "n_tets": 9303,
+  "n_tris": {
+    "farfield": 77,
+    "symmetry": 399,
+    "wake": 998,
+    "wall": 1772
+  },
+  "schema": 1,
+  "sha256": "4f6828336b83c7af84bf47bc86bf8e4ce4b1eec78038c5852d8994ad947d0169"
+}

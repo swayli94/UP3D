@@ -21,6 +21,7 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, ".."))
@@ -90,10 +91,70 @@ NOT_COVERED = (
     ("tests/test_p5_onera_m6.py", "45-75 min from scratch (M6 medium continuation+polish)"),
     ("phases/p1/tests/test_b14_schur_ls.py  [ARCHIVED]", "M6 medium Schur/lagged-LU arms"),
     ("phases/p1/tests/test_b15_ls_newton_freeze.py  [ARCHIVED]", "the M6 medium M0.84 freeze ramp (~515 s idle)"),
-    ("tests/test_b18_wingbody_transonic.py", "wing-body transonic ramps"),
+    #: ★ GS4.0 2026-08-16: was listed as `tests/test_b18_wingbody_transonic.py`, a path
+    #: that has not existed since phase 3 archived the file (its 4 legs were 100 %
+    #: level-set). It sat here UNMARKED while every sibling carried [ARCHIVED], so this
+    #: list over-stated what it had checked. Note what actually changed underneath: the
+    #: CONFORMING half of b18's capability is no longer uncovered at all -- it is the
+    #: `test_b32_wingbody_conforming_transonic.py` lock added to LOCKS above.
+    ("phases/p1/tests/test_b18_wingbody_transonic.py  [ARCHIVED]",
+     "level-set wing-body transonic ramps; the conforming half is now IN this tier (b32)"),
     ("[ARCHIVED, except test_p8_jacobian] test_b6_transonic, test_b16/b17, test_b11, test_b19",
      "passed on 2026-08-06; cost not individually measured"),
 )
+
+
+def _check_node_paths():
+    """Every node named in LOCKS and NOT_COVERED must actually exist.
+
+    ★ GS4.0 (2026-08-16). The exclusion list is deliberately treated as part of
+    this script's OUTPUT, not as a comment -- the file's own header says a fast
+    tier mistaken for full coverage would recreate the failure it exists to
+    prevent. But it was only ever PRINTED, never validated, and the 2026-08-16
+    audit found `tests/test_b18_wingbody_transonic.py` still listed as a live
+    exclusion after phase 3 archived it -- unmarked, while every other archived
+    entry carries `[ARCHIVED]`. A rotted list is worse than no list, because it
+    reads as though someone checked.
+
+    Entries tagged `[ARCHIVED]` are exempt from existence (that IS the tag's
+    meaning), and the last NOT_COVERED entry is a prose roll-up rather than a
+    path, so only entries that look like a path are checked.
+
+    ★ Two constructive-pass holes closed on purpose (the pre-registration's
+    8th question -- what does this give on an extreme sample?): an EMPTY list
+    would make the loop vacuously true, and a list of nothing but `[ARCHIVED]`
+    entries would too. Both are asserted, so this can never pass by being empty.
+    ★ Self-reference (the 8th question's other half): this reads the LOCKS /
+    NOT_COVERED tuples and the filesystem. It does not scan its own source, so
+    it cannot match itself -- the failure mode that hit `pgrep -f`, the G-Z
+    forbidden-word guard and the G-L load guard three times this season.
+    """
+    root = Path(__file__).resolve().parent.parent
+    checked, missing = 0, []
+    for node, _why in LOCKS + NOT_COVERED:
+        if "[ARCHIVED]" in node:
+            continue
+        path = node.split("::")[0].strip()
+        if not path.endswith(".py"):          # prose roll-up entry, not a path
+            continue
+        checked += 1
+        if not (root / path).exists():
+            missing.append(path)
+    #: ★ `checked >= len(LOCKS)` ALONE passes vacuously on an empty list (0 >= 0).
+    #: Caught by this round's own extreme-sample test before the guard shipped --
+    #: which is the argument for asking the 8th question rather than trusting that
+    #: a count comparison is a floor. A tier with no locks is a bug, not a pass.
+    assert LOCKS, "the fast tier has no locks -- that is a bug, not a green run"
+    assert checked >= len(LOCKS), (
+        f"only {checked} path-like entries checked but there are {len(LOCKS)} "
+        "locks -- the check is not covering what it claims to cover")
+    if missing:
+        raise SystemExit(
+            "★ this tier's node list has rotted -- these paths do not exist:\n  "
+            + "\n  ".join(missing)
+            + "\n(if a file was archived, point the entry at its archived path "
+              "AND tag it [ARCHIVED], the way its siblings are.)")
+    return checked
 
 
 def main():
@@ -101,7 +162,13 @@ def main():
         print("★ PYFP3D_TRANSONIC_GATES=1 is required, else every gated lock SKIPS "
               "and this reports a vacuous green.")
         return 2
+    #: ★ GS4.0: validate the node list BEFORE spending ~9 min, so a rotted entry costs
+    #: a second rather than a whole tier run that then reports a coverage claim it
+    #: cannot back. Raises SystemExit with the offending paths.
+    n_checked = _check_node_paths()
     print("capability locks, FAST tier -- run this at every close-out")
+    print(f"  node list validated: {n_checked} live paths exist "
+          "(archived entries are tagged and exempt)")
     print("  threads (G8.2 asserts a wall-clock budget, so this is part of the result): "
           + ", ".join(f"{v}={os.environ[v]}" for v in THREAD_VARS))
     try:

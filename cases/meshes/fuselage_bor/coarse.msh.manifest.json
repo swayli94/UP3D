@@ -1,0 +1,15 @@
+{
+  "bytes": 4933016,
+  "extra": {
+    "generator": "cases/meshes/fuselage_bor/generate_fuselage_bor.py",
+    "note": "stamped at GS4.0 from the pre-existing local mesh (mtime 2026-08-04); regeneration must reproduce this sha256"
+  },
+  "n_nodes": 26527,
+  "n_tets": 139042,
+  "n_tris": {
+    "farfield": 226,
+    "wall": 12144
+  },
+  "schema": 1,
+  "sha256": "889d6c747ef978a3670132d2bde9d39203b6e8602e4ab30cfebea6d1a132bce5"
+}

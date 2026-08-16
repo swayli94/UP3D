@@ -228,8 +228,14 @@ def main():
             fhist = np.asarray(r.get("F_history", []), dtype=float)
             gstall = int(r.get("n_gmres_stalled") or 0)
             areason = str(r.get("accept_reason"))
-            m_att = float(r.get("m_last_converged", r.get("m_final", M_TARGET)))
-            conv = bool(r["converged"]) and abs(m_att - M_TARGET) < 1e-9
+            #: ★ GS4.0 (2026-08-16): `m_final` / `target_reached` existed only on the
+            #: DELETED level-set driver, so this `.get` chain had been falling through
+            #: to M_TARGET since phase 3 -- making the second conjunct below identically
+            #: True and silently degrading `conv` to the bare driver flag. Read the key
+            #: with no default now: a missing key is a library regression and must be
+            #: loud. (docs/inspection/20260816-2200-independent-audit-zh.md §7.1)
+            m_att = r["m_final"]
+            conv = bool(r["target_reached"])
             nlim = int(r.get("n_limited") or 0); nflr = int(r.get("n_floored") or 0)
             res = float(r["residual_history"][-1])
             wall = time.perf_counter() - t0

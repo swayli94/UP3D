@@ -105,6 +105,18 @@ def append_row(row):
             # solver did not attain. (CLEAN rows were never affected: conv already
             # requires |m_final - m| < 1e-9. The damage was bounded to non-CLEAN rows,
             # which is why the envelope points stand.)
+            # ★★ ERRATUM 2026-08-16 (GS4.0). Two things above went wrong when phase 3
+            # deleted the level-set route, and both are now fixed:
+            #  (1) this instrument was built for a defect found on the LEVEL-SET path
+            #      using a field only the LEVEL-SET driver supplied, so deleting the
+            #      route silently removed its input and "a row must never be able to
+            #      claim a Mach the solver did not attain" became FALSE for the only
+            #      surviving path (see the m_att branch in run_cell);
+            #  (2) the parenthetical is wrong even as written: THIS script's `conv` is
+            #      `bool(r["converged"])` and never looked at m_final -- that was the
+            #      level-set driver's internal invariant, not ours. CLEAN rows happened
+            #      to stay safe for a different reason (a conforming ramp that dies
+            #      returns converged=False), and the CLEAN guard now checks explicitly.
             "m_attained", "accept_reason", "res_unfrozen", "f_final",
             "descent10", "note"]
     with open(CSV, "a", newline="") as fh:
@@ -297,7 +309,32 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
     #: the Mach the solver ACTUALLY attained -- see the append_row note. Recorded
     #: unconditionally so a non-converged row can never again be read as if it held a
     #: state at the requested Mach.
-    m_att = float(r.get("m_last_converged", r.get("m_final", m)))
+    #:
+    #: ★★ GS4.0 (2026-08-16), and the reason is worth stating in full. This line used to
+    #: read `float(r.get("m_last_converged", r.get("m_final", m)))`. Both keys existed
+    #: ONLY on the level-set driver (`newton_ls.py`), which phase 3 DELETED -- so from
+    #: that day the chain fell through to `m`, i.e. m_att was IDENTICALLY the requested
+    #: Mach, and the CLEAN guard below (`abs(m_att - m) > 1e-9`) could not fire. A guard
+    #: written specifically so as NOT to trust the driver flags had become a guard that
+    #: trusted them completely, silently. Found by the 2026-08-16 independent audit
+    #: (docs/inspection/20260816-2200-independent-audit-zh.md, §7.1); the fields are now
+    #: backported to the CONFORMING ramp (`newton.py::_ramp_honesty_fields`).
+    #:
+    #: Two branches, each stated rather than defaulted:
+    #:  - RAMP driver: the keys are present and must be read. No `.get` default -- if a
+    #:    future refactor drops them again this must raise, not degrade quietly. That is
+    #:    the entire lesson of this defect.
+    #:  - SINGLE-Mach driver (`solve_newton_lifting`, used by the subsonic cells): the
+    #:    returned state is at `m` BY CONSTRUCTION -- there is no ramp to fall short of --
+    #:    so m_att = m is the correct reading here, not a fallback.
+    #: `m_final` (not `m_last_converged`) is the label, because this column labels the
+    #: row's OWN cl_p / cl_kj / m_max, and those are computed from `r["phi"]`, which is
+    #: the state at `m_final`. A ramp that died at 0.80 after converging 0.75 returns the
+    #: FAILED 0.80 state, so 0.80 is what the row's numbers belong to.
+    if "m_final" in r:
+        m_att = r["m_final"]
+    else:
+        m_att = float(m)
     #: is the last-10-step residual descent still steep? This is the cheap
     #: discriminator between "ran out of iteration budget while converging" and
     #: "genuinely stalled" -- the two were indistinguishable in the first matrix, and
@@ -324,7 +361,14 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
     #: a CLEAN row that did not attain its own Mach would invalidate the envelope
     #: table, so make that unrepresentable rather than trusting the driver flags to
     #: stay consistent with each other.
-    if status.startswith("CLEAN") and abs(m_att - m) > 1e-9:
+    #: ★ GS4.0: `m_att is None` (no level ran at all) also lands here -- an unknown
+    #: attained Mach on a CLEAN row is exactly the unrepresentable case, and a bare
+    #: `abs(None - m)` would raise inside the reporting layer, which is how a 40-minute
+    #: solve was lost once. The old parenthetical "CLEAN rows were never affected: conv
+    #: already requires |m_final - m| < 1e-9" (see append_row) described the LEVEL-SET
+    #: driver's internals -- this script's `conv` is just `bool(r["converged"])`, so the
+    #: check has to be made here, not assumed upstream.
+    if status.startswith("CLEAN") and (m_att is None or abs(m_att - m) > 1e-9):
         row["status"] = "MACH_NOT_ATTAINED"
         row["note"] = f"clean at {m_att} but {m} was requested"
     return row, (geom_obj, phi, f)
@@ -333,8 +377,13 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
 def save_cp(cell, m, geom, payload):
     """Section Cp -- the artifact the user asked for as next-phase reference.
 
-    Uses pyfp3d.post.unified.section_cp for BOTH paths, so the conforming and
-    level-set curves in this matrix are produced by the same dispatch.
+    Uses pyfp3d.post.unified.section_cp.
+
+    ★ GS4.0 erratum 2026-08-16: this used to read "for BOTH paths, so the
+    conforming and level-set curves in this matrix are produced by the same
+    dispatch". There is only ONE path since ruling D5, and `post/unified.py`
+    was collapsed onto its conforming half in phase 3 -- the sentence had
+    outlived the thing it described.
     """
     (obj, phi, _f) = payload
     mesh, op, mf = obj

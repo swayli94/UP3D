@@ -1,0 +1,18 @@
+{
+  "bytes": 3500117,
+  "extra": {
+    "generator": "cases/meshes/onera_m6_wingbody_conforming/generate_onera_m6_wingbody_conforming.py",
+    "note": "stamped at GS4.0 from the pre-existing local mesh (mtime 2026-08-04); regeneration must reproduce this sha256"
+  },
+  "n_nodes": 18390,
+  "n_tets": 90099,
+  "n_tris": {
+    "farfield": 221,
+    "fuselage": 2610,
+    "symmetry": 3651,
+    "wake": 6342,
+    "wall": 6432
+  },
+  "schema": 1,
+  "sha256": "0793df1b2dc3f386a08acfa943faf9c916b9167a7d1ace4f3b5c0c117ed045bf"
+}

@@ -1,0 +1,17 @@
+{
+  "bytes": 1804044,
+  "extra": {
+    "generator": "cases/meshes/onera_m6/generate_onera_m6.py",
+    "note": "stamped at GS4.0 from the pre-existing local mesh (mtime 2026-08-04); regeneration must reproduce this sha256"
+  },
+  "n_nodes": 9457,
+  "n_tets": 46067,
+  "n_tris": {
+    "farfield": 218,
+    "symmetry": 1332,
+    "wake": 3688,
+    "wall": 5142
+  },
+  "schema": 1,
+  "sha256": "f4c281c097546ee5ec5e75180dc0bbb66a456ff6270a2af482e6fcfb053e6d64"
+}
