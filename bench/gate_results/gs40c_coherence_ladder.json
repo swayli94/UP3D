@@ -1,0 +1,8 @@
+{
+  "mesh_sha": "aaed210e1e4515a84e8772717497ef2af9355cfed5ce45386635b9deb01f6eb3",
+  "verdict": {
+    "rc0.025": "C-PEAK  (small patch is a genuine interior optimum)",
+    "rc0.045": "C-PEAK  (small patch is a genuine interior optimum)"
+  },
+  "wall_s": 302.5
+}
