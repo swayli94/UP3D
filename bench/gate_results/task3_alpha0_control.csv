@@ -1,0 +1,5 @@
+accept_reason,alpha,cl,converged,factor,failure_mode,h_wall_normal,has_shock,leg,m_max,mode_evidence,n_floored,n_limited,n_newton,n_stations,n_tets,res_final,run,seed,threads,wall_s,window,x_shock
+tol,0.0,-0.003634,True,1.0,,0.004,True,R0_baseline,1.20048,accept_reason='tol',0,0,14,160,36426,1.3644875540317739e-13,1,5,8,3.2,None,0.4104484039191785
+tol,0.0,-0.036603,True,1.0,,0.002,True,RG_global,1.20973,accept_reason='tol',0,0,13,320,65670,1.0443497410969863e-13,1,5,8,5.7,None,0.3178135063963572
+tol,0.0,0.003177,True,3.0,,0.004,True,RS_shock_band,1.18665,accept_reason='tol',0,0,14,160,36546,1.1180304633911986e-13,1,5,8,2.8,"(0.45, 0.75)",0.42121039246876935
+tol,0.0,0.030727,True,1.0,,0.002,True,RN_normal_only,1.186,accept_reason='tol',0,0,17,160,52674,1.0457906317849262e-13,1,5,8,4.5,None,0.43131256592892403

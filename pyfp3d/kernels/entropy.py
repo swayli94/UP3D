@@ -115,6 +115,8 @@ def shock_factor_sweep(
     lim: np.ndarray,
     s_out: np.ndarray,
     m1_out: np.ndarray,
+    soft_eps: float = 0.0,
+    soft_q: float = 1.0,
 ) -> None:
     """Per-element local entropy factor s_e (see module docstring, `detection`).
 
@@ -192,13 +194,44 @@ def shock_factor_sweep(
         if not lim[e]:
             continue                      # own speed non-physical: no correction
         m2e = mach_number_squared(q2[e], m_inf, gamma)
-        if m2e >= 1.0:
-            continue                      # still supersonic: not post-shock
-        if not lim[u]:
-            continue                      # donor speed non-physical (m_cap)
-        m2u = mach_number_squared(q2[u], m_inf, gamma)
-        if m2u <= 1.0:
-            continue                      # donor subsonic: no shock crossed
+        #: ★★ `soft_eps` (phase 3, 2026-08-12, pre-registered addendum #1 of
+        #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md): the MEMBERSHIP test below is
+        #: a HARD switch, and that is the measured source of the selection limit cycle -- a cell
+        #: sitting on the sonic line flips on an infinitesimal change in phi while its s JUMPS by
+        #: 1 - sigma_RH(M1). Measured: max|dsigma| pins at exactly that jump (1.55e-2 <-> a cell at
+        #: M1 1.27) with periods 2 to 5, and with the refresh cap removed 0 of 9 legs converge.
+        #: ★ The fix is shaped on the precedent NEXT DOOR: the artificial-density switch is already
+        #: a continuous ramp, `nu_e = C*max(0, 1 - mc2/max(m2, mc2))`. Only this test was hard.
+        #: soft_eps = 0.0 (the default) takes the ORIGINAL branches and is bit-identical.
+        if soft_eps <= 0.0:
+            if m2e >= 1.0:
+                continue                  # still supersonic: not post-shock
+            if not lim[u]:
+                continue                  # donor speed non-physical (m_cap)
+            m2u = mach_number_squared(q2[u], m_inf, gamma)
+            if m2u <= 1.0:
+                continue                  # donor subsonic: no shock crossed
+            w_soft = 1.0
+        else:
+            #: the two hard tests become two ramps across M^2 = 1, each clamped to [0, 1]
+            w_e = (1.0 - m2e) / soft_eps
+            if w_e <= 0.0:
+                continue                  # fully supersonic: outside the band, as before
+            if w_e > 1.0:
+                w_e = 1.0
+            if not lim[u]:
+                continue
+            m2u = mach_number_squared(q2[u], m_inf, gamma)
+            w_u = (m2u - 1.0) / soft_eps
+            if w_u <= 0.0:
+                continue                  # donor fully subsonic: outside the band, as before
+            if w_u > 1.0:
+                w_u = 1.0
+            w_soft = w_e * w_u
+            #: ★ the knee walk below needs a supersonic donor to start from. Inside the band the
+            #: donor may be only marginally supersonic; that is fine (m_cur = sqrt(m2u) is then
+            #: barely above 1 and sigma_RH is barely below 1), but m2u <= 1 is impossible here
+            #: because w_u > 0 required it.
         m_cur = np.sqrt(m2u)
         rise_max = 0.0
         c = u
@@ -222,7 +255,21 @@ def shock_factor_sweep(
             m_cur = m_n
             c = nxt
         m1 = m_cur
-        s_out[e] = total_pressure_ratio(m1, gamma)
+        s_full = total_pressure_ratio(m1, gamma)
+        #: ★ the short-circuit is LOAD-BEARING, not an optimisation: `1 - 1.0*(1 - s)` is NOT
+        #: bit-identical to `s` in floating point, so a branchless blend would move every
+        #: out-of-band cell too, and F3 (legacy bit-identity) would fail for an arithmetic reason
+        #: rather than a physical one. Same lesson as the deleted sigma_scale instrument.
+        if w_soft == 1.0:
+            s_out[e] = s_full
+        else:
+            #: ★ `soft_q` (pre-registered 20260812-1700): the exponent that separates "the jump was
+            #: the cause" from "the correction just got weaker". q = 1 is the plain ramp; q < 1 pushes
+            #: partial weights back toward 1, RESTORING the magnitude while staying continuous.
+            #: Both endpoints stay exact (0^q = 0, 1^q = 1), so the default-inert guarantee and the
+            #: endpoint tests are untouched.
+            w_eff = w_soft if soft_q == 1.0 else w_soft ** soft_q
+            s_out[e] = 1.0 - w_eff * (1.0 - s_full)
         m1_out[e] = m1
 
 
@@ -398,10 +445,21 @@ class EntropyOperator:
 
     def __init__(self, n_elements: int, n_round: int = N_ROUND_DEFAULT,
                  max_walk: int = MAX_WALK_DEFAULT,
-                 knee_frac: float = KNEE_FRAC_DEFAULT):
+                 knee_frac: float = KNEE_FRAC_DEFAULT,
+                 soft_eps: float = 0.0, soft_q: float = 1.0):
         self.n_round = int(n_round)
         self.max_walk = int(max_walk)
         self.knee_frac = float(knee_frac)
+        #: ★ post-shock membership softening width in M^2 units. 0.0 = the HARD test = today,
+        #: bit-identical. Pre-registered (addendum #1) at 0.05 for the A/B, and the verdict must
+        #: report sensitivity across 0.02/0.05/0.10 -- it is a CALIBRATION, not a guarantee.
+        self.soft_eps = float(soft_eps)
+        if self.soft_eps < 0.0:
+            raise ValueError(f"soft_eps must be >= 0, got {self.soft_eps}")
+        #: ★ magnitude-recovery exponent, only meaningful with soft_eps > 0. 1.0 = the plain ramp.
+        self.soft_q = float(soft_q)
+        if not 0.0 < self.soft_q <= 1.0:
+            raise ValueError(f"soft_q must be in (0, 1], got {self.soft_q}")
         self._s = np.ones(n_elements, dtype=np.float64)
         self._m1 = np.zeros(n_elements, dtype=np.float64)
         self._sigma = np.ones(n_elements, dtype=np.float64)
@@ -455,7 +513,8 @@ class EntropyOperator:
                 raise ValueError(
                     f"lim mask has {len(lm)} entries, expected {n}")
         shock_factor_sweep(q2, up, m_inf, gamma, self.max_walk,
-                           self.knee_frac, lm, self._s, self._m1)
+                           self.knee_frac, lm, self._s, self._m1, self.soft_eps,
+                           self.soft_q)
         self.n_rounds = transport_sigma(
             self._s, up, self.n_round, self._sigma, self._anc_a, self._anc_b,
             self._prod_b)

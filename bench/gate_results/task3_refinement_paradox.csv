@@ -1,0 +1,8 @@
+accept_reason,cl,converged,factor,failure_mode,h_wall_normal,has_shock,leg,m_max,mode_evidence,n_floored,n_limited,n_newton,n_stations,n_tets,res_final,run,seed,threads,wall_s,window,x_shock
+tol,0.258223,True,1.0,,0.004,True,R0_baseline,1.33286,accept_reason='tol',0,0,31,160,36426,9.45577175714882e-14,1,5,8,4.6,None,0.6050839087194283
+tol,0.347132,True,1.0,,0.002,True,RG_global,2.04095,accept_reason='tol',0,0,56,320,65670,7.284732688322017e-11,1,5,8,16.4,None,0.7738756957598373
+tol,0.347132,True,1.0,,0.002,True,RG_global,2.04095,accept_reason='tol',0,0,56,320,65670,7.284732688322017e-11,2,5,8,16.8,None,0.7738756957598373
+tol,0.29947,True,3.0,,0.004,True,RS_shock_band,1.35765,accept_reason='tol',0,0,20,160,36546,1.7776326738155533e-11,1,5,8,3.8,"(0.45, 0.75)",0.4783330738726443
+tol,0.29947,True,3.0,,0.004,True,RS_shock_band,1.35765,accept_reason='tol',0,0,20,160,36546,1.7776326738155533e-11,2,5,8,3.7,"(0.45, 0.75)",0.4783330738726443
+tol,0.286557,True,1.0,,0.002,True,RN_normal_only,1.33638,accept_reason='tol',0,0,20,160,52674,2.760368610626387e-13,1,5,8,6.1,None,0.6243748047425046
+tol,0.286557,True,1.0,,0.002,True,RN_normal_only,1.33638,accept_reason='tol',0,0,20,160,52674,2.760368610626387e-13,2,5,8,6.1,None,0.6243748047425046

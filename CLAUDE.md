@@ -206,6 +206,52 @@ so it changes the VERDICT, not the numbers. Note:
 `docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
 Do not re-attribute this to the tip: the affected elements span the whole mesh (z/b 0.002-1.650).
 
+## ★★ Four criterion defects in four rounds, all the same shape (2026-08-12, measured)
+
+Phase three's sigma rounds produced a criterion defect EVERY round, and every one was found after
+the measurement rather than before it. They are one mistake wearing four hats:
+
+| round | the defect | what it let through |
+|---|---|---|
+| sigma selection | **one-sided bands** -- only contemplated the control being WORSE | a reversed, family-consistent result could only land in "no direction" |
+| sigma strength | **unbalanced panel** -- compared spreads across theta without fixing the converged-seed set | "non-monotone" was triggered by a set-SIZE artefact (the dying seed was the outlier) |
+| soft membership | **absolute threshold** (<= 5 %) on families whose baselines differ 150x | an 8.8x DEGRADATION scored as PASS |
+| magnitude-preserving | **an OUTPUT treated as an INPUT** -- "match sigma_min back to legacy" | the target was unhittable BY CONSTRUCTION, so the binding leg could only read J3 |
+
+The common sentence: **the criterion did not cover the domain of the quantity it compares.** So
+before registering a band, run it against these four questions:
+
+1. **Is it one-sided?** State where the OPPOSITE outcome would land.
+2. **Does the independent variable change which samples EXIST?** If yes, fix the sample set first --
+   a spread over a shrinking set is not comparable -- and never report a spread over fewer than two
+   converged legs as "small"; call it UNDEFINED.
+3. **Is the threshold absolute where the baselines differ?** Make it relative to each arm's own
+   baseline, or an improvement cannot be told from a tolerated regression.
+4. **Is the quantity being matched an INPUT or an OUTPUT?** "Restore X to its baseline" is only
+   well-posed if X is something you set. `sigma_min` is a diagnostic of the CONVERGED STATE, so
+   when the state moves the target moves with it.
+5. ★★ **Are the two numbers I am comparing THE SAME THING?** Added 2026-08-13 after the M6 triage
+   hit this family FOUR TIMES IN ONE ROUND: cross-PIPELINE (P14's anchor against the script's own
+   output), cross-LEVEL (a function's `levels=("coarse",)` DEFAULT against the evidence's medium),
+   cross-PROVENANCE (an 8-thread run against a 16-thread committed row) and cross-TIME (a HEAD run
+   against a reference produced before three recorded recipe changes). Before comparing, check that
+   both sides come from the same pipeline, the same level, the same thread count and the same code.
+   ★ All four were caught by a guard that STOPPED the round rather than by reading the numbers —
+   which is the argument for writing an instrument check with a hard stop into every registration.
+   ★★ **Fifth member, 2026-08-16: cross-MESH-FAMILY.** The `onera_m6` `.msh` files were regenerated
+   on 2026-08-04 when the level names flipped flat → round, so every pre-08-04 anchor
+   (`run_m3_budget.P14_ANCHOR` among them) is a FLAT-CAP number. Measured with the mesh file as the
+   only variable: coarse cl_p 0.262123 (flat) vs 0.268115 (round) = **+2.29 %** — which is exactly
+   the "two pipelines disagree on coarse by 2.0 %" debt that had stood for five days. The two sides
+   were never two pipelines; they were one recipe on two mesh generations. **A mesh file is part of
+   the provenance — check it like the thread count.**
+   ★★★ And the process lesson, which cost more than the measurement did (the whole check was **14
+   seconds** of compute): **before restating a debt for the second time, spend the ZERO compute
+   needed to pin down what its referent is and where that referent lives.** That 2.0 % had been
+   written down with no value and no source, and it then propagated into EIGHT files as "unexplained"
+   — while the referent sat as a module constant in the very script that produced the number. A gap
+   with no citable referent is not a debt, it is a sentence, and sentences replicate.
+
 ## ★★ Prove a kernel property with an independent ORACLE, not with cases you invented
 
 Measured 2026-08-05, at the cost of two wrong fixes in one round. Three candidate termination
@@ -326,7 +372,9 @@ consequence, measured: the first full gated run since the 2026-08-04 round-tip s
 invisible by construction — the ungated suite stays green while capability locks rot.
 
 So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
-**measured 2026-08-11 at 891 s = 14.8 min, 5/5 green** (was 644 s / 7 groups: three
+**measured 2026-08-11 TWICE at the same 8 threads on the same box: 891 s and
+564 s, both 5/5 green** (keep both: a 1.6x spread with an identical result is the
+same wall-clock-is-a-calibration lesson as G8.2's 5.4x) (was 644 s / 7 groups: three
 level-set locks left with the route in phase 3, and the conforming wing-body transonic
 ceiling lock was added — a capability lock kept OUT of this tier would run only in the
 2 h gated set, i.e. 6x less often than the tier it belongs to) — ★ and that cost holds ONLY with the thread caps
@@ -429,10 +477,26 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
 - **Read signatures and import paths; do not recall them.** Five wrong-from-memory calls in one
   day, one of which (`phi_init` at the top level instead of inside `newton_kw`) killed all five
   legs of a 40-minute run with TypeError.
+  ★★ **And a signature is not the contract** (2026-08-16, measured, cost one completed M6 medium
+  solve): a dry-check that read `classify_failure`'s argument NAMES still passed lists where it
+  needs arrays (it does `tail > 0`; its own call site builds them with `np.asarray`) and unpacked
+  TWO returns from a function that returns FOUR. It raised in the reporting layer AFTER the solve
+  finished and BEFORE the row was appended, so the solve was lost -- the same family as the
+  40-minute solve destroyed by a `float(None)`. ⇒ **the dry-check must exercise RETURN ARITY and
+  ARGUMENT TYPES, not just the signature** -- call the function once on a toy input before
+  spending compute. Corollary already in force: put `append + write` AHEAD of any post-processing
+  and wrap the post-processing, so a reporting error can only add a column.
 - **`pgrep`/`pkill -f <pattern>` matches YOUR OWN command line.** `pgrep -f "pytest tests/"`
   reported "still running" for a job that had finished; `pkill -f run_le5_taper_coverage` killed
   the invoking shell (exit 144) and lost the script it was writing. **Kill by PID**, and poll a
   log's completion marker rather than the process table.
+  ★★ **"Kill by PID" is not enough if you SEARCH for the PID** (2026-08-11, measured, cost one
+  shell): `PID=$(ps -eo pid,args | grep "[r]un_task3_sigma_selection.py" | awk '{print $1}')`
+  then `kill $PID` killed the invoking shell — because that shell's own argv contained the
+  pattern (the script name appeared elsewhere in the same compound command), and the `[r]`
+  bracket trick **only hides the grep process, never the parent shell**. The heredoc that was
+  supposed to apply a fix never ran. ⇒ **capture the PID at LAUNCH — `cmd & echo $! > pidfile`**
+  — and check liveness with `kill -0 $(cat pidfile)`. Never search for a PID by pattern.
 - **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
   `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
   states in one day; the third was caught only by killing a fresh run 5 minutes in.
@@ -447,16 +511,53 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **457 passed + 12 skipped +
-   2 xfailed, 0 failed** (2026-08-11, measured 930.97 s @8 threads under load).
+3. Full suite: `pytest tests/` — current baseline **479 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-12, **measured in full @494.75 s @8 threads**). It was
+   first carried as 474 + 5 by arithmetic and is now measured directly; the 474 before it
+   had likewise been 468 + 6. ★ Both arithmetic steps closed exactly against the later
+   direct measurement, which is the only reason that bookkeeping is allowed at all — it is
+   for non-interacting pure-Python asserts, never for anything that touches a solve.
+   ★ Earlier the same day it went 468 → 472 → 468 and that is
+   an account closing, not churn: the +4 were the TEMPORARY `sigma_scale` instrument's
+   locks, and they were deleted WITH the instrument at its registered expiry
+   (docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
+   "in case we need it again" is how temporary knobs become permanent.
+   ★★ Same disposal applied at the phase-3 close-out (2026-08-16) to `capture_select` /
+   `capture_select_abs`, whose route K3 had measured HARMFUL (cl spread 1.21 % → 7.47 % on the
+   balanced panel, one seed lost) — it had survived as a default-OFF option with NO registered
+   expiry, which is exactly how the previous instance started. **A killed route's knob is deleted
+   with the route.** Test count unmoved (it had no locks); the defect it was meant to address is
+   still reported, by `sigma_freeze_report` — ★ the distinction worth keeping: **a known defect
+   belongs in the report, not in an option the caller is invited to flip.**
+   Same count as: **468 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-11, measured 494.47 s @8 threads on a quiet box;
+   the 930.97 s recorded below was the same 8 threads UNDER LOAD — a 1.9x spread on
+   wall time with the same result, so quote suite walls flagged, never as a cost).
+   ★ +11 vs the 457 below = `tests/test_meshgen_structured.py` (phase 3 task 3):
+   `pyfp3d/meshgen/structured.py` had ZERO tests/ coverage — G0's bit-identical
+   single-variable knobs, the one thing route (A) actually delivered, were asserted
+   only by a bench script, i.e. on no cadence. Same gap round 2b closed for the
+   conforming wing-body transonic lock.
    ★ The drop from 538 is **phase 3 task 1: the level-set route was DELETED**
    (ruling D5) — 9 library files / **4624 lines**, `pyfp3d/wake/` gone entirely,
    `post/unified.py` collapsed onto its conforming half. Read the numbers as an
    account that closes, not as "nothing broke":
    - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
      the new gated wing-body lock), i.e. the deletion subtracted only;
-   - GATED full set **466 passed + 1 skipped + 4 xfailed, 0 failed** (2:08:50 @8
-     threads), against 720/2/8 at 3:04:44 before: 208 archived gated items + 47 in
+   - ★★ **GATED full set RE-MEASURED at the phase-3 close-out (2026-08-16): 488 passed +
+     1 skipped + 3 xfailed + 1 XPASSED, 0 failed, 1:11:48 @16 threads.** Read it as an
+     account that closes on all four numbers: the ungated suite is 479 + 12 + 2, the gated
+     run unlocks **11** skips, and **9 became passed (479 + 9 = 488), 1 became xfailed
+     (2 -> 3) and 1 became XPASSED** -- 9 + 1 + 1 = 11 exactly.
+     ★★★ And the xpass needs no investigation, because the mark's own reason predicts it:
+     `test_p4_transonic::test_g41_transonic_medium_gate` is non-strict ON PURPOSE because the
+     outcome is ENVIRONMENT-DEPENDENT -- its text records "at 16 threads this leg CONVERGES
+     (|R| 2.8e-13) ... the gated suite at 8 threads then showed it NOT converging (|R|
+     3.77e-05)". I ran at 16 threads and the 466-baseline ran at 8, so the ONLY non-pass/fail
+     difference from that baseline is the one test whose mark says it flips with thread count.
+     ⇒ no regression, and **a gated count must always be quoted with its thread count**.
+   - the 2026-08-11 GATED reading it supersedes: **466 passed + 1 skipped + 4 xfailed,
+     0 failed** (2:08:50 @8 threads), against 720/2/8 at 3:04:44 before: 208 archived gated items + 47 in
      three archive files that no longer collect + 5 amputated legs − 1 new lock
      = **259**, exactly the difference. The 4 strict xfails that vanished were the
      level-set ones (b7 ×3 + b22 medium), archived with their files.

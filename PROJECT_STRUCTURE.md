@@ -35,6 +35,17 @@ pyfp3d/                    # Main package
 │   │                       #   ✓ [M3/Track B] embed_wake=False + a size-field-ONLY ±6° corridor
 │   │                       #   fan -> the wake-free family (nothing in the topology knows the
 │   │                       #   wake exists; default True keeps the M0 path untouched)
+│   ├── structured.py     # ✓ [phase 3 / task 2] structured / hybrid layer-block generator.
+│   │                       #   ★ Its load-bearing property is BIT-IDENTICAL single-variable
+│   │                       #   knobs (G0 4/4): grading is ANCHORED AT THE WALL with a DERIVED
+│   │                       #   layer count (growing r_far only APPENDS layers), tangential
+│   │                       #   spacing depends on n_theta alone, and it uses NO gmsh size field
+│   │                       #   -- phase two's four gmsh knobs were all measured out of scope.
+│   │                       #   airfoil_surface_distribution also carries a LOCAL chordwise
+│   │                       #   refinement window at FIXED station count (so a shock-band leg is
+│   │                       #   not confounded with a global DOF change; the cost is a measured
+│   │                       #   12.4 % coarsening outside -- a BOUND, not cleanliness).
+│   │                       #   Locked by tests/test_meshgen_structured.py
 │   ├── fuselage.py       # ✓ [M2] simplified axisymmetric fuselage as ONE splined body of
 │   │                       #   revolution (fusing primitives leaves C0 seams = spurious edges);
 │   │                       #   rule-driven 5*C_ROOT length, 2-diameter ellipsoid nose, graded
@@ -333,6 +344,18 @@ cases/                     # Test cases and reference data
 │   ├── naca0012_2.5d/    # ✓ [M0] Single-layer extruded NACA0012 + embedded wake sheet
 │   │                       #   (generate_naca0012.py, one parameter h_wall per level;
 │   │                       #   coarse 16.4k / medium 61.8k tets committed, fine on demand)
+│   ├── cylinder_hex_2.5d/  # ✓ [phase 3 / task 2] structured O-grid cylinder, hex->tet via
+│   │                       #   extrude_single_layer; coarse/medium/fine .msh COMMITTED (matching
+│   │                       #   the sibling unstructured family) + stats CSV + layer PNG with a
+│   │                       #   NEAR-WALL ZOOM (the near-wall layer is the whole claim; a
+│   │                       #   full-domain view cannot show it)
+│   ├── naca0012_hex_2.5d/  # ✓ [phase 3 / task 2] HYBRID architecture (user-specified, the
+│   │                       #   production one): finite-height structured layer block hugging the
+│   │                       #   wall, truncated, gmsh unstructured beyond. TE marching direction
+│   │                       #   pinned to +-y (a sharp TE's averaged normal points +x, which would
+│   │                       #   march down the wake line) and the TE de-clustered. AR max 5.9
+│   │                       #   (the v1 O-grid was 1305). coarse/medium/fine committed + 3-panel
+│   │                       #   PNG (full / TE / LE zoom)
 │   ├── rae2822_2.5d/     # ✓ [V5/GV5.2] RAE2822 family via the point-set airfoil path
 │   │                       #   (meshgen/planar.py::airfoil_wake_2d + load_airfoil_ordinates
 │   │                       #   PCHIP resample; rae2822.dat = the Cook/AGARD-AR-138 Table 6.1
@@ -509,6 +532,15 @@ tests/                     # Unit and gate tests
 │                                  #   default-OFF bitwise + residual/J row structure +
 │                                  #   flag-ON FD + J_e zeroing + out-of-pattern guards +
 │                                  #   plate smoke + te_outflow_pairs on the NACA strip
+├── test_meshgen_structured.py     # ✓ [phase 3] structured/hybrid generator locks (11):
+│                                  #   wall-anchored grading (append-only bit-identical prefix,
+│                                  #   exact first step, radii-vs-distances kept SEPARATE on
+│                                  #   purpose) + station count + LE-finer-than-TE + the local
+│                                  #   window's two default bit-identities and its measured
+│                                  #   outside cost + block quality drift lock (AR 5.899,
+│                                  #   min_area 5.08e-06) + TE ray EXACTLY +-y.
+│                                  #   ★ Added because the module had ZERO tests/ coverage: G0
+│                                  #   lived only in a bench script, i.e. on no cadence
 ├── test_meshgen_rae2822.py        # ✓ [V5/GV5.2] RAE2822 point-set meshgen tests (5):
 │                                  #   ordinate load (Cook layout) + PCHIP resample
 │                                  #   convention/bounds/clustering + thickness/camber
@@ -629,7 +661,11 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
 │                           #   activity, split by which phase invented them. Merged here by
 │                           #   user ruling. The criterion is NOT old-vs-new, it is WILL IT BE
 │                           #   RUN AGAIN. See bench/README.md.
-├── run_capability_locks.py  # ★ the FAST capability tier, ritual step 0: 5 groups, 482 s.
+├── run_capability_locks.py  # ★ the FAST capability tier, ritual step 0: 5 groups, measured
+│                           #   TWICE on 2026-08-11 at the same 8 threads on the same box:
+│                           #   891 s and 564 s, both 5/5 green. Keep both -- a 1.6x spread with
+│                           #   an identical result is the standing lesson that a wall clock is a
+│                           #   CALIBRATION of the machine, not a reading of the solver.
 │                           #   Pins its own thread caps (one lock asserts a wall clock) and
 │                           #   prints WHAT IT DOES NOT COVER every run.
 ├── run_bench.py             # GS0.3 per-round drift detection vs baseline_2026-07-28.csv
@@ -638,6 +674,42 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
 ├── run_capability_matrix.py # 13 configurations x ladder = 78 points (M5-adjacent)
 ├── run_g82_anchor_check.py  # G8.2's physics anchors when the wall-clock assert masks them
 ├── run_le14_common_root.py  # the failure CLASSIFIER (never report a bare conv=False)
+├── run_hex_g0_single_var.py # [phase 3 / task 2] G0: the 4 single-variable arms, bit-identity
+├── run_hex_q2_wall_accuracy.py  # [task 2] Q2 wall Cp vs the analytic cylinder, wall DOF matched
+├── run_hex_q1_donor.py      # [task 2] Q1 donor determinism D1-D4, global AND supersonic-zone;
+│                           #   its premise asserts converged AND 0/0 clamps (the first run
+│                           #   measured a DIVERGED field and would have published it)
+├── run_task3_refinement_paradox.py  # [task 3] the 4 refinement legs + the alpha=0 discriminator
+├── run_task3_seed_nonuniqueness.py  # ★ [task 3] the DECISIVE control: at a FIXED mesh, the seed
+│                           #   alone moves x_shock 0.168-0.306 c = 31-56x M1's tolerance, so a
+│                           #   refinement comparison at M0.80/alpha1.25 is unreadable. Also
+│                           #   scopes it (M0.72 unique; alpha=0 nearly unique) and classifies
+│                           #   every non-converged leg
+├── run_task3_local_window_guard.py  # [task 3] the local-refinement window's guard
+│   # ★★ the rest of task 3's harness, added here 2026-08-16 (29 run_task3_*/run_hex_* scripts and
+│   #    32 committed CSVs in gate_results/ -- this document had listed only the first four):
+├── run_task3_sigma_selection.py, run_task3_sigma_strength.py,
+│   run_task3_sigma_charge_count.py, run_task3_sigma_freeze.py,
+│   run_task3_soft_membership.py, run_task3_magnitude_preserving.py,
+│   run_task3_capture_selection.py       # the seven sigma rounds; the TEMPORARY sigma_scale knob
+│                           #   they used was DELETED at its registered expiry, with its tests
+├── run_task3_m6_triage.py, run_m3_budget.py (extended)  # the staleness triage: the "LE band is
+│                           #   70 % of M3's budget" number was EXPIRED and is retired
+├── run_task3_le_registration.py, run_task3_tip_gate.py,
+│   run_task3_le_offset_scatter.py       # the LE line: chordwise misregistration refuted, the tip
+│                           #   refuted with a proxy-free gate, the error split into scatter+offset
+├── run_task3_fixed_budget.py, run_task3_nearbody_axis.py  # allocation at a fixed cell budget:
+│                           #   a real ~17 % lever that SATURATES; also the shared mesh builder,
+│                           #   guards and search that every later task-3 script imports
+├── run_task3_selfconvergence.py, run_task3_common_pointset.py,
+│   run_task3_nonconv_discriminator.py, run_task3_tipstations_mechanism.py,
+│   run_task3_shape_and_taper.py, run_task3_alignment_spanwise.py,
+│   run_task3_nearsingular_partition.py  # ★ the self-convergence chain: d_self GROWS with
+│                           #   refinement at the LE upper surface, which invalidated the
+│                           #   extrapolation behind "changing the mesh cannot solve M3"
+├── run_task3_s4_premise_check.py        # ★ the turn to product metrics: S4's two founding
+│                           #   premises re-measured on HEAD (cost ratio, crossflow), plus the
+│                           #   level trend behind ruling-grade decisions about GS4.1
 ├── run_gs31_precond.py      # reproduces the precond/EW decision, which is LIVE and carries
 │                           #   refutation conditions -- testing them needs this script
 ├── run_le_response.py       # LE response measurement (imported by the above)
@@ -667,6 +739,26 @@ docs/                      # only what phase 3 needs; the phase-1 plan/evidence 
 │   └── _TEMPLATE.md         #   the round-file format (pre-registrations are committed BEFORE
 │                           #   the measurement they govern -- that ordering is the point).
 │                           #   The 85 executed round files are in phases/p2/docs/dev_phase_two/
+├── dev_phase_three/        # ★★ THE ACTIVE PHASE (added here 2026-08-16 -- this document is the
+│                           #   surface the close-out ritual flags as the one that silently rots,
+│                           #   and it had carried only phase 3's FIRST round until now).
+│                           #   68 round files, one pre-registration + one verdict per round, each
+│                           #   pre-registration committed BEFORE the code it governs.
+│   ├── progress.md          # ★ THE INDEX: one row per round (36 rows), plus the task ①②③ status
+│   ├── 20260811-*           #   task ① delete the level-set route; task ② hexahedral body-fitted
+│   │                        #   mesh (Q1 donor determinism, Q2 wall accuracy -- both FAIL, ruling
+│   │                        #   D6 stopped the route)
+│   ├── 20260811..0813-*     #   task ③ part 1: the refinement paradox, non-uniqueness, and seven
+│   │                        #   sigma rounds (selection / strength / charge count / freeze / soft
+│   │                        #   membership / magnitude-preserving / capture) -- the sigma line
+│   │                        #   closed with a trade-off statement in the capability boundary
+│   ├── 20260813..0815-*     #   task ③ part 2: the M6 LE line -- staleness triage, chordwise
+│   │                        #   registration, tip gate, offset-vs-scatter, isoparametric-P2
+│   │                        #   read-only assessment, fixed-budget allocation, self-convergence
+│   ├── 20260815..0816-*     #   task ③ part 3: the non-convergence discriminator chain, then the
+│   │                        #   turn to product metrics -- S4's premise check, its cost trend, and
+│   │                        #   20260816-1000-gs41-initiation.md (a proposal, not an opened gate)
+│   └── (the level-set deletion verdict is 20260811-0100)
 ├── design.md, design_track_v.md            # theory/numerics reference (current); track_b is
 │                           #   archived with the level-set route (ruling D5)
 ├── agent-rules.md          # imported by CLAUDE.md via @; phase-one "Current phase" narrative
@@ -1434,7 +1526,12 @@ the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
 collapsed onto its conforming half. ONE wake route remains: `mesh/wake_cut.py` +
 `constraints/te_pressure.py` + `solve/newton.py` / `picard.py`, with `tip_taper`
 (B31/B32, carrying a **−1.3 % cl** model bias).
-Baselines after the deletion: always-on **457 passed / 12 skipped / 2 xfailed**, gated
+Baselines: always-on **479 passed / 12 skipped / 2 xfailed** (2026-08-12 = 474 measured in
+full @478.40 s plus 5 non-interacting soft-membership asserts; earlier it went
+468 → 472 → 468 in one day -- the +4 were the temporary `sigma_scale` instrument's locks
+and were deleted with it at its registered expiry). Earlier the same count (2026-08-11, 494 s @8
+threads quiet; +11 = `tests/test_meshgen_structured.py`, closing the structured
+generator's zero-coverage debt). After the level-set deletion it was **457 / 12 / 2**, gated
 **466 / 1 / 4** (2:08:50), fast tier **5 groups**. Both accounts close item by item —
 docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
 ⚠ `phases/p1/` still imports the deleted modules and is NOT runnable; the archive is a

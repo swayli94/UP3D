@@ -555,3 +555,128 @@ def test_mcap_the_mechanism_itself_is_locked():
     guarded = EntropyOperator(3).sigma(
         q2_b, up_b, 0.8, lim=np.array([False, True, True])).copy()
     assert guarded.min() == 1.0
+
+
+# --- the sigma-freeze honesty report (phase 3, 2026-08-12) -------------------------------------
+# ★ These lock the round's DELIVERABLE. `_sigma_freeze_report` is a pure read-out over the history
+# the driver already collects, so it is testable without a solve -- and a deliverable with no test
+# is the debt this project has now paid for twice (the conforming wing-body lock, and structured.py's
+# zero coverage). The four-part churn test in particular must stay four-part: "it looks like it
+# oscillates" is not a criterion, and the project has already published a conclusion off a period-3
+# cycle that fooled a hand-picked threshold.
+
+def _hist(sigma_mins=None, n_shocks=None, deltas=None):
+    """Build a sigma_history: entries are (sigma_min, n_shock, m1_max, sigma_delta, converged)."""
+    n = len(n_shocks)
+    sigma_mins = sigma_mins or [0.98] * n
+    return [(sigma_mins[i], n_shocks[i], 1.3, deltas[i], True) for i in range(n)]
+
+
+class TestSigmaFreezeReport:
+    def test_settled_tail_triggers_nothing(self):
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[74] * 10, deltas=[1e-2, 5e-3, 1e-3, 3e-4, 1e-4,
+                                              3e-5, 1e-5, 3e-6, 1e-6, 1e-9])
+        r = _sigma_freeze_report(h)
+        assert r["frozen_in_transient"] is False, "a decayed last delta is not a transient freeze"
+        assert r["selection_churn"] is False, "a CONSTANT n_shock is not churn"
+
+    def test_still_moving_when_frozen_is_flagged(self):
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[74] * 10, deltas=[1e-2] * 9 + [0.53])
+        r = _sigma_freeze_report(h)
+        assert r["frozen_in_transient"] is True
+        assert r["last_sigma_delta"] == pytest.approx(0.53)
+
+    def test_period_2_churn_is_flagged_with_its_period(self):
+        """The measured hybrid signature: n_shock alternating 148/154 with a PINNED delta."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[148, 154] * 5, deltas=[1.02e-2] * 10)
+        r = _sigma_freeze_report(h)
+        assert r["selection_churn"] is True
+        assert r["churn_period"] == 2
+
+    def test_period_3_churn_is_flagged_and_its_period_reported(self):
+        """The comment's own condition reproduced: 75;74;74 repeating, delta pinned at 1.55e-2.
+
+        ★ The period must come out 3, not 2 -- the project lost a published conclusion to a
+        period-3 cycle whose descent ratio landed on the wrong side of a hand-picked threshold."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[75, 74, 74] * 4, deltas=[1.55e-2] * 12)
+        r = _sigma_freeze_report(h)
+        assert r["selection_churn"] is True
+        assert r["churn_period"] == 3
+
+    def test_a_decaying_delta_is_not_churn_even_while_the_set_moves(self):
+        """★ The four conditions are an AND. A set that still moves while the correction is
+        converging is a tail transient, not a limit cycle -- flagging it would make the warning
+        useless by firing on healthy solves."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        h = _hist(n_shocks=[148, 154] * 5,
+                  deltas=[1e-2, 5e-3, 2e-3, 1e-3, 5e-4, 2e-4, 1e-4, 5e-5, 2e-5, 1e-9])
+        r = _sigma_freeze_report(h)
+        assert r["selection_churn"] is False
+
+    def test_short_or_empty_history_says_unknown_rather_than_clean(self):
+        """A single refresh has no predecessor, so it cannot say 'settled'. The count is reported
+        so a caller can tell "quiet" from "could not know" -- the vacuous-PASS lesson."""
+        from pyfp3d.solve.newton import _sigma_freeze_report
+        assert _sigma_freeze_report([])["n_refresh"] == 0
+        r = _sigma_freeze_report(_hist(n_shocks=[74], deltas=[0.9]))
+        assert r["n_refresh"] == 1
+        assert r["frozen_in_transient"] is False and r["selection_churn"] is False
+
+
+# --- the soft post-shock membership ramp (phase 3 Part 3, 2026-08-12) --------------------------
+# The measured reason it exists: the membership test was a HARD switch, so a cell on the sonic line
+# flipped on an infinitesimal change in phi while its factor JUMPED by 1 - sigma_RH(M1). max|dsigma|
+# pinned at exactly that jump, periods 2 to 5, and with the refresh cap removed 0 of 9 legs
+# converged. The artificial-density switch next door has always been a ramp (m_crit); only this test
+# was hard. Verdict: docs/dev_phase_three/20260812-1500-soft-membership-verdict.md.
+
+def _pair(m_donor, m_self, m_inf=0.8):
+    """Donor -> self, one hop. Returns (q2, upstream) for a two-element chain."""
+    q2 = np.array([float(q2_at_mach(m_donor, m_inf)), float(q2_at_mach(m_self, m_inf))])
+    return q2, np.array([0, 1 - 1])  # element 1's donor is element 0; element 0 is its own root
+
+
+class TestSoftMembership:
+    def test_soft_eps_zero_is_bit_identical(self):
+        """★ BY CONSTRUCTION via the explicit short-circuit, not because the algebra is exact:
+        `1 - 1.0*(1 - s)` is NOT bit-identical to `s` in floating point, so a branchless blend
+        would have moved out-of-band cells at the DEFAULT setting."""
+        q2, up = _pair(1.30, 0.80)
+        hard = EntropyOperator(2).sigma(q2, up, 0.8).copy()
+        soft0 = EntropyOperator(2, soft_eps=0.0).sigma(q2, up, 0.8).copy()
+        assert np.array_equal(hard, soft0)
+        assert hard.min() < 1.0, "premise: this pair must actually be charged"
+
+    def test_deep_inside_the_band_reproduces_the_hard_answer_exactly(self):
+        """Both endpoints must agree with the hard switch, or the ramp is a different model rather
+        than a smoothing of the same one. Donor well supersonic and self well subsonic."""
+        q2, up = _pair(1.40, 0.70)
+        hard = EntropyOperator(2).sigma(q2, up, 0.8).copy()
+        soft = EntropyOperator(2, soft_eps=0.05).sigma(q2, up, 0.8).copy()
+        assert np.array_equal(hard, soft), "w_u = w_e = 1 must take the short-circuit"
+
+    def test_outside_the_band_is_exactly_one_on_both_sides(self):
+        for m_donor, m_self in ((0.90, 0.80), (1.30, 1.20)):
+            q2, up = _pair(m_donor, m_self)
+            soft = EntropyOperator(2, soft_eps=0.05).sigma(q2, up, 0.8).copy()
+            assert np.all(soft == 1.0), f"donor {m_donor} self {m_self} should not be charged"
+
+    def test_inside_the_band_the_charge_is_partial_and_monotone_in_eps(self):
+        """A cell just barely subsonic gets a PARTIAL charge, and a wider band means a smaller
+        weight for the same cell -- which is the whole point: no jump."""
+        #: self at M^2 = 1 - 0.01 -> inside a 0.05 band, outside a 0.005 band
+        m_self = float(np.sqrt(0.99))
+        q2, up = _pair(1.40, m_self)
+        hard = EntropyOperator(2).sigma(q2, up, 0.8).copy().min()
+        s_narrow = EntropyOperator(2, soft_eps=0.02).sigma(q2, up, 0.8).copy().min()
+        s_wide = EntropyOperator(2, soft_eps=0.10).sigma(q2, up, 0.8).copy().min()
+        assert hard < s_narrow < 1.0, "the hard switch charges FULLY; the narrow band partially"
+        assert s_narrow < s_wide < 1.0, "a wider band gives this cell a smaller weight"
+
+    def test_negative_soft_eps_raises(self):
+        with pytest.raises(ValueError, match="soft_eps"):
+            EntropyOperator(2, soft_eps=-0.01)

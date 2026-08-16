@@ -1,0 +1,2 @@
+window,factor,n_stations,n_base,n_local,count_fixed,d_in_base,d_in_local,ratio_in,d_out_base,d_out_local,ratio_out,n_in_base,n_in_local,confound_ratio,window_denser,non_vacuous,verdict
+"(0.45, 0.75)",3.0,160,160,160,True,0.02036955,0.01042645,0.511865,0.00978706,0.01100009,1.123942,30,60,3.938,True,True,PASS

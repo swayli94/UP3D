@@ -192,7 +192,8 @@ class NewtonWorkspace:
                  farfield_spanwise_gamma: bool = False,
                  tip_taper: Optional[np.ndarray] = None,
                  kutta_estimator: str = "probe",
-                 external_rhs: Optional[np.ndarray] = None):
+                 external_rhs: Optional[np.ndarray] = None,
+                 sigma_soft_eps: float = 0.0, sigma_soft_q: float = 1.0):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -248,9 +249,22 @@ class NewtonWorkspace:
         # depends CONTINUOUSLY on phi through p02/p01(M1) -- a live sigma with
         # no d(sigma)/d(phi) term would make the Jacobian genuinely inexact,
         # unlike the piecewise-constant upstream selection.
-        self.ent = EntropyOperator(self.op.n_tets)
+        self.ent = EntropyOperator(self.op.n_tets, soft_eps=sigma_soft_eps,
+                                   soft_q=sigma_soft_q)
         self.sigma_frozen = None
         self.sigma_converged = True
+        #: the donor map the last sigma refresh used (record only -- see refresh_sigma)
+        self.upstream_sigma = None
+        #: per-refresh post-shock SET membership, newest last, capped (record only)
+        self.shock_set_history = []
+        #: ★★ capture SELECTION was tried here and REMOVED 2026-08-16. K3 measured the rule HARMFUL
+        #: (balanced panel [0, 5]: cl spread 1.21 % -> 7.47 %, and it lost a seed), so the route is
+        #: dead -- see docs/dev_phase_three/20260812-2300-capture-selection-verdict.md. The knob went
+        #: with it rather than surviving as a default-OFF option, on this project's own rule that a
+        #: knob kept "in case we need it again" is how temporary knobs become permanent. The freeze
+        #: keeps the LAST refresh, and the honest reading of that stays in the sigma-freeze report:
+        #: the last refresh is often the WORST (seed 0: ... 1.49, 1.33, 1.95 -- a transient spike,
+        #: frozen forever), which is a DEFECT that is reported, not a knob that is offered.
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
         self.n_st = wc.n_stations
@@ -494,6 +508,23 @@ class NewtonWorkspace:
         # docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
         sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air,
                              lim=state["lim"])
+        #: ★ RECORD ONLY -- no switch, no numerical effect (one int64 copy). The map this refresh
+        #: actually used cannot be recovered afterwards: a FROZEN step uses the freeze's map while
+        #: an unfrozen one uses the live walk's, and the docstring above is explicit that sigma and
+        #: the flux must share their notion of "upstream". So recomputing it later would answer a
+        #: question about a DIFFERENT map. Recording it is the same discipline the project already
+        #: imposes on the side-field density source: every consumer of that path must state and
+        #: record where its input came from. Consumed by
+        #: bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
+        self.upstream_sigma = np.asarray(upstream).copy()
+        #: ★ RECORD ONLY, BOUNDED. The post-shock SET is the object the freeze exists to pin, so
+        #: "which cells flip in and out" is the primary datum for diagnosing selection churn --
+        #: and `sigma_history` only carries the COUNT. Bounded at 128 entries because a Mach ramp
+        #: reuses one workspace across levels and an unbounded list would grow with the ramp.
+        #: Consumed by bench/run_task3_sigma_freeze.py (pre-registration 20260812-1100).
+        self.shock_set_history.append(np.flatnonzero(self.ent._m1 > 0.0))
+        if len(self.shock_set_history) > 128:
+            del self.shock_set_history[0]
         self.sigma_frozen = sig.copy()
         self.sigma_converged = self.ent.converged
         return self.ent.converged
@@ -593,6 +624,56 @@ def _ew_forcing(r_norm, r_norm_prev, eta_prev, eta0=1e-2, gamma_ew=0.9,
 #: permanent default-off knobs. 5 is the pre-2026-08-02 default, i.e. the value every
 #: committed pre-flip result was produced with.
 _SEED_FALLBACK = 5
+
+
+#: threshold for "sigma was still moving when it was frozen". FIXED IN ADVANCE by the
+#: pre-registration at 1e-3, on this reasoning: the measured selection churn pins max|dsigma| at
+#: 1.0e-2 to 6.7e-2 (one cell's on/off jump), while a settled tail should drive it to zero, so 1e-3
+#: sits about a decade below the churn and well above the settled floor. ★ It is a CALIBRATION and
+#: is treated as one: the raw value is always reported next to the flag.
+_SIGMA_DELTA_SETTLED = 1e-3
+#: churn window and the maximum number of distinct post-shock counts that still reads as "a small
+#: recurring set". Both fixed in advance.
+_CHURN_WINDOW, _CHURN_MAX_DISTINCT = 10, 3
+
+
+def _sigma_freeze_report(sigma_history):
+    """Read the two sigma-freeze signatures off the history the driver already collects.
+
+    Pure read-out: it performs no measurement of its own and moves no number. `sigma_history`
+    entries are (sigma_min, n_shock, m1_max, sigma_delta, transport_converged).
+    """
+    out = dict(n_refresh=len(sigma_history), last_sigma_delta=None, tail_n_shock=None,
+               churn_period=None, frozen_in_transient=False, selection_churn=False,
+               tau_settled=_SIGMA_DELTA_SETTLED)
+    if not sigma_history:
+        return out
+    tail = sigma_history[-_CHURN_WINDOW:]
+    deltas = [float(h[3]) for h in tail]
+    counts = [int(h[1]) for h in tail]
+    out["last_sigma_delta"] = deltas[-1]
+    out["tail_n_shock"] = ";".join(map(str, counts))
+
+    #: (P-A) still moving when pinned. The first refresh has no predecessor, so a single-refresh
+    #: history cannot say anything -- reported as False with n_refresh so a caller can tell the
+    #: difference between "settled" and "unknown".
+    if len(sigma_history) >= 2:
+        out["frozen_in_transient"] = bool(deltas[-1] > _SIGMA_DELTA_SETTLED)
+
+    #: (P-B) the SET is flipping: a small recurring value set that actually moves, with the delta
+    #: not decaying. ★ All four together -- "it looks like it oscillates" is not a criterion.
+    if len(tail) >= 4:
+        distinct = sorted(set(counts))
+        small = len(distinct) <= _CHURN_MAX_DISTINCT and len(counts) > len(distinct)
+        moving = len(distinct) > 1
+        not_decaying = min(deltas) > 1e-8 and deltas[-1] >= 0.1 * max(deltas)
+        out["selection_churn"] = bool(small and moving and not_decaying)
+        for p in range(1, 6):
+            if len(counts) > p and all(counts[i] == counts[i - p]
+                                       for i in range(p, len(counts))):
+                out["churn_period"] = p
+                break
+    return out
 
 
 def solve_newton_lifting(
@@ -697,6 +778,20 @@ def solve_newton_lifting(
     #: stays because low-subsonic work may legitimately want it off and
     #: because it is the tool for ON/OFF comparisons.
     entropy_correction: bool = True,
+    #: ★★ Part 3 of the sigma-freeze round (pre-registered addendum #1 of
+    #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md). Width, in M^2 units, of a
+    #: CONTINUOUS ramp replacing the post-shock membership test's two hard switches -- the measured
+    #: source of the selection limit cycle (a cell on the sonic line flips on an infinitesimal phi
+    #: change while its factor JUMPS by 1 - sigma_RH). 0.0 = the hard test = today, BIT-IDENTICAL.
+    #: Shaped on the precedent in the same kernel family: the artificial-density switch has always
+    #: been a ramp (m_crit), and only this test was hard.
+    sigma_soft_eps: float = 0.0,
+    #: ★ magnitude-recovery exponent for the soft membership ramp (pre-registered 20260812-1700).
+    #: 1.0 = the plain ramp of the previous round; q < 1 restores the correction's magnitude while
+    #: keeping the ramp continuous, which is what separates "the jump caused the seed dependence"
+    #: from "there was simply less correction left to be sensitive to". Inert when
+    #: sigma_soft_eps = 0.
+    sigma_soft_q: float = 1.0,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -820,7 +915,9 @@ def solve_newton_lifting(
                              vortex_center, farfield_spanwise_gamma,
                              tip_taper=tip_taper,
                              kutta_estimator=kutta_estimator,
-                             external_rhs=external_rhs)
+                             external_rhs=external_rhs,
+                             sigma_soft_eps=sigma_soft_eps,
+                             sigma_soft_q=sigma_soft_q)
     elif ws.kutta_estimator != kutta_estimator:
         raise ValueError(
             f"workspace was built with kutta_estimator="
@@ -1403,6 +1500,37 @@ def solve_newton_lifting(
                      "first_n_floored": int(state["n_floored"])}
     else:
         _fallback = {"fired": False, "accepted": False, "seed": None}
+    #: ================= sigma-freeze honesty report (phase 3, 2026-08-12) =================
+    #: ★ Two SEPARATE signatures, deliberately not merged into one index: they are two different
+    #: diseases wanting OPPOSITE treatments, and merging them is how a mixture gets correlated
+    #: against a single number (the failure that killed five hypotheses in one phase-two day).
+    #:
+    #:   frozen_in_transient  sigma was pinned while it was still MOVING -- _SIGMA_REFRESH_MAX
+    #:                        ran out before the field settled. Measured consequence: the answer
+    #:                        inherits a dependence on where the iteration happened to be, worth
+    #:                        32 % in cl across Picard seeds at M0.80/alpha1.25.
+    #:   selection_churn      the post-shock SET is flipping. MEASURED with the cap removed:
+    #:                        periods 2/3/4/5 on 5 of 9 legs, with max|dsigma| PINNED at a
+    #:                        constant equal to one cell's on/off jump (1.55e-2 <-> a cell at
+    #:                        M1 1.27), and 0 of 9 legs converge. So the freeze is load-bearing.
+    #:
+    #: ★ This REPORTS; it does not refuse. Promoting it to a refusal (like
+    #: sigma_transport_not_converged) is a CONTRACT change that could turn committed capability
+    #: anchors red, so the trigger rate on those anchors is measured first and the promotion is
+    #: the user's call. Pre-registration: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md.
+    #: ★ tau is a CALIBRATION, not a guarantee (the EW forcing / taper r_c / descent10 lesson), so
+    #: the raw last delta is reported alongside the flag and the verdict reports sensitivity.
+    _sig_report = _sigma_freeze_report(sigma_history)
+    if _sig_report["frozen_in_transient"] or _sig_report["selection_churn"]:
+        _msg = ", ".join(k for k in ("frozen_in_transient", "selection_churn")
+                         if _sig_report[k])
+        print(f"  [pyfp3d] sigma-freeze WARNING: {_msg}  "
+              f"(last |dsigma| {_sig_report['last_sigma_delta']}, "
+              f"tail n_shock {_sig_report['tail_n_shock']}, "
+              f"period {_sig_report['churn_period']}) -- the entropy correction riding this "
+              f"answer was frozen at a state the field has since left; see result["
+              f"'sigma_freeze_report']")
+
     return {
         "seed_fallback": _fallback,
         "phi": state["phi_cut"],
@@ -1421,6 +1549,7 @@ def solve_newton_lifting(
         "froze": frozen is not None,
         "n_freeze_refresh": n_freeze_refresh,
         "residual_unfrozen": residual_unfrozen,
+        "sigma_freeze_report": _sig_report,
         "n_assignment_stale": n_assignment_stale,
         "assignment_cycle": assignment_cycle,
         "n_freeze_reverts": n_freeze_reverts,
@@ -1434,6 +1563,9 @@ def solve_newton_lifting(
         "clamped": bool(state["n_limited"] > 0 or state["n_floored"] > 0),
         # GS1b.3 entropy-correction diagnostics (all None/empty when off)
         "entropy_correction": bool(entropy_correction),
+        "sigma_soft_eps": float(sigma_soft_eps),
+        "sigma_soft_q": float(sigma_soft_q),
+        "capture_n_refresh": n_sigma_refresh,
         "sigma_history": sigma_history,
         "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),
         "n_shock_cells": (int(ws.ent.n_shock) if entropy_correction else None),

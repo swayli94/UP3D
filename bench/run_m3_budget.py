@@ -50,7 +50,15 @@ EXP_FILE = os.path.join(REPO, "cases", "reference_data",
                         "onera_m6_experiment", "experiment-Cp.dat")
 #: GV5.3's committed same-extractor k = 0 pooled RMS -- R1's reference at medium
 GV53_K0_POOLED = {"medium": 0.1288}
-#: P14 pressure-Kutta anchors (cl_p, cl_KJ), GV5.3's P14_ANCHOR verbatim
+#: P14 pressure-Kutta anchors (cl_p, cl_KJ), GV5.3's P14_ANCHOR verbatim.
+#: ★★ ERRATUM 2026-08-16: these are FLAT-CAP-ERA numbers. The onera_m6 .msh files were
+#: regenerated on 2026-08-04 when the level names flipped flat -> round, so comparing a HEAD
+#: reading against them is a CROSS-MESH-FAMILY comparison. Measured on coarse, same script,
+#: same recipe, same threads, mesh file the ONLY variable: coarse_flat.msh gives cl_p 0.262123
+#: (-0.249 % from this anchor) while coarse.msh gives 0.268115 (+2.03 %) -- and that +2.03 % is
+#: exactly the "two pipelines disagree on coarse" debt, now closed as a mesh-family switch.
+#: Round file docs/dev_phase_three/20260816-2000-coarse-pipeline-gap-verdict.md,
+#: evidence gate_results/task3_coarse_pipeline_gap.csv.
 P14_ANCHOR = {"coarse": (0.262778, 0.268813),
               "medium": (0.277628, 0.282263)}
 #: mirrors NEWTON_M6_RECIPE's newton_kw and doubles as the drift guard in solve().
@@ -131,7 +139,8 @@ def band_rms(curves, exp, eta):
     return out
 
 
-def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
+def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
+          probe_seed=0, taper_rc=0.05):
     """The P14 transonic recipe verbatim, entropy (and now the Kutta form) variable.
 
     ★ 2026-07-31: `kutta` was added after the first budget round measured its own cl
@@ -151,6 +160,38 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
     single source of truth for the solver settings.
     """
     kw = dict(NEWTON_M6_RECIPE)
+    #: ★★ STALENESS FIXED 2026-08-13 (pre-registered
+    #: docs/dev_phase_three/20260813-0900-m3-remeasure-prereg.md). This script never applied the
+    #: production tip_taper -- `grep -c tip_taper` was 0 -- although B32/G8.2 adopted it on
+    #: 2026-08-05, and `cases/meshes/onera_m6/medium.msh` was regenerated on 2026-08-04 as a ROUND
+    #: tip. Round tip WITHOUT the taper is the configuration measured to die (CLAUDE.md: removing the
+    #: taper fails M0.88 medium outright, 6/6 clamps; and test_p8_newton's own comment records that
+    #: "the third leg it would need -- round, no taper, CONVERGED -- does not exist"). Measured here:
+    #: without it, the medium ramp fails entirely on HEAD (m_final None, |R| 8.8e-07, cl_p 0.2493
+    #: against the 2026-07-31 CSV's 0.2765).
+    #: ★ The taper carries a MODEL bias of -1.3 % cl_p, so any lift reported from this script now
+    #: carries it and must say so.
+    #: taper=False reproduces the historical (flat-tip-era) configuration and is kept only for that.
+    if taper:
+        from pyfp3d.constraints.wake import tip_taper_factors
+        #: construction identical to tests/test_p8_newton.py::_m6_case -- not re-derived.
+        #: ★ R2 of the registration: pinned by an assert against that function's own source, so a
+        #: future change there is caught here instead of silently splitting the two paths.
+        import inspect
+        from tests import test_p8_newton as _p8
+        _src = inspect.getsource(_p8._m6_case)
+        assert 'tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth", 0.05 * B_SEMI)' in _src, (
+            "the production taper construction in test_p8_newton::_m6_case has changed -- this "
+            "script's copy is no longer verbatim (registration R2)")
+        #: ★ `taper_rc` is the production radius as a fraction of b_semi. 0.05 IS production and is
+        #: the default, so every existing call is unchanged. Swept in the tip-gate round
+        #: (pre-registration 20260813-2100) because the taper RADIUS is the only existing knob that
+        #: changes the tip treatment's strength without touching anything else -- which makes it a
+        #: dose-response on the quantity being explained rather than a proxy for it.
+        kw["newton_kw"] = dict(kw["newton_kw"],
+                               tip_taper=tip_taper_factors(wc.station_z, B_SEMI,
+                                                           "vanish_smooth",
+                                                           taper_rc * B_SEMI))
     # ★ the drift guard runs on the RECIPE, before any intentional override --
     # otherwise a deliberate, recorded deviation (n_newton_max below) trips the
     # very check that exists to catch UNintended drift. It did exactly that on
@@ -164,14 +205,23 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None):
         # recorded deviation from "the recipe verbatim" -- see the caller
         kw["newton_kw"]["n_newton_max"] = int(n_newton_max)
     if kutta == "pressure":
+        #: ★ `probe_seed` is a DELIBERATE, RECORDED deviation applied AFTER the drift guard --
+        #: the pattern this script already establishes for n_newton_max. Mutating M6_NEWTON_KW
+        #: instead (my first attempt) makes the guard fire, correctly, because that dict IS the
+        #: guard's target and a mutated one is indistinguishable from unintended drift.
+        #: ★★ The seed goes HERE and not at ramp level 0: level 0 receives phi_init, which makes
+        #: its own n_picard_seed inert, so seeding it would produce bit-identical legs
+        #: (pre-registration 20260813-0300 addendum #1).
         r0 = solve_newton_lifting(mc, wc, m_inf=0.70, alpha_deg=ALPHA,
-                                  entropy_correction=entropy, **M6_NEWTON_KW)
+                                  entropy_correction=entropy,
+                                  **dict(M6_NEWTON_KW, n_picard_seed=probe_seed))
         kw["newton_kw"].update(kutta_estimator="pressure", phi_init=r0["phi"],
                                gamma_init=r0["gamma"], n_picard_seed=0)
     return solve_newton_transonic(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, **kw)
 
 
-def main(levels=("coarse",)):
+def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0,
+         taper_rc=0.05):
     exp = parse_experiment()
     # GV5.3's W2 experiment-side guard, kept: a station whose max Cp is not at the
     # LE would mean the side mapping is broken and every RMS below is meaningless.
@@ -189,10 +239,11 @@ def main(levels=("coarse",)):
             continue
         mc, wc = cut_wake(read_mesh(path))
         s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
-        for entropy, kutta in LEGS:
+        for entropy, kutta in legs:
             tag = ("ON" if entropy else "OFF") + f"/{kutta}"
             t0 = time.perf_counter()
-            r = solve(mc, wc, entropy, kutta)
+            r = solve(mc, wc, entropy, kutta, taper=taper,
+                      probe_seed=probe_seed, taper_rc=taper_rc)
             wall = time.perf_counter() - t0
             phi = np.asarray(r["phi"])
             gamma = np.atleast_1d(np.asarray(r["gamma"]))
@@ -283,11 +334,15 @@ def main(levels=("coarse",)):
                 r2_validity=("n/a" if not entropy
                              else ("PASS" if r2_ok else "FAIL"))))
 
-    with open(os.path.join(OUT, "m3_budget.csv"), "w", newline="") as fh:
+    #: ★ G3-class hazard avoided by construction: the 2026-07-31 CSV is the HISTORICAL artifact for
+    #: the flat-tip / no-taper configuration and the capability boundary cites it (annotated as
+    #: superseded). A taper run therefore writes its OWN file and never overwrites it.
+    _name = out_name or ("m3_budget_head.csv" if taper else "m3_budget.csv")
+    with open(os.path.join(OUT, _name), "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in rows for k in r}))
         w.writeheader()
         w.writerows(rows)
-    print("\nwrote", os.path.join(OUT, "m3_budget.csv"))
+    print("\nwrote", os.path.join(OUT, _name))
 
     print("\n=== the registered reading (R1 -> R2 -> R3) ===")
     for level in levels:

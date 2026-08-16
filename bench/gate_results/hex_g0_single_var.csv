@@ -1,0 +1,5 @@
+allowed_to_move,arm,first_radial_spacing_bit_identical,h_t,h_t_bit_identical,knob,must_not_move,n_nodes,n_radial,node_prefix_bit_identical,r_achieved,r_achieved_bit_identical,radial_prefix_bit_identical,radial_sequence_bit_identical,verdict,wall_edges_bit_identical,wall_nodes_bit_identical
+"radial layer count, node count",r_far_x3,,0.0654498469,True,r_far=60.0,"near-body nodes, wall edges, tangential spacing, radial sequence prefix",4320,45,True,63.33266887,,True,,PASS,True,True
+"radial layer count, radial sequence",h_wall_normal_half,,0.0654498469,True,h_wall_normal=0.01,"wall nodes, wall edges, tangential spacing",4032,42,,21.46953854,,,,PASS,True,True
+"wall node count, tangential spacing",n_theta_x2,,0.0327249235,,n_theta=192,"radial layer count, radial sequence, achieved outer radius",7104,37,,21.28691359,True,,True,PASS,,
+"radial layer count, outer radii",growth_softer,True,0.0654498469,True,growth=1.08,"wall nodes, wall edges, tangential spacing, FIRST radial spacing",5568,58,,20.84528044,,,,PASS,True,True

@@ -1,0 +1,4 @@
+arm,seed,converged,res_final,n_newton,n_limited,n_floored,accept_reason,failure_mode,failure_evidence,solve_s,over_leg_gate,probe_cl
+B_direct,0,False,0.0021395137060136846,30,83,48,,clamping,clamps 83/48; descent10=0.013; tail_monotone=False (n_up=5); F_final=3.66e-04,198.9,False,12.416916488367033
+B_direct,5,False,2.386805950908914e-05,60,22,26,,clamping,clamps 22/26; descent10=1.380; tail_monotone=False (n_up=3); F_final=4.84e-06,335.7,False,12.416922800091392
+B_direct,12,False,3.984255528538994e-05,60,22,31,,clamping,clamps 22/31; descent10=0.310; tail_monotone=False (n_up=3); F_final=3.68e-07,353.7,False,12.416917750213283
