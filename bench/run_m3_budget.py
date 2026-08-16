@@ -50,7 +50,15 @@ EXP_FILE = os.path.join(REPO, "cases", "reference_data",
                         "onera_m6_experiment", "experiment-Cp.dat")
 #: GV5.3's committed same-extractor k = 0 pooled RMS -- R1's reference at medium
 GV53_K0_POOLED = {"medium": 0.1288}
-#: P14 pressure-Kutta anchors (cl_p, cl_KJ), GV5.3's P14_ANCHOR verbatim
+#: P14 pressure-Kutta anchors (cl_p, cl_KJ), GV5.3's P14_ANCHOR verbatim.
+#: ★★ ERRATUM 2026-08-16: these are FLAT-CAP-ERA numbers. The onera_m6 .msh files were
+#: regenerated on 2026-08-04 when the level names flipped flat -> round, so comparing a HEAD
+#: reading against them is a CROSS-MESH-FAMILY comparison. Measured on coarse, same script,
+#: same recipe, same threads, mesh file the ONLY variable: coarse_flat.msh gives cl_p 0.262123
+#: (-0.249 % from this anchor) while coarse.msh gives 0.268115 (+2.03 %) -- and that +2.03 % is
+#: exactly the "two pipelines disagree on coarse" debt, now closed as a mesh-family switch.
+#: Round file docs/dev_phase_three/20260816-2000-coarse-pipeline-gap-verdict.md,
+#: evidence gate_results/task3_coarse_pipeline_gap.csv.
 P14_ANCHOR = {"coarse": (0.262778, 0.268813),
               "medium": (0.277628, 0.282263)}
 #: mirrors NEWTON_M6_RECIPE's newton_kw and doubles as the drift guard in solve().

@@ -238,6 +238,19 @@ before registering a band, run it against these four questions:
    both sides come from the same pipeline, the same level, the same thread count and the same code.
    ★ All four were caught by a guard that STOPPED the round rather than by reading the numbers —
    which is the argument for writing an instrument check with a hard stop into every registration.
+   ★★ **Fifth member, 2026-08-16: cross-MESH-FAMILY.** The `onera_m6` `.msh` files were regenerated
+   on 2026-08-04 when the level names flipped flat → round, so every pre-08-04 anchor
+   (`run_m3_budget.P14_ANCHOR` among them) is a FLAT-CAP number. Measured with the mesh file as the
+   only variable: coarse cl_p 0.262123 (flat) vs 0.268115 (round) = **+2.29 %** — which is exactly
+   the "two pipelines disagree on coarse by 2.0 %" debt that had stood for five days. The two sides
+   were never two pipelines; they were one recipe on two mesh generations. **A mesh file is part of
+   the provenance — check it like the thread count.**
+   ★★★ And the process lesson, which cost more than the measurement did (the whole check was **14
+   seconds** of compute): **before restating a debt for the second time, spend the ZERO compute
+   needed to pin down what its referent is and where that referent lives.** That 2.0 % had been
+   written down with no value and no source, and it then propagated into EIGHT files as "unexplained"
+   — while the referent sat as a module constant in the very script that produced the number. A gap
+   with no citable referent is not a debt, it is a sentence, and sentences replicate.
 
 ## ★★ Prove a kernel property with an independent ORACLE, not with cases you invented
 
