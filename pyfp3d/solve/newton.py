@@ -257,16 +257,14 @@ class NewtonWorkspace:
         self.upstream_sigma = None
         #: per-refresh post-shock SET membership, newest last, capped (record only)
         self.shock_set_history = []
-        #: ★★ capture-SELECTION state (pre-registered 20260812-2100). The freeze currently adopts
-        #: the LAST refresh, and the measured m1_max trajectory shows the last one is often the
-        #: WORST (seed 0: ... 1.49, 1.33, 1.95 -- a transient spike, frozen forever). These hold the
-        #: candidate whose |dsigma| was smallest, so the driver can adopt THAT one instead.
-        #: ★ Selection, not smoothing: the adopted array is one refresh's own output UNCHANGED, so
-        #: the correction's MAGNITUDE is untouched by construction -- averaging or relaxing would
-        #: weaken it and re-import the confound the previous round was spent removing.
-        self.sigma_best = None
-        self.sigma_best_delta = None
-        self.sigma_best_index = None
+        #: ★★ capture SELECTION was tried here and REMOVED 2026-08-16. K3 measured the rule HARMFUL
+        #: (balanced panel [0, 5]: cl spread 1.21 % -> 7.47 %, and it lost a seed), so the route is
+        #: dead -- see docs/dev_phase_three/20260812-2300-capture-selection-verdict.md. The knob went
+        #: with it rather than surviving as a default-OFF option, on this project's own rule that a
+        #: knob kept "in case we need it again" is how temporary knobs become permanent. The freeze
+        #: keeps the LAST refresh, and the honest reading of that stays in the sigma-freeze report:
+        #: the last refresh is often the WORST (seed 0: ... 1.49, 1.33, 1.95 -- a transient spike,
+        #: frozen forever), which is a DEFECT that is reported, not a knob that is offered.
         self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
         self.n_st = wc.n_stations
@@ -794,17 +792,6 @@ def solve_newton_lifting(
     #: from "there was simply less correction left to be sensitive to". Inert when
     #: sigma_soft_eps = 0.
     sigma_soft_q: float = 1.0,
-    #: ★★ capture SELECTION (pre-registered 20260812-2100). False = today: the freeze keeps the LAST
-    #: refresh. True = adopt the refresh whose |dsigma| was smallest, i.e. the quietest state rather
-    #: than whichever one the budget happened to land on. It changes WHICH computed sigma is frozen
-    #: and never the sigma formula, so the correction's magnitude is untouched by construction --
-    #: which is what makes it the only available experiment that varies capture-uniformity alone.
-    #: NO new knob: the candidate set is every refresh with a defined delta.
-    capture_select: bool = False,
-    #: the RECORDED control arm: score candidates by the raw |dsigma| instead of the relative one.
-    #: Registered as a control precisely because it is biased (addendum #1) -- keeping it makes the
-    #: bias documented evidence rather than a claim made in passing.
-    capture_select_abs: bool = False,
     verbose: bool = False,
     #: private: set only by the cold-start seed fallback near the return, to
     #: stop it recursing. Not part of the public recipe.
@@ -1016,9 +1003,6 @@ def solve_newton_lifting(
 
     sigma_history = []             # (sigma_min, n_shock, m1_max, dsigma, conv)
     n_sigma_refresh = 0
-    _capture_adopted = False
-    capture_adopted_index = None
-    capture_adopted_delta = None
     if entropy_correction:
         # GS1b.3: the seed state is isentropic (sigma_frozen is None above), so
         # build sigma from it and re-evaluate before the loop -- from here on
@@ -1364,15 +1348,6 @@ def solve_newton_lifting(
         gamma = gamma + lam * dgamma
         R_free, F, state = R_try, F_try, state_try
         merit = merit_try
-        #: ★★ the adoption point: the refresh budget has just run out, so THIS is the moment the
-        #: freeze becomes permanent. Swapping in the quietest candidate makes the residual jump once
-        #: here -- pre-registered as EXPECTED and judged by F2, not to be explained away later.
-        if (entropy_correction and capture_select and n_sigma_refresh >= _SIGMA_REFRESH_MAX
-                and not _capture_adopted and ws.sigma_best is not None):
-            ws.sigma_frozen = ws.sigma_best.copy()
-            _capture_adopted = True
-            capture_adopted_index = ws.sigma_best_index
-            capture_adopted_delta = ws.sigma_best_delta
         if entropy_correction and n_sigma_refresh < _SIGMA_REFRESH_MAX:
             # GS1b.3: refresh the frozen entropy factor from the ACCEPTED state
             # and re-evaluate, so the next step's residual, Jacobian and line
@@ -1401,24 +1376,6 @@ def solve_newton_lifting(
                            float(np.max(np.abs(ws.sigma_frozen
                                                - sigma_prev))))
             n_sigma_refresh += 1
-            #: ★ candidate tracking. The FIRST refresh has no predecessor, so its delta is 0.0 by
-            #: construction and it is NOT a candidate -- admitting it would make "smallest delta"
-            #: trivially select the first refresh regardless of how unsettled it was.
-            #: ★★ RELATIVE delta, per addendum #1 of the pre-registration, which was written after a
-            #: smoke test showed the ABSOLUTE rule is biased toward WEAK corrections: |dsigma| is
-            #: minimised by refreshes where sigma is barely acting -- i.e. the early ones, before the
-            #: shock has formed -- and it duly selected refresh 2 with sigma_min 0.98975, landing on
-            #: x_shock 0.5601 against the isentropic 0.5605. Normalising by (1 - sigma_min) makes a
-            #: barely-acting refresh score LARGE instead of small, which removes the bias without
-            #: adding a knob (1e-12 is division protection, not a calibration). `capture_select_abs`
-            #: keeps the biased rule available as the recorded control arm.
-            if sigma_prev is not None:
-                _act = max(1.0 - float(ws.ent.sigma_min), 1e-12)
-                _score = sigma_delta if capture_select_abs else sigma_delta / _act
-                if ws.sigma_best_delta is None or _score < ws.sigma_best_delta:
-                    ws.sigma_best = ws.sigma_frozen.copy()
-                    ws.sigma_best_delta = float(_score)
-                    ws.sigma_best_index = int(n_sigma_refresh)
             sigma_history.append(
                 (float(ws.ent.sigma_min), int(ws.ent.n_shock),
                  float(ws.ent.m1_max), sigma_delta, bool(ws.ent.converged)))
@@ -1608,10 +1565,6 @@ def solve_newton_lifting(
         "entropy_correction": bool(entropy_correction),
         "sigma_soft_eps": float(sigma_soft_eps),
         "sigma_soft_q": float(sigma_soft_q),
-        "capture_select": bool(capture_select),
-        "capture_select_abs": bool(capture_select_abs),
-        "capture_adopted_index": capture_adopted_index,
-        "capture_adopted_delta": capture_adopted_delta,
         "capture_n_refresh": n_sigma_refresh,
         "sigma_history": sigma_history,
         "sigma_min": (float(ws.ent.sigma_min) if entropy_correction else None),

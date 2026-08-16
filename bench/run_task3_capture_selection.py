@@ -1,5 +1,16 @@
 """Change the CAPTURE without changing the MAGNITUDE: SELECT a computed sigma field, never blend one.
 
+★★★ NOT RUNNABLE AT HEAD (2026-08-16) -- and that is the intended end state. K3 fired: the selection
+rule is HARMFUL (balanced panel [0, 5], cl spread 1.21 % -> 7.47 %, one seed lost), so the route was
+killed, and at the phase-3 close-out the `capture_select` / `capture_select_abs` knobs were REMOVED
+from pyfp3d/solve/newton.py rather than left as default-OFF options -- this project's own rule is that
+a knob kept "in case we need it again" is how temporary knobs become permanent (the same disposal the
+temporary sigma_scale instrument got at its registered expiry). This file therefore raises TypeError
+on the solve call and is kept as the PROVENANCE of its committed CSV, not as a live harness.
+
+  to reproduce: git checkout c38f9a6 -- pyfp3d/solve/newton.py   (then restore with
+                git checkout HEAD -- pyfp3d/solve/newton.py, NEVER the bare form -- see CLAUDE.md)
+
 Pre-registered in docs/dev_phase_three/20260812-2100-capture-selection-prereg.md, with addendum #1
 (the relative-delta rule) committed after the smoke test and BEFORE any band was read.
 

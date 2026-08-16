@@ -522,6 +522,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    locks, and they were deleted WITH the instrument at its registered expiry
    (docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
    "in case we need it again" is how temporary knobs become permanent.
+   ★★ Same disposal applied at the phase-3 close-out (2026-08-16) to `capture_select` /
+   `capture_select_abs`, whose route K3 had measured HARMFUL (cl spread 1.21 % → 7.47 % on the
+   balanced panel, one seed lost) — it had survived as a default-OFF option with NO registered
+   expiry, which is exactly how the previous instance started. **A killed route's knob is deleted
+   with the route.** Test count unmoved (it had no locks); the defect it was meant to address is
+   still reported, by `sigma_freeze_report` — ★ the distinction worth keeping: **a known defect
+   belongs in the report, not in an option the caller is invited to flip.**
    Same count as: **468 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-11, measured 494.47 s @8 threads on a quiet box;
    the 930.97 s recorded below was the same 8 threads UNDER LOAD — a 1.9x spread on
