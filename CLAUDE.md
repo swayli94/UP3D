@@ -464,6 +464,15 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
 - **Read signatures and import paths; do not recall them.** Five wrong-from-memory calls in one
   day, one of which (`phi_init` at the top level instead of inside `newton_kw`) killed all five
   legs of a 40-minute run with TypeError.
+  ★★ **And a signature is not the contract** (2026-08-16, measured, cost one completed M6 medium
+  solve): a dry-check that read `classify_failure`'s argument NAMES still passed lists where it
+  needs arrays (it does `tail > 0`; its own call site builds them with `np.asarray`) and unpacked
+  TWO returns from a function that returns FOUR. It raised in the reporting layer AFTER the solve
+  finished and BEFORE the row was appended, so the solve was lost -- the same family as the
+  40-minute solve destroyed by a `float(None)`. ⇒ **the dry-check must exercise RETURN ARITY and
+  ARGUMENT TYPES, not just the signature** -- call the function once on a toy input before
+  spending compute. Corollary already in force: put `append + write` AHEAD of any post-processing
+  and wrap the post-processing, so a reporting error can only add a column.
 - **`pgrep`/`pkill -f <pattern>` matches YOUR OWN command line.** `pgrep -f "pytest tests/"`
   reported "still running" for a job that had finished; `pkill -f run_le5_taper_coverage` killed
   the invoking shell (exit 144) and lost the script it was writing. **Kill by PID**, and poll a
