@@ -1,0 +1,10 @@
+{
+  "verdict": "X-SHIFT (k* differs from the matched wing-body leg at {0.82: ('P1', 'P2')})",
+  "wing_kstar": {
+    "0.82": "P1",
+    "0.86": "P1",
+    "0.88": "P1"
+  },
+  "ctrl_kstar": "P1",
+  "wall_s": 115.8
+}
