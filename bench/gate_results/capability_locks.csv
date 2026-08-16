@@ -1,6 +1,6 @@
 node,locks,returncode,summary,wall_s
-tests/test_s1_m1a_envelope.py,M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05),0,============================== 4 passed in 6.77s ===============================,7.0
-tests/test_seed_fallback.py,"the cold-start seed fallback, incl. the real NACA M0.80 medium recovery",0,============================== 6 passed in 43.32s ==============================,43.5
-tests/test_b9_wingbody_conforming.py,"wing-body conforming: junction loading, the B8 lift-loss detector",0,============================== 9 passed in 8.42s ===============================,8.6
-tests/test_p8_newton.py,G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06),0,"=================== 10 passed, 1 xfailed in 82.05s (0:01:22) ===================",82.3
-tests/test_b32_wingbody_conforming_transonic.py,"the conforming WING-BODY transonic ceiling: M0.84 reached, 0 clamps, cl_p",0,======================== 1 passed in 384.40s (0:06:24) =========================,384.6
+tests/test_s1_m1a_envelope.py,M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05),0,============================== 4 passed in 10.43s ==============================,10.8
+tests/test_seed_fallback.py,"the cold-start seed fallback, incl. the real NACA M0.80 medium recovery",0,========================= 6 passed in 64.98s (0:01:04) =========================,65.3
+tests/test_b9_wingbody_conforming.py,"wing-body conforming: junction loading, the B8 lift-loss detector",0,============================== 9 passed in 11.72s ==============================,12.0
+tests/test_p8_newton.py,G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06),0,"=================== 10 passed, 1 xfailed in 85.68s (0:01:25) ===================",85.9
+tests/test_b32_wingbody_conforming_transonic.py,"the conforming WING-BODY transonic ceiling: M0.84 reached, 0 clamps, cl_p",0,======================== 1 passed in 390.21s (0:06:30) =========================,390.5

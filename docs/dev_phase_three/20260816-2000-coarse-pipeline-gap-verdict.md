@@ -111,3 +111,16 @@
 | ④ | P2 的 M0.5 工况维度 | → **phase 4**(裁决 D7,且受 **D2** 约束) |
 
 ⇒ ★★★ **裁决 D7 的两步("以测量结论收口" + "清挂账")均已完成 ⇒ phase 3 可以结束。**
+
+## 8. 收口仪式(CLAUDE.md 工作流第 5 步,第 0 项)
+
+**快速能力锁层 `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`:5/5 绿,564 s(9.4 min)**,
+★ **@8 线程**(脚本自己钉的,并打印了解析值)、load average **11.7 / 24 核** —— 按本项目的规矩,
+**墙钟必须带线程数与负载引用**(G8.2 那条锁断言的是墙钟预算,而墙钟是机器标定)。
+逐组:`test_s1_m1a_envelope` 10.8 s / `test_seed_fallback` 65.3 s / `test_b9_wingbody_conforming` 12.0 s /
+`test_p8_newton` 85.9 s(10 passed + 1 xfailed)/ `test_b32_wingbody_conforming_transonic` 390.5 s。
+
+★ **全门控集不重跑**:它已在**第 34 轮的阶段边界核查**上跑过(**488 + 1 + 3 + 1 XPASSED,0 failed**,
+1:11:48 @16t),而此后**求解路径上零改动** —— 核对过:`main...HEAD` 之后对 `pyfp3d/` 的唯一改动是
+`wing3d.py` 的 **docstring**(7 增 1 删,doc-only,已 `git diff` 逐行确认),其余全是 `bench/` 注释与文档。
+⇒ 不是"跳过",是**有依据地不重花 4 小时**。
