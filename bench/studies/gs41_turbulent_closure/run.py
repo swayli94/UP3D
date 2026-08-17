@@ -44,20 +44,30 @@ def _record(tag, metric, band, measured, verdict):
 # ---------------------------------------------------------------------------
 
 def cf_coles_fernholz(ret):
-    """c_f = 0.024 Re_theta^(-1/4)."""
+    """Coles-Fernholz logarithmic form, c_f = 2[(1/kappa) ln Re_theta + C]^-2
+    with kappa = 0.384, C = 4.127 (Nagib-Chauhan-Monkewitz)."""
+    return 2.0 * ((1.0 / 0.384) * np.log(ret) + 4.127) ** -2
+
+
+def cf_power_law(ret):
+    """1/4 power law, c_f = 0.024 Re_theta^(-1/4) (Schlichting).
+
+    addendum #1: this replaces a misapplied Karman-Schoenherr. KS relates the
+    LENGTH-AVERAGED C_F to a LENGTH Reynolds number, not the local c_f to
+    Re_theta -- the wrong variable pair, which is question 5 applied to the
+    reference rather than to the measurement.
+
+    ★ Ludwieg-Tillmann was considered as the second reference and rejected: it
+    depends on H, and H is one of the quantities under test, so the reference
+    would partly absorb an H error. Both references here depend on Re_theta
+    alone (question 7 -- a guard must not measure itself).
+    """
     return 0.024 * ret ** -0.25
-
-
-def cf_karman_schoenherr(ret):
-    """0.242/sqrt(cf) = log10(Re_theta cf), solved for cf."""
-    def f(cf):
-        return 0.242 / np.sqrt(cf) - np.log10(ret * cf)
-    return brentq(f, 1.0e-4, 2.0e-2, xtol=1e-14)
 
 
 def band_at(ret):
     """max(3 %, 2 x the two correlations' own disagreement) -- pre-reg 4.1."""
-    a, b = cf_coles_fernholz(ret), cf_karman_schoenherr(ret)
+    a, b = cf_coles_fernholz(ret), cf_power_law(ret)
     s = abs(a - b) / (0.5 * (a + b))
     return max(0.03, 2.0 * s), s
 
@@ -174,7 +184,7 @@ def gate(arm, binding):
     rows, worst_cf, n_excl = [], 0.0, 0
     for i in np.where(m)[0]:
         ret, cf = st.re_theta[i], st.cf[i]
-        cfa, cfb = cf_coles_fernholz(ret), cf_karman_schoenherr(ret)
+        cfa, cfb = cf_coles_fernholz(ret), cf_power_law(ret)
         b, s = band_at(ret)
         if s > 0.10:                       # pre-reg section 6: band meaningless
             n_excl += 1
@@ -183,7 +193,7 @@ def gate(arm, binding):
         worst_cf = max(worst_cf, d - b)    # positive = outside the band
         rows.append({"arm": arm, "x": st.x[i], "re_theta": ret, "H": st.H[i],
                      "cf": cf, "cf_coles_fernholz": cfa,
-                     "cf_karman_schoenherr": cfb, "band": b,
+                     "cf_power_law": cfb, "band": b,
                      "corr_spread": s, "worst_dev": d, "inside": int(d <= b)})
     inside = sum(r["inside"] for r in rows)
     print(f"  band is DERIVED: max(3 %, 2 x the two correlations' own spread); "
@@ -193,11 +203,11 @@ def gate(arm, binding):
     for r in rows[::max(1, len(rows)//6)]:
         print(f"         Re_th={r['re_theta']:8.0f} H={r['H']:.4f} "
               f"cf={r['cf']:.6f} (CF {r['cf_coles_fernholz']:.6f}, "
-              f"KS {r['cf_karman_schoenherr']:.6f}) dev={r['worst_dev']:.3%} "
+              f"PL {r['cf_power_law']:.6f}) dev={r['worst_dev']:.3%} "
               f"{'in' if r['inside'] else '★OUT'}")
 
     tag = "T-CF" if binding else f"T-CF[{arm}]"
-    _record(tag, "c_f vs BOTH established ZPG correlations",
+    _record(tag, "c_f vs BOTH established ZPG correlations (Coles-Fernholz log + 1/4 power law)",
             "inside the derived band at every station",
             f"{inside}/{len(rows)} stations inside; worst excess "
             f"{100*max(0.0, worst_cf):.2f} pp",
