@@ -126,10 +126,21 @@ def falkner_skan(m, eta_max=12.0):
         return [fp, fpp, -f * fpp - beta * (1.0 - fp * fp),
                 1.0 - fp, fp * (1.0 - fp)]
 
+    # A trial f''(0) off the root makes f' run away (up) or collapse (down)
+    # well before eta_max, and integrating that divergence at rtol 1e-12 is
+    # what hung the first execution. Terminal events cut the trial off; the
+    # residual stays correctly signed because it is read at whichever endpoint
+    # was reached.
+    def _hi(_, u):
+        return u[1] - 1.5
+    def _lo(_, u):
+        return u[1] + 0.2
+    _hi.terminal = _lo.terminal = True
+
     def shoot(s, full=False):
         sol = solve_ivp(rhs, (0.0, eta_max), [0.0, 0.0, s, 0.0, 0.0],
                         rtol=1e-12, atol=1e-14, dense_output=full,
-                        method="DOP853")
+                        method="DOP853", events=(_hi, _lo))
         return sol if full else sol.y[1, -1] - 1.0
 
     s = brentq(shoot, 0.1, 3.0, xtol=1e-13, rtol=1e-15)
