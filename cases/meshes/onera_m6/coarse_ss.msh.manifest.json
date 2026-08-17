@@ -1,8 +1,8 @@
 {
   "bytes": 2292309,
   "extra": {
-    "generator": "cases/meshes/onera_m6/generate_onera_m6.py",
-    "note": "stamped at GS4.0 from the pre-existing local mesh (mtime 2026-08-04); regeneration must reproduce this sha256"
+    "equivalent_to": "cases/meshes/onera_m6_roundtip/coarse.msh",
+    "note": "R3 CLOSED 2026-08-18 (GS4.0): byte-identical to its partner BY CONSTRUCTION, not by a directory copy. onera_m6 clamps h_far=min(2.5,120*h_wall) so that coarse/medium/fine stay bit-identical for the P5/G8.2/B7/M1 locks, and defines RICHARDSON_LADDER=(xcoarse_ss,coarse_ss,medium) with the clamp OFF; onera_m6_roundtip is unclamped from the start and its own comment says 'its coarse is what the shipped onera_m6 family needs a coarse_ss for'. Since 2026-08-04 both use tip_cap=round for non-_flat levels. => same construction, same parameters, same bytes. No cross-family risk existed in phase 3's S-ladder."
   },
   "n_nodes": 12061,
   "n_tets": 59359,
