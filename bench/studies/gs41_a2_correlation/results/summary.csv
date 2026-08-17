@@ -1,0 +1,12 @@
+tag,metric,band,measured,verdict
+fixed-point,"ZPG self-similar H, each family vs Blasius (2.591100)","RECORDED, no gate",correlation 2.590433 (-0.0258 %) vs profile 2.708292 (+4.5229 %) = 175.6x,RECORDED
+D-BLASIUS,max rel err H,<= 5 %,0.0258 %,pass-leg
+D-BLASIUS,max rel err cf*sqrt(Re_x),<= 5 %,0.0054 %,pass-leg
+D-BLASIUS,BOTH within +-5 % over >= 3 decades,both legs,"H ok, cf ok","D-BLASIUS PASS (★ near-circular, see prereg 0)"
+D-ORDER,err vs Blasius monotone + order >= 0.8,monotone & >= 0.8,H mono=True order=0.000; cf mono=False order=-0.000,D-FAIL
+D-ORDER,"SEPARATED: self-convergence order (discretization alone, vs n=32000)",RECORDED,"H 0.024, cf 3.908; model-floor/discretization gap 7.33e+09x (round 1: ~1e11)",RECORDED
+D-FS,max |H - H_FS|/H_FS over settled wedges,<= 8 %,1.0767 % (3/3 settled),D-FS PASS
+D-COST,t_strip(S4) at n_sub=2 (13764 stations),<1 s = C-SUB1; 1-100 s = C-PARTIAL; >100 s = C-MISS,0.5040 s,C-SUB1
+D-COST,vs round 2's profile closure at the same size,RECORDED,4.34x faster (2.188 s -> 0.504 s),RECORDED
+D-COST,P1 = t/t_inviscid at S4 (committed P1_IBL3 = 6.073),RECORDED,0.003347 (1815x the 3-D IBL's 915 s),RECORDED
+D-TURB,"cf vs 1/7 power law (profile closure, unchanged)","RECORDED, no gate",-7.71%..+11.36% vs round 1's -7.71%..+11.36% (bit-reproduced: False),RECORDED

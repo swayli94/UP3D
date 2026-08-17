@@ -212,7 +212,31 @@ pyfp3d/                    # Main package
 │   │                       #   newton_tight (splu + P8/P14 backtracking; probe guard =
 │   │                       #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
 │   │                       #   2026-07-23 (bench/studies/v5_tight_coupling/)
-│   └── strip2d.py        # ★ [GS4.1 phase 4, round 1 2026-08-18] 2-D chordwise STRIP,
+│   ├── closures_2d.py    # ★★ [GS4.1 round 3, route (a2) 2026-08-19] the 2-D
+│   │                       #   integral BL closure by FITTED CORRELATIONS
+│   │                       #   (Drela-Giles), laminar only. State (theta, H),
+│   │                       #   explicit 2-ODE system -- no quadrature, no state
+│   │                       #   Jacobian, which is the cost argument.
+│   │                       #   ★★ AUTHORITY, fixed before it was written:
+│   │                       #   closures.py owns the 3-D IBL, THIS owns the 2-D
+│   │                       #   strip. NOT two implementations of one model --
+│   │                       #   different state spaces and provenance. Neither
+│   │                       #   imports the other (asserted in tests); what stops
+│   │                       #   them drifting is that BOTH are checked against the
+│   │                       #   same external Falkner-Skan ODE oracle.
+│   │                       #   ★★★ Blasius is a FIXED POINT by construction:
+│   │                       #   zpg_fixed_point() = 2.590433 (-0.026 % vs Blasius)
+│   │                       #   against the profile family's 2.708292 (+4.52 %) =
+│   │                       #   175.6x. That is the whole of route (a2).
+│   │                       #   ★ Singular at separation (dH*/dH -> 0 at H = 4):
+│   │                       #   a known property of the DIRECT method and GS4.2's
+│   │                       #   motivation, so the marcher RAISES rather than
+│   │                       #   clamping. Correlations are fits to Falkner-Skan,
+│   │                       #   so checking them against Blasius/FS is a
+│   │                       #   TRANSCRIPTION test, NOT validation.
+│   │                       #   Evidence bench/studies/gs41_a2_correlation/ (9.1 s);
+│   │                       #   locks tests/test_gs41_closures_2d.py (16).
+│   ├── strip2d.py        # ★ [GS4.1 phase 4, round 1 2026-08-18] 2-D chordwise STRIP,
 │                           #   marched along the streamwise coordinate: momentum +
 │                           #   kinetic-energy integrals in conservative form, unknowns
 │                           #   (delta, A[, Ctau1]) = the closure's OWN state, implicit

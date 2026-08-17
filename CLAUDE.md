@@ -529,7 +529,15 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **521 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **537 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, **measured in full @485.74 s @8 threads**, GS4.1 round 3).
+   ★ +16 vs the 521 below = `tests/test_gs41_closures_2d.py` (route (a2)'s correlation
+   closure). **Skipped and xfailed did not move.** ★ Two of the 16 are structural rather
+   than numeric: the two closure families must not import each other (`closures.py` owns the
+   3-D IBL, `closures_2d.py` owns the 2-D strip — see its docstring), and the profile-path
+   fixed point must still read round 1's values, so adding a route cannot move an existing
+   number.
+   Previous: **521 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-18, **measured in full @472.19 s @8 threads**, GS4.1 round 1).
    ★ +21 vs the 500 below = `tests/test_gs41_strip2d.py` (the 2-D strip core's locks).
    **Skipped and xfailed did not move** — the round touched no solve, and `strip2d.py` is a
