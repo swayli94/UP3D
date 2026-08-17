@@ -180,9 +180,96 @@ def _branch_A(target_H, ue, rho, mu):
     return 0.5 * (lo + hi)
 
 
+def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
+                      n_substep=2000):
+    """March the strip with the **correlation** closure (`closures_2d.py`).
+
+    GS4.1 round 3, route (a2). The state is `(theta, H)` and the system is
+    explicit -- no implicit `M y' = F`, no quadrature, no state Jacobian -- which
+    is the whole cost argument. Laminar only.
+
+    `y0 = (theta, H)`. Kept as a separate entry point rather than a branch inside
+    `march` so that the profile path stays byte-for-byte what round 1 measured
+    (guard G-LEGACY); the two closures are separate authorities, not two
+    implementations of one model.
+
+    Raises `closures_2d.ClosureRangeError` if the march reaches separation
+    (`H >= H_SEPARATION_GUARD`) or leaves the correlation's range -- reported,
+    never clamped, because the direct form is singular there by construction.
+    """
+    import time
+
+    from pyfp3d.viscous import closures_2d as C2
+
+    xs = np.asarray(stations, dtype=float)
+    if xs.ndim != 1 or xs.size == 0:
+        raise ValueError("stations must be a non-empty 1-D array")
+    if np.any(np.diff(xs) <= 0.0):
+        raise ValueError("stations must be strictly increasing")
+    if xs[0] <= x_start:
+        raise ValueError("stations must lie downstream of x_start")
+    if x_start <= 0.0:
+        raise ValueError("x_start must be positive")
+
+    y = np.array(y0, dtype=float)
+    rec = {k: [] for k in ("x", "theta", "H", "ds1", "theta_star", "cf", "cD",
+                           "re_theta", "re_x", "ue", "delta", "A", "ctau")}
+
+    def _f(yy, xx):
+        ue, due = ue_fn(xx)
+        if yy[1] >= C2.H_SEPARATION_GUARD:
+            raise C2.ClosureRangeError(
+                f"H = {yy[1]:.4f} reached the separation guard "
+                f"{C2.H_SEPARATION_GUARD} -- the direct two-equation form is "
+                "singular at H = 4 (GS4.2's motivation); stopping this leg")
+        return np.array(C2.rhs(max(yy[0], C.DELTA_MIN), yy[1], ue, due,
+                              rho=rho, mu=mu))
+
+    t0 = time.perf_counter()
+    x = float(x_start)
+    span_log = np.log(xs[-1] / x_start)
+    for i in range(xs.size):
+        seg_log = np.log(xs[i] / x)
+        nsub = max(1, int(round(n_substep * seg_log / span_log)))
+        ratio = (xs[i] / x) ** (1.0 / nsub)
+        for _ in range(nsub):
+            dx = x * (ratio - 1.0)
+            k1 = _f(y, x)
+            k2 = _f(y + 0.5 * dx * k1, x + 0.5 * dx)
+            k3 = _f(y + 0.5 * dx * k2, x + 0.5 * dx)
+            k4 = _f(y + dx * k3, x + dx)
+            y = y + dx * (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0
+            y[0] = max(y[0], C.DELTA_MIN)
+            x += dx
+        x = xs[i]
+        ue, _ = ue_fn(x)
+        p = C2.packet(y[0], y[1], ue, rho=rho, mu=mu)
+        rec["x"].append(x)
+        rec["theta"].append(y[0])
+        rec["H"].append(y[1])
+        rec["ds1"].append(y[0] * y[1])
+        rec["theta_star"].append(y[0] * p["H_star"])
+        rec["cf"].append(p["cf"])
+        rec["cD"].append(p["cD"])
+        rec["re_theta"].append(p["re_theta"])
+        rec["re_x"].append(rho * ue * x / mu)
+        rec["ue"].append(ue)
+        rec["delta"].append(np.nan)     # the correlation state carries no delta
+        rec["A"].append(np.nan)         # nor a wall-slope parameter
+        rec["ctau"].append(np.nan)      # laminar only
+    wall = time.perf_counter() - t0
+
+    return StripState(turbulent=False, wall_time=wall, n_substep=n_substep,
+                      **{k: np.asarray(v) for k, v in rec.items()})
+
+
 def march(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5, turbulent=False,
           c_l=C.C_L_DEFAULT, n_substep=2000):
     """March the strip from `x_start` and record the closure at `stations`.
+
+    Uses the **profile** closure (`closures.py`). The correlation-closure
+    counterpart is `march_correlation`; see its docstring and `closures_2d.py`
+    for which closure is authoritative for what.
 
     `ue_fn(x)` returns `(u_e, du_e/dx)`. Integration is classical RK4 with the
     substeps distributed so that the march **lands exactly on every recording
