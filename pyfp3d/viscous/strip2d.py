@@ -181,7 +181,7 @@ def _branch_A(target_H, ue, rho, mu):
 
 
 def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
-                      n_substep=2000):
+                      n_substep=2000, x_tr=None, arm="new"):
     """March the strip with the **correlation** closure (`closures_2d.py`).
 
     GS4.1 round 3, route (a2). The state is `(theta, H)` and the system is
@@ -192,6 +192,20 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
     `march` so that the profile path stays byte-for-byte what round 1 measured
     (guard G-LEGACY); the two closures are separate authorities, not two
     implementations of one model.
+
+    `x_tr` forces transition: stations upstream of it use the laminar closure,
+    stations at or beyond it the turbulent one at local equilibrium. ★ With
+    `x_tr=None` (the default) this is byte-for-byte the laminar-only march of
+    round 3 -- guard G-LEGACY -- so adding turbulence moves no existing reading.
+    `arm` selects the turbulent `H*` correlation, "new" (what XFOIL 6.99 runs)
+    or "old" (the form commented out above it); it is inert when `x_tr is None`.
+
+    ★★ Transition is an INSTANTANEOUS switch at `x_tr` holding theta and H
+    continuous, not the e^N ramp of D13 eq (34)(35). That matches the project's
+    existing D-TR choice on the 3-D side, and its known consequence is already
+    on record: GV3.1 measured cf +44 % at the first post-trip station against
+    XFOIL's ramp. A large deviation at that one station is the transition model,
+    not the correlations.
 
     Raises `closures_2d.ClosureRangeError` if the march reaches separation
     (`H >= H_SEPARATION_GUARD`) or leaves the correlation's range -- reported,
@@ -215,8 +229,14 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
     rec = {k: [] for k in ("x", "theta", "H", "ds1", "theta_star", "cf", "cD",
                            "re_theta", "re_x", "ue", "delta", "A", "ctau")}
 
+    def _turbulent_at(xx):
+        return x_tr is not None and xx >= x_tr
+
     def _f(yy, xx):
         ue, due = ue_fn(xx)
+        if _turbulent_at(xx):
+            return np.array(C2.rhs_turb(max(yy[0], C.DELTA_MIN), yy[1], ue, due,
+                                        rho=rho, mu=mu, arm=arm))
         if yy[1] >= C2.H_SEPARATION_GUARD:
             raise C2.ClosureRangeError(
                 f"H = {yy[1]:.4f} reached the separation guard "
@@ -243,7 +263,8 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
             x += dx
         x = xs[i]
         ue, _ = ue_fn(x)
-        p = C2.packet(y[0], y[1], ue, rho=rho, mu=mu)
+        p = (C2.packet_turb(y[0], y[1], ue, rho=rho, mu=mu, arm=arm)
+             if _turbulent_at(x) else C2.packet(y[0], y[1], ue, rho=rho, mu=mu))
         rec["x"].append(x)
         rec["theta"].append(y[0])
         rec["H"].append(y[1])
@@ -256,7 +277,7 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
         rec["ue"].append(ue)
         rec["delta"].append(np.nan)     # the correlation state carries no delta
         rec["A"].append(np.nan)         # nor a wall-slope parameter
-        rec["ctau"].append(np.nan)      # laminar only
+        rec["ctau"].append(p.get("Ctau_eq", np.nan))
     wall = time.perf_counter() - t0
 
     return StripState(turbulent=False, wall_time=wall, n_substep=n_substep,

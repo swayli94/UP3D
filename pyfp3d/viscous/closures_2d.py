@@ -90,6 +90,179 @@ H_SEPARATION_GUARD = 3.9
 #: The (H - 1) denominator in the c_f correlation.
 H_MIN = 1.05
 
+# ---------------------------------------------------------------------------
+# TURBULENT closure (GS4.1 round 5). Every constant carries its source, because
+# the previous attempt at these was written from memory and drove a flat plate
+# to an unphysical H = 0.60.
+#
+# Sources:
+#   XFOIL 6.99, Xfoil699src/src/xblsys.f and xbl.f  (reference/XFOIL6.99.zip)
+#   Drela & Giles, AIAA J 25(10)                    (reference/drela-giles-*.pdf)
+#
+# ★★ LOCAL EQUILIBRIUM ONLY: Ctau is set to CtauEQ everywhere. The shear-stress
+# LAG equation is deliberately absent -- a zero-pressure-gradient plate cannot
+# test it (equilibrium IS Ctau = CtauEQ, so the lag term vanishes identically),
+# and shipping code this round cannot verify is what the scope boundary exists
+# to prevent. The gate's "two-equation + lag" is met by rounds 5 and 6 together.
+# ---------------------------------------------------------------------------
+
+GACON = 6.70                       # xbl.f:1559
+GBCON = 0.75                       # xbl.f:1560
+GCCON = 18.0                       # xbl.f:1561 (wake only; unused here)
+CTCON = 0.5 / (GACON ** 2 * GBCON)  # xbl.f:1569  -> 0.01485...
+HSMIN = 1.500                      # xblsys.f:2394 DATA HSMIN
+DHSINF = 0.015                     # xblsys.f:2394 DATA DHSINF
+
+#: Physical band a turbulent flat plate must stay inside. Leaving it is reported,
+#: never clamped -- the memory attempt left it and that is how the bug surfaced.
+H_TURB_LO, H_TURB_HI = 1.05, 4.0
+
+
+def h_kinematic(H, mach=0.0):
+    """Whitfield kinematic shape parameter. `xblsys.f:2278` HKIN / D-G eq (9).
+
+    At M = 0 this is the identity, which is the only regime this module runs in;
+    it is written out so the incompressible assumption is visible rather than
+    implied.
+    """
+    msq = mach * mach
+    return (H - 0.29 * msq) / (1.0 + 0.113 * msq)
+
+
+def h_star_turb(H, re_theta, mach=0.0, arm="new"):
+    """Turbulent `H*`. `xblsys.f:2388` HST.
+
+    `arm="new"` is the correlation XFOIL 6.99 actually runs, marked there
+    "new correlation 29 Nov 91". `arm="old"` is the form commented out directly
+    above it, which is the same generation as this module's laminar set. Round 4
+    measured the published laminar forms MORE accurate than XFOIL's later code
+    forms, so which generation is better on the turbulent side cannot be settled
+    by analogy -- both arms are provided and the round measures them.
+    """
+    hk = h_kinematic(H, mach)
+    ho = 3.0 + 400.0 / re_theta if re_theta > 400.0 else 4.0
+    rtz = re_theta if re_theta > 200.0 else 200.0
+    if arm == "old":
+        hs = 1.505 + 4.0 / re_theta
+        if hk < ho:
+            hs += (0.165 - 1.6 / np.sqrt(re_theta)) * (ho - hk) ** 1.6 / hk
+        return hs
+    if hk < ho:                                   # attached branch
+        hr = (ho - hk) / (ho - 1.0)
+        hs = (2.0 - HSMIN - 4.0 / rtz) * hr ** 2 * 1.5 / (hk + 0.5) \
+            + HSMIN + 4.0 / rtz
+    else:                                         # separated branch
+        grt = np.log(rtz)
+        hdif = hk - ho
+        rtmp = hdif + 4.0 / grt
+        hs = hdif ** 2 * (0.007 * grt / rtmp ** 2 + DHSINF / hk) \
+            + HSMIN + 4.0 / rtz
+    fm = 1.0 + 0.014 * mach * mach                # Whitfield compressibility
+    return (hs + 0.028 * mach * mach) / fm
+
+
+def cf_turb(H, re_theta, mach=0.0):
+    """Turbulent `c_f` (Coles). `xblsys.f:2483` CFT / D-G eq (13) (Swafford)."""
+    hk = h_kinematic(H, mach)
+    fc = np.sqrt(1.0 + 0.5 * 0.4 * mach * mach)
+    grt = max(np.log(re_theta / fc), 3.0)
+    gex = -1.74 - 0.31 * hk
+    arg = max(-20.0, -1.33 * hk)
+    cfo = 0.3 * np.exp(arg) * (grt / 2.3026) ** gex
+    return (cfo + 1.1e-4 * (np.tanh(4.0 - hk / 0.875) - 1.0)) / fc
+
+
+def slip_velocity(hs, H, mach=0.0):
+    """Normalized slip velocity `Us`. `xblsys.f:825`, `GBCON` from `xbl.f:1560`."""
+    hk = h_kinematic(H, mach)
+    return 0.5 * hs * (1.0 - (hk - 1.0) / (GBCON * H))
+
+
+def ctau_eq(hs, H, us, mach=0.0):
+    """Equilibrium shear coefficient `CtauEQ`. `xblsys.f:877`.
+
+    XFOIL stores its square root (`CQ2 = SQRT(...)`); this returns `CtauEQ`
+    itself, which is what the dissipation relation consumes.
+    """
+    hk = h_kinematic(H, mach)
+    return CTCON * hs * (hk - 1.0) ** 3 / ((1.0 - us) * H * hk * hk)
+
+
+def cd_turb(cf, us, ctau, hs):
+    """Turbulent `c_D`. `xblsys.f:2375` DIT.
+
+    ★★ DIT returns `DI = 2 c_D / H*`, NOT `c_D`. Reading it as `c_D` puts a
+    spurious factor of `H*/2` into the dissipation and drove the previous
+    attempt's flat plate to H = 0.60. `dissipation_identity` below is the
+    machine check for exactly that (guard G-DI).
+    """
+    return 0.5 * cf * us + ctau * (1.0 - us)
+
+
+def dissipation_identity(cd, hs):
+    """`DI = 2 c_D / H*` -- returned so a caller can assert the relation that
+    the memory attempt got wrong."""
+    return 2.0 * cd / hs
+
+
+def packet_turb(theta, H, ue, rho=1.0, mu=1.0e-5, mach=0.0, arm="new"):
+    """Turbulent closure quantities at one station, at local equilibrium."""
+    if not np.isfinite(H) or not (H_TURB_LO <= H <= H_TURB_HI):
+        raise ClosureRangeError(
+            f"turbulent H = {H!r} outside the physical band "
+            f"[{H_TURB_LO}, {H_TURB_HI}] -- reporting rather than clamping "
+            "(the memory attempt reached H = 0.60 here)")
+    re_theta = max(rho * ue * theta / mu, 1.0e-12)
+    hs = h_star_turb(H, re_theta, mach, arm)
+    cf = cf_turb(H, re_theta, mach)
+    us = slip_velocity(hs, H, mach)
+    ct = ctau_eq(hs, H, us, mach)
+    return {"re_theta": re_theta, "H_star": hs, "cf": cf, "Us": us,
+            "Ctau_eq": ct, "cD": cd_turb(cf, us, ct, hs)}
+
+
+def rhs_turb(theta, H, ue, due, rho=1.0, mu=1.0e-5, mach=0.0, arm="new",
+             rel_step=1.0e-6):
+    """`(dtheta/dxi, dH/dxi)` on the turbulent branch.
+
+    ★ One structural difference from the laminar branch: `H*` depends on
+    `Re_theta` as well as `H` (`HSL` sets `HS_RT = 0`, `HST` does not), so the
+    kinetic-energy equation carries an extra term,
+
+        theta (dH*/dH H' + dH*/dRe_theta Re_theta') = 2 c_D - H* c_f/2
+                                                      + H*(H-1) theta u_e'/u_e
+
+    with `Re_theta' = (rho/mu)(u_e theta' + theta u_e')`. Dropping it would be a
+    silent modelling change, not a simplification.
+
+    The two `H*` partials are taken by central difference. That is a deliberate
+    choice: they enter a marching right-hand side rather than a Newton Jacobian,
+    so difference accuracy is ample, and transcribing HST's analytic
+    derivatives would add a large surface of hand-copied algebra to a round
+    whose whole point is that hand-copying is what failed last time.
+    """
+    p = packet_turb(theta, H, ue, rho=rho, mu=mu, mach=mach, arm=arm)
+    hs, ret = p["H_star"], p["re_theta"]
+    grad = theta / ue * due
+
+    dtheta = 0.5 * p["cf"] - (H + 2.0) * grad
+
+    dh = rel_step * max(abs(H), 1.0)
+    dhs_dH = (h_star_turb(H + dh, ret, mach, arm)
+              - h_star_turb(H - dh, ret, mach, arm)) / (2.0 * dh)
+    dr = rel_step * ret
+    dhs_dre = (h_star_turb(H, ret + dr, mach, arm)
+               - h_star_turb(H, ret - dr, mach, arm)) / (2.0 * dr)
+
+    dre = rho / mu * (ue * dtheta + theta * due)
+    num = (2.0 * p["cD"] - hs * 0.5 * p["cf"] + hs * (H - 1.0) * grad
+           - theta * dhs_dre * dre)
+    den = theta * dhs_dH
+    if den == 0.0:
+        raise ClosureRangeError(
+            f"dH*/dH vanished at H = {H!r} on the turbulent branch")
+    return dtheta, num / den
+
 
 class ClosureRangeError(ValueError):
     """The march left the correlation's valid range -- report, do not clamp."""
