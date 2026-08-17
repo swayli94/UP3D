@@ -529,7 +529,23 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **537 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **542 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, GS4.1 round 4 = the closures.py source audit;
+   ★ wall 875.53 s @8 threads against 472–486 s for the same suite earlier the same day —
+   a 1.8x spread with an identical result. Load average at launch was only 1.26, so the
+   cause is NOT established; quote suite walls flagged and never as a cost, per the logged
+   precedent of 1.6x/1.9x/5.4x spreads on bit-identical answers).
+   ★ +5 vs the 537 below = `tests/test_gs41_closures_audit.py` (one finding, five
+   assertions), which locks the audit's
+   ROOT CAUSE (the kinetic-energy integrand is degree 21, so 8-point Gauss is short) and
+   NOT the error magnitude — so it stays true whether or not the quadrature is fixed.
+   ★★ The audit found `closures.py` faithful to Drela AIAA 2013-2437 on every profile and
+   integral definition (1e-15), with ONE substantive divergence: `ETA_LAM` is 8 points and
+   the kinetic-energy thicknesses need 11, giving phi*_1 a 4.3e-05 quadrature error. Reported,
+   NOT fixed — fixing moves every committed Track V number and needs a re-baseline errata
+   list. Also recorded: the library's comment justifying 8 points ("degree <= 13") is false
+   for those two thicknesses.
+   Previous: **537 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, **measured in full @485.74 s @8 threads**, GS4.1 round 3).
    ★ +16 vs the 521 below = `tests/test_gs41_closures_2d.py` (route (a2)'s correlation
    closure). **Skipped and xfailed did not move.** ★ Two of the 16 are structural rather

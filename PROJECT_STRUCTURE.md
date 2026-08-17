@@ -156,6 +156,31 @@ pyfp3d/                    # Main package
 │                           #   Term-2/Term-3 physics factor (forward path byte-identical)
 │   ├── __init__.py       #   exports WakeLevelSet / CutElementMap / MultivaluedOperator
 ├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
+│                           #   ★★ SOURCE-AUDITED 2026-08-19 (GS4.1 round 4) against its
+│                           #   binding reference, Drela AIAA 2013-2437 -- the first time,
+│                           #   because that paper was gitignored and absent until then.
+│                           #   Profile family and integral definitions match eq (42)-(61)
+│                           #   to 1e-15, so round 1's H = 2.708292 IS the published
+│                           #   family's property and not an implementation defect.
+│                           #   ★★★ ONE substantive divergence, reported NOT fixed:
+│                           #   ETA_LAM is 8-point Gauss, but eq (60)'s KINETIC-ENERGY
+│                           #   thicknesses phi*_1, phi*_2 have degree-21 integrands
+│                           #   (1 - R U (U^2+W^2), U and W each degree 7) and need 11
+│                           #   points -> phi*_1 carries 4.3e-05 quadrature error, and it
+│                           #   feeds theta*_1, i.e. the kinetic-energy equation eq (28).
+│                           #   The comment justifying 8 points ("degree <= 13") is false
+│                           #   for those two. ~1000x below the model errors above it, so
+│                           #   unlikely to move any published number -- but fixing it
+│                           #   moves EVERY committed Track V number and needs a
+│                           #   re-baseline errata list. Root cause locked in
+│                           #   tests/test_gs41_closures_audit.py; verdict in
+│                           #   docs/dev_phase_four/20260819-1100-*.md
+│                           #   ★ Also registered: D13 p.9 says the outer dissipation
+│                           #   length L is calibrated to Clauser's G-beta locus, while
+│                           #   C_L_DEFAULT = 0.09 is a Bradshaw value with the project's
+│                           #   own 2-D calibration -- the source's calibration has never
+│                           #   been performed. And KAPPA/B_SPALDING/RECOVERY_R are
+│                           #   NOT-IN-SOURCE: D13 gives those symbolically only.
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
 │   │                       #   GV1.1 9 PASS / 2 FAIL, V1 ✓ CLOSED 2026-07-22 (VERDICT
 │   │                       #   bench/studies/v1_ibl3_standalone/VERDICT.md); V1 does NOT touch
