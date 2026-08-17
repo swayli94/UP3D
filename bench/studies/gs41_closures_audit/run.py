@@ -46,10 +46,21 @@ def _item(tag, what, eq, verdict, detail, worst=None):
         print(f"         {detail}")
 
 
-def _rel(a, b):
+def _rel(a, b, scale=None):
+    """Error relative to the quantity's OWN scale.
+
+    addendum #1: the first execution divided by |b| alone, so quantities that
+    legitimately pass through zero -- f2, f3 carry a (1-eta)^2 factor and vanish
+    at the wall edge -- produced 1e-8 "relative" errors from 1e-16 absolute
+    ones, and reported six false DIVERGENT-UNDOCUMENTED. A threshold has to be
+    derived together with its denominator: whether a quantity can vanish, and
+    what its own range is, is part of the threshold.
+    """
     a, b = np.asarray(a, float), np.asarray(b, float)
-    scale = np.maximum(np.abs(b), 1.0e-300)
-    return float(np.max(np.abs(a - b) / scale))
+    if scale is None:
+        scale = np.max(np.abs(b))
+    den = np.maximum(np.abs(b), scale)
+    return float(np.max(np.abs(a - b) / np.maximum(den, 1.0e-300)))
 
 
 # ===========================================================================
@@ -182,6 +193,37 @@ def guard_indep():
     if bad:
         raise SystemExit("G-INDEP failed -- the audit would be checking the "
                          "library against itself (kill criterion 2)")
+
+
+def guard_teeth(C):
+    """G-TEETH (addendum #1 section 5): prove the REPAIRED metric still bites.
+
+    Repairing a metric after it produced six false alarms is exactly the moment
+    to check that the repair did not simply blind it. A known perturbation is
+    injected into the library side; the metric must still call it divergent. If
+    this guard passes silently on a corrupted input, the round is void.
+    """
+    eta = np.polynomial.legendre.leggauss(12)[0]*0.5 + 0.5
+    lf, ldf = np.empty(4), np.empty(4)
+    clean, paper = [], []
+    for e in eta:
+        C._lam_f0123(e, lf, ldf)
+        clean.append(lf.copy())
+        paper.append(p_f0123(e)[0])
+    clean, paper = np.array(clean), np.array(paper)
+    base = _rel(clean, paper)
+    caught = {}
+    for inj in (1.0e-6, 1.0e-9, 1.0e-11):
+        bad = clean * (1.0 + inj)
+        caught[inj] = _rel(bad, paper) > TOL_MATCH
+    ok = all(caught.values())
+    print(f"  G-TEETH   clean={base:.2e} (<= {TOL_MATCH:.0e}); injected "
+          + ", ".join(f"{k:.0e}->{'CAUGHT' if v else 'MISSED'}"
+                      for k, v in caught.items())
+          + f" -> {'PASS' if ok else 'FAIL'}")
+    if not ok:
+        raise SystemExit("G-TEETH failed -- the metric repair blinded the "
+                         "audit; the round is void (addendum #1 section 5)")
 
 
 def guard_frozen():
@@ -317,19 +359,51 @@ def tier23(C):
              ("dq2", C.OUT_DQ2), ("d_q", C.OUT_DQ), ("dq_c", C.OUT_DQC),
              ("tc1", C.OUT_TC1), ("tc2", C.OUT_TC2), ("dc1", C.OUT_DC1),
              ("dc2", C.OUT_DC2)]
-    worst, worst_n, rows = 0.0, "", []
+    # addendum #1: the Psi-weighted integrands carry Delta psi = arctan(W/U)
+    # (eq 40), which is TRANSCENDENTAL -- the library's 8-point rule is not
+    # exact for them, so comparing against a 40-point rule there compares two
+    # truncation errors. Only the polynomial half gets the independent rule;
+    # the Psi half is compared on the SAME rule, which isolates the integrand
+    # DEFINITION (what eq (60) actually specifies).
+    PSI_W = {"dq_c", "tc1", "tc2", "dc1", "dc2"}
+    eta8, w8 = np.polynomial.legendre.leggauss(8)
+    eta8, w8 = 0.5*(eta8 + 1.0), 0.5*w8
+    U8 = np.empty_like(eta8); W8 = np.empty_like(eta8)
+    for i, e in enumerate(eta8):
+        U8[i], W8[i], _, _ = p_lam_UW(e, A, B, Psi)
+    P8 = p_integrals(eta8, w8, U8, W8, np.ones_like(U8),
+                     np.arctan2(W8, U8))
+
+    scale = max(abs(P[n]*delta) for n, _ in names)
+    worst_p, worst_pn, worst_s, worst_sn, rows = 0.0, "", 0.0, "", []
     for n, idx in names:
-        lib, pap = out[idx], P[n]*delta
-        r = abs(lib - pap)/max(abs(pap), 1e-300)
-        rows.append((n, lib, pap, r))
-        if r > worst:
-            worst, worst_n = r, n
-    for n, lib, pap, r in rows:
-        print(f"         {n:6s} lib={lib: .8e} paper={pap: .8e} rel={r:.2e}")
+        lib = out[idx]
+        pap = (P8[n] if n in PSI_W else P[n])*delta
+        r = abs(lib - pap)/max(abs(pap), scale)
+        rows.append((n, lib, pap, r, n in PSI_W))
+        if n in PSI_W:
+            if r > worst_s: worst_s, worst_sn = r, n
+        elif r > worst_p:
+            worst_p, worst_pn = r, n
+    for n, lib, pap, r, ispsi in rows:
+        print(f"         {n:6s} lib={lib: .8e} paper={pap: .8e} rel={r:.2e}"
+              f"{'  [Psi-weighted, same-rule]' if ispsi else ''}")
+    worst = max(worst_p, worst_s)
     _item("A11", "integral thicknesses (16 of them)", "eq (60)",
           "MATCH" if worst <= TOL_MATCH else "DIVERGENT-UNDOCUMENTED",
-          f"laminar state, mach=0; library 8-pt (exact for these polynomials) "
-          f"vs independent 40-pt; worst is {worst_n}", worst)
+          f"laminar, mach=0. 11 polynomial ones: independent 40-pt vs the "
+          f"library's 8-pt (exact for degree<=13), worst {worst_pn} "
+          f"{worst_p:.2e}. 5 Psi-weighted ones carry arctan(W/U) and are NOT "
+          f"polynomial, so they are compared on the same 8-pt rule to isolate "
+          f"the integrand definition, worst {worst_sn} {worst_s:.2e}", worst)
+
+    trunc = max(abs((P8[n] - P[n])/max(abs(P[n]), 1e-300)) for n in PSI_W)
+    _item("A11q", "quadrature truncation of the Psi-weighted integrals",
+          "eq (60) + D-QUAD", "RECORDED",
+          f"8-pt vs 40-pt on the transcendental integrands differ by "
+          f"{trunc:.2e} relative -- this is the library's quadrature "
+          "resolution, NOT a formula divergence, and it is exactly what the "
+          "first execution mistook for one", trunc)
 
     # A12 -- coefficients
     re_d = rho*q*delta/mu
@@ -346,15 +420,50 @@ def tier23(C):
     r1 = abs(out[C.OUT_CF1] - cf1_p)/abs(cf1_p)
     r2 = abs(out[C.OUT_CF2] - cf2_p)/abs(cf2_p)
     r3 = abs(out[C.OUT_CD] - cD_p)/abs(cD_p)
-    r4 = abs(out[C.OUT_CDX] - cDx_p)/max(abs(cDx_p), 1e-300)
+    # addendum #1: on a LAMINAR state S ∝ dU and T ∝ dW, so the integrand of
+    # eq (61)'s CD_cross is identically zero and a relative comparison carries
+    # no information (both sides came out ~1e-19). Checked as an identity
+    # against the scale of its own terms instead.
+    term_scale = float(np.max(np.abs(S*dWd)) + np.max(np.abs(T*dUd)))
+    r4 = abs(out[C.OUT_CDX] - cDx_p)/max(term_scale, 1e-300)
     print(f"         Cf1 lib={out[C.OUT_CF1]:.8e} paper={cf1_p:.8e} rel={r1:.2e}")
     print(f"         Cf2 lib={out[C.OUT_CF2]:.8e} paper={cf2_p:.8e} rel={r2:.2e}")
     print(f"         CD  lib={out[C.OUT_CD]:.8e} paper={cD_p:.8e} rel={r3:.2e}")
     print(f"         CDx lib={out[C.OUT_CDX]:.8e} paper={cDx_p:.8e} rel={r4:.2e}")
     wc = max(r1, r2, r3, r4)
+    # and a turbulent state, where CD_cross is genuinely nonzero
+    st_t = (1.0e-2, 60.0, 6.0, -0.2, 1.0e-3, 2.0e-4)
+    out_t, _, _ = C.closure_scalar(st_t, q=q, rho=rho, mu=mu, turbulent=True)
+    red_t = rho*q*st_t[0]/mu
+    e24, w24 = np.polynomial.legendre.leggauss(24)
+    e24, w24 = 0.5*(e24 + 1.0), 0.5*w24
+    St = np.empty_like(e24); Tt = np.empty_like(e24)
+    dUt = np.empty_like(e24); dWt = np.empty_like(e24)
+    h = 1.0e-6
+    for i, e in enumerate(e24):
+        _, _, St[i], Tt[i], *_ = p_turb_UW(e, st_t[1], st_t[2], st_t[3],
+                                           red_t, Ctau1=st_t[4])
+        Up, Wp, *_ = p_turb_UW(min(e + h, 1.0), st_t[1], st_t[2], st_t[3],
+                               red_t, Ctau1=st_t[4])
+        Um, Wm, *_ = p_turb_UW(max(e - h, 0.0), st_t[1], st_t[2], st_t[3],
+                               red_t, Ctau1=st_t[4])
+        dUt[i] = (Up - Um)/(min(e + h, 1.0) - max(e - h, 0.0))
+        dWt[i] = (Wp - Wm)/(min(e + h, 1.0) - max(e - h, 0.0))
+    cDx_t = float(np.sum(w24*(St*dWt - Tt*dUt)))
+    r5 = abs(out_t[C.OUT_CDX] - cDx_t)/max(abs(cDx_t), 1e-300)
+    print(f"         CDx turbulent lib={out_t[C.OUT_CDX]:.6e} "
+          f"paper={cDx_t:.6e} rel={r5:.2e}  (nonzero here; the laminar one is "
+          "identically zero)")
     _item("A12", "Cf1, Cf2, CD, CD_cross", "eq (61)",
           "MATCH" if wc <= TOL_MATCH else "DIVERGENT-UNDOCUMENTED",
-          "Cf = 2S(0), CD = int(S dU/deta + T dW/deta) deta", wc)
+          "Cf = 2S(0), CD = int(S dU/deta + T dW/deta) deta; laminar CD_cross "
+          "is identically zero so it is checked against the scale of its own "
+          "terms", wc)
+    _item("A12t", "CD_cross on a TURBULENT state (nonzero)", "eq (61)",
+          "MATCH" if r5 <= 2e-3 else "DIVERGENT-UNDOCUMENTED",
+          "★ tolerance 2e-3, derived not picked: the paper side differentiates "
+          "the turbulent profile by finite difference (h=1e-6) against the "
+          "library's analytic derivative, so FD truncation dominates", r5)
 
     # A13
     th11_p = out[C.OUT_P11] - out[C.OUT_DS1]
@@ -432,6 +541,7 @@ def main():
     guard_indep()
     guard_frozen()
     from pyfp3d.viscous import closures as C
+    guard_teeth(C)
     print(f"  N_OUT = {C.N_OUT}; ★ closure_node's own docstring says "
           "'28-output ... (28,6)' -- stale comment, recorded below")
 
