@@ -52,11 +52,12 @@ from pyfp3d.mesh.reader import read_mesh                            # noqa: E402
 from pyfp3d.mesh.wake_cut import cut_wake                           # noqa: E402
 from pyfp3d.meshgen.fuselage import FuselageParams, make_inboard_clip  # noqa: E402
 from pyfp3d.meshgen.wing3d import B_SEMI, x_te                      # noqa: E402
-# ★ the UNIFIED entry points: one dispatch serving both wake paths
-# (phi= for conforming, mvop=+phi_ext= for level-set), so "same extractor" is
-# guaranteed by construction rather than by discipline. My first draft invented a
-# `wall_cp_curve_mv` that does not exist -- checked against the source instead.
-from pyfp3d.post.unified import section_cp, wall_forces as u_wall_forces  # noqa: E402
+# ★ "same extractor by construction" was originally guaranteed by post/unified.py's
+# dispatch over the two wake paths. Ruling D5 left one path, phase 3 collapsed the
+# module, and GS4.0 R2 deleted it -- so the extractors are now imported directly and
+# the guarantee is simply that there is only one of each.
+from pyfp3d.post.section_cut import section_cp_curve                 # noqa: E402
+from pyfp3d.post.surface import wall_force_coefficients as u_wall_forces  # noqa: E402
 from pyfp3d.post.surface import (cl_kj_3d, planform_area,           # noqa: E402
                                  wall_force_coefficients)
 from pyfp3d.solve.newton import (solve_newton_lifting,              # noqa: E402
@@ -295,7 +296,7 @@ def measure(cell, path, geom, mdir, level, alpha, fn, m):
     except Exception as exc:                                        # noqa: BLE001
         # ★ post-processing gets the SAME discipline as the solve. The first version
         # left it outside the try, and a stale import in the level-set branch
-        # (wall_forces lives in post.unified, not post.surface) killed the whole
+        # (wall_forces lived in post.unified, deleted at GS4.0 R2) killed the whole
         # multi-hour run at the first LS cell instead of recording one bad row.
         return dict(cell=cell, path=path, geom=geom, level=level, m_inf=m,
                     alpha=alpha, status="POSTPROC_ERROR",
@@ -407,18 +408,22 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
 def save_cp(cell, m, geom, payload):
     """Section Cp -- the artifact the user asked for as next-phase reference.
 
-    Uses pyfp3d.post.unified.section_cp.
+    Uses pyfp3d.post.section_cut.section_cp_curve directly.
 
     ★ GS4.0 erratum 2026-08-16: this used to read "for BOTH paths, so the
     conforming and level-set curves in this matrix are produced by the same
-    dispatch". There is only ONE path since ruling D5, and `post/unified.py`
-    was collapsed onto its conforming half in phase 3 -- the sentence had
-    outlived the thing it described.
+    dispatch". There is only ONE path since ruling D5.
+    ★★ GS4.0 R2, 2026-08-18: `post/unified.py` is now DELETED, and with it a
+    latent break -- the line below used to build `dict(mvop=op, phi_ext=phi)`
+    for the level-set branch, but phase 3 had already REMOVED those keywords
+    when it collapsed the module, so that branch would have raised TypeError if
+    it were ever reached. It cannot be reached (run_cell raises on path=
+    "level-set"), which is exactly why nothing caught it. Both are gone now.
     """
     (obj, phi, _f) = payload
-    mesh, op, mf = obj
-    kw = (dict(phi=phi) if mf is None else dict(mvop=op, phi_ext=phi))
-    m_eff = m if mf is None else mf
+    mesh, _op, mf = obj
+    assert mf is None, "the level-set branch was deleted by ruling D5"
+    kw, m_eff = dict(phi=phi), m
     stations = ([("z_mid", None)] if geom == "naca2.5d"
                 else [(f"{e:.2f}", e) for e in (0.20, 0.44, 0.65, 0.80, 0.90)])
     rows = []
@@ -426,9 +431,10 @@ def save_cp(cell, m, geom, payload):
         try:
             if eta is None:
                 z = 0.5 * float(np.ptp(mesh.nodes[:, 2]))
-                c = section_cp(mesh, z=z, m_inf=m_eff, **kw)
+                c = section_cp_curve(mesh, phi, z=z, m_inf=m_eff)
             else:
-                c = section_cp(mesh, eta=eta, b_semi=B_SEMI, m_inf=m_eff, **kw)
+                c = section_cp_curve(mesh, phi, eta=eta, b_semi=B_SEMI,
+                                     m_inf=m_eff)
         except Exception as exc:                                  # noqa: BLE001
             print(f"      (Cp at {label} failed: {type(exc).__name__}: {exc})",
                   flush=True)

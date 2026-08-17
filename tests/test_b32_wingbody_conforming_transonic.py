@@ -48,7 +48,7 @@ from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.meshgen.wing3d import B_SEMI
 from pyfp3d.post.surface import planform_area
-from pyfp3d.post.unified import wall_forces
+from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting, solve_newton_transonic
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -99,8 +99,15 @@ def test_conforming_wingbody_medium_reaches_m084():
     assert r["n_limited"] == 0 and r["n_floored"] == 0, (
         f"{r['n_limited']} limited / {r['n_floored']} floored at M{m_reached:.4g}; "
         f"b18 recorded 0+0, and a clamped state is not a solution")
-    cl_p = float(wall_forces(mc, phi=r["phi"], alpha_deg=ALPHA, s_ref=s_ref,
-                            m_inf=m_reached, wall_tag="wall")["cl"])
+    #: ★ GS4.0 R2: was post.unified.wall_forces, which phase 3 had collapsed onto
+    #: its conforming half and which its own docstring declared np.array_equal to
+    #: this function. VERIFIED before the swap on the M6 wing M0.8395 state --
+    #: cl 0.2775363765023681 both ways, cf/cp_tri array_equal -- then unified.py
+    #: was deleted, because a dispatch layer over one path is a second name for
+    #: the same computation.
+    cl_p = float(wall_force_coefficients(
+        mc.nodes, mc.elements, mc.boundary_faces["wall"], r["phi"],
+        alpha_deg=ALPHA, s_ref=s_ref, m_inf=m_reached)["cl"])
     assert abs(cl_p / CL_P - 1.0) < CL_P_RTOL, (
         f"cl_p {cl_p:.4f} vs the committed {CL_P:.4f} "
         f"({100 * (cl_p / CL_P - 1.0):+.2f} %, tol {100 * CL_P_RTOL:.0f} %)")
