@@ -529,7 +529,19 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **542 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **552 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, GS4.1 round 5 = the turbulent closure).
+   ★ +10 vs the 542 below = `tests/test_gs41_turbulent_closure.py`. Wall 1052 s @8
+   threads at load average **16.7** — the box was genuinely busy in this window, which
+   also explains the 875 s reading below; quote suite walls with their load, never as a
+   cost.
+   ★★ The locks worth knowing: the sourced constants with their xblsys.f/xbl.f citations
+   (CTCON is DERIVED from GACON/GBCON, not typed), the identity `DI = 2 c_D / H*` whose
+   misreading drove a memory-written version of this closure to an unphysical H = 0.60,
+   and that a ZPG turbulent plate's H genuinely DRIFTS ~5 %/decade — the last one is
+   recorded because round 5's own T-EQUIL criterion wrongly demanded a constant H, which
+   is registered as fix-before-reuse.
+   Previous: **542 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, GS4.1 round 4 = the closures.py source audit;
    ★ wall 875.53 s @8 threads against 472–486 s for the same suite earlier the same day —
    a 1.8x spread with an identical result. Load average at launch was only 1.26, so the

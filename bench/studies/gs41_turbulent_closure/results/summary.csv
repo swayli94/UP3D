@@ -1,0 +1,8 @@
+tag,metric,band,measured,verdict
+T-CF,c_f vs BOTH established ZPG correlations (Coles-Fernholz log + 1/4 power law),inside the derived band at every station,30/35 stations inside; worst excess 2.74 pp,T-FAIL
+T-H,H over the band,"[1.25, 1.50]","[1.3252, 1.5071]",T-FAIL
+T-EQUIL,self-consistent equilibrium,1.05 < H < 4 throughout AND drift < 2 %/decade,"H in [1.2768, 1.8040], drift 4.803 %/decade",T-FAIL
+T-CF[old],c_f vs BOTH established ZPG correlations (Coles-Fernholz log + 1/4 power law),inside the derived band at every station,31/35 stations inside; worst excess 1.44 pp,RECORDED
+T-H[old],H over the band,"[1.25, 1.50]","[1.3264, 1.4979]",RECORDED
+T-EQUIL[old],self-consistent equilibrium,1.05 < H < 4 throughout AND drift < 2 %/decade,"H in [1.2779, 1.7775], drift 4.792 %/decade",RECORDED
+T-CROSS,vs profile family's committed ZPG reading,ONE-SIDED: supports only,correlation cf vs 1/7 law -8.5%..+8.8% (profile family: -7.7%..+11.4%); H 1.325-1.507 (profile family 1.350-1.787); overlap=True,RECORDED
