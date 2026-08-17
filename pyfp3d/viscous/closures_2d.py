@@ -50,12 +50,29 @@ to use the profile closure. Do not read this module as covering turbulent flow.
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Correlation constants (Drela-Giles laminar closure). These are LITERATURE
-# values, and the round that introduced them verified every one against an
-# independent Falkner-Skan ODE integration rather than against memory: H*, c_f
-# and c_D all agree to within 0.1 % at Blasius over m in [-0.08, 1]. The fit's
-# own error reaches 5.1 % in c_f at strong adverse gradient (m = -0.08), which
-# is the correlation's error and not an implementation one.
+# Correlation constants -- the laminar closure of
+#
+#   Drela & Giles, "Viscous-Inviscid Analysis of Transonic and Low Reynolds
+#   Number Airfoils", AIAA Journal 25(10), Eqs. (10), (11), (12).
+#
+# ★ CITATION ADDED 2026-08-19 (GS4.1 round 5 dry run). Round 3 wrote these from
+# memory and verified them against an independent Falkner-Skan ODE rather than
+# against a source, because the source was not in the tree; the verdict recorded
+# their provenance as unattributed. With the paper available they check out
+# VERBATIM against Eqs. (10)-(12), so the code was right and only the citation
+# was missing.
+#
+# ★★ They are the PUBLISHED forms, not the ones in XFOIL 6.99. XFOIL's
+# xblsys.f carries later code revisions of the same closures -- HSL is built on
+# (Hk - 4.35), CFL on 0.0727*(5.5-Hk)^3/(Hk+1), and HST is marked "new
+# correlation 29 Nov 91" with the form used here sitting commented out above it.
+# Measured against the Falkner-Skan ODE at Blasius, the published forms here are
+# the more accurate ones: c_f*Re_theta is -0.08 % against XFOIL CFL's -2.89 %,
+# and in adverse gradient (m = -0.05) +0.53 % against -7.35 %. So this is not a
+# stale copy -- do not "update" it to the XFOIL code forms without measuring.
+#
+# DIL is the one that agrees between both: the 0.00205 / 5.5 / 0.207 group here
+# is identical in XFOIL's DIL.
 # ---------------------------------------------------------------------------
 
 H_KINK = 4.0            # branch split of all three correlations (= separation)
