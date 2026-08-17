@@ -572,6 +572,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    account that closes, not as "nothing broke":
    - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
      the new gated wing-body lock), i.e. the deletion subtracted only;
+   - ★★★ **GATED full set RE-MEASURED after GS4.0 (2026-08-18): 509 passed + 1 skipped +
+     3 xfailed + 1 XPASSED, 0 failed, 1:12:38 @16 threads.** All four numbers close against
+     the ungated 500 + 12 + 2: the gated run unlocks **11** skips, of which **9 became
+     passed (500 + 9 = 509), 1 became xfailed (2 -> 3) and 1 became XPASSED** -- 9+1+1 = 11.
+     ★ And **488 + 21 = 509 exactly**: the delta from the phase-3 handover reading is
+     precisely GS4.0's instrument locks, nothing else moved. The XPASS is again the leg the
+     mark itself predicts (thread-dependent) => NOT a regression.
    - ★★ **GATED full set RE-MEASURED at the phase-3 close-out (2026-08-16): 488 passed +
      1 skipped + 3 xfailed + 1 XPASSED, 0 failed, 1:11:48 @16 threads.** Read it as an
      account that closes on all four numbers: the ungated suite is 479 + 12 + 2, the gated
