@@ -106,3 +106,21 @@ class TestFlatPlate:
         st = S.march_correlation(np.array([1.0, 100.0]), y0, 0.01,
                                  S.flat_plate_ue(U), n_substep=2000)
         assert st.H[-1] == pytest.approx(2.590433, abs=5e-4)
+
+
+class TestAttraction:
+    """GS4.1 round 6 (E-ATTRACT): the turbulent branch forgets its initial
+    condition. This is what "equilibrium" means -- round 5's T-EQUIL wrongly
+    tested it as a constant H, which a ZPG turbulent layer does not have."""
+
+    def test_two_different_seeds_collapse_onto_one_curve(self):
+        stations = np.geomspace(5.3, 200.0, 40)
+        kw = dict(rho=RHO, mu=MU, n_substep=4000, x_tr=5.0)
+        a = S.march_correlation(stations, (4.793e-3, 1.8080), 5.1,
+                                S.flat_plate_ue(U), **kw)
+        b = S.march_correlation(stations, (4.793e-3, 1.8080 * 1.15), 5.1,
+                                S.flat_plate_ue(U), **kw)
+        assert abs(1.8080 * 0.15) / 1.8080 >= 0.10      # seeds really differ
+        sep = np.abs(b.H - a.H) / a.H
+        assert sep[-1] < 1e-4, f"seeds did not converge: {sep[-1]:.2e}"
+        assert sep.argmax() == 0                        # and it only shrinks

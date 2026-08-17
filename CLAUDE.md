@@ -529,7 +529,15 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **552 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **553 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, GS4.1 round 6, **measured @524.70 s @8 threads at
+   load 3.11**). ★ +1 vs the 552 below = the E-ATTRACT lock (two seeds 15 % apart in H
+   collapse onto one curve) — that is what "equilibrium" means for a turbulent branch,
+   and round 5's criterion wrongly tested it as a constant H.
+   ★★ This wall also settles the two previous rounds: 1052 s and 875 s were measured at
+   load 16.7 and on a busy box, and the same suite runs in ~525 s quiet. Quote suite walls
+   with their load; never as a cost.
+   Previous: **552 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, GS4.1 round 5 = the turbulent closure).
    ★ +10 vs the 542 below = `tests/test_gs41_turbulent_closure.py`. Wall 1052 s @8
    threads at load average **16.7** — the box was genuinely busy in this window, which
