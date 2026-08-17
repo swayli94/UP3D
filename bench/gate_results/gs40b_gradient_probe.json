@@ -1,0 +1,10 @@
+{
+  "mesh_sha": "aaed210e1e4515a84e8772717497ef2af9355cfed5ce45386635b9deb01f6eb3",
+  "state": "rc0.05.npz",
+  "m_inf": 0.88,
+  "ar_threshold": 2.5275882693873997,
+  "verdicts": {
+    "B1": "G-SMEAR (it is smoothing, not reconstruction)"
+  },
+  "wall_s": 60.1
+}

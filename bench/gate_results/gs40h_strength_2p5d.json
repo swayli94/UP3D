@@ -1,0 +1,15 @@
+{
+  "verdict": "S-STRENGTH (geometry adds nothing beyond shock strength)",
+  "p2_legs": [
+    "WB M0.82",
+    "W M0.76",
+    "W M0.8"
+  ],
+  "overlap": {
+    "lo": -1.9200915141884596,
+    "hi": -0.8126121990824734,
+    "offset": 0.03979100941853908,
+    "pooled": 0.13549208744864194
+  },
+  "wall_s": 219.0
+}

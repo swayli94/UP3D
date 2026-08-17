@@ -52,11 +52,12 @@ from pyfp3d.mesh.reader import read_mesh                            # noqa: E402
 from pyfp3d.mesh.wake_cut import cut_wake                           # noqa: E402
 from pyfp3d.meshgen.fuselage import FuselageParams, make_inboard_clip  # noqa: E402
 from pyfp3d.meshgen.wing3d import B_SEMI, x_te                      # noqa: E402
-# ★ the UNIFIED entry points: one dispatch serving both wake paths
-# (phi= for conforming, mvop=+phi_ext= for level-set), so "same extractor" is
-# guaranteed by construction rather than by discipline. My first draft invented a
-# `wall_cp_curve_mv` that does not exist -- checked against the source instead.
-from pyfp3d.post.unified import section_cp, wall_forces as u_wall_forces  # noqa: E402
+# ★ "same extractor by construction" was originally guaranteed by post/unified.py's
+# dispatch over the two wake paths. Ruling D5 left one path, phase 3 collapsed the
+# module, and GS4.0 R2 deleted it -- so the extractors are now imported directly and
+# the guarantee is simply that there is only one of each.
+from pyfp3d.post.section_cut import section_cp_curve                 # noqa: E402
+from pyfp3d.post.surface import wall_force_coefficients as u_wall_forces  # noqa: E402
 from pyfp3d.post.surface import (cl_kj_3d, planform_area,           # noqa: E402
                                  wall_force_coefficients)
 from pyfp3d.solve.newton import (solve_newton_lifting,              # noqa: E402
@@ -105,8 +106,50 @@ def append_row(row):
             # solver did not attain. (CLEAN rows were never affected: conv already
             # requires |m_final - m| < 1e-9. The damage was bounded to non-CLEAN rows,
             # which is why the envelope points stand.)
+            # ★★ ERRATUM 2026-08-16 (GS4.0). Two things above went wrong when phase 3
+            # deleted the level-set route, and both are now fixed:
+            #  (1) this instrument was built for a defect found on the LEVEL-SET path
+            #      using a field only the LEVEL-SET driver supplied, so deleting the
+            #      route silently removed its input and "a row must never be able to
+            #      claim a Mach the solver did not attain" became FALSE for the only
+            #      surviving path (see the m_att branch in run_cell);
+            #  (2) the parenthetical is wrong even as written: THIS script's `conv` is
+            #      `bool(r["converged"])` and never looked at m_final -- that was the
+            #      level-set driver's internal invariant, not ours. CLEAN rows happened
+            #      to stay safe for a different reason (a conforming ramp that dies
+            #      returns converged=False), and the CLEAN guard now checks explicitly.
             "m_attained", "accept_reason", "res_unfrozen", "f_final",
             "descent10", "note"]
+
+    #: ★★ GS4.0 R1 (2026-08-16). This appended blind. The schema grew from 18 to 24
+    #: fields on 2026-08-03, the header is written ONLY when the file is absent, and
+    #: the committed CSV predates the growth -- so the next run would have written
+    #: 24-field rows under a 19-field header and silently produced a file whose
+    #: columns no longer mean what the header says. That is the same family as
+    #: "are the two numbers I am comparing the same thing?", one layer down: are the
+    #: two ROWS even the same schema?
+    #:
+    #: Refuse loudly rather than repair, for two reasons the project has already
+    #: paid for: rewriting the header would REWRITE COMMITTED EVIDENCE in place (the
+    #: G3 hazard -- run_m3_budget was made to write its own filename precisely to
+    #: avoid this), and silently starting a second file would split one measurement
+    #: across two artifacts with no pointer between them. The operator decides.
+    if not head:
+        with open(CSV, newline="") as fh:
+            existing = next(csv.reader(fh), [])
+        if existing != keys:
+            missing = [k for k in keys if k not in existing]
+            raise SystemExit(
+                f"★ {CSV} has a {len(existing)}-column header but this script now "
+                f"writes {len(keys)} columns; appending would put fields under the "
+                f"wrong names.\n  columns this file has never seen: {missing}\n"
+                "  Pick one, deliberately:\n"
+                "    (a) move the committed CSV aside under a dated name and let this "
+                "run start a fresh file (the pre-deletion matrix stays citable);\n"
+                "    (b) point CSV at a new filename for this run.\n"
+                "  Do NOT rewrite the existing header in place -- that edits committed "
+                "evidence.")
+
     with open(CSV, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=keys, extrasaction="ignore")
         if head:
@@ -253,7 +296,7 @@ def measure(cell, path, geom, mdir, level, alpha, fn, m):
     except Exception as exc:                                        # noqa: BLE001
         # ★ post-processing gets the SAME discipline as the solve. The first version
         # left it outside the try, and a stale import in the level-set branch
-        # (wall_forces lives in post.unified, not post.surface) killed the whole
+        # (wall_forces lived in post.unified, deleted at GS4.0 R2) killed the whole
         # multi-hour run at the first LS cell instead of recording one bad row.
         return dict(cell=cell, path=path, geom=geom, level=level, m_inf=m,
                     alpha=alpha, status="POSTPROC_ERROR",
@@ -297,7 +340,32 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
     #: the Mach the solver ACTUALLY attained -- see the append_row note. Recorded
     #: unconditionally so a non-converged row can never again be read as if it held a
     #: state at the requested Mach.
-    m_att = float(r.get("m_last_converged", r.get("m_final", m)))
+    #:
+    #: ★★ GS4.0 (2026-08-16), and the reason is worth stating in full. This line used to
+    #: read `float(r.get("m_last_converged", r.get("m_final", m)))`. Both keys existed
+    #: ONLY on the level-set driver (`newton_ls.py`), which phase 3 DELETED -- so from
+    #: that day the chain fell through to `m`, i.e. m_att was IDENTICALLY the requested
+    #: Mach, and the CLEAN guard below (`abs(m_att - m) > 1e-9`) could not fire. A guard
+    #: written specifically so as NOT to trust the driver flags had become a guard that
+    #: trusted them completely, silently. Found by the 2026-08-16 independent audit
+    #: (docs/inspection/20260816-2200-independent-audit-zh.md, §7.1); the fields are now
+    #: backported to the CONFORMING ramp (`newton.py::_ramp_honesty_fields`).
+    #:
+    #: Two branches, each stated rather than defaulted:
+    #:  - RAMP driver: the keys are present and must be read. No `.get` default -- if a
+    #:    future refactor drops them again this must raise, not degrade quietly. That is
+    #:    the entire lesson of this defect.
+    #:  - SINGLE-Mach driver (`solve_newton_lifting`, used by the subsonic cells): the
+    #:    returned state is at `m` BY CONSTRUCTION -- there is no ramp to fall short of --
+    #:    so m_att = m is the correct reading here, not a fallback.
+    #: `m_final` (not `m_last_converged`) is the label, because this column labels the
+    #: row's OWN cl_p / cl_kj / m_max, and those are computed from `r["phi"]`, which is
+    #: the state at `m_final`. A ramp that died at 0.80 after converging 0.75 returns the
+    #: FAILED 0.80 state, so 0.80 is what the row's numbers belong to.
+    if "m_final" in r:
+        m_att = r["m_final"]
+    else:
+        m_att = float(m)
     #: is the last-10-step residual descent still steep? This is the cheap
     #: discriminator between "ran out of iteration budget while converging" and
     #: "genuinely stalled" -- the two were indistinguishable in the first matrix, and
@@ -324,7 +392,14 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
     #: a CLEAN row that did not attain its own Mach would invalidate the envelope
     #: table, so make that unrepresentable rather than trusting the driver flags to
     #: stay consistent with each other.
-    if status.startswith("CLEAN") and abs(m_att - m) > 1e-9:
+    #: ★ GS4.0: `m_att is None` (no level ran at all) also lands here -- an unknown
+    #: attained Mach on a CLEAN row is exactly the unrepresentable case, and a bare
+    #: `abs(None - m)` would raise inside the reporting layer, which is how a 40-minute
+    #: solve was lost once. The old parenthetical "CLEAN rows were never affected: conv
+    #: already requires |m_final - m| < 1e-9" (see append_row) described the LEVEL-SET
+    #: driver's internals -- this script's `conv` is just `bool(r["converged"])`, so the
+    #: check has to be made here, not assumed upstream.
+    if status.startswith("CLEAN") and (m_att is None or abs(m_att - m) > 1e-9):
         row["status"] = "MACH_NOT_ATTAINED"
         row["note"] = f"clean at {m_att} but {m} was requested"
     return row, (geom_obj, phi, f)
@@ -333,13 +408,22 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
 def save_cp(cell, m, geom, payload):
     """Section Cp -- the artifact the user asked for as next-phase reference.
 
-    Uses pyfp3d.post.unified.section_cp for BOTH paths, so the conforming and
-    level-set curves in this matrix are produced by the same dispatch.
+    Uses pyfp3d.post.section_cut.section_cp_curve directly.
+
+    ★ GS4.0 erratum 2026-08-16: this used to read "for BOTH paths, so the
+    conforming and level-set curves in this matrix are produced by the same
+    dispatch". There is only ONE path since ruling D5.
+    ★★ GS4.0 R2, 2026-08-18: `post/unified.py` is now DELETED, and with it a
+    latent break -- the line below used to build `dict(mvop=op, phi_ext=phi)`
+    for the level-set branch, but phase 3 had already REMOVED those keywords
+    when it collapsed the module, so that branch would have raised TypeError if
+    it were ever reached. It cannot be reached (run_cell raises on path=
+    "level-set"), which is exactly why nothing caught it. Both are gone now.
     """
     (obj, phi, _f) = payload
-    mesh, op, mf = obj
-    kw = (dict(phi=phi) if mf is None else dict(mvop=op, phi_ext=phi))
-    m_eff = m if mf is None else mf
+    mesh, _op, mf = obj
+    assert mf is None, "the level-set branch was deleted by ruling D5"
+    kw, m_eff = dict(phi=phi), m
     stations = ([("z_mid", None)] if geom == "naca2.5d"
                 else [(f"{e:.2f}", e) for e in (0.20, 0.44, 0.65, 0.80, 0.90)])
     rows = []
@@ -347,9 +431,10 @@ def save_cp(cell, m, geom, payload):
         try:
             if eta is None:
                 z = 0.5 * float(np.ptp(mesh.nodes[:, 2]))
-                c = section_cp(mesh, z=z, m_inf=m_eff, **kw)
+                c = section_cp_curve(mesh, phi, z=z, m_inf=m_eff)
             else:
-                c = section_cp(mesh, eta=eta, b_semi=B_SEMI, m_inf=m_eff, **kw)
+                c = section_cp_curve(mesh, phi, eta=eta, b_semi=B_SEMI,
+                                     m_inf=m_eff)
         except Exception as exc:                                  # noqa: BLE001
             print(f"      (Cp at {label} failed: {type(exc).__name__}: {exc})",
                   flush=True)

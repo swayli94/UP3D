@@ -313,8 +313,26 @@ already written; and two legs lost to `m_inf < m_start`, which the transonic dri
 Corollary that paid off immediately: **cache before you report** — the G8.2 re-anchor's every number
 was then computed from the npz with zero re-solves.
 
-★ **`m_last_converged` / `m_final` are both None on a FAILED ramp.** The per-level `converged` flags
-live in `level_results`, so "the highest level that converged" must be read from there.
+★ **`m_last_converged` / `m_final` say WHICH MACH THE RETURNED STATE LIVES AT** — on a failed ramp the
+returned dict is the FAILED level's state, at a LOWER Mach than `m_inf`, so pairing its `cl`/`phi`
+with the requested `m_inf` mislabels the row. `m_last_converged` is None when nothing converged.
+★★ **ERRATUM 2026-08-16 (GS4.0), and the correction matters more than the original line**: this
+paragraph used to read "both None on a FAILED ramp". They were not None — **they did not exist**, on
+any surviving driver. They were set only by `newton_ls.py`, deleted with the level-set route in phase
+3, and the conforming `newton.py` had never had them (discipline #9, a backport check that was never
+done). So callers using `r.get("m_last_converged", <default>)` got the DEFAULT, silently, instead of
+crashing: `bench/run_capability_matrix.py`'s `MACH_NOT_ATTAINED` guard compared `abs(m_att - m)` where
+`m_att` was identically `m`, i.e. **a guard that could not fire**, whose own comment said it existed so
+as not to trust the driver flags. ⇒ `newton.py::_ramp_honesty_fields` now provides all three
+(`m_final`, `m_last_converged`, `target_reached`) on the conforming ramp, unit-tested without a solve
+in `tests/test_gs40_provenance.py`. **Read them directly; do not `.get` them with a default** — a
+missing key is a library regression and must be loud. `solve_newton_lifting` (single Mach) does not
+have them, and there the state is at `m_inf` by construction. The per-level `converged` flags still
+live in `level_results`, which is what the three fields are derived from.
+★ **General lesson, logged**: when a route is deleted, the "only subtraction" ledger closed on
+`tests/` (passed 457 → 457) **cannot see `bench/`** — bench scripts are in no test collection, so they
+run on no cadence. **Deleting a route means grepping `bench/` and `cases/` for reads of its return
+keys**, not just counting tests.
 
 ## Mesh knobs are not orthogonal — measured, twice
 
@@ -511,7 +529,17 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **479 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **500 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-17, **measured in full @465.24 s @8 threads**, GS4.0 + the
+   R1 addendum). ★ 499 + 1 = the capability-matrix stale-schema lock.
+   Previous within GS4.0: **499 + 12 + 2** (@477.27 s @8 threads).
+   ★ +20 vs the 479 below = `tests/test_gs40_provenance.py` (the GS4.0 instrument locks:
+   the ramp honesty fields, the mesh manifest, the fast tier's node-list check). **Skipped
+   and xfailed did not move**, which is the point: GS4.0 was an instrument round and had no
+   licence to change a solve. ★ An independent full run of the 479 baseline was made the
+   same day BEFORE any change (472.99 s @8t) and reproduced it exactly, so the +20 is a
+   clean delta rather than a re-baseline.
+   Previous: **479 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-12, **measured in full @494.75 s @8 threads**). It was
    first carried as 474 + 5 by arithmetic and is now measured directly; the 474 before it
    had likewise been 468 + 6. ★ Both arithmetic steps closed exactly against the later
@@ -544,6 +572,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    account that closes, not as "nothing broke":
    - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
      the new gated wing-body lock), i.e. the deletion subtracted only;
+   - ★★★ **GATED full set RE-MEASURED after GS4.0 (2026-08-18): 509 passed + 1 skipped +
+     3 xfailed + 1 XPASSED, 0 failed, 1:12:38 @16 threads.** All four numbers close against
+     the ungated 500 + 12 + 2: the gated run unlocks **11** skips, of which **9 became
+     passed (500 + 9 = 509), 1 became xfailed (2 -> 3) and 1 became XPASSED** -- 9+1+1 = 11.
+     ★ And **488 + 21 = 509 exactly**: the delta from the phase-3 handover reading is
+     precisely GS4.0's instrument locks, nothing else moved. The XPASS is again the leg the
+     mark itself predicts (thread-dependent) => NOT a regression.
    - ★★ **GATED full set RE-MEASURED at the phase-3 close-out (2026-08-16): 488 passed +
      1 skipped + 3 xfailed + 1 XPASSED, 0 failed, 1:11:48 @16 threads.** Read it as an
      account that closes on all four numbers: the ungated suite is 479 + 12 + 2, the gated

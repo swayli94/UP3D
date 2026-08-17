@@ -164,6 +164,13 @@ def main():
             fr = r.get("sigma_freeze_report") or {}
             row = dict(arm=arm, seed=seed, converged=bool(r.get("converged")),
                        res_final=(h[-1] if h else None), error=err,
+                       #: ★ GS4.0: these two are None for the DIRECT arm by construction
+                       #: (`solve_newton_lifting` has no ramp, so the state is at M_INF)
+                       #: and real numbers for the ramp arm. Until 2026-08-16 they were
+                       #: None on BOTH arms, because the keys existed only on the deleted
+                       #: level-set driver -- two columns that looked like data and were
+                       #: not. `.get` is kept HERE on purpose: this call site legitimately
+                       #: receives both drivers. See audit §7.1.
                        m_final=r.get("m_final"), m_last=r.get("m_last_converged"),
                        n_limited=int(r.get("n_limited") or 0),
                        n_floored=int(r.get("n_floored") or 0),

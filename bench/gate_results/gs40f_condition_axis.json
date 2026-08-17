@@ -1,0 +1,12 @@
+{
+  "verdict": "W-DRIFT (interior max everywhere, but k* moves with condition)",
+  "per_leg": {
+    "M0.78": "PEAK k*=P1",
+    "M0.82": "PEAK k*=P2",
+    "M0.86": "PEAK k*=P1",
+    "ANCHOR": "PEAK k*=P1",
+    "A1.53": "PEAK k*=P1"
+  },
+  "strength_spread": 12.808,
+  "wall_s": 349.0
+}

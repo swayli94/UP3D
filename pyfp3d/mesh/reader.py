@@ -224,6 +224,15 @@ def write_mesh(mesh: Mesh, filepath: Path | str, verbose: bool = False) -> None:
     same way -- so read_mesh(write_mesh(mesh)) reproduces the original
     boundary_faces keys, not just a single "all_triangles" catch-all.
 
+    ★ GS4.0 (2026-08-16): also writes a `<name>.msh.manifest.json` SIDECAR
+    (`mesh/manifest.py`) recording the file's sha256 and its node/tet/boundary
+    counts. Unconditional and not a knob, because the whole point is that mesh
+    provenance must not be opt-in: the 3-D production meshes are gitignored, and
+    on 2026-08-04 a flat->round geometry change went through them INVISIBLY to
+    git, which cost five days and eight documents of a misattributed 2.0 %.
+    The sidecar never touches the .msh bytes, so `read_mesh(write_mesh(m))` is
+    unaffected.
+
     Args:
         mesh: Mesh object
         filepath: Output path
@@ -263,8 +272,14 @@ def write_mesh(mesh: Mesh, filepath: Path | str, verbose: bool = False) -> None:
     # bookkeeping, which is all read_mesh() relies on.
     meshio.write(str(filepath), mesh_obj, file_format="gmsh22")
 
+    #: ★ GS4.0 provenance sidecar -- see the docstring. Imported here rather than
+    #: at module scope because manifest.py imports read_mesh from this module.
+    from pyfp3d.mesh.manifest import write_manifest
+    mpath = write_manifest(filepath)
+
     if verbose:
         print(f"Wrote mesh to {filepath}")
+        print(f"Wrote manifest to {mpath}")
 
 
 def mesh_stats(mesh: Mesh) -> Dict:

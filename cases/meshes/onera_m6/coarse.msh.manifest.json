@@ -1,0 +1,24 @@
+{
+  "bytes": 2609753,
+  "extra": {
+    "axes_note": "TWO INDEPENDENT AXES, only one of which the level name states. `_ss` = the far-field clamp h_far=min(2.5,120*h_wall) is OFF (self-similar) and says NOTHING about the tip. `_flat` = flat tip cap; ABSENCE of `_flat` = ROUND, but only since 2026-08-04 -- before that date the same name meant FLAT, and that silent flip is the 2.0 % that stood five days (phase 3 round 36, F-MESH). h_far_over_h_wall == 120 means the clamp did not bite, i.e. this level IS on the refinement ray. Source: each generator's own LEVELS table, read at stamping time.",
+    "generator": "cases/meshes/onera_m6/generate_onera_m6.py",
+    "h_far": 2.5,
+    "h_far_over_h_wall": 83.3333,
+    "h_wall": 0.03,
+    "in_richardson_ladder": false,
+    "note": "stamped at GS4.0 from the pre-existing local mesh (mtime 2026-08-04); regeneration must reproduce this sha256",
+    "on_refinement_ray": false,
+    "tip_cap": "round"
+  },
+  "n_nodes": 13607,
+  "n_tets": 68624,
+  "n_tris": {
+    "farfield": 382,
+    "symmetry": 1736,
+    "wake": 3785,
+    "wall": 6890
+  },
+  "schema": 1,
+  "sha256": "ee8c58fe6bc4fbd965307d99bce4f2a3dc20545a6cee525da6bd6e968b65d2b3"
+}

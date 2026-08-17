@@ -453,6 +453,29 @@ class EntropyOperator:
         #: ★ post-shock membership softening width in M^2 units. 0.0 = the HARD test = today,
         #: bit-identical. Pre-registered (addendum #1) at 0.05 for the A/B, and the verdict must
         #: report sensitivity across 0.02/0.05/0.10 -- it is a CALIBRATION, not a guarantee.
+        #:
+        #: ★★ REGISTERED DELETION CONDITION (GS4.0, 2026-08-16). Roadmap principle 4 requires
+        #: every knob to carry one, and `soft_eps`/`soft_q` shipped WITHOUT one -- which is
+        #: exactly how `sigma_scale` and `capture_select` started, and both had to be deleted
+        #: later. The 2026-08-16 audit (§7.2) flagged the omission. Registering rather than
+        #: deleting, because the two verdicts differ from capture_select's: K3 KILLED the
+        #: selection route, whereas the soft-membership verdict was "the mechanism target is
+        #: RIGHT, this parameterization is not adoptable" with all four kill conditions unmet,
+        #: and softening the hard membership test remains the only named candidate for the
+        #: sigma-freeze path dependence (one internal inconsistency: the artificial density
+        #: already uses a continuous ramp at `m_crit`, only the entropy set test is hard).
+        #:
+        #: DELETE `soft_eps` and `soft_q` when ANY of:
+        #:   (1) some (eps, q) is ADOPTED as the default -- the knob becomes the behaviour; or
+        #:   (2) a PRE-REGISTERED round measures both an F5-class FAIL (the answer is pushed
+        #:       outside the M1 reference band) AND non-monotone eps sensitivity => the
+        #:       parameterization is killed and the knob goes with the route; or
+        #:   (3) 2026-12-31 passes with no round having used it => deleted as inactive.
+        #: While none holds, it is a RESEARCH knob and every phase close-out must re-read
+        #: this condition. Measured status at registration: F1/F2 pass at eps=0.05 (mixed
+        #: family seed spread 32.11 % -> 4.28 %) but the attribution is confounded (sigma_min
+        #: 0.74 -> 0.97, i.e. softening ~ weakening), F5 FAILS, and eps sensitivity is violent
+        #: and non-monotone (worst 41 %). => NOT adoptable as it stands.
         self.soft_eps = float(soft_eps)
         if self.soft_eps < 0.0:
             raise ValueError(f"soft_eps must be >= 0, got {self.soft_eps}")

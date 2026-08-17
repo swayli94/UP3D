@@ -817,6 +817,16 @@ def solve_newton_lifting(
     builds the hierarchy on the SPD Picard block (rebuilt every
     `amg_rebuild_every` Newton steps), "ilu" factors J_ff itself.
 
+    `sigma_soft_eps` / `sigma_soft_q`
+    RESEARCH knobs, default OFF (0.0 / 1.0 = the hard membership test,
+    bit-identical). ★ Their REGISTERED DELETION CONDITION lives beside the
+    parameters in `kernels/entropy.py::EntropyOperator.__init__` and must be
+    re-read at every phase close-out -- roadmap principle 4 requires one, and
+    GS4.0 (2026-08-16) added it after the independent audit found these were
+    the one pair that had shipped without it. Do not treat "default OFF" as a
+    reason to leave them alone: that is how `sigma_scale` and `capture_select`
+    both became permanent before being deleted.
+
     Convergence: ||R_free||_inf < tol_residual AND ||F||_inf < tol_gamma,
     refused while any element is speed-limited or density-floored (a
     clamped state is not a converged flow -- mirrors the P5 gate
@@ -1589,6 +1599,42 @@ def solve_newton_lifting(
     }
 
 
+def _ramp_honesty_fields(level_results, m_inf: float, converged: bool) -> dict:
+    """Which Mach does the returned state actually live at? (GS4.0)
+
+    Pure read-out over `level_results`: it performs no measurement of its own,
+    feeds nothing back into the solve, and therefore cannot move a committed
+    number. Split out of `solve_newton_transonic` so it is unit-testable
+    WITHOUT a solve -- the failure modes worth locking (an empty list, a ramp
+    that died at level 0, a ramp that died mid-way) are all cheaper to build by
+    hand than to provoke, and two reporting-layer defects this season each
+    destroyed an expensive solve because they were only ever exercised live.
+
+    Args:
+        level_results: the per-level dicts the ramp appends; each needs `m`
+            (float) and `converged` (bool). May be empty.
+        m_inf: the REQUESTED freestream Mach (the ramp target).
+        converged: the returned state's own convergence flag.
+
+    Returns:
+        dict with `m_final` (Mach the returned state lives at, None if no
+        level ran), `m_last_converged` (highest Mach that converged, None if
+        none did) and `target_reached` (bool).
+    """
+    conv_m = [float(lr["m"]) for lr in level_results if lr["converged"]]
+    m_final = float(level_results[-1]["m"]) if level_results else None
+    return {
+        "m_final": m_final,
+        "m_last_converged": max(conv_m) if conv_m else None,
+        #: `converged` alone is not enough: an upwind_c_post leg can fail at
+        #: m_inf, and a ramp can converge at a level BELOW m_inf only if it
+        #: then breaks out -- in which case converged is False anyway. Both
+        #: clauses are asserted rather than argued.
+        "target_reached": bool(converged and m_final is not None
+                               and abs(m_final - m_inf) <= 1e-12),
+    }
+
+
 def solve_newton_transonic(
     mesh_cut,
     wc,
@@ -1644,6 +1690,35 @@ def solve_newton_transonic(
     (m, n_newton, |R|_final)) and level_results (per-level dicts with
     the full residual/F/Gamma histories, wall_s and the level's timings
     -- the returned top-level `timings` covers only the FINAL level).
+
+    ★ GS4.0 (2026-08-16): plus the three HONESTY fields `m_final`,
+    `m_last_converged` and `target_reached`. They say WHICH MACH THE
+    RETURNED STATE LIVES AT, which is not `m_inf` when the ramp died
+    early -- the returned dict is then the FAILED level's state, at a
+    LOWER Mach, while a caller reading `cl`/`gamma`/`phi` next to the
+    requested `m_inf` would silently pair them.
+
+    These existed only on the deleted level-set driver
+    (`newton_ls.py:1186-1193` at revision d224223) and were never
+    backported here, so three bench consumers had been reading them
+    through `.get(..., <default>)` since the phase-3 deletion and were
+    silently getting the REQUESTED Mach back. The worst instance:
+    `bench/run_capability_matrix.py`'s MACH_NOT_ATTAINED guard compares
+    `abs(m_att - m)`, which was therefore identically zero -- a guard
+    that could not fire, whose own comment said it existed precisely so
+    as not to trust the driver flags. (Discipline #9, two paths => a
+    backport check, executed late.)
+
+    Semantics reproduce the level-set original with ONE recorded
+    difference: the original indexed `levels[i - 1]`, and this ramp
+    INSERTS retry levels into `levels` on failure, so that index no
+    longer means "the previous level". They are derived from
+    `level_results` instead -- which is what CLAUDE.md already told
+    callers to do. The derivation is equivalent because the converged
+    levels are monotone increasing in m (an inserted retry sits above
+    the last converged level and below the failed one), so "the last
+    level that converged" and "the highest Mach that converged" are the
+    same level; `max` is used because it states the invariant.
     """
     from pyfp3d.solve.continuation import mach_schedule
 
@@ -1747,6 +1822,9 @@ def solve_newton_transonic(
     result = dict(result)
     result["level_history"] = level_history
     result["level_results"] = level_results
+    #: ★ GS4.0 honesty fields -- see the docstring.
+    result.update(_ramp_honesty_fields(level_results, m_inf,
+                                       bool(result["converged"])))
     # A1: ramp total across all levels; the top-level `timings` (inherited
     # from dict(result)) is the FINAL level only -- the documented footgun.
     result["timings_total"] = sum_timings(

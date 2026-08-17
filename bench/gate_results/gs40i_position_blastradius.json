@@ -1,0 +1,43 @@
+{
+  "verdict_A": "POS-SAME (position neither improved nor degraded)",
+  "ratio_P1_P0": 1.2783,
+  "sup_frac": 0.12299,
+  "blast": [
+    {
+      "part": "B",
+      "state": "wing M0.82",
+      "m_inf": 0.82,
+      "n_tets": 68624,
+      "B1_dissipation": 0.026958,
+      "B2_donor": 0.060547,
+      "B3_sigma_set": 0.037436,
+      "band": "BR-MED"
+    },
+    {
+      "part": "B",
+      "state": "wing M0.86",
+      "m_inf": 0.86,
+      "n_tets": 68624,
+      "B1_dissipation": 0.034798,
+      "B2_donor": 0.062893,
+      "B3_sigma_set": 0.087112,
+      "band": "BR-MED"
+    },
+    {
+      "part": "B",
+      "state": "wing M0.88",
+      "m_inf": 0.88,
+      "n_tets": 68624,
+      "B1_dissipation": 0.034915,
+      "B2_donor": 0.063695,
+      "B3_sigma_set": 0.124694,
+      "band": "BR-LARGE"
+    }
+  ],
+  "ranking": [
+    "B3",
+    "B2",
+    "B1"
+  ],
+  "wall_s": 19.1
+}
