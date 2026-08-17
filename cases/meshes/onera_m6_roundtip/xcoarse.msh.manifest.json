@@ -1,8 +1,15 @@
 {
   "bytes": 400072,
   "extra": {
+    "axes_note": "TWO INDEPENDENT AXES, only one of which the level name states. `_ss` = the far-field clamp h_far=min(2.5,120*h_wall) is OFF (self-similar) and says NOTHING about the tip. `_flat` = flat tip cap; ABSENCE of `_flat` = ROUND, but only since 2026-08-04 -- before that date the same name meant FLAT, and that silent flip is the 2.0 % that stood five days (phase 3 round 36, F-MESH). h_far_over_h_wall == 120 means the clamp did not bite, i.e. this level IS on the refinement ray. Source: each generator's own LEVELS table, read at stamping time.",
     "equivalent_to": "cases/meshes/onera_m6/xcoarse_ss.msh",
-    "note": "R3 CLOSED 2026-08-18 (GS4.0): byte-identical to its partner BY CONSTRUCTION, not by a directory copy. onera_m6 clamps h_far=min(2.5,120*h_wall) so that coarse/medium/fine stay bit-identical for the P5/G8.2/B7/M1 locks, and defines RICHARDSON_LADDER=(xcoarse_ss,coarse_ss,medium) with the clamp OFF; onera_m6_roundtip is unclamped from the start and its own comment says 'its coarse is what the shipped onera_m6 family needs a coarse_ss for'. Since 2026-08-04 both use tip_cap=round for non-_flat levels. => same construction, same parameters, same bytes. No cross-family risk existed in phase 3's S-ladder."
+    "h_far": 7.199999999999999,
+    "h_far_over_h_wall": 120.0,
+    "h_wall": 0.06,
+    "in_richardson_ladder": true,
+    "note": "R3 CLOSED 2026-08-18 (GS4.0): byte-identical to its partner BY CONSTRUCTION, not by a directory copy. onera_m6 clamps h_far=min(2.5,120*h_wall) so that coarse/medium/fine stay bit-identical for the P5/G8.2/B7/M1 locks, and defines RICHARDSON_LADDER=(xcoarse_ss,coarse_ss,medium) with the clamp OFF; onera_m6_roundtip is unclamped from the start and its own comment says 'its coarse is what the shipped onera_m6 family needs a coarse_ss for'. Since 2026-08-04 both use tip_cap=round for non-_flat levels. => same construction, same parameters, same bytes. No cross-family risk existed in phase 3's S-ladder.",
+    "on_refinement_ray": true,
+    "tip_cap": "round"
   },
   "n_nodes": 2194,
   "n_tets": 9303,
