@@ -430,6 +430,20 @@ def main():
     print(f"  reference (integrated here): H={bl_fs['H']:.6f}, "
           f"cf*sqrt(Re_x)={bl_fs['cf_sqrt_rex']:.6f}")
 
+    # addendum #1: each family's ZPG fixed point, same construction, each
+    # compared to the SAME external truth. Not a criterion.
+    from pyfp3d.viscous import closures_2d as _C2
+    from pyfp3d.viscous import strip2d as _S
+    h_corr = _C2.zpg_fixed_point()
+    _, h_prof, _ = _S.similarity_fixed_point(m=0.0, rho=RHO, mu=MU)
+    e_corr = h_corr / bl_fs["H"] - 1.0
+    e_prof = h_prof / bl_fs["H"] - 1.0
+    _record("fixed-point", "ZPG self-similar H, each family vs Blasius "
+            f"({bl_fs['H']:.6f})", "RECORDED, no gate",
+            f"correlation {h_corr:.6f} ({100*e_corr:+.4f} %) vs profile "
+            f"{h_prof:.6f} ({100*e_prof:+.4f} %) = {abs(e_prof/e_corr):.1f}x",
+            "RECORDED")
+
     gate_blasius(bl_fs)
     gate_order(bl_fs)
     gate_fs()

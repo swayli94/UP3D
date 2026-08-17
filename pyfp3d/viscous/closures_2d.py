@@ -148,6 +148,30 @@ def rhs(theta, H, ue, due, rho=1.0, mu=1.0e-5):
     return dtheta, num / den
 
 
+def zpg_fixed_point():
+    """The zero-pressure-gradient self-similar `H` of THIS closure family.
+
+    Under the similarity ansatz the two source terms must cancel, and both
+    carry one factor `1/Re_theta`, so the condition collapses to the
+    Re-independent algebraic statement
+
+        `Re_theta 2c_D/H*  ==  Re_theta c_f/2`
+
+    -- no march, no discretization, no Reynolds number. It is the direct
+    counterpart of `strip2d.similarity_fixed_point` for the profile family, so
+    each closure's ZPG prediction can be compared against the SAME external
+    truth (Blasius). ★ That is comparing each family to the oracle, which is the
+    sanctioned pattern; it is NOT treating the two as interchangeable
+    implementations of one model, which the round forbids.
+    """
+    from scipy.optimize import brentq
+
+    def resid(H):
+        return re_theta_2cd_over_hstar(H) - re_theta_cf_half(H)
+
+    return brentq(resid, 1.5, 3.9, xtol=1e-14)
+
+
 def blasius_state(x, ue=1.0, rho=1.0, mu=1.0e-5, H=2.591100):
     """`(theta, H)` at station `x` on a Blasius plate.
 
