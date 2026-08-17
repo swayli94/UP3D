@@ -529,7 +529,15 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **500 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **521 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-18, **measured in full @472.19 s @8 threads**, GS4.1 round 1).
+   ★ +21 vs the 500 below = `tests/test_gs41_strip2d.py` (the 2-D strip core's locks).
+   **Skipped and xfailed did not move** — the round touched no solve, and `strip2d.py` is a
+   new module rather than a change to one. ★ Two of those 21 assert a **recorded FAIL's own
+   numbers** (the closure family's flat-plate fixed point sits +4.52 % in H and +6.94 % in
+   c_f√Re_x from Blasius): a recorded FAIL that gets silently re-baselined must be loud,
+   and a non-strict xfail cannot do that job.
+   Previous: **500 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-17, **measured in full @465.24 s @8 threads**, GS4.0 + the
    R1 addendum). ★ 499 + 1 = the capability-matrix stale-schema lock.
    Previous within GS4.0: **499 + 12 + 2** (@477.27 s @8 threads).

@@ -208,10 +208,43 @@ pyfp3d/                    # Main package
 │   │                       #   D closure-row / G per-zone u_e-recovery operators + the
 │   │                       #   Jacobian assemblies J_φ,BL / J_BL,φ (edge-data chain) /
 │   │                       #   J_φφ augmentation (dṁ/dφ through ρ_e·u_e)
-│   └── tight_driver.py   # ✓ [V5] TightPack + block/augmented residual + Jacobian +
-│                           #   newton_tight (splu + P8/P14 backtracking; probe guard =
-│                           #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
-│                           #   2026-07-23 (bench/studies/v5_tight_coupling/)
+│   ├── tight_driver.py   # ✓ [V5] TightPack + block/augmented residual + Jacobian +
+│   │                       #   newton_tight (splu + P8/P14 backtracking; probe guard =
+│   │                       #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
+│   │                       #   2026-07-23 (bench/studies/v5_tight_coupling/)
+│   └── strip2d.py        # ★ [GS4.1 phase 4, round 1 2026-08-18] 2-D chordwise STRIP,
+│                           #   marched along the streamwise coordinate: momentum +
+│                           #   kinetic-energy integrals in conservative form, unknowns
+│                           #   (delta, A[, Ctau1]) = the closure's OWN state, implicit
+│                           #   M y' = F via its analytic state Jacobian, RK4 with
+│                           #   substeps budgeted by share of log(x). NEVER assembles a
+│                           #   global system -- that is the mechanism it is cheaper than
+│                           #   ibl3.py by. CALLS closures.py (no closure formula or
+│                           #   constant of its own, source-asserted); ibl3.py untouched
+│                           #   (roadmap freeze). similarity_fixed_point() solves the
+│                           #   family's self-similar state ALGEBRAICALLY (no march, no
+│                           #   discretization) = the guard separating a marching defect
+│                           #   from a closure property.
+│                           #   ★★ ROUND-1 VERDICT = V-FAIL, cause in the CLOSURE, kill 1
+│                           #   fired: the flat-plate fixed point is H 2.708292 (+4.52 %,
+│                           #   inside ±5 %) but c_f√Re_x 0.710235 (+6.94 %, OUTSIDE) --
+│                           #   the MIRROR of the pre-registered prediction. ★★ Laminar c_f
+│                           #   had never been compared to an analytic value AT ALL: the
+│                           #   number sat in phase 1's own committed CSV
+│                           #   (v1_ibl3_standalone/results/gv1_1a_march.csv, cf_march),
+│                           #   +15.8 %..+7.75 % off Blasius across its window and
+│                           #   converging on this round's 0.710235 -- but GV1.1's gate (a)
+│                           #   gated H and its gate (b) gated TURBULENT c_f against the
+│                           #   closure's own march (common mode: two arms, one closure, so
+│                           #   blind to a shared model error). Data on disk, no criterion
+│                           #   covering it. ★ Do NOT put gate (b)'s 0.07 % next to a
+│                           #   laminar number -- that is a cross-regime comparison.
+│                           #   Discretization is NOT the cause (self-convergence order
+│                           #   4.04, error 1.3e-13 = 11 decades below the gap).
+│                           #   F-SIMILAR PASS 5.789 % (2/3 wedges); turbulent RECORDED.
+│                           #   Evidence bench/studies/gs41_strip_core/ (4.58 s);
+│                           #   locks tests/test_gs41_strip2d.py (21). ★ Whether to change
+│                           #   the closure is the NEXT round + user adjudication.
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -722,6 +755,14 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   governs; that ordering is the point. 23 phase-1 chains are in
                            #   phases/p1/cases/analysis/ -- the archive KEEPS the old layout
                            #   on purpose, since renaming a historical snapshot falsifies it.
+                           #   ★ "20 gates" counts GATES, not directories (17 measured
+                           #   2026-08-18) -- several studies carry more than one gate, so
+                           #   the two numbers are not the same thing and do not reconcile.
+                           #   ├── gs41_strip_core/  ★ [GS4.1 round 1, phase 4] the 2-D
+                           #   │     strip core vs Blasius / Falkner-Skan. Its registration
+                           #   │     lives in docs/dev_phase_four/ (prereg + 3 addenda),
+                           #   │     not in the study dir -- phase 4 keeps one round file
+                           #   │     per round there. V-FAIL, cause in the closure.
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit

@@ -31,6 +31,28 @@ follow-up; see "Addendum: (e) stabilization" below.
 Gate summary: **9 PASS / 2 FAIL** (+2 RECORDED diagnostics).
 `run.py` exits 1 (the two (a) rows are honest FAIL).
 
+> ★★ **ANNOTATION 2026-08-18 (GS4.1 round 1, phase 4 — no number above is changed).**
+> Two readings above must not be quoted on their own any more; see
+> [the GS4.1 round-1 verdict](../../../docs/dev_phase_four/20260818-2300-gs41-strip-core-verdict.md).
+>
+> 1. **Gate (b) is a COMMON-MODE comparison.** `cf_FE` vs `cf_march` share this same
+>    closure, so the 0.07 % is a statement that the FE solver integrates the family
+>    faithfully — **not** that `c_f` is accurate. It cannot detect an error the two arms
+>    share, and there is one. ★ It is also the **turbulent** leg, so its 0.07 % must never
+>    be placed beside a laminar/Blasius number (cross-regime).
+> 2. ★★★ **`results/gv1_1a_march.csv` (`cf_march`, the LAMINAR march) was never compared
+>    to Blasius by any gate here** — gate (a) gated `H`, gate (b) gated turbulent `c_f`.
+>    Measured from that committed CSV in 2026-08-18: `c_f√Re_x` runs **+15.77 %** (x=0.30)
+>    down to **+7.75 %** (x=2.10), i.e. **outside ±5 % at every station**, converging on
+>    the closure family's flat-plate fixed point **0.710235 = +6.94 %** — which GS4.1
+>    derived algebraically, with no discretization, and which agrees with this study's
+>    independently established `H* = 2.7083` to five digits.
+>
+> ⇒ The (a) FAIL recorded above is now known to be a property of the **closure family**
+> rather than of the 3-D IBL discretization (a strip core sharing the closure but not the
+> discretization reproduces it), and the family's `c_f` error is **larger** than the `H`
+> error this study gated on.
+
 ## Analysis
 
 **(a) H band — FAIL as pre-registered expectation.** The D13 laminar profile

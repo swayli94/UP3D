@@ -1,0 +1,8 @@
+tag,metric,band,measured,verdict
+"V-BLASIUS","max rel err H vs Blasius","<= 5 %","4.515 %","pass-leg"
+"V-BLASIUS","max rel err cf*sqrt(Re_x) vs Blasius","<= 5 %","7.799 %","fail-leg"
+"V-BLASIUS","BOTH within +-5 % over >= 3 Re_x decades","both legs pass","H ok, cf OUT","V-FAIL"
+"V-ORDER","err vs Blasius monotone decreasing + order >= 0.8","monotone & >= 0.8","H mono=True order=0.000; cf mono=False order=-0.000","V-FAIL"
+"V-ORDER","SEPARATED: self-convergence order (discretization error alone, vs n=32000)","RECORDED, not a criterion","H 4.039, cf 3.859","RECORDED"
+"F-SIMILAR","max |H - H_FS|/H_FS over converged wedges","<= 8 %","5.789 % (2/3 wedges)","F-SIMILAR PASS"
+"turbulent","cf vs 1/7 power law (Re_x 4.0e+04..2.0e+06)","no gate -- RECORDED","-7.71%..+11.36%, H in [1.350, 1.787]","RECORDED"
