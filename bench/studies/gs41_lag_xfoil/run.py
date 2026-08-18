@@ -412,16 +412,28 @@ def verdicts(C2, rows, floors):
     xs = np.array([lg[k]["x"] for k in keys])
     o = np.argsort(xs)
     dl, de, xs = dl[o], de[o], xs[o]
-    n = max(3, len(xs) // 5)                     # the relaxation region
-    win = slice(0, n)
-    better = int(np.sum(dl[win] < de[win]))
+    # ★ The registration says "in the post-transition relaxation region" but does
+    # NOT fix that region's SIZE, and the first execution used N/5 -- a number I
+    # picked. So every window is reported and the verdict is taken on the
+    # WINDOW-FREE one, which needs no choice of mine at all.
+    swept, all_pass = [], True
+    for frac, lbl in ((0.05, "N/20"), (0.10, "N/10"), (0.20, "N/5"),
+                      (0.33, "N/3"), (0.50, "N/2"), (1.00, "ALL")):
+        n = max(3, int(len(xs) * frac))
+        b = int(np.sum(dl[:n] < de[:n]))
+        swept.append((lbl, n, b, float(np.median(dl[:n])), float(np.median(de[:n]))))
+        all_pass &= b > n / 2
+        print(f"         window {lbl:5s} n={n:3d}  lag better {b:3d}/{n:3d}  "
+              f"median lag {100*np.median(dl[:n]):6.3f} % vs equil "
+              f"{100*np.median(de[:n]):6.3f} %")
+    lbl, n, b, ml, me = swept[-1]                       # ALL -- no window chosen
     _record("L-LAG", "lag vs equilibrium against XFOIL's own Ctau, "
-            f"first {n} stations after transition",
+            "WHOLE turbulent run (no window chosen); every window also reported",
             "the lag arm's deviation smaller than the equilibrium arm's",
-            f"{better}/{n} stations; median |dev| lag {100*np.median(dl[win]):.2f} % "
-            f"vs equil {100*np.median(de[win]):.2f} %; whole turbulent run "
-            f"lag {100*np.median(dl):.2f} % vs equil {100*np.median(de):.2f} %",
-            "L-LAG PASS" if better > n / 2 else "L-FAIL")
+            f"{b}/{n} stations; median |dev| lag {100*ml:.3f} % vs equil "
+            f"{100*me:.3f} %; verdict identical at every window N/20..ALL "
+            f"({'all pass' if all_pass else 'NOT all pass'})",
+            "L-LAG PASS" if b > n / 2 else "L-FAIL")
 
 
 if __name__ == "__main__":
