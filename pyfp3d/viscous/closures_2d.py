@@ -132,7 +132,12 @@ DFAC_C = 2.1                       # xblsys.f:970 HMIN = 1 + 2.1/ln(Re_theta)
 # vanishes identically. It arrives with the first pressure-gradient check.
 SCCON = 5.6                        # xbl.f:1558
 DUXCON = 1.0                       # xbl.f:1567
-DLCON = 0.9                        # xbl.f:1562 -- WAKE only (ALD); unused here
+DLCON = 0.9                        # xbl.f:1562 -- ALD in the WAKE (xblsys.f:1701,
+#                                    verified: IF(ITYP.EQ.3) ALD = DLCON, and ITYP=3
+#                                    IS the wake. ★ Checked from the source rather
+#                                    than assumed, because round 5 annotated GCCON
+#                                    "wake only, unused here" on exactly this pattern
+#                                    and was wrong -- ITYP=2 is turbulent.
 HDMAX = 12.0                       # xblsys.f:1112 cap on Delta/theta
 DE_A, DE_B = 3.15, 1.72            # xblsys.f:1103 Green's Delta correlation
 CTRCON = 1.8                       # xbl.f:1564 initial-Ctau constant
@@ -361,7 +366,7 @@ def s_tau_at_transition(H, ctau_eq, mach=0.0):
     return CTRCON * np.exp(-CTRCEX / (hk - 1.0)) * np.sqrt(ctau_eq)
 
 
-def lag_rate(s_tau, s_tau_eq, us, delta, uq, due_over_ue):
+def lag_rate(s_tau, s_tau_eq, us, delta, uq, due_over_ue, ald=1.0):
     """`d(ln sqrt(Ctau))/dxi` -- the continuous limit of `xblsys.f:1769-1771`.
 
     XFOIL writes the lag as a two-point residual,
@@ -376,9 +381,14 @@ def lag_rate(s_tau, s_tau_eq, us, delta, uq, due_over_ue):
     where `S = sqrt(Ctau)` is XFOIL's state variable (`xblsys.f:713`, and the
     dissipation uses `S**2` at `:1014`) and `SCC = SCCON 1.333/(1 + Us)`
     (`xblsys.f:1759`).
+
+    `ald` is XFOIL's `ALD`: 1 on a wall layer and `DLCON` in the wake
+    (`xblsys.f:1701-1705`). It is an explicit argument rather than a hardcoded 1
+    so that the wall assumption is VISIBLE -- with it buried, extending this to a
+    wake would silently drop the longer dissipation length.
     """
     scc = SCCON * 1.333 / (1.0 + us)
-    return (scc * (s_tau_eq - s_tau) / (2.0 * delta)
+    return (scc * (s_tau_eq - ald * s_tau) / (2.0 * delta)
             + DUXCON * (uq - due_over_ue))
 
 

@@ -529,13 +529,20 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **568 passed + 12 skipped +
-   2 xfailed, 0 failed** (2026-08-20, **measured in full @687.82 s @8 threads at
-   load 4.8–13.2**, GS4.1 round 9 = the five missing turbulent terms + the lag
+3. Full suite: `pytest tests/` — current baseline **569 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-20, **measured in full @805.39 s @8 threads at
+   load 17.8**, GS4.1 round 9 = the five missing turbulent terms + the lag
    equation).
-   ★ +13 vs the 555 below = `TestFiveMissingTerms` (6) + `TestLagEquation` (7);
-   **555 + 6 + 7 = 568 closes exactly, and skipped/xfailed did not move** — neither
+   ★ +14 vs the 555 below = `TestFiveMissingTerms` (6) + `TestLagEquation` (8);
+   **555 + 6 + 8 = 569 closes exactly, and skipped/xfailed did not move** — neither
    leg touched a solve.
+   ★ The 568 measured 40 minutes earlier @687.82 s at load 4.8–13.2 is the SAME
+   baseline one lock earlier; it was re-measured rather than incremented by
+   arithmetic because the last change edited `lag_rate`'s expression (`s_eq - s`
+   to `s_eq - ald*s`, bit-identical at `ald = 1.0` but still a library edit).
+   ★★ And the two walls are 687.82 s at load ~5–13 against 805.39 s at load 17.8
+   for the same suite on the same box — quote suite walls with their load, never
+   as a cost.
    ★★ The five terms are the round's standing lesson: `c_f = max(CFT, CFL)` on
    turbulent stations, `DFAC`'s low-Hk fade, `0.995` (not 1.0) in the outer
    dissipation, the laminar-stress outer term, and the `Us` clamp were all ABSENT
@@ -549,6 +556,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    MORE faithful made agreement with two external ZPG `c_f` correlations WORSE
    (62/69 → 43/70 stations inside), which points at those correlations'
    unestablished applicability rather than at the repair.
+   ★ Fast tier at this baseline: **5/5 green, 581 s (9.7 min) @8 threads, load 4.2**.
    ★ The one located code defect still open: just behind transition
    (`x/c` 0.049–0.089) the strip disagrees with XFOIL itself — candidate
    `xblsys.f:1197 TRDIF`, which splits the transition interval into a laminar and

@@ -370,3 +370,14 @@ class TestLagEquation:
                                  S.flat_plate_ue(U), rho=RHO, mu=MU,
                                  n_substep=4000, x_tr=5.0)
         assert st.H[-1] == pytest.approx(1.2932778384340817, rel=1e-14)
+
+    def test_ald_is_explicit_so_the_wall_assumption_is_visible(self):
+        """★ `ALD` is 1 on a wall layer and DLCON in the wake
+        (`xblsys.f:1701-1705`, verified from the source). It is an argument, not
+        a hardcoded 1, because round 5 annotated GCCON "wake only, unused here"
+        on exactly this pattern and was wrong -- so an out-of-scope constant gets
+        a visible use site rather than a comment."""
+        base = dict(s_tau=0.04, s_tau_eq=0.04, us=0.55, delta=0.1, uq=0.0,
+                    due_over_ue=0.0)
+        assert C2.lag_rate(**base) == 0.0                     # wall, ALD = 1
+        assert C2.lag_rate(ald=C2.DLCON, **base) != 0.0       # wake, ALD = 0.9
