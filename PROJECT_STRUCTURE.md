@@ -261,6 +261,24 @@ pyfp3d/                    # Main package
 │   │                       #   TRANSCRIPTION test, NOT validation.
 │   │                       #   Evidence bench/studies/gs41_a2_correlation/ (9.1 s);
 │   │                       #   locks tests/test_gs41_closures_2d.py (16).
+│   │                       #   ★★ [round 9, 2026-08-20] FIVE whole XFOIL terms were
+│   │                       #   MISSING and are now transcribed: c_f = max(CFT, CFL) on
+│   │                       #   turbulent stations, DFAC's low-Hk fade on the wall
+│   │                       #   dissipation, 0.995 (not 1.0) in the outer term, the
+│   │                       #   laminar-stress outer term, and the Us clamp. NONE was
+│   │                       #   findable by a guard over the constants already written --
+│   │                       #   0.995 was never typed, DFAC did not exist, the max is
+│   │                       #   control flow. Reading the source BLOCK whole found them;
+│   │                       #   A-WHOLE now does that as a machine check (30 BLVAR
+│   │                       #   assignments, all classified). c_D moved 0.03-9.33 % and
+│   │                       #   E-CF went 62/69 -> 43/70: more faithful, WORSE agreement
+│   │                       #   with two external ZPG correlations whose applicability to
+│   │                       #   this family was never established. ★ Also the shear-stress
+│   │                       #   LAG equation (bl_thickness, uq_equilibrium, lag_rate,
+│   │                       #   s_tau_at_transition) -- absent through rounds 5-8 because a
+│   │                       #   ZPG plate cannot test it (measured: arms 1.3 % apart
+│   │                       #   downstream, 4.3x apart at transition). Evidence
+│   │                       #   bench/studies/gs41_five_terms/ + gs41_lag_xfoil/.
 │   ├── strip2d.py        # ★ [GS4.1 phase 4, round 1 2026-08-18] 2-D chordwise STRIP,
 │                           #   marched along the streamwise coordinate: momentum +
 │                           #   kinetic-energy integrals in conservative form, unknowns
@@ -294,6 +312,9 @@ pyfp3d/                    # Main package
 │                           #   Evidence bench/studies/gs41_strip_core/ (4.58 s);
 │                           #   locks tests/test_gs41_strip2d.py (21). ★ Whether to change
 │                           #   the closure is the NEXT round + user adjudication.
+│                           #   ★ [round 9 leg B] march_correlation(..., lag=True) adds a
+│                           #   third state sqrt(Ctau); lag=False is bit-identical
+│                           #   (H[-1] = 1.2932778384340817, asserted).
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -812,6 +833,19 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   │     lives in docs/dev_phase_four/ (prereg + 3 addenda),
                            #   │     not in the study dir -- phase 4 keeps one round file
                            #   │     per round there. V-FAIL, cause in the closure.
+                           #   ├── gs41_five_terms/  ★ [GS4.1 round 9 leg A] the five
+                           #   │     missing turbulent terms + a re-baseline of rounds
+                           #   │     5/6. A-WHOLE classifies every BLVAR assignment.
+                           #   ├── gs41_lag_xfoil/   ★ [GS4.1 round 9 leg B] the lag
+                           #   │     equation vs the LOCALLY REBUILT XFOIL 6.99 used
+                           #   │     whole. L-LAG PASS (lag arm 2.8x/13x closer to
+                           #   │     XFOIL's own Ctau than the equilibrium arm);
+                           #   │     L-TURB FAIL per station, localized just behind
+                           #   │     transition -> candidate = TRDIF's two-part
+                           #   │     transition interval (xblsys.f:1197), absent here.
+                           #   │     ★ An IMPLEMENTATION check, NOT model validation:
+                           #   │     XFOIL is the same Drela-Giles family, and no
+                           #   │     reference in this repo carries BL profiles.
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit

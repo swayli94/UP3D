@@ -529,7 +529,32 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **555 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **568 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-20, **measured in full @687.82 s @8 threads at
+   load 4.8–13.2**, GS4.1 round 9 = the five missing turbulent terms + the lag
+   equation).
+   ★ +13 vs the 555 below = `TestFiveMissingTerms` (6) + `TestLagEquation` (7);
+   **555 + 6 + 7 = 568 closes exactly, and skipped/xfailed did not move** — neither
+   leg touched a solve.
+   ★★ The five terms are the round's standing lesson: `c_f = max(CFT, CFL)` on
+   turbulent stations, `DFAC`'s low-Hk fade, `0.995` (not 1.0) in the outer
+   dissipation, the laminar-stress outer term, and the `Us` clamp were all ABSENT
+   from `closures_2d.py`, and **not one of them was findable by round 8's G-USED
+   guard, which walks the constants already written down** — 0.995 was a number
+   never typed, DFAC a function that did not exist, the max a branch. **A guard
+   over the constants you wrote cannot see the terms you did not.** Reading the
+   source BLOCK whole found them; `A-WHOLE` now does that as a machine check
+   (every plain assignment in XFOIL's `BLVAR` classified, unclassified = FAIL).
+   ★ Measured consequence, recorded without being used to reject the fix: being
+   MORE faithful made agreement with two external ZPG `c_f` correlations WORSE
+   (62/69 → 43/70 stations inside), which points at those correlations'
+   unestablished applicability rather than at the repair.
+   ★ The one located code defect still open: just behind transition
+   (`x/c` 0.049–0.089) the strip disagrees with XFOIL itself — candidate
+   `xblsys.f:1197 TRDIF`, which splits the transition interval into a laminar and
+   a turbulent part inside ONE station interval where we switch abruptly at a
+   whole station.
+   Previous: **555 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-20, GS4.1 round 8 = the GCC transcription fix).
    ★ +2 vs the 553 below = `TestPostTransitionRelaxation`, added because the
    existing 48 locks ALL passed after a change that moved c_f by up to 4.5 % —

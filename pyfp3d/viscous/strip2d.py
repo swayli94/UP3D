@@ -188,6 +188,15 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
     explicit -- no implicit `M y' = F`, no quadrature, no state Jacobian -- which
     is the whole cost argument. Laminar only.
 
+    ★ `lag=True` (GS4.1 round 9 leg B) extends the state to `(theta, H, sqrt(Ctau))`
+    and evolves the shear-stress lag instead of holding `Ctau = CtauEQ`. The
+    third component is seeded at the transition crossing from
+    `closures_2d.s_tau_at_transition`, three decades below equilibrium, exactly as
+    `xblsys.f:1393/1403` does. `lag=False` is the default and is bit-identical to
+    rounds 3-9A -- asserted in `tests/test_gs41_turbulent_closure.py`.
+    ★ A zero-pressure-gradient plate cannot discriminate the two arms: they were
+    measured 1.3 % apart downstream, against 4.3x just after transition.
+
     `y0 = (theta, H)`. Kept as a separate entry point rather than a branch inside
     `march` so that the profile path stays byte-for-byte what round 1 measured
     (guard G-LEGACY); the two closures are separate authorities, not two

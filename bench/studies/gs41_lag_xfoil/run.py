@@ -235,7 +235,7 @@ def floor_of(S, C2, side, i0, i_tr, y0):
     return f, b
 
 
-def compare(side, res, stations, i0, mask, keys):
+def compare(side, res, i0, mask):
     rows = []
     idx = np.arange(i0 + 1, len(side.s))
     for name, st in (("equil", res["equil"]), ("lag", res["lag"])):
@@ -289,7 +289,7 @@ def main():
             if isinstance(resA[arm], Exception):
                 print(f"   march A {arm}: STOPPED -- {type(resA[arm]).__name__}:"
                       f" {resA[arm]}")
-        rows = compare(side, resA, None, i0, mask, {})
+        rows = compare(side, resA, i0, mask)
         for r in rows:
             r["march"] = "A_whole"
         all_rows += rows
@@ -302,7 +302,7 @@ def main():
                 if isinstance(resB[arm], Exception):
                     print(f"   march B {arm}: STOPPED -- "
                           f"{type(resB[arm]).__name__}: {resB[arm]}")
-            rows = compare(side, resB, None, i_tr, mask, {})
+            rows = compare(side, resB, i_tr, mask)
             for r in rows:
                 r["march"] = "B_turb"
             all_rows += rows
