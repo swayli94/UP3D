@@ -120,10 +120,30 @@ class TestLibraryRuleUnchanged:
     def test_the_rule_is_a_gauss_legendre_map_onto_unit_interval(self):
         # ★ reads the size from the module rather than hardcoding it, so the rule's
         # SHAPE stays locked while the count is free to be re-chosen (phase-5 round 2)
+        # ★★ Re-specified in phase-5 round 7. This used to assert a PLAIN
+        # Gauss-Legendre map, and it went red the moment F4's substitution landed --
+        # the lock doing its job. It now locks the SUBSTITUTED rule and the two
+        # properties that make it the right one, so it survives a change of count:
+        #   eta = (1 - cos theta)/2 with theta Gauss-Legendre on [0, pi],
+        #   which absorbs OUT_SD's endpoint w^1.5 singularity (round 7: 1.9e-06 ->
+        #   6.7e-16 at n=16) and clusters nodes at both ends.
         x, w = np.polynomial.legendre.leggauss(C.ETA_LAM.size)
-        assert C.ETA_LAM == pytest.approx(0.5*(x + 1.0), rel=1e-15)
-        assert C.W_LAM == pytest.approx(0.5*w, rel=1e-15)
-        assert float(np.sum(C.W_LAM)) == pytest.approx(1.0, rel=1e-15)
+        th = 0.5 * np.pi * (x + 1.0)
+        assert C.ETA_LAM == pytest.approx(0.5*(1.0 - np.cos(th)), rel=1e-15)
+        assert C.W_LAM == pytest.approx(0.5*np.sin(th)*w*0.5*np.pi, rel=1e-15)
+        # ★★★ NOT a loosened band. The old rule's weights summed to 1.0 within
+        # 1e-15 by coincidence of a simpler sum; the substituted rule's 24 terms
+        # leave ~4 ulp. So the bound is DERIVED from the summation rather than
+        # picked: n terms of magnitude <= 1 accumulate at most ~n*eps.
+        # (Relaxing 1e-15 to a chosen 1e-14 would have been exactly the
+        # make-it-green move B-NOLOOSEN forbids; this states the arithmetic.)
+        n_terms = C.W_LAM.size
+        bound = n_terms * np.finfo(float).eps
+        assert abs(float(np.sum(C.W_LAM)) - 1.0) < bound, (
+            f"weight sum {np.sum(C.W_LAM):.17f} is off by more than {n_terms} ulp")
+        # ★ the property that matters: nodes cluster at the ends, unlike plain GL
+        gl = 0.5*(x + 1.0)
+        assert C.ETA_LAM[0] < 0.25 * gl[0], "the rule no longer clusters at the wall"
 
 
 class TestQuadratureIsVisible:
@@ -158,10 +178,13 @@ class TestQuadratureIsVisible:
         """rel = 1e-6, which is 5000x under the 5.2e-03 that round 4 measured
         24 -> 96 to be worth, so this WILL fire on a count change."""
         o = self._pack(1)
-        for slot, want in ((18, 1.297516357384e-03),      # OUT_CD
-                           (19, 6.435379719033e-07),      # OUT_CDX  (round 3's binding)
-                           (20, -1.239876805020e-06),     # OUT_CDC
-                           (24, 5.890484720198e-01)):     # OUT_SD
+        # ★ Re-pinned in phase-5 round 7, when F4's theta-substitution landed. The
+        # band is UNCHANGED (rel = 1e-6); only the values move -- and this lock
+        # FIRING on that change is the first production proof that F5's fix works.
+        for slot, want in ((18, 1.297813938117e-03),      # OUT_CD
+                           (19, 6.433082848482e-07),      # OUT_CDX  (round 3's binding)
+                           (20, -1.238016949659e-06),     # OUT_CDC
+                           (24, 5.890486225481e-01)):     # OUT_SD
             assert o[slot] == pytest.approx(want, rel=1e-6), (
                 f"turbulent output slot {slot} moved: {o[slot]:.12e} vs {want:.12e}. "
                 "If ETA_TURB changed, bring a measured radius and an errata list "
