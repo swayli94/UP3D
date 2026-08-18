@@ -1,0 +1,7 @@
+tag,metric,band,measured,verdict
+G-REPRO,base d reproduces round 9,"bias 0.00257, MAD 0.01459, n 627","bias +0.00257, MAD 0.01459, n 627",G-REPRO PASS
+E-PERM,"d(eta) smoother than a random reordering (exact, all n!)",>=5/13 => (c) structure;  <=2/13 => not (c);  else UNDECIDABLE,P0 3/13 states with p<0.05 (null expects 0.65);  pooled LADDER 27/52,E-PERM: UNDECIDABLE
+E-BAND,"MAD of d vs station half-width (P0, set fixed across widths)",>=30% drop at 0.01 => (b);  <10% change => not (b),h=0.01: bias +0.00824 MAD 0.02175 n=91  h=0.02: bias +0.01879 MAD 0.02502 n=91  h=0.04: bias +0.03768 MAD 0.04092 n=91   |dMAD|/MAD = 13.1%,E-BAND: UNDECIDABLE
+E-J1,|J1(eta+-0.01) - J1(eta)| (set fixed across the three eta),>=0.007 => (a);  <=0.002 => not (a),"median 0.00961, mean 0.01394, n=182 (of 182 station-slots)",E-J1: (a) CARRIES IT
+E-VAR,spread across eta vs across arms (declared in advance to be nearly a deduction; context only),RECORDED,median sigma across eta 0.21731 vs across arms 0.00727,RECORDED
+E-PAIRED,stations where the D-argmin arm is closer than the runner-up (RECORDED -- no significance machinery registered),RECORDED; ranking claims are FORBIDDEN this round,44/89 station-comparisons over 13 states (chance 44),RECORDED
