@@ -126,6 +126,18 @@ US_CLAMP_TRIG = 0.95               # xblsys.f:836 IF(ITYP.LE.2 .AND. US2.GT..)
 US_CLAMP_VAL = 0.98                # xblsys.f:838 US2 = 0.98
 DFAC_C = 2.1                       # xblsys.f:970 HMIN = 1 + 2.1/ln(Re_theta)
 
+# --- the shear-stress LAG equation (round 9 leg B) --------------------------
+# ★ Deliberately absent from rounds 5-8: a zero-pressure-gradient plate cannot
+# test a lag, because equilibrium IS Ctau = CtauEQ there and the source term
+# vanishes identically. It arrives with the first pressure-gradient check.
+SCCON = 5.6                        # xbl.f:1558
+DUXCON = 1.0                       # xbl.f:1567
+DLCON = 0.9                        # xbl.f:1562 -- WAKE only (ALD); unused here
+HDMAX = 12.0                       # xblsys.f:1112 cap on Delta/theta
+DE_A, DE_B = 3.15, 1.72            # xblsys.f:1103 Green's Delta correlation
+CTRCON = 1.8                       # xbl.f:1564 initial-Ctau constant
+CTRCEX = 3.3                       # xbl.f:1565 initial-Ctau exponent
+
 #: Physical band a turbulent flat plate must stay inside. Leaving it is reported,
 #: never clamped -- the memory attempt left it and that is how the bug surfaced.
 H_TURB_LO, H_TURB_HI = 1.05, 4.0
@@ -300,6 +312,76 @@ def dissipation_identity(cd, hs):
     return 2.0 * cd / hs
 
 
+def bl_thickness(theta, H, mach=0.0):
+    """BL thickness `Delta` from the simplified Green correlation.
+
+    `xblsys.f:1103`: `Delta = (3.15 + 1.72/(Hk-1)) theta + delta*`, capped at
+    `HDMAX theta` (`:1112-1115`). The cap is what keeps `Delta` finite as
+    `Hk -> 1`; it is the source's own guard, not an addition here.
+
+    `Delta` sets the lag equation's relaxation LENGTH, so mistaking it for
+    `delta*` -- about eight times smaller -- would put the relaxation rate out by
+    that factor. It is the registered way prediction 1 of leg B can be wrong.
+    """
+    hk = h_kinematic(H, mach)
+    if hk <= 1.0:
+        return HDMAX * theta
+    de = (DE_A + DE_B / (hk - 1.0)) * theta + theta * H
+    return min(de, HDMAX * theta)
+
+
+def uq_equilibrium(cf_wall, H, re_theta, theta, mach=0.0):
+    """`UQ`, the equilibrium normalized velocity gradient. `xblsys.f:1726-1730`.
+
+        HR = HKC / (GACON * ALD * Hk),  UQ = (0.5 c_f - HR^2) / (GBCON delta*)
+
+    with `ALD = 1` on a wall layer (`xblsys.f:1705`; the wake's `DLCON` is out of
+    scope). `HKC` is the same `Hk - 1 - GCCON/Re_theta` that round 8 restored.
+    `c_f` here is the WALL value (raw CFT), matching `CFA`'s source.
+    """
+    hk = h_kinematic(H, mach)
+    hkc = max(hk - 1.0 - GCCON / re_theta, 0.01)
+    hr = hkc / (GACON * hk)
+    return (0.5 * cf_wall - hr * hr) / (GBCON * theta * H)
+
+
+def s_tau_at_transition(H, ctau_eq, mach=0.0):
+    """Initial `sqrt(Ctau)` at the transition point. `xblsys.f:1393, 1403`.
+
+        S_tr = CTRCON exp(-CTRCEX/(Hk-1)) * sqrt(CtauEQ)
+
+    ★ The prefactor is TINY -- 2.4e-3 at Hk = 1.5 -- so the lag arm starts three
+    decades below equilibrium and climbs. That is the shape XFOIL's own dumped
+    CT shows through transition, and it is what makes the two arms of leg B
+    distinguishable at all.
+    """
+    hk = h_kinematic(H, mach)
+    if hk <= 1.0:
+        return np.sqrt(ctau_eq)
+    return CTRCON * np.exp(-CTRCEX / (hk - 1.0)) * np.sqrt(ctau_eq)
+
+
+def lag_rate(s_tau, s_tau_eq, us, delta, uq, due_over_ue):
+    """`d(ln sqrt(Ctau))/dxi` -- the continuous limit of `xblsys.f:1769-1771`.
+
+    XFOIL writes the lag as a two-point residual,
+
+        REZC = SCC (CQA - SA ALD) DXI - DEA 2 SLOG + DEA 2 (UQ DXI - ULOG) DUXCON
+
+    with `SLOG = ln(S2/S1)` and `ULOG = ln(U2/U1)`. Dividing by `DXI` and taking
+    `DXI -> 0` gives
+
+        d(ln S)/dxi = SCC (S_EQ - S) / (2 Delta) + DUXCON (UQ - u_e'/u_e)
+
+    where `S = sqrt(Ctau)` is XFOIL's state variable (`xblsys.f:713`, and the
+    dissipation uses `S**2` at `:1014`) and `SCC = SCCON 1.333/(1 + Us)`
+    (`xblsys.f:1759`).
+    """
+    scc = SCCON * 1.333 / (1.0 + us)
+    return (scc * (s_tau_eq - s_tau) / (2.0 * delta)
+            + DUXCON * (uq - due_over_ue))
+
+
 def packet_turb(theta, H, ue, rho=1.0, mu=1.0e-5, mach=0.0, arm="new"):
     """Turbulent closure quantities at one station, at local equilibrium."""
     if not np.isfinite(H) or not (H_TURB_LO <= H <= H_TURB_HI):
@@ -320,7 +402,7 @@ def packet_turb(theta, H, ue, rho=1.0, mu=1.0e-5, mach=0.0, arm="new"):
 
 
 def rhs_turb(theta, H, ue, due, rho=1.0, mu=1.0e-5, mach=0.0, arm="new",
-             rel_step=1.0e-6):
+             rel_step=1.0e-6, s_tau=None):
     """`(dtheta/dxi, dH/dxi)` on the turbulent branch.
 
     ★ One structural difference from the laminar branch: `H*` depends on
@@ -343,6 +425,13 @@ def rhs_turb(theta, H, ue, due, rho=1.0, mu=1.0e-5, mach=0.0, arm="new",
     hs, ret = p["H_star"], p["re_theta"]
     grad = theta / ue * due
 
+    cD = p["cD"]
+    if s_tau is not None:
+        # LAG arm: the dissipation reads the TRANSPORTED shear coefficient, and
+        # CtauEQ appears only as the lag equation's source. Equilibrium is the
+        # special case s_tau = sqrt(CtauEQ), which this reproduces exactly.
+        cD = cd_turb(p["cf_wall"], p["Us"], s_tau * s_tau, hs, p["DFAC"], ret)
+
     dtheta = 0.5 * p["cf"] - (H + 2.0) * grad
 
     dh = rel_step * max(abs(H), 1.0)
@@ -353,13 +442,19 @@ def rhs_turb(theta, H, ue, due, rho=1.0, mu=1.0e-5, mach=0.0, arm="new",
                - h_star_turb(H, ret - dr, mach, arm)) / (2.0 * dr)
 
     dre = rho / mu * (ue * dtheta + theta * due)
-    num = (2.0 * p["cD"] - hs * 0.5 * p["cf"] + hs * (H - 1.0) * grad
+    num = (2.0 * cD - hs * 0.5 * p["cf"] + hs * (H - 1.0) * grad
            - theta * dhs_dre * dre)
     den = theta * dhs_dH
     if den == 0.0:
         raise ClosureRangeError(
             f"dH*/dH vanished at H = {H!r} on the turbulent branch")
-    return dtheta, num / den
+    if s_tau is None:
+        return dtheta, num / den
+    ds = lag_rate(s_tau, np.sqrt(p["Ctau_eq"]), p["Us"],
+                  bl_thickness(theta, H, mach),
+                  uq_equilibrium(p["cf_wall"], H, ret, theta, mach),
+                  due / ue) * s_tau
+    return dtheta, num / den, ds
 
 
 class ClosureRangeError(ValueError):

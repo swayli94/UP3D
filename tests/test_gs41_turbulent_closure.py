@@ -278,3 +278,95 @@ class TestFiveMissingTerms:
                  for ret in np.geomspace(200.0, 1.0e8, 40))
         assert hi == pytest.approx(0.922068, abs=1e-5)             # unreachable
         assert hi < C2.US_CLAMP_TRIG
+
+
+class TestLagEquation:
+    """GS4.1 round 9 leg B. The shear-stress lag, transcribed from
+    `xblsys.f:1769-1771`'s two-point residual in its continuous limit.
+
+    ★ Rounds 5-8 deliberately did NOT carry it, because a zero-pressure-gradient
+    plate cannot test a lag: equilibrium IS Ctau = CtauEQ there, so the source
+    term vanishes identically. These locks assert the machinery and the ONE
+    thing a plate CAN show -- that the two arms converge downstream.
+    """
+
+    def test_the_lag_constants_match_their_sources(self):
+        assert C2.SCCON == 5.6                # xbl.f:1558
+        assert C2.DUXCON == 1.0               # xbl.f:1567
+        assert C2.DLCON == 0.9                # xbl.f:1562 -- wake only
+        assert C2.HDMAX == 12.0               # xblsys.f:1112
+        assert (C2.DE_A, C2.DE_B) == (3.15, 1.72)     # xblsys.f:1103
+        assert (C2.CTRCON, C2.CTRCEX) == (1.8, 3.3)   # xbl.f:1564-1565
+
+    def test_delta_is_the_thickness_not_delta_star(self):
+        """★ The lag's relaxation LENGTH is Delta, about eight times delta*.
+        Confusing them puts the relaxation rate out by that factor, which is the
+        registered way leg B's first prediction can be wrong."""
+        theta, H = 2.0e-2, 1.45
+        de = C2.bl_thickness(theta, H)
+        assert de == pytest.approx((C2.DE_A + C2.DE_B / (H - 1.0)) * theta
+                                   + theta * H, rel=1e-14)
+        assert de / (theta * H) > 5.0                       # >> delta*
+        # the cap is the source's own guard as Hk -> 1
+        assert C2.bl_thickness(theta, 1.0001) == C2.HDMAX * theta
+        assert C2.bl_thickness(theta, 1.0) == C2.HDMAX * theta
+
+    def test_the_transition_seed_is_three_decades_below_equilibrium(self):
+        """`xblsys.f:1393, 1403`: S_tr = CTRCON exp(-CTRCEX/(Hk-1)) sqrt(CtauEQ).
+        The prefactor is what makes the lag arm distinguishable at all."""
+        ct_eq = 1.5e-3
+        for H, lo, hi in ((1.5, 1e-4, 1e-2), (2.0, 1e-2, 0.2)):
+            r = C2.s_tau_at_transition(H, ct_eq) / np.sqrt(ct_eq)
+            assert lo < r < hi, f"H={H} prefactor {r:.3e}"
+        assert C2.s_tau_at_transition(1.5, ct_eq) < 0.01 * np.sqrt(ct_eq)
+
+    def test_the_lag_source_vanishes_at_equilibrium(self):
+        """The defining property: with Ctau = CtauEQ and no pressure gradient
+        beyond UQ, the relaxation term is exactly zero."""
+        assert C2.lag_rate(0.04, 0.04, 0.55, 0.1, 0.0, 0.0) == 0.0
+        assert C2.lag_rate(0.02, 0.04, 0.55, 0.1, 0.0, 0.0) > 0.0   # climbs
+        assert C2.lag_rate(0.06, 0.04, 0.55, 0.1, 0.0, 0.0) < 0.0   # decays
+
+    def test_rhs_turb_reduces_to_the_equilibrium_arm(self):
+        """★ G-LEGACY at the equation level: handing the lag arm exactly
+        sqrt(CtauEQ) must reproduce the equilibrium arm's first two components,
+        so the two arms differ only through the transported Ctau."""
+        theta, H, ue = 2.0e-2, 1.45, 1.0
+        p = C2.packet_turb(theta, H, ue, rho=RHO, mu=MU)
+        eq = C2.rhs_turb(theta, H, ue, 0.0, rho=RHO, mu=MU)
+        lg = C2.rhs_turb(theta, H, ue, 0.0, rho=RHO, mu=MU,
+                         s_tau=np.sqrt(p["Ctau_eq"]))
+        assert len(eq) == 2 and len(lg) == 3
+        assert lg[0] == pytest.approx(eq[0], rel=1e-15)
+        assert lg[1] == pytest.approx(eq[1], rel=1e-15)
+        # ★ and the third component is NOT zero here. My first version asserted
+        # it was, on the intuition that "Ctau = CtauEQ means equilibrium" -- but
+        # the source says otherwise: with the relaxation term vanishing, the
+        # remaining term is DUXCON (UQ - u_e'/u_e), and UQ is the pressure
+        # gradient an equilibrium layer WANTS, which a flat plate does not
+        # supply. So a ZPG plate is not an equilibrium state for the lag, and
+        # dS/dxi = S UQ exactly. Asserting the transcription, not the intuition.
+        uq = C2.uq_equilibrium(p["cf_wall"], H, p["re_theta"], theta)
+        assert lg[2] == pytest.approx(np.sqrt(p["Ctau_eq"]) * uq, rel=1e-12)
+        assert uq < 0.0                      # measured; pulls Ctau below CtauEQ
+
+    def test_the_two_arms_converge_on_a_flat_plate(self):
+        """★★ The plate's one honest lag reading, and it is a NEGATIVE result:
+        the arms agree to ~1 % far downstream, which is exactly why rounds 5-8
+        could not have tested the lag. Near transition they differ by 4x."""
+        y0 = C2.blasius_state(0.05, ue=U, rho=RHO, mu=MU, H=2.591100)
+        st = np.geomspace(5.1, 400.0, 30)
+        kw = dict(rho=RHO, mu=MU, n_substep=4000, x_tr=5.0)
+        a = S.march_correlation(st, y0, 0.05, S.flat_plate_ue(U), **kw)
+        b = S.march_correlation(st, y0, 0.05, S.flat_plate_ue(U), lag=True, **kw)
+        assert b.ctau[0] / a.ctau[0] < 0.5            # still climbing
+        assert abs(b.ctau[-1] / a.ctau[-1] - 1.0) < 0.05   # converged
+        assert b.H[0] > a.H[0]                        # less stress, fuller H
+
+    def test_lag_off_is_bit_identical(self):
+        """G-LEGACY: the default path did not move when the lag arm landed."""
+        y0 = C2.blasius_state(0.05, ue=U, rho=RHO, mu=MU, H=2.591100)
+        st = S.march_correlation(np.geomspace(5.1, 400.0, 30), y0, 0.05,
+                                 S.flat_plate_ue(U), rho=RHO, mu=MU,
+                                 n_substep=4000, x_tr=5.0)
+        assert st.H[-1] == pytest.approx(1.2932778384340817, rel=1e-14)

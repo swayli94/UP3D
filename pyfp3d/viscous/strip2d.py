@@ -181,7 +181,7 @@ def _branch_A(target_H, ue, rho, mu):
 
 
 def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
-                      n_substep=2000, x_tr=None, arm="new"):
+                      n_substep=2000, x_tr=None, arm="new", lag=False):
     """March the strip with the **correlation** closure (`closures_2d.py`).
 
     GS4.1 round 3, route (a2). The state is `(theta, H)` and the system is
@@ -226,6 +226,9 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
         raise ValueError("x_start must be positive")
 
     y = np.array(y0, dtype=float)
+    if lag and y.size == 2:
+        y = np.append(y, 0.0)          # seeded at the transition crossing below
+    seeded = bool(lag and y.size == 3 and y[2] > 0.0)
     rec = {k: [] for k in ("x", "theta", "H", "ds1", "theta_star", "cf", "cD",
                            "re_theta", "re_x", "ue", "delta", "A", "ctau")}
 
@@ -235,6 +238,10 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
     def _f(yy, xx):
         ue, due = ue_fn(xx)
         if _turbulent_at(xx):
+            if lag:
+                return np.array(C2.rhs_turb(max(yy[0], C.DELTA_MIN), yy[1], ue,
+                                            due, rho=rho, mu=mu, arm=arm,
+                                            s_tau=max(yy[2], 1.0e-14)))
             return np.array(C2.rhs_turb(max(yy[0], C.DELTA_MIN), yy[1], ue, due,
                                         rho=rho, mu=mu, arm=arm))
         if yy[1] >= C2.H_SEPARATION_GUARD:
@@ -242,8 +249,8 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
                 f"H = {yy[1]:.4f} reached the separation guard "
                 f"{C2.H_SEPARATION_GUARD} -- the direct two-equation form is "
                 "singular at H = 4 (GS4.2's motivation); stopping this leg")
-        return np.array(C2.rhs(max(yy[0], C.DELTA_MIN), yy[1], ue, due,
-                              rho=rho, mu=mu))
+        out = C2.rhs(max(yy[0], C.DELTA_MIN), yy[1], ue, due, rho=rho, mu=mu)
+        return np.array(out + (0.0,) if lag else out)
 
     t0 = time.perf_counter()
     x = float(x_start)
@@ -254,12 +261,22 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
         ratio = (xs[i] / x) ** (1.0 / nsub)
         for _ in range(nsub):
             dx = x * (ratio - 1.0)
+            if lag and not seeded and _turbulent_at(x):
+                # xblsys.f:1393/1403 -- the transition seed, three decades below
+                # equilibrium, which is what makes the two arms distinguishable
+                ue_s, _ = ue_fn(x)
+                p_s = C2.packet_turb(max(y[0], C.DELTA_MIN), y[1], ue_s,
+                                     rho=rho, mu=mu, arm=arm)
+                y[2] = C2.s_tau_at_transition(y[1], p_s["Ctau_eq"])
+                seeded = True
             k1 = _f(y, x)
             k2 = _f(y + 0.5 * dx * k1, x + 0.5 * dx)
             k3 = _f(y + 0.5 * dx * k2, x + 0.5 * dx)
             k4 = _f(y + dx * k3, x + dx)
             y = y + dx * (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0
             y[0] = max(y[0], C.DELTA_MIN)
+            if lag:
+                y[2] = max(y[2], 0.0)
             x += dx
         x = xs[i]
         ue, _ = ue_fn(x)
@@ -277,7 +294,8 @@ def march_correlation(stations, y0, x_start, ue_fn, rho=1.0, mu=1.0e-5,
         rec["ue"].append(ue)
         rec["delta"].append(np.nan)     # the correlation state carries no delta
         rec["A"].append(np.nan)         # nor a wall-slope parameter
-        rec["ctau"].append(p.get("Ctau_eq", np.nan))
+        rec["ctau"].append(y[2] ** 2 if (lag and _turbulent_at(x))
+                           else p.get("Ctau_eq", np.nan))
     wall = time.perf_counter() - t0
 
     return StripState(turbulent=False, wall_time=wall, n_substep=n_substep,
