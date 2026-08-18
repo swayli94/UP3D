@@ -529,7 +529,21 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **572 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **574 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-22, **measured in full @979.15 s @8 threads at
+   load 14–17** — a busy box; quote the wall with its load, never as a cost).
+   ★ +2 vs the 572 below = `TestQuadratureIsVisible`, and the reason it exists is a
+   measured COVERAGE defect, not an accuracy one: taking the turbulent quadrature
+   from **24 to 96 points** moves the closure outputs by **5.2e-03** and leaves the
+   **entire suite green**. Nothing in the project could see a quadrature change of
+   that size on either table (the laminar half moved 6.5e-04 in F1 with no Track V
+   lock red).
+   ★★ So the count was **NOT changed**: a number no test can see cannot be changed
+   verifiably. The two anchors pin four turbulent closure outputs at `rel = 1e-6`,
+   5000× under the movement measured, and **G-TEETH verified they fire** (temporarily
+   setting `ETA_TURB = 40` makes them red). They are SUPPOSED to go red on any count
+   change — that is how the change then arrives with a radius and an errata list.
+   Previous: **572 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-22, **measured in full @895.80 s @8 threads at
    load 18.9** — a busy box; quote the wall with its load, never as a cost).
    ★ +1 vs the 571 below = F1's re-specified audit lock splitting in two, and F1 is
