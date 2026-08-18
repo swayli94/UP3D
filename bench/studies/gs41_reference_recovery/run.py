@@ -140,15 +140,34 @@ def main():
             # committed generator's own convention (upper = x[:k+1][::-1],
             # lower = the rest), not a choice of mine; sharing it gave 140+141.
             lo = surf[le + 1:]
-            _record("R-STATIONS", f"{tag}: surface rows vs committed",
-                    f"{len(ru)} upper + {len(rl)} lower",
-                    f"{len(up)} upper + {len(lo)} lower",
-                    "PASS" if (len(up) == len(ru) and len(lo) == len(rl))
-                    else "R-FAIL -> kill 1")
-            if len(up) != len(ru) or len(lo) != len(rl):
+            # addendum #3: the pre-registration says the STATIONS must
+            # correspond one-to-one to the x column's storage precision. An
+            # earlier version compared only the row COUNTS -- the registered
+            # criterion was right and the implementation was weaker, so a
+            # paneling mismatch passed and R-REPRO then compared different
+            # points. Counts AND x, as registered.
+            count_ok = len(up) == len(ru) and len(lo) == len(rl)
+            dx = float("nan")
+            if count_ok:
+                dx = max(
+                    float(np.max(np.abs(up[:, 1] - np.array(
+                        [float(r["x_c"]) for r in ru])))),
+                    float(np.max(np.abs(lo[:, 1] - np.array(
+                        [float(r["x_c"]) for r in rl])))))
+            x_ok = count_ok and dx <= 1.0e-6      # x_c stored to 6 decimals
+            _record("R-STATIONS", f"{tag}: surface stations vs committed",
+                    f"{len(ru)}+{len(rl)} rows AND max|dx| <= 1e-6 "
+                    "(the x_c column's storage precision)",
+                    f"{len(up)}+{len(lo)} rows, max|dx| = {dx:.3e}",
+                    "PASS" if x_ok else "R-FAIL -> kill 1")
+            if not x_ok:
                 ok_all = False
-                print("  ★ paneling differs -- stopping this case rather than "
-                      "interpolating two different point sets (kill 1)")
+                print("  ★ the paneling of the committed reference cannot be "
+                      "reproduced from the supplied source -- stopping this "
+                      "case rather than comparing different point sets "
+                      "(kill 1, the reverse outcome registered in section 3). "
+                      "NOT tuning PPAR until it matches: that would be "
+                      "searching the input for a target output.")
                 continue
 
             # R-POLAR
