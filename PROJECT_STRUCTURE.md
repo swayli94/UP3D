@@ -872,6 +872,18 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   │     quadrature and REZH only a two-point upwind
                            #   │     average, so the scheme is 2nd order in theta
                            #   │     and 1st in H. Neither side is wrong.
+                           #   └── gs41_relaxation/  ★ [GS4.1 round 14, G13] the
+                           #         post-transition relaxation. TWO DIFFERENT
+                           #         defects, measured: the plate is outside its
+                           #         band over Re_theta 576-2997 while the airfoil
+                           #         misses 5 of 214 stations at Re_theta 236-452,
+                           #         and the ranges do not overlap. Green's Delta
+                           #         is excluded (approach length matches XFOIL to
+                           #         1-5 %). ★★ The plate's band has NO counterpart
+                           #         against a same-family reference, so it cannot
+                           #         be attributed to the closure -- its reference
+                           #         (Coles-Fernholz + the 1/4 power law) is the
+                           #         open question, which is a criterion decision.
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit
