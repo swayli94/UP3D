@@ -522,6 +522,14 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
   how this survives to bite later. ⇒ **after capturing the PID, verify it: `ps -o args -p $PID`
   must print the script name.** Capturing at launch removes the pattern-match hazard; it does not
   by itself prove you captured the work.
+  ★★★ **Second instance the same day, and worse — the check earned itself immediately.** With
+  `setsid nohup python -u <script> &` written directly (no wrapper), `$!` is the **`setsid`**
+  process, which forks and **exits within milliseconds** while python runs on detached with a
+  different PID. So `kill -0 $(cat pidfile)` reports the job **finished, two seconds in** — an
+  until-loop on it returns at once and the run looks instantaneous. The first instance was benign
+  because the wrapper outlived its child; this one inverts the answer. ⇒ the `ps -o args -p $PID`
+  check is not belt-and-braces, it is **the** check: a PID that no longer exists and a PID doing
+  your work are indistinguishable to `kill -0`.
 - **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
   `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
   states in one day; the third was caught only by killing a fresh run 5 minutes in.
