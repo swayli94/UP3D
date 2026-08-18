@@ -164,7 +164,13 @@ def a_used(C2):
     0.95 trigger -- so the criterion had to grow a third class before execution.
     """
     def cd(theta, H):
-        return C2.packet_turb(theta, H, U_INF, rho=RHO, mu=MU)["cD"]
+        """★ Addendum #3: the metric is the RHS the march actually consumes,
+        not c_D. Defect 1 enters the MOMENTUM equation only -- c_D's wall term
+        uses the raw CFT by design -- so reading c_D reported it as unreachable
+        when the dry run had already measured it firing. Both components, so a
+        change in either shows."""
+        r = C2.rhs_turb(theta, H, U_INF, 0.0, rho=RHO, mu=MU)
+        return abs(r[0]) + abs(r[1])
 
     zpg = (2.0e-2, 1.40)                  # Re_theta 2000, on the ZPG plate
     apg = (6.0e-3, 2.90)                  # Re_theta 600, near separation
@@ -194,7 +200,7 @@ def a_used(C2):
             cls[name] = "WIRED+UNREACHABLE" if probe else "NOT-WIRED"
             if not probe:
                 not_wired.append(name)
-        print(f"         defect {name:16s} {cls[name]:18s} c_D moves "
+        print(f"         defect {name:16s} {cls[name]:18s} |RHS| moves "
               f"{100*ra:7.3f} % at its probe state, {100*rz:6.3f} % on ZPG")
 
     # the unreachability bound, printed as addendum #2 requires
@@ -208,7 +214,8 @@ def a_used(C2):
           f"check, or lowering H_TURB_LO.")
     n = {c: sum(v == c for v in cls.values()) for c in
          ("WIRED+REACHABLE", "WIRED+UNREACHABLE", "NOT-WIRED")}
-    _record("A-USED", "each correction is wired in (three classes, addendum #2)",
+    _record("A-USED", "each correction is wired in (three classes, #2; "
+            "metric = the marched RHS, #3)",
             "no NOT-WIRED",
             f"{n['WIRED+REACHABLE']} reachable, {n['WIRED+UNREACHABLE']} wired "
             f"but unreachable (sup Us {hi:.4f} < {C2.US_CLAMP_TRIG}), "
@@ -288,13 +295,16 @@ def a_rebase(C2, S):
             "E-ATTRACT PASS")
 
     m = (np.arange(A.x.size) >= start) & (A.re_theta <= RE_HI)
-    _record("E-PHYS", "post-repair", "1.05 < H < 4",
-            f"[{A.H.min():.4f}, {A.H.max():.4f}]",
-            "E-PHYS PASS" if (A.H.min() > 1.05 and A.H.max() < 4.0) else "E-FAIL")
+    phys = A.H.min() > 1.05 and A.H.max() < 4.0
+    _record("E-PHYS", "post-repair", "1.05 < H < 4 (RECORDED, addendum #3)",
+            f"[{A.H.min():.4f}, {A.H.max():.4f}]"
+            f" -> standing gate {'holds' if phys else 'BROKEN'}", "RECORDED")
     Hw = A.H[m]
-    _record("E-H", "post-repair", "[1.25, 1.50]",
-            f"[{Hw.min():.4f}, {Hw.max():.4f}]",
-            "E-H PASS" if (Hw.min() >= 1.25 and Hw.max() <= 1.50) else "E-FAIL")
+    h_ok = Hw.min() >= 1.25 and Hw.max() <= 1.50
+    _record("E-H", "post-repair", "[1.25, 1.50] (RECORDED, addendum #3)",
+            f"[{Hw.min():.4f}, {Hw.max():.4f}]"
+            f" -> standing gate {'holds' if h_ok else 'BROKEN (round 8 already "
+            "crossed 1.50 at 1.5213)'}", "RECORDED")
 
     rows, n_out = [], 0
     for i in np.where(m)[0]:
@@ -310,10 +320,18 @@ def a_rebase(C2, S):
                      "cf_coles_fernholz": cfa, "cf_power_law": cfb,
                      "band": b, "dev": dev, "inside": int(inside),
                      "excess_pp": max(0.0, 100.0 * (dev - b))})
-    _record("E-CF", "post-repair", "inside the derived band at every station",
+    _record("E-CF", "post-repair",
+            "inside the derived band at every station (RECORDED, addendum #3)",
             f"{len(rows)-n_out}/{len(rows)} inside, worst excess "
-            f"{max(r['excess_pp'] for r in rows):.3f} pp",
-            "E-CF PASS" if n_out == 0 else "E-FAIL")
+            f"{max(r['excess_pp'] for r in rows):.3f} pp"
+            f" -> standing gate {'holds' if n_out == 0 else 'still FAILS, as "
+            "since round 5'}", "RECORDED")
+    _record("A-STANDING", "the standing round-6 gates, read after the repair",
+            "stated separately from the re-baseline rows, not instead of them",
+            f"E-PHYS {'holds' if phys else 'BROKEN'}; "
+            f"E-H {'holds' if h_ok else 'BROKEN'}; "
+            f"E-CF {'holds' if n_out == 0 else 'FAILS'}",
+            "A-STANDING RECORDED")
     out = [r for r in rows if not r["inside"]]
     if out:
         print(f"         {len(out)} station(s) outside, Re_theta "
