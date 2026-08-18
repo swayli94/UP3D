@@ -37,6 +37,33 @@ laminar branch the stress equations are PINNED by the solver, so the factors
 are computed but unused upstream of x_tr).
 """
 
+# ---------------------------------------------------------------------------
+# ★★ The `D-*` decision identifiers used in this file, audited in phase-5 round 6
+# (F8, docs/dev_phase_five/20260822-1400-f8-verdict.md). "Appears in a document" is
+# not "is defined there" -- the audit classified each by whether any record says
+# WHAT THE DECISION IS:
+#
+#   D-CT    DEFINED   docs/design_track_v.md sec 3.2 + its decision table
+#   D-HB    DEFINED   docs/design_track_v.md decision table
+#   D-QUAD  DEFINED   docs/design_track_v.md decision table -- ★ but its text still
+#                     claims the quadrature was set "by polynomial exactness and
+#                     Spalding resolution, unit-tested", and BOTH halves were
+#                     measured false in phase-5 rounds 2 and 3. An erratum is
+#                     annotated beside it there.
+#   D-CT-1  NO RECORD ★ occurs only next to the value it labels
+#   D-CT-2  NO RECORD ★ ditto (this is what round 5 found for C_L)
+#   D-TR    NO RECORD ★ used across audit docs as the NAME of a recorded
+#                     divergence (forced transition vs the paper's e^N), but no
+#                     record defines it
+#   D-BC    NO RECORD ★ no occurrence anywhere outside pyfp3d/
+#   D-PT    NO RECORD ★ ditto
+#
+# ★★★ These are left in place rather than deleted or back-filled. Writing a design
+# record for a dangling ID now would be inventing provenance after the fact -- the
+# thing round 5 objected to. This note is the honest alternative: the reader learns
+# which identifiers resolve BEFORE trusting one.
+# ---------------------------------------------------------------------------
+
 import os
 
 import numba
