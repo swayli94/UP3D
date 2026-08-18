@@ -85,11 +85,13 @@ def parse_dump(path):
         if len(f) == 10:
             rows.append([float(v) for v in f])
     a = np.array(rows)
-    # surface rows run upper TE -> LE -> lower TE with s increasing; the wake
-    # continues past the TE. Split where x stops belonging to the airfoil.
+    # addendum #1: surface rows run upper TE -> LE -> lower TE; the WAKE then
+    # continues past the trailing edge with x > 1, y = 0 and Cf = 0. An earlier
+    # version took the maximum x after the LE as the trailing edge, which lands
+    # inside the wake and swept all 36 wake rows into the surface.
     le = int(np.argmin(a[:, 1]))
-    tail = a[le:]
-    end = le + int(np.argmax(tail[:, 1])) + 1        # last point back at the TE
+    past = np.where(a[le:, 1] > 1.0 + 1.0e-9)[0]
+    end = le + int(past[0]) if past.size else len(a)
     return header, a[:end], a[end:]
 
 
@@ -134,7 +136,10 @@ def main():
 
             le = int(np.argmin(surf[:, 1]))
             up = surf[:le + 1][::-1]                 # LE -> TE, as committed
-            lo = surf[le:]
+            # addendum #1: the LE row belongs to UPPER only. That is the
+            # committed generator's own convention (upper = x[:k+1][::-1],
+            # lower = the rest), not a choice of mine; sharing it gave 140+141.
+            lo = surf[le + 1:]
             _record("R-STATIONS", f"{tag}: surface rows vs committed",
                     f"{len(ru)} upper + {len(rl)} lower",
                     f"{len(up)} upper + {len(lo)} lower",
