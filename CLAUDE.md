@@ -515,6 +515,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
   bracket trick **only hides the grep process, never the parent shell**. The heredoc that was
   supposed to apply a fix never ran. ⇒ **capture the PID at LAUNCH — `cmd & echo $! > pidfile`**
   — and check liveness with `kill -0 $(cat pidfile)`. Never search for a PID by pattern.
+  ★★ **And a launch-time PID can still be the WRONG process** (2026-08-23, measured): `echo $!`
+  after `setsid nohup python <script> &` inside a wrapped `bash -c '... eval "..."'` wrote the
+  **wrapper shell's** PID (1971747), not python's (1971751), so `kill -0` was watching the
+  wrapper. Here the wrapper outlived its child and the check happened to work — which is exactly
+  how this survives to bite later. ⇒ **after capturing the PID, verify it: `ps -o args -p $PID`
+  must print the script name.** Capturing at launch removes the pattern-match hazard; it does not
+  by itself prove you captured the work.
 - **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
   `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
   states in one day; the third was caught only by killing a fresh run 5 minutes in.
