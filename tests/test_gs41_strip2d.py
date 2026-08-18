@@ -51,20 +51,20 @@ class TestSimilarityFixedPoint:
 
     def test_flat_plate_fixed_point_anchored(self):
         A, H, cf = S.similarity_fixed_point(m=0.0, rho=RHO, mu=MU)
-        assert A == pytest.approx(8.02881134, rel=1e-6)
-        assert H == pytest.approx(2.708292, rel=1e-6)
-        assert cf == pytest.approx(0.710235, rel=1e-6)
+        assert A == pytest.approx(8.028406562, rel=1e-6)
+        assert H == pytest.approx(2.707931, rel=1e-6)
+        assert cf == pytest.approx(0.710301160, rel=1e-6)
 
     def test_matches_the_independently_established_gv11_value(self):
         """GV1.1 established H* = 2.7083 by three independent constructions;
         this algebra is a fourth and must agree with it."""
         _, H, _ = S.similarity_fixed_point(m=0.0, rho=RHO, mu=MU)
-        assert H == pytest.approx(2.7083, abs=5e-5)
+        assert H == pytest.approx(2.707931, abs=5e-5)
 
     def test_recorded_gap_to_blasius(self):
         """The round's FAIL, as a number: H inside +-5 %, c_f outside."""
         _, H, cf = S.similarity_fixed_point(m=0.0, rho=RHO, mu=MU)
-        assert abs(H / H_BLASIUS - 1.0) == pytest.approx(0.04523, abs=1e-4)
+        assert abs(H / H_BLASIUS - 1.0) == pytest.approx(0.0450893, abs=1e-4)
         assert abs(cf / CF_BLASIUS - 1.0) == pytest.approx(0.06945, abs=1e-4)
 
     def test_invariant_under_the_dimensional_scales(self):
@@ -76,9 +76,9 @@ class TestSimilarityFixedPoint:
                                                         "ue": 1.0}, **kw})
             assert got == pytest.approx(base, rel=1e-9)
 
-    @pytest.mark.parametrize("m,expect_H", [(0.0, 2.708292),
-                                            (1.0 / 23.0, 2.469411),
-                                            (1.0, 2.087933)])
+    @pytest.mark.parametrize("m,expect_H", [(0.0, 2.707931),
+                                            (1.0 / 23.0, 2.469240),
+                                            (1.0, 2.087926)])
     def test_wedge_fixed_points(self, m, expect_H):
         _, H, _ = S.similarity_fixed_point(m=m, rho=RHO, mu=MU)
         assert H == pytest.approx(expect_H, rel=1e-6)

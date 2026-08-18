@@ -122,9 +122,28 @@ def _gauss_table(n):
     return np.ascontiguousarray(eta), np.ascontiguousarray(wgt)
 
 
-# Laminar: integrands are polynomials of degree <= 13 in eta (products of the
-# degree-4/5 Bernstein-type basis functions) -> 8 points exact to degree 15.
-ETA_LAM, W_LAM = _gauss_table(8)
+# Laminar. ★★★ The claim that used to stand here -- "integrands are polynomials of
+# degree <= 13 -> 8 points exact to degree 15" -- is FALSE twice over, both halves
+# measured (GS4.1 round 4's source audit; phase-5 round 2's n-sweep):
+#
+#   1. The KINETIC-ENERGY thicknesses phi*_1 and phi*_2 integrate
+#      1 - R U (U^2 + W^2) with U and W each degree 7, i.e. degree 21, not 13.
+#   2. ★★ More fundamentally, this ONE table serves all 30 outputs, and OUT_SD
+#      integrates (R w)^1.5 with w = 4 eta (1 - eta) vanishing at BOTH ends -- so
+#      w^1.5 has square-root-singular derivatives there and Gauss-Legendre
+#      converges only ALGEBRAICALLY. NO point count makes it exact. Measured
+#      distance to an n = 48 reference: n=8 7.9e-04, n=11 1.2e-05, n=14 3.6e-06,
+#      n=20 6.2e-07, n=24 2.5e-07, n=30 7.7e-08, n=40 1.2e-08 -- and OUT_SD is the
+#      binding output at every n >= 11.
+#
+# ★ So the point count here is a TOLERANCE CHOICE, not a degree calculation.
+# 24 puts the residual at 2.5e-07, a 4x margin under the tightest band any lock
+# currently places on a quantity fed by this table (rel = 1e-6), and it matches
+# ETA_TURB so the two tables no longer disagree for no stated reason.
+# ★★ The structural fix for OUT_SD is a substitution absorbing the endpoint
+# w^1.5 behaviour, NOT more points -- REPORTED, not done (same disposition round 4
+# gave the defect it found).
+ETA_LAM, W_LAM = _gauss_table(24)
 # Turbulent: Spalding profile is non-polynomial; 24 points resolve the
 # near-wall log-region variation for delta+ up to O(1e5) (unit-tested).
 ETA_TURB, W_TURB = _gauss_table(24)

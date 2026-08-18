@@ -16,6 +16,8 @@ rule would move every committed Track V number and needs its own round with a
 re-baseline errata list.
 """
 
+import inspect
+
 import numpy as np
 import pytest
 
@@ -77,19 +79,48 @@ class TestQuadratureDegree:
 
 
 class TestLibraryRuleUnchanged:
-    def test_laminar_rule_is_still_eight_points(self):
-        """★ If this fails, someone changed the laminar quadrature. That is the
-        registered follow-up F1 and it moves every committed Track V number --
-        see docs/dev_phase_four/20260819-1100-closures-source-audit-verdict.md
-        section 2, and bring a re-baseline errata list.
+    """★★ Re-specified in phase-5 round 2, when F1 landed. These used to lock the
+    OLD rule (8 points), so they went red the moment the rule was fixed -- which is
+    the lock doing its job. They now lock the NEW rule AND the root cause behind it,
+    so they stay true whether or not anyone changes the count again.
+    """
+
+    def test_laminar_rule_is_twenty_four_points(self):
+        """The count is a TOLERANCE CHOICE, not a degree calculation -- see the
+        next test for why no count can be exact. 24 was chosen for a 4x margin
+        under the tightest band any lock places on a quantity this table feeds
+        (rel = 1e-6), and to match ETA_TURB."""
+        assert C.ETA_LAM.size == 24, (
+            f"ETA_LAM is now {C.ETA_LAM.size} points, was 24. Changing it moves "
+            "committed Track V numbers by up to 6.5e-04 relative WITHOUT making "
+            "any Track V lock red (phase-5 round 2 measured that), so bring a "
+            "re-baseline errata list in the same commit.")
+
+    def test_one_laminar_integrand_is_not_polynomial_so_no_count_is_exact(self):
+        """★★★ The root cause, and the reason the library's original comment was
+        false: OUT_SD integrates (R w)^1.5 with w = 4 eta (1 - eta) vanishing at
+        BOTH endpoints, so w^1.5 has square-root-singular derivatives there and
+        Gauss-Legendre converges only algebraically. Measured distances to an
+        n = 48 reference: n=8 7.9e-04, n=11 1.2e-05, n=24 2.5e-07, n=40 1.2e-08 --
+        never exact, and OUT_SD is the binding output at every n >= 11.
+
+        This asserts the STRUCTURE (the 1.5 power on a vanishing weight), not the
+        error size, so it survives any future change of the count -- the same
+        reason round 4's own lock asserted the degree and not the error.
         """
-        assert C.ETA_LAM.size == 8, (
-            f"ETA_LAM is now {C.ETA_LAM.size} points, was 8. If this is the "
-            "F1 fix, the verdict's section 2.3 requires a re-baseline errata "
-            "list in the same commit.")
+        src = inspect.getsource(C)
+        assert "wsig = 4.0 * eta * (1.0 - eta)" in src or \
+               "4.0 * eta * (1.0 - eta)" in src, \
+            "the outer stress weight is no longer 4 eta (1 - eta)"
+        assert "(R * wsig) ** 1.5" in src, \
+            "OUT_SD's integrand is no longer (R w)^1.5 -- if it was given a "\
+            "substitution absorbing the endpoint behaviour, that is the "\
+            "registered structural fix and this lock should be re-specified"
 
     def test_the_rule_is_a_gauss_legendre_map_onto_unit_interval(self):
-        x, w = np.polynomial.legendre.leggauss(8)
+        # ★ reads the size from the module rather than hardcoding it, so the rule's
+        # SHAPE stays locked while the count is free to be re-chosen (phase-5 round 2)
+        x, w = np.polynomial.legendre.leggauss(C.ETA_LAM.size)
         assert C.ETA_LAM == pytest.approx(0.5*(x + 1.0), rel=1e-15)
         assert C.W_LAM == pytest.approx(0.5*w, rel=1e-15)
         assert float(np.sum(C.W_LAM)) == pytest.approx(1.0, rel=1e-15)

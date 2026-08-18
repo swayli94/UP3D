@@ -125,9 +125,17 @@ class TestMarch:
         """G-LEGACY as a suite lock: adding (a2) moved no round-1 reading."""
         from pyfp3d.viscous import strip2d as S
         A, H, cf = S.similarity_fixed_point(m=0.0, rho=1.0, mu=1.0e-5)
-        assert A == pytest.approx(8.02881134, rel=1e-6)
-        assert H == pytest.approx(2.708292, rel=1e-6)
-        assert cf == pytest.approx(0.710235, rel=1e-6)
+        # ★ Re-pinned in phase-5 round 2 when closures.py's laminar quadrature went
+        # 8 -> 24 points. The bands are UNCHANGED (rel=1e-6); only the values move:
+        # A by -5.0e-05, H by -1.3e-04, cf by +9.3e-05.
+        # ★★ An earlier version of this comment said "cf did not move at this
+        # precision" -- INFERRED from cf not appearing in the failure list rather
+        # than measured, and wrong. It moved; its own assertion simply had not been
+        # reached, because the A assertion above it fails first. Same trap as b7/b9:
+        # the first failing assert hides the rest.
+        assert A == pytest.approx(8.028406562, rel=1e-6)
+        assert H == pytest.approx(2.707931, rel=1e-6)
+        assert cf == pytest.approx(0.710301160, rel=1e-6)
 
     def test_separation_stops_the_leg_rather_than_limping_on(self):
         from pyfp3d.viscous import strip2d as S
