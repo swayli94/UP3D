@@ -113,6 +113,19 @@ CTCON = 0.5 / (GACON ** 2 * GBCON)  # xbl.f:1569  -> 0.01485...
 HSMIN = 1.500                      # xblsys.f:2394 DATA HSMIN
 DHSINF = 0.015                     # xblsys.f:2394 DATA DHSINF
 
+# --- the outer-layer dissipation terms (round 9 leg A) ---------------------
+# ★★ These five names exist because round 9's dry run read the turbulent block
+# WHOLE instead of reading the lines its constants appear on, and found five
+# XFOIL terms with no counterpart here. None of them could have been found by a
+# guard over the constants already written down: 0.995 was a number never typed,
+# DFAC a function that did not exist, max(CFT, CFL) a branch. See
+# docs/dev_phase_four/20260820-1000-round9-addendum1-five-more-terms.md
+CD_OUT_US = 0.995                  # xblsys.f:1014, 1029 -- NOT 1.0
+CD_LAMSTRESS = 0.15                # xblsys.f:1029 laminar stress, outer layer
+US_CLAMP_TRIG = 0.95               # xblsys.f:836 IF(ITYP.LE.2 .AND. US2.GT..)
+US_CLAMP_VAL = 0.98                # xblsys.f:838 US2 = 0.98
+DFAC_C = 2.1                       # xblsys.f:970 HMIN = 1 + 2.1/ln(Re_theta)
+
 #: Physical band a turbulent flat plate must stay inside. Leaving it is reported,
 #: never clamped -- the memory attempt left it and that is how the bug surfaced.
 H_TURB_LO, H_TURB_HI = 1.05, 4.0
@@ -161,8 +174,43 @@ def h_star_turb(H, re_theta, mach=0.0, arm="new"):
     return (hs + 0.028 * mach * mach) / fm
 
 
-def cf_turb(H, re_theta, mach=0.0):
-    """Turbulent `c_f` (Coles). `xblsys.f:2483` CFT / D-G eq (13) (Swafford)."""
+def cf_lam_xfoil(H, re_theta, mach=0.0):
+    """XFOIL's own LAMINAR `c_f` correlation, CFL (`xblsys.f:2452`).
+
+    ★ Not the laminar branch of this module: that one runs the 1987 PUBLISHED
+    Drela-Giles forms, which round 4 measured as the more accurate pair. This
+    exists for one purpose only -- XFOIL evaluates CFL at every TURBULENT
+    station and uses it when it exceeds CFT (`xblsys.f:913-921`), so
+    reproducing that requires XFOIL's own laminar form, not ours.
+    """
+    hk = h_kinematic(H, mach)
+    if hk < 5.5:
+        tmp = (5.5 - hk) ** 3 / (hk + 1.0)
+        return (0.0727 * tmp - 0.07) / re_theta
+    tmp = 1.0 - 1.0 / (hk - 4.5)
+    return (0.015 * tmp * tmp - 0.07) / re_theta
+
+
+def dfac_low_hk(H, re_theta, mach=0.0):
+    """Low-`H_k` correction factor on the turbulent WALL dissipation.
+
+    `xblsys.f:965-985`: `Hmin = 1 + 2.1/ln(Re_theta)` is the shape factor below
+    which a wake layer would no longer exist, and the wall dissipation is faded
+    out through `DFAC = (1 + tanh((Hk-1)/(Hmin-1)))/2` as `Hk` approaches it.
+    Typically ~0.95, i.e. a ~5 % reduction, strongest at low `Re_theta`.
+    """
+    hk = h_kinematic(H, mach)
+    hmin = 1.0 + DFAC_C / np.log(max(re_theta, 1.0 + 1.0e-9))
+    return 0.5 + 0.5 * np.tanh((hk - 1.0) / (hmin - 1.0))
+
+
+def cf_turb_wall(H, re_theta, mach=0.0):
+    """Turbulent `c_f` (Coles), CFT alone. `xblsys.f:2483` / D-G eq (13).
+
+    ★ The WALL DISSIPATION uses this, not `cf_turb` -- `xblsys.f:959` builds the
+    wall term from `CF2T`, the raw CFT, while the momentum equation gets the
+    `max(CFT, CFL)` of `cf_turb`. The asymmetry is XFOIL's, not a slip.
+    """
     hk = h_kinematic(H, mach)
     fc = np.sqrt(1.0 + 0.5 * 0.4 * mach * mach)
     grt = max(np.log(re_theta / fc), 3.0)
@@ -172,10 +220,29 @@ def cf_turb(H, re_theta, mach=0.0):
     return (cfo + 1.1e-4 * (np.tanh(4.0 - hk / 0.875) - 1.0)) / fc
 
 
+def cf_turb(H, re_theta, mach=0.0):
+    """`c_f` at a turbulent station = `max(CFT, CFL)` (`xblsys.f:913-921`).
+
+    XFOIL evaluates the laminar correlation at turbulent stations too and takes
+    whichever is larger, which matters just past transition at low `Re_theta` --
+    exactly the band where E-CF has been failing since round 5.
+    """
+    return max(cf_turb_wall(H, re_theta, mach),
+               cf_lam_xfoil(H, re_theta, mach))
+
+
 def slip_velocity(hs, H, mach=0.0):
-    """Normalized slip velocity `Us`. `xblsys.f:825`, `GBCON` from `xbl.f:1560`."""
+    """Normalized slip velocity `Us`. `xblsys.f:825`, `GBCON` from `xbl.f:1560`.
+
+    ★ Clamped as in `xblsys.f:836-838`: on a wall layer (`ITYP <= 2`) a `Us`
+    above 0.95 is replaced by 0.98. It never fires on a ZPG plate (`Us ~ 0.54`
+    there), which is why rounds 5-8 could not have detected its absence; it
+    fires under strong adverse pressure gradient, where `1 - Us` is the
+    denominator of `CtauEQ`.
+    """
     hk = h_kinematic(H, mach)
-    return 0.5 * hs * (1.0 - (hk - 1.0) / (GBCON * H))
+    us = 0.5 * hs * (1.0 - (hk - 1.0) / (GBCON * H))
+    return US_CLAMP_VAL if us > US_CLAMP_TRIG else us
 
 
 def ctau_eq(hs, H, us, re_theta, mach=0.0):
@@ -206,15 +273,25 @@ def ctau_eq(hs, H, us, re_theta, mach=0.0):
     return CTCON * hs * hkb * hkc * hkc / ((1.0 - us) * H * hk * hk)
 
 
-def cd_turb(cf, us, ctau, hs):
-    """Turbulent `c_D`. `xblsys.f:2375` DIT.
+def cd_turb(cf_wall, us, ctau, hs, dfac, re_theta):
+    """Turbulent `c_D`, all three contributions. `xblsys.f:955-1035`.
 
     ★★ DIT returns `DI = 2 c_D / H*`, NOT `c_D`. Reading it as `c_D` puts a
     spurious factor of `H*/2` into the dissipation and drove the previous
     attempt's flat plate to H = 0.60. `dissipation_identity` below is the
     machine check for exactly that (guard G-DI).
+
+        c_D = 0.5 c_f,wall Us DFAC          wall           (:959, faded at :985)
+            + Ctau (0.995 - Us)             outer turbulent           (:1014)
+            + 0.15 (0.995 - Us)^2 / Re_th   outer laminar stress      (:1029)
+
+    ★ Rounds 5-8 carried only `0.5 c_f Us + Ctau (1 - Us)`: no DFAC, `1.0` for
+    `0.995`, and the third term missing entirely. `cf_wall` is CFT, never the
+    `max(CFT, CFL)` -- see `cf_turb_wall`.
     """
-    return 0.5 * cf * us + ctau * (1.0 - us)
+    return (0.5 * cf_wall * us * dfac
+            + ctau * (CD_OUT_US - us)
+            + CD_LAMSTRESS * (CD_OUT_US - us) ** 2 / re_theta)
 
 
 def dissipation_identity(cd, hs):
@@ -232,11 +309,14 @@ def packet_turb(theta, H, ue, rho=1.0, mu=1.0e-5, mach=0.0, arm="new"):
             "(the memory attempt reached H = 0.60 here)")
     re_theta = max(rho * ue * theta / mu, 1.0e-12)
     hs = h_star_turb(H, re_theta, mach, arm)
-    cf = cf_turb(H, re_theta, mach)
+    cf_wall = cf_turb_wall(H, re_theta, mach)
+    cf = cf_turb(H, re_theta, mach)               # max(CFT, CFL) -- momentum
     us = slip_velocity(hs, H, mach)
     ct = ctau_eq(hs, H, us, re_theta, mach)
-    return {"re_theta": re_theta, "H_star": hs, "cf": cf, "Us": us,
-            "Ctau_eq": ct, "cD": cd_turb(cf, us, ct, hs)}
+    dfac = dfac_low_hk(H, re_theta, mach)
+    return {"re_theta": re_theta, "H_star": hs, "cf": cf, "cf_wall": cf_wall,
+            "Us": us, "Ctau_eq": ct, "DFAC": dfac,
+            "cD": cd_turb(cf_wall, us, ct, hs, dfac, re_theta)}
 
 
 def rhs_turb(theta, H, ue, due, rho=1.0, mu=1.0e-5, mach=0.0, arm="new",
