@@ -114,13 +114,29 @@ class TestAttraction:
     tested it as a constant H, which a ZPG turbulent layer does not have."""
 
     def test_two_different_seeds_collapse_onto_one_curve(self):
+        """★ The seed is DERIVED here, not hardcoded.
+
+        An earlier version pinned (4.793e-3, 1.8080), taken from a march at the
+        time it was written. Round 8's CtauEQ correction moved that state to
+        (4.7898e-3, 1.8335) -- H by 1.41 % -- leaving a stale pre-fix number
+        sitting in the suite with no provenance attached. It never failed,
+        because the seed is an INPUT and the assertion is about convergence, so
+        nothing would ever have flagged it. Computing it removes the whole class
+        of problem instead of re-pinning a value that will drift again.
+        """
+        lead = S.march_correlation(np.array([5.1]),
+                                   C2.blasius_state(0.05, ue=U, rho=RHO, mu=MU,
+                                                    H=2.591100),
+                                   0.05, S.flat_plate_ue(U), rho=RHO, mu=MU,
+                                   n_substep=8000, x_tr=5.0)
+        th, H0 = float(lead.theta[0]), float(lead.H[0])
         stations = np.geomspace(5.3, 200.0, 40)
         kw = dict(rho=RHO, mu=MU, n_substep=4000, x_tr=5.0)
-        a = S.march_correlation(stations, (4.793e-3, 1.8080), 5.1,
+        a = S.march_correlation(stations, (th, H0), 5.1,
                                 S.flat_plate_ue(U), **kw)
-        b = S.march_correlation(stations, (4.793e-3, 1.8080 * 1.15), 5.1,
+        b = S.march_correlation(stations, (th, H0 * 1.15), 5.1,
                                 S.flat_plate_ue(U), **kw)
-        assert abs(1.8080 * 0.15) / 1.8080 >= 0.10      # seeds really differ
+        assert 0.15 >= 0.10                             # seeds really differ
         sep = np.abs(b.H - a.H) / a.H
         assert sep[-1] < 1e-4, f"seeds did not converge: {sep[-1]:.2e}"
         assert sep.argmax() == 0                        # and it only shrinks
