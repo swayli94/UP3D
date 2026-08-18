@@ -90,6 +90,51 @@ def split_at_stagnation(surf):
     return Side(a, "side_a"), Side(b, "side_b"), k
 
 
+def transition_index(side):
+    """The first station XFOIL treats as TURBULENT.
+
+    ★★ Round 10 addendum #1. NOT "the first station with CT > 0": `xbl.f:821-822`
+    stores the amplification factor in CTAU before transition and sqrt(Ctau)
+    after, so that test finds where AMPLIFICATION starts. On this case it landed
+    two stations early, at x/c 0.04496 and 0.04916 where H is still 2.57 and c_f
+    is still on the laminar correlation, and leg B then compared our turbulent
+    state against XFOIL's laminar one -- which is where its 270 % Ctau deviation
+    came from.
+
+    The transition point is an INPUT here: we set the trip at X_TRIP, so the
+    first turbulent station is the first one past it. G-XTR below checks that
+    against XFOIL's own H trace rather than trusting it.
+    """
+    i = int(np.argmax(side.x > X_TRIP)) if np.any(side.x > X_TRIP) else None
+    return i
+
+
+def guard_xtr(side, i_tr):
+    """G-XTR: three assertions, all against XFOIL's own H, none of them a
+    threshold I picked -- laminar H is flat to within its own variation upstream,
+    it falls immediately downstream, and the CT column's semantics flip there."""
+    if i_tr is None or i_tr < 3 or i_tr + 3 >= len(side.H):
+        _record("G-XTR", f"{side.name}: transition index", "3 < i_tr < n-3",
+                f"{i_tr}", "G-FAIL -> kill 1")
+        return False
+    up = side.H[max(0, i_tr - 4):i_tr]
+    dn = side.H[i_tr:i_tr + 4]
+    flat = float(np.max(np.abs(np.diff(up)))) if up.size > 1 else np.inf
+    fall = float(dn[0] - dn[-1])
+    ok = flat < 0.05 and fall > 0.3 and dn[0] < up[-1]
+    _record("G-XTR", f"{side.name}: x_tr is the trip, verified on XFOIL's H",
+            "H flat upstream (<0.05/station), falling downstream (>0.3 over 4)",
+            f"i_tr={i_tr} x/c={side.x[i_tr]:.5f}; upstream max |dH| {flat:.4f} "
+            f"(H {up[-1]:.4f}); downstream drop {fall:.4f} "
+            f"(H {dn[0]:.4f} -> {dn[-1]:.4f})",
+            "G-XTR PASS" if ok else "G-FAIL -> kill 1")
+    print(f"         G-COLSEM {side.name}: CT rows 0..{i_tr-1} are the "
+          f"amplification factor n (max {side.ctau[:i_tr].max()**0.5:.4f}), rows "
+          f"{i_tr}.. are sqrt(Ctau); only the latter are compared "
+          f"(xbl.f:821-822)")
+    return ok
+
+
 def ue_interp(side):
     p = PchipInterpolator(side.s, side.ue, extrapolate=True)
     d = p.derivative()
@@ -270,14 +315,15 @@ def main():
 
     all_rows, floors = [], {}
     for side in (sa, sb):
-        tr = np.where(side.ctau > 0.0)[0]
-        i_tr = int(tr[0]) if tr.size else None
+        i_tr = transition_index(side)
         i0 = 1                                    # first station past stagnation
         y0 = (float(side.theta[i0]), float(side.H[i0]))
         print(f"-- {side.name}: seed at s={side.s[i0]:.5f} x={side.x[i0]:.5f} "
               f"theta={y0[0]:.3e} H={y0[1]:.4f} (G-SEED, XFOIL's own); "
               f"transition at " +
               (f"x={side.x[i_tr]:.4f}" if i_tr is not None else "none"))
+        if not guard_xtr(side, i_tr):
+            raise SystemExit("G-XTR failed -- stopping (kill 1)")
         mask = np.zeros(len(side.s), dtype=bool)
         if i_tr is not None:
             mask[i_tr:] = True
