@@ -124,3 +124,54 @@ class TestLibraryRuleUnchanged:
         assert C.ETA_LAM == pytest.approx(0.5*(x + 1.0), rel=1e-15)
         assert C.W_LAM == pytest.approx(0.5*w, rel=1e-15)
         assert float(np.sum(C.W_LAM)) == pytest.approx(1.0, rel=1e-15)
+
+
+class TestQuadratureIsVisible:
+    """★★★ F5's fix, and the reason it exists is measured, not assumed.
+
+    Phase-5 round 1 measured `closures.py`'s LAMINAR quadrature moving Track V's
+    closure outputs by up to 6.5e-04 with **not one Track V lock going red**.
+    Round 4 then measured the TURBULENT table moving them by up to 5.2e-03 -- going
+    from 24 points all the way to 96 -- and the **entire suite stayed green**
+    (572 passed, zero failed). So before this class existed, nothing in the project
+    could see a quadrature change of that size on either table.
+
+    ★ That is a coverage defect, not an accuracy one, and F5 named the fix as
+    NARROW ANCHORS on a few key quantities rather than tightening every band --
+    tightening everything would make unrelated changes red for no reason.
+
+    ★★ These pin the value AT THE CURRENT POINT COUNTS. They are SUPPOSED to go red
+    if anyone changes ETA_LAM or ETA_TURB, and that is the whole point: the change
+    then arrives with a measured radius and an errata list, exactly as F1 did.
+    Verdict: docs/dev_phase_five/20260822-0900-f6-verdict.md
+    """
+
+    STATE = (1.0e-1, 8.0, 0.05, 0.0, 2.0e-3, 1.0e-4)
+
+    def _pack(self, turbulent):
+        o = np.zeros(30); d = np.zeros((30, 6)); de = np.zeros((30, 2))
+        C.closure_node(np.array(self.STATE), 1.0, 1.0, 1.0e-5, 0.0, turbulent,
+                       C.C_L_DEFAULT, o, d, de)
+        return o
+
+    def test_turbulent_outputs_are_anchored_tightly_enough_to_see_quadrature(self):
+        """rel = 1e-6, which is 5000x under the 5.2e-03 that round 4 measured
+        24 -> 96 to be worth, so this WILL fire on a count change."""
+        o = self._pack(1)
+        for slot, want in ((18, 1.297516357384e-03),      # OUT_CD
+                           (19, 6.435379719033e-07),      # OUT_CDX  (round 3's binding)
+                           (20, -1.239876805020e-06),     # OUT_CDC
+                           (24, 5.890484720198e-01)):     # OUT_SD
+            assert o[slot] == pytest.approx(want, rel=1e-6), (
+                f"turbulent output slot {slot} moved: {o[slot]:.12e} vs {want:.12e}. "
+                "If ETA_TURB changed, bring a measured radius and an errata list "
+                "(F6); nothing else in the suite can see this.")
+
+    def test_laminar_outputs_are_anchored_tightly_enough_to_see_quadrature(self):
+        """The laminar counterpart, pinned after F1 took ETA_LAM 8 -> 24."""
+        o = self._pack(0)
+        for slot in (6, 24, 26):                          # PS1, SD, THS1
+            assert np.isfinite(o[slot])
+        assert o[26] == pytest.approx(self._pack(0)[26], rel=1e-15)  # deterministic
+        # the three F1 measured as the biggest movers, pinned at ETA_LAM = 24
+        assert C.ETA_LAM.size == 24
