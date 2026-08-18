@@ -846,6 +846,19 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   │     ★ An IMPLEMENTATION check, NOT model validation:
                            #   │     XFOIL is the same Drela-Giles family, and no
                            #   │     reference in this repo carries BL profiles.
+                           #   ├── gs41_transition_attrib/ ★ [GS4.1 round 10]
+                           #   │     separates the three candidates behind that
+                           #   │     gap. TRDIF is NOT a missing term -- it is
+                           #   │     the discretisation device XFOIL needs for
+                           #   │     its two-point scheme, and a substepped
+                           #   │     continuous march already switches anywhere
+                           #   │     inside an interval (T-C1' PASS, H 0.45 %).
+                           #   │     ★★ Round 9's 101 %/270 % were an INSTRUMENT
+                           #   │     error: BLDUMP's CT column holds the
+                           #   │     amplification factor before transition and
+                           #   │     sqrt(Ctau) after (xbl.f:821-822), so
+                           #   │     "first station with CT > 0" landed two
+                           #   │     stations early. Guard G-XTR covers x_tr now.
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit
