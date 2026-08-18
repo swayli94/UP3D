@@ -381,3 +381,50 @@ class TestLagEquation:
                     due_over_ue=0.0)
         assert C2.lag_rate(**base) == 0.0                     # wall, ALD = 1
         assert C2.lag_rate(ald=C2.DLCON, **base) != 0.0       # wake, ALD = 0.9
+
+
+class TestSeedAgainstXfoil:
+    """GS4.1 round 17 (G20). ★★★ The first EXTERNALLY validated anchor for the
+    seed chain, and the only one in this file whose expected values come from
+    outside the project.
+
+    The design is what makes it clean. XFOIL's forced transition point is placed
+    exactly ON a station (`XTR` = that station's x/c), and `xblsys.f:435` tests
+    `XIFORC .LE. X2` while `:451` assigns `XT = XIFORC` -- so the transition
+    interval's TURBULENT part has zero length. That station therefore keeps its
+    LAMINAR theta and H, and its stored CTAU is exactly XFOIL's own
+    `ST = CTR * CQ` at that state. No march, no discretisation, no interpolation
+    stands between the two numbers.
+
+    Measured 2026-08-21 with the locally rebuilt XFOIL 6.99 on NACA 0012,
+    Re 3e6, M 0, alpha 2 deg, 280 panels, XTR 0.05370 both surfaces; verified by
+    the polar's Top_Xtr = Bot_Xtr = 0.05370 and by H staying on the laminar
+    plateau at that station and collapsing at the next.
+
+    ★ What this does NOT establish: in general use XT falls INSIDE an interval and
+    the state fed to the seed is our own laminar march's, not XFOIL's. This
+    verifies the seed FORMULA, not the seed's input in general use.
+    """
+
+    #: (theta, H, ue) at the on-station transition point, and XFOIL's own CT there
+    XFOIL_ST = (
+        (7.900000e-05, 2.5660, 1.32970, 1.661500e-02),   # upper
+        (6.800000e-05, 2.3980, 1.01430, 1.203100e-02),   # lower
+    )
+
+    def test_seed_chain_reproduces_xfoils_own_ST(self):
+        for theta, H, ue, ct_xfoil in self.XFOIL_ST:
+            p = C2.packet_turb(theta, H, ue, rho=1.0, mu=1.0 / 3.0e6)
+            ours = C2.s_tau_at_transition(H, p["Ctau_eq"])
+            assert ours == pytest.approx(ct_xfoil, rel=0.02), \
+                f"H={H}: ours {ours:.6e} vs XFOIL {ct_xfoil:.6e}"
+            # measured 0.12 % and 0.15 % -- pinned an order tighter than the band
+            assert abs(ours / ct_xfoil - 1.0) < 0.005
+
+    def test_the_implied_CTR_matches_the_formula(self):
+        """★ Splits the chain: CTR alone, against what XFOIL's ST implies."""
+        for theta, H, ue, ct_xfoil in self.XFOIL_ST:
+            p = C2.packet_turb(theta, H, ue, rho=1.0, mu=1.0 / 3.0e6)
+            ctr_formula = C2.CTRCON * np.exp(-C2.CTRCEX / (H - 1.0))
+            ctr_implied = ct_xfoil / np.sqrt(p["Ctau_eq"])
+            assert ctr_formula == pytest.approx(ctr_implied, rel=0.005)

@@ -529,7 +529,24 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **569 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **571 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-21, **measured in full @1021.82 s @8 threads at
+   load 18.75** — a busy box; quote the wall with its load, never as a cost).
+   ★ +2 vs the 569 below = `TestSeedAgainstXfoil`, GS4.1 round 17, and it is the
+   **first externally-validated anchor in the viscous suite**: every other lock in
+   that file checks us against ourselves or against a transcription of the source.
+   ★★ The design is what makes it clean. XFOIL's forced trip is placed exactly ON a
+   station, and because `xblsys.f:435` tests `XIFORC .LE. X2` while `:451` assigns
+   `XT = XIFORC`, TRDIF's turbulent sub-interval then has ZERO length — so that
+   station keeps its laminar theta and H while its stored CTAU becomes XFOIL's own
+   `ST = CTR·CQ`. Our seed chain reproduces it to **0.12 % / 0.15 %** at two
+   states, with no march, no discretisation and no interpolation in between.
+   ★ What it does NOT establish: in general use `XT` falls INSIDE an interval and
+   the state fed to the seed is our own laminar march's. The transition-region gap
+   measured in round 16 decomposes as **XFOIL's own one step ≈ 41 %** plus **our
+   laminar closure being a different (and by round 4's measurement more accurate)
+   family ≈ 59 %** — both understood, both deliberate, neither a defect.
+   Previous: **569 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-20, **measured in full @805.39 s @8 threads at
    load 17.8**, GS4.1 round 9 = the five missing turbulent terms + the lag
    equation).

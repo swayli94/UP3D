@@ -884,6 +884,17 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #         be attributed to the closure -- its reference
                            #         (Coles-Fernholz + the 1/4 power law) is the
                            #         open question, which is a criterion decision.
+                           #   └── gs41_seed_on_station/ ★★ [GS4.1 round 17, G20]
+                           #         puts XFOIL's forced trip exactly ON a station,
+                           #         which makes TRDIF's turbulent sub-interval
+                           #         zero-length (xblsys.f:435 tests XIFORC .LE. X2,
+                           #         :451 assigns XT = XIFORC), so that station's
+                           #         stored CTAU IS XFOIL's own ST. Our seed chain
+                           #         reproduces it to 0.12 %/0.15 % with no march,
+                           #         no discretisation, no interpolation between.
+                           #         ⇒ the seed is NOT a defect; round 16's
+                           #         transition gap is XFOIL's one step (~41 %) plus
+                           #         our different laminar closure family (~59 %).
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit

@@ -1,0 +1,11 @@
+tag,metric,band,measured,verdict
+G-XTON,XFOIL's own transition x/c vs the station we asked for,equal to print precision (0.0537),"Top_Xtr 0.05370, Bot_Xtr 0.05370",G-XTON PASS
+G-DEGEN,side_a: the CT column's semantics flip HERE,H flat to the previous station (<0.05) and collapsing to the next (>0.1),"|dH| 0.0190, drop 0.4160",G-DEGEN PASS
+G-FRAC,side_a: XT's distance from the station,"<= 5 % of the interval, else UNDEFINED",|x_station - XTR| = 0.00e+00,"G-FRAC PASS (f = 0, no residual discretisation)"
+Z-SEED,side_a: our seed chain vs XFOIL's own ST,ratio within 2 %,ours 1.659429e-02 vs XFOIL 1.661500e-02 = 0.9988,Z-SEED PASS
+Z-CHAIN,side_a: CTR alone,RECORDED,ours 0.218823 vs implied 0.219096,RECORDED
+G-DEGEN,side_b: the CT column's semantics flip HERE,H flat to the previous station (<0.05) and collapsing to the next (>0.1),"|dH| 0.0020, drop 0.2420",G-DEGEN PASS
+G-FRAC,side_b: XT's distance from the station,"<= 5 % of the interval, else UNDEFINED",|x_station - XTR| = 0.00e+00,"G-FRAC PASS (f = 0, no residual discretisation)"
+Z-SEED,side_b: our seed chain vs XFOIL's own ST,ratio within 2 %,ours 1.201248e-02 vs XFOIL 1.203100e-02 = 0.9985,Z-SEED PASS
+Z-CHAIN,side_b: CTR alone,RECORDED,ours 0.169869 vs implied 0.170131,RECORDED
+Z-N,sample size,"n = 2, one station per surface; no spread reported and disagreement would be UNDEFINED",ratios 0.9988 and 0.9985 (0.03 pp apart),Z-N PASS
