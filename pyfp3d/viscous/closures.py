@@ -107,10 +107,19 @@ A1_BRADSHAW = 0.15    # Reynolds stress anisotropy ratio a1 (D13 (30))
 #   4. "(D-CT-2)": that ID has NO design record anywhere -- it occurs only beside
 #      this value, in the GV1.1 pre-registration/verdict and in this file.
 # ★ Same disposition round 4 gave kappa, B and r: the paper names the quantity
-# without giving the number, so the number is ours. This says so instead of citing
-# a calibration nobody performed. The VALUE is unchanged -- changing it would move
-# every Track V number and needs the radius-then-re-pin process (F1, F6).
-# Verdict: docs/dev_phase_five/20260822-1200-f2-verdict.md
+# without giving the number, so the number is ours.
+# ★★ Round 7 then ran a PROXY calibration -- choosing c_l so our equilibrium
+# Ctau_eq matches XFOIL's CtauEQ on the 2-D reduction, which the paper's own p.9
+# says this formulation reduces to. It is a proxy: the paper matches a dissipation
+# INTEGRAL to the locus, we match XFOIL's CtauEQ. Result:
+#     well-posed states (H >= 1.60): c_l = 0.0669 .. 0.0713, spread 6.6 %
+#     all states:                    c_l = 0.0669 .. 0.2194, spread 222 %
+# so a single constant does NOT fit everywhere. The well-posed median is 0.0685,
+# making the shipped 0.09 1.31x it -- and since Ctau_eq goes as c_l squared, about
+# 1.73x in CtauEQ. RECORDED, NOT ADOPTED: round 7's addendum 1 required BOTH
+# readings to pass before the value could move, and the global one does not.
+# Verdicts: docs/dev_phase_five/20260822-1200-f2-verdict.md (provenance)
+#           docs/dev_phase_five/20260822-1700-f2f4f6-verdict.md (proxy calibration)
 C_L_DEFAULT = 0.09    # outer dissipation length L = C_L * delta
 CTAU_LAM = 1.0e-8     # pinned laminar stress level (D-TR; << Ctaucrit)
 GAMMA_AIR = 1.4
