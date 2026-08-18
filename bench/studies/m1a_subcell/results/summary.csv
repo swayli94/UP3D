@@ -1,0 +1,4 @@
+tag,metric,band,measured,verdict
+S-TIE,states where two arms give an IDENTICAL footprint vector,per-cell rule's count is the target to beat,per-cell 0/13  ->  sub-cell 0/13,S-TIE PASS
+S-MONO,the interpolated x lies between the two centroids,every station,0 violations of 91,S-MONO PASS
+S-SHIFT,"|sub-cell - per-cell|, in the normalised chord the per-cell rule uses",RECORDED (expected ~0.3 cell),"median 0.00016, max 0.00247",RECORDED
