@@ -529,7 +529,16 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **553 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **555 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-20, GS4.1 round 8 = the GCC transcription fix).
+   ★ +2 vs the 553 below = `TestPostTransitionRelaxation`, added because the
+   existing 48 locks ALL passed after a change that moved c_f by up to 4.5 % —
+   every turbulent lock windows at Re_theta >= 800 and the change concentrates
+   below it. **A lock whose window excludes the region a change acts on does not
+   cover that change.** The new anchors interpolate H to FIXED Re_theta (600 /
+   1000 / 3000) rather than taking a max over stations, because a max over
+   stations depends on where the first station lands relative to x_tr.
+   Previous: **553 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, GS4.1 round 6, **measured @524.70 s @8 threads at
    load 3.11**). ★ +1 vs the 552 below = the E-ATTRACT lock (two seeds 15 % apart in H
    collapse onto one curve) — that is what "equilibrium" means for a turbulent branch,
