@@ -859,6 +859,19 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   │     sqrt(Ctau) after (xbl.f:821-822), so
                            #   │     "first station with CT > 0" landed two
                            #   │     stations early. Guard G-XTR covers x_tr now.
+                           #   ├── gs41_two_point/  ★ [GS4.1 rounds 11-12]
+                           #   │     scheme.py transcribes XFOIL's BLDIF two-point
+                           #   │     implicit discretisation (turbulent intervals,
+                           #   │     M = 0). An INSTRUMENT, deliberately NOT in
+                           #   │     pyfp3d/, with a registered expiry.
+                           #   │     ★★ Round 11 stopped on its own kill criterion;
+                           #   │     round 12 then showed the two sets of equations
+                           #   │     AGREE (all three residuals O(h^3) on our
+                           #   │     converged solution) and named the real
+                           #   │     difference: XFOIL gives REZT a three-point
+                           #   │     quadrature and REZH only a two-point upwind
+                           #   │     average, so the scheme is 2nd order in theta
+                           #   │     and 1st in H. Neither side is wrong.
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit
