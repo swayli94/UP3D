@@ -144,8 +144,24 @@ def _gauss_table(n):
 # w^1.5 behaviour, NOT more points -- REPORTED, not done (same disposition round 4
 # gave the defect it found).
 ETA_LAM, W_LAM = _gauss_table(24)
-# Turbulent: Spalding profile is non-polynomial; 24 points resolve the
-# near-wall log-region variation for delta+ up to O(1e5) (unit-tested).
+# Turbulent. ★★ The claim that used to stand here -- "24 points resolve the
+# near-wall log-region variation for delta+ up to O(1e5) (unit-tested)" -- is FALSE
+# in BOTH halves, measured in phase-5 round 3
+# (docs/dev_phase_five/20260822-0600-f3-verdict.md):
+#
+#   1. "(unit-tested)": nothing in tests/ asserts anything about ETA_TURB. The only
+#      Spalding lock tests the y+ -> u+ -> y+ INVERSION, not the quadrature.
+#   2. "24 points resolve...": against an n = 96 reference, 24 points leave
+#      1.7e-03 to 5.2e-03 at EVERY state measured (re_delta 1e4..1e7), with
+#      OUT_CDX -- the near-wall PROFILE-DERIVATIVE dissipation term -- binding.
+#      ★ For scale, the same count leaves 2.5e-07 on the laminar table. The claim
+#      already fails far below its own stated limit; the round did not reach
+#      delta+ = 1e5 and claims nothing about that point.
+#
+# ★★ The count is UNCHANGED here on purpose: raising it moves every committed
+# turbulent-side number, and that radius has not been measured. Registered as F6;
+# the fix follows F1's pattern -- measure the radius first, then re-pin with an
+# errata list. This comment carries no number, so correcting it needed no radius.
 ETA_TURB, W_TURB = _gauss_table(24)
 
 
