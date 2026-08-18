@@ -153,12 +153,20 @@ def main():
 
             # R-POLAR
             cp = committed_polar[tag]
+            # addendum #2: a data row is one whose seven fields ALL parse as
+            # floats (alpha CL CD CDp CM Top_Xtr Bot_Xtr). An earlier version
+            # asked only whether the first field looked numeric, which matched
+            # the header line "1 1 Reynolds number fixed".
             got = {}
             for ln in open(polar).read().splitlines():
                 f = ln.split()
-                if len(f) >= 7 and f[0].replace(".", "").isdigit():
-                    got = {"cl": float(f[1]), "cd": float(f[2]),
-                           "cm": float(f[4])}
+                if len(f) != 7:
+                    continue
+                try:
+                    v = [float(t) for t in f]
+                except ValueError:
+                    continue
+                got = {"cl": v[1], "cd": v[2], "cm": v[4]}
             worst = 0.0
             for k in ("cl", "cd", "cm"):
                 u = ulp_of(cp[k])
