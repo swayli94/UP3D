@@ -1,0 +1,7 @@
+tag,metric,band,measured,verdict
+T-C1',"side_a: the transition-interval station, PREDICTED from a clean laminar seed",inside the round-9 band (2 %) for theta and H,"best at x_tr = x/c 0.05052: theta 1.31 %, H 0.45 %",T-C1' PASS -- TRDIF is absorbed by the continuous march
+T-C2,side_a: x_tr swept across ONE XFOIL interval,derived range = the interval containing the trip; sample set fixed by T-SET,outliers 20 at the station boundary -> 3 at x/c 0.05143 (best); the trip we set is x/c 0.05,T-C2 RECORDED
+T-C3,"side_a: discretisation, BOUNDED not reproduced","movement fine -> one step per XFOIL interval, against the observed deviation",max movement 41.56 pp against an observed 14.82 % -- ratio 2.804,T-C3 is a main effect
+T-C1',"side_b: the transition-interval station, PREDICTED from a clean laminar seed",inside the round-9 band (2 %) for theta and H,"best at x_tr = x/c 0.05007: theta 0.69 %, H 0.45 %",T-C1' PASS -- TRDIF is absorbed by the continuous march
+T-C2,side_b: x_tr swept across ONE XFOIL interval,derived range = the interval containing the trip; sample set fixed by T-SET,outliers 25 at the station boundary -> 8 at x/c 0.04961 (best); the trip we set is x/c 0.05,T-C2 RECORDED
+T-C3,"side_b: discretisation, BOUNDED not reproduced","movement fine -> one step per XFOIL interval, against the observed deviation",max movement 26.94 pp against an observed 13.69 % -- ratio 1.968,T-C3 is a main effect
