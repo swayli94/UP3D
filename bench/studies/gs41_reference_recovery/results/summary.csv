@@ -1,0 +1,3 @@
+tag,metric,band,measured,verdict
+R-STATIONS,xtr005: surface stations vs committed,140+140 rows AND max|dx| <= 1e-6 (the x_c column's storage precision),"140+140 rows, max|dx| = 1.750e-03",R-FAIL -> kill 1
+R-STATIONS,xtr030: surface stations vs committed,140+140 rows AND max|dx| <= 1e-6 (the x_c column's storage precision),"140+140 rows, max|dx| = 1.750e-03",R-FAIL -> kill 1

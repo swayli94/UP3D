@@ -1,0 +1,24 @@
+item,what,paper_eq,verdict,worst_rel,detail
+A1,laminar basis f0..f3 + eta-derivatives,eq (46),MATCH,4.440905923529284e-16,12 interior Gauss points
+A2,laminar U(eta;A),eq (42),MATCH,1.8630290930206742e-15,"3 (A,B,Psi) states x 12 points; U and W checked together"
+A3,"laminar W(eta;B,Psi)",eq (43),MATCH,1.8630290930206742e-15,"same array as A2 (cols 1,3)"
+A4,"laminar S, T = (1/Re_d)(mu/mu_i) dU/deta, dW/deta",eq (44)(45),MATCH,1.8630290930206742e-15,"S,T are U',W' scaled by 1/Re_d; the profile derivatives are cols 2,3 of the same comparison, and the 1/Re_d scaling is exercised by A12's Cf1"
+A5,Spalding y+(u+),eq (51),MATCH,1.5334186717565496e-16,"u+ in [0.5, 25]; library Newton vs an independent bisection"
+A10,"U_tau, W_tau, delta+",eq (55)(56)(57),DIVERGENT-DOCUMENTED,0.0,"library drops the (nu_w/nu_i)^1/2 factors of (56)(57) -- its docstring states 'incompressible form (nu_w = nu_i)', so the divergence is RECORDED in the code itself; the incompressible limit matches"
+A7,"turbulent U, W",eq (47)(48),MATCH,6.397279841248331e-16,"3 states x 12 points. ★ tolerance 1e-9 not 1e-12: u+(y+) is found by Newton in the library and by bisection here, so the two agree only to their respective root tolerances -- derived from the algorithms, not picked"
+A9,"K, Upsilon",eq (53)(54),MATCH,6.397279841248331e-16,"exercised through A7 (K=1.870979, Upsilon=3.014051 enter U and W directly); the library does not expose them separately"
+A6,Coles wake g_o = 3eta^2 - 2eta^3,eq (52),MATCH,6.397279841248331e-16,exercised through A7; not separately exposed
+A8,"turbulent S, T",eq (49)(50),SEE-A12,,not exposed per-eta by the library; its wall value enters Cf1/Cf2 and its integral enters CD -- both checked at A12
+A11,integral thicknesses (16 of them),eq (60),DIVERGENT-UNDOCUMENTED,4.2926481998447016e-05,"laminar, mach=0. 11 polynomial ones: independent 40-pt vs the library's 8-pt (exact for degree<=13), worst ps1 4.29e-05. 5 Psi-weighted ones carry arctan(W/U) and are NOT polynomial, so they are compared on the same 8-pt rule to isolate the integrand definition, worst tc1 3.69e-17"
+A11q,quadrature truncation of the Psi-weighted integrals,eq (60) + D-QUAD,RECORDED,7.574617732131238e-05,"8-pt vs 40-pt on the transcendental integrands differ by 7.57e-05 relative -- this is the library's quadrature resolution, NOT a formula divergence, and it is exactly what the first execution mistook for one"
+A12,"Cf1, Cf2, CD, CD_cross",eq (61),MATCH,1.2007755999815103e-14,"Cf = 2S(0), CD = int(S dU/deta + T dW/deta) deta; laminar CD_cross is identically zero so it is checked against the scale of its own terms"
+A12t,CD_cross on a TURBULENT state (nonzero),eq (61),MATCH,1.1314718220321514e-09,"★ tolerance 2e-3, derived not picked: the paper side differentiates the turbulent profile by finite difference (h=1e-6) against the library's analytic derivative, so FD truncation dominates"
+A13,theta11 = p11 - ds1 ; theta*1 = ps1 - ds1,eq (60) text,MATCH,0.0,identity check inside the packet
+A14,Crocco-Busemann R = rho/rho_i,eq (58),MATCH,0.0,"3 (U, W, E', dHw) states"
+A15,Sutherland mu/mu_i,eq (59),UNCHECKABLE,,"the library computes M inline inside closure_node with no separate entry point, and the paper's h_S/h_i is not given a numeric value in the text -- reported unreadable rather than guessed"
+A16,a1 Reynolds-stress anisotropy,eq (30) text,MATCH,0.0,"paper 0.15, library A1_BRADSHAW = 0.15"
+A17,"Spalding kappa, B",eq (51),NOT-IN-SOURCE,,"D13 (51) writes kappa and B symbolically and gives no values; library uses KAPPA=0.41, B_SPALDING=5.5 (the standard Spalding pair). The project's choice, not the paper's."
+A18,recovery factor r ~ Pr^1/2,eq (58) text,NOT-IN-SOURCE,,"paper states r ~ Pr^(1/2) without a number; library RECOVERY_R = 0.85 (i.e. Pr ~ 0.72). Consistent with the paper's form, value is the project's"
+A19,Ctau_crit vs the pinned laminar stress,eq (35) text,DIVERGENT-DOCUMENTED,,"paper: Ctau_crit ~ 1e-4 as the transition trigger. Library pins laminar stress at CTAU_LAM = 1e-08 and its comment says '<< Ctaucrit' -- a deliberate, recorded relation, not the same quantity"
+A20,outer dissipation length L,p.9 (33) text,DIVERGENT-UNDOCUMENTED-TIER4,,"★ paper: L 'is calibrated so that the dissipation integral D matches the dissipation implied by CLAUSER'S G-BETA LOCUS'. Library: C_L_DEFAULT = 0.09 commented as the BRADSHAW outer-layer value with a separate 2-D-reduction calibration. The source's stated calibration has never been performed. Tier 4 is inventory, so this does NOT set AUD-DEFECT -- it is a registered finding"
+A21,transition mechanism,"eq (34)(35), p.9 s.7",DIVERGENT-DOCUMENTED,,"paper: e^N with the TS-envelope f_N, switching on |Ctau| vs Ctau_crit. Library: forced transition from x_tr (design decision D-TR). GV3.1 already measured the consequence -- cf +44 % at the first post-trip station"

@@ -1,0 +1,31 @@
+var,line,class,maps_to
+US2,825,HERE,slip_velocity
+US2,838,HERE,US_CLAMP_VAL  (defect 5)
+US2,848,N/A-WAKE,ITYP=3 wake clamp 0.99995
+GCC,858,HERE,GCCON=0 on the laminar branch
+HKC,859,HERE,ctau_eq hkc
+GCC,863,HERE,GCCON in ctau_eq (round 8)
+HKC,864,HERE,ctau_eq hkc
+HKC,868,HERE,ctau_eq hkc 0.01 floor
+HKB,874,HERE,ctau_eq hkb
+USB,875,HERE,ctau_eq (1-us)
+CQ2,876,HERE,ctau_eq (we return its square)
+CF2,904,N/A-WAKE,ITYP=3 cf=0
+CF2,919,HERE,"cf_turb = max(CFT, CFL)  (defect 1)"
+DI2,958,HERE,cd_turb wall term
+GRT,972,HERE,dfac_low_hk  (defect 2)
+HMIN,973,HERE,dfac_low_hk  (defect 2)
+FL,977,HERE,dfac_low_hk  (defect 2)
+TFL,981,HERE,dfac_low_hk  (defect 2)
+DFAC,982,HERE,dfac_low_hk  (defect 2)
+DI2,994,HERE,cd_turb wall x DFAC  (defect 2)
+DI2,999,N/A-WAKE,ITYP=3 zero wall contribution
+DD,1013,HERE,cd_turb outer turbulent  (defect 3)
+DI2,1018,HERE,cd_turb outer turbulent  (defect 3)
+DD,1028,HERE,cd_turb outer laminar stress  (defect 4)
+DI2,1033,HERE,cd_turb outer laminar stress  (defect 4)
+DI2,1080,N/A-WAKE,ITYP=3 laminar wake CD
+DI2,1093,N/A-WAKE,ITYP=3 doubled for two wake halves
+DE2,1103,DEFERRED,BL thickness Delta -- LEG B needs it for the lag equation's relaxation length
+HDMAX,1112,DEFERRED,the Delta cap -- leg B
+DE2,1115,DEFERRED,the Delta cap -- leg B

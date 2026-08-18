@@ -1,0 +1,7 @@
+tag,metric,band,measured,verdict
+G-INDEP,relative spread of cost across u_e families,<= 5 %,1.93 % (3 families),PASS
+C-COST,t_strip(S4) at n_sub=2 (13764 stations),<1 s = C-SUB1; 1-100 s = C-PARTIAL; >100 s = C-MISS,2.1880 s,C-PARTIAL
+C-RATIO,P1_strip = t_strip / t_inviscid at S4 (vs committed P1_IBL3 = 6.073),"RECORDED, not a criterion",0.01453  (418x faster than the 3-D IBL's 915 s),RECORDED
+profile,closure quadrature share of one RK4 step,"RECORDED, no gate",92.7 %,RECORDED
+crossflow,"S4 discarded crossflow, magnitude consequence","RECORDED, no gate",0.0496 % in |u_e|,RECORDED
+crossflow,"S4 discarded crossflow, DIRECTION consequence","RECORDED, no gate",1.80 deg at the worst node,RECORDED

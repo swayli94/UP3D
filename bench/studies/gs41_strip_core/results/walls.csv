@@ -1,0 +1,12 @@
+label,seconds,detail
+V-BLASIUS march,0.122466,(2000 substeps, 19 stations)
+V-ORDER march n=250,0.014905,
+V-ORDER march n=500,0.031631,
+V-ORDER march n=1000,0.061783,
+V-ORDER march n=2000,0.122368,
+V-ORDER reference n=32000,1.962769,
+F-SIMILAR march m=0.00000,0.124412,
+F-SIMILAR march m=0.04348,0.129971,
+F-SIMILAR march m=1.00000,0.130082,
+turbulent march,0.529255,
+TOTAL round compute,4.575123,excludes the close-out lock tier (addendum #1 section 3)

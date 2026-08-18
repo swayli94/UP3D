@@ -156,6 +156,31 @@ pyfp3d/                    # Main package
 │                           #   Term-2/Term-3 physics factor (forward path byte-identical)
 │   ├── __init__.py       #   exports WakeLevelSet / CutElementMap / MultivaluedOperator
 ├── viscous/              # ✓ [Track V / V1] IBL3 (Drela 2013 integral boundary layer,
+│                           #   ★★ SOURCE-AUDITED 2026-08-19 (GS4.1 round 4) against its
+│                           #   binding reference, Drela AIAA 2013-2437 -- the first time,
+│                           #   because that paper was gitignored and absent until then.
+│                           #   Profile family and integral definitions match eq (42)-(61)
+│                           #   to 1e-15, so round 1's H = 2.708292 IS the published
+│                           #   family's property and not an implementation defect.
+│                           #   ★★★ ONE substantive divergence, reported NOT fixed:
+│                           #   ETA_LAM is 8-point Gauss, but eq (60)'s KINETIC-ENERGY
+│                           #   thicknesses phi*_1, phi*_2 have degree-21 integrands
+│                           #   (1 - R U (U^2+W^2), U and W each degree 7) and need 11
+│                           #   points -> phi*_1 carries 4.3e-05 quadrature error, and it
+│                           #   feeds theta*_1, i.e. the kinetic-energy equation eq (28).
+│                           #   The comment justifying 8 points ("degree <= 13") is false
+│                           #   for those two. ~1000x below the model errors above it, so
+│                           #   unlikely to move any published number -- but fixing it
+│                           #   moves EVERY committed Track V number and needs a
+│                           #   re-baseline errata list. Root cause locked in
+│                           #   tests/test_gs41_closures_audit.py; verdict in
+│                           #   docs/dev_phase_four/20260819-1100-*.md
+│                           #   ★ Also registered: D13 p.9 says the outer dissipation
+│                           #   length L is calibrated to Clauser's G-beta locus, while
+│                           #   C_L_DEFAULT = 0.09 is a Bradshaw value with the project's
+│                           #   own 2-D calibration -- the source's calibration has never
+│                           #   been performed. And KAPPA/B_SPALDING/RECOVERY_R are
+│                           #   NOT-IN-SOURCE: D13 gives those symbolically only.
 │   │                       #   design_track_v.md) — standalone prescribed-u_e stage shipped;
 │   │                       #   GV1.1 9 PASS / 2 FAIL, V1 ✓ CLOSED 2026-07-22 (VERDICT
 │   │                       #   bench/studies/v1_ibl3_standalone/VERDICT.md); V1 does NOT touch
@@ -208,10 +233,88 @@ pyfp3d/                    # Main package
 │   │                       #   D closure-row / G per-zone u_e-recovery operators + the
 │   │                       #   Jacobian assemblies J_φ,BL / J_BL,φ (edge-data chain) /
 │   │                       #   J_φφ augmentation (dṁ/dφ through ρ_e·u_e)
-│   └── tight_driver.py   # ✓ [V5] TightPack + block/augmented residual + Jacobian +
-│                           #   newton_tight (splu + P8/P14 backtracking; probe guard =
-│                           #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
-│                           #   2026-07-23 (bench/studies/v5_tight_coupling/)
+│   ├── tight_driver.py   # ✓ [V5] TightPack + block/augmented residual + Jacobian +
+│   │                       #   newton_tight (splu + P8/P14 backtracking; probe guard =
+│   │                       #   the IBL halving-on-nonfinite idiom); GV5.1 ✓ EXECUTED
+│   │                       #   2026-07-23 (bench/studies/v5_tight_coupling/)
+│   ├── closures_2d.py    # ★★ [GS4.1 round 3, route (a2) 2026-08-19] the 2-D
+│   │                       #   integral BL closure by FITTED CORRELATIONS
+│   │                       #   (Drela-Giles), laminar only. State (theta, H),
+│   │                       #   explicit 2-ODE system -- no quadrature, no state
+│   │                       #   Jacobian, which is the cost argument.
+│   │                       #   ★★ AUTHORITY, fixed before it was written:
+│   │                       #   closures.py owns the 3-D IBL, THIS owns the 2-D
+│   │                       #   strip. NOT two implementations of one model --
+│   │                       #   different state spaces and provenance. Neither
+│   │                       #   imports the other (asserted in tests); what stops
+│   │                       #   them drifting is that BOTH are checked against the
+│   │                       #   same external Falkner-Skan ODE oracle.
+│   │                       #   ★★★ Blasius is a FIXED POINT by construction:
+│   │                       #   zpg_fixed_point() = 2.590433 (-0.026 % vs Blasius)
+│   │                       #   against the profile family's 2.708292 (+4.52 %) =
+│   │                       #   175.6x. That is the whole of route (a2).
+│   │                       #   ★ Singular at separation (dH*/dH -> 0 at H = 4):
+│   │                       #   a known property of the DIRECT method and GS4.2's
+│   │                       #   motivation, so the marcher RAISES rather than
+│   │                       #   clamping. Correlations are fits to Falkner-Skan,
+│   │                       #   so checking them against Blasius/FS is a
+│   │                       #   TRANSCRIPTION test, NOT validation.
+│   │                       #   Evidence bench/studies/gs41_a2_correlation/ (9.1 s);
+│   │                       #   locks tests/test_gs41_closures_2d.py (16).
+│   │                       #   ★★ [round 9, 2026-08-20] FIVE whole XFOIL terms were
+│   │                       #   MISSING and are now transcribed: c_f = max(CFT, CFL) on
+│   │                       #   turbulent stations, DFAC's low-Hk fade on the wall
+│   │                       #   dissipation, 0.995 (not 1.0) in the outer term, the
+│   │                       #   laminar-stress outer term, and the Us clamp. NONE was
+│   │                       #   findable by a guard over the constants already written --
+│   │                       #   0.995 was never typed, DFAC did not exist, the max is
+│   │                       #   control flow. Reading the source BLOCK whole found them;
+│   │                       #   A-WHOLE now does that as a machine check (30 BLVAR
+│   │                       #   assignments, all classified). c_D moved 0.03-9.33 % and
+│   │                       #   E-CF went 62/69 -> 43/70: more faithful, WORSE agreement
+│   │                       #   with two external ZPG correlations whose applicability to
+│   │                       #   this family was never established. ★ Also the shear-stress
+│   │                       #   LAG equation (bl_thickness, uq_equilibrium, lag_rate,
+│   │                       #   s_tau_at_transition) -- absent through rounds 5-8 because a
+│   │                       #   ZPG plate cannot test it (measured: arms 1.3 % apart
+│   │                       #   downstream, 4.3x apart at transition). Evidence
+│   │                       #   bench/studies/gs41_five_terms/ + gs41_lag_xfoil/.
+│   ├── strip2d.py        # ★ [GS4.1 phase 4, round 1 2026-08-18] 2-D chordwise STRIP,
+│                           #   marched along the streamwise coordinate: momentum +
+│                           #   kinetic-energy integrals in conservative form, unknowns
+│                           #   (delta, A[, Ctau1]) = the closure's OWN state, implicit
+│                           #   M y' = F via its analytic state Jacobian, RK4 with
+│                           #   substeps budgeted by share of log(x). NEVER assembles a
+│                           #   global system -- that is the mechanism it is cheaper than
+│                           #   ibl3.py by. CALLS closures.py (no closure formula or
+│                           #   constant of its own, source-asserted); ibl3.py untouched
+│                           #   (roadmap freeze). similarity_fixed_point() solves the
+│                           #   family's self-similar state ALGEBRAICALLY (no march, no
+│                           #   discretization) = the guard separating a marching defect
+│                           #   from a closure property.
+│                           #   ★★ ROUND-1 VERDICT = V-FAIL, cause in the CLOSURE, kill 1
+│                           #   fired: the flat-plate fixed point is H 2.708292 (+4.52 %,
+│                           #   inside ±5 %) but c_f√Re_x 0.710235 (+6.94 %, OUTSIDE) --
+│                           #   the MIRROR of the pre-registered prediction. ★★ Laminar c_f
+│                           #   had never been compared to an analytic value AT ALL: the
+│                           #   number sat in phase 1's own committed CSV
+│                           #   (v1_ibl3_standalone/results/gv1_1a_march.csv, cf_march),
+│                           #   +15.8 %..+7.75 % off Blasius across its window and
+│                           #   converging on this round's 0.710235 -- but GV1.1's gate (a)
+│                           #   gated H and its gate (b) gated TURBULENT c_f against the
+│                           #   closure's own march (common mode: two arms, one closure, so
+│                           #   blind to a shared model error). Data on disk, no criterion
+│                           #   covering it. ★ Do NOT put gate (b)'s 0.07 % next to a
+│                           #   laminar number -- that is a cross-regime comparison.
+│                           #   Discretization is NOT the cause (self-convergence order
+│                           #   4.04, error 1.3e-13 = 11 decades below the gap).
+│                           #   F-SIMILAR PASS 5.789 % (2/3 wedges); turbulent RECORDED.
+│                           #   Evidence bench/studies/gs41_strip_core/ (4.58 s);
+│                           #   locks tests/test_gs41_strip2d.py (21). ★ Whether to change
+│                           #   the closure is the NEXT round + user adjudication.
+│                           #   ★ [round 9 leg B] march_correlation(..., lag=True) adds a
+│                           #   third state sqrt(Ctau); lag=False is bit-identical
+│                           #   (H[-1] = 1.2932778384340817, asserted).
 ├── solve/                # Linear and nonlinear solvers
 │   ├── __init__.py
 │   ├── linear.py         # [P1] Dirichlet elimination + CG/PyAMG preconditioner (done);
@@ -722,6 +825,80 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   governs; that ordering is the point. 23 phase-1 chains are in
                            #   phases/p1/cases/analysis/ -- the archive KEEPS the old layout
                            #   on purpose, since renaming a historical snapshot falsifies it.
+                           #   ★ "20 gates" counts GATES, not directories (17 measured
+                           #   2026-08-18) -- several studies carry more than one gate, so
+                           #   the two numbers are not the same thing and do not reconcile.
+                           #   ├── gs41_strip_core/  ★ [GS4.1 round 1, phase 4] the 2-D
+                           #   │     strip core vs Blasius / Falkner-Skan. Its registration
+                           #   │     lives in docs/dev_phase_four/ (prereg + 3 addenda),
+                           #   │     not in the study dir -- phase 4 keeps one round file
+                           #   │     per round there. V-FAIL, cause in the closure.
+                           #   ├── gs41_five_terms/  ★ [GS4.1 round 9 leg A] the five
+                           #   │     missing turbulent terms + a re-baseline of rounds
+                           #   │     5/6. A-WHOLE classifies every BLVAR assignment.
+                           #   ├── gs41_lag_xfoil/   ★ [GS4.1 round 9 leg B] the lag
+                           #   │     equation vs the LOCALLY REBUILT XFOIL 6.99 used
+                           #   │     whole. L-LAG PASS (lag arm 2.8x/13x closer to
+                           #   │     XFOIL's own Ctau than the equilibrium arm);
+                           #   │     L-TURB FAIL per station, localized just behind
+                           #   │     transition -> candidate = TRDIF's two-part
+                           #   │     transition interval (xblsys.f:1197), absent here.
+                           #   │     ★ An IMPLEMENTATION check, NOT model validation:
+                           #   │     XFOIL is the same Drela-Giles family.
+                           #   │     ★★ Ruling 2026-08-21: no BL-profile reference
+                           #   │     will be introduced -- XFOIL is the BL reference
+                           #   │     and Cp is where the model is judged, against the
+                           #   │     experiments that already carry it. A BL-quantity
+                           #   │     difference is debt only once shown to move Cp.
+                           #   ├── gs41_transition_attrib/ ★ [GS4.1 round 10]
+                           #   │     separates the three candidates behind that
+                           #   │     gap. TRDIF is NOT a missing term -- it is
+                           #   │     the discretisation device XFOIL needs for
+                           #   │     its two-point scheme, and a substepped
+                           #   │     continuous march already switches anywhere
+                           #   │     inside an interval (T-C1' PASS, H 0.45 %).
+                           #   │     ★★ Round 9's 101 %/270 % were an INSTRUMENT
+                           #   │     error: BLDUMP's CT column holds the
+                           #   │     amplification factor before transition and
+                           #   │     sqrt(Ctau) after (xbl.f:821-822), so
+                           #   │     "first station with CT > 0" landed two
+                           #   │     stations early. Guard G-XTR covers x_tr now.
+                           #   ├── gs41_two_point/  ★ [GS4.1 rounds 11-12]
+                           #   │     scheme.py transcribes XFOIL's BLDIF two-point
+                           #   │     implicit discretisation (turbulent intervals,
+                           #   │     M = 0). An INSTRUMENT, deliberately NOT in
+                           #   │     pyfp3d/, with a registered expiry.
+                           #   │     ★★ Round 11 stopped on its own kill criterion;
+                           #   │     round 12 then showed the two sets of equations
+                           #   │     AGREE (all three residuals O(h^3) on our
+                           #   │     converged solution) and named the real
+                           #   │     difference: XFOIL gives REZT a three-point
+                           #   │     quadrature and REZH only a two-point upwind
+                           #   │     average, so the scheme is 2nd order in theta
+                           #   │     and 1st in H. Neither side is wrong.
+                           #   └── gs41_relaxation/  ★ [GS4.1 round 14, G13] the
+                           #         post-transition relaxation. TWO DIFFERENT
+                           #         defects, measured: the plate is outside its
+                           #         band over Re_theta 576-2997 while the airfoil
+                           #         misses 5 of 214 stations at Re_theta 236-452,
+                           #         and the ranges do not overlap. Green's Delta
+                           #         is excluded (approach length matches XFOIL to
+                           #         1-5 %). ★★ The plate's band has NO counterpart
+                           #         against a same-family reference, so it cannot
+                           #         be attributed to the closure -- its reference
+                           #         (Coles-Fernholz + the 1/4 power law) is the
+                           #         open question, which is a criterion decision.
+                           #   └── gs41_seed_on_station/ ★★ [GS4.1 round 17, G20]
+                           #         puts XFOIL's forced trip exactly ON a station,
+                           #         which makes TRDIF's turbulent sub-interval
+                           #         zero-length (xblsys.f:435 tests XIFORC .LE. X2,
+                           #         :451 assigns XT = XIFORC), so that station's
+                           #         stored CTAU IS XFOIL's own ST. Our seed chain
+                           #         reproduces it to 0.12 %/0.15 % with no march,
+                           #         no discretisation, no interpolation between.
+                           #         ⇒ the seed is NOT a defect; round 16's
+                           #         transition gap is XFOIL's one step (~41 %) plus
+                           #         our different laminar closure family (~59 %).
 
 cases/                     # inputs and demos only, now that analysis/ merged into bench/
 ├── reference_data/        # ✓ external ground truth -- NEVER edit

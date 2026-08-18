@@ -529,7 +529,118 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **500 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **571 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-21, **measured in full @1021.82 s @8 threads at
+   load 18.75** — a busy box; quote the wall with its load, never as a cost).
+   ★ +2 vs the 569 below = `TestSeedAgainstXfoil`, GS4.1 round 17, and it is the
+   **first externally-validated anchor in the viscous suite**: every other lock in
+   that file checks us against ourselves or against a transcription of the source.
+   ★★ The design is what makes it clean. XFOIL's forced trip is placed exactly ON a
+   station, and because `xblsys.f:435` tests `XIFORC .LE. X2` while `:451` assigns
+   `XT = XIFORC`, TRDIF's turbulent sub-interval then has ZERO length — so that
+   station keeps its laminar theta and H while its stored CTAU becomes XFOIL's own
+   `ST = CTR·CQ`. Our seed chain reproduces it to **0.12 % / 0.15 %** at two
+   states, with no march, no discretisation and no interpolation in between.
+   ★ What it does NOT establish: in general use `XT` falls INSIDE an interval and
+   the state fed to the seed is our own laminar march's. The transition-region gap
+   measured in round 16 decomposes as **XFOIL's own one step ≈ 41 %** plus **our
+   laminar closure being a different (and by round 4's measurement more accurate)
+   family ≈ 59 %** — both understood, both deliberate, neither a defect.
+   Previous: **569 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-20, **measured in full @805.39 s @8 threads at
+   load 17.8**, GS4.1 round 9 = the five missing turbulent terms + the lag
+   equation).
+   ★ +14 vs the 555 below = `TestFiveMissingTerms` (6) + `TestLagEquation` (8);
+   **555 + 6 + 8 = 569 closes exactly, and skipped/xfailed did not move** — neither
+   leg touched a solve.
+   ★ The 568 measured 40 minutes earlier @687.82 s at load 4.8–13.2 is the SAME
+   baseline one lock earlier; it was re-measured rather than incremented by
+   arithmetic because the last change edited `lag_rate`'s expression (`s_eq - s`
+   to `s_eq - ald*s`, bit-identical at `ald = 1.0` but still a library edit).
+   ★★ And the two walls are 687.82 s at load ~5–13 against 805.39 s at load 17.8
+   for the same suite on the same box — quote suite walls with their load, never
+   as a cost.
+   ★★ The five terms are the round's standing lesson: `c_f = max(CFT, CFL)` on
+   turbulent stations, `DFAC`'s low-Hk fade, `0.995` (not 1.0) in the outer
+   dissipation, the laminar-stress outer term, and the `Us` clamp were all ABSENT
+   from `closures_2d.py`, and **not one of them was findable by round 8's G-USED
+   guard, which walks the constants already written down** — 0.995 was a number
+   never typed, DFAC a function that did not exist, the max a branch. **A guard
+   over the constants you wrote cannot see the terms you did not.** Reading the
+   source BLOCK whole found them; `A-WHOLE` now does that as a machine check
+   (every plain assignment in XFOIL's `BLVAR` classified, unclassified = FAIL).
+   ★ Measured consequence, recorded without being used to reject the fix: being
+   MORE faithful made agreement with two external ZPG `c_f` correlations WORSE
+   (62/69 → 43/70 stations inside), which points at those correlations'
+   unestablished applicability rather than at the repair.
+   ★ Fast tier at this baseline: **5/5 green, 581 s (9.7 min) @8 threads, load 4.2**.
+   ★ The one located code defect still open: just behind transition
+   (`x/c` 0.049–0.089) the strip disagrees with XFOIL itself — candidate
+   `xblsys.f:1197 TRDIF`, which splits the transition interval into a laminar and
+   a turbulent part inside ONE station interval where we switch abruptly at a
+   whole station.
+   Previous: **555 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-20, GS4.1 round 8 = the GCC transcription fix).
+   ★ +2 vs the 553 below = `TestPostTransitionRelaxation`, added because the
+   existing 48 locks ALL passed after a change that moved c_f by up to 4.5 % —
+   every turbulent lock windows at Re_theta >= 800 and the change concentrates
+   below it. **A lock whose window excludes the region a change acts on does not
+   cover that change.** The new anchors interpolate H to FIXED Re_theta (600 /
+   1000 / 3000) rather than taking a max over stations, because a max over
+   stations depends on where the first station lands relative to x_tr.
+   Previous: **553 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, GS4.1 round 6, **measured @524.70 s @8 threads at
+   load 3.11**). ★ +1 vs the 552 below = the E-ATTRACT lock (two seeds 15 % apart in H
+   collapse onto one curve) — that is what "equilibrium" means for a turbulent branch,
+   and round 5's criterion wrongly tested it as a constant H.
+   ★★ This wall also settles the two previous rounds: 1052 s and 875 s were measured at
+   load 16.7 and on a busy box, and the same suite runs in ~525 s quiet. Quote suite walls
+   with their load; never as a cost.
+   Previous: **552 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, GS4.1 round 5 = the turbulent closure).
+   ★ +10 vs the 542 below = `tests/test_gs41_turbulent_closure.py`. Wall 1052 s @8
+   threads at load average **16.7** — the box was genuinely busy in this window, which
+   also explains the 875 s reading below; quote suite walls with their load, never as a
+   cost.
+   ★★ The locks worth knowing: the sourced constants with their xblsys.f/xbl.f citations
+   (CTCON is DERIVED from GACON/GBCON, not typed), the identity `DI = 2 c_D / H*` whose
+   misreading drove a memory-written version of this closure to an unphysical H = 0.60,
+   and that a ZPG turbulent plate's H genuinely DRIFTS ~5 %/decade — the last one is
+   recorded because round 5's own T-EQUIL criterion wrongly demanded a constant H, which
+   is registered as fix-before-reuse.
+   Previous: **542 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, GS4.1 round 4 = the closures.py source audit;
+   ★ wall 875.53 s @8 threads against 472–486 s for the same suite earlier the same day —
+   a 1.8x spread with an identical result. Load average at launch was only 1.26, so the
+   cause is NOT established; quote suite walls flagged and never as a cost, per the logged
+   precedent of 1.6x/1.9x/5.4x spreads on bit-identical answers).
+   ★ +5 vs the 537 below = `tests/test_gs41_closures_audit.py` (one finding, five
+   assertions), which locks the audit's
+   ROOT CAUSE (the kinetic-energy integrand is degree 21, so 8-point Gauss is short) and
+   NOT the error magnitude — so it stays true whether or not the quadrature is fixed.
+   ★★ The audit found `closures.py` faithful to Drela AIAA 2013-2437 on every profile and
+   integral definition (1e-15), with ONE substantive divergence: `ETA_LAM` is 8 points and
+   the kinetic-energy thicknesses need 11, giving phi*_1 a 4.3e-05 quadrature error. Reported,
+   NOT fixed — fixing moves every committed Track V number and needs a re-baseline errata
+   list. Also recorded: the library's comment justifying 8 points ("degree <= 13") is false
+   for those two thicknesses.
+   Previous: **537 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-19, **measured in full @485.74 s @8 threads**, GS4.1 round 3).
+   ★ +16 vs the 521 below = `tests/test_gs41_closures_2d.py` (route (a2)'s correlation
+   closure). **Skipped and xfailed did not move.** ★ Two of the 16 are structural rather
+   than numeric: the two closure families must not import each other (`closures.py` owns the
+   3-D IBL, `closures_2d.py` owns the 2-D strip — see its docstring), and the profile-path
+   fixed point must still read round 1's values, so adding a route cannot move an existing
+   number.
+   Previous: **521 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-18, **measured in full @472.19 s @8 threads**, GS4.1 round 1).
+   ★ +21 vs the 500 below = `tests/test_gs41_strip2d.py` (the 2-D strip core's locks).
+   **Skipped and xfailed did not move** — the round touched no solve, and `strip2d.py` is a
+   new module rather than a change to one. ★ Two of those 21 assert a **recorded FAIL's own
+   numbers** (the closure family's flat-plate fixed point sits +4.52 % in H and +6.94 % in
+   c_f√Re_x from Blasius): a recorded FAIL that gets silently re-baselined must be loud,
+   and a non-strict xfail cannot do that job.
+   Previous: **500 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-17, **measured in full @465.24 s @8 threads**, GS4.0 + the
    R1 addendum). ★ 499 + 1 = the capability-matrix stale-schema lock.
    Previous within GS4.0: **499 + 12 + 2** (@477.27 s @8 threads).

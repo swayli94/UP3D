@@ -1,0 +1,10 @@
+tag,metric,band,measured,verdict
+A-LEGACY,laminar branch untouched by the repair,ZPG fixed point 2.590433 and x_tr=None march unmoved,"fixed point 2.590433, march endpoint 2.590433",A-LEGACY PASS
+A-WHOLE,every plain assignment in BLVAR is classified,"no unclassified (name, line) pair",0 unclassified; 3 deferred to leg B,A-WHOLE PASS
+A-USED,"each correction is wired in (three classes, #2; metric = the marched RHS, #3)",no NOT-WIRED,"4 reachable, 1 wired but unreachable (sup Us 0.9221 < 0.95), 0 not wired",A-USED PASS
+A-SIZE,how far the five move c_D,RECORDED,|move| 0.03%..9.33%,RECORDED
+E-ATTRACT,post-repair,<= 1 % and staying,"Re_theta 576, final sep 1.45e-06",E-ATTRACT PASS
+E-PHYS,post-repair,"1.05 < H < 4 (RECORDED, addendum #3)","[1.2933, 1.6490] -> standing gate holds",RECORDED
+E-H,post-repair,"[1.25, 1.50] (RECORDED, addendum #3)","[1.3417, 1.5130] -> standing gate BROKEN (round 8 already crossed 1.50 at 1.5213)",RECORDED
+E-CF,post-repair,"inside the derived band at every station (RECORDED, addendum #3)","43/70 inside, worst excess 3.877 pp -> standing gate still FAILS, as since round 5",RECORDED
+A-STANDING,"the standing round-6 gates, read after the repair","stated separately from the re-baseline rows, not instead of them",E-PHYS holds; E-H BROKEN; E-CF FAILS,A-STANDING RECORDED
