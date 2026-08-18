@@ -64,9 +64,27 @@ else:
 KAPPA = 0.41          # von Karman constant (Spalding law (51))
 B_SPALDING = 5.5      # Spalding log-law intercept
 A1_BRADSHAW = 0.15    # Reynolds stress anisotropy ratio a1 (D13 (30))
-C_L_DEFAULT = 0.09    # outer dissipation length L = C_L * delta (D-CT-2;
-                      # Bradshaw outer-layer value; 2-D-reduction calibration
-                      # recorded in the GV1.1 VERDICT)
+# ★★ C_L is the PROJECT'S CHOICE. Phase-5 round 5 (F2) checked all four provenance
+# claims the previous comment made, and none is supported:
+#   1. Drela AIAA 2013-2437 p.9 says verbatim "The outer-layer dissipation length L
+#      is calibrated so that the dissipation integral D matches the dissipation
+#      implied by Clauser's G-beta locus" (and p.12 repeats it) -- it states that a
+#      calibration was DONE and gives neither the procedure nor a value. The string
+#      "0.09" appears ZERO times in the paper; refs 17/18 are Clauser 1954/1956,
+#      the data source, not the constant.
+#   2. "Bradshaw outer-layer value": no citable source for 0.09 in reference/.
+#      (A1_BRADSHAW = 0.15 above IS the Bradshaw stress ratio, a different thing.)
+#   3. "calibration recorded in the GV1.1 VERDICT": that VERDICT lists c_l = 0.09
+#      under "Numerical settings (as run)"; the calibration table its addendum
+#      mentions belongs to eps_diff_s, not to c_l.
+#   4. "(D-CT-2)": that ID has NO design record anywhere -- it occurs only beside
+#      this value, in the GV1.1 pre-registration/verdict and in this file.
+# ★ Same disposition round 4 gave kappa, B and r: the paper names the quantity
+# without giving the number, so the number is ours. This says so instead of citing
+# a calibration nobody performed. The VALUE is unchanged -- changing it would move
+# every Track V number and needs the radius-then-re-pin process (F1, F6).
+# Verdict: docs/dev_phase_five/20260822-1200-f2-verdict.md
+C_L_DEFAULT = 0.09    # outer dissipation length L = C_L * delta
 CTAU_LAM = 1.0e-8     # pinned laminar stress level (D-TR; << Ctaucrit)
 GAMMA_AIR = 1.4
 RECOVERY_R = 0.85     # r ~ Pr^1/2 (D13 (58))
