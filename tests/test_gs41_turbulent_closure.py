@@ -124,3 +124,42 @@ class TestAttraction:
         sep = np.abs(b.H - a.H) / a.H
         assert sep[-1] < 1e-4, f"seeds did not converge: {sep[-1]:.2e}"
         assert sep.argmax() == 0                        # and it only shrinks
+
+
+class TestPostTransitionRelaxation:
+    """GS4.1 round 8. ★ These exist because the round-8 GCC fix moved the
+    turbulent readings most strongly at Re_theta < 800 -- and every lock above
+    windows at Re_theta >= 800, so the suite did NOT notice. A lock whose window
+    excludes the region a change acts on is not covering that change.
+    """
+
+    def _plate(self):
+        y0 = C2.blasius_state(0.05, ue=U, rho=RHO, mu=MU, H=2.591100)
+        return S.march_correlation(np.geomspace(5.1, 400.0, 60), y0, 0.05,
+                                   S.flat_plate_ue(U), rho=RHO, mu=MU,
+                                   n_substep=8000, x_tr=5.0)
+
+    def test_H_in_the_relaxation_region_is_anchored(self):
+        """H at FIXED Re_theta, interpolated -- station-layout independent.
+
+        ★ An earlier version anchored the maximum H below Re_theta 800, which is
+        not well defined: it depends on how close the first station lands to
+        x_tr, and it read 1.83 here against 1.5213 in the round's own script.
+        Two different station sets, which is question 5 again. Interpolating to
+        a fixed Re_theta removes the dependence -- verified stable to 0.005
+        across 40, 60 and 90 stations.
+        """
+        st = self._plate()
+        o = np.argsort(st.re_theta)
+        ret, H = st.re_theta[o], st.H[o]
+        assert np.interp(600.0, ret, H) == pytest.approx(1.512, abs=0.01)
+        assert np.interp(1000.0, ret, H) == pytest.approx(1.4516, abs=0.005)
+        assert np.interp(3000.0, ret, H) == pytest.approx(1.3809, abs=0.003)
+
+    def test_the_relaxation_decays(self):
+        """H must fall monotonically away from that peak -- the transition
+        transient relaxes rather than persisting."""
+        st = self._plate()
+        i = int(np.argmax(st.H))
+        tail = st.H[i:]
+        assert np.all(np.diff(tail) <= 1e-9), "H does not decay after its peak"

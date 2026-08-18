@@ -1,0 +1,9 @@
+tag,metric,band,measured,verdict
+F-SOURCE,ctau_eq vs an independent transcription of CQ2,"<= 1e-14 (same formula, two orderings)",2.22e-16,PASS
+F-USED,GCCON actually reaches ctau_eq's return value,setting GCCON=0 must change the result,4.45 % change at Re_theta 2000,PASS
+F-LEGACY,laminar path unmoved,ZPG fixed point 2.590433,2.590433; march H[-1] 2.590433,PASS
+E-ATTRACT,post-fix,<= 1 % and staying,Re_theta 574 (round 6: 578),RECORDED
+E-PHYS,post-fix,1.05 < H < 4,"[1.2773, 1.6645] (round 6: [1.2768, 1.6359])",RECORDED
+E-H,post-fix,"[1.25, 1.50]","[1.3279, 1.5213] (round 6: [1.3256, 1.4919])",RECORDED
+E-CF,post-fix,inside the derived band at every station,62/69 inside (round 6: 60/69),RECORDED
+F-DELTA,how far the fix moved round 6's readings,RECORDED,c_f 0.221..4.457 %; H 0.171..1.974 %,RECORDED

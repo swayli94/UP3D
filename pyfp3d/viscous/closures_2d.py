@@ -108,7 +108,7 @@ H_MIN = 1.05
 
 GACON = 6.70                       # xbl.f:1559
 GBCON = 0.75                       # xbl.f:1560
-GCCON = 18.0                       # xbl.f:1561 (wake only; unused here)
+GCCON = 18.0                       # xbl.f:1561; USED on the turbulent WALL
 CTCON = 0.5 / (GACON ** 2 * GBCON)  # xbl.f:1569  -> 0.01485...
 HSMIN = 1.500                      # xblsys.f:2394 DATA HSMIN
 DHSINF = 0.015                     # xblsys.f:2394 DATA DHSINF
@@ -178,14 +178,32 @@ def slip_velocity(hs, H, mach=0.0):
     return 0.5 * hs * (1.0 - (hk - 1.0) / (GBCON * H))
 
 
-def ctau_eq(hs, H, us, mach=0.0):
-    """Equilibrium shear coefficient `CtauEQ`. `xblsys.f:877`.
+def ctau_eq(hs, H, us, re_theta, mach=0.0):
+    """Equilibrium shear coefficient `CtauEQ`. `xblsys.f:856-877` (BLVAR).
 
     XFOIL stores its square root (`CQ2 = SQRT(...)`); this returns `CtauEQ`
     itself, which is what the dissipation relation consumes.
+
+        HKB = Hk - 1
+        HKC = Hk - 1 - GCCON/Re_theta        (floored at 0.01)
+        CtauEQ = CTCON * H* * HKB * HKC^2 / ((1 - Us) * H * Hk^2)
+
+    ★★ HKB and HKC are TWO DIFFERENT quantities. Round 5 wrote (Hk-1)**3,
+    collapsing them and dropping the -GCCON/Re_theta correction, because the
+    subtraction sits inside XFOIL's `IF(ITYP.EQ.2)` branch and I read ITYP=2 as
+    the wake. The source says two lines above (`xblsys.f:794-795`) that
+    ITYP = 1 is laminar and ITYP = 2 is TURBULENT, and `xbl.f:810` calls
+    BLVAR(2) for every station past transition. So the correction applies on
+    the turbulent wall -- exactly where this function is used.
+
+    The omission made CtauEQ high by 14 % at Re_theta 578, 4.7 % at 2000 and
+    1.1 % at 1e4, and it feeds c_D. Fixed in round 8; see
+    docs/dev_phase_four/20260820-0500-gcc-fix-prereg.md.
     """
     hk = h_kinematic(H, mach)
-    return CTCON * hs * (hk - 1.0) ** 3 / ((1.0 - us) * H * hk * hk)
+    hkb = hk - 1.0
+    hkc = max(hk - 1.0 - GCCON / re_theta, 0.01)
+    return CTCON * hs * hkb * hkc * hkc / ((1.0 - us) * H * hk * hk)
 
 
 def cd_turb(cf, us, ctau, hs):
@@ -216,7 +234,7 @@ def packet_turb(theta, H, ue, rho=1.0, mu=1.0e-5, mach=0.0, arm="new"):
     hs = h_star_turb(H, re_theta, mach, arm)
     cf = cf_turb(H, re_theta, mach)
     us = slip_velocity(hs, H, mach)
-    ct = ctau_eq(hs, H, us, mach)
+    ct = ctau_eq(hs, H, us, re_theta, mach)
     return {"re_theta": re_theta, "H_star": hs, "cf": cf, "Us": us,
             "Ctau_eq": ct, "cD": cd_turb(cf, us, ct, hs)}
 
