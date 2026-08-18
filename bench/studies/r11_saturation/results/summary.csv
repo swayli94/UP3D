@@ -1,0 +1,7 @@
+tag,metric,band,measured,verdict
+G-REPRO,saturation census reproduces round 10,131/627,131/627,G-REPRO PASS
+G-SATDEF,foot>0.95 and foot>0.9 classify identically,identical counts (round 10 measured a clean gap),131 vs 131,G-SATDEF PASS
+R-N,states retaining >=3 common-clean stations,"if most states fall below 3, D cannot be computed cleanly at all",13/13; common-clean per state 3 3 4 4 4 4 4 4 5 5 5 5 5,R-N: D is computable
+R-RANK,states whose D-argmin changes once saturated stations go,>=5/13 => round 18's ranking was contaminated;  <=2/13 => it survives,"4/13 changed (W M0.8395, W M0.88, WB M0.78, WB xcoarse);  k_pos* all {'P3': 3, 'P1': 4, 'P2': 4, 'P0': 2} -> clean {'P3': 2, 'P1': 4, 'P0': 3, 'P2': 4}",R-RANK: UNDECIDABLE
+R-J1,signed one-sided differences of J1 agree in sign,>=70% same sign => real spanwise slope => round 10's (a) is REFUTED;  <=30% => noise => (a) stands,"56.0% of 91 station-slots  (median |fwd| 0.01063, |bwd| 0.00860)",R-J1: UNDECIDABLE
+R-SAT,saturation rate by arm; |d| on unsaturated readings,RECORDED,P0 36.3%  P1 22.2%  P2 16.7%  P3 12.5%  S1 26.4%  S2 19.1%  S3 12.5%;  clean |d| median 0.00840 = 0.20 cell,RECORDED
