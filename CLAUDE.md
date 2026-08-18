@@ -530,6 +530,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
   because the wrapper outlived its child; this one inverts the answer. ⇒ the `ps -o args -p $PID`
   check is not belt-and-braces, it is **the** check: a PID that no longer exists and a PID doing
   your work are indistinguishable to `kill -0`.
+  ★★ **And the fallback search hits the OTHER hazard**: `ps -eo pid,args | awk '/[r]un_x.py/'`
+  matched the **wrapper `bash -c`**, because the wrapper's own argv contains the script name —
+  the `[r]` bracket hides the matching process, never the parent shell (already logged), and that
+  applies to a launch search exactly as it applies to a kill search. ⇒ **match the EXECUTABLE too**:
+  `awk '$2 ~ /^python/ && /[r]un_x.py/'` on `pid,comm,args`. Measured 2026-08-23: both hazards fired
+  on one launch — `$!` gave a dead PID, and the pattern search gave the wrapper.
 - **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
   `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
   states in one day; the third was caught only by killing a fresh run 5 minutes in.
