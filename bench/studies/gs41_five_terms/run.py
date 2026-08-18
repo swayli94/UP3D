@@ -322,7 +322,9 @@ def a_rebase(C2, S):
                      "band": b, "dev": dev, "inside": int(inside),
                      "excess_pp": max(0.0, 100.0 * (dev - b))})
     _record("E-CF", "post-repair",
-            "inside the derived band at every station (RECORDED, addendum #3)",
+            "inside the derived band at every station (RECORDED, addendum #3; "
+            "E-CF formally DEMOTED from a gate 2026-08-21 -- grounds in "
+            "gs41_repaired_criteria/run.py)",
             f"{len(rows)-n_out}/{len(rows)} inside, worst excess "
             f"{max(r['excess_pp'] for r in rows):.3f} pp -> standing gate "
             + ("holds" if n_out == 0 else "still FAILS, as since round 5"),

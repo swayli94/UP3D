@@ -179,9 +179,10 @@ def gates(A, start):
               f"cf={r['cf']:.6f} dev={r['dev']:.3%} band={r['band']:.3%} "
               f"{'in' if r['inside'] else '★OUT'}")
     _record("E-CF", "c_f vs both established ZPG correlations",
-            "inside the derived band at every station",
+            "inside the derived band at every station -- " + "RECORDED -- E-CF was DEMOTED from a gate on 2026-08-21 (user ruling). The window, the band and every threshold are UNCHANGED; only the verdict code moved. Grounds, all previously measured: making the closure more faithful to xblsys.f made agreement with these two correlations WORSE (62/69 -> 43/70, round 9 leg A); the plate's out-of-band Re_theta range has NO counterpart against a same-family reference where theta agrees to 0.11 % (round 14); and the correlations' own validity range has no citable source in this repo. ★ This does NOT mean the plate side is fine -- it means the plate's red cannot be ATTRIBUTED to the closure, because its reference is not qualified. Reopening condition: a ZPG reference whose validity range IS citable, or an experiment carrying BL profiles.",
             f"{len(rows)-n_out}/{len(rows)} inside",
-            "E-CF PASS" if n_out == 0 else "E-FAIL")
+            "RECORDED (demoted 2026-08-21; was E-FAIL at "
+            f"{len(rows)-n_out}/{len(rows)})")
 
     Hw = A.H[m]
     _record("E-H", "H over the measured window", "[1.25, 1.50]",

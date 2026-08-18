@@ -1,7 +1,7 @@
 tag,metric,band,measured,verdict
-E-ATTRACT,two seeds collapse onto one H(Re_theta),<= 1 % and staying,achieved at Re_theta = 578 (x = 5.60); final separation 1.51e-06,E-ATTRACT PASS
-E-PHYS,H physical over the whole march,1.05 < H < 4,"[1.2768, 1.6359]",E-PHYS PASS
-E-CF,c_f vs both established ZPG correlations,inside the derived band at every station,60/69 inside,E-FAIL
-E-H,H over the measured window,"[1.25, 1.50]","[1.3256, 1.4919]",E-H PASS
-E-HREF,H vs Clauser G=6.8 equilibrium relation,"RECORDED, no gate (G carries a 6.1-6.8 literature spread)",-1.49%..+0.85%,RECORDED
-E-CROSS,vs the profile family's committed ZPG reading,ONE-SIDED: supports only,-8.4%..+8.8% (profile family -7.7%..+11.4%),RECORDED
+E-ATTRACT,two seeds collapse onto one H(Re_theta),<= 1 % and staying,achieved at Re_theta = 576 (x = 5.60); final separation 1.45e-06,E-ATTRACT PASS
+E-PHYS,H physical over the whole march,1.05 < H < 4,"[1.2933, 1.6490]",E-PHYS PASS
+E-CF,c_f vs both established ZPG correlations,inside the derived band at every station,43/70 inside,E-FAIL
+E-H,H over the measured window,"[1.25, 1.50]","[1.3417, 1.5130]",E-FAIL
+E-HREF,H vs Clauser G=6.8 equilibrium relation,"RECORDED, no gate (G carries a 6.1-6.8 literature spread)",+0.12%..+2.10%,RECORDED
+E-CROSS,vs the profile family's committed ZPG reading,ONE-SIDED: supports only,-10.7%..+5.0% (profile family -7.7%..+11.4%),RECORDED

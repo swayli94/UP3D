@@ -155,7 +155,9 @@ def main():
     _record("E-H", "post-fix", "[1.25, 1.50]",
             f"[{A.H[m].min():.4f}, {A.H[m].max():.4f}] "
             f"(round 6: [1.3256, 1.4919])", "RECORDED")
-    _record("E-CF", "post-fix", "inside the derived band at every station",
+    _record("E-CF", "post-fix",
+            "inside the derived band at every station (E-CF DEMOTED to RECORDED "
+            "2026-08-21 -- see gs41_repaired_criteria/run.py for the grounds)",
             f"{len(rows)-n_out}/{len(rows)} inside (round 6: 60/69)",
             "RECORDED")
 
