@@ -529,7 +529,28 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **571 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **572 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-22, **measured in full @895.80 s @8 threads at
+   load 18.9** — a busy box; quote the wall with its load, never as a cost).
+   ★ +1 vs the 571 below = F1's re-specified audit lock splitting in two, and F1 is
+   the **first change to `closures.py` in seventeen rounds**: the laminar quadrature
+   went **8 → 24 points**.
+   ★★★ The reason it is 24 and not 11 is the round's real finding: `OUT_SD`
+   integrates `(R w)^1.5` with `w = 4 eta (1 - eta)` vanishing at BOTH ends, so
+   `w^1.5` has square-root-singular derivatives there and Gauss-Legendre converges
+   only ALGEBRAICALLY — **no point count is exact**, and the "degree ⇒ points"
+   framing is retired for this table. Measured against an n = 48 reference: n=8
+   7.9e-04, n=11 1.2e-05, n=24 2.5e-07, n=40 1.2e-08. So **24 is a TOLERANCE CHOICE**
+   (4× under the tightest band any lock places on a quantity the table feeds, and it
+   matches `ETA_TURB`), not a derivation. The structural fix — a substitution
+   absorbing the endpoint behaviour — is **reported, not done** (F4).
+   ★★ And the census that came with it: **9 of 30 closure outputs move above 1e-9**,
+   led by `theta*_1` at **6.46e-04** which sits on the kinetic-energy equation — while
+   **not one Track V lock went red**. Their bands are wider than 6.5e-04, so they
+   cannot see this class of change (F5; same shape as the round-8 window problem).
+   ★ Seven assertions re-pinned with **every tolerance unchanged**, and errata
+   discharged across ten places with no committed number rewritten.
+   Previous: **571 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-21, **measured in full @1021.82 s @8 threads at
    load 18.75** — a busy box; quote the wall with its load, never as a cost).
    ★ +2 vs the 569 below = `TestSeedAgainstXfoil`, GS4.1 round 17, and it is the
