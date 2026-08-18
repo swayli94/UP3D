@@ -164,13 +164,21 @@ class TestPostTransitionRelaxation:
         Two different station sets, which is question 5 again. Interpolating to
         a fixed Re_theta removes the dependence -- verified stable to 0.005
         across 40, 60 and 90 stations.
+
+        ★ Re-pinned in round 9 leg A, once the five missing turbulent terms were
+        transcribed: the anchors moved -0.21 %, +0.29 % and +0.85 %, and only the
+        Re_theta 3000 one went red. The other two tolerances are set by the
+        station-layout spread (0.0055 at Re_theta 600), which is wider than the
+        change -- so a lock whose tolerance is dominated by a nuisance
+        sensitivity cannot see a real move of comparable size. Recorded rather
+        than tightened, because that spread is real.
         """
         st = self._plate()
         o = np.argsort(st.re_theta)
         ret, H = st.re_theta[o], st.H[o]
-        assert np.interp(600.0, ret, H) == pytest.approx(1.512, abs=0.01)
-        assert np.interp(1000.0, ret, H) == pytest.approx(1.4516, abs=0.005)
-        assert np.interp(3000.0, ret, H) == pytest.approx(1.3809, abs=0.003)
+        assert np.interp(600.0, ret, H) == pytest.approx(1.5088, abs=0.01)
+        assert np.interp(1000.0, ret, H) == pytest.approx(1.4558, abs=0.005)
+        assert np.interp(3000.0, ret, H) == pytest.approx(1.3926, abs=0.003)
 
     def test_the_relaxation_decays(self):
         """H must fall monotonically away from that peak -- the transition
@@ -179,3 +187,94 @@ class TestPostTransitionRelaxation:
         i = int(np.argmax(st.H))
         tail = st.H[i:]
         assert np.all(np.diff(tail) <= 1e-9), "H does not decay after its peak"
+
+
+class TestFiveMissingTerms:
+    """GS4.1 round 9 leg A. Five XFOIL terms that were absent from this module
+    until round 9's dry run read the turbulent block of `xblsys.f` whole instead
+    of reading the lines its constants appear on.
+
+    ★★ None of them could have been caught by a guard over the constants already
+    written down: 0.995 was a number never typed, DFAC a function that did not
+    exist, and max(CFT, CFL) a branch. That is why these locks assert the TERMS,
+    not just the constants.
+    """
+
+    def test_the_new_constants_match_their_sources(self):
+        assert C2.CD_OUT_US == 0.995          # xblsys.f:1014, 1029 -- not 1.0
+        assert C2.CD_LAMSTRESS == 0.15        # xblsys.f:1029
+        assert C2.US_CLAMP_TRIG == 0.95       # xblsys.f:836
+        assert C2.US_CLAMP_VAL == 0.98        # xblsys.f:838
+        assert C2.DFAC_C == 2.1               # xblsys.f:970
+
+    def test_cf_at_a_turbulent_station_is_the_max_of_two(self):
+        """`xblsys.f:913-921`. Fires near separation, where the laminar
+        correlation exceeds the turbulent one."""
+        assert C2.cf_turb(1.45, 2000.0) == C2.cf_turb_wall(1.45, 2000.0)
+        assert C2.cf_lam_xfoil(2.90, 600.0) > C2.cf_turb_wall(2.90, 600.0)
+        assert C2.cf_turb(2.90, 600.0) == C2.cf_lam_xfoil(2.90, 600.0)
+
+    def test_the_wall_dissipation_uses_the_raw_cft(self):
+        """★ The asymmetry is XFOIL's: the momentum equation gets
+        `max(CFT, CFL)` while the wall dissipation keeps the raw CFT
+        (`xblsys.f:959` uses CF2T). Round 9's A-USED probe first read c_D and so
+        reported the max as unreachable -- it does not enter c_D at all."""
+        p = C2.packet_turb(6.0e-3, 2.90, 1.0, rho=RHO, mu=MU)
+        assert p["cf"] > p["cf_wall"]                 # the max fired
+        assert p["cf_wall"] == C2.cf_turb_wall(2.90, p["re_theta"])
+        cd = C2.cd_turb(p["cf_wall"], p["Us"], p["Ctau_eq"], p["H_star"],
+                        p["DFAC"], p["re_theta"])
+        assert p["cD"] == pytest.approx(cd, rel=1e-15)
+
+    def test_dfac_fades_the_wall_term_towards_hk_one(self):
+        """`xblsys.f:965-985`: `DFAC = (1 + tanh((Hk-1)/(Hmin-1)))/2` with
+        `Hmin = 1 + 2.1/ln(Re_theta)`.
+
+        ★ My first version of this lock asserted DFAC = 1/2 at Hk = Hmin, which
+        is wrong: that argument is 1, not 0, so DFAC there is tanh(1) shifted =
+        0.8808. The half point sits at Hk = 1, where no wake layer exists at all.
+        The test was wrong and the transcription was right -- which is the way
+        round it should be caught.
+        """
+        for ret in (600.0, 3000.0, 1.0e5):
+            hmin = 1.0 + C2.DFAC_C / np.log(ret)
+            assert C2.dfac_low_hk(1.0, ret) == pytest.approx(0.5, rel=1e-12)
+            assert C2.dfac_low_hk(hmin, ret) == pytest.approx(
+                0.5 + 0.5 * np.tanh(1.0), rel=1e-12)
+            assert 0.99 < C2.dfac_low_hk(3.0, ret) <= 1.0
+            assert 0.85 < C2.dfac_low_hk(1.45, ret) < 1.0
+        # strongest at low Re_theta, where Hmin is largest
+        assert C2.dfac_low_hk(1.45, 600.0) < C2.dfac_low_hk(1.45, 30000.0)
+
+    def test_cd_carries_all_three_contributions(self):
+        """Wall + outer turbulent + outer laminar stress. Removing any one
+        changes c_D, which is what rounds 5-8 were silently doing to two of
+        them."""
+        p = C2.packet_turb(2.0e-2, 1.40, 1.0, rho=RHO, mu=MU)
+        us, ret = p["Us"], p["re_theta"]
+        wall = 0.5 * p["cf_wall"] * us * p["DFAC"]
+        outer = p["Ctau_eq"] * (C2.CD_OUT_US - us)
+        lam = C2.CD_LAMSTRESS * (C2.CD_OUT_US - us) ** 2 / ret
+        assert p["cD"] == pytest.approx(wall + outer + lam, rel=1e-14)
+        assert lam / p["cD"] > 0.005          # not negligible at Re_theta 2000
+        pre_round9 = 0.5 * p["cf"] * us + p["Ctau_eq"] * (1.0 - us)
+        assert abs(p["cD"] / pre_round9 - 1.0) > 0.005
+
+    def test_the_us_clamp_is_wired_but_unreachable(self):
+        """★★ Round 9 addendum #2. The clamp is transcribed faithfully and IS
+        wired into `slip_velocity`, but `H*` is bounded by 2 as Hk -> 1 while
+        `H_TURB_LO` holds H at 1.05, so raw Us never exceeds 0.9221 and the 0.95
+        trigger cannot fire through `packet_turb`.
+
+        A-USED as first registered would have called that a FAIL, which is the
+        one-sided-criterion mistake: "faithful but unreachable" and "never wired
+        in" need opposite responses. This lock records BOTH halves, so lowering
+        H_TURB_LO -- the change that would make it reachable -- lands here.
+        """
+        assert C2.slip_velocity(2.4, 1.05) == C2.US_CLAMP_VAL      # wired
+        hi = max(0.5 * C2.h_star_turb(H, ret)
+                 * (1.0 - (H - 1.0) / (C2.GBCON * H))
+                 for H in np.linspace(C2.H_TURB_LO, C2.H_TURB_HI, 60)
+                 for ret in np.geomspace(200.0, 1.0e8, 40))
+        assert hi == pytest.approx(0.922068, abs=1e-5)             # unreachable
+        assert hi < C2.US_CLAMP_TRIG

@@ -7,6 +7,11 @@
 > **本文的数一个都不改写** —— 它们是 pre-fix 的记录；新数见
 > [第八轮判定](20260820-0700-gcc-fix-verdict.md)。
 
+> ★★ **第二道勘误指针（第九轮 A 腿，2026-08-20）**：湍流读数**又一次**被超越 ——
+> 五处整项缺失（`max(CFT,CFL)`、`DFAC`、外层 `0.995`、层流应力项、`U_s` 钳位）已补齐，
+> E-CF **62/69 → 43/70**（第六轮原读数 60/69），出界区间扩到 `576–2997`。
+> **本文的数仍然一个都不改写**；见[第九轮 A 腿判定](20260820-1400-five-terms-verdict.md)。
+
 **性质**：判定。判据、守卫、kill criterion **逐字**来自
 [预注册](20260819-1700-repaired-criteria-prereg.md)（**代码之前提交**）。
 **证据** `bench/studies/gs41_repaired_criteria/results/`（`window.csv`、`summary.csv`）。

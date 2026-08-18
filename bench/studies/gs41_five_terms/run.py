@@ -301,10 +301,11 @@ def a_rebase(C2, S):
             f" -> standing gate {'holds' if phys else 'BROKEN'}", "RECORDED")
     Hw = A.H[m]
     h_ok = Hw.min() >= 1.25 and Hw.max() <= 1.50
+    h_note = "holds" if h_ok else \
+        "BROKEN (round 8 already crossed 1.50 at 1.5213)"
     _record("E-H", "post-repair", "[1.25, 1.50] (RECORDED, addendum #3)",
-            f"[{Hw.min():.4f}, {Hw.max():.4f}]"
-            f" -> standing gate {'holds' if h_ok else 'BROKEN (round 8 already "
-            "crossed 1.50 at 1.5213)'}", "RECORDED")
+            f"[{Hw.min():.4f}, {Hw.max():.4f}] -> standing gate {h_note}",
+            "RECORDED")
 
     rows, n_out = [], 0
     for i in np.where(m)[0]:
@@ -323,9 +324,9 @@ def a_rebase(C2, S):
     _record("E-CF", "post-repair",
             "inside the derived band at every station (RECORDED, addendum #3)",
             f"{len(rows)-n_out}/{len(rows)} inside, worst excess "
-            f"{max(r['excess_pp'] for r in rows):.3f} pp"
-            f" -> standing gate {'holds' if n_out == 0 else 'still FAILS, as "
-            "since round 5'}", "RECORDED")
+            f"{max(r['excess_pp'] for r in rows):.3f} pp -> standing gate "
+            + ("holds" if n_out == 0 else "still FAILS, as since round 5"),
+            "RECORDED")
     _record("A-STANDING", "the standing round-6 gates, read after the repair",
             "stated separately from the re-baseline rows, not instead of them",
             f"E-PHYS {'holds' if phys else 'BROKEN'}; "
