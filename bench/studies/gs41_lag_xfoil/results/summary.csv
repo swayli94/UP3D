@@ -1,0 +1,7 @@
+tag,metric,band,measured,verdict
+G-USED,each new lag constant reaches the answer,disabling any one must change it,4/4 wired,G-USED PASS
+G-LEGACY,laminar branch and the equilibrium arm unmoved,2.590433 / 1.2932778384340817,2.590433 / 2.590433,G-LEGACY PASS
+G-UNITS,"converted c_D at the TE, rebuilt from c_f and Ctau","<= 15 % (structural closure, not an accuracy claim)",1.2827e-03 dumped vs 1.2829e-03 rebuilt = 0.02 %,G-UNITS PASS
+L-LAM,"laminar c_f vs XFOIL, march A",per station: the two correlation sets' own difference there,"43/59 inside, worst excess 2.38 pp at x/c 0.0004",L-FAIL
+L-TURB,"theta/H/c_f/Ctau vs XFOIL, march B (turbulent only)","median <= max(10 x floor, 2 %) = 2.00 %",theta med 0.82 % max 11.89 %; H med 0.03 % max 25.78 %; cf med 0.23 % max 101.34 %; ctau med 0.06 % max 270.17 %,L-TURB PASS
+L-LAG,"lag vs equilibrium against XFOIL's own Ctau, first 43 stations after transition",the lag arm's deviation smaller than the equilibrium arm's,41/43 stations; median |dev| lag 0.48 % vs equil 1.36 %; whole turbulent run lag 0.06 % vs equil 0.78 %,L-LAG PASS
