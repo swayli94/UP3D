@@ -1,0 +1,8 @@
+tag,metric,band,measured,verdict
+P-AXIS,"our theta vs XFOIL's, per station","median <= 2 %, else the Re_theta axis is NOT common","median 0.11 %, worst 1.94 %",P-AXIS PASS
+P-SEED,side_a: Ctau at the first station after transition,ratio ours/XFOIL ~ 1,ours 2.407669e-03 vs XFOIL 2.390819e-03 = 1.0070,P-SEED PASS
+P-SEED,side_b: Ctau at the first station after transition,ratio ours/XFOIL ~ 1,ours 2.347743e-03 vs XFOIL 2.441052e-03 = 0.9618,P-SEED FAIL -- the transition seed is a suspect
+P-RATE,"side_a: approach length of Ctau -> CtauEQ, in Delta",ratio ours/XFOIL within 25 %,"ours 81.49 Delta, XFOIL 80.63 Delta (Delta = 1.292e-03); ratio 1.011",P-RATE PASS
+P-RATE,"side_b: approach length of Ctau -> CtauEQ, in Delta",ratio ours/XFOIL within 25 %,"ours 117.74 Delta, XFOIL 112.12 Delta (Delta = 1.072e-03); ratio 1.050",P-RATE PASS
+P-SAME,plate's out-of-band Re_theta vs the airfoil's,"overlap = CONSISTENT WITH one defect (never proof, section 2); no overlap = two different defects",plate 576-2997 (27 st); airfoil 236-452 (5 st); overlap NO,P-SAME: TWO DIFFERENT DEFECTS
+P-CORR,the plate against Coles-Fernholz and the 1/4 power law,"RECORDED ONLY -- round 9 leg A measured that a MORE faithful closure agreed with these WORSE, so their applicability to this family is not established",43/70 inside,RECORDED
