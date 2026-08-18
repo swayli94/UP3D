@@ -145,24 +145,38 @@ def refine(s, k):
     return np.asarray(out)
 
 
+#: X-CONSIST's edge velocity -- ANALYTIC, and deliberately NOT zero-pressure
+#: gradient. Addendum #2: on the real u_e this criterion cannot be satisfied by
+#: any correct transcription, because the two schemes consume u_e differently
+#: (station endpoints against the PCHIP's derivative) and a C1 interpolant's own
+#: error does not shrink when the STATIONS are refined. m != 0 keeps every ULOG
+#: term alive, which was addendum #1's reason for leaving the synthetic case.
+CONSIST_M, CONSIST_U0 = -0.08, 1.10
+
+
 def x_consist(S, side, i_tr):
     """★★ The independent oracle, and a kill criterion. The two marchers share
     `closures_2d` and share NO discretisation code, so if the difference between
     them shrinks under refinement they are discretising the same equations. If
     it does not, my BLDIF transcription is wrong and the rest of the round could
     not be interpreted."""
-    ue_fn, ue_p = R9.ue_interp(side)
     base = side.s[i_tr:]
+    x0 = float(base[0])
+    ue_p = lambda x: CONSIST_U0 * (x / x0) ** CONSIST_M
+    ue_fn = lambda x: (CONSIST_U0 * (x / x0) ** CONSIST_M,
+                       CONSIST_U0 * CONSIST_M / x0 * (x / x0) ** (CONSIST_M - 1))
     y0 = (float(side.theta[i_tr]),
           float(side.theta[i_tr] * side.H[i_tr]),
           float(np.sqrt(max(side.ctau[i_tr], 1e-12))))
+    print(f"         analytic u_e = {CONSIST_U0} (x/{x0:.5f})^{CONSIST_M} -- "
+          f"non-ZPG so every ULOG term is alive, and no interpolant (addendum #2)")
     diffs = []
-    for k in (1, 2, 4, 8):
+    for k in (1, 2, 4, 8, 16):
         st = refine(base, k)
-        tp = TP.march(st[1:], y0, st[0], lambda x: float(ue_p(x)), RHO, MU)
+        tp = TP.march(st[1:], y0, st[0], ue_p, RHO, MU)
         rk = S.march_correlation(st[1:], (y0[0], y0[1] / y0[0], y0[2]),
                                  st[0], ue_fn, rho=RHO, mu=MU,
-                                 n_substep=max(4000, 40 * st.size),
+                                 n_substep=max(8000, 60 * st.size),
                                  x_tr=float(st[0]) * 0.999, lag=True)
         j = [int(np.argmin(np.abs(st[1:] - v))) for v in base[1:]]
         d = max(float(np.max(np.abs(tp["theta"][j] / rk.theta[j] - 1.0))),
@@ -175,7 +189,7 @@ def x_consist(S, side, i_tr):
                        np.log([d for _, d in diffs]), 1)[0]
     _record("X-CONSIST", f"{side.name}: two-point vs RK4 under refinement",
             "difference must DECREASE monotonically; order reported",
-            f"{diffs[0][1]:.3e} -> {diffs[-1][1]:.3e} over x1..x8, "
+            f"{diffs[0][1]:.3e} -> {diffs[-1][1]:.3e} over x1..x16, "
             f"measured order {order:.2f}",
             "X-CONSIST PASS" if ok else "X-FAIL -> kill 1")
     return ok, order
