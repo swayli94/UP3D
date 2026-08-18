@@ -844,8 +844,12 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   │     transition -> candidate = TRDIF's two-part
                            #   │     transition interval (xblsys.f:1197), absent here.
                            #   │     ★ An IMPLEMENTATION check, NOT model validation:
-                           #   │     XFOIL is the same Drela-Giles family, and no
-                           #   │     reference in this repo carries BL profiles.
+                           #   │     XFOIL is the same Drela-Giles family.
+                           #   │     ★★ Ruling 2026-08-21: no BL-profile reference
+                           #   │     will be introduced -- XFOIL is the BL reference
+                           #   │     and Cp is where the model is judged, against the
+                           #   │     experiments that already carry it. A BL-quantity
+                           #   │     difference is debt only once shown to move Cp.
                            #   ├── gs41_transition_attrib/ ★ [GS4.1 round 10]
                            #   │     separates the three candidates behind that
                            #   │     gap. TRDIF is NOT a missing term -- it is
