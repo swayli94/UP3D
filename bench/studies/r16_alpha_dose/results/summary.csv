@@ -1,0 +1,4 @@
+tag,metric,band,measured,verdict
+W-CONFOUND,shock-band max M across the alpha legs (the confound),<= 20% => the dose-response is readable;  > that => W-DOSE is NOT isolable,a=0.0: 0.9824  a=0.5: 1.1050  a=1.25: 2.5483;  spread 159.4 % (denominator = min),★ W-CONFOUND FIRED: shock strength moves too much -- W-DOSE not isolable
+W-DOSE,does the TE divergence scale with alpha,alpha=0 clean and growing => lift/wake coupled;  alpha=0 already diverging => wake coupling EXCLUDED (immune to the confound);  else UNDEFINED,"a=0.0: TE maxM 0.8302, sup 0, clamps 0/0  a=0.5: TE maxM 0.8292, sup 0, clamps 0/0  a=1.25: TE maxM 29.4872, sup 787, clamps 1135/0",W-DOSE: consistent with lift/wake coupling BUT NOT ISOLABLE (W-CONFOUND fired) -- no attribution
+W-COST,wall time per leg,RECORDED,a=0.0: 66.8s  a=0.5: 324.8s  a=1.25: 1285.0s,RECORDED
