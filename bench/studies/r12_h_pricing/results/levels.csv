@@ -1,0 +1,5 @@
+cl_p,conv,evidence,h_shock,h_wall,level,mode,n_floored,n_limited,n_nodes,n_steps,res_last,usable,wall_s,x_shock
+0.296972,True,,0.039081,0.04,xcoarse,converged,0,0,1676,10,3.988437679672544e-13,True,0.5,0.531672
+0.407978,True,,0.019926,0.02,coarse,converged,0,0,6106,28,2.904495138539988e-13,True,1.2,0.619468
+0.34134,True,,0.009964,0.01,medium,converged,0,0,21874,62,2.854995790643492e-13,True,510.4,0.600592
+0.287835,False,descent10=0.708; tail_monotone=False (n_up=3),0.004982,0.005,fine,limit_cycle,0,0,82356,80,4.9591211611898733e-08,False,,0.65279
