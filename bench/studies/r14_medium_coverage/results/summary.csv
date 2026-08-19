@@ -1,0 +1,5 @@
+tag,metric,band,measured,verdict
+G-REPRO,n_limited reproduces the committed run,1135,1135,G-REPRO PASS
+V-WHERE,"where the limiter-active cells sit, by x/c band",SHOCK+MID >= 70% and LE ~ 0 => C=1.0 is insufficient upwinding;  LE >= 50% => a geometric hot spot,LE 0.0%  MID 0.0%  SHOCK 0.0%  TE 84.6%;  peak M^2 at x/c 0.9965,"V-WHERE: UNDEFINED -- neither pattern dominates (recorded, not attributed)"
+V-CL,the clamped state's own numbers,RECORDED ONLY -- GS1.4: a clamped state's numbers are NOT results,cl_p 0.85795  x_shock 0.978699920321843,RECORDED (must not be used)
+V-READ,the mode decomposition already committed,zero-compute; declared in advance to be nearly a deduction,"C=1.0 clamping on BOTH seeds (1135/0, 2587/391); C=3.0/seed0 limit_cycle (0/0); C=1.5 clean on both => (c) blocked at BOTH ENDS of its sweep; seed 0 has 1/3 usable C values, seed 5 has 2/3 => neither can populate (c)",V-READ: confirmed from bench/gate_results/m1_gate_default.csv
