@@ -391,7 +391,12 @@ invisible by construction — the ungated suite stays green while capability loc
 
 So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
 **measured 2026-08-11 TWICE at the same 8 threads on the same box: 891 s and
-564 s, both 5/5 green** (keep both: a 1.6x spread with an identical result is the
+564 s, both 5/5 green** — ★ and a THIRD reading 2026-08-24 after phase five's R19
+library change: **740 s, 5/5 green, at 8 threads under load average 11.1 on 24 cpus**
+(groups: s1_m1a 11.9 s · seed_fallback 70.2 s · b9_wingbody_conforming 15.1 s ·
+p8_newton 134.8 s · b32_wingbody_conforming_transonic 508.1 s). Three readings now
+span 564–891 s with an identical verdict, which is the point: **the wall is a
+calibration of the machine, the 5/5 is the result** (keep both: a 1.6x spread with an identical result is the
 same wall-clock-is-a-calibration lesson as G8.2's 5.4x) (was 644 s / 7 groups: three
 level-set locks left with the route in phase 3, and the conforming wing-body transonic
 ceiling lock was added — a capability lock kept OUT of this tier would run only in the
