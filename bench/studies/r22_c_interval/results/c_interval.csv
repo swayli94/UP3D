@@ -1,0 +1,7 @@
+C,cl_p,conv,evidence,mode,n_floored,n_limited,n_steps,source,steps_capped,steps_floored,usable,wall_s,x_shock
+1.0,0.857947,0,clamps 1135/0; descent10=0.057; tail_monotone=False (n_up=6),clamping,0,1135,47,cached,35,0,0,,0.9787
+1.1,0.040267,1,,converged,0,0,27,new,4,2,1,71.1,0.657435
+1.25,2.502974,0,clamps 5217/1543; tail_monotone=False (n_up=4),clamping,1543,5217,6,new,3,3,0,47.7,0.892313
+1.5,0.34134,1,,converged,0,0,62,cached,1,0,1,,0.600592
+2.0,0.473876,0,descent10=1.022; tail_monotone=False (n_up=6),limit_cycle,0,0,80,new,3,0,0,17.8,0.691589
+2.5,0.554894,0,descent10=3.704; tail_monotone=False (n_up=2),limit_cycle,0,0,80,new,3,0,0,18.1,0.723312
