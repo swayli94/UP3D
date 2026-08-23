@@ -550,7 +550,32 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **580 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **589 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-24, **measured in full @690.49 s @8 threads at
+   load 12.6**, phase-five R23).
+   ★ +9 vs the 580 below = `tests/test_r23_usability.py`, locking `bench/usability.py`
+   — **580 + 9 = 589 closes exactly**, skipped/xfailed unmoved, `pyfp3d/` untouched.
+   ★★ **What it is for.** Measured: at medium/alpha 1.25/seed 0, `upwind_c = 1.10`
+   converged to **|R| 2.28e-13 with ZERO clamps** on a root whose Gamma was **7.6x**
+   off and cl_p **8.5x** off. It passed every usability check the project had, and
+   GS1.4's clamp-not-silent contract cannot see that class. ⇒ **`converged ∧ 0 clamps`
+   is NOT a sufficient usability test**; an ANSWER ANCHOR is needed, exactly as the
+   capability boundary's anomaly 1 said in advance.
+   ★★★ **It is outlier detection, NOT correctness certification** — the anchor is the
+   candidate set's own median, so a set that is wrong together passes, and a spurious
+   root landing near the consensus passes. Two measured fragilities are in the module
+   docstring: with only two legal legs the median IS the midpoint, so the outlier drags
+   its own reference (measured: consensus pulled to 0.1908 from 0.3413, the good leg's
+   own ratio rising to 1.79 against a 3.0 threshold); and `assess_set`'s per-axis
+   spread POOLS the other axes, so "seed 5 spread 42.61 %" mixed coarse with medium and
+   is not a gate reading.
+   ★ The threshold 3.0 is a **CALIBRATION** derived from the nine committed
+   converged-unclamped legs (legitimate ratio max **1.47**, spurious root **8.48** ⇒ a
+   **5.8x gap**), with the same status as the EW forcing and the taper r_c.
+   ★ G-CADENCE: the tool lives in `bench/` and its locks in `tests/`, because bench
+   scripts are in no test collection and therefore on no cadence — a usability
+   criterion without a tests lock would reproduce the problem it exists to fix.
+   Previous: **580 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-23, **measured in full @780.32 s @8 threads at
    load 12.2**, phase-five R19).
    ★ +6 vs the 574 below = `tests/test_r19_gamma_target.py`, and **574 + 6 = 580
