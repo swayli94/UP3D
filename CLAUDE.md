@@ -555,7 +555,31 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **589 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **595 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-24, **measured in full @716.81 s @8 threads at
+   load 14.9**, the M1 re-spec).
+   ★★★ +6 vs the 589 below = `tests/test_m1_respec.py`, and **589 + 6 = 595 closes
+   exactly** with skipped/xfailed unmoved. It locks a **USER RULING of 2026-08-24**:
+   **M1 (a) deleted as a criterion, (b) and (c) relaxed from 3 % to 20 %, and split into
+   two INDEPENDENT metrics M1b and M1c.** ★ This is the **first relaxation of a target
+   number in this project** — the phase-two plan records "目标数字一个都没有放松过" — so it
+   is recorded as a signed ruling and the old spec and its numbers are kept verbatim in
+   the capability boundary's pre-2026-08-24 section.
+   ★★ Measured outcome, zero new solves (the committed gate CSV fed through `_criteria`):
+   **M1b PASS on both seeds** (−16.33 % / −16.15 %); **M1c PASS on seed 5** (coarse
+   9.42 %, medium 17.86 % — margin only **2.14 pp**) and **FAIL on seed 0 ONLY because
+   medium has a single converged leg** — a COVERAGE failure, which the script now says in
+   its own output because no tolerance can cure it.
+   ★★★ **The cost of deleting (a), recorded**: it was M1's only externally anchored
+   criterion. M1b and M1c are code-against-itself, so **both can pass on a uniformly wrong
+   solution** — `upwind_c = 1.10` at medium is the measured instance (converged, 0 clamps,
+   |R| 2.3e-13, Gamma off 7.6x, x_shock 0.657 outside the band) and **M1c counts it as a
+   legal leg**. The mitigation exists (`bench/usability.py` + an x_shock band precondition)
+   and is deliberately NOT wired in, since that would put (a) back without a ruling.
+   ★ Also fixed at source: the gate carried `SHOCK_REF, SHOCK_TOL = 0.61, 0.02`, a number
+   that appears in nine documents and in **no reference file**; it now reads the committed
+   **0.62 ± 0.03** from `cases/reference_data/naca0012_m080/shock_reference.csv`.
+   Previous: **589 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-24, **measured in full @690.49 s @8 threads at
    load 12.6**, phase-five R23).
    ★ +9 vs the 580 below = `tests/test_r23_usability.py`, locking `bench/usability.py`

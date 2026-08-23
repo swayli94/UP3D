@@ -47,7 +47,32 @@ sys.path.insert(0, str(HERE))
 from run_le14_common_root import classify_failure               # noqa: E402
 
 M_INF, ALPHA = 0.80, 1.25
-SHOCK_REF, SHOCK_TOL = 0.61, 0.02
+#: ★★★ M1 RE-SPEC, 2026-08-24, BY USER RULING -- the FIRST relaxation of a target
+#: number in this project (the phase-two plan recorded "目标数字一个都没有放松过").
+#:   (a) shock band          -> DELETED as a criterion (kept below as a RECORDED reading)
+#:   (b) two-level cl        -> 3 % relaxed to 20 %, and split out as its own metric M1b
+#:   (c) C-sweep cl          -> 3 % relaxed to 20 %, and split out as its own metric M1c
+#: ★★ WHY the old 3 % went: its only documented rationale was decidability, and its VALUE
+#: was borrowed from M2's "cl within 3 % of experiment" target -- which the user retired as
+#: meaningless, on grounds the project's own numbers support: the A4 input band is 2.5 %, so
+#: a 3 % target sits at the measurement floor, and an inviscid full-potential model compared
+#: against viscous experiment carries a model-form error larger than 3 % by construction
+#: (GV5.2: every RAE2822 shock 0.06-0.10 c downstream). With that gone, the 3 % had no basis.
+#: ★ The two criteria themselves are UNCHANGED in form and remain meaningful: (b) asks
+#: whether the answer has stopped moving under refinement, (c) asks how much of the lift is
+#: set by a stabilisation constant that does not exist in the true solution.
+M1B_TOL = 0.20
+M1C_TOL = 0.20
+#: ★★ (a) is no longer a criterion, but the reading is still printed -- and printed against
+#: the COMMITTED reference `cases/reference_data/naca0012_m080/shock_reference.csv`
+#: (0.62 +- 0.03), NOT the 0.61 +- 0.02 that this constant used to carry and that circulates
+#: in nine documents while appearing in no reference file (measured 2026-08-23).
+#: ★★★ Consequence of deleting it, recorded because it is a real loss: (a) was M1's ONLY
+#: externally anchored criterion. (b) and (c) are code-against-itself, so both can pass on a
+#: solution that is uniformly wrong -- upwind_c = 1.10 at medium is a measured instance
+#: (converged, 0 clamps, |R| 2.3e-13, Gamma off 7.6x, x_shock 0.657 OUTSIDE the band, and
+#: (c) counts it as a legal leg). See bench/usability.py.
+SHOCK_REF, SHOCK_TOL = 0.62, 0.03
 CS = (1.0, 1.5, 3.0)
 LEVELS = ("coarse", "medium")
 #: ★ THE SEED IS AN AXIS, added 2026-08-05, because it moved a published number.
@@ -217,8 +242,10 @@ def main():
     overall = True
     #: ★ SEEDS, not `seeds`: the third seed is diagnostic and must not be able to move the verdict
     for seed in SEEDS:
-        overall &= _criteria([r for r in rows if r.get("n_picard_seed") == seed],
-                             seed)
+        v = _criteria([r for r in rows if r.get("n_picard_seed") == seed], seed)
+        #: ★ two INDEPENDENT metrics since the 2026-08-24 ruling; `overall` is kept only
+        #: as a convenience exit code -- the per-metric verdicts are the result.
+        overall &= all(v.values())
     print(f"\nM1: {'PASS' if overall else 'FAIL'}"
           f"{'   (seed %d ran as a DIAGNOSTIC and did not vote)' % THIRD_SEED if a.third_seed else ''}")
     return 0 if overall else 1
@@ -269,19 +296,18 @@ def _criteria(rows, seed):
     print(f"\n=== M1 criteria, n_picard_seed = {seed}"
           f"{'  (library default)' if seed == 0 else '  (the published numbers)'}"
           " ===")
-    ok = True
-    # (a) shock band, default C, both levels
+    verdicts = {}
+    # (a) RETIRED as a criterion by the 2026-08-24 ruling -- RECORDED only, and against
+    # the COMMITTED band. It does not enter any PASS/FAIL below.
     for level in LEVELS:
         m = [r for r in rows if r.get("level") == level and r.get("C") == 1.5]
         if not m or m[0].get("x_shock") is None:
-            print(f"  (a) {level}: no result -> FAIL")
-            ok = False
+            print(f"  (a) {level}: no result -> RECORDED (no reading)")
             continue
         x, conv = m[0]["x_shock"], m[0]["converged"]
-        good = conv and abs(x - SHOCK_REF) <= SHOCK_TOL
-        print(f"  (a) {level:7s} x_shock {x:.4f} vs {SHOCK_REF}+-{SHOCK_TOL}"
-              f"  conv={conv}  -> {'PASS' if good else 'FAIL'}")
-        ok &= bool(good)
+        inband = conv and abs(x - SHOCK_REF) <= SHOCK_TOL
+        print(f"  (a) {level:7s} x_shock {x:.4f} vs committed {SHOCK_REF}+-{SHOCK_TOL}"
+              f"  conv={conv}  in-band={inband}  -> RECORDED (criterion RETIRED)")
     # (b) two-level cl agreement at the default C
     cl = {}
     for level in LEVELS:
@@ -291,31 +317,40 @@ def _criteria(rows, seed):
             cl[level] = (m[0]["cl_p"], m[0]["converged"])
     if len(cl) == 2:
         d = (cl["medium"][0] - cl["coarse"][0]) / abs(cl["coarse"][0])
-        good = abs(d) < 0.03 and all(c[1] for c in cl.values())
-        print(f"  (b) cl coarse {cl['coarse'][0]:.4f} -> medium "
-              f"{cl['medium'][0]:.4f} = {100 * d:+.1f} % (< 3 %)"
+        good = abs(d) < M1B_TOL and all(c[1] for c in cl.values())
+        print(f"  M1b  cl coarse {cl['coarse'][0]:.4f} -> medium "
+              f"{cl['medium'][0]:.4f} = {100 * d:+.2f} % (< {100 * M1B_TOL:.0f} %)"
               f"  converged={[c[1] for c in cl.values()]}"
               f"  -> {'PASS' if good else 'FAIL'}")
-        ok &= bool(good)
+        verdicts["M1b"] = bool(good)
     else:
-        print("  (b) FAIL: fewer than two levels produced a result")
-        ok = False
+        print("  M1b  FAIL: fewer than two levels produced a result")
+        verdicts["M1b"] = False
     # (c) dissipation sensitivity per level
+    m1c = True
     for level in LEVELS:
         sub = [r for r in rows if r.get("level") == level
                and r.get("cl_p") is not None and r.get("converged")]
         if len(sub) < 2:
-            print(f"  (c) {level}: {len(sub)} converged leg(s) -> FAIL")
-            ok = False
+            #: ★ this is a COVERAGE failure, not a precision one -- relaxing the tolerance
+            #: cannot cure it, and saying so keeps the two apart in the output
+            print(f"  M1c  {level:7s} {len(sub)} converged leg(s) -> FAIL "
+                  "(COVERAGE, not precision -- a tolerance cannot fix it)")
+            m1c = False
             continue
         v = [r["cl_p"] for r in sub]
         spread = (max(v) - min(v)) / min(v)
-        good = spread < 0.03
-        print(f"  (c) {level:7s} cl over C in [1,3]: {min(v):.4f}..{max(v):.4f}"
-              f" = {100 * spread:.1f} % (< 3 %) -> {'PASS' if good else 'FAIL'}")
-        ok &= bool(good)
-
-    return ok
+        good = spread < M1C_TOL
+        print(f"  M1c  {level:7s} cl over C in [1,3]: {min(v):.4f}..{max(v):.4f}"
+              f" = {100 * spread:.2f} % (< {100 * M1C_TOL:.0f} %) over {len(sub)} legs"
+              f" -> {'PASS' if good else 'FAIL'}")
+        m1c &= bool(good)
+    verdicts["M1c"] = m1c
+    print(f"  ⇒ M1b {'PASS' if verdicts['M1b'] else 'FAIL'};  "
+          f"M1c {'PASS' if verdicts['M1c'] else 'FAIL'}   "
+          "(two INDEPENDENT metrics since the 2026-08-24 ruling -- they ask different "
+          "questions: convergence vs how much of the lift a stabilisation constant sets)")
+    return verdicts
 
 
 if __name__ == "__main__":
