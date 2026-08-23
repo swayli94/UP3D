@@ -28,7 +28,17 @@ import duct as D                                                        # noqa: 
 import nozzle as N                                                      # noqa: E402
 
 #: ★ G-ONEKNOB -- every one of these is copied verbatim from run_nozzle.py; only N_MAX moves
-M_INF = 0.5 if not hasattr(N, "M_INF") else None       # resolved below from the module
+#: ★★ M_INF is read from the runner module, not guessed -- my first attempt guessed two
+#: method names for the initial guess, both absent, so phi0 became None and numpy turned it
+#: into a 0-d array: eight legs died in the same obscure numba typing error inside
+#: element_velocity_q2. The hasattr fallbacks made the guess SILENT instead of loud.
+#: The construction below is now copied verbatim from run_nozzle.py::run_one.
+import importlib.util as _ilu
+_rs = _ilu.spec_from_file_location("run_nozzle", os.path.join(ARCH, "run_nozzle.py"))
+_rm = _ilu.module_from_spec(_rs)
+_src = open(os.path.join(ARCH, "run_nozzle.py")).read()
+M_INF = float([l.split("=")[1] for l in _src.splitlines()
+               if l.startswith("M_INF")][0].split("#")[0])
 CS = (1.0, 1.5, 2.0, 3.0)
 NX = 400                    # h = 0.05, the finest level in the committed sweep
 TOL = 1e-11
@@ -61,17 +71,18 @@ def one(C, n_max):
     """run_nozzle.py::run_one, reduced to what N2 needs; the recipe is verbatim."""
     ny = max(6, NX // 16)
     mesh = N.nozzle_mesh(NX, ny, jitter=0.0)
-    m_inf = getattr(N, "M_INF", None) or 0.5
-    sysd = D.DuctSystem(mesh, m_inf=m_inf, upwind_c=C)
-    ex = N.exact_solution(m_inf, x_s=N.X_S_TARGET)
-    phi0 = sysd.dirichlet_from_exact(ex) if hasattr(sysd, "dirichlet_from_exact") else None
-    if phi0 is None:                       # fall back to the runner's own construction
-        phi0 = sysd.phi_bc_from_exact(ex) if hasattr(sysd, "phi_bc_from_exact") else None
+    sysd = D.DuctSystem(mesh, m_inf=M_INF, upwind_c=C)
+    ex = N.exact_solution(M_INF, x_s=N.X_S_TARGET)
+    #: verbatim from run_nozzle.py::run_one -- Dirichlet data from the exact solution,
+    #: and for the unperturbed start the initial guess IS that data
+    phi_bc = ex["phi_of_x"](mesh.nodes[:, 0])
+    phi0 = phi_bc.copy()
     t0 = time.perf_counter()
     phi, info = sysd.newton(phi0, n_max=n_max, tol=TOL)
     w = time.perf_counter() - t0
     xc, ux = D.element_u(sysd, phi)
     x_sh, n_sup, _, _ = N.shock_from_profile(xc, ux, ex["u_star"], NX)
+    #: G-TRUTH: the analytic shock position comes from the module, never typed by me
     return dict(C=C, n_max=n_max, converged=bool(info["converged"]),
                 reason=info.get("reason", "tol"), n_newton=int(info["n_newton"]),
                 res_final=float(np.asarray(info["residual_history"], float)[-1]),
