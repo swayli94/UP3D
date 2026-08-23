@@ -1,0 +1,4 @@
+tag,metric,band,measured,verdict
+D-DECOMP,additive split of the median log|grad| excess,G share >=70% => geometry/reconstruction;  S share >=70% => the solution;  else mixed (both reported),"DIRTY a0 M0.84: Dlog_q +0.48052 = G +0.02442 + S +0.22788 (G 5.1%, S 47.4%); DIRTY C1.0 a1.25: Dlog_q +0.6822 = G -0.37456 + S +1.09253 (G -54.9%, S 160.2%)",★ D-DECOMP: UNDEFINED -- the two legs disagree (kill criterion 4)
+D-GEOM,"||B||_F and volume, supersonic vs slab base rate (discharges R20's unimplemented M-GEOM)",RECORDED,DIRTY a0 M0.84: ||B|| p50 212.268 vs base 212.135; vol p50 2.90864e-07 vs 2.92895e-07; DIRTY C1.0 a1.25: ||B|| p50 169.167 vs base 212.135; vol p50 5.64581e-07 vs 2.92895e-07,RECORDED
+G-CHECKOFF,every registered criterion has code,all four,"D-DECOMP=yes, D-GEOM=yes, D-BOTHLEGS=yes, D-CLEAN=yes",G-CHECKOFF PASS
