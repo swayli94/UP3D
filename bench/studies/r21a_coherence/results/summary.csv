@@ -1,0 +1,4 @@
+tag,metric,band,measured,verdict
+C-PV,boundary/volume of the supersonic set vs a same-size null,"below null p5 => field structure;  inside [p5,p95] => 'one blob' unsupported;  above p95 => more scattered than chance","DIRTY a0 M0.84: P/V 0.7456 vs null [2.9086, 2.9833] -> field structure; DIRTY C1.0 a1.25: P/V 1.3215 vs null [3.5704, 3.6621] -> field structure",★ C-PV: field structure
+C-COMP,components and largest-component share vs the null,"declared in advance to be WEAK -- 32% occupancy sits on the 3-D percolation threshold, so this is secondary","DIRTY a0 M0.84: 2 comps (null 1000-1073), max frac 0.9995 (null 0.007-0.0135); DIRTY C1.0 a1.25: 34 comps (null 618-654), max frac 0.6544 (null 0.0051-0.0102)",RECORDED
+C-EXT,extent of the set,RECORDED,"DIRTY a0 M0.84: x/c 0.8-1.0984, max |y| 1.3185; DIRTY C1.0 a1.25: x/c 0.8-1.2, max |y| 1.9554",RECORDED
