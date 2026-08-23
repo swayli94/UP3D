@@ -1703,7 +1703,54 @@ the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
 collapsed onto its conforming half. ONE wake route remains: `mesh/wake_cut.py` +
 `constraints/te_pressure.py` + `solve/newton.py` / `picard.py`, with `tip_taper`
 (B31/B32, carrying a **−1.3 % cl** model bias).
-Baselines: always-on **479 passed / 12 skipped / 2 xfailed** (2026-08-12 = 474 measured in
+★★★ **PHASE FIVE (2026-08-22 → 2026-08-24) IS NOT IN THE TREE ABOVE, and that omission is
+itself the recorded failure mode** -- CLAUDE.md's close-out ritual flags this file as "the one
+that silently rots", and phase two rotted it once already (neither `bench/` nor `docs/` was in
+the tree). What phase five added, none of it navigable from the tree until now:
+
+    bench/usability.py          # ★ NEW LIBRARY-ADJACENT TOOL (R23): is a CONVERGED solve's
+                                #   ANSWER usable? Measured: upwind_c 1.10 converged to
+                                #   |R| 2.28e-13 with ZERO clamps on a root whose Gamma was
+                                #   7.6x off -- `converged ∧ 0 clamps` is NOT sufficient.
+                                #   ★ It is OUTLIER DETECTION, not correctness: N1 measured it
+                                #   letting through 8/8 provably-wrong nozzle legs because the
+                                #   ratio is SCALE-DEPENDENT (works on lift, which can collapse
+                                #   toward zero; useless on a position). Locked by
+                                #   tests/test_r23_usability.py (9).
+    bench/studies/m1a_subcell/          # R14-era: sub-cell shock-position extractor
+    bench/studies/m1b_tie/              # D's argmin ties, per-cell vs sub-cell
+    bench/studies/m1e_scatter/          # what carries D's station-to-station scatter
+    bench/studies/r11_saturation/       # the footprint rule's failure detection
+    bench/studies/r12_h_pricing/        # ★ the h route priced: h_shock per level + convergence
+    bench/studies/r13_thread_seed_join/ # 16t vs 8t joined -- the comparison nobody had made
+    bench/studies/r14_medium_coverage/  # where the limiter-active cells are
+    bench/studies/r15_modes/            # the two failure modes at (c)'s two ends
+    bench/studies/r16_alpha_dose/       # alpha dose-response (confounded, no attribution)
+    bench/studies/r17_mach_alpha0/      # alpha=0 with rising M -- premise failed, withdrawn
+    bench/studies/r18_attribution_audit/# pooled audit of my own attribution
+    bench/studies/r19_gamma_input/      # ★ prescribed-Gamma grid (needs the library change)
+    bench/studies/r20_te_mechanism/     # what the supersonic cells touch (wake cut EXCLUDED)
+    bench/studies/r21a_coherence/       # one blob vs salt-and-pepper, against a null
+    bench/studies/r21d_decompose/       # geometry vs solution split (RETRACTED, see below)
+    bench/studies/r22_c_interval/       # the usable upwind_c interval at medium
+    bench/studies/n1_nozzle_anchor/     # ★ the anchor validated where TRUTH exists
+    tests/test_r19_gamma_target.py      # 6 locks on the prescribed-circulation path
+    tests/test_r23_usability.py         # 9 locks on the usability criterion
+    docs/dev_phase_five/                # 25 rounds + prereg/verdict/errata + progress.md
+
+★★ **The one `pyfp3d/` change in phase five**: `solve/newton.py` gained `gamma_target`
+(prescribed circulation, R19) -- **20 non-comment lines**, generalising B31's Gamma-pin target
+from 0 on BOTH Kutta rows. **The Jacobian is untouched** (the target is a constant, so the
+existing FD locks still cover it) and `gamma_target=None` takes the original expression
+verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
+against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
+
+Baselines: always-on **589 passed / 12 skipped / 2 xfailed** (2026-08-24, measured in full
+@690.49 s @8 threads at load 12.6, phase-five R23; 580 + 9 closes exactly, the +9 being
+`tests/test_r23_usability.py`). ★ Fast capability-lock tier re-run at the phase-five close-out
+after the one library change: **5/5 green, 740 s @8 threads at load 11.1** -- a third reading
+against the recorded 891 s and 564 s, so the wall is a calibration and the 5/5 is the result.
+Previous: **479 passed / 12 skipped / 2 xfailed** (2026-08-12 = 474 measured in
 full @478.40 s plus 5 non-interacting soft-membership asserts; earlier it went
 468 → 472 → 468 in one day -- the +4 were the temporary `sigma_scale` instrument's locks
 and were deleted with it at its registered expiry). Earlier the same count (2026-08-11, 494 s @8
