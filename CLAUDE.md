@@ -550,7 +550,22 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **574 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **580 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-23, **measured in full @780.32 s @8 threads at
+   load 12.2**, phase-five R19).
+   ★ +6 vs the 574 below = `tests/test_r19_gamma_target.py`, and **574 + 6 = 580
+   closes exactly with skipped/xfailed unmoved** — which is the point: R19 is the
+   **first change to `pyfp3d/` in twenty rounds** (`gamma_target`, prescribed
+   circulation on the Newton path) and it **moved no existing test**.
+   ★★ The change generalises B31's Gamma-pin target from 0 to a prescribed value on
+   **both** Kutta rows, and **the Jacobian is untouched** (the target is a constant),
+   so the existing FD locks still cover it. `gamma_target=None` takes the original
+   expression verbatim, so bit-identity needs no floating-point argument — verified
+   by `array_equal(phi)` against two committed caches.
+   ★ Trap logged: the first pass changed only the **pressure**-path blend while the
+   NACA recipe takes the **probe** default, and `T-PIN` caught it (Gamma came back 0
+   instead of 0.25). **Change the row your case actually takes.**
+   Previous: **574 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-22, **measured in full @979.15 s @8 threads at
    load 14–17** — a busy box; quote the wall with its load, never as a cost).
    ★ +2 vs the 572 below = `TestQuadratureIsVisible`, and the reason it exists is a
