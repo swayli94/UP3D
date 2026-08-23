@@ -1,0 +1,4 @@
+tag,metric,band,measured,verdict
+M-CONTROL,do the TE-band base rates agree between dirty and clean legs,<=10% => an enrichment is a distribution change;  >10% => it is the band's COMPOSITION changing and must not be read as enrichment,worst relative base-rate difference 0.00% at None,M-CONTROL: base rates agree
+M-ENRICH/DIRTY medium a0 M0.84,"enrichment by class, against the band's own base rate","one class >=2 with the rest <1.5 => that feature;  all in [0.7,1.5] => no topological feature;  else UNDEFINED",WAKE 0.0  TE-NODE None  WALL 1.53  INTERIOR 1.013,M-ENRICH: UNDEFINED (multiple or mixed)
+M-ENRICH/DIRTY medium C1.0 a1.25,"enrichment by class, against the band's own base rate","one class >=2 with the rest <1.5 => that feature;  all in [0.7,1.5] => no topological feature;  else UNDEFINED",WAKE 0.0  TE-NODE None  WALL 0.535  INTERIOR 1.051,M-ENRICH: UNDEFINED (multiple or mixed)
