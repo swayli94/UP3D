@@ -1,6 +1,6 @@
 # pyFP3D Roadmap — Track V (viscous–inviscid interaction V1–V6)
 
-> Split from `docs/roadmap.md` on 2026-07-15. **No longer verbatim**: re-specified
+> Split from `phases/p1/docs/roadmap.md` on 2026-07-15. **No longer verbatim**: re-specified
 > at Track V opening 2026-07-22, and re-phased the same day (the oversized V1
 > split into V1 core / V2 channel / V3 coupling; old V2–V4 → V4–V6). Global
 > working rules, gate-ID conventions and the track index live in

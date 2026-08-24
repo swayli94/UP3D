@@ -53,11 +53,11 @@ LS+clip 可到 0.75——GB18.3 的"跨模型只剩 M0.5"可以升级。
 |---|---|
 | `cases/demo/b18_wingbody_transonic/run_demo.py` | docstring 重写（新叙事）+ `ls_mesh` 增加 clip 侧 builder（`inboard_clip=make_inboard_clip(FUS)`）+ LS 腿改 A/C 对 + 新增跨模型腿 + 图/CSV 刷新 |
 | `cases/demo/b18_wingbody_transonic/results/*` | 全量重生成（checks.csv、cl_vs_mach.csv、cross_model.csv、3 PNG） |
-| `docs/demo_report.md` | B18 行刷新 |
-| `docs/design_track_b.md` | 新 §22（B26/B27）+ §18 erratum 指针（§19–21 体例） |
+| `phases/p1/docs/demo_report.md` | B18 行刷新 |
+| `phases/p1/docs/design_track_b.md` | 新 §22（B26/B27）+ §18 erratum 指针（§19–21 体例） |
 | `docs/agent-rules.md` | B26 ✓ CLOSED（B26-A）+ B27 ✓ CLOSED 条目；next-phase 优先级更新 |
 | `docs/overview.md` | B-track 表 GB20.5 故事勘误（袋归因：刻面 G1.6 → 自由边奇点已愈；G1.6 退居 cl_fus 嫌疑） |
-| `docs/roadmap.md` | B-track 行 B18 描述刷新 |
+| `phases/p1/docs/roadmap.md` | B-track 行 B18 描述刷新 |
 | `cases/analysis/b27_b18_demo_refresh/` | 本文件 + `results/g27_consistency.csv`（demo 重跑 vs B26 committed 的逐项 diff） |
 
 ### 2.2 腿（全部重型、显式启动、后台）

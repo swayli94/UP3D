@@ -1,6 +1,6 @@
 # pyFP3D Roadmap — Track P (solver phases P0–P14)
 
-> Split verbatim from `docs/roadmap.md` on 2026-07-15 (content unchanged; only
+> Split verbatim from `phases/p1/docs/roadmap.md` on 2026-07-15 (content unchanged; only
 > this header and the ledger heading were added). Global working rules, gate-ID
 > conventions and the track index live in [roadmap.md](../roadmap.md); the
 > human-readable status snapshot is [overview.md](../../../../docs/overview.md).
@@ -1181,7 +1181,7 @@ on M6 medium) premise is REFUTED and that gate is dropped, not just unmet**.
 The sole surviving justification is **G1.6**, and after B18/B20 the same root
 cause owns three refinement-worsening wounds (sphere Cp 11.6%; GB9.4 fuselage
 spurious lift 16–20% growing 0.164→0.205; GB20.5 LS junction pocket Mmax
-1.31→5.22) — docs/analysis/next_phase_priorities_2026-07-19.md recommended
+1.31→5.22) — phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md recommended
 P11 first, sphere leg first; user arbitrated OPEN 2026-07-19.
 **Scope (this phase): the sphere/Laplace leg only.** No wake, no compressible
 path, no sharp edges (design.md §4.1 — Track M owns those). The
@@ -1888,7 +1888,7 @@ symptom by construction).
   `cases/reference_data/naca0012_m05/` (PG + Kármán–Tsien corrected panel cl/Cp with provenance + verification trail). Gates:
   G3.1 **0.32%** (< 2%); G3.2 **cl −0.33%** from the PG/KT midpoint and inside the bracket, **15 iterations** (< 30), strictly monotone
   residual; G3.3 matrix/φ/Γ **bitwise** at M∞ = 0 + full suite green. Suite: 117 passed + 2 xfailed, ~96 s (G3.2's medium-mesh nested solve
-  is ~45 s of it). Demo: `cases/demo/p3_subsonic/` (14 checks PASS) + docs/demo_report.md §P3. Known non-P3 fix bundled:
+  is ~45 s of it). Demo: `cases/demo/p3_subsonic/` (14 checks PASS) + phases/p1/docs/demo_report.md §P3. Known non-P3 fix bundled:
   `tests/test_p2_wake_cut.py` topology sweep now skips surface-only mesh assets (the new `cessna_surface.msh` broke `read_mesh` in the
   hard-rule-7 sweep — pre-existing on main).
 - P4 — ✓ — 2026-07-07 — **★ ERRATUM (2026-07-11, P8/N5 finding — user-approved: record, do not re-open):**

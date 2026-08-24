@@ -1,4 +1,4 @@
-"""Track V V2 -- transpiration channel (binding: docs/roadmap/track_v.md
+"""Track V V2 -- transpiration channel (binding: phases/p1/docs/roadmap/track_v.md
 "V2 -- Transpiration channel through all three drivers", 2026-07-22 re-spec).
 
 The viscous-inviscid coupling BC: the boundary layer displaces the effective

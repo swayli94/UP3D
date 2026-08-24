@@ -1,6 +1,6 @@
 """
 Track B / B4 gate: TE control-volume & implicit-Kutta re-derivation
-(docs/roadmap.md Track B B4; docs/design_track_b.md §9).
+(phases/p1/docs/roadmap.md Track B B4; phases/p1/docs/design_track_b.md §9).
 
 B3 delivered the multivalued lifting solve, but its emergent circulation
 converged to the WRONG value (Γ → ~0.168 vs the conforming 0.120). B4 fixes

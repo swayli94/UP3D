@@ -7,7 +7,7 @@ One self-contained, self-checking demo per completed roadmap phase. Each
 `run_demo.py` regenerates every figure/CSV in its `results/` folder and
 verifies the phase's acceptance numbers (exit code 0 = all checks pass;
 the G1.6 open gate is an expected XFAIL). Conclusions and analysis live in
-[docs/demo_report.md](../../phases/p1/docs/demo_report.md).
+[phases/p1/docs/demo_report.md](../../phases/p1/docs/demo_report.md).
 
 Heavy transonic parts run only under `PYFP3D_TRANSONIC_GATES=1` (skipped by
 default); runtimes below are the default (light) path.

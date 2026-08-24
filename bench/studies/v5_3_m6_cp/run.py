@@ -1,6 +1,6 @@
 """GV5.3 M6 wing direction+magnitude check vs committed Cp (Track V5).
 
-Binding text: docs/roadmap/track_v.md GV5.3 (re-anchored 2026-07-22,
+Binding text: phases/p1/docs/roadmap/track_v.md GV5.3 (re-anchored 2026-07-22,
 user-directed: the committed experiment holds Cp only -- no experimental
 CL); pre-registered: bench/studies/v5_3_m6_cp/PRE_REGISTRATION.md
 (committed ba636d9 BEFORE the first code change).

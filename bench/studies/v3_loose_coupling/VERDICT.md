@@ -1,7 +1,7 @@
 # GV3.1 / GV3.2 VERDICT — honest FAIL (2 PASS / 4 FAIL / 23 RECORDED)
 
 Date: 2026-07-22. Branch: kimi/track-v3-loose-coupling.
-Binding text: docs/roadmap/track_v.md GV3.1/GV3.2; pre-registration +
+Binding text: phases/p1/docs/roadmap/track_v.md GV3.1/GV3.2; pre-registration +
 2026-07-22 addendum: PRE_REGISTRATION.md. Evidence: results/ (summary.csv
 is the machine-readable verdict; this file is the narrative).
 

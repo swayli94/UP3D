@@ -287,7 +287,7 @@ no-op on committed data — each verified as such, not assumed.
   (0.17/0.36 vs 0.15/0.34) is documented at its source rather than
   "fixed" — switching `p14/run_demo.py`'s rounded `LS_REF` to a CSV read would
   move the committed `checks.csv` and force a re-run of a heavy demo for a
-  0.02pp rounding difference; (b) the dated `docs/analysis/` snapshot keeps its
+  0.02pp rounding difference; (b) the dated `phases/p1/docs/analysis/` snapshot keeps its
   original prose plus an erratum, per the "dated snapshots are not maintained
   documents" rule.
 - [x] **GA3.2 — C2/C3 backported to the conforming Newton** (`solve/newton.py`).

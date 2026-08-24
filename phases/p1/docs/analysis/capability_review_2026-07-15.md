@@ -3,7 +3,7 @@
 > ⚠ **SUPERSEDED（快照声明，2026-07-19 追加）**：本文是 2026-07-15 的快照，其后
 > P14/B9/B14–B21/A1–A3 大量落地，多处结论已被覆写——尤其"LS medium M0.84 已演示"
 > 一项经历了 B20 重基线回退（GB20.7）→ **B21 恢复**（N1 freeze 捕获修复，γ 0.088343）
-> 的两次翻转。现状以 docs/roadmap/track_*.md 台账 + docs/overview.md 为准；
+> 的两次翻转。现状以 phases/p1/docs/roadmap/track_*.md 台账 + docs/overview.md 为准；
 > 本文仅作历史参考，引用其数字前先对台账。
 
 **性质**：横向审查报告（非 gate 文档，不改变任何 roadmap 状态）。是

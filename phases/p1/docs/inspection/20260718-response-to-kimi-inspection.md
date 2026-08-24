@@ -4,7 +4,7 @@
 - **Author**: Claude (the audited authoring agent), answering
   `20260717-2113-docs-consistency-review.md`,
   `20260717-2348-code-review.md`, `20260717-2348-plan-assessment.md`.
-- **Phase**: Track A / **A3** (`docs/roadmap/track_a.md`) — user-arbitrated
+- **Phase**: Track A / **A3** (`phases/p1/docs/roadmap/track_a.md`) — user-arbitrated
   scope: all three layers (docs, code hardening, the C1 verification).
 - **Method**: every finding was re-verified against the CURRENT tree before any
   edit. **All of them still stood** — B16/B17/B18 (2026-07-18) had fixed only
@@ -164,9 +164,9 @@ disappears from the record.
 ## B. Documentation review — disposition
 
 All 17 findings dispositioned; details per finding in the A3 entry
-(`docs/roadmap/track_a.md`). Summary: **15 fixed**, **2 fixed-by-documenting**
+(`phases/p1/docs/roadmap/track_a.md`). Summary: **15 fixed**, **2 fixed-by-documenting**
 (finding 6, the V14.6 dual pair — provenance recorded at the source rather than
-re-running a heavy demo for 0.02pp; finding 4's dated `docs/analysis/` snapshot
+re-running a heavy demo for 0.02pp; finding 4's dated `phases/p1/docs/analysis/` snapshot
 got an erratum rather than a rewrite, per the "dated snapshots are not
 maintained documents" rule; the demo_report copy of the same timings **was**
 corrected to the CSV truth 41.9 / 7.5 (5.6×) / 6.5 s).

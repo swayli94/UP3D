@@ -1,5 +1,5 @@
 """Track V V5 Stage 3 -- the augmented (tight) Newton driver (binding:
-docs/roadmap/track_v.md GV5.1 + the 2026-07-22 pre-registered FD note;
+phases/p1/docs/roadmap/track_v.md GV5.1 + the 2026-07-22 pre-registered FD note;
 design: bench/studies/v5_tight_coupling/PRE_REGISTRATION.md).
 
 The pre-registered full state, residual and Jacobian (PRE_REGISTRATION

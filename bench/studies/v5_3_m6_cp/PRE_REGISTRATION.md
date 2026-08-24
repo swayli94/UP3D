@@ -2,7 +2,7 @@
 
 Committed BEFORE the first code change (Track V discipline; user-sequenced
 2026-07-24: GV5.1d → GV5.5 → GV5.2–5.4). Binding text:
-`docs/roadmap/track_v.md` GV5.3 (re-anchored 2026-07-22, user-directed: the
+`phases/p1/docs/roadmap/track_v.md` GV5.3 (re-anchored 2026-07-22, user-directed: the
 committed `cases/reference_data/onera_m6_experiment/` holds **Cp only** — no
 experimental CL value is committed, so this gate does NOT use the external
 "experiment ≈ 0.26–0.27" figure).

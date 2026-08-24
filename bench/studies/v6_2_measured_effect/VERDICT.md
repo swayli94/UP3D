@@ -1,7 +1,7 @@
 # GV6.2 VERDICT — measured wake-IBL on/off effect vs the A4 band
 
 - Date: 2026-07-25 · Branch: `kimi/track-v6-gv6-2`
-- Binding text: `docs/roadmap/track_v.md` GV6.2
+- Binding text: `phases/p1/docs/roadmap/track_v.md` GV6.2
 - Pre-registration: [PRE_REGISTRATION.md](PRE_REGISTRATION.md)
   (committed before execution, `ab89483`; the XFOIL wake-reference
   sourcing **RULED Option A 2026-07-25 (user)** — analysis-local
@@ -22,7 +22,7 @@
 - **Post-verdict adjudication 2026-07-25 (user)**: the recorded
   reading accepted — the significance condition is NOT met →
   **producer (ii) NOT opened; V6 ✓ CLOSED** (the GV6.0 ruling clause,
-  `docs/roadmap/track_v.md` V6).
+  `phases/p1/docs/roadmap/track_v.md` V6).
 
 ## Result table
 

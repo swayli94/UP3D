@@ -1,6 +1,6 @@
 # pyFP3D Roadmap — Track B (level-set embedded wake B1–B27)
 
-> Split verbatim from `docs/roadmap.md` on 2026-07-15 (content unchanged; only
+> Split verbatim from `phases/p1/docs/roadmap.md` on 2026-07-15 (content unchanged; only
 > this header and the ledger heading were added). Global working rules, gate-ID
 > conventions and the track index live in [roadmap.md](../roadmap.md); the
 > human-readable status snapshot is [overview.md](../../../../docs/overview.md).
@@ -2148,7 +2148,7 @@ re-baseline erratum process rule; (4) the next-phase priority re-assessment.
   inspection's §2 recommendation; its D1/D2/D7/D8 were all products of this
   rule not existing.
 - [~] **GB22.5 — next-phase priority re-assessment (RECORDED, decision =
-  user).** `docs/analysis/next_phase_priorities_2026-07-19.md`: recommends
+  user).** `phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md`: recommends
   **P11 (curved wall elements) first** — post-B20/B21 the wing-body line has
   no numerical suspects left, and the G1.6 faceted-geometry root now owns
   three refinement-worsening wounds (sphere Cp 11.6 %, GB9.4 fuselage lift
@@ -2557,7 +2557,7 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
   committed coarse (~35 s) + medium (~9 min) ramps and asserts m_final/γ/M_max/clamps absolutely (γ rtol 1e-4 = 20× the measured run-to-run
   spread, 4 orders under a B20-sized move) — the alarm that did not exist when the suite stayed green through two re-baselines.
   **GB22.4 ✓** CLAUDE.md step-5 re-baseline erratum checklist + agent-rules discipline #11.
-  **GB22.5 RECORDED** `docs/analysis/next_phase_priorities_2026-07-19.md` — recommends **P11 first** (G1.6 owns three refinement-worsening
+  **GB22.5 RECORDED** `phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md` — recommends **P11 first** (G1.6 owns three refinement-worsening
   wounds; wing-body line has no numerical suspects left), LS fine second, Track V after P11 (V1 ladder parallelizable);
   decision = user. Backport N/A.
 - B21 — ✓ — 2026-07-19 — **Freeze-capture alignment with the B20 density (the Kimi-inspection N1 fix) —

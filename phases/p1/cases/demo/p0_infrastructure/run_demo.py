@@ -1,7 +1,7 @@
 """
 P0 demo -- mesh infrastructure evidence (gates G0.1-G0.4, all closed).
 
-What this shows, per docs/roadmap.md P0 and docs/demo_report.md:
+What this shows, per phases/p1/docs/roadmap.md P0 and phases/p1/docs/demo_report.md:
   1. G0.1 volume exactness: sum(V_e) equals the analytic volume to machine
      precision on meshes with an exact polyhedral volume.
   2. G0.2 gradient exactness: the P1 element gradient reproduces the

@@ -12,7 +12,7 @@ Core modules:
   - post: VTK output, visualization
 
 Reference: docs/design.md
-Roadmap: docs/roadmap.md
+Roadmap: phases/p1/docs/roadmap.md
 """
 
 __version__ = "0.0.1"

@@ -2,7 +2,7 @@
 P1 demo -- Laplace solver evidence (G1.1 + G1.2 closed; G1.3/G1.4 oracle
 negative results; G1.6 OPEN, shown honestly as the documented gap).
 
-What this shows, per docs/roadmap.md P1 and docs/demo_report.md:
+What this shows, per phases/p1/docs/roadmap.md P1 and phases/p1/docs/demo_report.md:
   1. V0 freestream preservation: phi = x gives machine-zero interior
      residual on every mesh type -- the assembly is consistent.
   2. G1.1 MMS convergence: L2 error is O(h^2) (slope >= 1.9) -- the

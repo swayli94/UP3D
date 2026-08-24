@@ -10,7 +10,7 @@ function's docstring for why the volume-based approach was rejected
 (systematic underestimate at the boundary, and an ill-conditioned failure
 mode for a naive least-squares fix).
 
-Status (see docs/roadmap.md P1 ledger and PROJECT_STRUCTURE.md "Known gaps"):
+Status (see phases/p1/docs/roadmap.md P1 ledger and PROJECT_STRUCTURE.md "Known gaps"):
 this does NOT yet meet the <2% max-error target from design.md Sec 10 (V2)
 on the medium mesh. Measured max error is ~11.6% on medium (down from ~12.0%
 with the older linear-only recovery) and only reaches ~4% even at h_min=0.02

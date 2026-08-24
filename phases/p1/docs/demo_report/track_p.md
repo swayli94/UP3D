@@ -1,6 +1,6 @@
 # Phase demo report — Track P (solver phases)
 
-> Split verbatim from `docs/demo_report.md` on 2026-07-15 (content unchanged;
+> Split verbatim from `phases/p1/docs/demo_report.md` on 2026-07-15 (content unchanged;
 > only this header was added; sections keep their original chronological order).
 > Scope, reproduce instructions and the honesty/evidence rule: see the
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).

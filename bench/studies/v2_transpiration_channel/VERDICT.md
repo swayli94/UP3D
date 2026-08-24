@@ -1,7 +1,7 @@
 # GV2.1 VERDICT — transpiration channel exactness
 
 - Date: 2026-07-22 · Branch: `kimi/track-v2-transpiration`
-- Binding text: `docs/roadmap/track_v.md` GV2.1(a)–(c) (2026-07-22 re-spec)
+- Binding text: `phases/p1/docs/roadmap/track_v.md` GV2.1(a)–(c) (2026-07-22 re-spec)
 - Pre-registration: [PRE_REGISTRATION.md](PRE_REGISTRATION.md) (committed
   before any gate execution; **no band changed during/after execution**)
 - Evidence: `results/summary.csv`, `results/gv2_1a_refinement.csv`,

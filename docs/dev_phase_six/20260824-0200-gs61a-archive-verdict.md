@@ -12,7 +12,7 @@
 `docs/inspection/` 删除**,理由是「**我们现在本来就是要进行全面梳理,以前的分析和文档都只是参考**」。
 
 ⇒ §2 里被检查单挡下的那 **4 个文件**(`roadmap.md`、`PHASE_TWO_CAPABILITY_BOUNDARY.md`、
-`DECISION-2026-08-02-precond.md`、`_TEMPLATE.md`)以及 `docs/dev_phase_five/progress.md`
+`DECISION-2026-08-02-precond.md`、`_TEMPLATE.md`)以及 `phases/p5/docs/dev_phase_five/progress.md`
 **现在也已归档**。**本文件下面的正文一字不改** —— 那次勾选的读数是真的,
 而**裁决可以覆盖一份检查单,这两件事不冲突**。
 
@@ -20,7 +20,7 @@
 所以归档的同时必须有一个**新的落点**,否则那不是归档而是丢失 ⇒
 **[承接台账](20260824-0300-carried-forward.md)** 就是那个落点。
 
-★ 本文件正文里出现的 `docs/dev_phase_two/README.md`、`docs/dev_phase_five/progress.md`
+★ 本文件正文里出现的 `phases/p2/docs/dev_phase_two/README.md`、`phases/p5/docs/dev_phase_five/progress.md`
 等路径,按 CLAUDE.md 文档地图的既有口径读作**历史名**:
 它们现在分别在 `phases/p2/docs/dev_phase_two/` 与 `phases/p5/docs/dev_phase_five/`。
 
@@ -28,7 +28,7 @@
 
 ## 0. 一句话
 
-按 `docs/dev_phase_two/README.md` **自己那份 2026-08-10 写下的逐文件检查单**勾选，
+按 `phases/p2/docs/dev_phase_two/README.md` **自己那份 2026-08-10 写下的逐文件检查单**勾选，
 **phase-2 六件套里只有 2 个能移，4 个被条件挡住** —— 而**两条阻塞是关于当前库的可测事实**。
 **测试代码一个文件都没有移动**，理由可测（§3）。
 ★★★ 而本轮最贵的发现是**搬迁自己造成的**：**239 条相对 markdown 断链**，
@@ -51,7 +51,7 @@
 
 ## 2. ★★★ 六件套：**对着条件勾**，而检查单起作用了
 
-`docs/dev_phase_two/README.md` 2026-08-10 就写了「**将来那次移动对着条件勾，不要临时判断**」。
+`phases/p2/docs/dev_phase_two/README.md` 2026-08-10 就写了「**将来那次移动对着条件勾，不要临时判断**」。
 勾选结果：
 
 | 文件 | 勾选 | 依据（**两条是实测，不是判断**） |
@@ -66,7 +66,7 @@
 ★★ **值得单记**：若按"phase 2 已结束"这个**日期**理由一次性搬走，就会把**当前库默认值的决策记录**
 和**唯一的能力声明**归档掉。**那份检查单正是为了拦住这件事才存在的，它拦住了。**
 
-★ `docs/dev_phase_five/progress.md` 按**同一条理由**留下 —— phase 6 立项把它的 §A/§B 列为前置阅读。
+★ `phases/p5/docs/dev_phase_five/progress.md` 按**同一条理由**留下 —— phase 6 立项把它的 §A/§B 列为前置阅读。
 可移条件已登记：**phase 6 的结论不再依赖那两张表时**。
 
 ## 3. ★★ 测试代码：**一个文件都没有移动**，而这是测量结论
@@ -111,10 +111,10 @@
 
 ### 5.2 ★★★ 断裂类 4：**根相对路径字面量**（"已修三类"里没有它）
 
-活脚本里的**绑定文本行** —— `Binding gate text: docs/roadmap/track_v.md GV1.1(a)-(e)` ——
-是 `bench/studies/` 的研究**指向管它的门**的审计链。2026-08-10 把 `docs/roadmap/` 移进了 `p1/`，
+活脚本里的**绑定文本行** —— `Binding gate text: phases/p1/docs/roadmap/track_v.md GV1.1(a)-(e)` ——
+是 `bench/studies/` 的研究**指向管它的门**的审计链。2026-08-10 把 `phases/p1/docs/roadmap/` 移进了 `p1/`，
 **这些绑定行一条都没重指**。实测**预存在** **227** 条死的 `docs/**` 文件字面量
-（`docs/roadmap/track_v.md` 57、`docs/roadmap.md` 50 领头）+ **139** 处指向已不存在的 `docs/` 目录。
+（`phases/p1/docs/roadmap/track_v.md` 57、`phases/p1/docs/roadmap.md` 50 领头）+ **139** 处指向已不存在的 `docs/` 目录。
 ★ 本轮的前缀限定改写**顺带修掉 65 条**（都落在我搬迁的那些目录里）；
 **其余是 phase-1 旧账，本轮不修** —— 把一次目录搬迁和一次两百多处的链接修复混在一个提交里，
 **两件事都变得无法验证**。⇒ 登记为 **GS6.1 正式对象**，而它现在**有仪器了**。
@@ -123,7 +123,7 @@
 
 `[x](../inspection/y.md)` 相对**被引用文件自己的目录**解析，
 所以根相对的正则**在原理上看不见它**。实测：搬迁**造成 239 条断链**（基线 9 → 248）。
-最大一块是 **`docs/dev_phase_five/progress.md` 留在原位而它的 60 个轮次文件搬走了**，
+最大一块是 **`phases/p5/docs/dev_phase_five/progress.md` 留在原位而它的 60 个轮次文件搬走了**，
 11 条兄弟链接当场断掉 —— **"留一个、搬其余"这个决定本身有链接代价，而它不在任何检查单上。**
 
 修法：按**唯一 basename** 重指并重算相对路径（唯一命中才改，0 或 >1 报告不动）⇒
@@ -140,13 +140,13 @@
 | C 相对链接 | 9 | 8 | ★ **0** | **5** |
 
 两条初看"新增"的，核后都是**同一条发现换了路径**（键是 `(文件, 路径)`，改名读起来像新增）：
-`20260816-2200-independent-audit-zh.md → docs/roadmap.md` 在旧路径里就有 2 次；
+`20260816-2200-independent-audit-zh.md → phases/p1/docs/roadmap.md` 在旧路径里就有 2 次；
 `progress.md → ](TE)` 是 `[φ](TE) = Γ` 这个**唯一被明确允许的数学记号例外**。
 ⇒ **净新增断裂 = 0，另修掉 70 条旧账。**
 
 ## 6. ★★ 而第一版仪器是错的，且是被**抽样检查**抓住的
 
-它把 `[docs/roadmap.md](phases/p1/docs/roadmap.md)` 这种 **markdown 显示文本**算成路径引用
+它把 `[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)` 这种 **markdown 显示文本**算成路径引用
 （CLAUDE.md 的文档地图**明写**那个名字是历史的），于是报出 **277 条"断裂"**。
 我准备把这个数写进结论**之前**去抽样看了几条，才发现它量的不是我以为的东西。
 

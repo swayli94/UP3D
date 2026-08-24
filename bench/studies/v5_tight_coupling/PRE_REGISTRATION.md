@@ -1,6 +1,6 @@
 # GV5.1 PRE-REGISTRATION — augmented Newton: exactness + convergence
 
-Binding text: `docs/roadmap/track_v.md` **GV5.1** (with the 2026-07-22
+Binding text: `phases/p1/docs/roadmap/track_v.md` **GV5.1** (with the 2026-07-22
 user-directed pre-registered FD note): both coupling blocks FD-verified
 (project Jacobian discipline; the B19/B31 FD-gate pattern) + quadratic tail
 on the GV3.1 case; outer iterations ≤ half the V3 loose loop. Committed

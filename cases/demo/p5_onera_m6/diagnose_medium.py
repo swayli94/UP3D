@@ -1,6 +1,6 @@
 """Where and WHY were the M>2 cells in the pre-fix P5 medium solution?
 (evidence behind the 2026-07-08 second re-diagnosis that closed the medium
-gate — docs/roadmap.md P5, INVESTIGATION_kutta_closure.md. On a post-fix
+gate — phases/p1/docs/roadmap.md P5, INVESTIGATION_kutta_closure.md. On a post-fix
 cache the hot-cell audits report clean; the probe-sharing audit still shows
 the recorded known-robustness item.)
 

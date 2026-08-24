@@ -1,4 +1,4 @@
-"""Track V V3 loose coupling (binding: docs/roadmap/track_v.md "V3 -- Loose
+"""Track V V3 loose coupling (binding: phases/p1/docs/roadmap/track_v.md "V3 -- Loose
 coupling (2.5-D ladder + fuselage smoke)"; design: docs/design_track_v.md;
 module under test: pyfp3d/viscous/coupling.py).
 

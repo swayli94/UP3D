@@ -9,7 +9,7 @@ Sec 8 (subsonic: nu == 0, rho_tilde == rho) -- `solve_subsonic`
 inner P2 secant Kutta at frozen rho; see its docstring for why nesting
 replaced the interleaved form).
 
-Reference: docs/roadmap.md P1-P3; design.md Sec 8 (Nonlinear solution
+Reference: phases/p1/docs/roadmap.md P1-P3; design.md Sec 8 (Nonlinear solution
 strategy).
 """
 

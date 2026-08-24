@@ -2,7 +2,7 @@
 
 Committed BEFORE the first code change (Track V discipline; user-sequenced
 2026-07-24: GV5.1d → GV5.5 → GV5.2–5.4; GV5.3 merged 2026-07-25 PR #18).
-Binding text: `docs/roadmap/track_v.md` **GV5.4** —
+Binding text: `phases/p1/docs/roadmap/track_v.md` **GV5.4** —
 
 > augmented step wall-time ≤ ~2× the inviscid Newton step on M6 medium
 > with the block preconditioner working; measured number recorded either

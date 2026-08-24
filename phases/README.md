@@ -149,14 +149,14 @@ gitignore 意味着**新 clone 里没有这些文件** —— 而那会让 phase
 **这一轮实测出第四类**:活脚本里的**绑定文本行** ——
 
 ```
-Binding gate text: docs/roadmap/track_v.md GV1.1(a)-(e)
+Binding gate text: phases/p1/docs/roadmap/track_v.md GV1.1(a)-(e)
 ```
 
 这是 `bench/studies/` 的研究**指向管它的门**的审计链。2026-08-10 整理把
-`docs/roadmap/` 移进了 `p1/`,**而这些绑定行一条都没有重指**:实测**仍有 139 处**
-指向已不存在的 `docs/` 目录(`docs/roadmap/` 94、`docs/discussion_notes/` 17、
-`docs/analysis/` 14、`docs/demo_report/` 11、`docs/archive/` 3),
-另有 **184 处**死的 `docs/**/*.md` 文件字面量(`docs/roadmap/track_v.md` 57、`docs/roadmap.md` 50 领头)。
+`phases/p1/docs/roadmap/` 移进了 `p1/`,**而这些绑定行一条都没有重指**:实测**仍有 139 处**
+指向已不存在的 `docs/` 目录(`phases/p1/docs/roadmap/` 94、`docs/discussion_notes/` 17、
+`phases/p1/docs/analysis/` 14、`phases/p1/docs/demo_report/` 11、`phases/p1/docs/archive/` 3),
+另有 **184 处**死的 `docs/**/*.md` 文件字面量(`phases/p1/docs/roadmap/track_v.md` 57、`phases/p1/docs/roadmap.md` 50 领头)。
 
 ★★★ **本轮不修它们**,理由写下来:把一次目录搬迁和一次 184+139 处的链接修复混在一个提交里,
 **两件事都变得无法验证**。⇒ 登记为 **phase 6 GS6.1 的对象**,并且它现在**有仪器了**(下节)。
@@ -180,7 +180,7 @@ Binding gate text: docs/roadmap/track_v.md GV1.1(a)-(e)
 一个报 0 的仪器在这里是坏的而不是好的;④ 改写;⑤ 复验回到基线。
 
 ★★ 而**第一版仪器是错的,且是被抽样检查抓住的**:它把
-`[docs/roadmap.md](phases/p1/docs/roadmap.md)` 这种**markdown 显示文本**算成了路径引用
+`[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)` 这种**markdown 显示文本**算成了路径引用
 (CLAUDE.md 的文档地图明写那个名字是历史的),于是报出 277 条"断裂"。
 **这与本文件上一节记的"第一版闭包太松(把注释里的提及也算了)"是同一个错误的第二次出现。**
 ⇒ 口径:**报一个数之前,先抽样看那个数里的东西是不是你以为的东西。**

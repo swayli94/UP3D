@@ -1,6 +1,6 @@
 """
 M0 gate checks for the single-layer extruded NACA0012 quasi-2D mesh family
-(cases/meshes/naca0012_2.5d, generate_naca0012.py; docs/roadmap.md Track M).
+(cases/meshes/naca0012_2.5d, generate_naca0012.py; phases/p1/docs/roadmap.md Track M).
 
 Mesh-side M0 gate items covered here:
   - solver preprocessor (mesh/reader.py) ingests the family; tags complete

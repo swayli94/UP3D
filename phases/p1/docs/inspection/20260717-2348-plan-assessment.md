@@ -2,7 +2,7 @@
 
 - **Date**: 2026-07-17 23:48 CST
 - **Auditor**: Kimi Code CLI (independent of the main authoring agent)
-- **Basis**: `docs/roadmap.md` + `docs/roadmap/track_*.md` (status authority),
+- **Basis**: `phases/p1/docs/roadmap.md` + `phases/p1/docs/roadmap/track_*.md` (status authority),
   `docs/agent-rules.md`, `docs/overview.md`, `docs/design.md` (validation
   ladder §10, risks §12), `PROJECT_STRUCTURE.md`, plus the two companion
   inspection reports of the same date (docs consistency, code review). This

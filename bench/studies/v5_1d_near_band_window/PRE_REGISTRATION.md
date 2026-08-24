@@ -1,7 +1,7 @@
 # PRE-REGISTRATION — GV5.1d: the near-band seed — does a quadratic basin exist ADJACENT to the floor?
 
 Committed BEFORE the first execution, per discipline. Gate:
-`docs/roadmap/track_v.md` V5 follow-up **GV5.1d** (2026-07-24,
+`phases/p1/docs/roadmap/track_v.md` V5 follow-up **GV5.1d** (2026-07-24,
 user-directed: "开启 GV5.1d 近带种子"). Design inputs: the committed
 GV5.1c VERDICT (`../v5_1c_above_band_window/VERDICT.md` — the
 above-band window read: NO quadratic regime anywhere above the floor;

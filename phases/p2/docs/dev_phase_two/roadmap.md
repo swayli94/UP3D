@@ -5,7 +5,7 @@
 （全面重新审计，含 6 组实测实验）
 
 **这个文件是第二阶段唯一的权威计划。** 第一阶段的
-`docs/roadmap.md` + `docs/roadmap/track_*.md` **就地冻结为历史档案**，
+`phases/p1/docs/roadmap.md` + `phases/p1/docs/roadmap/track_*.md` **就地冻结为历史档案**，
 不再更新、不再作为计划依据；里面的技术事实（尤其是负面结论）仍可引用，
 但引用时必须注明是第一阶段记录。
 
@@ -466,7 +466,7 @@ M3（M6 Cp RMS < 0.05）仍无法达到，且原因归到网格规整度 / 每�
 
 ## 8. 与第一阶段的关系
 
-* **冻结**：`docs/roadmap.md`、`docs/roadmap/track_*.md`、`docs/agent-rules.md` 的
+* **冻结**：`phases/p1/docs/roadmap.md`、`phases/p1/docs/roadmap/track_*.md`、`docs/agent-rules.md` 的
   "Current phase" 叙事块 —— 不再更新。技术事实可引用，注明"第一阶段记录"。
 * **保留并继续用**：`cases/reference_data/`（出处齐全）、网格生成流水线、
   尾迹切割 + P14 压强相等 Kutta、精确雅可比的 FD 验证纪律、计时仪表、证据文化。

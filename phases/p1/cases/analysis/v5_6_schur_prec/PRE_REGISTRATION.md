@@ -5,7 +5,7 @@ adjudicated 2026-07-25 (user)**: this gate opens the GV5.4 registered
 follow-up *"the design-doc's (A,Ψ)-structured BL treatment + a Schur-aware
 reduced-space preconditioner (the correction J_hB·J_BB⁻¹·J_Bh is what plain
 AMG-φ misses; the stagnation at 1e-7..1e-5 is its signature)"*
-(`bench/studies/v5_4_cost/VERDICT.md` "Follow-ups"; `docs/roadmap/track_v.md`
+(`bench/studies/v5_4_cost/VERDICT.md` "Follow-ups"; `phases/p1/docs/roadmap/track_v.md`
 GV5.4 reading). The sibling registered follow-ups (the EW-forcing variant,
 the pressure-Kutta row wiring, stale-preconditioner productization) stay
 registered-not-opened (§7).

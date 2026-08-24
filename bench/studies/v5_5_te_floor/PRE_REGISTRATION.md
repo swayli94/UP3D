@@ -3,7 +3,7 @@
 Committed BEFORE the first code change, per discipline (the GV5.5
 registration's own clause: "success criterion sketch — to be
 pre-registered BEFORE code per discipline when the item opens").
-Gate: `docs/roadmap/track_v.md` V5 **GV5.5** (registered 2026-07-24,
+Gate: `phases/p1/docs/roadmap/track_v.md` V5 **GV5.5** (registered 2026-07-24,
 user-directed; opened 2026-07-24, user-directed). Design inputs: the
 committed IBL-floor diagnosis (`../v5_ibl_floor/results/findings.md` =
 `docs/design_track_v.md` §13 item 3 — the floor lives in the TE-band

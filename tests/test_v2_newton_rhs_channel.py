@@ -1,5 +1,5 @@
 """Track V V2 RHS channels in the two Newton drivers (binding:
-docs/roadmap/track_v.md "V2 -- Transpiration channel through all three
+phases/p1/docs/roadmap/track_v.md "V2 -- Transpiration channel through all three
 drivers", gates GV2.1(b)/(c)).
 
 Covers, on the NACA0012 coarse 2.5D case (M0.5, alpha 2; subcritical, so

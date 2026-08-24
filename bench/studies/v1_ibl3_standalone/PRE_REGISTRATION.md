@@ -1,6 +1,6 @@
 # GV1.1 Pre-registration (written before any gate execution)
 
-Binding gate text: `docs/roadmap/track_v.md` GV1.1(a)–(e) (2026-07-22 re-spec).
+Binding gate text: `phases/p1/docs/roadmap/track_v.md` GV1.1(a)–(e) (2026-07-22 re-spec).
 User directive 2026-07-22: **no gate re-spec** — bands below are the
 execution-level operationalization the gate text itself requires ("band
 pre-registered"), not a redefinition of the gate.

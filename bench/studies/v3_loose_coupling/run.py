@@ -1,6 +1,6 @@
 """GV3.1/GV3.2 loose FP+IBL coupling gates (Track V3).
 
-Binding text: docs/roadmap/track_v.md GV3.1/GV3.2 (2026-07-22 re-spec);
+Binding text: phases/p1/docs/roadmap/track_v.md GV3.1/GV3.2 (2026-07-22 re-spec);
 pre-registered bands: bench/studies/v3_loose_coupling/PRE_REGISTRATION.md
 (committed before the first execution). Regenerates every CSV/PNG in
 results/ and exits 0 iff all pre-registered assertions hold (honest FAIL

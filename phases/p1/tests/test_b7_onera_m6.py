@@ -1,6 +1,6 @@
 """
 Track B / B7 gate: the ONERA M6 3D gate for the level-set solver
-(docs/roadmap.md Track B B7; docs/design_track_b.md).
+(phases/p1/docs/roadmap.md Track B B7; phases/p1/docs/design_track_b.md).
 
 B7 is the first Track B phase that exercises the genuinely 3D machinery. B1-B6
 ran on quasi-2D meshes, where the wake sheet is a flat strip with no tip and no

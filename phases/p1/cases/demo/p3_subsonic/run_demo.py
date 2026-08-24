@@ -1,7 +1,7 @@
 """
 P3 demo -- subsonic compressible evidence (gates G3.1-G3.3, all closed).
 
-What this shows, per docs/roadmap.md P3 and docs/demo_report.md:
+What this shows, per phases/p1/docs/roadmap.md P3 and phases/p1/docs/demo_report.md:
   1. Assembly tech-debt retirement: the colored-prange fast path
      (precomputed B_e/V_e, elem_to_csr scatter, mesh/coloring.py wired in)
      reproduces the P1 reference kernels to machine precision, is

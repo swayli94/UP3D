@@ -1,6 +1,6 @@
 # GV6.0 — Design adjudication: the V6 wake-sheet IBL correction (BEFORE code, user-adjudicated)
 
-Registered in `docs/roadmap/track_v.md` (the V6 section): *"GV6.0 design
+Registered in `phases/p1/docs/roadmap/track_v.md` (the V6 section): *"GV6.0 design
 adjudication (BEFORE code, user-adjudicated): the LS-path sheet-source
 mechanism. `pyfp3d/wake/` has no sheet-surface integration machinery — the
 options are zero-isosurface polygon integration (new geometry code) or a

@@ -1,6 +1,6 @@
 # GV3.1 / GV3.2 Pre-registration (written before any gate execution)
 
-Binding gate text: `docs/roadmap/track_v.md` GV3.1/GV3.2 (2026-07-22
+Binding gate text: `phases/p1/docs/roadmap/track_v.md` GV3.1/GV3.2 (2026-07-22
 re-spec, V3 — Loose coupling). User directive 2026-07-22 (Track V
 opening): **no gate re-spec** — the bands below are the execution-level
 operationalization the gate text itself requires, not a redefinition.

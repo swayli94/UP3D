@@ -65,7 +65,7 @@
 
 **A3 响应文档的一处夸大**：response 称 finding 2（M2 权威矛盾）"resolved in
 track_m's title, checkbox **and ledger**"——title/checkbox 确已修，但
-**ledger 行 `docs/roadmap/track_m.md:247` 仍 `| M2 | ◐ |`**，`docs/roadmap.md:13`
+**ledger 行 `phases/p1/docs/roadmap/track_m.md:247` 仍 `| M2 | ◐ |`**，`phases/p1/docs/roadmap.md:13`
 与 `docs/overview.md:131` 也仍写 "M2 ◐"。权威级矛盾以缩小的形式残留至今。
 
 ### 1.2 B19/B20 修复正确性（本轮重点复核，公式级）
@@ -230,7 +230,7 @@ knob 与 `:30` "knob is REMOVED" 同文件矛盾。
 **D10 [pre-existing] 三处更老的 doc 债**：`design.md` §12 risk 1 仍写"TE nodes
 not duplicated"（P2 早已重定规格为 duplicated，单值 TE 是"定量错误"）；P13
 动机段仍说 tip 修复"交给 Track B / B10 rescope"（G13.2 已记 superseded，B10
-条目无回指）；`docs/analysis/capability_review_2026-07-15.md` 无 superseded
+条目无回指）；`phases/p1/docs/analysis/capability_review_2026-07-15.md` 无 superseded
 banner（其 LS medium M0.84"已演示"恰是 GB20.7 现状 FAIL 的案例）。
 
 **D11 [trivial]** 时序漂移：GB15.3 文档 41.9/7.5/5.6×/6.5 vs 现 CSV

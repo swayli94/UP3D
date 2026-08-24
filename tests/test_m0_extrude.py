@@ -2,7 +2,7 @@
 M0 unit tests: single-layer extrusion + globally consistent prism -> 3-tet
 split (pyfp3d/meshgen/extrude.py). Pure numpy, no Gmsh dependency.
 
-Covers the M0 spec items (docs/roadmap.md Track M):
+Covers the M0 spec items (phases/p1/docs/roadmap.md Track M):
   - exactly one cell layer between two parallel planes, both tagged "symmetry"
   - 3 tets per prism, all positive volume, exact total volume
   - min-global-index diagonal rule -> every interior quad face split

@@ -1,6 +1,6 @@
 # Phase demo report — Track B (level-set embedded wake)
 
-> Split verbatim from `docs/demo_report.md` on 2026-07-15 (content unchanged;
+> Split verbatim from `phases/p1/docs/demo_report.md` on 2026-07-15 (content unchanged;
 > only this header was added; sections keep their original chronological order).
 > Scope, reproduce instructions and the honesty/evidence rule: see the
 > [demo_report.md](../demo_report.md) index. Roadmap gates: [roadmap/](../roadmap/).
@@ -1970,7 +1970,7 @@ items. No `pyfp3d/` change.
 - **GB22.4 — process**: CLAUDE.md workflow step 5 gained the re-baseline
   erratum checklist (grep the moved values, correct or annotate every
   old-section quote in the same commit); agent-rules discipline #11.
-- **GB22.5 (RECORDED)** — `docs/analysis/next_phase_priorities_2026-07-19.md`
+- **GB22.5 (RECORDED)** — `phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md`
   recommends **P11 first** (G1.6 now owns three refinement-worsening wounds
   and the wing-body line has no numerical suspects left), LS fine second,
   Track V after P11 (V1 ladder parallelizable), plus a cheap M_max
@@ -2105,4 +2105,4 @@ clip + flat sheet, re-solved: medium ceiling 0.7625 → **0.775**, cross-model
 gaps **2.6→0.5 / 2.4→1.1 / 2.5→1.1 %** (M0.5/0.65/0.75), GB18.5 live flat
 cl_fus **0.0382** @0.7875 vs conf 0.0423 (the ×2 out-band reading retired);
 M0.5 LS anchors re-pinned 0.2115/0.2184; checks.csv 8/8 PASS. See the B29
-row in `docs/roadmap/track_b.md`.
+row in `phases/p1/docs/roadmap/track_b.md`.

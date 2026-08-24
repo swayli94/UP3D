@@ -10,7 +10,7 @@ workstation-scale (minutes for 1–3 M nodes).
 ★★ **LAYOUT — read this before following any path below.** Finished phases are archived
 into **`phases/p1/` … `phases/p5/`** (tracked, not gitignored, so the evidence stays in HEAD).
 The link targets in this map were repointed mechanically, so a line reading
-`[docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical, the file now
+`[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical, the file now
 lives in the archive.** What stays in place is what the CURRENT phase needs, and the rule is
 measurable — *if a surviving test or script reads it, it stays*. Measured state **2026-08-24**:
 
@@ -53,9 +53,9 @@ resolve through one hop.
 - [docs/overview.md](docs/overview.md) — human-readable snapshot: per-track
   status table, **document map** (which file is authoritative for what, and when
   to update it), regression-baseline lineage, long-standing open items.
-- [docs/roadmap.md](phases/p1/docs/roadmap.md) — **active tracker index**: working rules,
+- [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
-  gate checklists and progress ledgers live in **[docs/roadmap/](phases/p1/docs/roadmap)**
+  gate checklists and progress ledgers live in **[phases/p1/docs/roadmap/](phases/p1/docs/roadmap)**
   (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B32
   level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
   transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
@@ -86,19 +86,19 @@ resolve through one hop.
   variational crime), route fork = user's call** —
   `track_v.md` V1–V4 viscous, designed-not-started, `track_a.md` A1–A3
   verification & analysis; **A3 ✓ CLOSED 2026-07-18** = the response to the
-  2026-07-17 independent inspection (docs/inspection/; the 2026-07-19
+  2026-07-17 independent inspection (phases/p1/docs/inspection/; the 2026-07-19
   second-round inspection's N1/D1–D10 findings were executed by B21 + the
   errata wave). **Next phase = user's call.**)
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
-  [docs/design_track_b.md](phases/p1/docs/design_track_b.md) (it supersedes DN1).
+  [phases/p1/docs/design_track_b.md](phases/p1/docs/design_track_b.md) (it supersedes DN1).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12); §11 is a
-  pointer to roadmap.md + docs/roadmap/ since 2026-07-15.
-- [docs/demo_report.md](phases/p1/docs/demo_report.md) — **evidence dossier index** (per-
+  pointer to roadmap.md + phases/p1/docs/roadmap/ since 2026-07-15.
+- [phases/p1/docs/demo_report.md](phases/p1/docs/demo_report.md) — **evidence dossier index** (per-
   phase directory table); the evidence sections live in
-  **[docs/demo_report/](phases/p1/docs/demo_report)** (`track_p.md`, `track_m.md`,
+  **[phases/p1/docs/demo_report/](phases/p1/docs/demo_report)** (`track_p.md`, `track_m.md`,
   `track_b.md`, `track_a.md`): one self-checking demo per phase under `cases/demo/<phase>/`
   with committed figures + measured gate numbers. When a phase closes, add its
   demo section to the matching track file and a row to the index.
@@ -108,8 +108,8 @@ resolve through one hop.
   script, no CSV, no cached `.npz` — after a P11 ledger status had already been
   changed on its strength. If a run is too expensive to repeat, that is the
   reason to commit its CSV, not a reason to skip it.
-- [docs/analysis/](phases/p1/docs/analysis) — analysis/review reports (capability
-  reviews etc.), dated snapshots, non-normative. [docs/archive/](phases/p1/docs/archive)
+- [phases/p1/docs/analysis/](phases/p1/docs/analysis) — analysis/review reports (capability
+  reviews etc.), dated snapshots, non-normative. [phases/p1/docs/archive/](phases/p1/docs/archive)
   — historical archives (e.g. the pre-2026-07-15 agent-rules narrative);
   never a coding spec (rule 11). `docs/discussion_notes/` was **DELETED
   2026-07-14** (commit 0e4895a; history via
@@ -565,7 +565,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
 
 ## Workflow
 
-1. Before coding: find the open gate in the current phase's docs/roadmap/ entry
+1. Before coding: find the open gate in the current phase's phases/p1/docs/roadmap/ entry
    and plan against its acceptance criterion. Every visual gate needs a headless artifact
    (`artifacts/<gate_id>/*.png` + `summary.csv`; matplotlib `Agg`, PyVista
    off-screen — never GUI-only checks).
@@ -917,7 +917,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off the phase-two list is how it rotted again. Steps 0 and 6 and the erratum checklist
    apply to both lists.
    For a **phase-one** close-out:
-   tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
+   tick the gate in the phase's `phases/p1/docs/roadmap/track_*.md` entry, then update
    **all five** surfaces, because each has gone stale at least once by being
    "obvious enough to skip":
    1. that track file's **progress ledger** (bullet entry + track-status line;
@@ -964,5 +964,5 @@ phases V1–V4 are distinct from the validation-case IDs V0–V6). Track P was
 renumbered 2026-07-08 and 2026-07-11, Track B 2026-07-12 (×2) and 2026-07-13 —
 docs before those dates use the then-current IDs (e.g. pre-2026-07-11 "P9
 curved walls"/"P10 backlog" read as P11/P12). The one-line convention summary
-and per-phase mapping notes live in docs/roadmap.md and the affected
-docs/roadmap/ entries.
+and per-phase mapping notes live in phases/p1/docs/roadmap.md and the affected
+phases/p1/docs/roadmap/ entries.

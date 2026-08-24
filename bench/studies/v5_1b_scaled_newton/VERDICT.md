@@ -1,6 +1,6 @@
 # GV5.1b VERDICT — scaled + damped augmented Newton: machinery delivered, the window question reframed
 
-Gate: `docs/roadmap/track_v.md` V5 follow-up **GV5.1b** (2026-07-24).
+Gate: `phases/p1/docs/roadmap/track_v.md` V5 follow-up **GV5.1b** (2026-07-24).
 Pre-registration: `PRE_REGISTRATION.md` (committed 8b7793f before the
 first execution). Runner: `run.py` (regenerates every artifact in
 `results/`; seeds by the committed recipe, wiring guard PASS both

@@ -409,7 +409,7 @@ bench 脚本不在任何测试收集里，"跑在零节奏上"。而能力矩阵
 
 ### 7.4 ★ `README.md` 是烂掉的人类入口【实测，新发现】
 
-- 指向 `docs/roadmap.md`，称其为 *"active implementation roadmap, gates, and progress ledger"*
+- 指向 `phases/p1/docs/roadmap.md`，称其为 *"active implementation roadmap, gates, and progress ledger"*
   —— 该链接现在解析到 **`phases/p1/docs/roadmap.md`**，即**明文冻结的 phase-1 历史档案**。
 - **完全没有**提到 `conda env` **`up3d`**、**`PYTHONNOUSERSITE=1`**、**`scipy ≥ 1.12`**、
   也没提到仓库根目录就有的 `environment.yml`；只写 `pip install -e ".[dev]"`。

@@ -3,7 +3,7 @@
 **Committed before execution** (Track-V discipline). Date: 2026-07-25.
 Branch `kimi/track-v6-gv6-2`.
 
-**Gate text** (`docs/roadmap/track_v.md`, V6): *"**GV6.2 measured
+**Gate text** (`phases/p1/docs/roadmap/track_v.md`, V6): *"**GV6.2 measured
 effect**: wake-IBL on/off cl (and TE-region Cp) delta on the GV3.1 case,
 direction-checked against XFOIL's wake modelling; RECORDED with the A4
 input band quoted."*

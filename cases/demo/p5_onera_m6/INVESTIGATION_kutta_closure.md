@@ -9,7 +9,7 @@ prior roadmap/demo_report/agent-rules text) was **wrong** and is superseded by
 this record.
 
 This is the lab notebook for the T1–T4 tests. One-line conclusions live in
-[docs/roadmap.md](../../../phases/p1/docs/roadmap.md) P5, [docs/demo_report.md](../../../phases/p1/docs/demo_report.md)
+[phases/p1/docs/roadmap.md](../../../phases/p1/docs/roadmap.md) P5, [phases/p1/docs/demo_report.md](../../../phases/p1/docs/demo_report.md)
 P5, and [docs/agent-rules.md](../../../docs/agent-rules.md).
 
 ## The failure

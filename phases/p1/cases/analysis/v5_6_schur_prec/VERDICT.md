@@ -8,7 +8,7 @@ GV5.1b–GV5.4 executions not re-imposed; the GV5.4 8-thread numbers quoted
 as a NON-binding cross-check only). One clean execution — no addenda (the
 wiring guards passed first try at both levels).
 
-## Question (binding: docs/roadmap/track_v.md GV5.6)
+## Question (binding: phases/p1/docs/roadmap/track_v.md GV5.6)
 
 > The GV5.4 system/seed/protocol verbatim: does the Schur-aware
 > block-preconditioned GMRES linear solve WORK (the GV5.4 D5 binary), and

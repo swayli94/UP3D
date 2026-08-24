@@ -1,6 +1,6 @@
 """GV2.1 transpiration channel exactness (Track V2 gate).
 
-Binding text: docs/roadmap/track_v.md GV2.1(a)-(c) (2026-07-22 re-spec);
+Binding text: phases/p1/docs/roadmap/track_v.md GV2.1(a)-(c) (2026-07-22 re-spec);
 pre-registered bands: bench/studies/v2_transpiration_channel/
 PRE_REGISTRATION.md (committed before the first execution). Regenerates
 every CSV/PNG in results/ and exits 0 iff all pre-registered assertions

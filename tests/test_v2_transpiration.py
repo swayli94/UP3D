@@ -1,4 +1,4 @@
-"""Track V V2 transpiration channel (binding: docs/roadmap/track_v.md
+"""Track V V2 transpiration channel (binding: phases/p1/docs/roadmap/track_v.md
 "V2 -- Transpiration channel through all three drivers", gates GV2.1(a)/(b);
 design: docs/design_track_v.md; module under test:
 pyfp3d/viscous/transpiration.py).

@@ -1,7 +1,7 @@
 """
 P5 demo -- 3D validation on the ONERA M6 wing (gates G5.1, G5.2).
 
-What this shows, per docs/roadmap.md P5 and cases/reference_data/onera_m6_m084:
+What this shows, per phases/p1/docs/roadmap.md P5 and cases/reference_data/onera_m6_m084:
   1. G5.1: M_inf = 0.84, alpha = 3.06 deg transonic lifting solution on the
      swept M6 half wing. Sectional Cp(x/c) at eta = 0.44/0.65/0.90 against the
      AGARD-anchored full-potential scatter band, with the upper-surface shock

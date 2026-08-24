@@ -4,7 +4,7 @@ across the geometry x mesh matrix, as EVALUATION EVIDENCE (not a phase
 gate): what the solver delivers today, at what cost, against which
 references. Requested 2026-07-11 to ground the post-P8 planning
 discussion (P9 curved walls vs Track V viscous vs Track B level-set
-wake); the analysis section lives in docs/demo_report.md.
+wake); the analysis section lives in phases/p1/docs/demo_report.md.
 
 Case matrix (all Newton runs freshly measured here):
 
@@ -42,7 +42,7 @@ neither. Non-lifting bodies run through the Picard paths (solve_laplace /
 solve_subsonic, see cases/demo/p1_laplace + p3_subsonic part 2), which
 carry the open G1.6 flat-facet wall-Cp gap (~11.6%, root-caused, P9).
 That capability boundary is part of the assessment, recorded in
-docs/demo_report.md.
+phases/p1/docs/demo_report.md.
 
 Timing protocol (G8.2, measured 2026-07-11): cap NUMBA + BLAS + OMP at
 16 threads on the 16C/32T box or timings inflate ~33%:

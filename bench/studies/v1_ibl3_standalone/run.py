@@ -1,6 +1,6 @@
 """GV1.1 standalone IBL3 verification (Track V1 gate).
 
-Binding text: docs/roadmap/track_v.md GV1.1(a)-(e); pre-registered bands:
+Binding text: phases/p1/docs/roadmap/track_v.md GV1.1(a)-(e); pre-registered bands:
 bench/studies/v1_ibl3_standalone/PRE_REGISTRATION.md (written before the
 first execution). Regenerates every CSV/PNG in results/ and exits 0 iff all
 pre-registered assertions hold (honest FAIL otherwise).

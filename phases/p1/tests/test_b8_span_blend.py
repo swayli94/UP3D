@@ -1,7 +1,7 @@
 """
 Track B / B8 re-spec: spanwise termination blend of the wake LS rows.
 
-docs/roadmap.md Track B B8 (re-spec); run_b8_termination_diagnosis.py.
+phases/p1/docs/roadmap.md Track B B8 (re-spec); run_b8_termination_diagnosis.py.
 
 The B8 row blend (TE rows) was measured NOT to bound the LS tip edge. The
 termination diagnosis found why, and what actually diverges:

@@ -1,6 +1,6 @@
 """
 Track B / B3 gate: lifting solve with IMPLICIT Kutta on the level-set path
-(docs/roadmap.md Track B B3; docs/design_track_b.md §9).
+(phases/p1/docs/roadmap.md Track B B3; phases/p1/docs/design_track_b.md §9).
 
 No Γ secant and no master–slave Γ constraint: the TE jump is carried by the
 multivalued aux DOFs, the g₁+g₂ wake LS convects it downstream, and its VALUE

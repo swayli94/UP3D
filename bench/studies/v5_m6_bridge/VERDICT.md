@@ -1,6 +1,6 @@
 # GV5.0 VERDICT — M6 subsonic loose-coupling bridge (RECORDED)
 
-Gate: `docs/roadmap/track_v.md` **GV5.0** (2026-07-22, user-directed;
+Gate: `phases/p1/docs/roadmap/track_v.md` **GV5.0** (2026-07-22, user-directed;
 RECORDED entry check, no pass/fail). Pre-registration:
 `PRE_REGISTRATION.md` (committed f263424 before the first execution).
 Runner: `run.py` (regenerates every artifact in `results/`). Executed

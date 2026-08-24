@@ -1,6 +1,6 @@
 """GV6.2 measured wake-IBL on/off effect vs the A4 band (Track V6).
 
-Binding text: docs/roadmap/track_v.md GV6.2; pre-registered bands:
+Binding text: phases/p1/docs/roadmap/track_v.md GV6.2; pre-registered bands:
 bench/studies/v6_2_measured_effect/PRE_REGISTRATION.md (the XFOIL
 wake-reference sourcing RULED Option A 2026-07-25, user). All bands
 RECORDED (the gate text's verdict type); exits 0 unless a guard fires

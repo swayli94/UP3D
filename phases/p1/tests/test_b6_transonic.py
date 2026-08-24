@@ -1,6 +1,6 @@
 """
 Track B / B6 gate: transonic + Mach continuation on the level-set path
-(docs/roadmap.md Track B B6; docs/design_track_b.md §5.2/D10).
+(phases/p1/docs/roadmap.md Track B B6; phases/p1/docs/design_track_b.md §5.2/D10).
 
 What B6 adds over B3/B4 (subsonic lifting):
 

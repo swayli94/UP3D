@@ -82,14 +82,14 @@
 
 - `cases/demo/b18_wingbody_transonic/run_demo.py` docstring + checks 注
   = 预注册 §2.4 叙事逐字落位。
-- `docs/demo_report.md` B18 行刷新；`docs/design_track_b.md` 新 §22
+- `phases/p1/docs/demo_report.md` B18 行刷新；`phases/p1/docs/design_track_b.md` 新 §22
   （B26/B27）+ §18 erratum 指针；`docs/agent-rules.md` B26/B27 条目 +
   next-phase 优先级；`docs/overview.md` B-track 表 GB20.5 故事勘误
   （袋归因：刻面 G1.6 → 自由边奇点已愈；G1.6 退居 cl_fus 嫌疑）；
-  `docs/roadmap.md` B-track 行 B18 描述刷新。
+  `phases/p1/docs/roadmap.md` B-track 行 B18 描述刷新。
 - 遗留 inspection 债（预注册 T4 条款，本 phase 不扩 scope）：
-  `docs/demo_report/track_b.md` 的 B18 详章（~L1756 起）与 L8 头部仍讲
-  旧"交界受限"故事；`docs/agent-rules.md` / `docs/roadmap/track_b.md`
+  `phases/p1/docs/demo_report/track_b.md` 的 B18 详章（~L1756 起）与 L8 头部仍讲
+  旧"交界受限"故事；`docs/agent-rules.md` / `phases/p1/docs/roadmap/track_b.md`
   缺 B23/B24/B25 条目（本分支未 push 链的既存债）。均留待合入时统一收尾。
 
 ## 6. 后续（预注册 §6 出口）

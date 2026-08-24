@@ -13,7 +13,7 @@
 
 1. **翼身跨声速的全部关键声称经 npz/CSV 逐位核实成立**（conforming 0.84/0.79、
    LS+clip 0.84/0.7625、跨模型 2.4–2.6%、`inboard_clip` 默认逐位不变）。未发现数值正确性问题。
-2. **主要问题是文档债**：B23–B27 的"五面收尾"缺四面——权威源 `docs/roadmap/track_b.md`
+2. **主要问题是文档债**：B23–B27 的"五面收尾"缺四面——权威源 `phases/p1/docs/roadmap/track_b.md`
    完全没有 B23–B27 条目/台账行，且其 B18 条目仍陈述已退役叙事（无勘误指针），与已更新的
    索引面（roadmap.md / overview.md / agent-rules.md / design_track_b.md §22 /
    demo_report.md）**直接矛盾**。这是 B22 刚立的纪律 #10/#11 的同类失守；
@@ -31,8 +31,8 @@
 
 | 面 | 状态 | 问题 |
 |---|---|---|
-| `docs/roadmap/track_b.md`（**唯一权威**） | ✗ | 全文无 B23–B27 条目与台账行；B18 条目（`:1230`）仍写"LS junction-limited / G1.6 刻面 / closed-negative"，无 B26/B27 勘误指针——与 `roadmap.md:14`、`overview.md:190`、`agent-rules.md:549`、`design_track_b.md:1563`（§22）、`demo_report.md:69` 冲突 |
-| `docs/demo_report/track_b.md` | ✗ | 头部（`:8`）停在 B21（连 B22 都没进头部）；B18 详章（`:1756-1819`）仍是旧叙事无加注；无 B26/B27 节 |
+| `phases/p1/docs/roadmap/track_b.md`（**唯一权威**） | ✗ | 全文无 B23–B27 条目与台账行；B18 条目（`:1230`）仍写"LS junction-limited / G1.6 刻面 / closed-negative"，无 B26/B27 勘误指针——与 `roadmap.md:14`、`overview.md:190`、`agent-rules.md:549`、`design_track_b.md:1563`（§22）、`demo_report.md:69` 冲突 |
+| `phases/p1/docs/demo_report/track_b.md` | ✗ | 头部（`:8`）停在 B21（连 B22 都没进头部）；B18 详章（`:1756-1819`）仍是旧叙事无加注；无 B26/B27 节 |
 | `PROJECT_STRUCTURE.md` | ✗ | footer 写"Track B — B1–B9, B11–B22 ✓"；目录树无 b23–b27 分析目录 |
 | `cases/analysis/README.md` | ✗ | 有 b23/b24/b25 行，缺 b26/b27 行 |
 | `cases/demo/README.md` | ✗ | b18 行仍写 "1 PASS + 6 RECORDED"；B27 刷新后 = 8 gates 8/8 PASS |
@@ -41,7 +41,7 @@
 
 ### 1.2 陈旧数字 / 失效路由
 
-- **`docs/roadmap/track_v.md:62-67,84-85` scope guard**："M6 CL 0.245 vs FP-reference 0.288，
+- **`phases/p1/docs/roadmap/track_v.md:62-67,84-85` scope guard**："M6 CL 0.245 vs FP-reference 0.288，
   归因于 sharp-TE/LE P1 壁面梯度地板 → P11，P9 先判别"——三处全过时：① 0.245 已被 P14
   （medium 0.2823）与 P13 tapered fine（0.2866 = 参考的 99.5%）超越；② P11 曲面壁元
   2026-07-19 实测**阴性**关闭；③ P14/G14.7 测得 0.019 gap 的 69% 是 Kutta 估计器偏差。
@@ -210,23 +210,23 @@ streamline.py 等已过时），**绑定设计 = IBL3 表面 FE**——开工时
 
 §1.1 各面全部落地，逐面结果：
 
-- `docs/roadmap/track_b.md`：标题 B1–B21 → **B1–B27**；L8 状态行追加 B23–B27 一句话条目；
+- `phases/p1/docs/roadmap/track_b.md`：标题 B1–B21 → **B1–B27**；L8 状态行追加 B23–B27 一句话条目；
   B18 条目加 ★★★ 勘误块（"junction-limited" 退役）+ Consequence 段 B27 跨模型注记
   （M0.65 2.4% PASS / M0.75 2.5%，M0.5-only 退役；coarse 0.60 旧 0.2% 行退役 → C 侧 0.2133/2.1%）
   + GB18.2/18.3/18.4 superseded 标注；新增 B23–B27 五个 phase 条目（Progress ledger 之前）；
   台账状态行/"as of" 行/台账表格（B23–B27 五行，最新在前）同步。
-- `docs/demo_report/track_b.md`：B18 详章顶部 erratum 指针块 + 章内 "1 PASS + 6 RECORDED"
+- `phases/p1/docs/demo_report/track_b.md`：B18 详章顶部 erratum 指针块 + 章内 "1 PASS + 6 RECORDED"
   标注 superseded；文末新增 B23/B24/B25/B26/B27 五个紧凑节。
-- `docs/demo_report.md`：索引表新增 B23–B27 五行（B18 行此前已是 B27 刷新版）。
+- `phases/p1/docs/demo_report.md`：索引表新增 B23–B27 五行（B18 行此前已是 B27 刷新版）。
 - `docs/agent-rules.md`：Track-B 状态行补 B23/B24/B25 条目（B26/B27 已在）；B18 专条加
   ★★★ erratum 指针 + gates 计数标注；基线行更新（见下）。
 - `docs/overview.md`：B-track 状态列 B11–B22 → B11–B27；行内补 B23/B24/B25 一句话；
   "现基线"行与演进链更新（见下）。
-- `docs/roadmap.md`：Track-B 行状态列 B11–B21 → B11–B27，补 B23/B24/B25 一句话。
+- `phases/p1/docs/roadmap.md`：Track-B 行状态列 B11–B21 → B11–B27，补 B23/B24/B25 一句话。
 - `CLAUDE.md`：doc-map track_b B1–B21 → B1–B27 + B23–B27 收尾注；workflow 第 3 条基线更新。
 - `PROJECT_STRUCTURE.md`：目录树 cases/analysis 段加 b23–b27 五行；`meshgen/fuselage.py`
   注释加 `make_inboard_clip`；`wake/cut_elements.py` 注释加 `inboard_clip`；footer 基线行更新。
-- `docs/roadmap/track_v.md`：scope guard 2026-07-20 erratum 块（0.245 陈旧 → 0.2823/0.2866；
+- `phases/p1/docs/roadmap/track_v.md`：scope guard 2026-07-20 erratum 块（0.245 陈旧 → 0.2823/0.2866；
   P11 阴性；DN6 §8.3 residual.py 占位无代码对应）——本轮复核已在位。
 - 基线重测（全套件，16 线程）：**479 passed + 25 skipped + 2 xfailed，1100.63 s**
   ——与 473+25+2（P11）对账 +6 passed = `TestInboardFragmentClip`（4）+ b1 foot-preference 锁（1）

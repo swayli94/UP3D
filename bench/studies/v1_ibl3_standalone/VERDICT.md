@@ -1,7 +1,7 @@
 # GV1.1 VERDICT — standalone IBL3 verification
 
 Date: 2026-07-22 · Branch: `kimi/track-v1-ibl3-core` · Binding text:
-`docs/roadmap/track_v.md` GV1.1(a)–(e) (2026-07-22 re-spec) ·
+`phases/p1/docs/roadmap/track_v.md` GV1.1(a)–(e) (2026-07-22 re-spec) ·
 Pre-registration: [PRE_REGISTRATION.md](PRE_REGISTRATION.md) (committed
 before the first execution; user directive: **no gate re-spec**) ·
 Evidence: `results/*.csv`, `results/gv1_1_panels.png`, `results/summary.csv`

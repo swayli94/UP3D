@@ -2,7 +2,7 @@
 Track B / B31 candidate C1 (GB31.3): outboard faded fringe of the LS
 wake-sheet termination.
 
-docs/roadmap.md Track B B31; cases/analysis/b31_tip_termination/
+phases/p1/docs/roadmap.md Track B B31; cases/analysis/b31_tip_termination/
 PRE_REGISTRATION.md section 3 (GB31.3).
 
 The embedded sheet ends at the spanwise clip as a HEAVISIDE (F1): the last

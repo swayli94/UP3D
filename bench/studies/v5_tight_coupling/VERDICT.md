@@ -1,6 +1,6 @@
 # GV5.1 VERDICT — augmented (φ, Γ, U) Newton: exactness PASS, quadratic tail FAIL (IBL floor)
 
-Gate: `docs/roadmap/track_v.md` **GV5.1** (2026-07-23). Pre-registration:
+Gate: `phases/p1/docs/roadmap/track_v.md` **GV5.1** (2026-07-23). Pre-registration:
 `PRE_REGISTRATION.md` (committed c56046d before the first execution;
 addendum 98f9d81 pre-execution; addendum 2, 606b149, user-adjudicated
 seed amendment, committed before the amended execution). Runner:

@@ -1,4 +1,4 @@
-"""Track V V6 wake-sheet delta* source (binding: docs/roadmap/track_v.md
+"""Track V V6 wake-sheet delta* source (binding: phases/p1/docs/roadmap/track_v.md
 GV6.1; pre-registration bench/studies/v6_1_wake_sheet/PRE_REGISTRATION.md
 including the 2026-07-25 addendum; module under test:
 pyfp3d/viscous/wake_sheet.py).

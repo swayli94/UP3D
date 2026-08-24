@@ -1,6 +1,6 @@
 """GV5.0 M6 subsonic loose-coupling bridge (Track V5 entry check).
 
-Binding text: docs/roadmap/track_v.md GV5.0 (2026-07-22, user-directed);
+Binding text: phases/p1/docs/roadmap/track_v.md GV5.0 (2026-07-22, user-directed);
 pre-registered: bench/studies/v5_m6_bridge/PRE_REGISTRATION.md (committed
 before the first execution). ALL metrics RECORDED (no pass/fail; no
 delta*(z) truth data exists for the M6). Regenerates every CSV/PNG in

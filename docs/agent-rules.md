@@ -636,7 +636,7 @@ below a B20-sized move) — the alarm that did not exist when the suite stayed
 green through two re-baselines in two days. ★ **GB22.4** the re-baseline
 erratum checklist is now process (CLAUDE.md workflow step 5 ★ clause +
 discipline #11). ★ **GB22.5 RECORDED** — next-phase priority analysis
-(`docs/analysis/next_phase_priorities_2026-07-19.md`): **P11 first** (G1.6
+(`phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md`): **P11 first** (G1.6
 owns three refinement-worsening wounds; the wing-body line has no numerical
 suspects left after B20/B21), LS fine second (B14-ready, but no blocked
 question needs it), Track V after P11 (V1 2.5-D ladder parallelizable), plus
@@ -1040,7 +1040,7 @@ exposed-span cl_KJ, same-extractor discipline); GB9.4 fuselage-no-lift ≤ 5%
 of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
 (RECORDED, no pass/fail).
 
-## Track status (one line each; authority = docs/roadmap/*.md ledgers)
+## Track status (one line each; authority = phases/p1/docs/roadmap/*.md ledgers)
 
 - **Track P** ([track_p.md](../phases/p1/docs/roadmap/track_p.md)): P0–P9 ✓ (P1: G1.6 strict
   xfail, root cause RE-ATTRIBUTED by P11) · P10 ◐ (G10.1 open) · **P11 ✓

@@ -1,6 +1,6 @@
 """
 M5 gate checks for the ROUNDED-TIP ONERA M6 family (cases/meshes/
-onera_m6_roundtip, generate_onera_m6_roundtip.py; docs/roadmap.md Track M M5).
+onera_m6_roundtip, generate_onera_m6_roundtip.py; phases/p1/docs/roadmap.md Track M M5).
 
 WHAT M5 IS FOR. P13/G13.3 localized the last thing blocking 3D grid convergence
 to the FLAT tip cap of the M1 family: a flat cap meets the upper/lower surfaces

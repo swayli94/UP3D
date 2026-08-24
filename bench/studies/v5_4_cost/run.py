@@ -1,6 +1,6 @@
 """GV5.4 augmented-step cost on M6 medium with the block preconditioner.
 
-Binding text: docs/roadmap/track_v.md GV5.4 ("augmented step wall-time
+Binding text: phases/p1/docs/roadmap/track_v.md GV5.4 ("augmented step wall-time
 <= ~2x the inviscid Newton step on M6 medium with the block
 preconditioner working; measured number recorded either way");
 pre-registered: bench/studies/v5_4_cost/PRE_REGISTRATION.md (committed

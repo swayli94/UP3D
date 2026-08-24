@@ -156,12 +156,12 @@ m1_max 1.97),却几乎不改那 5 站的 Cp。合理推断(**未测**):那个强
 * `cases/demo/p8_newton/run_demo.py` `M6_LOCK`;
 * `cases/demo/p8_capability/run_demo.py` `M6_LOCK`(**`cl_p_coarse` 未重测,留值并标注**);
 * `cases/demo/p10_newton_usability/run_ab_g102.py` locks + 文件头注释;
-* `docs/roadmap/track_p.md` G8.2 门禁文本(粗体新值 + 被取代值 + 移除 xfail 的理由)。
+* `phases/p1/docs/roadmap/track_p.md` G8.2 门禁文本(粗体新值 + 被取代值 + 移除 xfail 的理由)。
 
 **标注不改(历史记录 / 未重测)**
 * `cases/demo/b7_onera_m6/run_demo.py` 的 `P8` 参考行(跨族比较,coarse cl 未重测)—— 加了 ERRATUM 注释;
-* `phases/p2/docs/inspection/20260728-1330-full-audit-zh.md`、`docs/archive/`、
-  `docs/demo_report/track_b.md`、`docs/design_track_b.md`、`docs/overview.md`(GV5.4 叙述)
+* `phases/p2/docs/inspection/20260728-1330-full-audit-zh.md`、`phases/p1/docs/archive/`、
+  `phases/p1/docs/demo_report/track_b.md`、`phases/p1/docs/design_track_b.md`、`docs/overview.md`(GV5.4 叙述)
   —— 都是**当时测量的历史记录**,按纪律"改正或标注"取标注,不重写历史。
 
 ⚠ **仍欠的债(明确登记,不是遗漏)**:上述 demo 的**已提交图**是等熵态产出的,

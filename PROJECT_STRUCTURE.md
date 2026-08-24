@@ -519,7 +519,7 @@ cases/                     # Test cases and reference data
 │   └── naca0012_m080/    # ✓ [P4] transonic shock reference: Euler anchor (~0.60c upper,
 │                                 #   ~0.35c lower) + documented conservative-FP aft-shift band;
 │                                 #   README records that no open FP table was retrievable
-├── demo/                 # ✓ Per-phase evidence demos (docs/demo_report.md; one
+├── demo/                 # ✓ Per-phase evidence demos (phases/p1/docs/demo_report.md; one
 │   ├── README.md         #   self-checking run_demo.py + committed results/ per phase)
 │   ├── _common.py        #   shared chart style + CheckList acceptance recorder
 │   ├── p0_infrastructure/  # G0.1-G0.4: volume/gradient exactness, coloring, VTK I/O
@@ -1169,7 +1169,7 @@ design.md §5.1.2, `artifacts/G1.3/` + oracle results in `cases/demo/p1_laplace/
 ### ✓ P11 completed 2026-07-19 — curved wall elements NEGATIVE; G1.6 re-attributed
 
 The DP1 "> 5%" branch's curved-element route was built and measured (phase P11, sphere leg;
-full record: docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curved_walls/`; tests
+full record: phases/p1/docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curved_walls/`; tests
 `tests/test_p11_curved_walls.py`; code `pyfp3d/solve/curved_wall.py` + the opt-in
 `stiffness_delta` hook on `solve_laplace`, default bit-identical):
 
@@ -1339,8 +1339,8 @@ Two findings worth knowing before touching this code (both cost real time to dis
    damping must be localized to the supersonic rows; and near the fold the live Γ→far-field-vortex
    loop has **gain > 1** ⇒ the transonic/3D recipe is `farfield="neumann"` (the López outlet).
 
-Authoritative: [docs/design_track_b.md](phases/p1/docs/design_track_b.md) (numerics; §11 = the B7 3D gate)
-and [docs/roadmap.md](phases/p1/docs/roadmap.md) Track B (gates + ledger). Evidence: demos
+Authoritative: [phases/p1/docs/design_track_b.md](phases/p1/docs/design_track_b.md) (numerics; §11 = the B7 3D gate)
+and [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md) Track B (gates + ledger). Evidence: demos
 `cases/demo/b3_levelset_lifting/`, `b4p5_farfield/`, `b6_transonic/`, `b7_onera_m6/`; tests
 `test_b1_cut_elements` / `test_b2_multivalued` / `test_b3_lifting` / `test_b4_te_control_volume` /
 `test_b45_farfield` / `test_b6_transonic` / `test_b6_newton` / `test_b7_onera_m6`.
@@ -1351,8 +1351,8 @@ are kept on purpose so the committed paths stay stable — that gate is now **B5
 
 > **This "Implementation Status" section is a P0–P2-era historical record and is NOT the
 > tracker.** "What phase are we in / what gate is open" lives ONLY in
-> [docs/roadmap.md](phases/p1/docs/roadmap.md) (progress ledger) and [docs/agent-rules.md](docs/agent-rules.md)
-> ("Current phase"); the per-phase evidence lives in [docs/demo_report.md](phases/p1/docs/demo_report.md).
+> [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md) (progress ledger) and [docs/agent-rules.md](docs/agent-rules.md)
+> ("Current phase"); the per-phase evidence lives in [phases/p1/docs/demo_report.md](phases/p1/docs/demo_report.md).
 > P3–P10 and Track B/M all closed gates *after* the text above was written — read the roadmap,
 > not this list.
 
@@ -1445,7 +1445,7 @@ gate is the achievable measured criterion (`TestG16Respec` PASS); the literal 2%
 ## References
 
 - **Design & Theory:** [docs/design.md](docs/design.md)
-- **Roadmap & Gates:** [docs/roadmap.md](phases/p1/docs/roadmap.md)
+- **Roadmap & Gates:** [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)
 - **Agent Rules:** [docs/agent-rules.md](docs/agent-rules.md)
 - **Claude Code Instructions:** [CLAUDE.md](CLAUDE.md)
 
@@ -1454,8 +1454,8 @@ gate is the achievable measured criterion (`TestG16Respec` PASS); the literal 2%
 **Last updated:** 2026-07-18  
 **Status:** per-track status lives in [docs/overview.md](docs/overview.md)
 (human-readable snapshot) and the per-track trackers
-[docs/roadmap/](phases/p1/docs/roadmap) (authoritative; docs were split by track
-2026-07-15 — docs/roadmap.md and docs/demo_report.md are now thin indexes).
+[phases/p1/docs/roadmap/](phases/p1/docs/roadmap) (authoritative; docs were split by track
+2026-07-15 — phases/p1/docs/roadmap.md and phases/p1/docs/demo_report.md are now thin indexes).
 One-line summary: Track P — P0–P9 ✓ (P1: G1.6 open as a `strict=True` xfail;
 root cause RE-ATTRIBUTED by P11, see "Known gaps"), P10 ◐, **P11 ✓ CLOSED
 (2026-07-19, opened + closed same day): curved wall elements measured
@@ -1736,7 +1736,10 @@ the tree). What phase five added, none of it navigable from the tree until now:
     bench/studies/n1_nozzle_anchor/     # ★ the anchor validated where TRUTH exists
     tests/test_r19_gamma_target.py      # 6 locks on the prescribed-circulation path
     tests/test_r23_usability.py         # 9 locks on the usability criterion
-    docs/dev_phase_five/                # 25 rounds + prereg/verdict/errata + progress.md
+    phases/p5/docs/dev_phase_five/      # ★ 27 rounds + prereg/verdict/errata + progress.md
+                                        #   (ARCHIVED 2026-08-24 by user ruling, with all of
+                                        #    phase 2-5; docs/ now holds 4 living documents
+                                        #    plus dev_phase_six/, and docs/inspection/ is GONE)
 
 ★★ **The one `pyfp3d/` change in phase five**: `solve/newton.py` gained `gamma_target`
 (prescribed circulation, R19) -- **20 non-comment lines**, generalising B31's Gamma-pin target

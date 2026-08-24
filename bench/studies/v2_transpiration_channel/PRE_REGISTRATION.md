@@ -1,6 +1,6 @@
 # GV2.1 Pre-registration (written before any gate execution)
 
-Binding gate text: `docs/roadmap/track_v.md` GV2.1(a)–(c) (2026-07-22 re-spec,
+Binding gate text: `phases/p1/docs/roadmap/track_v.md` GV2.1(a)–(c) (2026-07-22 re-spec,
 V2 — Transpiration channel through all three drivers). User directive
 2026-07-22 (Track V opening): **no gate re-spec** — the bands below are the
 execution-level operationalization the gate text itself requires, not a

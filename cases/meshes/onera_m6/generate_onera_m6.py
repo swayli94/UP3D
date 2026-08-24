@@ -1,6 +1,6 @@
 """
 M1 deliverable: ONERA M6 half-wing tet mesh family with embedded wake
-sheet (docs/roadmap.md Track M, gate M1; consumed by solver phase P5).
+sheet (phases/p1/docs/roadmap.md Track M, gate M1; consumed by solver phase P5).
 
 Geometry, axis convention and wake-sheet construction live in
 pyfp3d/meshgen/wing3d.py (vanilla Gmsh/OCC; node duplication stays in the

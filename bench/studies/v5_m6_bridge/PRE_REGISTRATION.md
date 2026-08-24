@@ -1,6 +1,6 @@
 # GV5.0 PRE-REGISTRATION — M6 subsonic loose-coupling bridge (RECORDED)
 
-Binding text: `docs/roadmap/track_v.md` **GV5.0** (added 2026-07-22,
+Binding text: `phases/p1/docs/roadmap/track_v.md` **GV5.0** (added 2026-07-22,
 user-directed): the 2.5-D → transonic-3-D bridge — the V3 loose driver on
 the ONERA M6, giving the crossflow content (Ψ, B equations) its first live
 3-D exercise before GV5.3. **Every metric is RECORDED, not pass/fail** (no

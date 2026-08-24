@@ -746,7 +746,7 @@ verification yardstick.
 
 The DP1 "> 5%" branch's curved-element route, opened as phase P11 (roadmap
 track_p.md §P11; scope = the sphere/Laplace leg first, per
-docs/analysis/next_phase_priorities_2026-07-19.md). Design chosen to make the
+phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md). Design chosen to make the
 smallest change that moves the *integration domain* — the thing G1.3/G1.4
 proved is actually wrong — while leaving DOFs, sparsity, SPD-ness and every
 committed solver path untouched:
@@ -1153,10 +1153,10 @@ second — otherwise model error and code error are confounded.
 
 ---
 
-## 11. Development roadmap (moved to roadmap.md + docs/roadmap/)
+## 11. Development roadmap (moved to roadmap.md + phases/p1/docs/roadmap/)
 
-> The roadmap lives in [docs/roadmap.md](../phases/p1/docs/roadmap.md) (track index + working
-> rules) with one file per track under [docs/roadmap/](../phases/p1/docs/roadmap): Track P (solver
+> The roadmap lives in [phases/p1/docs/roadmap.md](../phases/p1/docs/roadmap.md) (track index + working
+> rules) with one file per track under [phases/p1/docs/roadmap/](../phases/p1/docs/roadmap): Track P (solver
 > P0–P13), Track M (meshing M0–M5), Track B (level-set wake B1–B15; numerics
 > spec [design_track_b.md](../phases/p1/docs/design_track_b.md)), Track V (viscous–inviscid
 > coupling V1–V4 — phase IDs distinct from the §10 validation-case IDs V0–V6).

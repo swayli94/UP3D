@@ -1,6 +1,6 @@
 """
 M1 gate checks for the ONERA M6 swept/tapered half-wing mesh family
-(cases/meshes/onera_m6, generate_onera_m6.py; docs/roadmap.md Track M).
+(cases/meshes/onera_m6, generate_onera_m6.py; phases/p1/docs/roadmap.md Track M).
 
 Mesh-side M1 gate items covered here:
   - solver preprocessor ingests the family; tags complete (wall /

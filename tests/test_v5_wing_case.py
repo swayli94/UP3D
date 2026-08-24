@@ -1,4 +1,4 @@
-"""Track V V5 wing case wiring (binding: docs/roadmap/track_v.md GV5.0,
+"""Track V V5 wing case wiring (binding: phases/p1/docs/roadmap/track_v.md GV5.0,
 2026-07-22; module under test: pyfp3d/viscous/coupling.py::build_wing_case).
 
 Covers (ungated, lightweight; on the gitignored M6 coarse mesh -- skips

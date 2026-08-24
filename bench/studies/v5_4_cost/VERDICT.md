@@ -7,7 +7,7 @@ BEFORE the re-execution it enabled). Execution: 2026-07-25, the
 temporary 8-thread session constraint (user-directed; every wall time
 below is non-comparable to the 16-thread ledger entries).
 
-## Question (binding: docs/roadmap/track_v.md GV5.4)
+## Question (binding: phases/p1/docs/roadmap/track_v.md GV5.4)
 
 > augmented step wall-time ≤ ~2× the inviscid Newton step on M6 medium
 > with the block preconditioner working; measured number recorded either

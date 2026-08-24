@@ -1,5 +1,5 @@
 """
-M0 single-layer quasi-2D extrusion (docs/roadmap.md Track M, gate link G2.5).
+M0 single-layer quasi-2D extrusion (phases/p1/docs/roadmap.md Track M, gate link G2.5).
 
 Takes a 2D triangulation and extrudes exactly ONE cell layer in z between two
 parallel planes z0 and z0+dz. Every 2D triangle becomes one prism, subdivided

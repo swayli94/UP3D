@@ -1,7 +1,7 @@
 """
 Track B / B8 gate: level-set tip-edge desingularization (row-blend tip taper).
 
-docs/roadmap.md Track B B8; docs/agent-rules.md P13/G13.2 finding (8).
+phases/p1/docs/roadmap.md Track B B8; docs/agent-rules.md P13/G13.2 finding (8).
 
 P13/G13.2 fixed the tip/wake-edge singularity on the CONFORMING path with a
 spanwise loading taper Gamma_eff(z) = F(z)*Gamma_Kutta(z). That cannot be ported

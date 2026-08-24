@@ -1,7 +1,7 @@
 # GV3.3 Pre-registration — fuselage body-of-revolution smoke
 
 Written 2026-07-22 before any GV3.3 execution. Binding gate text:
-docs/roadmap/track_v.md GV3.3 (2026-07-22, user-directed). User
+phases/p1/docs/roadmap/track_v.md GV3.3 (2026-07-22, user-directed). User
 directive: no gate re-spec — the bands below are the execution-level
 operationalization the gate text itself requires.
 

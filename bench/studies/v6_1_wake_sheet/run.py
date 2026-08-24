@@ -1,6 +1,6 @@
 """GV6.1 conforming wake-sheet delta* source gate (Track V6).
 
-Binding text: docs/roadmap/track_v.md GV6.1; pre-registered bands:
+Binding text: phases/p1/docs/roadmap/track_v.md GV6.1; pre-registered bands:
 bench/studies/v6_1_wake_sheet/PRE_REGISTRATION.md (+ the 2026-07-25
 addendum, committed before the first code change). Regenerates every
 CSV/PNG in results/ and exits 0 iff all binding bands PASS (honest FAIL

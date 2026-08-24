@@ -1,5 +1,5 @@
 """Track V V5 Stage 1 -- augmented-Newton fixed operators and the J_phi,BL
-FD gate (binding: docs/roadmap/track_v.md GV5.1 + the 2026-07-22
+FD gate (binding: phases/p1/docs/roadmap/track_v.md GV5.1 + the 2026-07-22
 pre-registered FD note; design: bench/studies/v5_tight_coupling/
 PRE_REGISTRATION.md; module under test: pyfp3d/viscous/tight.py).
 

@@ -1,7 +1,7 @@
 """
 P4 demo -- transonic artificial-density evidence (gates G4.1-G4.3).
 
-What this shows, per docs/roadmap.md P4 and docs/demo_report.md:
+What this shows, per phases/p1/docs/roadmap.md P4 and phases/p1/docs/demo_report.md:
   1. G4.2: the upwind machinery is an EXACT no-op below critical Mach --
      M = 0.5 with the upstream walk + nu switch + rho_tilde sweep active
      is bit-identical to the P3 path (nu == 0.0 exactly).
