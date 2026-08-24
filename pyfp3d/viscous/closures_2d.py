@@ -2,7 +2,7 @@
 (Drela-Giles), for the chordwise strip core only.
 
 GS4.1 round 3, pre-registration
-`docs/dev_phase_four/20260819-0500-gs41-a2-correlation-closure-prereg.md`.
+`phases/p4/docs/dev_phase_four/20260819-0500-gs41-a2-correlation-closure-prereg.md`.
 
 ★★ AUTHORITY, fixed before this file was written (pre-registration section 2):
 
@@ -119,7 +119,7 @@ DHSINF = 0.015                     # xblsys.f:2394 DATA DHSINF
 # XFOIL terms with no counterpart here. None of them could have been found by a
 # guard over the constants already written down: 0.995 was a number never typed,
 # DFAC a function that did not exist, max(CFT, CFL) a branch. See
-# docs/dev_phase_four/20260820-1000-round9-addendum1-five-more-terms.md
+# phases/p4/docs/dev_phase_four/20260820-1000-round9-addendum1-five-more-terms.md
 CD_OUT_US = 0.995                  # xblsys.f:1014, 1029 -- NOT 1.0
 CD_LAMSTRESS = 0.15                # xblsys.f:1029 laminar stress, outer layer
 US_CLAMP_TRIG = 0.95               # xblsys.f:836 IF(ITYP.LE.2 .AND. US2.GT..)
@@ -282,7 +282,7 @@ def ctau_eq(hs, H, us, re_theta, mach=0.0):
 
     The omission made CtauEQ high by 14 % at Re_theta 578, 4.7 % at 2000 and
     1.1 % at 1e4, and it feeds c_D. Fixed in round 8; see
-    docs/dev_phase_four/20260820-0500-gcc-fix-prereg.md.
+    phases/p4/docs/dev_phase_four/20260820-0500-gcc-fix-prereg.md.
     """
     hk = h_kinematic(H, mach)
     hkb = hk - 1.0

@@ -1,6 +1,6 @@
 """Outstanding item 2: the coarse 2.0 % -- is it the flat->round CAP switch, or a real pipeline gap?
 
-Pre-registered in docs/dev_phase_three/20260816-1800-coarse-pipeline-gap-prereg.md. Phase 3's last debt.
+Pre-registered in phases/p3/docs/dev_phase_three/20260816-1800-coarse-pipeline-gap-prereg.md. Phase 3's last debt.
 
 ★★★ The entry check relocated the debt before any code was written. "2.0 % against the P14 coarse anchor"
 had no citable referent in the round file; g82_anchor_check.csv is MEDIUM (run_g82_anchor_check.py:51 calls

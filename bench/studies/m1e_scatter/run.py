@@ -1,6 +1,6 @@
 """M1-e -- what carries D's 0.36-cell station-to-station scatter.
 
-Binding text: docs/dev_phase_five/20260822-2200-m1e-prereg.md (committed before
+Binding text: phases/p5/docs/dev_phase_five/20260822-2200-m1e-prereg.md (committed before
 this file existed).
 
 Three candidates with different consequences: J1's own noise (a), the footprint's

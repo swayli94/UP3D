@@ -1,6 +1,6 @@
 """R13 -- join the three committed m1_gate CSVs. Zero solves.
 
-Binding text: docs/dev_phase_five/20260823-0500-r13-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-0500-r13-prereg.md (committed first).
 
 Both axes were already measured and committed. What had never been done is the
 comparison: putting the 16-thread and 8-thread runs side by side per (level, C, seed).

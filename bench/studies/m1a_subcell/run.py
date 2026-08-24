@@ -1,6 +1,6 @@
 """M1-a -- make the shock-position instrument SUB-CELL resolvable.
 
-Binding text: docs/dev_phase_five/20260822-1800-m1a-prereg.md (committed before
+Binding text: phases/p5/docs/dev_phase_five/20260822-1800-m1a-prereg.md (committed before
 this file existed).
 
 ★★★ This does NOT fix M1. M1's three gates are untouched and its recorded verdict

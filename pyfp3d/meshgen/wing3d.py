@@ -260,14 +260,14 @@ def onera_m6_wing_mesh(
                 at M_inf 0.5, M_max went 0.9557 -> 1.3945 with 7 of the top 8
                 cells in the tip band, and a direct M0.70 solve pinned the
                 m_cap. Round file
-                docs/dev_phase_two/20260801-0400-gs21-addendum1.md.
+                phases/p2/docs/dev_phase_two/20260801-0400-gs21-addendum1.md.
         tip_cap: "round" (DEFAULT since 2026-08-04, see the signature note above --
                 half body of revolution, no edge) or "flat" (M1-era; planar cap,
                 sharp convex edge). ★ ERRATUM 2026-08-16: this line said
                 '"flat" (M1, default)' for twelve days after the default was
                 flipped, i.e. the docstring contradicted the signature. Doc-only
                 fix; no behaviour change. Carried as an open item since
-                docs/dev_phase_three/20260814-1000-fixed-budget-addendum1.md.
+                phases/p3/docs/dev_phase_three/20260814-1000-fixed-budget-addendum1.md.
                 "round" (M5 -- half body of revolution, no edge)
         h_tip: size on the rounded cap (default 0.25 h_wall, so it scales
                 with the level and a refinement ladder stays self-similar).

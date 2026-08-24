@@ -1,6 +1,6 @@
 """Task 3 item 1: WHY does refinement make robustness worse? -- classify it first.
 
-Pre-registered in docs/dev_phase_three/20260811-1500-task3-refinement-paradox-prereg.md,
+Pre-registered in phases/p3/docs/dev_phase_three/20260811-1500-task3-refinement-paradox-prereg.md,
 committed before this file was written.
 
 GS1.2 measured the paradox and never classified it: refinement makes convergence WORSE (fine

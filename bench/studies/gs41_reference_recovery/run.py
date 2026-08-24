@@ -1,7 +1,7 @@
 """GS4.1 round 7 -- recover the edge velocity XFOIL always wrote and the
 committed CSV writer discarded.
 
-Binding text: docs/dev_phase_four/20260820-0100-reference-recovery-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260820-0100-reference-recovery-prereg.md
 (committed before this script existed).
 
 ★ Evidence recovery, not measurement: this touches no library code and produces

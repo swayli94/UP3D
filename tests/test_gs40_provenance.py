@@ -2,7 +2,7 @@
 GS4.0 locks: the honesty fields, the mesh manifest, and the node-list check.
 
 These three cover the defects the 2026-08-16 independent audit found
-(docs/inspection/20260816-2200-independent-audit-zh.md §7.1, §7.3, §7.6).
+(phases/p3/docs/inspection/20260816-2200-independent-audit-zh.md §7.1, §7.3, §7.6).
 Every one of them is an INSTRUMENT defect -- code whose job is to tell the
 truth about a measurement -- and all three had the same shape: the instrument
 kept reporting after the thing it measured went away, and nothing went red.

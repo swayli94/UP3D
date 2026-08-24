@@ -1,6 +1,6 @@
 """Part 1 of the sigma-freeze round: REPRODUCE the limit cycle before analysing it.
 
-Pre-registered in docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md, committed before this
+Pre-registered in phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md, committed before this
 file was written.
 
 Why reproduction has to come first. The user asked why the limit cycle exists. The entry check found

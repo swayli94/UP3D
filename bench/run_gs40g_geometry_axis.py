@@ -1,8 +1,8 @@
 """
 Does k* survive a change of GEOMETRY?
 
-Pre-registration: docs/dev_phase_four/20260817-2300-geometry-axis-prereg.md
-Previous round:   docs/dev_phase_four/20260817-2100-condition-axis-verdict.md (W-DRIFT)
+Pre-registration: phases/p4/docs/dev_phase_four/20260817-2300-geometry-axis-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260817-2100-condition-axis-verdict.md (W-DRIFT)
 
 Wing-body -> M6 WING, at conditions MATCHED to the states already cached, so
 geometry is the single variable. The criterion is not "is k* == 1" but "is k*

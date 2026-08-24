@@ -165,7 +165,7 @@ def test_harmless_donor_cycle_converges_with_the_correct_sigma():
     solves, exactly 2 of 68624 and 2 of 90099 elements sat on such a cycle with
     s == 1 on both, and a solve at |R| = 8.85e-15 with zero clamped and zero shock
     cells was reported FAILED because of them
-    (docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md).
+    (phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md).
 
     The mechanism the old docstring described is real, but it lives in the
     SHOCKED-cycle case, which that data did not contain and which the next test
@@ -435,7 +435,7 @@ def test_c_jacobian_is_fd_exact_for_the_frozen_sigma_system():
 
 # ---------------------------------------------------------------------------
 # the m_cap guard (pre-registered
-# docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md; the defect it fixes
+# phases/p2/docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md; the defect it fixes
 # was measured on M6 medium: m1_max = m_cap exactly, sigma_min = 0.0, 57 floored
 # cells, |R| 2.49e-06 un-converged -- the G8.2 signature). All four were verified
 # FAILING against the pre-fix kernel before being committed.
@@ -632,7 +632,7 @@ class TestSigmaFreezeReport:
 # flipped on an infinitesimal change in phi while its factor JUMPED by 1 - sigma_RH(M1). max|dsigma|
 # pinned at exactly that jump, periods 2 to 5, and with the refresh cap removed 0 of 9 legs
 # converged. The artificial-density switch next door has always been a ramp (m_crit); only this test
-# was hard. Verdict: docs/dev_phase_three/20260812-1500-soft-membership-verdict.md.
+# was hard. Verdict: phases/p3/docs/dev_phase_three/20260812-1500-soft-membership-verdict.md.
 
 def _pair(m_donor, m_self, m_inf=0.8):
     """Donor -> self, one hop. Returns (q2, upstream) for a two-element chain."""

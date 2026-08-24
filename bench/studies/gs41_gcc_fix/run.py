@@ -1,6 +1,6 @@
 """GS4.1 round 8 -- fix the omitted GCC/Re_theta in CtauEQ, and record what moves.
 
-Binding text: docs/dev_phase_four/20260820-0500-gcc-fix-prereg.md (committed
+Binding text: phases/p4/docs/dev_phase_four/20260820-0500-gcc-fix-prereg.md (committed
 before any code). No new functionality: no lag equation, no XFOIL comparison.
 
 ★★ The fix is justified by the SOURCE, not by the outcome. It stands even if

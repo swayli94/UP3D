@@ -84,12 +84,12 @@ this project has logged repeatedly).
 
 | Document | Authoritative for |
 |---|---|
-| [docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md) | **what the solver can do, which routes are closed, which gaps are open** |
-| [docs/dev_phase_three/20260816-1000-gs41-initiation.md](docs/dev_phase_three/20260816-1000-gs41-initiation.md) | **the single entry point for phase 4** — read its §0 first |
-| [docs/dev_phase_two/roadmap.md](docs/dev_phase_two/roadmap.md) | the plan: product metrics M1–M5, stages S0–S6, working principles, rulings D1–D7 |
-| [docs/dev_phase_four/progress.md](docs/dev_phase_four/progress.md) | current phase, one row per round |
+| [phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md) | **what the solver can do, which routes are closed, which gaps are open** |
+| [phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md](phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md) | **the single entry point for phase 4** — read its §0 first |
+| [phases/p2/docs/dev_phase_two/roadmap.md](phases/p2/docs/dev_phase_two/roadmap.md) | the plan: product metrics M1–M5, stages S0–S6, working principles, rulings D1–D7 |
+| [phases/p4/docs/dev_phase_four/progress.md](phases/p4/docs/dev_phase_four/progress.md) | current phase, one row per round |
 | [docs/design.md](docs/design.md) | theory and numerics: equations, wake/Kutta, discretization, kernel rules |
-| [docs/inspection/](docs/inspection/) | independent audits (2026-07-28, 2026-08-16) |
+| [phases/p1/docs/inspection/](phases/p1/docs/inspection/) · [p2](phases/p2/docs/inspection/) · [p3](phases/p3/docs/inspection/) | independent audits, archived with their phase (`docs/inspection/` deleted 2026-08-24) |
 | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | layout, per-module status, known gaps |
 | [CLAUDE.md](CLAUDE.md) / [docs/agent-rules.md](docs/agent-rules.md) | working rules for the coding agent |
 

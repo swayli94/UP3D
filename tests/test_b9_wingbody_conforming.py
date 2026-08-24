@@ -168,7 +168,7 @@ def test_laplace_lifting_loads_the_junction(coarse_cut):
     analogue detector, since a mis-terminated sheet would unload the innermost
     stations.
 
-    ★★ RE-SPEC 2026-08-09. Record in docs/dev_phase_two/20260809-0300-b9-respec.md.
+    ★★ RE-SPEC 2026-08-09. Record in phases/p2/docs/dev_phase_two/20260809-0300-b9-respec.md.
     The `kutta_converged` assertion is DROPPED, and the budget goes 20 -> 100, on
     measurement rather than convenience:
 

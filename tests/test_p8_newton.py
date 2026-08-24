@@ -448,7 +448,7 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: contraindicated near the fold (the P8 "warm-start only from CONVERGED
 #: levels" trap in G10.2 form).
 #: ★ GS3.1 2026-08-02: precond "direct" -> "amg"
-#: (docs/dev_phase_two/DECISION-2026-08-02-precond.md). The library's EW forcing
+#: (phases/p2/docs/dev_phase_two/DECISION-2026-08-02-precond.md). The library's EW forcing
 #: default was tightened to 1e-10 in the same change, and at that setting amg
 #: reproduces the direct path's cl_p / cl_KJ / LE-band RMS / pooled RMS to <= 2.6e-09
 #: on the 1.16 M-tet case -- seven orders inside every lock below -- while costing
@@ -471,7 +471,7 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: M6 wing at alpha 3.06, M0.70 carries M_max 1.5358 with 214 shock cells -- it is NOT
 #: subcritical (bench/gate_results/le_window.csv). What survives is the MEASUREMENT
 #: that a ramp cures the cold-start failure (|R| 4.49e-11 at seed 0,
-#: docs/dev_phase_two/20260805-2200-seed-exposure.md); what is refuted is this
+#: phases/p2/docs/dev_phase_two/20260805-2200-seed-exposure.md); what is refuted is this
 #: EXPLANATION of why. The actual mechanism is that the previous level's CONVERGED
 #: solution does the seed's job, which needs no claim about the first level being
 #: subsonic. Also note the sentence below promising "the library default stays 5, so
@@ -512,7 +512,7 @@ def _m6_case(level, m_inf=0.84, alpha=3.06):
     t0 = time.perf_counter()
     mc, wc = cut_wake(read_mesh(p))
     #: ★★ RE-ANCHORED 2026-08-05/06, user ruling. Full record in
-    #: docs/dev_phase_two/20260806-0600-g82-reanchor.md, written before this edit as
+    #: phases/p2/docs/dev_phase_two/20260806-0600-g82-reanchor.md, written before this edit as
     #: roadmap sec 5 requires. Why the production taper is now part of the case:
     #:
     #: onera_m6/medium.msh was regenerated on 2026-08-04 when the base level names

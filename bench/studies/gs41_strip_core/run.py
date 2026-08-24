@@ -1,7 +1,7 @@
 """GS4.1 round 1 -- verification of the 2-D strip core against analytic
 laminar solutions.
 
-Binding text: docs/dev_phase_four/20260818-2100-gs41-strip-core-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260818-2100-gs41-strip-core-prereg.md
 plus addendum #1 (both committed before this script existed). Criteria
 V-BLASIUS / V-ORDER / F-SIMILAR and the guards below are quoted from it and
 are NOT re-specified here.

@@ -1,6 +1,6 @@
 """GS4.1 round 17 (G20) -- put transition ON a station and test the seed chain.
 
-Binding text: docs/dev_phase_four/20260821-1400-g20-prereg.md + addendum #1
+Binding text: phases/p4/docs/dev_phase_four/20260821-1400-g20-prereg.md + addendum #1
 (20260821-1500). Both committed before the comparison was made.
 
 ★ Committed so the round's numbers are REGENERABLE rather than living only in the

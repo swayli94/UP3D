@@ -1,6 +1,6 @@
 """A: what does the peak-depth estimate MISS (zero-solve)?  B: is the eta-0.90 peak taper-made?
 
-Pre-registered in docs/dev_phase_three/20260815-1000-shape-and-taper-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260815-1000-shape-and-taper-prereg.md.
 
 A decomposes the self-difference ITSELF with the identity RMS^2 = bias^2 + var. If f_bias is high and
 |bias| matches |dCp_min|, the level-to-level change is a band-wide LEVEL SHIFT that the peak already

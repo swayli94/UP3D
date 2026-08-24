@@ -2037,8 +2037,8 @@ skipped.
 ### B21 — Freeze-capture alignment with the B20 density (the Kimi-inspection N1 fix) ✓ CLOSED 2026-07-19 (NEW; appended after B20, no renumber; executes the 2026-07-19 second-round inspection's N1 finding)
 
 **Trigger.** The 2026-07-19 Kimi inspection
-(`docs/inspection/20260719-0555-full-inspection.md`, N1) found — and confirmed
-with a committed probe (`docs/inspection/20260719-n1-freeze-probe.py`) — that
+(`phases/p1/docs/inspection/20260719-0555-full-inspection.md`, N1) found — and confirmed
+with a committed probe (`phases/p1/docs/inspection/20260719-n1-freeze-probe.py`) — that
 `freeze_side_state` was the ONE consumer of the side q²/ρ path the B20 patch
 missed: it captured the frozen (upstream, branch) selection on the UNPATCHED
 side field while `newton_side_data` applies `_apply_main_density` first. The
@@ -2564,7 +2564,7 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
   restores the M6-medium M0.84 ramp and OVERTURNS GB20.7.** `freeze_side_state` was the one consumer of the side q²/ρ path the B20 patch
   missed: it captured (upstream, branch) on the UNPATCHED side field while `newton_side_data` patches first —
   probe-confirmed **83 upstream + 9 branch** selection differences vs the live system (M6 coarse seeded M0.70, all aux-touching mixed-plain;
-  `docs/inspection/20260719-n1-freeze-probe.py`). Pre-B20 both were consistently unpatched;
+  `phases/p1/docs/inspection/20260719-n1-freeze-probe.py`). Pre-B20 both were consistently unpatched;
   **B20's partial patch CREATED the inconsistency** ⇒ every armed freeze locked a selection the live system would not make = the actual
   mechanism of the "GB20.7 capability loss". **Fix = one line** (capture runs `_apply_main_density`); 2.5-D bit-identical.
   **GB21.1 ✓** committed recipe reaches **M0.84 again**: γ **0.088343** (pre-B20 0.088338), M_max 2.4818, res 9.0e-14, 0 lim/1 flr, **515

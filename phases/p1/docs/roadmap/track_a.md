@@ -437,7 +437,7 @@ that stood here is superseded: B9 closed 2026-07-17.)*
   close-out ritual extended to FIVE surfaces + a backport check** (CLAUDE.md step 5; agent-rules disciplines #9/#10) —
   the audit's findings were mostly close-out debt, concentrated in exactly the two surfaces the old two-item ritual omitted.
   **NO `pyfp3d/` numerics change.** Suite **463 + 21 + 2** (+3 reader). Response report:
-  `docs/inspection/20260718-response-to-kimi-inspection.md`. ★ **Errata (2026-07-19, from the Kimi second-round audit):** (1) the **P2**
+  `phases/p1/docs/inspection/20260718-response-to-kimi-inspection.md`. ★ **Errata (2026-07-19, from the Kimi second-round audit):** (1) the **P2**
   physics-bounds contradiction is **BACKLOG, not fixed** — previously recorded only in the response doc;
   now also here and as a comment at `pyfp3d/physics/isentropic.py::validate_physics_bounds`; (2) the claim "M2 authority contradiction
   resolved in title, checkbox AND ledger" was overstated — the `track_m.md` ledger row (and the roadmap.md/overview.md M lines) still read ◐

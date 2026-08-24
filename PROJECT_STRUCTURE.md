@@ -174,7 +174,7 @@ pyfp3d/                    # Main package
 │                           #   moves EVERY committed Track V number and needs a
 │                           #   re-baseline errata list. Root cause locked in
 │                           #   tests/test_gs41_closures_audit.py; verdict in
-│                           #   docs/dev_phase_four/20260819-1100-*.md
+│                           #   phases/p4/docs/dev_phase_four/20260819-1100-*.md
 │                           #   ★ Also registered: D13 p.9 says the outer dissipation
 │                           #   length L is calibrated to Clauser's G-beta locus, while
 │                           #   C_L_DEFAULT = 0.09 is a Bradshaw value with the project's
@@ -830,7 +830,7 @@ bench/                     # ✓ Measurement harness -- NOT tests. ★ The line 
                            #   the two numbers are not the same thing and do not reconcile.
                            #   ├── gs41_strip_core/  ★ [GS4.1 round 1, phase 4] the 2-D
                            #   │     strip core vs Blasius / Falkner-Skan. Its registration
-                           #   │     lives in docs/dev_phase_four/ (prereg + 3 addenda),
+                           #   │     lives in phases/p4/docs/dev_phase_four/ (prereg + 3 addenda),
                            #   │     not in the study dir -- phase 4 keeps one round file
                            #   │     per round there. V-FAIL, cause in the closure.
                            #   ├── gs41_five_terms/  ★ [GS4.1 round 9 leg A] the five
@@ -1307,8 +1307,8 @@ first task deleted it: 9 library files / **4624 lines**, `pyfp3d/wake/` removed 
 `post/unified.py` collapsed onto its conforming half. `from pyfp3d.wake import ...` is a
 hard error now. The text below is kept as the DESIGN RECORD of what was built and why --
 read it in the past tense; the code is in `phases/p1/` and in git history, and the
-measured reasons for abandoning it are in docs/dev_phase_two/roadmap.md ruling D5.
-Verdict: docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
+measured reasons for abandoning it are in phases/p2/docs/dev_phase_two/roadmap.md ruling D5.
+Verdict: phases/p3/docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
 
 Original heading: *✓ Track B — level-set embedded wake (B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ B7 ✓;
 B6 ◐ in progress)*
@@ -1696,7 +1696,7 @@ prerequisite: medium smooth-wall band ≈2.5% peak / 0.04·U∞ max-norm / O(h),
 `phases/p1/cases/analysis/a4_ue_error_band/`) (A3 = response
 to the 2026-07-17 independent inspection: docs consistency + cross-path
 hardening + the C1 Jacobian verification, see
-[docs/inspection/](docs/inspection/); the footer's "A3 ◐" was itself one of
+[phases/p2/docs/inspection/](phases/p2/docs/inspection/); the footer's "A3 ◐" was itself one of
 the close-out-debt findings, fixed 2026-07-19). Next phase = the user's call.
 ★★★ **PHASE THREE opened 2026-08-11. Task 1 done: the LEVEL-SET ROUTE IS DELETED**
 (ruling D5) — 9 library files / **4624 lines**, `pyfp3d/wake/` gone, `post/unified.py`
@@ -1757,14 +1757,14 @@ and were deleted with it at its registered expiry). Earlier the same count (2026
 threads quiet; +11 = `tests/test_meshgen_structured.py`, closing the structured
 generator's zero-coverage debt). After the level-set deletion it was **457 / 12 / 2**, gated
 **466 / 1 / 4** (2:08:50), fast tier **5 groups**. Both accounts close item by item —
-docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
+phases/p3/docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
 ⚠ `phases/p1/` still imports the deleted modules and is NOT runnable; the archive is a
 snapshot, and a working tree is `git worktree add ../up3d-prereorg d224223`.
 
 ★★ **PHASE TWO (2026-07-28 .. 2026-08-10) — read
-[docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
+[phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
 first.** The whole block below this line is the PHASE-ONE footer, frozen with the
-phase-one docs on 2026-07-28 (docs/dev_phase_two/roadmap.md §8); its status verdicts
+phase-one docs on 2026-07-28 (phases/p2/docs/dev_phase_two/roadmap.md §8); its status verdicts
 are history, its technical facts stay citable as phase-one records.
 
 Phase-two baselines, measured:
@@ -1780,7 +1780,7 @@ Phase-two baselines, measured:
   production round-tip meshes those level-set gates have no clamp-free state to anchor,
   and per ruling **D5** that route is ABANDONED — they are abandoned-route records, not
   open obligations, and they go away with the files in phase three.
-- Phase two's own metric verdicts live in `docs/dev_phase_two/progress.md`'s tracking
+- Phase two's own metric verdicts live in `phases/p2/docs/dev_phase_two/progress.md`'s tracking
   table; the one that changes what to work on next is **M3a, measured UNREACHABLE for
   an inviscid solver** (model floor 0.0516–0.0707 against a viscous experiment).
 

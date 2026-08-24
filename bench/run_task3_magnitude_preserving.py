@@ -1,6 +1,6 @@
 """Magnitude-preserving softening: separate "the jump was the cause" from "less correction".
 
-Pre-registered in docs/dev_phase_three/20260812-1700-magnitude-preserving-prereg.md, committed
+Pre-registered in phases/p3/docs/dev_phase_three/20260812-1700-magnitude-preserving-prereg.md, committed
 before this code -- a NEW registration and not an addendum, because it CHANGES a criterion (F1), and
 amending a criterion after its result has been read is post-hoc loosening even with a right motive.
 

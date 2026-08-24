@@ -1,8 +1,8 @@
 """
 Registered item 1, re-opening measurement: sonic-set COHERENCE across a patch-size ladder.
 
-Pre-registration: docs/dev_phase_four/20260817-0900-coherence-ladder-prereg.md
-Previous round:   docs/dev_phase_four/20260817-0700-gradient-probe-verdict.md (G-SMEAR)
+Pre-registration: phases/p4/docs/dev_phase_four/20260817-0900-coherence-ladder-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260817-0700-gradient-probe-verdict.md (G-SMEAR)
 
 THE TARGET IS LAST ROUND'S FAILURE MODE. There, the SHOCK partition came back
 EMPTY -- 18746 sonic-crossing faces in 6273 components, median 2, largest 47,

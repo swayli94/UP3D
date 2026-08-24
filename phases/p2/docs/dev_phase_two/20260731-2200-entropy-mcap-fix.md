@@ -160,7 +160,7 @@ m1_max 1.97),却几乎不改那 5 站的 Cp。合理推断(**未测**):那个强
 
 **标注不改(历史记录 / 未重测)**
 * `cases/demo/b7_onera_m6/run_demo.py` 的 `P8` 参考行(跨族比较,coarse cl 未重测)—— 加了 ERRATUM 注释;
-* `docs/inspection/20260728-1330-full-audit-zh.md`、`docs/archive/`、
+* `phases/p2/docs/inspection/20260728-1330-full-audit-zh.md`、`docs/archive/`、
   `docs/demo_report/track_b.md`、`docs/design_track_b.md`、`docs/overview.md`(GV5.4 叙述)
   —— 都是**当时测量的历史记录**,按纪律"改正或标注"取标注,不重写历史。
 

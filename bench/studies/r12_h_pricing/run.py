@@ -1,6 +1,6 @@
 """R12 -- price the h route for M1, on the committed NACA0012 2.5-D ladder.
 
-Binding text: docs/dev_phase_five/20260823-0300-r12-h-pricing-prereg.md (committed
+Binding text: phases/p5/docs/dev_phase_five/20260823-0300-r12-h-pricing-prereg.md (committed
 before this file existed).
 
 The h the mechanism argument asks for (h_shock <~ 0.005-0.01 c) already exists as the

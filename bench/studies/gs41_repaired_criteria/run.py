@@ -1,6 +1,6 @@
 """GS4.1 round 6 -- the turbulent closure under REPAIRED criteria (G1, G2).
 
-Binding text: docs/dev_phase_four/20260819-1700-repaired-criteria-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260819-1700-repaired-criteria-prereg.md
 (committed before this script existed).
 
 ★★★ This round does NOT overturn round 5. Round 5's three T-FAILs stand as
@@ -179,7 +179,7 @@ def gates(A, start):
               f"cf={r['cf']:.6f} dev={r['dev']:.3%} band={r['band']:.3%} "
               f"{'in' if r['inside'] else '★OUT'}")
     _record("E-CF", "c_f vs both established ZPG correlations",
-            "inside the derived band at every station -- " + "RECORDED -- E-CF was DEMOTED from a gate on 2026-08-21 (user ruling). The window, the band and every threshold are UNCHANGED; only the verdict code moved. Grounds, all previously measured: making the closure more faithful to xblsys.f made agreement with these two correlations WORSE (62/69 -> 43/70, round 9 leg A); the plate's out-of-band Re_theta range has NO counterpart against a same-family reference where theta agrees to 0.11 % (round 14); and the correlations' own validity range has no citable source in this repo. ★ This does NOT mean the plate side is fine -- it means the plate's red cannot be ATTRIBUTED to the closure, because its reference is not qualified. Reopening condition: a ZPG reference whose validity range IS citable. The BL-profile half of this condition was WITHDRAWN by the user ruling of 2026-08-21 -- no BL-profile reference will be introduced, XFOIL is the BL reference, and a BL-quantity difference is debt only once it is shown to move Cp. See docs/dev_phase_four/20260821-1800-gs41-disposition.md.",
+            "inside the derived band at every station -- " + "RECORDED -- E-CF was DEMOTED from a gate on 2026-08-21 (user ruling). The window, the band and every threshold are UNCHANGED; only the verdict code moved. Grounds, all previously measured: making the closure more faithful to xblsys.f made agreement with these two correlations WORSE (62/69 -> 43/70, round 9 leg A); the plate's out-of-band Re_theta range has NO counterpart against a same-family reference where theta agrees to 0.11 % (round 14); and the correlations' own validity range has no citable source in this repo. ★ This does NOT mean the plate side is fine -- it means the plate's red cannot be ATTRIBUTED to the closure, because its reference is not qualified. Reopening condition: a ZPG reference whose validity range IS citable. The BL-profile half of this condition was WITHDRAWN by the user ruling of 2026-08-21 -- no BL-profile reference will be introduced, XFOIL is the BL reference, and a BL-quantity difference is debt only once it is shown to move Cp. See phases/p4/docs/dev_phase_four/20260821-1800-gs41-disposition.md.",
             f"{len(rows)-n_out}/{len(rows)} inside",
             "RECORDED (demoted 2026-08-21; was E-FAIL at "
             f"{len(rows)-n_out}/{len(rows)})")

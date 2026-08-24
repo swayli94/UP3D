@@ -219,7 +219,7 @@ P8_CL_KJ = 0.2692          # the Newton truth -- the lift reference
 
 
 #: ★★ RE-SPEC 2026-08-09 (round-tip cost). Full record in
-#: docs/dev_phase_two/20260809-0100-b7-respec.md, written before this edit per roadmap
+#: phases/p2/docs/dev_phase_two/20260809-0100-b7-respec.md, written before this edit per roadmap
 #: sec 5. `cases/meshes/onera_m6*` were regenerated ROUND on 2026-08-04 while these
 #: gates' anchors were measured on the FLAT cap. All SIX gate quantities were measured on
 #: both caps BEFORE anything was changed, because this gate asserts five things and pytest
@@ -260,7 +260,7 @@ P8_CL_KJ = 0.2692          # the Newton truth -- the lift reference
 #: negative, and the LS driver has no `tip_taper` parameter at all). Their strictness still
 #: earns its keep -- it keeps the recorded state honest until the file is removed -- and this
 #: file is on phase three's deletion list as a MIXED file whose LS legs come out
-#: (docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2), so the xfails go with them.
+#: (phases/p2/docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2), so the xfails go with them.
 ROUND_XFAIL_SUBSONIC = {"M1"}          # M4's subsonic leg still passes 5/5
 ROUND_XFAIL_TRANSONIC = {"M1", "M4"}
 
@@ -272,7 +272,7 @@ def _round_xfail(directory, which):
     if tag in bad:
         pytest.xfail(
             f"round-tip re-spec 2026-08-09: {tag} {which} has no anchorable state on "
-            f"the round mesh (docs/dev_phase_two/20260809-0100-b7-respec.md). M1 "
+            f"the round mesh (phases/p2/docs/dev_phase_two/20260809-0100-b7-respec.md). M1 "
             f"subsonic reads M_max 1.4022 at M_inf 0.5 against flat's 0.7726; M1 "
             f"transonic fails 3 of the 5 gate conditions, not just the clamps; M4 "
             f"transonic reads M_max 2.6669 outside the (1.0, 2.5) band with 0/2 clamps. "

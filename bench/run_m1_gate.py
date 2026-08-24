@@ -1,6 +1,6 @@
 """Product metric M1, evaluated honestly (phase two GS1.5).
 
-M1 (docs/dev_phase_two/roadmap.md 2): NACA0012 M0.80 / alpha 1.25 --
+M1 (phases/p2/docs/dev_phase_two/roadmap.md 2): NACA0012 M0.80 / alpha 1.25 --
   (a) upper-surface shock at 0.61 +- 0.02 (the project's own Euler-anchored
       reference band, cases/reference_data/naca0012_m080/),
   (b) cl agreeing within 3 % between two mesh levels,
@@ -94,7 +94,7 @@ SEEDS = (0, 5)
 #: picks one, with cl_p spreading 23-32 % across {0, 5, 12} at a BIT-IDENTICAL mesh -- 8-11x the
 #: 3 % of criteria (b)/(c). Seeds 0 and 5 happen to agree on coarse (0.02-2.76 %), so the gate's
 #: own sampling is blind to it. Evidence:
-#: docs/dev_phase_three/20260811-2100-task3-nonuniqueness-verdict.md.
+#: phases/p3/docs/dev_phase_three/20260811-2100-task3-nonuniqueness-verdict.md.
 #:
 #: It is OPT-IN, and that is a recorded deviation from the registration's letter (addendum #2): the
 #: default invocation must stay byte-compatible with the committed m1_gate_default.csv, which the

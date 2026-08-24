@@ -873,7 +873,7 @@ internal note where it conflicts).**
       around the measured Newton solution: **cl_p 0.263888 ± 0.005, shocks
       η44/65/90 = 0.59582/0.53914/0.34225 ± 0.02, M_max 2.10709 ± 0.05**
       (★ RE-ANCHORED 2026-07-31 to the entropy-corrected default by phase-two
-      `docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md`; the SUPERSEDED
+      `phases/p2/docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md`; the SUPERSEDED
       isentropic anchors were cl_p 0.2646, 0.596/0.541/0.362, M_max 2.134 —
       the η = 0.90 shock had only 0.0002 of margin left inside its own
       tolerance, so this is a re-anchor and not a "still passes". The gate's

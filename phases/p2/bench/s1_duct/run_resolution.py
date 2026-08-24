@@ -2,7 +2,7 @@
 under mesh refinement.
 
 Two parts (pre-registered in
-docs/dev_phase_two/20260728-1825-s1-resolution.md):
+phases/p2/docs/dev_phase_two/20260728-1825-s1-resolution.md):
 
   Q1  nozzle bench (exact reference): position error and smear width expressed
       in CELLS, vs h and C. If the error is a roughly constant number of cells,

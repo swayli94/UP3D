@@ -1,6 +1,6 @@
 """R17 -- alpha = 0, rising M-infinity: a strong shock with ZERO wake jump.
 
-Binding text: docs/dev_phase_five/20260823-1300-r17-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-1300-r17-prereg.md (committed first).
 
 A symmetric section at alpha = 0 has Gamma identically zero, so M-infinity strengthens
 the shock without introducing a wake jump. That is the single-variable isolation R16's

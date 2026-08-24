@@ -1,6 +1,6 @@
 """G0 — is the structured generator genuinely SINGLE-VARIABLE? (phase 3 task 2, route A)
 
-Pre-registered in docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §3: this check comes
+Pre-registered in phases/p3/docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §3: this check comes
 BEFORE every reading, because phase two learned the hard way that a conclusion of the form
 "refining X controls Y" cannot be earned from knobs that move other things. Four knobs of the
 unstructured generator were caught out of scope -- `h_wall` (+41.7 % LE face count), `h_edge`

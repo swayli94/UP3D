@@ -1,6 +1,6 @@
 """Why does the LE upper surface not converge? A DISCRIMINATOR over four candidates.
 
-Pre-registered in docs/dev_phase_three/20260815-0200-nonconvergence-discriminator-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260815-0200-nonconvergence-discriminator-prereg.md.
 
 d_self has so far been read only as an RMS, but it is a POINTWISE quantity, so the distribution of its
 squared mass in chord and in span is the fingerprint that separates the candidates:

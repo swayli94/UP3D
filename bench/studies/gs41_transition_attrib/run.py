@@ -1,6 +1,6 @@
 """GS4.1 round 10 -- separate the three candidates behind the transition gap.
 
-Binding text: docs/dev_phase_four/20260820-2000-transition-attribution-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260820-2000-transition-attribution-prereg.md
 plus addenda #1 (the CT column is two quantities; L-TURB withdrawn) and #2
 (TRDIF may be subsumed by a continuous march). All committed before this script.
 

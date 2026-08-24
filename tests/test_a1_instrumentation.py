@@ -57,7 +57,7 @@ def _warm_the_jit(cut):
     is also why a freshly created conda env showed failures here that a warm
     checkout does not -- a new env has cold caches by construction, which is
     the "1 item still to investigate" left open in
-    docs/dev_phase_two/20260804-2148-le-round-tip-and-environment.md sec 7.
+    phases/p2/docs/dev_phase_two/20260804-2148-le-round-tip-and-environment.md sec 7.
 
     One throwaway solve is enough for every driver in this module: they share
     the assembly, upwind, entropy and linear-solve kernels.

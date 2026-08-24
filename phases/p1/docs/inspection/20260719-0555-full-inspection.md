@@ -101,7 +101,7 @@ track_m's title, checkbox **and ledger**"——title/checkbox 确已修，但
   `newton_side_data` computes, so the frozen sweep reproduces the live density
   **bitwise** at the freeze point"（`:730-732`）在 mixed-side plain 触-cut 元素
   上破裂。
-- **本轮已用探针实测确认**（`docs/inspection/20260719-n1-freeze-probe.py`，
+- **本轮已用探针实测确认**（`phases/p1/docs/inspection/20260719-n1-freeze-probe.py`，
   M6 coarse、M0.70 seeded 跨声速态，与 GB19.6 同一工况）：shipped 捕获与
   B20-patched 捕获的选择差异——upper 侧 **upstream 83 个元素不同、branch 9 个
   不同**，且差异**全部**落在 aux-touching mixed-plain 类上（83/83、7/7；
@@ -338,7 +338,7 @@ GB17.2 "~22%" vs CSV 20.1%/19.4%（参照基不同）。
     机翼侧元素（`track_m.md` M2）。
 12. **N1**（本轮新增，已实测确认）：`freeze_side_state` 未打 B20 补丁；
     M6 coarse M0.70 下选择差异 83 upstream + 9 branch（探针：
-    `docs/inspection/20260719-n1-freeze-probe.py`）。
+    `phases/p1/docs/inspection/20260719-n1-freeze-probe.py`）。
 13. **流程缺口**：3-D LS 数字无测试锁（N3）；re-baseline 旧章节勘误无流程
     （§2 流程建议）。
 

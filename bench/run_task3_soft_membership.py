@@ -1,6 +1,6 @@
 """Part 3 of the sigma-freeze round: soften the post-shock MEMBERSHIP test and read F1-F5.
 
-Pre-registered in docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md, with the candidate
+Pre-registered in phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md, with the candidate
 order and the ramp's exact form fixed in addendum #1 BEFORE this code was written.
 
 Why this candidate and not relaxation or averaging: Part 1 measured the mechanism. The membership

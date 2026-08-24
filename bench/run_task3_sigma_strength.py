@@ -2,12 +2,12 @@
 
 ★★ NOT RUNNABLE AS SHIPPED -- and that is the intended end state. The `sigma_scale` instrument
 this script drives was TEMPORARY by registration and was DELETED at the round's close-out
-(docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md section 6, the B20 precedent: a knob
+(phases/p3/docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md section 6, the B20 precedent: a knob
 built solely to make an A/B measurable is removed on adoption). The evidence is the committed
 CSV; this file records exactly how it was produced. To re-run, restore the instrument by
 cherry-picking the library half of commit a07e9b3 (37 lines, two files, default bit-identical).
 
-Pre-registered in docs/dev_phase_three/20260812-0300-sigma-strength-prereg.md, committed before
+Pre-registered in phases/p3/docs/dev_phase_three/20260812-0300-sigma-strength-prereg.md, committed before
 the instrument was implemented.
 
 Why a sweep and not the ON/OFF result already in hand: ON/OFF is TWO POINTS, and two points cannot

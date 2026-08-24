@@ -1,6 +1,6 @@
 """Tip-gate redesign: sweep the taper RADIUS and read the LE-RMS SPANWISE PROFILE.
 
-Pre-registered in docs/dev_phase_three/20260813-2100-tip-gate-redesign-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260813-2100-tip-gate-redesign-prereg.md.
 
 ★ Why this gate and not the previous one: GS2.1's tip gate used peak LOCATION as a proxy for the tip
 free-edge singularity, and its own author recorded why that failed -- the peak MOVED to the outboard
@@ -12,7 +12,7 @@ outboard/inboard ratio) instead of a hand-picked threshold like M_max < 1.6.
 ★★ r_c = 0 is deliberately NOT in the scan: that configuration is already measured not to converge,
 and a non-solution is not a reading.
 
-Verdict: docs/dev_phase_three/20260813-2300-tip-gate-verdict.md -- W2, the tip is not the driver
+Verdict: phases/p3/docs/dev_phase_three/20260813-2300-tip-gate-verdict.md -- W2, the tip is not the driver
 (delta-R = 0.0027 while cl_p moves 3.13 %, so the knob demonstrably reaches the solve).
 
 Outputs (TRACKED): bench/gate_results/task3_tip_gate.csv

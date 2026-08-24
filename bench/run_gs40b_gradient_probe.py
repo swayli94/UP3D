@@ -1,8 +1,8 @@
 """
 Registered item 1 -- the ZERO-SOLVE kill test for interior gradient reconstruction.
 
-Pre-registration: docs/dev_phase_four/20260817-0300-gradient-probe-prereg.md
-Addendum #1:      docs/dev_phase_four/20260817-0400-gradient-probe-addendum1.md
+Pre-registration: phases/p4/docs/dev_phase_four/20260817-0300-gradient-probe-prereg.md
+Addendum #1:      phases/p4/docs/dev_phase_four/20260817-0400-gradient-probe-addendum1.md
 
 THE QUESTION. Hold a CONVERGED phi fixed and swap ONLY the recovery operator.
 Does the heavy tail of the single-face Mach jump collapse -- and does it collapse

@@ -1,6 +1,6 @@
 """GS4.1 round 4 -- audit `closures.py` against its binding reference.
 
-Binding text: docs/dev_phase_four/20260819-0900-closures-source-audit-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260819-0900-closures-source-audit-prereg.md
 (committed before this script existed). The audit list in section 3 there is
 CLOSED and fixed in advance; every item below emits exactly one verdict code,
 including the ones that turn out unreadable.

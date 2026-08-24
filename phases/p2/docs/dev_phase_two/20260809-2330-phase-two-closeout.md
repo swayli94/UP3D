@@ -9,9 +9,9 @@
 | # | 内容 | 产物 |
 |---|---|---|
 | 1 | **关掉最后一个悬置的实验**(登记项 0:干净的远场臂)—— 判据 **N**,有界负结论 | [20260809-2100](20260809-2100-farfield-arm-verdict.md) + `bench/run_farfield_arm.py` + `bench/gate_results/farfield_arm.csv` |
-| 2 | **交付能力边界文件** | [PHASE_TWO_CAPABILITY_BOUNDARY.md](../../../../docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md) |
-| 3 | **把裁决 D5 落到代码与清单里**(四条 strict xfail 标为"已放弃路线的记录",不是未结义务) | 两个测试文件的就地注释 + [LEVELSET_DELETION_INVENTORY.md](../../../../docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md) §2b |
-| 4 | **收口面单**(phase 一的五面已冻结,phase two 有自己的面单)+ roadmap §2/§6 的收尾注记 | [CLAUDE.md](../../../../CLAUDE.md) 仪式第 5 步 + [roadmap.md](../../../../docs/dev_phase_two/roadmap.md) |
+| 2 | **交付能力边界文件** | [PHASE_TWO_CAPABILITY_BOUNDARY.md](PHASE_TWO_CAPABILITY_BOUNDARY.md) |
+| 3 | **把裁决 D5 落到代码与清单里**(四条 strict xfail 标为"已放弃路线的记录",不是未结义务) | 两个测试文件的就地注释 + [LEVELSET_DELETION_INVENTORY.md](LEVELSET_DELETION_INVENTORY.md) §2b |
+| 4 | **收口面单**(phase 一的五面已冻结,phase two 有自己的面单)+ roadmap §2/§6 的收尾注记 | [CLAUDE.md](../../../../CLAUDE.md) 仪式第 5 步 + [roadmap.md](roadmap.md) |
 
 **未动 `pyfp3d/`**(全部是文档、bench 脚本、测试注释)。
 
@@ -61,6 +61,6 @@ roadmap §4 的 S6(战略后备)写着触发条件是:
 
 ## 5. 交给 phase three 的三件事(顺序由使用者定)
 
-1. **删除 level-set**([LEVELSET_DELETION_INVENTORY.md](../../../../docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md),七步顺序);
+1. **删除 level-set**([LEVELSET_DELETION_INVENTORY.md](LEVELSET_DELETION_INVENTORY.md),七步顺序);
 2. **六面体贴体网格**(★ 开工那一轮**先写 kill criterion**,原则 8;依据见边界 §7,逐条标明测量 vs 推断);
 3. **其余问题** —— 按边界 §3(未解释亏空)与 §4(真实缺陷)排序。

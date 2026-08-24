@@ -1,7 +1,7 @@
 """Is the all-scales LE gain bought by ALLOCATION or by CELL COUNT?
 
-Pre-registered in docs/dev_phase_three/20260814-0900-fixed-budget-allocation-prereg.md,
-with addendum #1 (docs/dev_phase_three/20260814-1000-fixed-budget-addendum1.md) committed before this
+Pre-registered in phases/p3/docs/dev_phase_three/20260814-0900-fixed-budget-allocation-prereg.md,
+with addendum #1 (phases/p3/docs/dev_phase_three/20260814-1000-fixed-budget-addendum1.md) committed before this
 file was written.
 
 The question: proportional all-scales refinement was measured to reduce the LE-band error, but it costs

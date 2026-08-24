@@ -441,7 +441,7 @@ def _ab_leg(snippet, worktree, ref, out_npz, overlay_delta=False):
     "nodes -- exactly the magnitude this test reports as a failure. "
     "Attribution chain and the two-run measurement: "
     "bench/s1_duct/check_loose_loop_determinism.py; round record "
-    "docs/dev_phase_two/20260729-0130-s1-clamp-not-silent.md 4.1. "
+    "phases/p2/docs/dev_phase_two/20260729-0130-s1-clamp-not-silent.md 4.1. "
     "The GV6.1 (a)(ii) EVIDENCE is unaffected -- it is committed in "
     "bench/studies/v6_1_wake_sheet/ -- but this live guard cannot mean "
     "what it claims until the loose loop is made deterministic."))
@@ -458,7 +458,7 @@ def test_ab_bit_identity_gate_free_library(tmp_path):
     commit and the same thread count (67 s, idle machine) -- the only
     difference was concurrent load from other solver processes. The mechanism
     was NOT root-caused (registered as an open question in
-    docs/dev_phase_two/20260728-1520-s0-foundation.md §6); per decision D1 the
+    phases/p2/docs/dev_phase_two/20260728-1520-s0-foundation.md §6); per decision D1 the
     permanent assertion is now a 1e-12 relative tolerance, which still pins
     the phase-one claim (the flag adds no numerical effect: any real change
     would be orders larger) without being a load-sensitive alarm."""

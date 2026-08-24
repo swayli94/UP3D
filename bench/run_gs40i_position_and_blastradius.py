@@ -2,8 +2,8 @@
 Part A: does the reconstruction move the shock TOWARD an independent judge?
 Part B: how big is the perturbation inside the solver's own switches?
 
-Pre-registration: docs/dev_phase_four/20260818-0900-position-and-blastradius-prereg.md
-Summary:          docs/dev_phase_four/20260818-0700-recovery-line-summary.md
+Pre-registration: phases/p4/docs/dev_phase_four/20260818-0900-position-and-blastradius-prereg.md
+Summary:          phases/p4/docs/dev_phase_four/20260818-0700-recovery-line-summary.md
 
 ★ Part A is finally non-circular. J1 -- the wall-Cp shock position -- runs through
 WALL-TRIANGLE tangential gradients and reads no volume gradient at all, so it is

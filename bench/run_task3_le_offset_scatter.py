@@ -1,6 +1,6 @@
 """Is the LE error a CONSTANT OFFSET or SCATTER? One solve, one identity, no fit.
 
-Pre-registered in docs/dev_phase_three/20260814-0100-le-offset-scatter-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260814-0100-le-offset-scatter-prereg.md.
 
 Established before this round: the LE deficit is a LEVEL error, not a shape or position one -- eta 0.90
 is the worst station while sitting on the FLATTEST part of the Cp curve, so position cannot explain it

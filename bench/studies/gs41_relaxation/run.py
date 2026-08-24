@@ -1,6 +1,6 @@
 """GS4.1 round 14 (G13) -- is the post-transition relaxation one defect or two?
 
-Binding text: docs/dev_phase_four/20260821-0800-g13-prereg.md (committed before
+Binding text: phases/p4/docs/dev_phase_four/20260821-0800-g13-prereg.md (committed before
 any code). Re-scoped there, with the reason: the plate's two external correlations
 cannot adjudicate an attribution question, because round 9 leg A measured that a
 MORE faithful closure agreed with them WORSE.

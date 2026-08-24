@@ -1,6 +1,6 @@
 """Self-convergence on a COMMON point set, factor-2 chain S0/S2/S4. ZERO SOLVES.
 
-Pre-registered in docs/dev_phase_three/20260814-2200-common-pointset-prereg.md, whose section 0 states my
+Pre-registered in phases/p3/docs/dev_phase_three/20260814-2200-common-pointset-prereg.md, whose section 0 states my
 prediction (N-DISC) up front, because I have already seen the sqrt(2) chain's numbers and cannot claim a
 blind test -- and states how that prediction could fail (the clamped leading-edge points may have carried
 most of the self-difference, in which case d_self collapses and the reading flips to N-MODEL).

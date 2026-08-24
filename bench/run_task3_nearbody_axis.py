@@ -1,6 +1,6 @@
 """N1 confirm the near-body axis IN ADVANCE / N2 the flat-cap hypothesis / N3 price the MID-for-LE trade.
 
-Pre-registered in docs/dev_phase_three/20260814-1400-nearbody-axis-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260814-1400-nearbody-axis-prereg.md.
 
 Last round found LE-band error monotone in the near-body cell share -- but on an axis identified AFTER
 the data, because the arm registered as "bulk-heavy" had actually moved cells outward (the per-shell

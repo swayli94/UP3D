@@ -1,6 +1,6 @@
 """N2 -- is the nozzle's reason=cap a BUDGET stop or a capability limit?
 
-Binding text: docs/dev_phase_five/20260824-1000-n2-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260824-1000-n2-prereg.md (committed first).
 
 Read the implementation first and the question changed: `reason=cap` is the Newton
 ITERATION cap (n_max=80, hardcoded in run_nozzle.py:65) with tol=1e-11, and those legs

@@ -1,6 +1,6 @@
 """M3 error budget: is wall accuracy the binding term, or is it shock position?
 
-Pre-registered in docs/dev_phase_two/20260731-1600-m3-budget-prereg.md and committed
+Pre-registered in phases/p2/docs/dev_phase_two/20260731-1600-m3-budget-prereg.md and committed
 before this file was written. Read that for the protocol and, more importantly, for the
 interpretation rules R1-R4 -- in particular R2, the validity gate that decides whether
 the entropy-ON leg is a physics reading at all or the G8.2 3-D donor-cycle defect
@@ -57,7 +57,7 @@ GV53_K0_POOLED = {"medium": 0.1288}
 #: same recipe, same threads, mesh file the ONLY variable: coarse_flat.msh gives cl_p 0.262123
 #: (-0.249 % from this anchor) while coarse.msh gives 0.268115 (+2.03 %) -- and that +2.03 % is
 #: exactly the "two pipelines disagree on coarse" debt, now closed as a mesh-family switch.
-#: Round file docs/dev_phase_three/20260816-2000-coarse-pipeline-gap-verdict.md,
+#: Round file phases/p3/docs/dev_phase_three/20260816-2000-coarse-pipeline-gap-verdict.md,
 #: evidence gate_results/task3_coarse_pipeline_gap.csv.
 P14_ANCHOR = {"coarse": (0.262778, 0.268813),
               "medium": (0.277628, 0.282263)}
@@ -161,7 +161,7 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
     """
     kw = dict(NEWTON_M6_RECIPE)
     #: ★★ STALENESS FIXED 2026-08-13 (pre-registered
-    #: docs/dev_phase_three/20260813-0900-m3-remeasure-prereg.md). This script never applied the
+    #: phases/p3/docs/dev_phase_three/20260813-0900-m3-remeasure-prereg.md). This script never applied the
     #: production tip_taper -- `grep -c tip_taper` was 0 -- although B32/G8.2 adopted it on
     #: 2026-08-05, and `cases/meshes/onera_m6/medium.msh` was regenerated on 2026-08-04 as a ROUND
     #: tip. Round tip WITHOUT the taper is the configuration measured to die (CLAUDE.md: removing the

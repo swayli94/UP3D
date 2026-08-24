@@ -263,7 +263,7 @@ def test_taper_is_local_to_the_tip_on_m6(m6_coarse):
     #: That sigma failure was then root-caused and fixed: a HARMLESS length-2 donor cycle
     #: (2 of 68624 elements, s = 1 on both) could never satisfy the transport's
     #: every-ancestor-is-a-root termination test, so a perfect solve was reported failed
-    #: (docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md). Both legs now
+    #: (phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md). Both legs now
     #: report accept_reason = tol, so `converged` is asserted again -- and the residual
     #: bounds stay, because they say more than the flag does.
     for tag, r in (("base", base), ("tapered", tap)):

@@ -3,7 +3,7 @@ puts it? Sweep over the artificial-dissipation constant C, mesh size h and mesh
 regularity.
 
 Protocol (pre-registered in
-docs/dev_phase_two/20260728-1640-s1-shock-bench.md):
+phases/p2/docs/dev_phase_two/20260728-1640-s1-shock-bench.md):
 
   * constant-area duct, exact piecewise-linear stationary shock at x_s = 2.0
     of a duct of length 4 -- an EXACT weak solution of the full-potential

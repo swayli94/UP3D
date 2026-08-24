@@ -1,6 +1,6 @@
 """R16 -- is the trailing-edge divergence lift/wake coupled? An alpha dose-response.
 
-Binding text: docs/dev_phase_five/20260823-1100-r16-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-1100-r16-prereg.md (committed first).
 
 Method is B23's: alpha zero clean and growing superlinearly means lift/wake coupled. The
 confound is declared in advance -- alpha moves the wake jump AND the shock strength -- so

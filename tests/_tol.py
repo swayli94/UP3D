@@ -1,6 +1,6 @@
 """Shared tolerance assertions for the test suite.
 
-Phase two GS0.2, decision D1 (docs/dev_phase_two/roadmap.md §7):
+Phase two GS0.2, decision D1 (phases/p2/docs/dev_phase_two/roadmap.md §7):
 
   * permanent tests assert a RELATIVE tolerance of 1e-12 -- four to six orders
     tighter than any physically meaningful change (0.1 % in lift, 0.001 chord

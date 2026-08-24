@@ -1,6 +1,6 @@
 """N1 -- validate R23's usability criterion where TRUTH exists. Zero solves.
 
-Binding text: docs/dev_phase_five/20260824-0800-n1-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260824-0800-n1-prereg.md (committed first).
 
 The nozzle has an analytic solution, so `converged` legs that are provably WRONG exist:
 start=perturbed carries converged=True, reason=tol and err_cells around 36-41. On the

@@ -1,6 +1,6 @@
 """GS4.1 round 9 leg B -- the lag equation, checked against the rebuilt XFOIL.
 
-Binding text: docs/dev_phase_four/20260820-0900-lag-and-xfoil-check-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260820-0900-lag-and-xfoil-check-prereg.md
 plus addenda #1 (20260820-1500, the dump's normalisations) and #2 (20260820-1600,
 two marches). All committed before this script existed.
 

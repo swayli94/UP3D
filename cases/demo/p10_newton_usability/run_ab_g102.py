@@ -235,7 +235,7 @@ def main():
                                  b_semi=B_SEMI, m_inf=0.84)
             shocks[eta] = shock_report(c, 0.84)["upper"]["x_shock"]
         # ★ RE-ANCHORED 2026-07-31 to the entropy-corrected default (m_cap guard,
-        # docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md). SUPERSEDED
+        # phases/p2/docs/dev_phase_two/20260731-2200-entropy-mcap-fix.md). SUPERSEDED
         # isentropic: 0.2646 / 2.134 / 0.596 / 0.541 / 0.362.
         v["locks"] = [
             ("cl", forces["cl"], 0.263888, 0.005),

@@ -1,6 +1,6 @@
 """R21-a -- is the TE supersonic set one blob or salt-and-pepper? With a null.
 
-Binding text: docs/dev_phase_five/20260823-2100-r21a-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-2100-r21a-prereg.md (committed first).
 
 2146 of 6652 band elements is 32.3% occupancy and the 3-D site-percolation threshold is
 about 0.31, so a random set of the same size would very likely connect too -- "it is one

@@ -1,6 +1,6 @@
 """R15 -- the C=3.0 limit cycle and the rho_floor leg, with control arms.
 
-Binding text: docs/dev_phase_five/20260823-0900-r15-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-0900-r15-prereg.md (committed first).
 
 Feasibility resolved BEFORE registering: the floored cells cannot be located from what
 the library returns (rho_tilde is not returned; the workspace exposes no rho/nu/floor

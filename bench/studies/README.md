@@ -448,9 +448,9 @@ running. ⇒ The rows below are grouped by phase rather than merged into the fla
 so a future reader can see which phase each belongs to without reading every round file.
 
 **Where the round-by-round record lives** (these rows are an index, not the evidence):
-phase four = [`docs/dev_phase_three/20260816-1000-gs41-initiation.md`](../../docs/dev_phase_three/20260816-1000-gs41-initiation.md)
-(entry point) + `docs/dev_phase_four/progress.md`; phase five =
-[`docs/dev_phase_five/progress.md`](../../docs/dev_phase_five/progress.md), whose §A/§B
+phase four = [`phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md`](../../phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md)
+(entry point) + `phases/p4/docs/dev_phase_four/progress.md`; phase five =
+[`phases/p5/docs/dev_phase_five/progress.md`](../../phases/p5/docs/dev_phase_five/progress.md), whose §A/§B
 tables say which conclusions **stand** and which were **retracted** — read those two tables
 before citing any number from a phase-five directory.
 
@@ -483,7 +483,7 @@ they are cheap to re-run; each `run.py` self-checks its own bands.
 
 ### Phase five — M1 (2-D inviscid calibration, NACA0012 M0.80 / α1.25)
 
-★ **Read `docs/dev_phase_five/progress.md` §B first.** Seven conclusions from these
+★ **Read `phases/p5/docs/dev_phase_five/progress.md` §B first.** Seven conclusions from these
 directories were **retracted by later rounds in the same phase**, including two of the
 headline ones; the directories are kept because the *measurements* stand even where the
 *attributions* did not.

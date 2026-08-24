@@ -1,6 +1,6 @@
 """GS4.1 round 3 -- route (a2): the correlation closure, verified and costed.
 
-Binding text: docs/dev_phase_four/20260819-0500-gs41-a2-correlation-closure-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260819-0500-gs41-a2-correlation-closure-prereg.md
 (committed before this script existed). Every band is quoted verbatim from
 rounds 1 and 2 so the three rounds compare on one criterion.
 

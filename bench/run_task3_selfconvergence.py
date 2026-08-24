@@ -1,6 +1,6 @@
 """Is the LE-band error DISCRETISATION or MODEL error? A self-convergence (Cauchy) read.
 
-Pre-registered in docs/dev_phase_three/20260814-1800-selfconvergence-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260814-1800-selfconvergence-prereg.md.
 
 Every earlier round measured e(h) = RMS[Cp_h - Cp_exp]. Whether the solution has CONVERGED needs the
 solution against itself: d_self(h) = RMS[Cp_h - Cp_finer] at the same experimental abscissae, so both

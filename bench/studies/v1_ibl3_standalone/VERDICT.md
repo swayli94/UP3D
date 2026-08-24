@@ -33,7 +33,7 @@ Gate summary: **9 PASS / 2 FAIL** (+2 RECORDED diagnostics).
 
 > ★★ **ANNOTATION 2026-08-18 (GS4.1 round 1, phase 4 — no number above is changed).**
 > Two readings above must not be quoted on their own any more; see
-> [the GS4.1 round-1 verdict](../../../docs/dev_phase_four/20260818-2300-gs41-strip-core-verdict.md).
+> [the GS4.1 round-1 verdict](../../../phases/p4/docs/dev_phase_four/20260818-2300-gs41-strip-core-verdict.md).
 >
 > 1. **Gate (b) is a COMMON-MODE comparison.** `cf_FE` vs `cf_march` share this same
 >    closure, so the 0.07 % is a statement that the FE solver integrates the family

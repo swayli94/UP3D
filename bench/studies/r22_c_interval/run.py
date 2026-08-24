@@ -1,6 +1,6 @@
 """R22 -- the usable upwind_c interval at medium, and the cl spread across it.
 
-Binding text: docs/dev_phase_five/20260824-0200-r22-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260824-0200-r22-prereg.md (committed first).
 
 (c) cannot be populated at medium because C=1.0 clamps and C=3.0 limit-cycles. Turning
 "cannot evaluate" into "here is the usable interval and the spread across it" is strictly

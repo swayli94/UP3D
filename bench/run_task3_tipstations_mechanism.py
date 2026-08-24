@@ -1,6 +1,6 @@
 """Q1 out-of-sample at the two MASKED stations + Q2 foot-versus-peak attribution. One batch of solves.
 
-Pre-registered in docs/dev_phase_three/20260815-0600-tipstations-mechanism-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260815-0600-tipstations-mechanism-prereg.md.
 
 Q1: the experiment has SEVEN stations and M3 uses five -- eta 0.96 and 0.99 are tip-masked, so their
 self-differences have never been computed. That makes them genuinely out-of-sample for the previous round's

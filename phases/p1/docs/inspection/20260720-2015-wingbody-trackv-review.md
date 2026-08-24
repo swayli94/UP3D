@@ -50,7 +50,7 @@
   不存在：`kernels/residual.py:43-76,144-189` 纯体积装配，无任何边界面循环。DN6 是历史文档，
   但 track_v.md 把 DN2/DN6 列为设计记录，开工时会误导（正确起点 = `solve/wall_correction.py`
   的 RHS 装配模板，见 §3.2）。
-- `docs/inspection/20260719-0555-full-inspection.md` §4.5 开放清单中 #1（GB20.7）、#5（翼身
+- `phases/p1/docs/inspection/20260719-0555-full-inspection.md` §4.5 开放清单中 #1（GB20.7）、#5（翼身
   跨声速不对称）、#12（N1）、#13（N3）已被 B21/B22/B26 解决（快照报告，不补注，读者注意）。
 
 ### 1.3 代码层小问题（非 bug，记录）

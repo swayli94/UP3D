@@ -7,26 +7,42 @@ workstation-scale (minutes for 1–3 M nodes).
 
 ## Document map (read the relevant one before coding)
 
-★★ **LAYOUT CHANGED 2026-08-10 — read this before following any path below.** Finished
-phases were archived into **`phases/p1/`** and **`phases/p2/`** (tracked, not gitignored, so
-the evidence stays in HEAD). The link targets in this map were repointed mechanically, so a
-line reading `[docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical,
-the file now lives in the archive.** What stayed in place is what phase 3 still needs, and the
-rule was measurable — *if a surviving test or script reads it, it stays*:
+★★ **LAYOUT — read this before following any path below.** Finished phases are archived
+into **`phases/p1/` … `phases/p5/`** (tracked, not gitignored, so the evidence stays in HEAD).
+The link targets in this map were repointed mechanically, so a line reading
+`[docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical, the file now
+lives in the archive.** What stays in place is what the CURRENT phase needs, and the rule is
+measurable — *if a surviving test or script reads it, it stays*. Measured state **2026-08-24**:
 
-- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **73 test files (every conforming
-  anchor)**; the 18 pure level-set test files are archived, since deleting them is phase 3's
-  first task;
-- `bench/` keeps the **7-module closure** behind the five product metrics **plus
+- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **72 test files** — ★ **every one of
+  them exercises live code** (all 72 have passing items in the gated set), so by the archive's
+  own rule **no test file is archivable**; the 18 pure level-set files went with their deleted
+  route, and phase 2–5 deleted no route. Phase 1's number here used to read "73"; it is 72.
+- `bench/` keeps the **7-module closure** behind the product metrics **plus
   `bench/gate_results/`** — the capability boundary cites those CSVs by path;
-- `cases/demo/` keeps **9 of 33** and `cases/analysis/` **10 of 33** subdirectories, the ones
-  kept tests actually read (e.g. `cases/demo/p11_curved_walls/`, which
-  `tests/test_laplace_sphere.py` reads for the LIVE G1.6 Option C gate);
-- `docs/` keeps overview, design, design_track_v, agent-rules, inspection/, and the **six
-  phase-three-facing** files in `docs/dev_phase_two/` (roadmap, progress, the capability
-  boundary, the level-set inventory, the precond decision record, the template).
+- `cases/demo/` keeps **6** subdirectories, the ones kept tests actually read (e.g.
+  `cases/demo/p11_curved_walls/`, which `tests/test_laplace_sphere.py` reads for the LIVE G1.6
+  Option C gate). ★ **`cases/analysis/` NO LONGER EXISTS** — merged into `bench/studies/` in
+  `7edce18` (user ruling: `bench/` and `cases/analysis/` were two homes for one thing). The
+  historical copy keeps the old name at `phases/p1/cases/analysis/`, deliberately.
+- ★★★ `docs/` holds **only 4 living documents plus the current phase**: `overview.md`,
+  `design.md`, `design_track_v.md`, `agent-rules.md`, and `dev_phase_six/`. **User ruling
+  2026-08-24: every phase-2…5 document moved into `phases/p*/`, and `docs/inspection/` was
+  DELETED** — audit reports now archive with their phase (`phases/p{1,2,3}/docs/inspection/`),
+  and a new report is written into the current phase's directory. Prior analysis and documents
+  are **reference material only**; phase 6 tracks what is still in force itself.
+  ⇒ **`docs/dev_phase_six/20260824-0300-carried-forward.md` is the single live landing point**
+  for anything the archived files used to state: the **measured** library defaults (`ew_eta0` =
+  `ew_eta_max` = 1e-6, `entropy_correction=True`, `tip_cap="round"`, `upwind_c=1.5`, `m_crit`
+  0.95, `m_cap` 3.0 — read with `inspect.signature`, not copied), the rulings still in force
+  (D5 executed, D2 activated; ★ D1/D3/D4 explicitly **not** re-checked), and the do-not-reopen
+  list. ★ The capability boundary is now archived at
+  `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` and is still the only
+  document stating what the solver can do — **producing phase 6's own is a phase-6 deliverable**;
+  until then, cite the archived original rather than paraphrasing it.
+  ★ Round-file template: `phases/p2/docs/dev_phase_two/_TEMPLATE.md`.
 
-**Start here for phase 3:** [docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
+**Start here:** [phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
 then [phases/README.md](phases/README.md) for what was archived and how to get a
 guaranteed-runnable phase-1/2 tree (`git worktree add ../up3d-prereorg d224223`).
 
@@ -203,7 +219,7 @@ cycles intact so they still collapse and are still refused, termination test unc
 Measured A/B: acceptance flips False -> True while sigma_min and cl_p agree to 10 digits with
 identical refresh and step counts (`bench/gate_results/sigma_fix_verify{,_prefix}.csv`) —
 so it changes the VERDICT, not the numbers. Note:
-`docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
+`phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
 Do not re-attribute this to the tip: the affected elements span the whole mesh (z/b 0.002-1.650).
 
 ## ★★ Four criterion defects in four rounds, all the same shape (2026-08-12, measured)
@@ -784,7 +800,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ Earlier the same day it went 468 → 472 → 468 and that is
    an account closing, not churn: the +4 were the TEMPORARY `sigma_scale` instrument's
    locks, and they were deleted WITH the instrument at its registered expiry
-   (docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
+   (phases/p3/docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
    "in case we need it again" is how temporary knobs become permanent.
    ★★ Same disposal applied at the phase-3 close-out (2026-08-16) to `capture_select` /
    `capture_select_abs`, whose route K3 had measured HARMFUL (cl spread 1.21 % → 7.47 % on the
@@ -873,13 +889,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ **Step 6, added 2026-08-09: when a criterion is RETIRED or re-specified, grep its
    numbers and wording across `tests/` too** — B28 retired the fuselage-lift premise in
    the demo and the matching assertion sat in a gated test until 2026-08-09.
-   ★ **Phase THREE (opened 2026-08-11) records rounds in `docs/dev_phase_three/`**
+   ★ **Phase THREE (opened 2026-08-11) records rounds in `phases/p3/docs/dev_phase_three/`**
    (its own progress.md); the PLAN and rulings D1–D5 still live in
-   docs/dev_phase_two/roadmap.md, and docs/dev_phase_two/README.md holds the per-file
+   phases/p2/docs/dev_phase_two/roadmap.md, and phases/p2/docs/dev_phase_two/README.md holds the per-file
    checklist for when those six files may move to `phases/p2/docs/`.
    ★★★ **Phase THREE CLOSED 2026-08-16** (ruling D7; all three tasks on `main` — ① via PR #26,
    ②③ via PR #27 `d5efe53`). **PHASE 4'S SINGLE ENTRY POINT IS
-   [docs/dev_phase_three/20260816-1000-gs41-initiation.md](docs/dev_phase_three/20260816-1000-gs41-initiation.md)**
+   [phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md](phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md)**
    — read its §0 before anything else: it is self-contained by design (handover baselines, the items
    D7 assigned forward, the six things that must not be silently changed, and the two measured
    conclusions GS4.1 must carry — **P1 = 6.07× now but crosses the band's floor at the next level**,
@@ -887,12 +903,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ It stays where it is; phase 4's own progress.md **links** it rather than copying it — a copied
    entry point forks from its original, which is the failure this project has logged repeatedly.
    ★ **Phase TWO uses a different surface list**, because the phase-one docs below are
-   frozen (docs/dev_phase_two/roadmap.md §8): (1) `docs/dev_phase_two/progress.md` — one
+   frozen (phases/p2/docs/dev_phase_two/roadmap.md §8): (1) `phases/p2/docs/dev_phase_two/progress.md` — one
    row, plus **its own 阶段进度概览 and 产品指标追踪 tables** (they live in progress.md,
-   NOT in the roadmap); (2) `docs/dev_phase_two/roadmap.md` when a ruling or a stage
+   NOT in the roadmap); (2) `phases/p2/docs/dev_phase_two/roadmap.md` when a ruling or a stage
    disposition moves; (3) the round file
    itself; (4) this file's **baseline line** when the suite count moves; (5)
-   `docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
+   `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
    capability claim; ★ **(6) PROJECT_STRUCTURE.md** — added 2026-08-10 after checking it
    and finding phase two absent from it ENTIRELY: neither `bench/` nor `docs/` was in the
    directory tree and the footer baseline still read the phase-one 652, so ~70 round files

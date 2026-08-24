@@ -1,6 +1,6 @@
 """GS2.1 step one: is the M6 LE Cp error resolution-controlled at all?
 
-Pre-registered in docs/dev_phase_two/20260801-0200-gs21-le-response-prereg.md and
+Pre-registered in phases/p2/docs/dev_phase_two/20260801-0200-gs21-le-response-prereg.md and
 committed before this file was written -- read that for the four legs and the criteria.
 The short version: the expensive part of GS2.1 (true 3-D anisotropic prism layers) is
 machinery to build, so first sweep the generator's EXISTING single-variable LE knob

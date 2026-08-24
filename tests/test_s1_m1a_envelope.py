@@ -60,7 +60,7 @@ M_INF, ALPHA = 0.72, 1.25
 #: would not break the M1a lock" was imprecise -- it held for the consistency
 #: criterion, not for the absolute locks).
 #: ★★ GATE RE-SPEC 2026-08-05, user ruling. Recorded in full in
-#: docs/dev_phase_two/20260805-2330-m1a-respec.md, written BEFORE this edit as
+#: phases/p2/docs/dev_phase_two/20260805-2330-m1a-respec.md, written BEFORE this edit as
 #: roadmap sec 5 requires. Summary of what changed and what it COST:
 #:
 #: The ladder moved from (coarse, medium, fine) to (xcoarse, coarse, medium) because
@@ -150,7 +150,7 @@ def test_m1a_three_level_convergence(mesh_dir):
     what carries the statement, and it is asserted first.
 
     What this criterion no longer claims, and why, is in the LOCK comment above and in
-    docs/dev_phase_two/20260805-2330-m1a-respec.md sec 5.
+    phases/p2/docs/dev_phase_two/20260805-2330-m1a-respec.md sec 5.
     """
     cl = {}
     for level in LADDER:

@@ -3,7 +3,7 @@ along the streamwise coordinate, independent of the three-dimensional
 `ibl3.py` system.
 
 Scope and provenance (GS4.1 round 1, pre-registration
-`docs/dev_phase_four/20260818-2100-gs41-strip-core-prereg.md` + addendum #1):
+`phases/p4/docs/dev_phase_four/20260818-2100-gs41-strip-core-prereg.md` + addendum #1):
 
 - the closure family is **reused verbatim** from `closures.py` -- this module
   contains no closure formula and no closure constant of its own, so a

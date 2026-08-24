@@ -1,6 +1,6 @@
 """M1-b + M1-c -- measure S-TIE at the registered quantity, and ask what sets D's floor.
 
-Binding text: docs/dev_phase_five/20260822-2000-m1b-prereg.md  (+ addendum #1,
+Binding text: phases/p5/docs/dev_phase_five/20260822-2000-m1b-prereg.md  (+ addendum #1,
 both committed before this file existed).
 
 ★★ Round 8 implemented S-TIE against the FOOTPRINT VECTOR; the registered quantity

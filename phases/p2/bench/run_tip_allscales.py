@@ -1,6 +1,6 @@
 """GS2.1 step two: cure the tip, then read P11's all-scales lever.
 
-Pre-registered in docs/dev_phase_two/20260801-0800-gs21-tip-prereg.md, committed before
+Pre-registered in phases/p2/docs/dev_phase_two/20260801-0800-gs21-tip-prereg.md, committed before
 this file was written. Read that for the legs, for G1 (the tip-cure gate that must pass
 before any refinement reading is attributable) and for G2's same-recipe baseline rule.
 

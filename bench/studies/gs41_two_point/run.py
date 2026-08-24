@@ -1,6 +1,6 @@
 """GS4.1 round 11 -- XFOIL's two-point scheme, so C3 becomes a reading.
 
-Binding text: docs/dev_phase_four/20260821-0100-two-point-scheme-prereg.md +
+Binding text: phases/p4/docs/dev_phase_four/20260821-0100-two-point-scheme-prereg.md +
 addendum #1 (20260821-0130). Both committed before any code.
 
 Regenerate:  PYTHONNOUSERSITE=1 python bench/studies/gs41_two_point/run.py

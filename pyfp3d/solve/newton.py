@@ -43,7 +43,7 @@ is a Picard stabilizer -- it would destroy quadratic convergence); no
 pseudo-transient term (phase two GS1.2b measured a SER-scheduled one to be
 strictly worse than plain Newton here, and removed the dormant fixed-shift
 `ptc_dtau` it replaced -- see
-docs/dev_phase_two/20260728-2030-s1-ptc.md). Transonic runs MAY wrap this in
+phases/p2/docs/dev_phase_two/20260728-2030-s1-ptc.md). Transonic runs MAY wrap this in
 the upward-only Mach continuation of solve_newton_transonic (M_crit and upwind_c held FIXED
 within the ramp, Lopez Tables 4.7/4.8/4.13).
 """
@@ -272,7 +272,7 @@ class NewtonWorkspace:
         self.shock_set_history = []
         #: ★★ capture SELECTION was tried here and REMOVED 2026-08-16. K3 measured the rule HARMFUL
         #: (balanced panel [0, 5]: cl spread 1.21 % -> 7.47 %, and it lost a seed), so the route is
-        #: dead -- see docs/dev_phase_three/20260812-2300-capture-selection-verdict.md. The knob went
+        #: dead -- see phases/p3/docs/dev_phase_three/20260812-2300-capture-selection-verdict.md. The knob went
         #: with it rather than surviving as a default-OFF option, on this project's own rule that a
         #: knob kept "in case we need it again" is how temporary knobs become permanent. The freeze
         #: keeps the LAST refresh, and the honest reading of that stays in the sigma-freeze report:
@@ -539,7 +539,7 @@ class NewtonWorkspace:
         # over a donor cycle -- 57 floored cells, |R| 2.49e-06 un-converged (the
         # G8.2 signature; the two collapse routes are locked in
         # tests/test_s1b_entropy.py). Pre-registered
-        # docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
+        # phases/p2/docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
         sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air,
                              lim=state["lim"])
         #: ★ RECORD ONLY -- no switch, no numerical effect (one int64 copy). The map this refresh
@@ -742,7 +742,7 @@ def solve_newton_lifting(
     # ★ Also measured and rejected: a Laplace "cheap linearised seed" is far WORSE than
     # none (103.5 s, non-converged, cl_p 18 % off), and a shallow Picard-2 seed is
     # worthless (same wall, 9 Newton steps at level 0 against 3). Evidence:
-    # bench/gate_results/gs33b_seed.csv, docs/dev_phase_two/20260802-2300-noseed-global.md
+    # bench/gate_results/gs33b_seed.csv, phases/p2/docs/dev_phase_two/20260802-2300-noseed-global.md
     n_picard_seed: int = 0,
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
@@ -818,7 +818,7 @@ def solve_newton_lifting(
     #: because it is the tool for ON/OFF comparisons.
     entropy_correction: bool = True,
     #: ★★ Part 3 of the sigma-freeze round (pre-registered addendum #1 of
-    #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md). Width, in M^2 units, of a
+    #: phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md). Width, in M^2 units, of a
     #: CONTINUOUS ramp replacing the post-shock membership test's two hard switches -- the measured
     #: source of the selection limit cycle (a cell on the sonic line flips on an infinitesimal phi
     #: change while its factor JUMPS by 1 - sigma_RH). 0.0 = the hard test = today, BIT-IDENTICAL.
@@ -1479,7 +1479,7 @@ def solve_newton_lifting(
     finalize(timings, time.perf_counter() - t_wall0)
     # ---- COLD-START SEED FALLBACK (user ruling 2026-08-05) --------------------
     #
-    # MEASURED mechanism (docs/dev_phase_two/20260805-2200-seed-exposure.md): the
+    # MEASURED mechanism (phases/p2/docs/dev_phase_two/20260805-2200-seed-exposure.md): the
     # 2026-08-02 flip of n_picard_seed's default 5 -> 0 does not fail on its own. It
     # fails on a CONJUNCTION -- no seed, AND a cold start directly at a supercritical
     # M_inf, AND a mesh fine enough to resolve the supersonic pocket. NACA0012 M0.80:
@@ -1567,7 +1567,7 @@ def solve_newton_lifting(
     #: ★ This REPORTS; it does not refuse. Promoting it to a refusal (like
     #: sigma_transport_not_converged) is a CONTRACT change that could turn committed capability
     #: anchors red, so the trigger rate on those anchors is measured first and the promotion is
-    #: the user's call. Pre-registration: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md.
+    #: the user's call. Pre-registration: phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md.
     #: ★ tau is a CALIBRATION, not a guarantee (the EW forcing / taper r_c / descent10 lesson), so
     #: the raw last delta is reported alongside the flag and the verdict reports sensitivity.
     _sig_report = _sigma_freeze_report(sigma_history)

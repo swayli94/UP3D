@@ -1,6 +1,6 @@
 """R20 -- what are the TE supersonic cells touching? Zero solves.
 
-Binding text: docs/dev_phase_five/20260823-1900-r20-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-1900-r20-prereg.md (committed first).
 
 Thirteen rounds measured where and how much; none asked why. A potential flow at M 0.8
 cannot have a physical supersonic region at the trailing edge, so it comes from a

@@ -1,7 +1,22 @@
-# `phases/` —— phase 1 与 phase 2 的归档
+# `phases/` —— phase 1–5 的归档
 
-**这里放的是已结束阶段的材料。** phase 3 的工作面在仓库的原位置
+**这里放的是已结束阶段的材料。** phase 6 的工作面在仓库的原位置
 (`pyfp3d/`、`tests/`、`bench/`、`cases/`、`docs/`)。
+
+★★★ **2026-08-24 使用者裁决:phase 2–5 的文档全部移入 `phases/p*/`,`docs/inspection/` 删除。**
+「以前的分析和文档都只是参考」—— phase 6 在自己的文档里指向或跟踪它们。
+⇒ `docs/` 现在只剩 **4 份活文档 + 当前阶段目录**(`overview` / `design` / `design_track_v` /
+`agent-rules` + `dev_phase_six/`)。
+
+★★ 这次裁决**覆盖了** `p2/docs/dev_phase_two/README.md` 那份逐文件检查单挡下的 4 个文件。
+挡它们的两条理由是**可测的事实**(EW forcing 1e-6 仍是库默认;它是唯一的能力声明),
+所以**归档的同时必须有一个新的落点**,否则那不是归档而是丢失 ⇒
+**[`docs/dev_phase_six/20260824-0300-carried-forward.md`](../docs/dev_phase_six/20260824-0300-carried-forward.md)**
+就是那个落点(实测的库默认值、仍在管事的裁决、不许重开的封闭负结果、东西都搬到哪了)。
+★ 而**能力边界仍然只有归档那一份** —— 产出 phase 6 自己的那一份是**phase 6 的交付**;
+在那之前引用能力声明**必须引用归档原件**,不许凭记忆转述。
+
+**测试代码一个文件都没有移动 —— 见下面「为什么测试不归档」。**
 
 整理于 **2026-08-10**,基准提交 **`d224223`**(phase two 的 PR #25 合并点)。
 
@@ -38,8 +53,11 @@ inspection 与 6 个 phase-3 要用的 phase-two 文件。
 
 | | 内容 |
 |---|---|
-| `p1/` | phase 1(Track P/M/B/V/A):24 个 demo + 23 个 analysis 证据链、phase-1 的 roadmap 与 demo_report、`design_track_b.md`、`analysis/`、`archive/`、**18 个纯 level-set 测试** |
-| `p2/` | phase 2:45 个 bench 脚本 + `s1_duct/`、**85 个轮次文件** |
+| `p1/` | phase 1(Track P/M/B/V/A):24 个 demo + 23 个 analysis 证据链、phase-1 的 roadmap 与 demo_report、`design_track_b.md`、`analysis/`、`archive/`、**18 个纯 level-set 测试**、8 份审查报告 |
+| `p2/` | phase 2:45 个 bench 脚本 + `s1_duct/`、**92 个文件**的 `dev_phase_two/`(2026-08-24 补入全部 7 个:`progress.md`、`LEVELSET_DELETION_INVENTORY.md`、`roadmap.md`(裁决 D1–D5)、`PHASE_TWO_CAPABILITY_BOUNDARY.md`(★ **仍是唯一的能力声明**)、`DECISION-2026-08-02-precond.md`、`_TEMPLATE.md`(★ **轮次格式仍在用**)、`README.md`(那份检查单))、**2026-07-28 奠基审计 + exp1–exp6** |
+| `p3/` | phase 3:**68 个轮次文件** + **2026-08-16 独立审计**(触发 GS4.0) |
+| `p4/` | phase 4(GS4.1 二维 strip IBL / 剪应力滞后):**82 个轮次文件** |
+| `p5/` | phase 5(M1 二维无粘标定):**61 个文件**,含 `progress.md`(★ 它的 **§A 仍然成立 / §B 已撤回**两张表是 phase 6 的前置阅读 —— 引用 phase 5 任何数字之前先读那两张表) |
 
 ## ★ 第三轮:15 个目录搬回原位(保留规则原来只算了一跳)
 
@@ -105,3 +123,73 @@ git worktree add ../up3d-prereorg d224223     # 整理之前的完整状态
 最初的要求是把归档 gitignore。**改为跟踪**(使用者 2026-08-10 裁决),理由是:
 gitignore 意味着**新 clone 里没有这些文件** —— 而那会让 phase 1/2 的每一个结论在 HEAD 上
 **失去提交产物**,与本项目的头号纪律直接冲突。目录整洁的效果不变,证据仍在。
+
+---
+
+## ★★★ 2026-08-24 这一轮:两个**本文件上一节没列**的断裂类,以及为什么测试不归档
+
+### 为什么**测试代码一个文件都没有移动**
+
+使用者要求梳理「phase 2–5 的文档**和测试代码**」。文档移了,**测试一个都没移**,理由是**可测的**:
+
+- 本文件第 59–61 行自己写着:**「把一条活的收口门指进归档比没有这道门更糟」** ——
+  它会跑、会绿、并为一条没人维护的路线断言能力。
+- 而 **72 个测试文件在门控全集里全部有通过项**(604 passed / 1 skipped / 4 xfailed,
+  1:44:32 @8 线程),即**每一个都在检验活的 `pyfp3d/` 代码**。
+- phase 1 的 18 个测试之所以能归档,是因为**它们那条路(level-set)被删除了**。
+  **phase 2–5 没有删除任何路线** ⇒ 按同一条规则,**没有一个测试文件可归档**。
+
+★ 唯一的例外是一条**该删不该归档**的:`tests/test_v6_wake_sheet.py::test_ab_bit_identity_gate_free_library`
+是 2026-07-29 因**前提为假**而 `mark.skip` 的(松循环 run-to-run 不可复现)。
+登记给 phase 6:**删除,而不是移进归档** —— 归档一条已知前提为假的测试等于把它藏起来。
+
+### ★★ 断裂类 4:**根相对路径字面量**(本文件"已修的三类"里没有它)
+
+上一节列了三类已机械修好的断裂(`parents[N]` 深度、移动目录的路径字面量、`gate_results` 横向指向)。
+**这一轮实测出第四类**:活脚本里的**绑定文本行** ——
+
+```
+Binding gate text: docs/roadmap/track_v.md GV1.1(a)-(e)
+```
+
+这是 `bench/studies/` 的研究**指向管它的门**的审计链。2026-08-10 整理把
+`docs/roadmap/` 移进了 `p1/`,**而这些绑定行一条都没有重指**:实测**仍有 139 处**
+指向已不存在的 `docs/` 目录(`docs/roadmap/` 94、`docs/discussion_notes/` 17、
+`docs/analysis/` 14、`docs/demo_report/` 11、`docs/archive/` 3),
+另有 **184 处**死的 `docs/**/*.md` 文件字面量(`docs/roadmap/track_v.md` 57、`docs/roadmap.md` 50 领头)。
+
+★★★ **本轮不修它们**,理由写下来:把一次目录搬迁和一次 184+139 处的链接修复混在一个提交里,
+**两件事都变得无法验证**。⇒ 登记为 **phase 6 GS6.1 的对象**,并且它现在**有仪器了**(下节)。
+
+### ★★ 断裂类 5:**相对 markdown 链接** —— 而这一类只有它自己的仪器看得见
+
+`[x](../inspection/y.md)` 是**相对被引用文件自己的目录**解析的,
+所以一个根相对的正则**在原理上看不见它**。实测代价:本轮搬迁**造成 239 条断链**
+(移动前基线 9 → 移动后 248),其中最大一块是 `phases/p5/docs/dev_phase_five/progress.md`
+**留在原位而它的 60 个轮次文件搬走了** —— 11 条兄弟链接当场断掉。
+
+修法与验证:按**唯一 basename** 重指并重算相对路径(唯一命中才改,0 或 >1 报告不动)——
+自动修 **231** 条,**12 条**因为 `progress.md` / `roadmap.md` / `README.md` 这类通名重复而按意图手改,
+复验剩 **5 条,全部是 `[φ](TE) = Γ` 这个数学记号**,即本仓库唯一被明确允许的例外。
+
+### ★ 这一轮的方法论,一句话
+
+**先给搬迁做仪器,并先证明仪器有牙。** 顺序是:
+① 移动前取基线(A=12 / C=9 / D=139);② `git mv`;
+③ **移动后、改写前**跑仪器,**A 必须从 12 跳到 152** —— 这一步就是 G-TEETH,
+一个报 0 的仪器在这里是坏的而不是好的;④ 改写;⑤ 复验回到基线。
+
+★★ 而**第一版仪器是错的,且是被抽样检查抓住的**:它把
+`[docs/roadmap.md](phases/p1/docs/roadmap.md)` 这种**markdown 显示文本**算成了路径引用
+(CLAUDE.md 的文档地图明写那个名字是历史的),于是报出 277 条"断裂"。
+**这与本文件上一节记的"第一版闭包太松(把注释里的提及也算了)"是同一个错误的第二次出现。**
+⇒ 口径:**报一个数之前,先抽样看那个数里的东西是不是你以为的东西。**
+
+### ★ 库文件被改了 8 个,而它是**纯文档改动 —— 用 AST 证明的,不是靠读 diff**
+
+绑定文本也写在 `pyfp3d/` 的模块 docstring 里,所以重指改到了 8 个库文件
+(`kernels/entropy.py`、`meshgen/structured.py`、`meshgen/wing3d.py`、`solve/newton.py`、
+`viscous/closures.py`、`viscous/closures_2d.py`、`viscous/ibl3.py`、`viscous/strip2d.py`;23 insertions / 23 deletions)。
+判据不是"看起来都在 docstring 里",而是:**把每个 docstring 清空之后比较 AST**,
+8 个文件对移动前的基线**逐位相同** ⇒ 代码零改动。
+(基线取自 `git worktree add <tmp> HEAD` —— 未提交状态下 HEAD 就是移动前的树。)

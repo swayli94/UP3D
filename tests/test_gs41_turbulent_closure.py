@@ -5,7 +5,7 @@ the closure were edited: the sourced constants, the dissipation identity that a
 memory-written version got wrong, and the fact that a flat plate settles onto a
 physical turbulent shape factor instead of collapsing.
 
-Verdict: docs/dev_phase_four/20260819-1500-turbulent-closure-verdict.md
+Verdict: phases/p4/docs/dev_phase_four/20260819-1500-turbulent-closure-verdict.md
 """
 
 import numpy as np

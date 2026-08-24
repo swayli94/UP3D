@@ -1,6 +1,6 @@
 """GS4.1 round 2 -- (3) cost measure at S2/S4 station counts, (4) crossflow record.
 
-Binding text: docs/dev_phase_four/20260819-0100-gs41-cost-and-crossflow-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260819-0100-gs41-cost-and-crossflow-prereg.md
 (committed before this script existed). Codes C-SUB1 / C-PARTIAL / C-MISS and
 the guards are quoted from it and are NOT re-specified here.
 

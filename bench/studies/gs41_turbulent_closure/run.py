@@ -1,6 +1,6 @@
 """GS4.1 round 5 -- the turbulent closure at local equilibrium, on a ZPG plate.
 
-Binding text: docs/dev_phase_four/20260819-1300-turbulent-closure-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260819-1300-turbulent-closure-prereg.md
 (committed before this script existed). Codes T-CF / T-H / T-EQUIL / T-CROSS and
 the guards are quoted from it and are NOT re-specified here.
 

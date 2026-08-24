@@ -1,6 +1,6 @@
 """Is the 3-D grid-convergence failure lift-coupled, or is it the wall geometry?
 
-Pre-registered in docs/dev_phase_two/20260803-2000-alpha-discriminator-prereg.md, committed
+Pre-registered in phases/p2/docs/dev_phase_two/20260803-2000-alpha-discriminator-prereg.md, committed
 before this file was written. Read that first -- it records the two premises the user
 corrected (distance to a VISCOUS experiment is not an accuracy measure for a full-potential
 solver, and this phase is about the capability boundary and finding bugs).

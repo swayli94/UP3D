@@ -1,8 +1,8 @@
 """
 Does k*=1 survive a change of FLOW CONDITION?
 
-Pre-registration: docs/dev_phase_four/20260817-1900-condition-axis-prereg.md
-Previous round:   docs/dev_phase_four/20260817-1700-level-ladder-verdict.md (K-FIXED)
+Pre-registration: phases/p4/docs/dev_phase_four/20260817-1900-condition-axis-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260817-1700-level-ladder-verdict.md (K-FIXED)
 
 The previous verdict wrote its own limit as the fourth forbidden sentence: k*=1
 across three LEVELS is not k*=1 across CONDITIONS. Here geometry, mesh level and

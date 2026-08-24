@@ -1,6 +1,6 @@
 """Is a converged solve's ANSWER usable? -- the check the project did not have.
 
-Binding text: docs/dev_phase_five/20260824-0500-r23-prereg.md.
+Binding text: phases/p5/docs/dev_phase_five/20260824-0500-r23-prereg.md.
 
 ★★★ Why this exists. Measured 2026-08-24 (R22): at medium / alpha 1.25 / seed 0,
 `upwind_c = 1.10` converged to |R| = 2.28e-13 with ZERO clamps, and its Gamma was

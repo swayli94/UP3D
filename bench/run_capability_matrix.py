@@ -1,6 +1,6 @@
 """S5-cap: the solver CAPABILITY matrix, measured on today's HEAD.
 
-Pre-registered in docs/dev_phase_two/20260802-2200-capability-matrix-prereg.md (plus the
+Pre-registered in phases/p2/docs/dev_phase_two/20260802-2200-capability-matrix-prereg.md (plus the
 same file's appendix recording the user's mesh-density axis and save-and-plot
 requirement), committed before this file.
 
@@ -348,7 +348,7 @@ def _postprocess(cell, path, geom, level, alpha, m, wall, mesh, op, r, phi,
     #: Mach, and the CLEAN guard below (`abs(m_att - m) > 1e-9`) could not fire. A guard
     #: written specifically so as NOT to trust the driver flags had become a guard that
     #: trusted them completely, silently. Found by the 2026-08-16 independent audit
-    #: (docs/inspection/20260816-2200-independent-audit-zh.md, §7.1); the fields are now
+    #: (phases/p3/docs/inspection/20260816-2200-independent-audit-zh.md, §7.1); the fields are now
     #: backported to the CONFORMING ramp (`newton.py::_ramp_honesty_fields`).
     #:
     #: Two branches, each stated rather than defaulted:

@@ -8,7 +8,7 @@ Newton converged to |R| = 9.2e-13 with the shock 40 cells away from the exact
 position, and that state had 72 elements pinned at exactly `rho_floor`. A
 four-decade A/B showed the physical branch is completely insensitive to the floor
 (n_floored = 0 throughout) while the spurious branch only EXISTS for
-floor >= 0.02 (docs/dev_phase_two/20260728-1640-s1-shock-bench.md 4.4).
+floor >= 0.02 (phases/p2/docs/dev_phase_two/20260728-1640-s1-shock-bench.md 4.4).
 
 A clamp is an algebraic override: where it binds, the element no longer
 discretises the full-potential equation, so "the residual is zero" says nothing

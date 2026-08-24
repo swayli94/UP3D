@@ -1,6 +1,6 @@
 """How many times does one streamline get charged for a shock? A literal hop-by-hop count.
 
-Pre-registered in docs/dev_phase_three/20260812-0700-sigma-charge-count-prereg.md, committed before
+Pre-registered in phases/p3/docs/dev_phase_three/20260812-0700-sigma-charge-count-prereg.md, committed before
 the record-only store and this file were written.
 
 The setting: sigma_e is the PRODUCT of per-element factors s = sigma_RH(M1) along the donor chain

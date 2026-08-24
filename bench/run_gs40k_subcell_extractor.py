@@ -1,8 +1,8 @@
 """
 Sub-cell footprint extraction: change the RULER, not the thing being measured.
 
-Pre-registration: docs/dev_phase_four/20260818-1700-subcell-extractor-prereg.md
-Previous round:   docs/dev_phase_four/20260818-1500-position-primary-verdict.md
+Pre-registration: phases/p4/docs/dev_phase_four/20260818-1700-subcell-extractor-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260818-1500-position-primary-verdict.md
 
 Same 13 states, same 7 arms, same J1 judge, same D. The ONLY variable is the
 footprint extractor: per-cell (resolution h) versus sub-cell (interpolate the

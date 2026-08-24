@@ -1,6 +1,6 @@
 """Is the entropy correction a SELECTION operator? sigma ON vs OFF, cross-seed spread.
 
-Pre-registered in docs/dev_phase_three/20260811-2300-sigma-selection-prereg.md, committed
+Pre-registered in phases/p3/docs/dev_phase_three/20260811-2300-sigma-selection-prereg.md, committed
 before this file was written.
 
 The upstream finding: at M0.80/alpha1.25 the discrete problem has SEVERAL solutions, and the

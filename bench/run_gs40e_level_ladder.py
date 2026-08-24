@@ -2,8 +2,8 @@
 Is the optimal recovery patch scale a LENGTH that tracks the mesh, or a
 TOPOLOGICAL property pinned at the immediate neighbours?
 
-Pre-registration: docs/dev_phase_four/20260817-1500-level-ladder-prereg.md
-Previous round:   docs/dev_phase_four/20260817-1100-coherence-ladder-verdict.md (C-PEAK)
+Pre-registration: phases/p4/docs/dev_phase_four/20260817-1500-level-ladder-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260817-1100-coherence-ladder-verdict.md (C-PEAK)
 
 Three levels spanning 20x in element count, with the condition, geometry and
 recipe held fixed and only h varying. K-FIXED (k*=1 everywhere) makes the result

@@ -11,7 +11,7 @@ on the solve call and is kept as the PROVENANCE of its committed CSV, not as a l
   to reproduce: git checkout c38f9a6 -- pyfp3d/solve/newton.py   (then restore with
                 git checkout HEAD -- pyfp3d/solve/newton.py, NEVER the bare form -- see CLAUDE.md)
 
-Pre-registered in docs/dev_phase_three/20260812-2100-capture-selection-prereg.md, with addendum #1
+Pre-registered in phases/p3/docs/dev_phase_three/20260812-2100-capture-selection-prereg.md, with addendum #1
 (the relative-delta rule) committed after the smoke test and BEFORE any band was read.
 
 Why selection and not smoothing: averaging sigma fields is NOT magnitude-neutral (the mean of 0.743

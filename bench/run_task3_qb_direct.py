@@ -1,6 +1,6 @@
 """Outstanding item 1: the Q-B DIRECT arm -- does the SYSTEM have several solutions without the ramp?
 
-Pre-registered in docs/dev_phase_three/20260816-1400-qb-direct-arm-prereg.md. Ruling D7 keeps this in
+Pre-registered in phases/p3/docs/dev_phase_three/20260816-1400-qb-direct-arm-prereg.md. Ruling D7 keeps this in
 phase 3.
 
 Arm A (the ramp, three seeds) is answered: 0.0011 % cl_p spread on the ramp path. Arm B asks whether the

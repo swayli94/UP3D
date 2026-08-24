@@ -1,6 +1,6 @@
 """R19 experiment -- separate upM from |Gamma| by making Gamma an INPUT.
 
-Binding text: docs/dev_phase_five/20260823-1700-r19-prereg.md.
+Binding text: phases/p5/docs/dev_phase_five/20260823-1700-r19-prereg.md.
 
 R18 found upM and |Gamma| BOTH separate TE-clean from TE-supersonic legs, are not
 independent, and that no cached leg breaks their correlation. With gamma_target the

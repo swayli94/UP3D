@@ -2,7 +2,7 @@
 easier to determine? (phase 3 task 2, route A)
 
 The user's FIRST concern, pre-registered in
-docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §4 Q1.
+phases/p3/docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §4 Q1.
 
 ★★ Measured on NACA0012 at the M1 condition (M0.80 / alpha 1.25), NOT on the cylinder: the
 entropy correction only acts where the flow is supersonic, so at M = 0 it is inert and a

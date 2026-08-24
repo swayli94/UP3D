@@ -1,6 +1,6 @@
 """GS3.1 (b)+(c): direct vs amg -- answer invariance and speed, as a TRACKED artifact.
 
-Pre-registered in docs/dev_phase_two/20260802-0200-gs31-prereg.md. Tolerance 1e-8
+Pre-registered in phases/p2/docs/dev_phase_two/20260802-0200-gs31-prereg.md. Tolerance 1e-8
 relative on cl_p / cl_KJ / LE upper RMS / pooled RMS / M_max; acceptance >= 3x wall.
 An answer moving above 1e-8 is a FINDING that blocks the flip, not an acceptable error.
 

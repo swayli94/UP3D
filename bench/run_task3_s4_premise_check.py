@@ -1,6 +1,6 @@
 """S4's two founding premises, checked on HEAD. Near-zero cost.
 
-Pre-registered in docs/dev_phase_three/20260815-2200-s4-premise-check-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260815-2200-s4-premise-check-prereg.md.
 
 S4 ("viscous restart by subtraction") rests on two PHASE-ONE measurements:
   P1  the boundary layer costs 9x the inviscid solve (1032 s against 115 s);

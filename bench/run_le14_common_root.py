@@ -233,7 +233,7 @@ def main():
             #: to M_TARGET since phase 3 -- making the second conjunct below identically
             #: True and silently degrading `conv` to the bare driver flag. Read the key
             #: with no default now: a missing key is a library regression and must be
-            #: loud. (docs/inspection/20260816-2200-independent-audit-zh.md §7.1)
+            #: loud. (phases/p3/docs/inspection/20260816-2200-independent-audit-zh.md §7.1)
             m_att = r["m_final"]
             conv = bool(r["target_reached"])
             nlim = int(r.get("n_limited") or 0); nflr = int(r.get("n_floored") or 0)

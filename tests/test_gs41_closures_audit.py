@@ -1,6 +1,6 @@
 """GS4.1 round 4: lock the ROOT CAUSE of the audit's one substantive finding.
 
-The audit (docs/dev_phase_four/20260819-1100-closures-source-audit-verdict.md)
+The audit (phases/p4/docs/dev_phase_four/20260819-1100-closures-source-audit-verdict.md)
 found that `closures.py`'s laminar Gauss rule is too coarse for the
 kinetic-energy thicknesses, and that the comment justifying the rule is wrong
 about why 8 points suffice.
@@ -163,7 +163,7 @@ class TestQuadratureIsVisible:
     ★★ These pin the value AT THE CURRENT POINT COUNTS. They are SUPPOSED to go red
     if anyone changes ETA_LAM or ETA_TURB, and that is the whole point: the change
     then arrives with a measured radius and an errata list, exactly as F1 did.
-    Verdict: docs/dev_phase_five/20260822-0900-f6-verdict.md
+    Verdict: phases/p5/docs/dev_phase_five/20260822-0900-f6-verdict.md
     """
 
     STATE = (1.0e-1, 8.0, 0.05, 0.0, 2.0e-3, 1.0e-4)

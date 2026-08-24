@@ -1,7 +1,7 @@
 """One test that says out loud whether mesh generation works in this environment.
 
 Written because of a measured failure mode, not as boilerplate
-(docs/dev_phase_two/20260801-0230-gmsh-broken.md). On 2026-08-01 `import gmsh` on
+(phases/p2/docs/dev_phase_two/20260801-0230-gmsh-broken.md). On 2026-08-01 `import gmsh` on
 this machine raised
 
     OSError: libGLU.so.1: cannot open shared object file
@@ -48,7 +48,7 @@ def meshgen_status():
                     f"without sudo, apt-get download those packages, dpkg -x them "
                     f"into a directory and point LD_LIBRARY_PATH at its "
                     f"usr/lib/x86_64-linux-gnu (see "
-                    f"docs/dev_phase_two/20260801-0230-gmsh-broken.md)")
+                    f"phases/p2/docs/dev_phase_two/20260801-0230-gmsh-broken.md)")
         return False, f"gmsh import failed: {type(exc).__name__}: {msg}"
     try:
         gmsh.initialize()

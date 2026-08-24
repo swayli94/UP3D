@@ -1,7 +1,7 @@
 """F: does the level-to-level change align with the FOOT displacement or the PEAK location?
 G: which spanwise quantity also TURNS OVER near eta 0.90?  Both ZERO-SOLVE.
 
-Pre-registered in docs/dev_phase_three/20260815-1400-alignment-and-spanwise-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260815-1400-alignment-and-spanwise-prereg.md.
 
 F ★★ The sampling problem is faced first, not discovered afterwards: the foot-swept interval is 0.002 to
 0.020 chord wide while each station holds only 5-10 experimental points across [0, 0.15), so it would

@@ -52,7 +52,7 @@ ALPHA = 3.06
 RAMP = dict(m_target=0.84, alpha_deg=ALPHA, farfield="neumann",
             n_seed=40, n_newton_max=80, tol_residual=1e-10)
 
-#: ★★ RE-SPEC 2026-08-06. Full record in docs/dev_phase_two/20260806-1200-b22-respec.md,
+#: ★★ RE-SPEC 2026-08-06. Full record in phases/p2/docs/dev_phase_two/20260806-1200-b22-respec.md,
 #: written before this edit as roadmap sec 5 requires. What happened and what it costs:
 #:
 #: `cases/meshes/onera_m6_wakefree/` was regenerated ROUND on 2026-08-04 while these
@@ -126,7 +126,7 @@ def test_m6_coarse_ramp_anchor():
     top = max(clean, key=lambda l: l["m_inf"])
     assert abs(top["m_inf"] - a["m_clean"]) < 1e-9, (
         f"highest CLEAN level {top['m_inf']:.4f} vs anchor {a['m_clean']} — a "
-        f"capability re-baseline; see docs/dev_phase_two/20260806-1200-b22-respec.md")
+        f"capability re-baseline; see phases/p2/docs/dev_phase_two/20260806-1200-b22-respec.md")
     assert top["residual_norm"] < 1e-9, f"|R| = {top['residual_norm']:.2e}"
     assert np.isclose(top["gamma"], a["gamma"], rtol=GAMMA_RTOL, atol=0.0), (
         f"gamma {top['gamma']:.8f} vs anchor {a['gamma']:.8f}")
@@ -143,13 +143,13 @@ def test_m6_coarse_ramp_anchor():
     "inside this very test. STRICT on purpose: if a future change makes a clean level "
     "appear, this must go RED so the capability gets re-anchored rather than silently "
     "improving. Readings are in MEDIUM_RECORDED and in "
-    "docs/dev_phase_two/20260806-1200-b22-respec.md. "
+    "phases/p2/docs/dev_phase_two/20260806-1200-b22-respec.md. "
     "★★ D5 (2026-08-09, user): the level-set wake route is ABANDONED -- future development "
     "is conforming only -- so read this as an ABANDONED-ROUTE record, not an open "
     "obligation. It is one of the four strict xfails that exist because the production "
     "round-tip meshes leave the LS path with no clamp-free state to anchor, and this whole "
     "FILE is on phase three's deletion list "
-    "(docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2)."))
+    "(phases/p2/docs/dev_phase_two/LEVELSET_DELETION_INVENTORY.md sec 2)."))
 @pytest.mark.skipif(not GATES, reason="heavy gated 3-D anchor (~35 min)")
 def test_m6_medium_ramp_anchor():
     """The M6 MEDIUM ramp — expected to have no clean level on the round tip."""

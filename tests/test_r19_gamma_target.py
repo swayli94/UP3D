@@ -1,6 +1,6 @@
 """R19 -- prescribed circulation on the Newton path (`gamma_target`).
 
-Binding text: docs/dev_phase_five/20260823-1700-r19-prereg.md.
+Binding text: phases/p5/docs/dev_phase_five/20260823-1700-r19-prereg.md.
 
 The Picard path has had `gamma_fixed` since phase 1 and `newton.py` had no equivalent
 (discipline #9). The change generalises the B31 pin's target from zero to a prescribed

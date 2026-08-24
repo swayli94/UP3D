@@ -1,6 +1,6 @@
 """R18 -- audit my own attribution across every cached leg. Zero solves.
 
-Binding text: docs/dev_phase_five/20260823-1500-r18-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-1500-r18-prereg.md (committed first).
 
 R14 concluded "the TE blob is created by C=1.0" from a control that changed upwind_c AND
 convergence status together -- the defect I used to void R16. This pools every cached leg

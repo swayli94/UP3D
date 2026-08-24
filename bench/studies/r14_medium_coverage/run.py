@@ -1,6 +1,6 @@
 """R14 -- medium's convergence coverage: WHERE the clamped cells are.
 
-Binding text: docs/dev_phase_five/20260823-0700-r14-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-0700-r14-prereg.md (committed first).
 
 The modes are already classified and committed (clamping at C=1.0 on both seeds,
 limit_cycle at C=3.0/seed 0, clean at C=1.5). CLAUDE.md's clamping signature is the

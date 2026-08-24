@@ -1,6 +1,6 @@
 """Is the non-convergence confined to the leading-edge NEAR-SINGULAR region? ZERO SOLVE.
 
-Pre-registered in docs/dev_phase_three/20260815-1800-nearsingular-partition-prereg.md.
+Pre-registered in phases/p3/docs/dev_phase_three/20260815-1800-nearsingular-partition-prereg.md.
 
 The explanation under test, from already-committed numbers: at the finest level's worst station one wall cell
 is about 0.0102 chord, the sonic front foot sits at 0.00405 chord (inside the FIRST cell), and the most

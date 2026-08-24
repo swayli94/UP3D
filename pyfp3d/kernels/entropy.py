@@ -20,10 +20,10 @@ parameter by that round's own Q5. Reading: on this discretisation the
 field, because the shock is smeared over 2-3 IRREGULAR tet cells and the
 per-cell compression noise is the same size as the discrimination needed.
 The chain-free code is in git history at 774ef96; the round file is
-docs/dev_phase_two/20260731-0000-s1b-chainfree-sigma.md.
+phases/p2/docs/dev_phase_two/20260731-0000-s1b-chainfree-sigma.md.
 
 Phase-two gate GS1b.3. Pre-registration:
-docs/dev_phase_two/20260729-0700-s1b-entropy-implementation.md.
+phases/p2/docs/dev_phase_two/20260729-0700-s1b-entropy-implementation.md.
 
 WHY THIS EXISTS (measured, not assumed). At a fixed transonic condition the
 computed lift does not converge under refinement (M0.7875/alpha1.25:
@@ -195,7 +195,7 @@ def shock_factor_sweep(
             continue                      # own speed non-physical: no correction
         m2e = mach_number_squared(q2[e], m_inf, gamma)
         #: ★★ `soft_eps` (phase 3, 2026-08-12, pre-registered addendum #1 of
-        #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md): the MEMBERSHIP test below is
+        #: phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md): the MEMBERSHIP test below is
         #: a HARD switch, and that is the measured source of the selection limit cycle -- a cell
         #: sitting on the sonic line flips on an infinitesimal change in phi while its s JUMPS by
         #: 1 - sigma_RH(M1). Measured: max|dsigma| pins at exactly that jump (1.55e-2 <-> a cell at

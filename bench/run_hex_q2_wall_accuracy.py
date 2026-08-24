@@ -1,7 +1,7 @@
 """Q2 — is the WALL SURFACE resolved better on a structured body-fitted grid?
 
 The user's second concern, pre-registered in
-docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §4 Q2. The cylinder is the first leg
+phases/p3/docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §4 Q2. The cylinder is the first leg
 because it has an EXACT potential solution and the unstructured family is already measured,
 so this is a same-geometry A/B against external truth rather than against our own history.
 

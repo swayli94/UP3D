@@ -1,6 +1,6 @@
 """GS4.1 round 9 leg A -- the five missing turbulent terms, and what they move.
 
-Binding text: docs/dev_phase_four/20260820-0900-lag-and-xfoil-check-prereg.md
+Binding text: phases/p4/docs/dev_phase_four/20260820-0900-lag-and-xfoil-check-prereg.md
 plus addendum #1, 20260820-1000-round9-addendum1-five-more-terms.md (both
 committed before this script existed).
 

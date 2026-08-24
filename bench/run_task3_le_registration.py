@@ -1,6 +1,6 @@
 """How much of the LE 70 % is just CHORDWISE MISREGISTRATION? One parameter, one solve.
 
-Pre-registered in docs/dev_phase_three/20260813-1700-le-registration-prereg.md, committed before this
+Pre-registered in phases/p3/docs/dev_phase_three/20260813-1700-le-registration-prereg.md, committed before this
 file.
 
 Entry check (in the registration): three hypotheses for the LE deficit are already REFUTED -- the

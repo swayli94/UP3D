@@ -1,6 +1,6 @@
 """The cold-start Picard-seed fallback (user ruling 2026-08-05).
 
-Mechanism it exists for, MEASURED in docs/dev_phase_two/20260805-2200-seed-exposure.md:
+Mechanism it exists for, MEASURED in phases/p2/docs/dev_phase_two/20260805-2200-seed-exposure.md:
 the 2026-08-02 flip of `n_picard_seed`'s default from 5 to 0 does not fail on its own.
 It fails on a conjunction -- no seed, AND a cold start directly at a supercritical
 M_inf, AND a mesh fine enough to resolve the supersonic pocket. NACA0012 M0.80 medium

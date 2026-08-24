@@ -3,7 +3,7 @@
 The fix: transport_sigma settles when P[ancestor] == 1 exactly ("my ancestor
 contributes nothing") instead of when every ancestor is a genuine chain root. The
 root cause it addresses, and the criterion's derivation, are in
-docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md.
+phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md.
 
 Pre-registered in that note's sec 8, BEFORE any code was written:
 
@@ -69,7 +69,7 @@ KEYS = ["leg", "case", "m_inf", "alpha", "converged", "accept_reason",
 
 
 #: sigma_min MEASURED on the pre-fix library, committed in
-#: docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md sec 4.
+#: phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md sec 4.
 #:
 #: ★ RECORDED FOR COMPARISON, NOT AS A GATE, and the first draft of this script had
 #: it backwards. It gated on "post-fix sigma_min must not EXCEED the pre-fix value,

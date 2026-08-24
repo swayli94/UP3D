@@ -2,8 +2,8 @@
 Is the k*=P2 exception a STRENGTH effect or a GEOMETRY effect? -- and the 2.5-D
 arm that was registered last round and never run.
 
-Pre-registration: docs/dev_phase_four/20260818-0300-strength-and-2p5d-prereg.md
-Previous round:   docs/dev_phase_four/20260818-0100-geometry-axis-verdict.md (X-SHIFT)
+Pre-registration: phases/p4/docs/dev_phase_four/20260818-0300-strength-and-2p5d-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260818-0100-geometry-axis-verdict.md (X-SHIFT)
 
 ★ NEW PRIMARY QUANTITY, and it is a new QUESTION, not a relaxed old one: five
 rounds scored the discrete k* = argmax C, and the whole dispute is one leg at a

@@ -652,7 +652,7 @@ UNPATCHED side field while `newton_side_data` runs `_apply_main_density`
 first, so on 3-D meshes every armed freeze locked a selection the live system
 would not make (probe: **83 upstream + 9 branch** differences at M6 coarse
 seeded M0.70, all aux-touching mixed-plain;
-`docs/inspection/20260719-n1-freeze-probe.py`). ★★ **The one-line fix RESTORES
+`phases/p1/docs/inspection/20260719-n1-freeze-probe.py`). ★★ **The one-line fix RESTORES
 the M6-medium M0.84 ramp**: the committed recipe reaches **M0.84** with γ
 **0.088343** (pre-B20 0.088338), M_max 2.4818, res 9.0e-14, **0 lim/1 flr**,
 **515 s** (pre-B20 657 s / 3 clamped) — faster AND cleaner, and freeze_tol

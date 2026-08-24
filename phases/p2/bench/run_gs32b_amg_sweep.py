@@ -1,6 +1,6 @@
 """GS3.2 route (b): can pyamg parameters alone fix the extruded-mesh anisotropy?
 
-Pre-registered in docs/dev_phase_two/20260802-1000-gs32b-prereg.md, committed before this
+Pre-registered in phases/p2/docs/dev_phase_two/20260802-1000-gs32b-prereg.md, committed before this
 file. Same protocol as run_gs32_premise.py -- same meshes, same Laplacian, same Dirichlet
 set, same rtol, same seeded right-hand side -- so the numbers are directly comparable to
 that round's 2.5-D 278 / 2-D 14.

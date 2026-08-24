@@ -5,7 +5,7 @@ The bench case is a straight (constant-area) 2-D channel carrying a single
 stationary normal shock, meshed as a single-layer 2.5-D tet mesh -- the same
 element idiom as the production airfoil meshes.
 
-Why this case (docs/dev_phase_two/20260728-1640-s1-shock-bench.md §1.0):
+Why this case (phases/p2/docs/dev_phase_two/20260728-1640-s1-shock-bench.md §1.0):
 
   * In full potential a shock is an ISENTROPIC, mass-conserving jump, so in a
     constant-area duct rho(u^2) u = mdot has two roots u_sup > u* > u_sub and

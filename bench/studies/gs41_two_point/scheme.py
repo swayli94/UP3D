@@ -1,6 +1,6 @@
 """XFOIL's two-point implicit BL discretisation, turbulent intervals only.
 
-Binding text: docs/dev_phase_four/20260821-0100-two-point-scheme-prereg.md and
+Binding text: phases/p4/docs/dev_phase_four/20260821-0100-two-point-scheme-prereg.md and
 addendum #1 (20260821-0130, turbulent-only + consistency on the real u_e).
 
 ★★ This is an INSTRUMENT, not a product path. It exists to turn round 10's loose

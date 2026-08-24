@@ -1,7 +1,7 @@
 """
 A3 / GA3.5 — C1: does the LS Newton Jacobian match its residual on a 3D mesh?
 
-kimi's 2026-07-17 code review (docs/inspection/20260717-2348-code-review.md,
+kimi's 2026-07-17 code review (phases/p1/docs/inspection/20260717-2348-code-review.md,
 finding C1) argues that `newton_terms23_side_coo` mis-maps its columns on
 MIXED-SIDE PLAIN elements -- uncut elements whose four nodes do not all sit on
 one side of the wake level set. They exist only in 3D: elements beyond the

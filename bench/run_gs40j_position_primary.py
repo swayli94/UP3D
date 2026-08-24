@@ -1,8 +1,8 @@
 """
 Position as the PRIMARY quantity, across every cached state.
 
-Pre-registration: docs/dev_phase_four/20260818-1300-position-primary-prereg.md
-Previous round:   docs/dev_phase_four/20260818-1100-position-and-blastradius-verdict.md
+Pre-registration: phases/p4/docs/dev_phase_four/20260818-1300-position-primary-prereg.md
+Previous round:   phases/p4/docs/dev_phase_four/20260818-1100-position-and-blastradius-verdict.md
 
 Seven rounds optimised COHERENCE, which every verdict labelled a proxy with the
 forbidden sentence "coherent is not correct". Last round measured the target for

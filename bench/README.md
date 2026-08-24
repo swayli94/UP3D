@@ -14,7 +14,7 @@
 **判据不是"新旧",是"会不会再跑"。** 按这条界,`run_bench.py` 与 `run_gs31_precond.py`
 在整理中一度被误归为一次性研究、**又搬回来了**:前者是 GS0.3 的**每轮漂移检测**(而且它的基线
 `baseline_2026-07-28.csv` 一直留在这里 —— 脚本走了基线留下,本身就是分类错了的证据);
-后者是 [`DECISION-2026-08-02-precond.md`](../docs/dev_phase_two/DECISION-2026-08-02-precond.md)
+后者是 [`DECISION-2026-08-02-precond.md`](../phases/p2/docs/dev_phase_two/DECISION-2026-08-02-precond.md)
 的复现脚本,而那个决策**是活的**(EW forcing 1e-6 仍是默认)并写着**推翻条件** ——
 要检验推翻条件就需要这个脚本。
 

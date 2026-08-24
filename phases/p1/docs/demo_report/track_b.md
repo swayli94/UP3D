@@ -1920,7 +1920,7 @@ caches deleted — the demo-cache trap).
 
 The 2026-07-19 Kimi inspection (N1) found `freeze_side_state` captured the
 frozen (upstream, branch) on the UNPATCHED side field — the one consumer the
-B20 patch missed (probe `docs/inspection/20260719-n1-freeze-probe.py`: 83
+B20 patch missed (probe `phases/p1/docs/inspection/20260719-n1-freeze-probe.py`: 83
 upstream + 9 branch differences vs the live system, all aux-touching
 mixed-plain). Pre-B20 capture and live were consistently unpatched; B20's
 partial patch created the inconsistency, so the B15 frozen Newton finish

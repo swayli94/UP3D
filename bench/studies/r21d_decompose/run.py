@@ -1,6 +1,6 @@
 """R21-d -- is the blob's q^2 excess geometric amplification or the solution itself?
 
-Binding text: docs/dev_phase_five/20260823-2300-r21d-prereg.md (committed first).
+Binding text: phases/p5/docs/dev_phase_five/20260823-2300-r21d-prereg.md (committed first).
 
 grad_e = sum_i phi_i B_e[i,:] and sum_i B_e[i,:] = 0, so the gradient depends only on the
 phi DIFFERENCES on the element:

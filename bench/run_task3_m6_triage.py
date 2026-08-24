@@ -1,6 +1,6 @@
 """Triage 1: is M6 coarse at M0.8395/alpha3.06 inside the multi-solution regime?
 
-Pre-registered in docs/dev_phase_three/20260813-0300-m6-triage-prereg.md, with addendum #1 (WHICH of
+Pre-registered in phases/p3/docs/dev_phase_three/20260813-0300-m6-triage-prereg.md, with addendum #1 (WHICH of
 the two seed sites to vary) committed before this file was written.
 
 The question that matters practically is not "does M6 have multiple solutions" but "are the COMMITTED

@@ -17,7 +17,7 @@ Binding references: Drela AIAA 2013-2437 ("D13") and docs/design_track_v.md
 Defect fluxes M, J, E, Ko, Q, Qo, wall shear and dissipation are assembled
 # ---------------------------------------------------------------------------
 # ★★ The `D-*` decision identifiers used in this file, audited in phase-5 round 6
-# (F8, docs/dev_phase_five/20260822-1400-f8-verdict.md). "Appears in a document" is
+# (F8, phases/p5/docs/dev_phase_five/20260822-1400-f8-verdict.md). "Appears in a document" is
 # not "is defined there" -- the audit classified each by whether any record says
 # WHAT THE DECISION IS:
 #

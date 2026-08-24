@@ -1,7 +1,7 @@
 """LE-mechanism factorial, second version: DISPLACEMENT at M0.75, with `h_far` as the
 bulk arm.
 
-Pre-registered in docs/dev_phase_two/20260806-0000-le-mechanism-prereg2.md and its two
+Pre-registered in phases/p2/docs/dev_phase_two/20260806-0000-le-mechanism-prereg2.md and its two
 addenda, all committed before this file was written. What each addendum changed:
 
   #1 (user)  M0.50 downgrades the QUESTION, not the condition -- with no supersonic cell

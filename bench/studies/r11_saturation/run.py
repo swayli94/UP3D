@@ -1,6 +1,6 @@
 """R11 -- give the footprint rule failure detection, then re-measure the arm ranking.
 
-Binding text: docs/dev_phase_five/20260823-0000-r11-prereg.md (committed before this
+Binding text: phases/p5/docs/dev_phase_five/20260823-0000-r11-prereg.md (committed before this
 file existed).
 
 Round 10 measured that `foot_from_field` returns the downstream end of its own search
