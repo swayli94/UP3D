@@ -23,7 +23,7 @@ import pytest
 from pyfp3d.mesh.metrics import compute_tet_volumes
 from pyfp3d.solve.picard import solve_laplace
 
-from .mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
+from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
 
 # 4-point, degree-2-exact symmetric tet quadrature rule (barycentric coords).
 _A = (5.0 - np.sqrt(5.0)) / 20.0

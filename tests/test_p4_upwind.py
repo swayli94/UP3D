@@ -22,7 +22,7 @@ from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.physics.isentropic import density_field, q2_at_mach
 from pyfp3d.solve.picard import solve_subsonic_lifting
 
-from .mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
+from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
 
 
 @pytest.fixture(scope="module")

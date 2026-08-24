@@ -50,7 +50,7 @@ from pyfp3d.solve.wall_correction import (
     wall_face_adjacent_tets,
 )
 
-from .mesh_utils import (
+from tests.mesh_utils import (
     cylinder_grad_exact,
     cylinder_phi_exact,
     element_gradients_all,

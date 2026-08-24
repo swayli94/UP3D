@@ -44,7 +44,7 @@ from pyfp3d.viscous.transpiration import (
     transpiration_from_delta_star,
 )
 
-from .mesh_utils import (
+from tests.mesh_utils import (
     cylinder_blowing_m_dot,
     cylinder_blowing_phi_exact,
     cylinder_phi_exact,

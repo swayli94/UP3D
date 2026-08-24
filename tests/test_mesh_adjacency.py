@@ -13,7 +13,7 @@ import pytest
 
 from pyfp3d.mesh.metrics import build_face_adjacency
 
-from .mesh_utils import generate_structured_cube_mesh
+from tests.mesh_utils import generate_structured_cube_mesh
 
 _FACE_LOCAL_NODES = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]]
 

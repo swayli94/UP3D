@@ -12,7 +12,7 @@ from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.kernels.upwind import UpwindOperator, compute_face_normals
 from pyfp3d.physics.isentropic import density_field, mach_squared_field
 
-from .mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
+from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
 
 
 def _cube():

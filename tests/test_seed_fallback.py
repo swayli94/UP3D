@@ -26,7 +26,7 @@ from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.solve.newton import _SEED_FALLBACK, solve_newton_lifting
 
-from .conftest import REPO_ROOT
+from tests.conftest import REPO_ROOT
 
 MESH = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh"
 #: enough dissipation and Newton budget to be a normal solve, small enough to be cheap

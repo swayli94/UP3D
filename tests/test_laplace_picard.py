@@ -17,7 +17,7 @@ import pytest
 from pyfp3d.kernels.residual import assemble_residual
 from pyfp3d.solve.picard import solve_laplace
 
-from .mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
+from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
 
 
 class TestResidualNormExcludesDirichletRows:

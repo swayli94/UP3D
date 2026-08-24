@@ -25,7 +25,7 @@ from pyfp3d.kernels.residual import (
 from pyfp3d.mesh.coloring import greedy_coloring, validate_coloring
 from pyfp3d.mesh.reader import read_mesh
 
-from .mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
+from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
 
 
 @pytest.fixture(scope="module")

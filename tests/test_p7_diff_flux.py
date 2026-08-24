@@ -31,7 +31,7 @@ from pyfp3d.physics.isentropic import (
     mach_squared_derivative_wrt_q_sq,
 )
 
-from .mesh_utils import generate_structured_cube_mesh
+from tests.mesh_utils import generate_structured_cube_mesh
 
 M_CRIT = 0.95
 UPWIND_C = 1.5

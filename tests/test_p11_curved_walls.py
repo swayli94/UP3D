@@ -50,7 +50,7 @@ from pyfp3d.solve.curved_wall import (
 from pyfp3d.solve.picard import solve_laplace
 from pyfp3d.solve.wall_correction import sphere_closest_point_normal
 
-from .mesh_utils import generate_sphere_shell_mesh, generate_structured_cube_mesh
+from tests.mesh_utils import generate_sphere_shell_mesh, generate_structured_cube_mesh
 
 A = 1.0
 

@@ -44,7 +44,7 @@ from pyfp3d.viscous.transpiration import (
     transpiration_from_delta_star,
 )
 
-from .mesh_utils import generate_sphere_shell_mesh, icosphere
+from tests.mesh_utils import generate_sphere_shell_mesh, icosphere
 
 REPO_ROOT = Path(__file__).parent.parent
 NACA_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"

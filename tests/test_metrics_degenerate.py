@@ -21,7 +21,7 @@ import pytest
 from pyfp3d.kernels.residual import assemble_residual
 from pyfp3d.mesh.metrics import element_gradients
 
-from .mesh_utils import generate_structured_cube_mesh
+from tests.mesh_utils import generate_structured_cube_mesh
 
 
 class TestDegenerateElementGuard:

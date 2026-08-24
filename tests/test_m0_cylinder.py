@@ -41,7 +41,7 @@ import pytest
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.meshgen.extrude import assert_quad_split_consistency
 
-from .mesh_utils import (
+from tests.mesh_utils import (
     CYLINDER_RADIUS as A,
     element_gradients_all,
     run_cylinder_case,

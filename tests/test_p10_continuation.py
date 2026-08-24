@@ -21,7 +21,7 @@ from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.solve.newton import solve_newton_lifting, solve_newton_transonic
 
-from .conftest import REPO_ROOT
+from tests.conftest import REPO_ROOT
 
 UPWIND_C = 1.5
 M_CRIT = 0.95

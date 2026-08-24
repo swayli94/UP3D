@@ -27,7 +27,7 @@ from pyfp3d.viscous.surface_mesh import (
     structured_rectangle_surface,
 )
 
-from .mesh_utils import generate_structured_cube_mesh
+from tests.mesh_utils import generate_structured_cube_mesh
 
 
 def _plate(nx=6, nz=4):

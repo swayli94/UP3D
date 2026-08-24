@@ -13,8 +13,8 @@ counts that grow only slowly (empirically ~log(1/h)) with mesh size.
 import numpy as np
 import pytest
 
-from .mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
-from .test_laplace_mms import phi_exact_fn
+from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
+from tests.test_laplace_mms import phi_exact_fn
 from pyfp3d.solve.picard import solve_laplace
 
 LEVELS = (8, 16, 32)

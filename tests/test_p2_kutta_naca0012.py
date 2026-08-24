@@ -27,7 +27,7 @@ from pyfp3d.post.surface import (
     sectional_cl_from_gamma,
     wall_force_coefficients,
 )
-from .mesh_utils import element_gradients_all
+from tests.mesh_utils import element_gradients_all
 
 ALPHA_DEG = 4.0
 

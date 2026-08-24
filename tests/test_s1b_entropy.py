@@ -26,7 +26,7 @@ from pyfp3d.physics.isentropic import (GAMMA, critical_speed_squared,
                                        density_isentropic, q2_at_mach)
 from pyfp3d.solve.newton import NewtonWorkspace, solve_newton_lifting
 
-from ._tol import assert_rel_close
+from tests._tol import assert_rel_close
 
 MESH = "cases/meshes/naca0012_2.5d/coarse.msh"
 M_INF, ALPHA = 0.7875, 1.25

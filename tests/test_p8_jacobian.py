@@ -30,7 +30,7 @@ import os
 import numpy as np
 import pytest
 
-from ._tol import assert_rel_close
+from tests._tol import assert_rel_close
 
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.kernels.upwind import UpwindOperator, rho_tilde_sweep
@@ -40,7 +40,7 @@ from pyfp3d.physics.isentropic import (
     mach_number_squared,
 )
 
-from .mesh_utils import generate_structured_cube_mesh
+from tests.mesh_utils import generate_structured_cube_mesh
 
 M_CRIT = 0.95
 UPWIND_C = 1.5

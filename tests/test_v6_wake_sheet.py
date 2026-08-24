@@ -41,7 +41,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ._tol import assert_rel_close
+from tests._tol import assert_rel_close
 from pyfp3d.constraints.wake import WakeConstraint
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.mesh.reader import read_mesh

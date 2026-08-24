@@ -10,7 +10,7 @@ Run with: pytest tests/test_v0_freestream.py -xvs
 import pytest
 import numpy as np
 
-from .mesh_utils import generate_structured_cube_mesh, cube_boundary_mask
+from tests.mesh_utils import generate_structured_cube_mesh, cube_boundary_mask
 
 
 def test_import_pyfp3d():
