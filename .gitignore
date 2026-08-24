@@ -41,12 +41,10 @@ htmlcov/
 .vscode/
 .idea/
 
-# Solver and visualization SCRATCH (not evidence -- see CLAUDE.md workflow rule 1).
-# ★ 2026-08-24: the old `artifacts/<gate_id>/` was specified as the evidence form for visual
-# gates while being gitignored, so it was never evidence and 11 documents cited paths that
-# exist in no fresh clone. It is now explicitly SCRATCH: the conftest fixture still writes
-# here to force headless output, and C/D-class figures go to a TRACKED results/ dir instead.
-artifacts/
+# ★ 2026-08-24: `artifacts/` DELETED. It was specified as the evidence form for visual gates
+# while being gitignored -- so it was never evidence, and its fixture recreated it on every
+# pytest run. C/D-class figures now live in the TRACKED cases/gates/<gate>/; A/B/E/F write
+# nothing (their gate IS the assertion) and use pytest's tmp_path when a plot is wanted.
 *.vtk
 *.vtu
 *.pvtu

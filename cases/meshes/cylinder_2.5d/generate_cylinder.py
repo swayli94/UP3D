@@ -10,7 +10,7 @@ cylinder flow is non-lifting, and the analytic solution
     phi = U x (1 + a^2 / r^2),   surface Cp = 1 - 4 sin^2(theta)
 
 makes this the simplest end-to-end validation of the quasi-2D meshing
-pipeline + Laplace solver (tests/test_m0_cylinder.py), complementing the
+pipeline + Laplace solver (tests/A/test_A14_meshgen_cylinder.py), complementing the
 lifting NACA0012 case which is the actual M0 deliverable.
 
 Tags: wall (cylinder), farfield (outer circle), symmetry (both z-planes).

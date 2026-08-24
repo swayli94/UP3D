@@ -1,0 +1,6 @@
+level,h_wall,max_cp_err_uncorrected,mean_cp_err_uncorrected,max_cp_err_corrected,mean_cp_err_corrected,max_rhs,spanwise_floor_uncorrected,spanwise_floor_corrected,n_cg_iterations,residual_norm
+coarse,0.1,9.097870e-02,4.506080e-02,9.097870e-02,4.506080e-02,1.458e-17,2.882147e-02,2.882147e-02,102,2.983e-11
+medium,0.05,4.490280e-02,2.243090e-02,4.490280e-02,2.243090e-02,6.417e-18,1.503645e-02,1.503645e-02,168,1.657e-11
+fine,0.025,2.221939e-02,1.113382e-02,2.221939e-02,1.113382e-02,2.955e-18,7.399324e-03,7.399324e-03,285,7.353e-12
+slope_uncorrected,,1.017,,,,,,,,
+slope_corrected,,1.017,,,,,,,,

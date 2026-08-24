@@ -13,33 +13,37 @@ REPO_ROOT = Path(__file__).parent.parent
 
 
 @pytest.fixture
-def artifacts_dir():
-    """Persistent root for gate artifacts (PNG, CSV, VTU files).
+def gate_evidence_dir(request):
+    """C / D 类门的**被跟踪**证据目录：`cases/gates/<门号>/`。
 
-    Defaults to <repo>/artifacts (gitignored) so the headless evidence each
-    visual gate produces survives the test run and can be inspected -- the
-    CLAUDE.md/roadmap workflow requires every visual gate to leave PNG+CSV
-    artifacts behind. (This used to be a tempfile.TemporaryDirectory, which
-    deleted every artifact at teardown and left artifacts/ permanently
-    empty.) Set PYFP3D_ARTIFACTS_DIR to redirect, e.g. to a CI upload dir.
+    ★★★ 2026-08-24：取代已删除的 `artifacts_dir` / `gate_artifacts_dir`。
+    那两个 fixture 指向 gitignored 的 `<repo>/artifacts/`，于是
+    **workflow 规则要求「每个视觉门留下产物」，而 .gitignore 保证它永不进 HEAD**
+    —— 按纪律 3 它从来就不是证据，却有 11 处文档把它当证据引用。
+    ★ 而 `mkdir(exist_ok=True)` 让它**每次 pytest 一跑就重新出现**，所以删目录不是修法，
+    必须删 fixture 本身。
+
+    **只有 C / D 类用它** —— 它们要给人肉眼检查（压力分布 / 力系数 / 网格收敛）。
+    A / B / E / F 不写图：它们的判据**就是断言本身**，写出来没人看的 PNG 是纯 churn
+    （实测那 5 个 A/B 的 savefig 里 4 个没有任何文档引用）。需要临时看图用 pytest 的 `tmp_path`。
+
+    **写与不写**（避免 churn，同时保证图与断言同源）：
+      - 平时跑：**不写**，断言对着已提交的 `summary.csv` ⇒ 代码一改答案就红，逼出一次有意的刷新；
+      - `PYFP3D_GATE_FIGURES=1`：同一次计算重写 `summary.csv` + `figures/*.png`。
+    ⇒ 图与断言来自**同一次计算，构造保证**；刷新走本项目已有的再基线勘误纪律。
     """
-    env = os.environ.get("PYFP3D_ARTIFACTS_DIR")
-    base = Path(env) if env else REPO_ROOT / "artifacts"
-    base.mkdir(parents=True, exist_ok=True)
-    return base
+    #: 门号 = 测试文件名的 <CLASS><nn>_<stem> 段，于是「门 <-> 证据目录」可机械互查
+    stem = Path(str(request.node.fspath)).stem          # test_C03_laplace_sphere
+    gate = stem[len("test_"):] if stem.startswith("test_") else stem
+    d = REPO_ROOT / "cases" / "gates" / gate
+    if os.environ.get("PYFP3D_GATE_FIGURES"):
+        (d / "figures").mkdir(parents=True, exist_ok=True)
+    return d
 
 
-@pytest.fixture
-def gate_artifacts_dir(artifacts_dir, request):
-    """
-    Create a subdirectory for the current test's gate artifacts.
-    
-    Naming convention: artifacts_dir / test_gate_id /
-    """
-    gate_id = request.node.name.replace("test_", "").upper()
-    gate_dir = artifacts_dir / gate_id
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    return gate_dir
+def gate_figures_enabled():
+    """True 时才写图/CSV。★ 平时为 False，所以一次普通 pytest 不会脏工作树。"""
+    return bool(os.environ.get("PYFP3D_GATE_FIGURES"))
 
 
 @pytest.fixture

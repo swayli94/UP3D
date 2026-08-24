@@ -1,0 +1,6 @@
+metric,value
+max_error,1.156344e-01
+mean_error,2.367211e-02
+n_wall_nodes,2379
+gate_target,0.02
+gate_status,OPEN (see test_sphere_cp_medium_mesh xfail)

@@ -7,7 +7,7 @@ What this shows, honestly:
      projection produces a stiffness delta that is EXACTLY zero (curved and
      flat share one code path), and the flat-geometry quadrature stiffness
      matches the independent P1 assembly to machine precision (locked in
-     tests/test_p11_curved_walls.py).
+     tests/A/test_A29_curved_wall_layer.py).
   2. G11.4 (RECORDED): the curved layer really does move the domain -- edge
      midpoints shift O(h^2) onto the sphere, the chordal sliver volume is
      removed, and the result is quadrature-rule-insensitive (deg2 vs deg3).
@@ -68,7 +68,7 @@ from pyfp3d.solve.wall_correction import sphere_closest_point_normal  # noqa: E4
 from tests.mesh_utils import (  # noqa: E402
     generate_sphere_shell_mesh, generate_structured_cube_mesh, icosphere,
 )
-from tests.test_p11_curved_walls import _boundary_tris_on_plane  # noqa: E402
+from tests.A.test_A29_curved_wall_layer import _boundary_tris_on_plane  # noqa: E402
 
 sys.path.insert(0, str(REPO_ROOT / "cases" / "meshes" / "sphere_shell"))
 from generate_sphere_shell import generate_sphere_shell  # noqa: E402

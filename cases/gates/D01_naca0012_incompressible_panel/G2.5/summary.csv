@@ -1,0 +1,5 @@
+level,case,max_abs_w_over_uinf,p99_abs_w_over_uinf,rms_abs_w_over_uinf
+coarse,phi=x,1.110e-14,,
+medium,phi=x,1.110e-14,,
+coarse,lifting alpha=4.0,6.419e-02,4.819e-03,1.618e-03
+medium,lifting alpha=4.0,4.478e-02,2.352e-03,8.216e-04

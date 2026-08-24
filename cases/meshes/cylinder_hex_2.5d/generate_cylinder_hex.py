@@ -4,7 +4,7 @@ The structured counterpart of `cases/meshes/cylinder_2.5d/` (gmsh unstructured a
 SAME geometry, SAME extrusion machinery, SAME output format -- so the two families give a
 clean same-geometry A/B, which is why the cylinder is the first leg: it has an EXACT
 potential solution, and the unstructured baseline is already measured (uncorrected wall Cp
-error converging at ~1.0 order, tests/test_wall_correction_cylinder.py).
+error converging at ~1.0 order, tests/C/test_C02_cylinder_wall_correction.py).
 
 Pipeline: `structured.cylinder_o_grid_2d` (analytic, no gmsh size field) -> each quad cut on
 a fixed diagonal into 2 triangles -> `extrude_single_layer` (prism -> 3 tets, globally

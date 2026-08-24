@@ -34,7 +34,7 @@ What this shows, per phases/p1/docs/roadmap.md P4 and phases/p1/docs/demo_report
   numbers, and you intend to commit the refreshed baseline. For a routine
   edit, the committed baseline is authoritative; verify the cheap coarse
   path (default run, ~4 min) instead. The pytest gate
-  (tests/test_p4_transonic.py) is the correctness check; this heavy mode
+  (tests/D/test_D03_naca0012_m080_shock.py) is the correctness check; this heavy mode
   only refreshes the committed evidence PNGs.
 
 Standalone + self-checking:  python cases/demo/p4_transonic/run_demo.py
@@ -54,7 +54,7 @@ Consequently:
   * the G4.1 checklist rows now read `engineering_converged` (the explicitly named
     old semantics) and a new row RECORDS the true field residual;
   * the physics gate on the shock position MOVED to the coupled Newton path
-    (tests/test_p4_transonic.py::test_g41_transonic_coarse_newton), where the
+    (tests/D/test_D03_naca0012_m080_shock.py::test_g41_transonic_coarse_newton), where the
     isentropic value is 0.6581 -- outside the Euler-anchored band -- and the
     entropy-corrected value is 0.6186, inside it;
   * the committed results/ CSV and PNG are NOT regenerated in this round (the heavy
@@ -99,7 +99,7 @@ M_INF, ALPHA = 0.80, 1.25
 
 # ---------------------------------------------------------------------------
 # Figure/CSV generators for the heavy G4.1 (coarse vs medium) + G4.3 evidence.
-# These moved here from the P4 gate test (tests/test_p4_transonic.py) so the
+# These moved here from the P4 gate test (tests/D/test_D03_naca0012_m080_shock.py) so the
 # committed artifacts and the code that makes them live together in the demo
 # (artifacts/ is gitignored, so demo_report cannot embed from there).
 # ---------------------------------------------------------------------------

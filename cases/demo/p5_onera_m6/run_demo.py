@@ -22,7 +22,7 @@ What this shows, per phases/p1/docs/roadmap.md P5 and cases/reference_data/onera
   re-emits the figures (fast). Force a fresh solve only when the
   solver/mesh/reference actually changed AND you will commit the refresh:
       PYFP3D_P5_RESOLVE=1 python cases/demo/p5_onera_m6/run_demo.py
-  The numeric gate is tests/test_p5_onera_m6.py (heavy asserts behind
+  The numeric gate is tests/D/test_D04_onera_m6_experiment.py (heavy asserts behind
   PYFP3D_TRANSONIC_GATES=1); this demo refreshes the committed evidence PNGs.
 
 Standalone + self-checking:  python cases/demo/p5_onera_m6/run_demo.py

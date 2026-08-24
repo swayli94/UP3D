@@ -62,7 +62,7 @@ from pyfp3d.solve.wall_correction import (  # noqa: E402
 from tests.mesh_utils import (  # noqa: E402
     cube_boundary_mask, generate_structured_cube_mesh, generate_sphere_shell_mesh,
 )
-from tests.test_laplace_mms import phi_exact_fn, run_mms_case  # noqa: E402
+from tests.C.test_C01_laplace_mms import phi_exact_fn, run_mms_case  # noqa: E402
 
 OUT = Path(__file__).resolve().parent / "results"
 SPHERE_DIR = MESH_DIR / "sphere_shell"
@@ -381,7 +381,7 @@ def demo_sphere_cp(checks):
 
     checks.add("G1.6", "max |Cp err| sphere medium", f"{err.max()*100:.1f}%",
                "< 2% (gate)", bool(err.max() < 0.02), xfail=True,
-               note="open gate; strict xfail in tests/test_laplace_sphere.py")
+               note="open gate; strict xfail in tests/C/test_C03_laplace_sphere.py")
     return err
 
 

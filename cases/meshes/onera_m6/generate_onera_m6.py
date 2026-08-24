@@ -31,7 +31,7 @@ No .msh file is committed (cases/meshes/onera_m6/*.msh is gitignored --
 they are large; coarse+medium regenerate in ~30 s, fine in ~4.5 min).
 The per-level stats CSVs and inspection PNGs ARE committed as the M1
 evidence record. Note the default-suite implications: the 13 tests in
-tests/test_m1_onera_m6.py skip when the meshes are absent, and the
+tests/A/test_A16_meshgen_onera_m6.py skip when the meshes are absent, and the
 hard-rule-7 glob sweep (test_p2_wake_cut.py) ingests whatever M6 meshes
 exist locally -- fine.msh alone adds ~94 s there, another reason to
 regenerate it only for mesh-convergence studies.
