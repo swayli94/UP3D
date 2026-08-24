@@ -1,0 +1,14 @@
+state,winner,runner,n_common,n_winner_closer
+W M0.76,P3,P1,6,6
+W M0.78,P1,P0,7,5
+W M0.80,P1,P3,7,4
+W M0.82,P3,P1,7,3
+W M0.8395,P2,P3,7,2
+W M0.86,P1,P2,7,2
+W M0.88,P1,P3,7,0
+WB M0.78,P3,P0,6,6
+WB M0.82,P2,P3,7,4
+WB M0.86,P0,P1,7,3
+WB M0.88,P2,P1,7,3
+WB xcoarse,P0,P1,7,2
+WB medium,P2,P0,7,4

@@ -433,3 +433,86 @@ is Track V's GV1.1 gate case, likewise a study; `v2_transpiration_channel/`,
 `v5_tight_coupling/` are
 Track V's GV2.1 / GV3.x / GV5.x gate cases (the `v5_ibl_floor/` one a
 RECORDED diagnosis, no bands), same status.)*
+
+---
+
+## ★★ Phase four (GS4.1, Track V route (a2)) and phase five (M1) — added 2026-08-23
+
+★★★ **Why this section exists, stated plainly:** the check that produces it found **32
+study directories on disk that this file did not mention** — **14** from phase four
+(`gs41_*`) and **18** from phase five. So the gap was **not** a phase-five oversight; the
+**phase-four close-out skipped this same surface**, and phase five then inherited a file
+that was already stale. `bench/studies/README.md` is exactly the surface the phase-one
+ritual flags as the one that silently rots (discipline #10), and it rotted for two phases
+running. ⇒ The rows below are grouped by phase rather than merged into the flat list above,
+so a future reader can see which phase each belongs to without reading every round file.
+
+**Where the round-by-round record lives** (these rows are an index, not the evidence):
+phase four = [`docs/dev_phase_three/20260816-1000-gs41-initiation.md`](../../docs/dev_phase_three/20260816-1000-gs41-initiation.md)
+(entry point) + `docs/dev_phase_four/progress.md`; phase five =
+[`docs/dev_phase_five/progress.md`](../../docs/dev_phase_five/progress.md), whose §A/§B
+tables say which conclusions **stand** and which were **retracted** — read those two tables
+before citing any number from a phase-five directory.
+
+### Phase four — GS4.1, the 2-D strip / IBL closure route
+
+Every one of these is a **closure-and-correlation** study (no FP solve unless noted), so
+they are cheap to re-run; each `run.py` self-checks its own bands.
+
+- `gs41_strip_core/` — route (a2)'s 2-D strip core (`pyfp3d/viscous/strip2d.py`)
+- `gs41_a2_correlation/` — the correlation closure family (`closures_2d.py`)
+- `gs41_closures_audit/` — ★★ the `closures.py` source audit vs Drela AIAA 2013-2437:
+  faithful on every profile/integral definition to 1e-15, **one** substantive divergence
+  (`ETA_LAM` quadrature short for the kinetic-energy thicknesses) — reported, then fixed
+  in `gs41_repaired_criteria/`
+- `gs41_turbulent_closure/` — the turbulent branch with its xblsys.f/xbl.f citations
+- `gs41_relaxation/` — post-transition relaxation; the round that found **every existing
+  turbulent lock windows at Re_theta >= 800** and so could not see a 4.5 % `c_f` move below it
+- `gs41_gcc_fix/` — the GCC transcription fix
+- `gs41_five_terms/` — ★★ the five missing turbulent terms + the lag equation; the round
+  whose lesson is that **a guard over the constants you wrote cannot see the terms you did not**
+- `gs41_lag_xfoil/`, `gs41_seed_on_station/` — ★ the seed chain against XFOIL, the viscous
+  suite's **first externally-validated anchor** (0.12 % / 0.15 % at two states)
+- `gs41_transition_attrib/` — the transition-region gap decomposition (XFOIL's own one step
+  ≈ 41 %, our different laminar closure family ≈ 59 %)
+- `gs41_two_point/`, `gs41_reference_recovery/`, `gs41_cost_crossflow/` — two-point checks,
+  reference recovery, and the cost/crossflow reads
+- `gs41_repaired_criteria/` — the re-specified criteria after the audit (quadrature 8 → 24
+  points; ★★★ **24 is a TOLERANCE CHOICE, not a derivation** — `(R w)^1.5` with `w` vanishing
+  at both ends is only algebraically convergent, so no point count is exact)
+
+### Phase five — M1 (2-D inviscid calibration, NACA0012 M0.80 / α1.25)
+
+★ **Read `docs/dev_phase_five/progress.md` §B first.** Seven conclusions from these
+directories were **retracted by later rounds in the same phase**, including two of the
+headline ones; the directories are kept because the *measurements* stand even where the
+*attributions* did not.
+
+- `r11_saturation/` — the footprint-rule saturation (found by re-checking a result that
+  looked wrong)
+- `r12_h_pricing/` — h-pricing; ★ also the round whose reporting layer died on `float(None)`
+  after an 11-min solve, recovered with zero re-solves by `recover.py` because the cache had
+  already been written
+- `r13_thread_seed_join/` — the thread × seed join
+- `r14_medium_coverage/`, `r15_modes/` — medium-level coverage and the failure modes
+- `r16_alpha_dose/`, `r17_mach_alpha0/` — α dose-response and the M-sweep at α = 0
+- `r18_attribution_audit/` — the attribution audit (**and the round whose anchor 5/13 did
+  not exist at its own scope** — addendum #1 before execution)
+- `r19_gamma_input/` — ★★ the phase's **only library change**: `gamma_target` on
+  `pyfp3d/solve/newton.py` (20 non-comment lines, Jacobian untouched, `None` = verbatim
+  legacy), which turns Γ from an output into an **input** — locks in `tests/test_r19_gamma_target.py`
+- `r20_te_mechanism/`, `r21a_coherence/`, `r21d_decompose/` — the TE supersonic structure
+  (x/c 0.904, |y| 0.089, one blob, not at cut/wall/TE-node) — ★★★ then **self-audited as
+  dissociated both ways** from the failure it was opened to explain
+- `r22_c_interval/` — the C-interval read; ★ carries its own erratum (the "only one usable C"
+  reading is **seed 0**'s; seed 5 has two)
+- `m1a_subcell/`, `m1b_tie/`, `m1e_scatter/` — the sub-cell extractor, the argmin ties, and
+  the scatter/permutation reads (zero new solves; they replay 13 committed `.npz`)
+- `n1_nozzle_anchor/` — ★★★ the analytic-solution anchor: the nozzle has **converged solutions
+  that are 36–41 cells wrong**, which is what limited `bench/usability.py`'s scope to
+  quantities that can collapse toward zero
+- `n2_nozzle_budget/` — ★★ `reason=cap` at h ≤ 0.05 is a **residual floor, not a budget stop**
+  (n_max 80 → 600 converges 0/4 and three legs end *worse*); by-product: **the shock position
+  is iteration-invariant** (≤ 8.7e-05 cells across a 7.5× change), so those readings are
+  citable for position even though the residual is not converged —
+  `python bench/studies/n2_nozzle_budget/run.py` — ~7 min at 8 threads

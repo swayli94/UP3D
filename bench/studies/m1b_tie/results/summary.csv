@@ -1,0 +1,8 @@
+tag,metric,band,measured,verdict
+G-REPRO,"per-cell argmin-tie count reproduces round 18, BOTH scopes","LADDER 4/13, ARMS 5/13","LADDER 4/13, ARMS 5/13",G-REPRO PASS
+T-TIE,"argmin-tie states, per-cell vs sub-cell (LADDER scope)",<=1 => resolution; still >=4 => attribution DEFINITIVELY excluded,per-cell 4/13 -> sub-cell 0/13  (ARMS: 5 -> 0),T-TIE PASS -- ties were resolution
+T-D,D itself under the two extractors,RECORDED,median D per-cell 0.01221 -> sub-cell 0.01220  (median |change| 0.00014),RECORDED
+T-DEF,"bias vs scatter of (foot - J1), percell",|bias| >> MAD => D's floor is a DEFINITION difference,n=627  bias +0.00257  MAD 0.01459  ratio 0.18,T-DEF: scatter-dominated
+T-SIGN,"fraction of readings with foot > J1, percell",near 0 or 1 => a fixed sign => definition difference,0.565 of 627,T-SIGN: mixed
+T-DEF(sub),"bias vs scatter of (foot - J1), subcell",|bias| >> MAD => D's floor is a DEFINITION difference,n=627  bias +0.00276  MAD 0.01475  ratio 0.19,T-DEF: scatter-dominated
+T-SIGN(sub),"fraction of readings with foot > J1, subcell",near 0 or 1 => a fixed sign => definition difference,0.582 of 627,T-SIGN: mixed

@@ -191,6 +191,7 @@ class NewtonWorkspace:
                  vortex_center=(0.25, 0.0),
                  farfield_spanwise_gamma: bool = False,
                  tip_taper: Optional[np.ndarray] = None,
+                 gamma_target: Optional[np.ndarray] = None,
                  kutta_estimator: str = "probe",
                  external_rhs: Optional[np.ndarray] = None,
                  sigma_soft_eps: float = 0.0, sigma_soft_q: float = 1.0):
@@ -210,6 +211,18 @@ class NewtonWorkspace:
             np.ones(wc.n_stations, dtype=np.float64) if tip_taper is None
             else np.asarray(tip_taper, dtype=np.float64).copy()
         )
+        #: R19: prescribed circulation for the B31 pin row. None = the pin
+        #: targets zero, which is the pre-R19 behaviour on the SAME code path.
+        #: Only acts where tip_taper < 1 (a full-station pin is tip_taper = 0).
+        self.gamma_target = (
+            None if gamma_target is None
+            else np.asarray(gamma_target, dtype=np.float64).copy()
+        )
+        if (self.gamma_target is not None
+                and self.gamma_target.shape != (wc.n_stations,)):
+            raise ValueError(
+                f"gamma_target must be ({wc.n_stations},), got "
+                f"{self.gamma_target.shape}")
         if self.tip_taper.shape != (wc.n_stations,):
             raise ValueError(
                 f"tip_taper must be ({wc.n_stations},), got "
@@ -464,13 +477,34 @@ class NewtonWorkspace:
                 # pin (with the row's own orientation) at taper_j = 0.
                 # Gamma enters EXPLICITLY here (an argument of
                 # eval_residual), unlike the probe path.
+                # R19: the pin's TARGET is generalisable. With gamma_target
+                # the row becomes s_j * (Gamma_j - Gamma_target_j), i.e. a pin
+                # to a PRESCRIBED circulation rather than to zero -- which
+                # makes Gamma an INPUT (the Picard path has had `gamma_fixed`
+                # since phase 1; newton.py had no equivalent, discipline #9).
+                # ★ The JACOBIAN IS UNCHANGED: d(Gamma - target)/dGamma ==
+                # dGamma/dGamma and d(target)/dphi == 0, so the existing
+                # FD locks (test_blend_jacobian_fd_phi/_gamma) still cover it.
+                # ★ gamma_target None takes the ORIGINAL expression verbatim,
+                # so the legacy path is bit-identical by construction rather
+                # than by an argument about subtracting 0.0.
+                g_pin = (gamma if self.gamma_target is None
+                         else gamma - self.gamma_target)
                 F = (self.kutta_sigma * (self.tip_taper * F_raw)
                      + (1.0 - self.tip_taper)
-                     * (self.kutta_weld_sign * gamma))
+                     * (self.kutta_weld_sign * g_pin))
         else:
             # Gamma_eff = taper * Gamma_Kutta (P13/G13.2; taper == 1 by
             # default, so this is the untapered Kutta residual bit-for-bit).
-            F = self.tip_taper * kutta_targets(phi_cut, self.wc) - gamma
+            # R19: same generalisation on the PROBE row (the DEFAULT estimator,
+            # and the one NACA_KW takes -- my first pass only changed the
+            # pressure-path blend, so T-PIN measured Gamma == 0 and caught it).
+            # F = t * targets - (Gamma - Gamma_target); at t = 0 that is a pin
+            # to Gamma_target. ★ The Jacobian is again UNCHANGED (the target is
+            # a constant), so the existing probe-row FD locks still cover it.
+            g_pin = (gamma if self.gamma_target is None
+                     else gamma - self.gamma_target)
+            F = self.tip_taper * kutta_targets(phi_cut, self.wc) - g_pin
         state = {
             "phi_red": phi_red, "phi_cut": phi_cut, "grad": grad,
             "q2l": q2l, "lim": lim, "rho": rho, "rho_t": rho_t,
@@ -767,6 +801,11 @@ def solve_newton_lifting(
     freeze_max_reverts: int = 3,
     workspace: Optional[NewtonWorkspace] = None,
     tip_taper: Optional[np.ndarray] = None,
+    #: R19: prescribe Gamma per station -- pins the B31 blend row to it
+    #: instead of to zero, making Gamma an INPUT. None = pre-R19 behaviour
+    #: on the same code path. Acts only where tip_taper < 1;
+    #: tip_taper = zeros(n_stations) is a full-station pin.
+    gamma_target: Optional[np.ndarray] = None,
     kutta_estimator: str = "probe",
     external_rhs: Optional[np.ndarray] = None,
     #: GS1b.11 (2026-07-31, user-adjudicated): the entropy-corrected density
@@ -924,6 +963,7 @@ def solve_newton_lifting(
         ws = NewtonWorkspace(mesh_cut, wc, alpha_deg, u_inf, gamma_air,
                              vortex_center, farfield_spanwise_gamma,
                              tip_taper=tip_taper,
+                             gamma_target=gamma_target,
                              kutta_estimator=kutta_estimator,
                              external_rhs=external_rhs,
                              sigma_soft_eps=sigma_soft_eps,

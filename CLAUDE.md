@@ -391,7 +391,12 @@ invisible by construction — the ungated suite stays green while capability loc
 
 So there is now a FAST tier, `PYFP3D_TRANSONIC_GATES=1 python bench/run_capability_locks.py`,
 **measured 2026-08-11 TWICE at the same 8 threads on the same box: 891 s and
-564 s, both 5/5 green** (keep both: a 1.6x spread with an identical result is the
+564 s, both 5/5 green** — ★ and a THIRD reading 2026-08-24 after phase five's R19
+library change: **740 s, 5/5 green, at 8 threads under load average 11.1 on 24 cpus**
+(groups: s1_m1a 11.9 s · seed_fallback 70.2 s · b9_wingbody_conforming 15.1 s ·
+p8_newton 134.8 s · b32_wingbody_conforming_transonic 508.1 s). Three readings now
+span 564–891 s with an identical verdict, which is the point: **the wall is a
+calibration of the machine, the 5/5 is the result** (keep both: a 1.6x spread with an identical result is the
 same wall-clock-is-a-calibration lesson as G8.2's 5.4x) (was 644 s / 7 groups: three
 level-set locks left with the route in phase 3, and the conforming wing-body transonic
 ceiling lock was added — a capability lock kept OUT of this tier would run only in the
@@ -515,6 +520,27 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
   bracket trick **only hides the grep process, never the parent shell**. The heredoc that was
   supposed to apply a fix never ran. ⇒ **capture the PID at LAUNCH — `cmd & echo $! > pidfile`**
   — and check liveness with `kill -0 $(cat pidfile)`. Never search for a PID by pattern.
+  ★★ **And a launch-time PID can still be the WRONG process** (2026-08-23, measured): `echo $!`
+  after `setsid nohup python <script> &` inside a wrapped `bash -c '... eval "..."'` wrote the
+  **wrapper shell's** PID (1971747), not python's (1971751), so `kill -0` was watching the
+  wrapper. Here the wrapper outlived its child and the check happened to work — which is exactly
+  how this survives to bite later. ⇒ **after capturing the PID, verify it: `ps -o args -p $PID`
+  must print the script name.** Capturing at launch removes the pattern-match hazard; it does not
+  by itself prove you captured the work.
+  ★★★ **Second instance the same day, and worse — the check earned itself immediately.** With
+  `setsid nohup python -u <script> &` written directly (no wrapper), `$!` is the **`setsid`**
+  process, which forks and **exits within milliseconds** while python runs on detached with a
+  different PID. So `kill -0 $(cat pidfile)` reports the job **finished, two seconds in** — an
+  until-loop on it returns at once and the run looks instantaneous. The first instance was benign
+  because the wrapper outlived its child; this one inverts the answer. ⇒ the `ps -o args -p $PID`
+  check is not belt-and-braces, it is **the** check: a PID that no longer exists and a PID doing
+  your work are indistinguishable to `kill -0`.
+  ★★ **And the fallback search hits the OTHER hazard**: `ps -eo pid,args | awk '/[r]un_x.py/'`
+  matched the **wrapper `bash -c`**, because the wrapper's own argv contains the script name —
+  the `[r]` bracket hides the matching process, never the parent shell (already logged), and that
+  applies to a launch search exactly as it applies to a kill search. ⇒ **match the EXECUTABLE too**:
+  `awk '$2 ~ /^python/ && /[r]un_x.py/'` on `pid,comm,args`. Measured 2026-08-23: both hazards fired
+  on one launch — `$!` gave a dead PID, and the pattern search gave the wrapper.
 - **Cache φ AND γ AND the diagnostic history** (`residual_history`, `clamp_history`, `F_history`,
   `n_gmres_stalled`, `accept_reason`). Incomplete caching forced three re-solves of the same five
   states in one day; the third was caught only by killing a fresh run 5 minutes in.
@@ -529,7 +555,106 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **571 passed + 12 skipped +
+3. Full suite: `pytest tests/` — current baseline **595 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-24, **measured in full @716.81 s @8 threads at
+   load 14.9**, the M1 re-spec).
+   ★★★ +6 vs the 589 below = `tests/test_m1_respec.py`, and **589 + 6 = 595 closes
+   exactly** with skipped/xfailed unmoved. It locks a **USER RULING of 2026-08-24**:
+   **M1 (a) deleted as a criterion, (b) and (c) relaxed from 3 % to 20 %, and split into
+   two INDEPENDENT metrics M1b and M1c.** ★ This is the **first relaxation of a target
+   number in this project** — the phase-two plan records "目标数字一个都没有放松过" — so it
+   is recorded as a signed ruling and the old spec and its numbers are kept verbatim in
+   the capability boundary's pre-2026-08-24 section.
+   ★★ Measured outcome, zero new solves (the committed gate CSV fed through `_criteria`):
+   **M1b PASS on both seeds** (−16.33 % / −16.15 %); **M1c PASS on seed 5** (coarse
+   9.42 %, medium 17.86 % — margin only **2.14 pp**) and **FAIL on seed 0 ONLY because
+   medium has a single converged leg** — a COVERAGE failure, which the script now says in
+   its own output because no tolerance can cure it.
+   ★★★ **The cost of deleting (a), recorded**: it was M1's only externally anchored
+   criterion. M1b and M1c are code-against-itself, so **both can pass on a uniformly wrong
+   solution** — `upwind_c = 1.10` at medium is the measured instance (converged, 0 clamps,
+   |R| 2.3e-13, Gamma off 7.6x, x_shock 0.657 outside the band) and **M1c counts it as a
+   legal leg**. The mitigation exists (`bench/usability.py` + an x_shock band precondition)
+   and is deliberately NOT wired in, since that would put (a) back without a ruling.
+   ★ Also fixed at source: the gate carried `SHOCK_REF, SHOCK_TOL = 0.61, 0.02`, a number
+   that appears in nine documents and in **no reference file**; it now reads the committed
+   **0.62 ± 0.03** from `cases/reference_data/naca0012_m080/shock_reference.csv`.
+   Previous: **589 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-24, **measured in full @690.49 s @8 threads at
+   load 12.6**, phase-five R23).
+   ★ +9 vs the 580 below = `tests/test_r23_usability.py`, locking `bench/usability.py`
+   — **580 + 9 = 589 closes exactly**, skipped/xfailed unmoved, `pyfp3d/` untouched.
+   ★★ **What it is for.** Measured: at medium/alpha 1.25/seed 0, `upwind_c = 1.10`
+   converged to **|R| 2.28e-13 with ZERO clamps** on a root whose Gamma was **7.6x**
+   off and cl_p **8.5x** off. It passed every usability check the project had, and
+   GS1.4's clamp-not-silent contract cannot see that class. ⇒ **`converged ∧ 0 clamps`
+   is NOT a sufficient usability test**; an ANSWER ANCHOR is needed, exactly as the
+   capability boundary's anomaly 1 said in advance.
+   ★★★ **It is outlier detection, NOT correctness certification** — the anchor is the
+   candidate set's own median, so a set that is wrong together passes, and a spurious
+   root landing near the consensus passes. Two measured fragilities are in the module
+   docstring: with only two legal legs the median IS the midpoint, so the outlier drags
+   its own reference (measured: consensus pulled to 0.1908 from 0.3413, the good leg's
+   own ratio rising to 1.79 against a 3.0 threshold); and `assess_set`'s per-axis
+   spread POOLS the other axes, so "seed 5 spread 42.61 %" mixed coarse with medium and
+   is not a gate reading.
+   ★ The threshold 3.0 is a **CALIBRATION** derived from the nine committed
+   converged-unclamped legs (legitimate ratio max **1.47**, spurious root **8.48** ⇒ a
+   **5.8x gap**), with the same status as the EW forcing and the taper r_c.
+   ★ G-CADENCE: the tool lives in `bench/` and its locks in `tests/`, because bench
+   scripts are in no test collection and therefore on no cadence — a usability
+   criterion without a tests lock would reproduce the problem it exists to fix.
+   Previous: **580 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-23, **measured in full @780.32 s @8 threads at
+   load 12.2**, phase-five R19).
+   ★ +6 vs the 574 below = `tests/test_r19_gamma_target.py`, and **574 + 6 = 580
+   closes exactly with skipped/xfailed unmoved** — which is the point: R19 is the
+   **first change to `pyfp3d/` in twenty rounds** (`gamma_target`, prescribed
+   circulation on the Newton path) and it **moved no existing test**.
+   ★★ The change generalises B31's Gamma-pin target from 0 to a prescribed value on
+   **both** Kutta rows, and **the Jacobian is untouched** (the target is a constant),
+   so the existing FD locks still cover it. `gamma_target=None` takes the original
+   expression verbatim, so bit-identity needs no floating-point argument — verified
+   by `array_equal(phi)` against two committed caches.
+   ★ Trap logged: the first pass changed only the **pressure**-path blend while the
+   NACA recipe takes the **probe** default, and `T-PIN` caught it (Gamma came back 0
+   instead of 0.25). **Change the row your case actually takes.**
+   Previous: **574 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-22, **measured in full @979.15 s @8 threads at
+   load 14–17** — a busy box; quote the wall with its load, never as a cost).
+   ★ +2 vs the 572 below = `TestQuadratureIsVisible`, and the reason it exists is a
+   measured COVERAGE defect, not an accuracy one: taking the turbulent quadrature
+   from **24 to 96 points** moves the closure outputs by **5.2e-03** and leaves the
+   **entire suite green**. Nothing in the project could see a quadrature change of
+   that size on either table (the laminar half moved 6.5e-04 in F1 with no Track V
+   lock red).
+   ★★ So the count was **NOT changed**: a number no test can see cannot be changed
+   verifiably. The two anchors pin four turbulent closure outputs at `rel = 1e-6`,
+   5000× under the movement measured, and **G-TEETH verified they fire** (temporarily
+   setting `ETA_TURB = 40` makes them red). They are SUPPOSED to go red on any count
+   change — that is how the change then arrives with a radius and an errata list.
+   Previous: **572 passed + 12 skipped +
+   2 xfailed, 0 failed** (2026-08-22, **measured in full @895.80 s @8 threads at
+   load 18.9** — a busy box; quote the wall with its load, never as a cost).
+   ★ +1 vs the 571 below = F1's re-specified audit lock splitting in two, and F1 is
+   the **first change to `closures.py` in seventeen rounds**: the laminar quadrature
+   went **8 → 24 points**.
+   ★★★ The reason it is 24 and not 11 is the round's real finding: `OUT_SD`
+   integrates `(R w)^1.5` with `w = 4 eta (1 - eta)` vanishing at BOTH ends, so
+   `w^1.5` has square-root-singular derivatives there and Gauss-Legendre converges
+   only ALGEBRAICALLY — **no point count is exact**, and the "degree ⇒ points"
+   framing is retired for this table. Measured against an n = 48 reference: n=8
+   7.9e-04, n=11 1.2e-05, n=24 2.5e-07, n=40 1.2e-08. So **24 is a TOLERANCE CHOICE**
+   (4× under the tightest band any lock places on a quantity the table feeds, and it
+   matches `ETA_TURB`), not a derivation. The structural fix — a substitution
+   absorbing the endpoint behaviour — is **reported, not done** (F4).
+   ★★ And the census that came with it: **9 of 30 closure outputs move above 1e-9**,
+   led by `theta*_1` at **6.46e-04** which sits on the kinetic-energy equation — while
+   **not one Track V lock went red**. Their bands are wider than 6.5e-04, so they
+   cannot see this class of change (F5; same shape as the round-8 window problem).
+   ★ Seven assertions re-pinned with **every tolerance unchanged**, and errata
+   discharged across ten places with no committed number rewritten.
+   Previous: **571 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-21, **measured in full @1021.82 s @8 threads at
    load 18.75** — a busy box; quote the wall with its load, never as a cost).
    ★ +2 vs the 569 below = `TestSeedAgainstXfoil`, GS4.1 round 17, and it is the
@@ -683,7 +808,31 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    account that closes, not as "nothing broke":
    - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
      the new gated wing-body lock), i.e. the deletion subtracted only;
-   - ★★★ **GATED full set RE-MEASURED after GS4.0 (2026-08-18): 509 passed + 1 skipped +
+   - ★★★ **GATED full set RE-MEASURED at the PHASE-FIVE close-out (2026-08-24): 604 passed +
+     1 skipped + 4 xfailed + 0 XPASSED, 0 failed, 1:44:32 @8 threads at load ~12-13.**
+     All four numbers close, three ways:
+     ★ **total items**: ungated 595 + 12 + 2 = **609** and gated 604 + 1 + 4 = **609**;
+     ★ **the unlock**: the gated run frees **11** skips (12 -> 1), of which **9 became passed
+     (595 + 9 = 604) and 2 became xfailed (2 -> 4)** -- 9 + 2 = 11 exactly;
+     ★★ **the delta from the previous gated reading**: 509 -> 604 = **+95**, and the ungated
+     suite over the same window went 500 -> 595 = **+95** ⇒ the gated growth is ENTIRELY the
+     ungated additions (phase four's GS4.1 rounds + phase five's locks). Nothing else moved.
+     ★★★ **The XPASS did not vanish -- it flipped, exactly as its own mark predicts.** GS4.0
+     read 3 xfailed + 1 XPASSED **@16 threads**; this run is **@8 threads**, and the XPASSing
+     leg is `test_p4_transonic::test_g41_transonic_medium_gate`, whose non-strict reason records
+     "at 16 threads this leg CONVERGES (|R| 2.8e-13) ... the gated suite at 8 threads then
+     showed it NOT converging (|R| 3.77e-05)". So 3 + 1 XPASS @16t == 4 xfailed @8t.
+     ⇒ **a gated count is meaningless without its thread count**, and this is the second
+     consecutive close-out where that one leg is the only pass/fail difference.
+     ★ The 4 xfails are exactly the 4 `pytest.mark.xfail` decorators in the tree
+     (`test_laplace_sphere` G1.6-literal strict · `test_wall_correction_cylinder` G1.3 strict ·
+     `test_p8_newton` strict · `test_p4_transonic` non-strict-on-purpose above), and the single
+     skip is `test_v6_wake_sheet::test_ab_bit_identity_gate_free_library` -- a **plain
+     `pytest.mark.skip`, RETIRED 2026-07-29 because its premise is false** (the loose loop is
+     not reproducible run-to-run), not a gate silently not running.
+     ★ Wall: **6272 s @8 threads**, against 1:12:38 @16t and 4:09 @8t-under-load for the same
+     set -- quote gated walls with thread count AND load, never as a cost.
+   - Previous: **GATED full set after GS4.0 (2026-08-18): 509 passed + 1 skipped +
      3 xfailed + 1 XPASSED, 0 failed, 1:12:38 @16 threads.** All four numbers close against
      the ungated 500 + 12 + 2: the gated run unlocks **11** skips, of which **9 became
      passed (500 + 9 = 509), 1 became xfailed (2 -> 3) and 1 became XPASSED** -- 9+1+1 = 11.

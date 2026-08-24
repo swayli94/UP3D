@@ -1,0 +1,6 @@
+tag,metric,band,measured,verdict
+P-H,h_shock vs h_wall in the shock band (mesh only),<=25% => h_wall is a fair proxy,"xcoarse 0.03908 (0.977x, 3 nodes)  coarse 0.01993 (0.996x, 5 nodes)  medium 0.00996 (0.996x, 10 nodes)  fine 0.00498 (0.996x, 20 nodes);  max deviation 2.3%",P-H: h_wall is a fair proxy
+P-CONV,does the production recipe converge unclamped at each level,fine usable => h route OPEN;  not usable => blocker confirmed on current code,xcoarse USABLE(0/0)  coarse USABLE(0/0)  medium USABLE(0/0)  fine limit_cycle(0/0),★ P-CONV: fine NOT usable -- blocker CONFIRMED on current code
+P-B,"two-level cl difference (medium, fine)",conditional on both usable,fine is not usable,NOT APPLICABLE
+P-B',"the pair that IS usable (coarse, medium)",RECORDED ONLY -- fold zone; M1's (b) target is <3%,coarse 0.40798 -> medium 0.34134 = -16.33%,RECORDED (reproduces the committed -16.2/-16.3%)
+P-PRIOR,prior blockers on the h route,RECORDED,thread scatter 0.027 c = 4.9x the +-0.0055 c requirement; seed change 0.1683 c = 31x,RECORDED

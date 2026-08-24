@@ -1,0 +1,5 @@
+cap_ratio,conv,m_inf,maxM,mode,n_floored,n_limited,n_steps,old_shM,source,steps_capped,steps_floored,te_maxM,te_sup,te_sym,upM,upM_x,wall_s,gamma,premise_gamma0
+0.3655,True,0.8,1.2393,,0,0,29,0.9824,cached R16,1,0,0.8302,0,,1.2393,0.3869,66.8,-3.703003e-03,yes
+0.3913,False,0.82,1.2962,limit_cycle,0,0,80,1.2962,new,3,0,0.865,0,,1.2962,0.5294,213.9,-2.661866e-02,NO
+0.6841,False,0.84,1.9812,limit_cycle,0,0,80,1.9812,new,14,0,1.5262,2146,0.0,1.9812,0.6608,267.0,+3.522496e-01,NO
+25285.4903,False,0.86,48.3555,clamping,39,3471,19,39.9708,new,14,13,48.3555,684,0.1667,39.9708,0.5669,598.2,+3.539194e-01,NO

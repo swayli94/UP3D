@@ -1,0 +1,5 @@
+base_INTERIOR,base_TE-NODE,base_WAKE,base_WALL,enrich_INTERIOR,enrich_TE-NODE,enrich_WAKE,enrich_WALL,leg,level,m_inf,n_band,n_sup,obs_INTERIOR,obs_TE-NODE,obs_WAKE,obs_WALL,te_maxM
+0.9331,0.0,0.0313,0.0356,1.013,,0.0,1.53,DIRTY medium a0 M0.84,medium,0.84,6652,2146,0.9455,0.0,0.0,0.0545,1.5262
+0.9331,0.0,0.0313,0.0356,,,,,CLEAN medium a0 M0.82,medium,0.82,6652,0,,,,,0.865
+0.9331,0.0,0.0313,0.0356,1.051,,0.0,0.535,DIRTY medium C1.0 a1.25,medium,0.8,6652,787,0.9809,0.0,0.0,0.0191,29.4872
+0.9331,0.0,0.0313,0.0356,,,,,CLEAN medium C1.5 a1.25,medium,0.8,6652,0,,,,,0.8607

@@ -1,0 +1,4 @@
+alpha,cap_ratio,conv,maxM,maxM_x,mode,n_floored,n_limited,n_steps,res_last,sh_maxM,source,steps_capped,steps_floored,te_maxM,te_sup,wall_s
+1.25,170747.716,False,29.4872,0.909,,0,1135,47,0.016298360909977893,2.5483,cached R14,35,0,29.4872,787,1285.0
+0.0,0.3655,True,1.2393,0.3869,converged,0,0,29,4.0461836213329707e-13,0.9824,new,1,0,0.8302,0,66.8
+0.5,0.3712,False,1.2518,0.3295,limit_cycle,0,0,80,1.0333704876558314e-09,1.105,new,2,0,0.8292,0,324.8

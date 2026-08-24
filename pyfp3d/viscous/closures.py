@@ -37,6 +37,33 @@ laminar branch the stress equations are PINNED by the solver, so the factors
 are computed but unused upstream of x_tr).
 """
 
+# ---------------------------------------------------------------------------
+# ★★ The `D-*` decision identifiers used in this file, audited in phase-5 round 6
+# (F8, docs/dev_phase_five/20260822-1400-f8-verdict.md). "Appears in a document" is
+# not "is defined there" -- the audit classified each by whether any record says
+# WHAT THE DECISION IS:
+#
+#   D-CT    DEFINED   docs/design_track_v.md sec 3.2 + its decision table
+#   D-HB    DEFINED   docs/design_track_v.md decision table
+#   D-QUAD  DEFINED   docs/design_track_v.md decision table -- ★ but its text still
+#                     claims the quadrature was set "by polynomial exactness and
+#                     Spalding resolution, unit-tested", and BOTH halves were
+#                     measured false in phase-5 rounds 2 and 3. An erratum is
+#                     annotated beside it there.
+#   D-CT-1  NO RECORD ★ occurs only next to the value it labels
+#   D-CT-2  NO RECORD ★ ditto (this is what round 5 found for C_L)
+#   D-TR    NO RECORD ★ used across audit docs as the NAME of a recorded
+#                     divergence (forced transition vs the paper's e^N), but no
+#                     record defines it
+#   D-BC    NO RECORD ★ no occurrence anywhere outside pyfp3d/
+#   D-PT    NO RECORD ★ ditto
+#
+# ★★★ These are left in place rather than deleted or back-filled. Writing a design
+# record for a dangling ID now would be inventing provenance after the fact -- the
+# thing round 5 objected to. This note is the honest alternative: the reader learns
+# which identifiers resolve BEFORE trusting one.
+# ---------------------------------------------------------------------------
+
 import os
 
 import numba
@@ -64,9 +91,36 @@ else:
 KAPPA = 0.41          # von Karman constant (Spalding law (51))
 B_SPALDING = 5.5      # Spalding log-law intercept
 A1_BRADSHAW = 0.15    # Reynolds stress anisotropy ratio a1 (D13 (30))
-C_L_DEFAULT = 0.09    # outer dissipation length L = C_L * delta (D-CT-2;
-                      # Bradshaw outer-layer value; 2-D-reduction calibration
-                      # recorded in the GV1.1 VERDICT)
+# ★★ C_L is the PROJECT'S CHOICE. Phase-5 round 5 (F2) checked all four provenance
+# claims the previous comment made, and none is supported:
+#   1. Drela AIAA 2013-2437 p.9 says verbatim "The outer-layer dissipation length L
+#      is calibrated so that the dissipation integral D matches the dissipation
+#      implied by Clauser's G-beta locus" (and p.12 repeats it) -- it states that a
+#      calibration was DONE and gives neither the procedure nor a value. The string
+#      "0.09" appears ZERO times in the paper; refs 17/18 are Clauser 1954/1956,
+#      the data source, not the constant.
+#   2. "Bradshaw outer-layer value": no citable source for 0.09 in reference/.
+#      (A1_BRADSHAW = 0.15 above IS the Bradshaw stress ratio, a different thing.)
+#   3. "calibration recorded in the GV1.1 VERDICT": that VERDICT lists c_l = 0.09
+#      under "Numerical settings (as run)"; the calibration table its addendum
+#      mentions belongs to eps_diff_s, not to c_l.
+#   4. "(D-CT-2)": that ID has NO design record anywhere -- it occurs only beside
+#      this value, in the GV1.1 pre-registration/verdict and in this file.
+# ★ Same disposition round 4 gave kappa, B and r: the paper names the quantity
+# without giving the number, so the number is ours.
+# ★★ Round 7 then ran a PROXY calibration -- choosing c_l so our equilibrium
+# Ctau_eq matches XFOIL's CtauEQ on the 2-D reduction, which the paper's own p.9
+# says this formulation reduces to. It is a proxy: the paper matches a dissipation
+# INTEGRAL to the locus, we match XFOIL's CtauEQ. Result:
+#     well-posed states (H >= 1.60): c_l = 0.0669 .. 0.0713, spread 6.6 %
+#     all states:                    c_l = 0.0669 .. 0.2194, spread 222 %
+# so a single constant does NOT fit everywhere. The well-posed median is 0.0685,
+# making the shipped 0.09 1.31x it -- and since Ctau_eq goes as c_l squared, about
+# 1.73x in CtauEQ. RECORDED, NOT ADOPTED: round 7's addendum 1 required BOTH
+# readings to pass before the value could move, and the global one does not.
+# Verdicts: docs/dev_phase_five/20260822-1200-f2-verdict.md (provenance)
+#           docs/dev_phase_five/20260822-1700-f2f4f6-verdict.md (proxy calibration)
+C_L_DEFAULT = 0.09    # outer dissipation length L = C_L * delta
 CTAU_LAM = 1.0e-8     # pinned laminar stress level (D-TR; << Ctaucrit)
 GAMMA_AIR = 1.4
 RECOVERY_R = 0.85     # r ~ Pr^1/2 (D13 (58))
@@ -116,17 +170,79 @@ OUT_KU2 = 29
 # ---------------------------------------------------------------------------
 
 def _gauss_table(n):
+    """★★★ Gauss-Legendre in THETA, mapped to eta by eta = (1 - cos theta)/2.
+
+    Phase-5 round 7 (F4). The plain eta-rule this replaced converged only
+    ALGEBRAICALLY, because OUT_SD integrates (R w)^1.5 with w = 4 eta (1 - eta)
+    vanishing at both ends -- so w^1.5 has square-root-singular derivatives there
+    and no point count is exact (round 2 measured 7.9e-04 at n=8 down to only
+    1.2e-08 at n=40).
+
+    The substitution turns w^1.5 into sin^3(theta) and dη into ½ sin(theta) dtheta,
+    which is smooth, so the singularity is absorbed rather than resolved. Measured
+    on that exact integral against 3π/16:
+
+        n      plain eta-rule      theta-substituted
+        8      5.41e-05            1.26e-06
+        16     1.86e-06            6.66e-16   <- machine precision
+        64     2.01e-09            1.55e-15
+
+    ★★ It also CLUSTERS nodes at both ends like a Chebyshev rule, which is what a
+    near-wall layer needs. On a 1/delta+ -thick proxy layer exp(-eta*delta+):
+    at delta+ = 1e3, n=24 goes 4.4e-01 -> 3.5e-03 and n=48 goes 8.9e-04 -> 1.4e-08.
+    ★ But it is NOT sufficient there on its own: at delta+ = 1e4, n=24 still leaves
+    1.9e-01. So F4 closes and F6 stays open -- exactly what round 7's prediction 3
+    said, and the verdict must not call F6 fixed.
+
+    ★ sum(w) = 1 is asserted by a lock; the rule still integrates constants exactly.
+    """
     x, w = np.polynomial.legendre.leggauss(n)
-    eta = 0.5 * (x + 1.0)
-    wgt = 0.5 * w
+    theta = 0.5 * np.pi * (x + 1.0)
+    eta = 0.5 * (1.0 - np.cos(theta))
+    wgt = 0.5 * np.sin(theta) * w * 0.5 * np.pi
     return np.ascontiguousarray(eta), np.ascontiguousarray(wgt)
 
 
-# Laminar: integrands are polynomials of degree <= 13 in eta (products of the
-# degree-4/5 Bernstein-type basis functions) -> 8 points exact to degree 15.
-ETA_LAM, W_LAM = _gauss_table(8)
-# Turbulent: Spalding profile is non-polynomial; 24 points resolve the
-# near-wall log-region variation for delta+ up to O(1e5) (unit-tested).
+# Laminar. ★★★ The claim that used to stand here -- "integrands are polynomials of
+# degree <= 13 -> 8 points exact to degree 15" -- is FALSE twice over, both halves
+# measured (GS4.1 round 4's source audit; phase-5 round 2's n-sweep):
+#
+#   1. The KINETIC-ENERGY thicknesses phi*_1 and phi*_2 integrate
+#      1 - R U (U^2 + W^2) with U and W each degree 7, i.e. degree 21, not 13.
+#   2. ★★ More fundamentally, this ONE table serves all 30 outputs, and OUT_SD
+#      integrates (R w)^1.5 with w = 4 eta (1 - eta) vanishing at BOTH ends -- so
+#      w^1.5 has square-root-singular derivatives there and Gauss-Legendre
+#      converges only ALGEBRAICALLY. NO point count makes it exact. Measured
+#      distance to an n = 48 reference: n=8 7.9e-04, n=11 1.2e-05, n=14 3.6e-06,
+#      n=20 6.2e-07, n=24 2.5e-07, n=30 7.7e-08, n=40 1.2e-08 -- and OUT_SD is the
+#      binding output at every n >= 11.
+#
+# ★ So the point count here is a TOLERANCE CHOICE, not a degree calculation.
+# 24 puts the residual at 2.5e-07, a 4x margin under the tightest band any lock
+# currently places on a quantity fed by this table (rel = 1e-6), and it matches
+# ETA_TURB so the two tables no longer disagree for no stated reason.
+# ★★ The structural fix for OUT_SD is a substitution absorbing the endpoint
+# w^1.5 behaviour, NOT more points -- REPORTED, not done (same disposition round 4
+# gave the defect it found).
+ETA_LAM, W_LAM = _gauss_table(24)
+# Turbulent. ★★ The claim that used to stand here -- "24 points resolve the
+# near-wall log-region variation for delta+ up to O(1e5) (unit-tested)" -- is FALSE
+# in BOTH halves, measured in phase-5 round 3
+# (docs/dev_phase_five/20260822-0600-f3-verdict.md):
+#
+#   1. "(unit-tested)": nothing in tests/ asserts anything about ETA_TURB. The only
+#      Spalding lock tests the y+ -> u+ -> y+ INVERSION, not the quadrature.
+#   2. "24 points resolve...": against an n = 96 reference, 24 points leave
+#      1.7e-03 to 5.2e-03 at EVERY state measured (re_delta 1e4..1e7), with
+#      OUT_CDX -- the near-wall PROFILE-DERIVATIVE dissipation term -- binding.
+#      ★ For scale, the same count leaves 2.5e-07 on the laminar table. The claim
+#      already fails far below its own stated limit; the round did not reach
+#      delta+ = 1e5 and claims nothing about that point.
+#
+# ★★ The count is UNCHANGED here on purpose: raising it moves every committed
+# turbulent-side number, and that radius has not been measured. Registered as F6;
+# the fix follows F1's pattern -- measure the radius first, then re-pin with an
+# errata list. This comment carries no number, so correcting it needed no radius.
 ETA_TURB, W_TURB = _gauss_table(24)
 
 

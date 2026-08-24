@@ -1,0 +1,5 @@
+level,C,n_conv,spread_rel
+coarse,1.0,2,0.028382
+coarse,1.5,2,0.002137
+coarse,3.0,2,0.000231
+medium,3.0,1,
