@@ -808,7 +808,31 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    account that closes, not as "nothing broke":
    - deleting the 4624 library lines left **passed UNCHANGED at 457** (+1 skipped =
      the new gated wing-body lock), i.e. the deletion subtracted only;
-   - ★★★ **GATED full set RE-MEASURED after GS4.0 (2026-08-18): 509 passed + 1 skipped +
+   - ★★★ **GATED full set RE-MEASURED at the PHASE-FIVE close-out (2026-08-24): 604 passed +
+     1 skipped + 4 xfailed + 0 XPASSED, 0 failed, 1:44:32 @8 threads at load ~12-13.**
+     All four numbers close, three ways:
+     ★ **total items**: ungated 595 + 12 + 2 = **609** and gated 604 + 1 + 4 = **609**;
+     ★ **the unlock**: the gated run frees **11** skips (12 -> 1), of which **9 became passed
+     (595 + 9 = 604) and 2 became xfailed (2 -> 4)** -- 9 + 2 = 11 exactly;
+     ★★ **the delta from the previous gated reading**: 509 -> 604 = **+95**, and the ungated
+     suite over the same window went 500 -> 595 = **+95** ⇒ the gated growth is ENTIRELY the
+     ungated additions (phase four's GS4.1 rounds + phase five's locks). Nothing else moved.
+     ★★★ **The XPASS did not vanish -- it flipped, exactly as its own mark predicts.** GS4.0
+     read 3 xfailed + 1 XPASSED **@16 threads**; this run is **@8 threads**, and the XPASSing
+     leg is `test_p4_transonic::test_g41_transonic_medium_gate`, whose non-strict reason records
+     "at 16 threads this leg CONVERGES (|R| 2.8e-13) ... the gated suite at 8 threads then
+     showed it NOT converging (|R| 3.77e-05)". So 3 + 1 XPASS @16t == 4 xfailed @8t.
+     ⇒ **a gated count is meaningless without its thread count**, and this is the second
+     consecutive close-out where that one leg is the only pass/fail difference.
+     ★ The 4 xfails are exactly the 4 `pytest.mark.xfail` decorators in the tree
+     (`test_laplace_sphere` G1.6-literal strict · `test_wall_correction_cylinder` G1.3 strict ·
+     `test_p8_newton` strict · `test_p4_transonic` non-strict-on-purpose above), and the single
+     skip is `test_v6_wake_sheet::test_ab_bit_identity_gate_free_library` -- a **plain
+     `pytest.mark.skip`, RETIRED 2026-07-29 because its premise is false** (the loose loop is
+     not reproducible run-to-run), not a gate silently not running.
+     ★ Wall: **6272 s @8 threads**, against 1:12:38 @16t and 4:09 @8t-under-load for the same
+     set -- quote gated walls with thread count AND load, never as a cost.
+   - Previous: **GATED full set after GS4.0 (2026-08-18): 509 passed + 1 skipped +
      3 xfailed + 1 XPASSED, 0 failed, 1:12:38 @16 threads.** All four numbers close against
      the ungated 500 + 12 + 2: the gated run unlocks **11** skips, of which **9 became
      passed (500 + 9 = 509), 1 became xfailed (2 -> 3) and 1 became XPASSED** -- 9+1+1 = 11.
