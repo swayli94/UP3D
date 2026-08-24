@@ -128,7 +128,7 @@ def test_bad_inputs_raise():
 # --------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def naca_coarse():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
                      / "coarse.msh")
     return cut_wake(mesh)
@@ -225,7 +225,7 @@ def test_taper_reaches_the_transonic_driver(naca_coarse):
 # --------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def m6_coarse():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     p = REPO_ROOT / "cases" / "meshes" / "onera_m6" / "coarse.msh"
     if not p.exists():
         pytest.skip("onera_m6/coarse.msh not generated (gitignored)")

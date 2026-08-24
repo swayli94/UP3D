@@ -38,7 +38,7 @@ def coarse(mesh_dir_2p5d):
 
 @pytest.fixture(scope="module")
 def mesh_dir_2p5d():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     d = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
     if not (d / "coarse.msh").exists():
         pytest.skip("naca0012_2.5d/coarse.msh not generated")

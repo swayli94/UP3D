@@ -30,7 +30,7 @@ from tests.mesh_utils import cube_boundary_mask, generate_structured_cube_mesh
 
 @pytest.fixture(scope="module")
 def naca_coarse():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     return read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
 
 
@@ -85,7 +85,7 @@ class TestFastAssemblyVsReference:
         assert np.array_equal(R1, R2)
 
     def test_coloring_valid_on_real_mesh(self):
-        from .conftest import REPO_ROOT
+        from tests.conftest import REPO_ROOT
         m = read_mesh(REPO_ROOT / "cases" / "meshes" / "cylinder_2.5d" / "coarse.msh")
         colors, n_colors = greedy_coloring(m.elements)
         assert validate_coloring(m.elements, colors)

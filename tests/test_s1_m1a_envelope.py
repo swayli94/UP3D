@@ -118,7 +118,7 @@ def _solve(mesh_dir, level):
 
 @pytest.fixture(scope="module")
 def mesh_dir():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     return REPO_ROOT / "cases" / "meshes"
 
 

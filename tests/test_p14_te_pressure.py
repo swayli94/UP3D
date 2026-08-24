@@ -28,7 +28,7 @@ UPWIND_C, M_CRIT, M_CAP, RHO_FLOOR = 1.5, 0.95, 3.0, 0.05
 
 @pytest.fixture(scope="module")
 def naca_case():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
 
     mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
                      / "coarse.msh")

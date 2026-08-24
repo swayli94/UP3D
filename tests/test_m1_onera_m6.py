@@ -197,7 +197,7 @@ class TestM6WakeCut:
 # ---------------------------------------------------------------------------
 def _generator():
     import importlib.util
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     p = REPO_ROOT / "cases" / "meshes" / "onera_m6" / "generate_onera_m6.py"
     spec = importlib.util.spec_from_file_location("_gen_m6", p)
     mod = importlib.util.module_from_spec(spec)

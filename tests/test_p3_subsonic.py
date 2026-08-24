@@ -76,7 +76,7 @@ def run_sphere_pair(mesh_path):
 
 @pytest.fixture(scope="module")
 def sphere_medium(request):
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     return run_sphere_pair(
         REPO_ROOT / "cases" / "meshes" / "sphere_shell" / "medium.msh"
     )
@@ -169,7 +169,7 @@ class TestG31SphereCompressible:
 class TestG33BitIdenticalLaplaceLimit:
     def test_matrix_bits_at_m0(self):
         """A(rho(M=0, any phi)) == Laplace A, bitwise."""
-        from .conftest import REPO_ROOT
+        from tests.conftest import REPO_ROOT
         from pyfp3d.kernels.jacobian import PicardOperator
         from pyfp3d.kernels.residual import assemble_stiffness_matrix
         from pyfp3d.physics.isentropic import density_field
@@ -186,7 +186,7 @@ class TestG33BitIdenticalLaplaceLimit:
     def test_lifting_m0_bitwise_vs_p2(self):
         """solve_subsonic_lifting(M=0) == solve_laplace_lifting, bitwise,
         for both the fixed-Gamma solve and the full secant Kutta loop."""
-        from .conftest import REPO_ROOT
+        from tests.conftest import REPO_ROOT
 
         m = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
         mc, wc = cut_wake(m)
@@ -206,7 +206,7 @@ class TestG33BitIdenticalLaplaceLimit:
     def test_nonlifting_m0_bitwise_vs_p1(self):
         """solve_subsonic(M=0) == solve_laplace, bitwise, at matched CG
         controls (rho == 1 exactly makes iteration 1 the P1 solve)."""
-        from .conftest import REPO_ROOT
+        from tests.conftest import REPO_ROOT
 
         mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "sphere_shell" / "coarse.msh")
         ff = np.unique(mesh.boundary_faces["farfield"])

@@ -247,7 +247,7 @@ class TestNothingElseMoved:
 # ---------------------------------------------------------------------------
 def _generator():
     import importlib.util
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     p = (REPO_ROOT / "cases" / "meshes" / "onera_m6_roundtip"
          / "generate_onera_m6_roundtip.py")
     spec = importlib.util.spec_from_file_location("_gen_m5", p)

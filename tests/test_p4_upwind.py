@@ -90,7 +90,7 @@ class TestUpstreamWalk:
 def test_g42_subcritical_noop_bitwise(artifacts_dir):
     """Gate G4.2: M_inf = 0.5 with the upwind machinery in the loop is
     bit-identical to the P3 path (upwind_c = 0), and nu == 0 everywhere."""
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
 
     mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
     mc, wc = cut_wake(mesh)

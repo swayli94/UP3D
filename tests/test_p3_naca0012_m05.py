@@ -69,13 +69,13 @@ def _compressible_case(mesh_dir, level):
 
 @pytest.fixture(scope="module")
 def coarse_case():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     return _compressible_case(REPO_ROOT / "cases" / "meshes", "coarse")
 
 
 @pytest.fixture(scope="module")
 def medium_case():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     return _compressible_case(REPO_ROOT / "cases" / "meshes", "medium")
 
 

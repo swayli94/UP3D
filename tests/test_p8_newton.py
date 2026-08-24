@@ -76,7 +76,7 @@ def _case_args():
 
 @pytest.fixture(scope="module")
 def coarse_mesh():
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
 
     mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
                      / "coarse.msh")
@@ -226,8 +226,8 @@ def test_supersonic_jacobian_is_nonsymmetric():
     from pyfp3d.kernels.upwind import UpwindOperator
     from pyfp3d.physics.isentropic import density_field
 
-    from .mesh_utils import generate_structured_cube_mesh
-    from .test_p8_jacobian import _degeneracy_breaker
+    from tests.mesh_utils import generate_structured_cube_mesh
+    from tests.test_p8_jacobian import _degeneracy_breaker
 
     nodes, elements = generate_structured_cube_mesh(n=6, L=1.0)
     op = PicardOperator(nodes, elements)
@@ -316,7 +316,7 @@ def _assert_terminal_quadratic(r):
 
 
 def _transonic_case(mesh_file, m_inf):
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     from pyfp3d.post.section_cut import wall_cp_curve
     from pyfp3d.post.shock import shock_report
     from pyfp3d.solve.newton import solve_newton_transonic

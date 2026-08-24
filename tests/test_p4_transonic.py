@@ -177,7 +177,7 @@ def test_p4_picard_path_historical_regression(reference_mesh_dir, artifacts_dir)
     against the Euler-anchored reference. The physics gate moved onto the Newton
     path in test_g41_transonic_coarse_newton.
     """
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     # ★ GS1b.11: entropy_correction is now the DEFAULT, and this test exists to lock the
     # HISTORICAL (isentropic Picard) behaviour, so it pins the flag OFF explicitly. With
     # the default it reads 0.5633 instead of 0.6041 -- a correct move, not a drift, and
@@ -209,7 +209,7 @@ def test_p4_picard_path_historical_regression(reference_mesh_dir, artifacts_dir)
 def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
     """Gate G4.1 on the Newton path: the shock position of a state that IS a
     solution, against the Euler-anchored reference band."""
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     case = _transonic_case_newton(
         REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
     r = case["result"]
@@ -245,7 +245,7 @@ def test_g41_transonic_coarse_newton(reference_mesh_dir, artifacts_dir):
     "(test_g41_transonic_coarse_newton) is robust and asserts normally."))
 def test_g41_transonic_medium_gate(reference_mesh_dir, artifacts_dir):
     """Gate G4.1 = V4 on the medium mesh, on the Newton path (GS1b.8)."""
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     case = _transonic_case_newton(
         REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "medium.msh")
     r = case["result"]
@@ -274,7 +274,7 @@ def test_g43_robustness_sweep(artifacts_dir):
     The answer-quality gate lives on the Newton path
     (test_g41_transonic_coarse_newton). A Newton-path version of this sweep is a
     registered follow-up, not done here (ten more coupled solves)."""
-    from .conftest import REPO_ROOT
+    from tests.conftest import REPO_ROOT
     from pyfp3d.constraints.wake import kutta_targets  # noqa: F401
 
     mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh")
