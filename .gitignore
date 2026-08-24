@@ -41,7 +41,11 @@ htmlcov/
 .vscode/
 .idea/
 
-# Solver and visualization artifacts
+# Solver and visualization SCRATCH (not evidence -- see CLAUDE.md workflow rule 1).
+# ★ 2026-08-24: the old `artifacts/<gate_id>/` was specified as the evidence form for visual
+# gates while being gitignored, so it was never evidence and 11 documents cited paths that
+# exist in no fresh clone. It is now explicitly SCRATCH: the conftest fixture still writes
+# here to force headless output, and C/D-class figures go to a TRACKED results/ dir instead.
 artifacts/
 *.vtk
 *.vtu

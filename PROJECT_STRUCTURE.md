@@ -1141,7 +1141,7 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
 
 The Option A (true-normal weak-flux correction) verification chain ran to completion the same
 day it was renumbered, and falsified the route (full evidence: roadmap G1.3/G1.4/DP1 entries,
-design.md §5.1.2, `artifacts/G1.3/` + oracle results in `cases/demo/p1_laplace/results/`):
+design.md §5.1.2, oracle results (the committed evidence) in `cases/demo/p1_laplace/results/`):
 
 - **Delivered code**: `pyfp3d/solve/wall_correction.py` (closest_point_normal callback interface
   with analytic cylinder/sphere implementations, domain-outward facet orientation from the
@@ -1292,7 +1292,8 @@ under refinement for solved fields.
   method-vs-method; cl(4°) = 0.482556 at N=800, Cp-integration vs Kutta–Joukowski agree to
   0.09%, lift slope 6.91/rad vs thickness-corrected 6.90. Provenance in its README.
 - **Gates** (all green, `tests/test_p2_wake_cut.py` + `tests/test_p2_kutta_naca0012.py`,
-  artifacts/G2.{1..5}/): G2.1 ‖R‖∞ = 8.4e-13 (folded wake-master rows 6.9e-16); G2.2
+  ★ readings below were produced into the gitignored `artifacts/G2.{1..5}/`, DELETED 2026-08-24 —
+  they are quoted here as the record; regenerate locally by running the P2 gates): G2.1 ‖R‖∞ = 8.4e-13 (folded wake-master rows 6.9e-16); G2.2
   [φ] − Γ < 1e-13; G2.3 medium cl_p = 0.47858 → −0.82% vs panel (coarse −3.0%), Kutta
   converged in 2 updates; G2.4 Γ-cl vs pressure-cl 0.01% (coarse 0.32%); G2.5 closed under
   the re-specced criterion (b) — p99 |w|/U∞ 4.82e-3 → 2.35e-3 (ratio 2.05 at h ratio 2),

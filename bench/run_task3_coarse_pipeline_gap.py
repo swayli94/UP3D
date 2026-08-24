@@ -44,7 +44,7 @@ from pyfp3d.post.surface import (cl_kj_3d, planform_area,              # noqa: E
                                  wall_force_coefficients)
 import run_m3_budget as MB                                             # noqa: E402
 import run_task3_m6_triage as TR                                       # noqa: E402
-from run_le14_common_root import classify_failure                      # noqa: E402
+from failure_modes import classify_failure                      # noqa: E402
 
 CSV = os.path.join(HERE, "gate_results", "task3_coarse_pipeline_gap.csv")
 #: the referent, read from run_m3_budget (GV5.3's P14_ANCHOR verbatim), NOT recalled

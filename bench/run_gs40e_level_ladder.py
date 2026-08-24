@@ -63,14 +63,14 @@ REPRO_C = dict(P0=0.191, P1=0.428, P2=0.284, P3=0.214)
 
 
 def guard_recipe():
-    """G-RECIPE: SOURCE-COMPARE the probe's recipe against run_le14_common_root.
+    """G-RECIPE: SOURCE-COMPARE the probe's recipe against failure_modes.
 
     Not "I remember copying it". The two files must name the same constants and
     pass the same literals to the ramp; a drifted recipe would make the levels
     incomparable, which is the 5th question in its cross-recipe form.
     """
     probe = (REPO / "bench/run_gs40d_level_cost_probe.py").read_text()
-    le14 = (REPO / "bench/run_le14_common_root.py").read_text()
+    le14 = (REPO / "bench/failure_modes.py").read_text()
     need_names = ("cap.CONF_SEED_KW", "cap.CONF_RAMP_NK", "cap.WB_MSTART", "cap.DM")
     need_lits = ("dm_min=0.01", "freeze_tol=1e-5", "intermediate_tol=1e-4",
                  'kutta_estimator="pressure"', "n_picard_seed=0")
@@ -81,7 +81,7 @@ def guard_recipe():
                 if t.replace(" ", "") not in re.sub(r"\s+", "", le14)]
     assert not missing, f"G-RECIPE: recipe fragments not found: {missing}"
     print(f"G-RECIPE  {len(need_names + need_lits)} recipe fragments present in "
-          "BOTH the probe and run_le14_common_root  PASS")
+          "BOTH the probe and failure_modes  PASS")
 
 
 def load(tag, npz):

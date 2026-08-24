@@ -13,7 +13,7 @@ cheaper mesh levels, and CACHE phi so the real round pays nothing. Nothing here
 may be read as a result about the recovery operator -- that is what the next
 pre-registered round is for.
 
-★ The recipe is COPIED FROM `run_le14_common_root.py` verbatim (same seed call,
+★ The recipe is COPIED FROM `failure_modes.py` verbatim (same seed call,
 same CONF_SEED_KW / CONF_RAMP_NK, same taper, same dm / dm_min / freeze_tol /
 intermediate_tol), because the whole point is that the new levels sit on the SAME
 recipe as the medium states already on disk. A drifted recipe would make the
@@ -31,7 +31,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "bench"))
 
-import run_capability_matrix as cap                                 # noqa: E402
+import capability_matrix as cap                                 # noqa: E402
 from pyfp3d.constraints.wake import tip_taper_factors               # noqa: E402
 from pyfp3d.mesh.manifest import mesh_fingerprint, read_manifest    # noqa: E402
 from pyfp3d.mesh.reader import read_mesh                            # noqa: E402
@@ -102,7 +102,7 @@ def leg(level):
 
 def main():
     print("★ COST PROBE -- no criteria, no verdict. Wall clock + convergence only.")
-    print(f"  recipe copied verbatim from run_le14_common_root (M{M_TARGET} / "
+    print(f"  recipe copied verbatim from failure_modes (M{M_TARGET} / "
           f"alpha {ALPHA} / r_c {R_C}); medium is already on disk.\n")
     rows = []
     for lv in LEVELS:

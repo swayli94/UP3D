@@ -22,7 +22,7 @@ sys.path.insert(0, ROOT); sys.path.insert(0, os.path.join(ROOT, "bench"))
 RES = os.path.join(HERE, "results")
 
 from run_gs40h_strength_and_2p5d import NACA_KW                         # noqa: E402
-from run_le14_common_root import classify_failure                       # noqa: E402
+from failure_modes import classify_failure                       # noqa: E402
 from pyfp3d.kernels.gradient import element_velocity_q2                 # noqa: E402
 from pyfp3d.mesh.metrics import precompute_element_geometry             # noqa: E402
 from pyfp3d.mesh.reader import read_mesh                                # noqa: E402

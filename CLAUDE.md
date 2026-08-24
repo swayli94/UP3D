@@ -566,8 +566,17 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
 ## Workflow
 
 1. Before coding: find the open gate in the current phase's phases/p1/docs/roadmap/ entry
-   and plan against its acceptance criterion. Every visual gate needs a headless artifact
-   (`artifacts/<gate_id>/*.png` + `summary.csv`; matplotlib `Agg`, PyVista
+   and plan against its acceptance criterion. Every visual gate must be **headless** —
+   matplotlib `Agg`, PyVista off-screen, never a GUI-only check.
+   ★★★ **But a headless plot is not evidence unless it is COMMITTED** (discipline 3), and the
+   old `artifacts/<gate_id>/` target was **gitignored** — 0 tracked files — so for years the
+   rule demanded an artifact and the repository guaranteed it never reached HEAD, while 11 live
+   documents cited `artifacts/G1.3/` and `artifacts/G2.{1..5}/` as if they existed in a fresh
+   clone. `artifacts/` was DELETED 2026-08-24. ⇒ **C/D-class figures write to a TRACKED
+   `results/` directory** (the pattern already carrying 292 committed PNGs under
+   `cases/demo/*/results/` and `bench/studies/*/results/`); A/B/E/F incidental plots go to a
+   gitignored scratch dir, because committing a PNG per run is pure binary churn. The old
+   sentence (`artifacts/<gate_id>/*.png` + `summary.csv`; matplotlib `Agg`, PyVista
    off-screen — never GUI-only checks).
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/test_v0_freestream.py`

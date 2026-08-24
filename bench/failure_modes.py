@@ -76,7 +76,7 @@ REPO = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, REPO)
 sys.path.insert(0, HERE)
 
-import run_capability_matrix as cap                                 # noqa: E402
+import capability_matrix as cap                                 # noqa: E402
 from pyfp3d.constraints.wake import tip_taper_factors               # noqa: E402
 from pyfp3d.mesh.metrics import precompute_element_geometry          # noqa: E402
 from pyfp3d.mesh.reader import read_mesh                            # noqa: E402

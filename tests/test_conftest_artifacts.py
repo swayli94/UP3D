@@ -3,11 +3,19 @@ Regression tests for the gate-artifact fixtures in conftest.py.
 
 The `artifacts_dir` fixture used to hand out a `tempfile.TemporaryDirectory`,
 so every PNG/CSV a gate test produced was deleted at teardown and the repo's
-`artifacts/` directory stayed permanently empty -- violating the
-CLAUDE.md/roadmap workflow rule that every visual gate leaves inspectable
-headless artifacts behind. These tests lock in the fix: artifacts land in
-the persistent (gitignored) `<repo>/artifacts/` by default, and
-PYFP3D_ARTIFACTS_DIR redirects them (e.g. to a CI upload directory).
+`artifacts/` directory stayed permanently empty. These tests lock in the fix:
+output lands in the persistent (gitignored) `<repo>/artifacts/` by default, and
+PYFP3D_ARTIFACTS_DIR redirects it (e.g. to a CI upload directory).
+
+*** What this directory IS and IS NOT (corrected 2026-08-24) ***
+It is SCRATCH -- the mechanism that forces headless output so a visual gate can
+never decay into a GUI-only check. It is NOT evidence: it is gitignored, so
+nothing written here reaches HEAD, and discipline 3 says a claim without a
+committed artifact is not evidence. The workflow rule used to name this
+directory as the evidence form for visual gates, which made the two rules
+contradict each other and left 11 documents citing `artifacts/G1.3/` and
+`artifacts/G2.{1..5}/` -- paths that exist in no fresh clone. C/D-class figures
+now go to a TRACKED `results/` directory instead.
 """
 
 import os

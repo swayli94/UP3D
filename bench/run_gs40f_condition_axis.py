@@ -30,7 +30,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "bench"))
 
-import run_capability_matrix as cap                                 # noqa: E402
+import capability_matrix as cap                                 # noqa: E402
 import run_gs40c_coherence_ladder as L                              # noqa: E402
 import run_gs40e_level_ladder as E                                  # noqa: E402
 from pyfp3d.constraints.wake import tip_taper_factors               # noqa: E402

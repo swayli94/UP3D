@@ -292,7 +292,7 @@ class TestCapabilityLockNodePaths:
         import csv as _csv
         import importlib.util
         from pathlib import Path
-        p = Path(__file__).parent.parent / "bench" / "run_capability_matrix.py"
+        p = Path(__file__).parent.parent / "bench" / "capability_matrix.py"
         spec = importlib.util.spec_from_file_location("_capmatrix", p)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

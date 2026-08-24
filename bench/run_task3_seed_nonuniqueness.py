@@ -32,7 +32,7 @@ from pyfp3d.post.section_cut import wall_cp_curve                 # noqa: E402
 from pyfp3d.post.shock import shock_report                        # noqa: E402
 from pyfp3d.post.surface import wall_force_coefficients           # noqa: E402
 from pyfp3d.solve.newton import solve_newton_lifting              # noqa: E402
-from run_le14_common_root import classify_failure                # noqa: E402
+from failure_modes import classify_failure                # noqa: E402
 from run_task3_refinement_paradox import SOLVE_KW, build          # noqa: E402
 
 CSV = os.path.join(HERE, "gate_results", "task3_seed_nonuniqueness.csv")

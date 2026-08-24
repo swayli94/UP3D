@@ -47,7 +47,7 @@ from pyfp3d.post.surface import (cl_kj_3d, planform_area,              # noqa: E
                                  wall_force_coefficients)
 from pyfp3d.solve.newton import solve_newton_lifting                   # noqa: E402
 import run_m3_budget as MB                                             # noqa: E402
-from run_le14_common_root import classify_failure                      # noqa: E402
+from failure_modes import classify_failure                      # noqa: E402
 from tests.test_p8_newton import NEWTON_M6_RECIPE                      # noqa: E402
 
 CSV = os.path.join(HERE, "gate_results", "task3_qb_direct.csv")
@@ -185,7 +185,7 @@ def main():
         #: ★★★ TWO defects fixed here, and both are the SAME family the project keeps recording:
         #: "read signatures and import paths, do not recall them", and "guard REPORT code the way
         #: solver code is guarded". The first call passed PYTHON LISTS (classify_failure does
-        #: `tail > 0`, so it needs arrays -- the caller at run_le14_common_root.py:226-228 builds
+        #: `tail > 0`, so it needs arrays -- the caller at failure_modes.py:226-228 builds
         #: them with np.asarray) and unpacked TWO returns where the function returns FOUR
         #: (mode, ev, d10, revisits, per its own caller at line 260). It raised AFTER seed 0's
         #: direct solve had finished and BEFORE rows.append, so the solve was lost -- the same

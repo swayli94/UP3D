@@ -670,7 +670,7 @@ Theoretical expectations and ceiling (recorded to manage expectations):
 
 The G1.3 cylinder pre-study and the G1.4 sphere oracle run the same day
 falsified the expectation above (full evidence: roadmap G1.3/G1.4 entries;
-`tests/test_wall_correction_cylinder.py`; `artifacts/G1.3/`; oracle results in
+`tests/test_wall_correction_cylinder.py`; `artifacts/G1.3/` (★ `artifacts/` was DELETED 2026-08-24 -- it was gitignored local output, never in HEAD, so by discipline 3 it was never evidence; regenerate locally by running the test); oracle results in
 `cases/demo/p1_laplace/results/`, demo absorbed there 2026-07-07). The
 mechanism, in hindsight elementary:
 

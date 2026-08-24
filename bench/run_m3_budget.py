@@ -37,7 +37,7 @@ from pyfp3d.post.surface import (cl_kj_3d, planform_area,           # noqa: E402
                                  wall_force_coefficients)
 from pyfp3d.solve.newton import (solve_newton_lifting,               # noqa: E402
                                  solve_newton_transonic)
-from tests.test_p8_newton import NEWTON_M6_RECIPE                   # noqa: E402
+from bench.recipes import NEWTON_M6_RECIPE                   # noqa: E402
 
 OUT = os.path.join(HERE, "gate_results")
 os.makedirs(OUT, exist_ok=True)

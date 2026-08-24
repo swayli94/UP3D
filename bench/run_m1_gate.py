@@ -44,7 +44,7 @@ from pyfp3d.post.shock import shock_report                     # noqa: E402
 from pyfp3d.post.surface import wall_force_coefficients        # noqa: E402
 from pyfp3d.solve.newton import solve_newton_lifting           # noqa: E402
 sys.path.insert(0, str(HERE))
-from run_le14_common_root import classify_failure               # noqa: E402
+from failure_modes import classify_failure               # noqa: E402
 
 M_INF, ALPHA = 0.80, 1.25
 #: ★★★ M1 RE-SPEC, 2026-08-24, BY USER RULING -- the FIRST relaxation of a target

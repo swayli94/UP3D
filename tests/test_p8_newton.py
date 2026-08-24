@@ -489,11 +489,7 @@ def test_newton_incompressible_single_step(coarse_mesh):
 #: NOT converged, cl_p 18 % off -- so a Laplace seed puts Newton in a bad basin.
 #: And a shallow Picard-2 seed is worthless: same wall, and level 0 needs 9 steps
 #: instead of 2. Evidence: bench/gate_results/gs33b_seed.csv.
-NEWTON_M6_RECIPE = dict(
-    dm=0.05, dm_min=0.01, freeze_tol=1e-6, intermediate_tol=1e-5,
-    newton_kw=dict(freeze_refresh_max=8, precond="amg", n_newton_max=60,
-                   n_picard_seed=0, farfield_spanwise_gamma=True),
-)
+from bench.recipes import NEWTON_M6_RECIPE  # noqa: E402  (裁决 a, 2026-08-24)
 
 
 def _m6_case(level, m_inf=0.84, alpha=3.06):
