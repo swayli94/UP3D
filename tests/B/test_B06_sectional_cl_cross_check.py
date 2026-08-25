@@ -90,12 +90,12 @@ def test_axial_term_is_not_silently_dropped():
         sectional_cl_from_cp(c, 5.0)
 
 
-def _case(level):
+def _case(level, alpha=ALPHA):
     p = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / ("%s.msh" % level)
     if not p.exists():
         pytest.skip("naca0012_2.5d/%s.msh 未生成" % level)
     mc, wc = cut_wake(read_mesh(str(p)))
-    r = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
+    r = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=alpha,
                              precond="direct", n_newton_max=60)
     assert r["converged"] and r["n_limited"] == 0 and r["n_floored"] == 0, (
         "%s 未给出干净的收敛态（conv=%s lim=%s flr=%s）—— 交叉校核建立在它之上，"
@@ -104,15 +104,31 @@ def _case(level):
     c = section_cp_curve(mc, r["phi"], z=0.5 * dz, m_inf=M_INF, u_inf=1.0)
     cl_g = float(np.median(sectional_cl_from_gamma(
         np.asarray(r["gamma"], dtype=np.float64), chord=c["chord"], u_inf=1.0)))
-    cl_cp = sectional_cl_from_cp(c, ALPHA)
+    cl_cp = sectional_cl_from_cp(c, alpha)
     f = wall_force_coefficients(mc.nodes, mc.elements, mc.boundary_faces["wall"],
-                                r["phi"], alpha_deg=ALPHA, s_ref=dz, m_inf=M_INF)
-    return cl_g, cl_cp, float(f["cl"]), abs(cl_cp - cl_g) / abs(cl_g)
+                                r["phi"], alpha_deg=alpha, s_ref=dz, m_inf=M_INF)
+    #: 只算 cn 的版本 —— 用来把**轴向分量**单独拎出来（见 test_the_axial_term_is_covered）
+    c_no_geom = dict(c); c_no_geom["y_upper"] = None; c_no_geom["y_lower"] = None
+    cn_only = sectional_cl_from_cp(c_no_geom, 0.0)
+    return (cl_g, cl_cp, float(f["cl"]), abs(cl_cp - cl_g) / abs(cl_g), cn_only)
 
 
 @pytest.fixture(scope="module")
 def ladder():
     return {lv: _case(lv) for lv in ("coarse", "medium")}
+
+
+#: ★★ 轴向项在生产迎角 alpha 2 上只占 cl 的 **0.16 %** —— G-TEETH 实测：把它的符号
+#: 翻转，本文件**全绿**，即 `sectional_cl_from_cp` 的**轴向那一半没有被检验**。
+#: 这与本季记的「窗口覆盖不到被改动的区域」同族。
+#: 实测 alpha 6：轴向项 **1.01 %** of cl；alpha 12.86 在 M0.5 medium 上**不收敛**
+#: （2925 limited / 727 floored）⇒ 6 度是可用的最大值。
+ALPHA_AXIAL = 6.0
+
+
+@pytest.fixture(scope="module")
+def high_alpha():
+    return _case("medium", alpha=ALPHA_AXIAL)
 
 
 def test_the_section_curve_carries_its_geometry():
@@ -139,7 +155,7 @@ def test_cp_integration_agrees_with_kutta_joukowski_on_a_clean_mesh(ladder):
 
     ★ 只立在 2.5-D：M6 上的差**混着展向不均匀**，不可归因（见模块 docstring）。
     """
-    cl_g, cl_cp, cl_p, rel = ladder["medium"]
+    cl_g, cl_cp, cl_p, rel, _ = ladder["medium"]
     assert rel < AGREE_MAX_MEDIUM, (
         "2.5-D medium 上截面 cl 两法不一致：Cp 积分 %.6f vs KJ %.6f（%.3f %%，"
         "要求 < %.1f %%）。\n"
@@ -170,8 +186,32 @@ def test_the_two_pressure_integrations_agree(ladder):
     它们与上面那条 KJ 对比是**不同的**校核：这条只查压力侧，不涉及环量。
     """
     for level in ("coarse", "medium"):
-        _, cl_cp, cl_p, _ = ladder[level]
+        _, cl_cp, cl_p, _, _ = ladder[level]
         rel = abs(cl_cp - cl_p) / abs(cl_p)
         assert rel < 0.01, (
             "%s：截面 Cp 积分 %.6f 与全翼 cl_p %.6f 差 %.3f %% —— "
             "两条压力积分路径应当几乎重合" % (level, cl_cp, cl_p, 100 * rel))
+
+
+def test_the_axial_term_is_covered(high_alpha):
+    """★★★ 覆盖 `sectional_cl_from_cp` 的**轴向那一半**。
+
+    ★ 这条是 **G-TEETH 抓出来的空缺**，不是设计时想到的：在生产迎角 alpha 2 上把
+    轴向项的符号翻转，本文件**全绿** —— 因为 NACA0012 对称且 `sin 2 deg = 0.035`，
+    轴向项只占 cl 的 **0.16 %**。⇒ 那半**没有被检验**。
+
+    实测 alpha 6：轴向项 **1.01 %** of cl，符号翻转会让 cl 动 ~2 %，越过下面的带。
+    ★ alpha 12.86（reference_data 里有对应实验工况）**不可用** —— M0.5 medium 上
+    不收敛（2925 limited / 727 floored），所以 6 度是可用的最大值。**这是覆盖的边界，
+    不是选择**：轴向项在 alpha 2 的生产工况上仍然测不到。
+    """
+    cl_g, cl_cp, cl_p, rel, cn_only = high_alpha
+    axial = cl_cp - cn_only * np.cos(np.deg2rad(ALPHA_AXIAL))
+    frac = abs(axial) / abs(cl_cp)
+    assert frac > 0.005, (
+        "alpha %.1f 上轴向项只占 cl 的 %.3f %% —— 低于 0.5 %% 时符号错误检测不出来，"
+        "这条门就覆盖不到它声称覆盖的那一半" % (ALPHA_AXIAL, 100 * frac))
+    assert rel < AGREE_MAX_MEDIUM, (
+        "alpha %.1f 上两法差 %.3f %%（要求 < %.1f %%）：Cp 积分 %.6f vs KJ %.6f。"
+        "★ 这个迎角下轴向项占 %.2f %%，所以本条同时覆盖它"
+        % (ALPHA_AXIAL, 100 * rel, 100 * AGREE_MAX_MEDIUM, cl_cp, cl_g, 100 * frac))
