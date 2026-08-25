@@ -431,10 +431,10 @@ def save_cp(cell, m, geom, payload):
         try:
             if eta is None:
                 z = 0.5 * float(np.ptp(mesh.nodes[:, 2]))
-                c = section_cp_curve(mesh, phi, z=z, m_inf=m_eff)
+                c = section_cp_curve(mesh, phi, z=z, m_inf=m_eff, smooth_passes=1)
             else:
                 c = section_cp_curve(mesh, phi, eta=eta, b_semi=B_SEMI,
-                                     m_inf=m_eff)
+                                     m_inf=m_eff, smooth_passes=1)
         except Exception as exc:                                  # noqa: BLE001
             print(f"      (Cp at {label} failed: {type(exc).__name__}: {exc})",
                   flush=True)

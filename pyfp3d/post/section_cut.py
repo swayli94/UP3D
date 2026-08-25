@@ -200,7 +200,8 @@ def _resolve_station(eta, z, b_semi) -> float:
 
 
 def _section_curve_dict(xs: np.ndarray, cps: np.ndarray, sides: np.ndarray,
-                        z: float, b_semi, min_points_per_side: int) -> Dict[str, np.ndarray]:
+                        z: float, b_semi, min_points_per_side: int,
+                        ys: Optional[np.ndarray] = None) -> Dict[str, np.ndarray]:
     """Sparse guard + chord/x_le normalization + per-side sort (shared core,
     B11) -- the common tail of `section_cp_curve` and
     `surface_ls.section_cp_curve_levelset`, extracted verbatim (identical
@@ -220,6 +221,10 @@ def _section_curve_dict(xs: np.ndarray, cps: np.ndarray, sides: np.ndarray,
         "x_upper": xn[sides][iu], "cp_upper": cps[sides][iu],
         "x_lower": xn[~sides][il], "cp_lower": cps[~sides][il],
         "chord": chord, "x_le": x_le, "z": float(z),
+        #: ★ 截面内的厚度坐标，按与 x_* 相同的排序给出（无则为 None）——
+        #: `sectional_cl_from_cp` 的轴向分量需要 dy/dx。
+        "y_upper": (ys[sides][iu] / chord) if ys is not None else None,
+        "y_lower": (ys[~sides][il] / chord) if ys is not None else None,
         "eta": (float(z) / float(b_semi)) if b_semi else None,
     }
 
@@ -269,7 +274,11 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
     # Geometric side hint (conforming path): per-row np.dot preserves the
     # original summation order -- do NOT vectorize to `mids @ hint`.
     sides = np.array([float(np.dot(m, hint)) > 0.0 for m in mids], dtype=bool)
-    return xs, cps, sides
+    #: ★ 2026-08-25：多返回 ys = 截面内的**厚度坐标**。截面 Cp 积分出 cl 需要它
+    #: （轴向分量要 dy/dx）；此前它被丢在这里，于是「由截面压力分布积分出的截面 cl」
+    #: 在库里**无法实现**。返回元数 3 -> 4，两个调用方都在本文件内，已同步。
+    ys = mids[:, 1]
+    return xs, cps, sides, ys
 
 
 def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
@@ -289,7 +298,7 @@ def wall_cp_curve(mesh, phi, z: float, u_inf: float = 1.0,
     Returns:
         dict: x_upper, cp_upper, x_lower, cp_lower (x as x/c from x_le)
     """
-    xs, cps, sides = _wall_section_points(
+    xs, cps, sides, ys = _wall_section_points(
         mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes,
         gamma)
     xs = (xs - x_le) / chord
@@ -400,10 +409,10 @@ def section_cp_curve(mesh, phi, *, eta: Optional[float] = None,
             cut is too sparse on a side.
     """
     z = _resolve_station(eta, z, b_semi)
-    xs, cps, sides = _wall_section_points(
+    xs, cps, sides, ys = _wall_section_points(
         mesh, phi, z, u_inf, upper_hint, wall_tag, m_inf, smooth_passes,
         gamma)
-    return _section_curve_dict(xs, cps, sides, z, b_semi, min_points_per_side)
+    return _section_curve_dict(xs, cps, sides, z, b_semi, min_points_per_side, ys)
 
 
 def plot_section_field(section: SectionData, field_name: str, output_path,

@@ -269,7 +269,11 @@ def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0,
             # ---- B1/B2 ------------------------------------------------------
             curves = {}
             for eta in ETAS:
-                curves[eta] = section_cp_curve(mc, phi, eta=eta,
+                #: ★★ smooth_passes=1（使用者裁决 2026-08-25）：截面 Cp 的**提取与对比**要平滑 ——
+                #: 截面切割是 1-D 切线，没有配对，展向不均匀时锯齿**不抵消**（载荷积分才抵消）。
+                #: 实测 M6 coarse：锯齿中位 0.1742->0.0469，7 站 pooled RMS **-4.10 %**（B05 门）。
+                #: ★ 一遍不是两遍：两遍 LE 带 +8.3 %（G6.3 的「抹掉前缘吸力峰」）。
+                curves[eta] = section_cp_curve(mc, phi, eta=eta, smooth_passes=1,
                                                b_semi=B_SEMI, m_inf=M_INF)
             per = {}
             for eta in ETAS:
