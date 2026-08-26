@@ -75,7 +75,7 @@ LEG_BUDGET_S = 900.0                   # pre-registered
 ALPHA_M6, ALPHA_NACA = 3.06, 1.25
 
 # ---- recipes, verbatim from committed sources ----------------------------
-# cases/demo/b18_wingbody_transonic/run_demo.py:139-156
+# phases/p1/cases/demo/b18_wingbody_transonic/run_demo.py:139-156
 CONF_SEED_KW = dict(farfield_spanwise_gamma=True, precond="direct",
                     direct_refactor_every=1000, n_newton_max=60)
 CONF_RAMP_NK = dict(freeze_refresh_max=8, precond="direct",

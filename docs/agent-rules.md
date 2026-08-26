@@ -132,7 +132,7 @@ preconditioner + the EW-forcing variant registered-not-opened). New machinery
 `viscous/coupling.py::build_wing_case`
 (3-D wing IBL case: LE-band laminar pin per local x/c, both TE natural
 outflow, root symmetry natural, tip band z > 0.95·b_semi pinned + ṁ-masked
-via the GV3.3 machinery) + `tests/test_v5_wing_case.py` (5). **Bridge
+via the GV3.3 machinery) + `tests/A/test_A43_wing_ibl_case.py` (5). **Bridge
 answer: the V3 loose loop is NOT sufficient on the 3-D lifting wing** —
 coarse: root-upper-TE separation patch (H 4–5.5) drives δ*↔ṁ↔u_e runaway
 (ṁ_max ×12.4 over k; the GV3.3-stern/Veldman class, first measurement on a
@@ -204,7 +204,7 @@ schedule 1e-6 ×10-on-reject / ÷3-on-accept bounded [1e-12, 1e2];
 floor-reached stop = merit rel-decrease < 1e-4 over 3 consecutive
 accepted steps; flags `scaling/lm_damping/floor_stop` default OFF =
 legacy path bit-reproduces the committed histories
-(`pyfp3d/viscous/tight_driver.py`; new `tests/test_v5_tight_scaled.py`
+(`pyfp3d/viscous/tight_driver.py`; new `tests/A/test_A47_tight_scaled_newton.py`
 (8); tight fleet 28 passed twice). Band (a) suite PASS both levels; the
 medium live-seed e2 identity 1.96e-10 vs a ≤ 1e-10 threshold chosen at
 implementation time (NOT pre-registered) = SuperLU pivot-order roundoff
@@ -310,7 +310,7 @@ bands PASS flag-ON (lam [2.606, 2.687], turb [1.509, 1.872]); loose
 smoke flag-ON coarse RED (cl_rel 2.62% > 2.5%, 10-outer cap hit) /
 medium marginal PASS (2.49%, 3 outer converged). The flag stays
 default-OFF (legacy paths bit-identical; 9 new tests
-`tests/test_v5_te_outflow.py`, tight fleet + full suite green
+`tests/A/test_A50_te_outflow_rows.py`, tight fleet + full suite green
 flag-OFF); the escalation ladder (upwind boundary-flux (a)-variant /
 closure regularization (b)) stays registered-not-opened — opening =
 user adjudication. Executed under the temporary 8-thread session
@@ -364,7 +364,7 @@ transonic Cp toward the committed experiment.** Condition TEST 2308
 verbatim (M 0.8395/α 3.06, Re_MAC 11.72e6, x_tr/c 0.05), the GV5.0
 wing case verbatim (tip band pinned + ṁ-masked), the P14 transonic FP
 recipe verbatim (M0.70 probe seed → the NEWTON_M6_RECIPE ramp imported
-from `tests/test_p8_newton.py`, pressure Kutta; NO tip_taper so the
+from `tests/E/test_E01_p8_newton_anchors.py`, pressure Kutta; NO tip_taper so the
 k = 0 solve anchors the committed P14 numbers — wiring guard W1 PASS
 both levels: k = 0 cl_KJ 0.2685 coarse / 0.2819 medium vs anchors
 0.2688/0.2823). **Band (a) RECORDED input-limited** (medium binding):
@@ -408,7 +408,7 @@ inviscid step, and the block preconditioner does NOT work at
 medium.** The tight/augmented Newton path (the GV5.1b scaled+damped
 driver with an injectable `step_solve` solve callback — a library
 change, default None = splu bit-identical, +2 tests
-`tests/test_v5_tight_scaled.py`) measured on the 124,216-DOF W2
+`tests/A/test_A47_tight_scaled_newton.py`) measured on the 124,216-DOF W2
 system (62,820 φ + 166 Γ + 61,230 BL; the A1 conf_newton seed
 chain verbatim per addendum #3). **Band (a) RECORDED**: augmented
 step 22.93 s vs the in-session inviscid anchor 3.05 s/step (13
@@ -486,7 +486,7 @@ knob is retained default-inert (C1/C3 both measured negative). ★ **GB31.4**
 step-semantics evaluation (evidence-only, CLOSED). Library changes this phase
 (`newton.py` blend, `cut_elements.py` `outboard_fringe`, `multivalued.py` C1
 fade) are ALL default-off / bit-identical. Tests
-`tests/test_b31_pressure_taper.py` (13) + `tests/test_b31_tip_fringe.py`
+`tests/A/test_A26_gamma_pin_row_blend.py` (13) + `phases/p1/tests/test_b31_tip_fringe.py`
 (19). Adoption exits user-adjudicated → B32. Evidence
 `phases/p1/cases/analysis/b31_tip_termination/`.
 
@@ -516,7 +516,7 @@ cross-model gaps **2.6→0.5 % (M0.5), 2.4→1.1 % (M0.65 PASS ≤5 %), 2.5→1.
 out 0.0388 / poles 0.0007) @0.7875 vs conf 0.0423 @0.79** — the B26 tilted
 "×2 out-band" reading (P11 watch item) retired per B28 (position
 sensitivity, not a lesion). checks.csv **8/8 PASS**;
-`tests/test_b9_wingbody_ls.py` switched to the production wiring (flat+clip,
+`phases/p1/tests/test_b9_wingbody_ls.py` switched to the production wiring (flat+clip,
 5/5). Evidence: `cases/demo/b18_wingbody_transonic/results/` (B29-refresh
 checks.csv / cross_model.csv / cl_vs_mach.csv / PNGs).
 
@@ -601,7 +601,7 @@ carry the erratum. ★ **Route fork RESOLVED 2026-07-22 (user-directed): (a)
 Option C re-spec ADOPTED** — the active G1.6 gate is now the measured PASSING
 criterion (all-scales-refined order ≥1.8 + mean-Cp < 1% at h_min 0.03 —
 measured 1.98/1.89 & 0.60%), asserted by
-`tests/test_laplace_sphere.py::TestG16Respec` (reads P11's committed sweep, no
+`tests/C/test_C03_laplace_sphere.py::TestG16Respec` (reads P11's committed sweep, no
 re-solve); the literal 2%-max-at-medium `test_sphere_cp_medium_mesh` STAYS a
 strict xfail = the recorded P1 limitation. Unchosen, on record: (b) isoparametric
 P2 wall layer (only route to the literal criterion; would also tighten Track V's
@@ -611,7 +611,7 @@ worsen-with-refinement is qualitatively different behaviour and needs its own
 discriminator before "G1.6 class" is quoted again. ★ Backport check: N/A —
 opt-in Laplace path only, `newton.py`/`newton_ls.py` untouched. Evidence:
 demo `cases/demo/p11_curved_walls/` (14 PASS + 2 XFAIL, ~4 min warm; sweep
-meshes gitignored, ~8 min first run), tests `tests/test_p11_curved_walls.py`
+meshes gitignored, ~8 min first run), tests `tests/A/test_A29_curved_wall_layer.py`
 (8, ungated), sweep/control CSVs committed. **Next phase = user's call**
 (the G1.6 route fork above, or the standing LS-fine / Track-V ordering from
 the priorities analysis — whose sphere-anchor caveat is now annotated in
@@ -629,7 +629,7 @@ Picard — bit-consistent with `n1_freeze_fix_sweep.csv`. ★ **GB22.2** B14 dem
 moved under B21 (γ 0.0848 → **0.084931**, M_max 1.3684) — the freeze-capture
 patch touches every 3-D freeze-armed ramp; ⚠ B14's demo_report index row had
 been missing since close-out (found + added). ★★ **GB22.3 — N3 CLOSED**:
-`tests/test_b22_ls_3d_anchors.py` (+2 gated) RE-SOLVES the committed M6
+`phases/p1/tests/test_b22_ls_3d_anchors.py` (+2 gated) RE-SOLVES the committed M6
 coarse (~35 s) + medium (~9 min) ramps and asserts m_final/γ/M_max/clamps
 absolutely (γ rtol 1e-4 = 20× the measured run-to-run spread, four orders
 below a B20-sized move) — the alarm that did not exist when the suite stayed
@@ -778,7 +778,7 @@ to 8 dp, M_max 1.134235 to 6 dp, same 40 steps, same plateau, **+3.6 % wall**.
 The plateau is the **B15 selection-churn limit cycle** and an exact derivative
 cannot fix a discontinuous selection ⇒ **B19 must NOT be credited with a
 convergence improvement**; it buys correctness (a Newton, not a quasi-Newton).
-**GB19.5 ✓** `tests/test_b19_jacobian_3d.py` (+3) closes the blind spot;
+**GB19.5 ✓** `phases/p1/tests/test_b19_jacobian_3d.py` (+3) closes the blind spot;
 ★★ **ERRATUM — the blind spot was mis-stated** by C1 and by my own first test:
 quasi-2-D has **129** mixed-side plain elements, not zero; it has **0** that
 READ an aux (0 of 129 touch a cut node) — that is the real invariant.
@@ -859,7 +859,7 @@ RECORDED. ★ **repays the GB16.6 evidence debt** (spec'd RECORDED but never
 implemented; B18 executes it as a negative). ★ **NO `pyfp3d/` numerics change** —
 pure demo/tests/docs on existing `solve_newton_transonic` +
 `solve_multivalued_newton_transonic`. fine excluded (G13.3). Tests
-`tests/test_b18_wingbody_transonic.py` (4, ungated); demo
+`phases/p1/tests/test_b18_wingbody_transonic.py` (4, ungated); demo
 `cases/demo/b18_wingbody_transonic/` (7 gates at the 2026-07-18 close-out:
 1 PASS + 6 RECORDED — **superseded 2026-07-20 by the B27 refresh: checks.csv
 8/8 PASS**, see the erratum above).
@@ -883,7 +883,7 @@ conf 0.2173 / legacy 0.2165 / pin0 0.1690 / **pin_gamma 0.2117 (Picard) = 0.2114
 (Newton; 0.2115 pre-B20)**, both solvers agreeing 0.1%. GB17.1–17.4 ✓,
 GB17.5/17.6 RECORDED;
 demo `cases/demo/b17_farfield_pin_gamma/` (3 coarse PASS + gated medium), tests
-`tests/test_b17_farfield_pin_gamma.py` (6).
+`phases/p1/tests/test_b17_farfield_pin_gamma.py` (6).
 - ★ **B16 conflated two orthogonal issues:** the far-field near-singular
   **conditioning** (the pin cures it, jump value irrelevant — cond1 O(1e19)→8.7e6
   either way) and the outflow **circulation** (needs jump=γ). A third issue at
@@ -1183,7 +1183,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   refined away, bounded δ* limit cycle); ΔCL DOWN both estimators (medium
   −2.4 % input-limited); crossflow small (max|B|/|A| ≤ 0.072); tip mask
   validated; `viscous/coupling.py::build_wing_case` +
-  `tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands;
+  `tests/A/test_A43_wing_ibl_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands;
   GV5.1 (`bench/studies/v5_tight_coupling/`): exact augmented (φ, Γ, BL)
   Newton delivered + FD-verified both levels (2.2e-8 coarse / 5.1e-9
   medium); quadratic tail HONEST FAIL = the intrinsic IBL floor on the
@@ -1201,7 +1201,7 @@ of wing cl_p at medium; GB9.6 = the kept 2026-07-14 fuselage-Cp guardrail
   `bench/studies/v5_1b_scaled_newton/`):
   the scaled + damped machinery is delivered and exact (row/column
   equilibration + Levenberg damping + floor-reached stop, flags default
-  OFF = legacy bit-identical; `tests/test_v5_tight_scaled.py` (8),
+  OFF = legacy bit-identical; `tests/A/test_A47_tight_scaled_newton.py` (8),
   tight fleet 28 green); the medium live-seed e2 read on a
   non-pre-registered ≤1e-10 threshold = pivot-order machine floor
   through cond ~ 1e10, adjudicated PASS 2026-07-24 under the
@@ -1355,9 +1355,28 @@ not a spec; its GB15.3 timings are pre-CSV — trust the committed CSVs).
     k ≥ 1 between fresh-compile and cache-load legs, k = 0 inviscid exact;
     load-vs-load deterministic). An in-process (cache-warm) leg compared
     against a fresh-worktree leg fails spuriously at ~1e-5 even for
-    identical sources — the GV6.1 (a)(ii) harness therefore runs BOTH legs
-    as fresh-compile worktree subprocesses. Evidence
+    identical sources — so a bit-identity A/B must put BOTH legs in the
+    same cache mode (fresh-compile worktree subprocesses is how GV6.1 did
+    it). Evidence
     `bench/studies/v6_1_wake_sheet/results/ab_cache_mode_isolation.csv`.
+    ★★ **The LIVE harness that implemented this was DELETED 2026-08-26**
+    (`test_ab_bit_identity_gate_free_library` plus `_git` / `_ab_leg` /
+    `_overlay_working_tree_delta`, which served only it): its own premise
+    was false — the loose loop is NOT reproducible run-to-run, the same
+    commit twice on the same machine at the same thread count giving max
+    relative **1.024** over 6104/6106 nodes, which is EXACTLY the magnitude
+    it reported as a failure, so it could not pass even when nothing was
+    wrong. ⇒ **this discipline now rests on the committed CSV above, not on
+    a runnable gate.** Standing measurements that survive the deletion:
+    the non-determinism is localised to `pyfp3d/viscous/` and **the inviscid
+    path IS deterministic (10/10)**, so a bit-identity A/B is still
+    well-posed there — but NOT as a V6 guard, because at k = 0 the flag-OFF
+    path does not touch the wake sheet and such a gate would stay green with
+    the wake sheet completely broken. What still covers V6's inertness is
+    the LIVE `(a)(i)` leg, `test_zero_field_loose_loop_bit_identical`
+    (flag ON with a zero δ*_wake field vs flag OFF, same tree, bit-exact);
+    what is LOST is only the **cross-commit** dimension.
+    Record: `docs/dev_phase_six/20260826-0100-m3a-smoothing-erratum.md` 的同期台账行。
 
 Baseline: **651 passed + 25 skipped + 2 xfailed** (2026-07-25, Track V **V6
 GV6.1 executed** (the conforming wake-sheet δ* source: (a)(i)/(a)(ii)
@@ -1368,7 +1387,7 @@ TE-continuity every outer PASS, (d) Δ-cl +0.00015 / TE max |ΔCp| 0.00250
 RECORDED — VERDICT `bench/studies/v6_1_wake_sheet/VERDICT.md`);
 full-suite measured 651 @1606.31 s **@8 threads** (temporary 8-core session
 constraint, user-directed; NOT comparable to the 16-thread ledger entries);
-+7 vs the 644 below = `tests/test_v6_wake_sheet.py` (7 new)).
++7 vs the 644 below = `tests/A/test_A51_wake_sheet_source.py` (7 new)).
 Previous: 644 passed + 25 skipped + 2 xfailed (2026-07-25, Track V **V5
 GV5.4 executed** (the augmented-step cost on M6 medium: band (a) RECORDED —
 the augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
@@ -1377,7 +1396,7 @@ at medium: block-Jacobi diverges, exact-BL Schur stalls 1/4 — VERDICT
 `bench/studies/v5_4_cost/VERDICT.md`); full-suite measured 644
 @1230.61 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +2 vs the 642
-below = `tests/test_v5_tight_scaled.py` (2 new: the `step_solve` callback
+below = `tests/A/test_A47_tight_scaled_newton.py` (2 new: the `step_solve` callback
 wiring + the default-None splu bit-identity guard)).
 Previous: 642 passed + 25 skipped + 2 xfailed (2026-07-25, Track V **V5
 GV5.3 executed** (the M6 wing direction+magnitude check vs committed Cp:
@@ -1396,8 +1415,8 @@ FAIL + the loose-recipe transonic-limit anatomy — every computed shock
 `bench/studies/v5_2_rae2822/VERDICT.md`); full-suite measured 642
 @1245.33 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +6 vs the 636
-below = `tests/test_meshgen_rae2822.py` (5) +
-`tests/test_p2_wake_cut.py::test_kutta_probes_cambered_te` (1)).
+below = `tests/A/test_A19_meshgen_rae2822.py` (5) +
+`tests/A/test_A24_wake_cut.py::test_kutta_probes_cambered_te` (1)).
 Previous: 636 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.5 executed** (the TE-band (B, δ) formulation item: the V1 TE-outflow row
 replacement does NOT break the floor — binding m2 5554×/245998× the floor,
@@ -1405,7 +1424,7 @@ the "worse" clause; flag default-OFF — VERDICT
 `bench/studies/v5_5_te_floor/VERDICT.md`); full-suite measured 636
 @1402.11 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries); +9 vs the 627
-below = `tests/test_v5_te_outflow.py` (9)).
+below = `tests/A/test_A50_te_outflow_rows.py` (9)).
 Previous: 627 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1d executed** (the near-band window read: NO quadratic basin adjacent to
 the floor either — near-band seeds stall immediately, coarse crawling to 24×
@@ -1416,7 +1435,7 @@ p = 1.17 honest FAIL — VERDICT
 NOT comparable to the 16-thread ledger entries; wall markedly below the
 GV5.1c-era 3903 s on the same thread count — machine/cache conditions differ,
 quoted flagged); +7 vs the 620
-below = `tests/test_v5_near_band_seed.py` (7)).
+below = `tests/A/test_A49_near_band_seed_maps.py` (7)).
 Previous: 620 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1c executed** (the above-band window read: NO quadratic regime above the
 floor — λ-capped halvings + a mid-range stall, binding medium median p = 0.56
@@ -1424,77 +1443,77 @@ honest FAIL — VERDICT
 `bench/studies/v5_1c_above_band_window/VERDICT.md`); full-suite measured 620
 @3903.16 s **@8 threads** (temporary 8-core session constraint, user-directed;
 NOT comparable to the 16-thread ledger entries, machine idle); +9 vs the 611
-below = `tests/test_v5_above_band_seed.py` (9)).
+below = `tests/A/test_A48_above_band_seed_maps.py` (9)).
 Previous: 611 passed + 25 skipped + 2 xfailed (2026-07-24, Track V **V5
 GV5.1b executed** (scaled+damped augmented Newton; machinery exact, band (b)
 window question reframed — VERDICT
 `bench/studies/v5_1b_scaled_newton/VERDICT.md`); full-suite measured 611
 @6556.77 s @16 threads (wall POLLUTED by co-tenant load ~70–80 — quote
 flagged, the GV5.1-era idle figure was 1537 s); +8 vs the 603 below =
-`tests/test_v5_tight_scaled.py` (8)).
+`tests/A/test_A47_tight_scaled_newton.py` (8)).
 Previous: 603 passed + 25 skipped + 2 xfailed (2026-07-23, Track V **V5
 GV5.1 executed** (augmented tight (φ, Γ, U) Newton; band (a) FD exactness
 PASS both levels, band (b) quadratic tail HONEST FAIL on the IBL floor —
 VERDICT `bench/studies/v5_tight_coupling/VERDICT.md`); full-suite measured
 603 @1537.09 s @16 threads; +20 vs the 583 below =
-`tests/test_v5_tight_jacobian.py` (8) + `tests/test_v5_tight_edge.py` (7) +
-`tests/test_v5_tight_system.py` (5)).
+`tests/A/test_A44_tight_jacobian.py` (8) + `tests/A/test_A45_tight_edge.py` (7) +
+`tests/A/test_A46_tight_system.py` (5)).
 Previous: 583 passed + 25 skipped + 2 xfailed (2026-07-23, Track V **V5
 GV5.0 executed** (M6 subsonic loose-coupling bridge, RECORDED entry check);
 full-suite measured 583 @1218.05 s @16 threads; +5 vs the 578 below =
-`tests/test_v5_wing_case.py` (5)).
+`tests/A/test_A43_wing_ibl_case.py` (5)).
 Previous: 578 passed + 25 skipped + 2 xfailed (2026-07-22, Track V **V3
 loose coupling shipped + GV3.1/3.2/3.3 executed**; full-suite measured 578
-@1637.39 s @16 threads; +7 vs the 571 below = `tests/test_v3_coupling.py`
+@1637.39 s @16 threads; +7 vs the 571 below = `tests/A/test_A42_loose_coupling.py`
 (7)).
 Previous: 571 passed + 25 skipped + 2 xfailed (2026-07-22, Track V **V2
 transpiration channel + GV2.1**; measured 571 @1321.89 s; +17 vs 554 =
-`tests/test_v2_transpiration.py` (9) + `tests/test_v2_newton_rhs_channel.py`
+`tests/A/test_A40_transpiration_channel.py` (9) + `tests/A/test_A41_transpiration_newton_rhs.py`
 (8); NOJIT lane 17/17 green).
 Previous: 554 passed + 25 skipped + 2 xfailed (2026-07-22, Track V **V1
 IBL3 core shipped + GV1.1 executed**; full-suite measured 554 @1462.64 s
-@16 threads; +35 vs the 519 below = `tests/test_v1_surface_mesh.py` (13) +
-`tests/test_v1_closures.py` (17) + `tests/test_v1_ibl3.py` (5); NOJIT lane
+@16 threads; +35 vs the 519 below = `tests/A/test_A33_ibl_surface_mesh.py` (13) +
+`tests/A/test_A34_ibl_closures_3d.py` (17) + `tests/A/test_A35_ibl3_core.py` (5); NOJIT lane
 35/35 green).
 Previous: 519 passed + 25 skipped + 2 xfailed (2026-07-22, B28–B32
 close-out **+ G1.6 Option C re-spec**; full-suite measured 516 @1223.39 s
-@16 threads, + the 3 `tests/test_laplace_sphere.py::TestG16Respec` asserts
+@16 threads, + the 3 `tests/C/test_C03_laplace_sphere.py::TestG16Respec` asserts
 = 519 — the re-spec reads P11's committed sweep CSVs, non-interacting).
 The 516 = +37 vs the B25 479 = B28's cut-from-fragment locks
-(`tests/test_b1_cut_elements.py`, +4) + B31's `tests/test_b31_pressure_taper.py`
-(13) + `tests/test_b31_tip_fringe.py` (19) + a `tests/test_p14_te_pressure.py`
+(`phases/p1/tests/test_b1_cut_elements.py`, +4) + B31's `tests/A/test_A26_gamma_pin_row_blend.py`
+(13) + `phases/p1/tests/test_b31_tip_fringe.py` (19) + a `tests/A/test_A25_te_pressure_kutta.py`
 lock (1); B29/B30/B32 added no tests.
 Previous: 479 + 25 + 2 (2026-07-20, B25 inboard
-fragment clip, +6 passed = `tests/test_b1_cut_elements.py::TestInboardFragmentClip`
-(4) + the same file's foot-preference lock (1) + `tests/test_m2_wingbody.py`'s
+fragment clip, +6 passed = `phases/p1/tests/test_b1_cut_elements.py::TestInboardFragmentClip`
+(4) + the same file's foot-preference lock (1) + `phases/p1/tests/test_m2_wingbody.py`'s
 waterline-extension lock (1); measured 1100.63 s @16 threads);
 473 + 25 + 2 (2026-07-19, P11 curved
-walls, +8 passed = the ungated `tests/test_p11_curved_walls.py`;
+walls, +8 passed = the ungated `tests/A/test_A29_curved_wall_layer.py`;
 measured 1124.94 s @16 threads);
 465 + 25 + 2 (2026-07-19, B22 3-D LS
-anchor locks, +2 skipped = the gated `tests/test_b22_ls_3d_anchors.py`;
+anchor locks, +2 skipped = the gated `phases/p1/tests/test_b22_ls_3d_anchors.py`;
 measured 1127.38 s @16 threads);
 465 + 23 + 2 (2026-07-19, B21
 freeze-capture alignment, +1 skipped = the gated 3-D freeze-capture lock
 `test_freeze_capture_matches_live_density_3d` in
-`tests/test_b15_ls_newton_freeze.py`; measured 1105.87 s @16 threads);
+`phases/p1/tests/test_b15_ls_newton_freeze.py`; measured 1105.87 s @16 threads);
 465 + 22 + 2 (2026-07-18, B19 LS-Newton
-Jacobian exactness, +2 passed / +1 skipped = `tests/test_b19_jacobian_3d.py`
+Jacobian exactness, +2 passed / +1 skipped = `phases/p1/tests/test_b19_jacobian_3d.py`
 (2 structural locks + 1 gated 3-D FD gate); measured 1101.50 s @16 threads);
 463 + 21 + 2 (2026-07-18, A3 inspection response, +3 passed =
-`tests/test_mesh_reader_roundtrip.py`'s unnamed-physical-group locks);
+`tests/A/test_A12_mesh_reader_roundtrip.py`'s unnamed-physical-group locks);
 460 + 21 + 2 (2026-07-18, B18 wing-body
-transonic, +4 passed = `tests/test_b18_wingbody_transonic.py` (4 ungated on the
+transonic, +4 passed = `phases/p1/tests/test_b18_wingbody_transonic.py` (4 ungated on the
 committed 2.5D NACA mesh; the wing-body transonic ramps live in the gated demo));
 456 + 21 + 2 (2026-07-18, B17 far-field pin_gamma, +6 passed =
-`tests/test_b17_farfield_pin_gamma.py`, 1097.11 s @16 threads);
+`phases/p1/tests/test_b17_farfield_pin_gamma.py`, 1097.11 s @16 threads);
 450 + 21 + 2 (2026-07-17, B16 far-field aux pin, +8 passed / +1 skipped
-= `tests/test_b16_farfield_aux.py`); 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =
+= `phases/p1/tests/test_b16_farfield_aux.py`); 442 + 20 + 2 (2026-07-17, B9 wing-body, +13/+1 =
 `tests/test_b9_wingbody_{conforming,ls}.py`, 1084.20 s @16 threads);
 429 + 19 + 2 (2026-07-17, B14 Schur+AMG, +8/+1 =
-`tests/test_b14_schur_ls.py`; 1043.37 s @16 threads); 421 + 18 + 2 (P14 tier 1+2, +15 =
-`tests/test_p14_te_pressure.py`; 1015.17 s @8 threads); 406 (= the 399 M2
+`phases/p1/tests/test_b14_schur_ls.py`; 1043.37 s @16 threads); 421 + 18 + 2 (P14 tier 1+2, +15 =
+`tests/A/test_A25_te_pressure_kutta.py`; 1015.17 s @8 threads); 406 (= the 399 M2
 number once A1's 7 tests landed), 973.59 s @8 threads, 2026-07-16; 396,
 988.73 s @16 threads, 2026-07-15; lineage in [overview.md](overview.md). After
-any kernel/assembly change run `pytest tests/test_v0_freestream.py` first
+any kernel/assembly change run `pytest tests/A/test_A01_freestream_preservation.py` first
 (CLAUDE.md hard rule 1).

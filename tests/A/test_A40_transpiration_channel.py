@@ -18,7 +18,7 @@ Covers:
   - GV2.1(a) coarse-mesh regression lock: Fourier-mode blowing on the M0
     cylinder vs the analytic exterior Laplace solution (the full
     coarse/medium/fine order study lives in
-    bench/studies/v2_transpiration_channel/run.py);
+    phases/p2/bench/studies/v2_transpiration_channel/run.py);
   - GV2.1(b) Picard legs: solve_laplace / solve_subsonic /
     solve_subsonic_lifting with an explicit zero RHS are bit-identical to
     the channel-absent defaults, and a nonzero RHS is self-consistent

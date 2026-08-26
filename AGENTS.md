@@ -28,7 +28,7 @@ Kimi 必须遵守：
 ## 项目关键纪律速记（详细版见 docs/agent-rules.md）
 
 - 线程上限 16，含 BLAS/OMP：`NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16`。
-- kernel/assembly 改动后先跑 `pytest tests/test_v0_freestream.py`，再跑更大范围。
+- kernel/assembly 改动后先跑 `pytest tests/A/test_A01_freestream_preservation.py`，再跑更大范围。
 - 证据纪律：结论必须有已提交的 artifact（PNG/CSV）；只写在 .md 里的数字不算证据。
 - 不重算贵重已提交 artifact（P4 heavy demo ~40 min、P5 medium 45–75 min 等），
   以 committed CSV/PNG 为准。

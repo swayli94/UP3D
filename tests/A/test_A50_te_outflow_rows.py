@@ -1,6 +1,6 @@
 """GV5.5 TE-outflow row replacement tests (a band-(a) suite leg).
 
-The V1 variant of bench/studies/v5_5_te_floor/PRE_REGISTRATION.md:
+The V1 variant of phases/p2/bench/studies/v5_5_te_floor/PRE_REGISTRATION.md:
 first-order extrapolation rows at the TE outflow nodes -- row 0
 (x-momentum, the delta carrier) replaced by U[i,0] - U[up,0], row 2
 (kinetic-energy, the shape carrier) by U[i,1] - U[up,1]; the matching

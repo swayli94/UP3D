@@ -43,7 +43,7 @@ streamlines, rho0 = p0/(R*T0) and T0 is preserved across a shock, so
 with sigma = p02/p01 the Rankine-Hugoniot total-pressure ratio at the pre-shock
 Mach number. Applying that factor makes the full-potential mass-conservation jump
 reproduce Rankine-Hugoniot identically (verified to 0.0000 % for M1 = 1.15..1.60
-in bench/s1_duct/run_entropy_premise.py). It is NOT sigma^(1/(gamma-1)) -- that
+in phases/p2/bench/s1_duct/run_entropy_premise.py). It is NOT sigma^(1/(gamma-1)) -- that
 form (inherited from some phase-one notes) applies the exponent twice; the
 numerical check settles it: at M1 = 1.35 sigma^1 gives the R-H ratio 1.60278
 while sigma^(1/(gamma-1)) gives 1.38162.
@@ -440,7 +440,7 @@ class EntropyOperator:
     MAX_WALK_DEFAULT = 512
     #: knee fraction for the pre-shock walk (see shock_factor_sweep). 0.3 is the
     #: measured middle of an insensitive band; sensitivity is reported by
-    #: bench/s1_duct/run_entropy_knee.py.
+    #: bench/s1_duct/run_entropy_knee.py (DELETED 2026-08-24 with the phase-2 bench archive -- not in phases/ either; the reading it produced is quoted here and is the surviving record).
     KNEE_FRAC_DEFAULT = 0.3
 
     def __init__(self, n_elements: int, n_round: int = N_ROUND_DEFAULT,

@@ -12,7 +12,7 @@ Scope and provenance (GS4.1 round 1, pre-registration
 - `ibl3.py` is **frozen** (roadmap: kept, not deleted); nothing here imports
   its assembly or its solver;
 - ★ the zero-pressure-gradient march is **not new**: `march_2d`/`_rhs_2d` in
-  `bench/studies/v1_ibl3_standalone/run.py` is the GV1.1 reference arm and
+  `phases/p2/bench/studies/v1_ibl3_standalone/run.py` is the GV1.1 reference arm and
   predates this module. What this module adds is (i) library status, (ii) the
   pressure-gradient terms, and (iii) the self-similar sweep those enable.
 

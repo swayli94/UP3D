@@ -21,7 +21,7 @@ measurable — *if a surviving test or script reads it, it stays*. Measured stat
 - `bench/` keeps the **7-module closure** behind the product metrics **plus
   `bench/gate_results/`** — the capability boundary cites those CSVs by path;
 - `cases/demo/` keeps **6** subdirectories, the ones kept tests actually read (e.g.
-  `cases/demo/p11_curved_walls/`, which `tests/test_laplace_sphere.py` reads for the LIVE G1.6
+  `cases/demo/p11_curved_walls/`, which `tests/C/test_C03_laplace_sphere.py` reads for the LIVE G1.6
   Option C gate). ★ **`cases/analysis/` NO LONGER EXISTS** — merged into `bench/studies/` in
   `7edce18` (user ruling: `bench/` and `cases/analysis/` were two homes for one thing). The
   historical copy keeps the old name at `phases/p1/cases/analysis/`, deliberately.
@@ -341,7 +341,7 @@ crashing: `bench/run_capability_matrix.py`'s `MACH_NOT_ATTAINED` guard compared 
 `m_att` was identically `m`, i.e. **a guard that could not fire**, whose own comment said it existed so
 as not to trust the driver flags. ⇒ `newton.py::_ramp_honesty_fields` now provides all three
 (`m_final`, `m_last_converged`, `target_reached`) on the conforming ramp, unit-tested without a solve
-in `tests/test_gs40_provenance.py`. **Read them directly; do not `.get` them with a default** — a
+in `tests/F/test_F01_provenance.py`. **Read them directly; do not `.get` them with a default** — a
 missing key is a library regression and must be loud. `solve_newton_lifting` (single Mach) does not
 have them, and there the state is at `m_inf` by construction. The per-level `converged` flags still
 live in `level_results`, which is what the three fields are derived from.
@@ -572,18 +572,44 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    old `artifacts/<gate_id>/` target was **gitignored** — 0 tracked files — so for years the
    rule demanded an artifact and the repository guaranteed it never reached HEAD, while 11 live
    documents cited `artifacts/G1.3/` and `artifacts/G2.{1..5}/` as if they existed in a fresh
-   clone. `artifacts/` was DELETED 2026-08-24. ⇒ **C/D-class figures write to a TRACKED
-   `results/` directory** (the pattern already carrying 292 committed PNGs under
-   `cases/demo/*/results/` and `bench/studies/*/results/`); A/B/E/F incidental plots go to a
-   gitignored scratch dir, because committing a PNG per run is pure binary churn. The old
-   sentence (`artifacts/<gate_id>/*.png` + `summary.csv`; matplotlib `Agg`, PyVista
-   off-screen — never GUI-only checks).
+   clone. `artifacts/` was DELETED 2026-08-24. ⇒ **C/D-class figures write to the TRACKED
+   `cases/gates/<gate_id>/`**, via the `gate_evidence_dir` fixture (keyed by the test file's
+   own stem, so the gate ID and its evidence directory cannot drift apart — `tests/F` asserts
+   that correspondence in BOTH directions). Generating them is opt-in: the export legs skip
+   unless `PYFP3D_GATE_FIGURES=1`, because committing a PNG per run is pure binary churn.
+   A/B/E/F incidental plots go to a gitignored scratch dir. `cases/gates/INDEX.md` embeds
+   every committed figure, so the evidence is readable without running anything.
+   ★ Headless still applies to all of it: matplotlib `Agg`, PyVista off-screen, never a
+   GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
-   `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **595 passed + 12 skipped +
+   `pytest tests/A/test_A01_freestream_preservation.py`
+3. Full suite: `pytest tests/` — current baseline **605 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @400.94 s @8 threads at
+   load 13.7**, phase-six rounds 10–16).
+   ★ vs the 604/33/2 below: deleting the retired `test_ab_bit_identity_gate_free_library`
+   (a plain skip whose premise was false) is **−1 skipped**, and F07's 6th check
+   (every embedded repo path in live code must exist) is **+1 passed** ⇒
+   **604 + 1 = 605, 33 − 1 = 32, xfailed unmoved = 2**.
+   Previous: **604 passed + 33 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @573.78 s @8 threads**,
+   phase-six rounds 10–14).
+   ★★★ **The layout changed: tests now live in `tests/A..F/`, and the TIER IS THE
+   DIRECTORY** — `pytest tests/A tests/B` (ungated, every change) · `tests/C tests/E`
+   (fast tier, every close-out) · `tests/D` (the gated set, phase boundaries) ·
+   `tests/F` (opt-in, with a default-on subset). 88 gate files / 585 `def test_`.
+   ★★ All three numbers close: the previous reading was **586 / 35 / 2** @403 s (after
+   the renumbering, before A53/B05/B06). A53 placeholder→real gate **+4p/−1s**, B05
+   placeholder→real gate **+6p/−1s**, B06 new **+7p**, F07 one more check **+1p**
+   ⇒ **586 + 18 = 604, 35 − 2 = 33, xfailed unmoved = 2**.
+   ★★★ **skipped 12 → 33 is the SHAPE of the renumbering, not a regression**: 4 C-class
+   and 6 D-class files are **PLACEHOLDER gates** (user ruling ④ "暂时没有数据的先占位" —
+   `@pytest.mark.skip` holds the gate ID while the reference data is pending); the rest
+   are gated locks and the figure-export legs that skip unless `PYFP3D_GATE_FIGURES=1`.
+   ★ `artifacts/` and its fixture are GONE — see workflow step 1 above.
+   Previous: **595 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-24, **measured in full @716.81 s @8 threads at
    load 14.9**, the M1 re-spec).
-   ★★★ +6 vs the 589 below = `tests/test_m1_respec.py`, and **589 + 6 = 595 closes
+   ★★★ +6 vs the 589 below = `tests/F/test_F06_m1_spec.py`, and **589 + 6 = 595 closes
    exactly** with skipped/xfailed unmoved. It locks a **USER RULING of 2026-08-24**:
    **M1 (a) deleted as a criterion, (b) and (c) relaxed from 3 % to 20 %, and split into
    two INDEPENDENT metrics M1b and M1c.** ★ This is the **first relaxation of a target
@@ -607,7 +633,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    Previous: **589 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-24, **measured in full @690.49 s @8 threads at
    load 12.6**, phase-five R23).
-   ★ +9 vs the 580 below = `tests/test_r23_usability.py`, locking `bench/usability.py`
+   ★ +9 vs the 580 below = `tests/F/test_F05_usability_anchor.py`, locking `bench/usability.py`
    — **580 + 9 = 589 closes exactly**, skipped/xfailed unmoved, `pyfp3d/` untouched.
    ★★ **What it is for.** Measured: at medium/alpha 1.25/seed 0, `upwind_c = 1.10`
    converged to **|R| 2.28e-13 with ZERO clamps** on a root whose Gamma was **7.6x**
@@ -632,7 +658,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    Previous: **580 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-23, **measured in full @780.32 s @8 threads at
    load 12.2**, phase-five R19).
-   ★ +6 vs the 574 below = `tests/test_r19_gamma_target.py`, and **574 + 6 = 580
+   ★ +6 vs the 574 below = `tests/A/test_A27_gamma_target.py`, and **574 + 6 = 580
    closes exactly with skipped/xfailed unmoved** — which is the point: R19 is the
    **first change to `pyfp3d/` in twenty rounds** (`gamma_target`, prescribed
    circulation on the Newton path) and it **moved no existing test**.
@@ -748,7 +774,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    with their load; never as a cost.
    Previous: **552 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, GS4.1 round 5 = the turbulent closure).
-   ★ +10 vs the 542 below = `tests/test_gs41_turbulent_closure.py`. Wall 1052 s @8
+   ★ +10 vs the 542 below = `tests/A/test_A39_turbulent_closure.py`. Wall 1052 s @8
    threads at load average **16.7** — the box was genuinely busy in this window, which
    also explains the 875 s reading below; quote suite walls with their load, never as a
    cost.
@@ -764,7 +790,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    a 1.8x spread with an identical result. Load average at launch was only 1.26, so the
    cause is NOT established; quote suite walls flagged and never as a cost, per the logged
    precedent of 1.6x/1.9x/5.4x spreads on bit-identical answers).
-   ★ +5 vs the 537 below = `tests/test_gs41_closures_audit.py` (one finding, five
+   ★ +5 vs the 537 below = `tests/A/test_A38_closures_source_audit.py` (one finding, five
    assertions), which locks the audit's
    ROOT CAUSE (the kinetic-energy integrand is degree 21, so 8-point Gauss is short) and
    NOT the error magnitude — so it stays true whether or not the quadrature is fixed.
@@ -776,7 +802,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    for those two thicknesses.
    Previous: **537 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, **measured in full @485.74 s @8 threads**, GS4.1 round 3).
-   ★ +16 vs the 521 below = `tests/test_gs41_closures_2d.py` (route (a2)'s correlation
+   ★ +16 vs the 521 below = `tests/A/test_A37_closures_2d.py` (route (a2)'s correlation
    closure). **Skipped and xfailed did not move.** ★ Two of the 16 are structural rather
    than numeric: the two closure families must not import each other (`closures.py` owns the
    3-D IBL, `closures_2d.py` owns the 2-D strip — see its docstring), and the profile-path
@@ -784,7 +810,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    number.
    Previous: **521 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-18, **measured in full @472.19 s @8 threads**, GS4.1 round 1).
-   ★ +21 vs the 500 below = `tests/test_gs41_strip2d.py` (the 2-D strip core's locks).
+   ★ +21 vs the 500 below = `tests/A/test_A36_strip2d_core.py` (the 2-D strip core's locks).
    **Skipped and xfailed did not move** — the round touched no solve, and `strip2d.py` is a
    new module rather than a change to one. ★ Two of those 21 assert a **recorded FAIL's own
    numbers** (the closure family's flat-plate fixed point sits +4.52 % in H and +6.94 % in
@@ -794,7 +820,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    2 xfailed, 0 failed** (2026-08-17, **measured in full @465.24 s @8 threads**, GS4.0 + the
    R1 addendum). ★ 499 + 1 = the capability-matrix stale-schema lock.
    Previous within GS4.0: **499 + 12 + 2** (@477.27 s @8 threads).
-   ★ +20 vs the 479 below = `tests/test_gs40_provenance.py` (the GS4.0 instrument locks:
+   ★ +20 vs the 479 below = `tests/F/test_F01_provenance.py` (the GS4.0 instrument locks:
    the ramp honesty fields, the mesh manifest, the fast tier's node-list check). **Skipped
    and xfailed did not move**, which is the point: GS4.0 was an instrument round and had no
    licence to change a solve. ★ An independent full run of the 479 baseline was made the
@@ -822,7 +848,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    2 xfailed, 0 failed** (2026-08-11, measured 494.47 s @8 threads on a quiet box;
    the 930.97 s recorded below was the same 8 threads UNDER LOAD — a 1.9x spread on
    wall time with the same result, so quote suite walls flagged, never as a cost).
-   ★ +11 vs the 457 below = `tests/test_meshgen_structured.py` (phase 3 task 3):
+   ★ +11 vs the 457 below = `tests/A/test_A18_meshgen_structured_hex.py` (phase 3 task 3):
    `pyfp3d/meshgen/structured.py` had ZERO tests/ coverage — G0's bit-identical
    single-variable knobs, the one thing route (A) actually delivered, were asserted
    only by a bench script, i.e. on no cadence. Same gap round 2b closed for the

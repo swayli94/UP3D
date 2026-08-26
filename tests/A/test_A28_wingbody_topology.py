@@ -219,7 +219,7 @@ def test_laplace_lifting_loads_the_junction(coarse_cut):
     # ---- fuselage lift: RECORDED, no longer asserted -----------------------
     #: ★★ The assertion that stood here -- `abs(cl_f) < 0.15 * abs(cl_w)` -- encoded a
     #: premise this project RETIRED on 2026-07-20. B28's re-spec of GB9.4 says so in as
-    #: many words in cases/demo/b9_wingbody/results/checks.csv:
+    #: many words in phases/p1/cases/demo/b9_wingbody/results/checks.csv:
     #:
     #:   GB9.4, medium_fuselage_lift, out-band conf 0.0351 / LS 0.0376 (gap 7.0 %),
     #:     criterion |conf_out - LS_out| <= 15 % |conf_out| (B28 re-spec), PASS,

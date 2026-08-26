@@ -14,11 +14,27 @@ Covers (the pre-registered +6):
   4. the sign-pin MMS (b) on the coarse strip (dead air U_inf = 0, uniform
      m0 through the PRODUCTION assembly: antisymmetry, jump = m0/rho0
      within 5%, ejection away from the sheet on both sides);
-  5. the (a)(ii) A/B loose-loop bit-identity (flag-OFF vs the gate-free
-     library at the pinned baseline commit; BOTH legs are subprocesses on
-     fresh worktrees = fresh numba compile, because cache-load is not
-     bit-faithful to fresh-compile in the viscous chain -- isolate3,
-     2026-07-25 -- so both legs must share one cache mode);
+    5. ★★★ **DELETED 2026-08-26 -- its premise was false.** The (a)(ii) leg
+       A/B'd this tree's flag-OFF loose-loop phi against a pinned pre-V6 commit
+       and required BIT identity. But the loose loop is **not reproducible run
+       to run**: the same commit, same machine, same thread count gives max
+       relative **1.024** over 6104/6106 nodes -- exactly the magnitude it
+       reported as a failure -- so it could not pass even when nothing was
+       wrong. It had been a plain `skip` since 2026-07-29; the worktree harness
+       (`_git` / `_ab_leg` / `_overlay_working_tree_delta`), which served only
+       it, went with it.
+       ★ What SURVIVES: the evidence is committed
+       (`bench/studies/v6_1_wake_sheet/results/ab_cache_mode_isolation.csv`),
+       discipline #12 now rests on that CSV rather than on a runnable gate, and
+       V6's inertness is still guarded LIVE by the (a)(i) leg
+       `test_zero_field_loose_loop_bit_identical`. What is LOST is only the
+       **cross-commit** dimension.
+       ★★ And the tempting repair does NOT work: a bit-identity A/B IS still
+       well-posed on the inviscid path (the non-determinism is localised to
+       `pyfp3d/viscous/`; inviscid measured deterministic 10/10), but at k = 0
+       the flag-OFF path never touches the wake sheet, so such a gate would
+       stay green with the wake sheet completely broken -- **well-posed and
+       vacuous is not a gate.**
   6. the fold-pairing structural assert (W3): every minus-side load lands
      in its master row under T^T.
   7. (GV6.2, +1) the CouplingConfig.wake_l_rel_chords plumbing: an
@@ -32,16 +48,11 @@ fallback is too slow for the FP solves).
 """
 
 import os
-import shutil
-import subprocess
-import sys
 from dataclasses import replace
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-from tests._tol import assert_rel_close
 from pyfp3d.constraints.wake import WakeConstraint
 from pyfp3d.kernels.jacobian import PicardOperator
 from pyfp3d.mesh.reader import read_mesh
@@ -66,10 +77,6 @@ NACA_DIR = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d"
 
 M_INF, ALPHA, RE = 0.5, 2.0, 3.0e6
 NOJIT = os.environ.get("PYFP3D_NOJIT", "0") == "1"
-
-# (a)(ii): the gate-free library = the GV6.0 adjudication merge on main
-# (the commit this branch forks from; every GV6.1 code change is on top).
-GATE_FREE_BASELINE = "13916b5"
 
 
 @pytest.fixture(scope="module")
@@ -321,165 +328,6 @@ def test_sign_pin_mms(naca_coarse_cut, wake_case):
 
 
 # ---------------------------------------------------------------------------
-# 5. (a)(ii) A/B bit-identity vs the gate-free library
-# ---------------------------------------------------------------------------
-
-
-_AB_SNIPPET = """\
-import sys
-
-# the PEP 660 editable finder for pyfp3d sits in sys.meta_path and beats
-# sys.path -- strip every editable finder BEFORE importing pyfp3d, then
-# resolve pyfp3d from the worktree passed as argv[1]
-sys.meta_path = [f for f in sys.meta_path
-                 if "_EditableFinder" not in type(f).__name__]
-sys.path.insert(0, sys.argv[1])
-
-import numpy as np
-import pyfp3d
-
-assert pyfp3d.__file__.startswith(sys.argv[1]), pyfp3d.__file__
-
-from pyfp3d.mesh.reader import read_mesh
-from pyfp3d.mesh.wake_cut import cut_wake
-from pyfp3d.viscous.coupling import (
-    CouplingConfig,
-    build_airfoil_case,
-    make_picard_lifting_driver,
-    run_loose_coupling,
-)
-
-mc, wc = cut_wake(read_mesh(sys.argv[2]))
-cfg = CouplingConfig(re_chord=3.0e6, m_inf=0.5, alpha_deg=2.0, n_outer_max=3)
-case = build_airfoil_case(
-    mc.nodes, mc.elements, mc.boundary_faces["wall"], cfg
-)
-res = run_loose_coupling(make_picard_lifting_driver(mc, wc, 0.5, 2.0), case, cfg)
-np.savez(sys.argv[3], phi=res.phi, gamma=res.gamma)
-"""
-
-
-def _git(*args):
-    return subprocess.run(
-        ["git", "-C", str(REPO_ROOT), *args],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
-
-
-def _overlay_working_tree_delta(worktree):
-    """Overlay the working tree's pyfp3d/ delta (modified / added /
-    untracked / deleted; __pycache__ excluded) onto a HEAD worktree, so
-    the leg measures THIS tree's exact code state even when dirty."""
-    # NB: no .strip() on stdout -- porcelain's leading status column
-    # (" M ...") is positional; stripping mangles the first line's path
-    out = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "status", "--porcelain", "--", "pyfp3d/"],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
-    for line in out.splitlines():
-        xy, rel = line[:2], line[3:]
-        if " -> " in rel:
-            rel = rel.split(" -> ")[-1]
-        rel = rel.strip('"')
-        if "__pycache__" in rel:
-            continue
-        dst = Path(worktree) / rel
-        if "D" in xy:
-            if dst.exists():
-                dst.unlink()
-            continue
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(REPO_ROOT / rel, dst)
-
-
-def _ab_leg(snippet, worktree, ref, out_npz, overlay_delta=False):
-    """One (a)(ii) leg: a FRESH worktree at ref (no __pycache__ -> every
-    numba function compiles from source) + one subprocess run.
-
-    isolate3/4 (2026-07-25): numba cache-LOAD is not bit-faithful to
-    fresh-COMPILE, and the infidelity lives entirely in pyfp3d/viscous/
-    -- a fresh leg and a cache-loading leg diverge at ~1e-5 in phi at
-    outer k >= 1 (k=0 inviscid exact) even for identical sources. Both
-    legs therefore run fresh-compile; comparing an in-process
-    (cache-warm) leg against a worktree leg fails spuriously.
-    """
-    _git("worktree", "add", "--detach", str(worktree), ref)
-    try:
-        if overlay_delta:
-            _overlay_working_tree_delta(worktree)
-        subprocess.run(
-            [
-                sys.executable,
-                str(snippet),
-                str(worktree),
-                str(NACA_DIR / "coarse.msh"),
-                str(out_npz),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=dict(os.environ),
-        )
-        return np.load(out_npz)
-    finally:
-        subprocess.run(
-            ["git", "-C", str(REPO_ROOT), "worktree", "remove", "--force",
-             str(worktree)],
-            capture_output=True,
-        )
-
-
-@pytest.mark.skip(reason=(
-    "RETIRED 2026-07-29 (phase two GS1.4): the premise is false. This "
-    "test A/Bs the loose-loop phi of HEAD against a pinned pre-V6 commit "
-    "and requires them to agree, but the loose loop is not reproducible "
-    "RUN TO RUN: the same commit executed twice on the same machine with "
-    "the same thread count differs by max relative 1.024 over 6104/6106 "
-    "nodes -- exactly the magnitude this test reports as a failure. "
-    "Attribution chain and the two-run measurement: "
-    "bench/s1_duct/check_loose_loop_determinism.py; round record "
-    "phases/p2/docs/dev_phase_two/20260729-0130-s1-clamp-not-silent.md 4.1. "
-    "The GV6.1 (a)(ii) EVIDENCE is unaffected -- it is committed in "
-    "bench/studies/v6_1_wake_sheet/ -- but this live guard cannot mean "
-    "what it claims until the loose loop is made deterministic."))
-@pytest.mark.skipif(NOJIT, reason="loose-loop FP solves are JIT-lane only")
-@pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
-def test_ab_bit_identity_gate_free_library(tmp_path):
-    """(a)(ii) / W1: the flag-OFF loose loop (this tree) reproduces the
-    gate-free library (the pinned baseline commit) on the same machine,
-    coarse 3 outer. Both legs are fresh-compile worktree subprocesses (the
-    isolate3/4 cache-mode discipline).
-
-    GS0.2 / D1 (2026-07-28): the assertion was `np.array_equal` and it FAILED
-    during the audit's full-suite run while PASSING standalone on the same
-    commit and the same thread count (67 s, idle machine) -- the only
-    difference was concurrent load from other solver processes. The mechanism
-    was NOT root-caused (registered as an open question in
-    phases/p2/docs/dev_phase_two/20260728-1520-s0-foundation.md §6); per decision D1 the
-    permanent assertion is now a 1e-12 relative tolerance, which still pins
-    the phase-one claim (the flag adds no numerical effect: any real change
-    would be orders larger) without being a load-sensitive alarm."""
-    snippet = tmp_path / "ab_leg.py"
-    snippet.write_text(_AB_SNIPPET)
-    head = _git("rev-parse", "HEAD")
-    base = _ab_leg(
-        snippet, tmp_path / "gate_free", GATE_FREE_BASELINE,
-        tmp_path / "baseline.npz",
-    )
-    cur = _ab_leg(
-        snippet, tmp_path / "current", head, tmp_path / "current.npz",
-        overlay_delta=True,
-    )
-    assert_rel_close(cur["phi"], base["phi"], msg="phi vs gate-free baseline")
-    assert_rel_close(cur["gamma"], base["gamma"],
-                     msg="gamma vs gate-free baseline")
-
-
-# ---------------------------------------------------------------------------
 # 6. fold-pairing structural assert (W3)
 # ---------------------------------------------------------------------------
 
@@ -511,7 +359,7 @@ def test_fold_pairing_structural(naca_coarse_cut, wake_case):
 
 # ---------------------------------------------------------------------------
 # 7. GV6.2 wake_l_rel_chords plumbing (pre-registration
-#    bench/studies/v6_2_measured_effect/PRE_REGISTRATION.md section 5)
+#    phases/p2/bench/studies/v6_2_measured_effect/PRE_REGISTRATION.md section 5)
 # ---------------------------------------------------------------------------
 
 

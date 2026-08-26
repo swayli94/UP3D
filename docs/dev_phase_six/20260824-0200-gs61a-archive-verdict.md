@@ -167,6 +167,6 @@
 ## 8. 实测口径
 
 - 移动 **226 文件**（`git mv`，历史跟随）；改写 **142 + 33 + 13** 个文件；`pyfp3d/` **AST 证明零代码改动**；
-- 主回归 `tests/test_v0_freestream.py` **6 passed**；全套见台账行；
+- 主回归 `tests/A/test_A01_freestream_preservation.py` **6 passed**；全套见台账行；
 - 仪器脚本在 scratchpad（一次性），**判据与读数在本文件与 `phases/README.md` §2026-08-24 节**；
 - 未修：**165 条死字面量 + 139 处死目录引用**（phase-1 旧账）⇒ **GS6.1 的对象**。

@@ -594,7 +594,7 @@ Implementation notes (binding for the eventual implementation):
 - Freestream-preservation check: uniform flow φ = U∞·x does not satisfy the
   sphere wall condition, so a nonzero correction term on wall-bearing meshes is
   expected; but it must be confirmed that the V0 freestream gate
-  (`tests/test_v0_freestream.py`, which uses wall-free / all-far-field
+  (`tests/A/test_A01_freestream_preservation.py`, which uses wall-free / all-far-field
   configurations) never triggers this correction path.
 - Prerequisite: consistent wall-facet winding — the existing winding assert in
   `_wall_vertex_normals` is a precondition for this correction and must not be
@@ -606,7 +606,7 @@ Implementation notes (binding for the eventual implementation):
 Option A/B route, to be exercised before the sphere (gate G1.3 precedes
 G1.4). Rationale: it exhibits the **same** curved-wall variational crime,
 already quantified — max |Cp err| 0.091 (coarse) → 0.045 (medium), ~O(h)
-(`tests/test_m0_cylinder.py`); every geometric ingredient Option A needs is
+(`tests/A/test_A14_meshgen_cylinder.py`); every geometric ingredient Option A needs is
 available in closed form; the meshes are cheap (6.9k / 17.3k tets); and the
 diagnostic is a one-dimensional curve Cp(θ).
 
@@ -670,7 +670,7 @@ Theoretical expectations and ceiling (recorded to manage expectations):
 
 The G1.3 cylinder pre-study and the G1.4 sphere oracle run the same day
 falsified the expectation above (full evidence: roadmap G1.3/G1.4 entries;
-`tests/test_wall_correction_cylinder.py`; `artifacts/G1.3/` (★ `artifacts/` was DELETED 2026-08-24 -- it was gitignored local output, never in HEAD, so by discipline 3 it was never evidence; regenerate locally by running the test); oracle results in
+`tests/C/test_C02_cylinder_wall_correction.py`; `artifacts/G1.3/` (★ `artifacts/` was DELETED 2026-08-24 -- it was gitignored local output, never in HEAD, so by discipline 3 it was never evidence; regenerate locally by running the test); oracle results in
 `cases/demo/p1_laplace/results/`, demo absorbed there 2026-07-07). The
 mechanism, in hindsight elementary:
 
@@ -863,7 +863,7 @@ dM²/du² > 0 the chain is positive (μ grows with speed, as it must); the earli
 "−" here was a transcription typo. The shipped derivative
 (`kernels/upwind.py::rho_tilde_sensitivities_sweep`, P7) uses the + sign and
 matches a central difference of the shipped flux at frozen selection to
-~4e-10 in every regime, `tests/test_p7_diff_flux.py`). **(B.4) is nonzero**: the
+~4e-10 in every regime, `tests/A/test_A03_differentiated_flux.py`). **(B.4) is nonzero**: the
 current element's residual depends on the *upstream* element's DOFs, so the
 Newton stencil is **wider than Picard** — the sparsity map and element coloring
 must be rebuilt from the element + upstream graph.

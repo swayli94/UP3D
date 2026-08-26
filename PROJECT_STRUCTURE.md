@@ -45,7 +45,7 @@ pyfp3d/                    # Main package
 │   │                       #   refinement window at FIXED station count (so a shock-band leg is
 │   │                       #   not confounded with a global DOF change; the cost is a measured
 │   │                       #   12.4 % coarsening outside -- a BOUND, not cleanliness).
-│   │                       #   Locked by tests/test_meshgen_structured.py
+│   │                       #   Locked by tests/A/test_A18_meshgen_structured_hex.py
 │   ├── fuselage.py       # ✓ [M2] simplified axisymmetric fuselage as ONE splined body of
 │   │                       #   revolution (fusing primitives leaves C0 seams = spurious edges);
 │   │                       #   rule-driven 5*C_ROOT length, 2-diameter ellipsoid nose, graded
@@ -66,7 +66,8 @@ pyfp3d/                    # Main package
 │                           #   ✓ [M4/Track B] embed_wake=False -> the sheet is built but neither
 │                           #   fragmented nor embedded (it feeds the Distance size field only),
 │                           #   so the tets never conform to it and no `wake` group exists;
-│                           #   ★ ✓ [M5] tip_cap="round" (default "flat" = bit-identical): closes
+│                           #   ★ ✓ [M5] tip_cap="round" (★ 勘误 2026-08-24: 圆角帽**就是默认**,
+│                           #   flat 必须按名字显式索取 —— 由 tests/A/test_A53 锁住): closes
 │                           #   the wing with the HALF BODY OF REVOLUTION swept by the tip section
 │                           #   about its own chord line (OCC revolve of the tip half-face about an
 │                           #   edge OF that face, fused onto the loft) -- removes the flat cap's
@@ -173,7 +174,7 @@ pyfp3d/                    # Main package
 │                           #   unlikely to move any published number -- but fixing it
 │                           #   moves EVERY committed Track V number and needs a
 │                           #   re-baseline errata list. Root cause locked in
-│                           #   tests/test_gs41_closures_audit.py; verdict in
+│                           #   tests/A/test_A38_closures_source_audit.py; verdict in
 │                           #   phases/p4/docs/dev_phase_four/20260819-1100-*.md
 │                           #   ★ Also registered: D13 p.9 says the outer dissipation
 │                           #   length L is calibrated to Clauser's G-beta locus, while
@@ -260,7 +261,7 @@ pyfp3d/                    # Main package
 │   │                       #   so checking them against Blasius/FS is a
 │   │                       #   TRANSCRIPTION test, NOT validation.
 │   │                       #   Evidence bench/studies/gs41_a2_correlation/ (9.1 s);
-│   │                       #   locks tests/test_gs41_closures_2d.py (16).
+│   │                       #   locks tests/A/test_A37_closures_2d.py (16).
 │   │                       #   ★★ [round 9, 2026-08-20] FIVE whole XFOIL terms were
 │   │                       #   MISSING and are now transcribed: c_f = max(CFT, CFL) on
 │   │                       #   turbulent stations, DFAC's low-Hk fade on the wall
@@ -310,7 +311,7 @@ pyfp3d/                    # Main package
 │                           #   4.04, error 1.3e-13 = 11 decades below the gap).
 │                           #   F-SIMILAR PASS 5.789 % (2/3 wedges); turbulent RECORDED.
 │                           #   Evidence bench/studies/gs41_strip_core/ (4.58 s);
-│                           #   locks tests/test_gs41_strip2d.py (21). ★ Whether to change
+│                           #   locks tests/A/test_A36_strip2d_core.py (21). ★ Whether to change
 │                           #   the closure is the NEXT round + user adjudication.
 │                           #   ★ [round 9 leg B] march_correlation(..., lag=True) adds a
 │                           #   third state sqrt(Ctau); lag=False is bit-identical
@@ -471,7 +472,7 @@ cases/                     # Test cases and reference data
 │   ├── onera_m6_wingbody_conforming/  # ✓ [B9] the same body with the wake sheet EMBEDDED
 │   │                       #   (conforming path; Netgen OFF -- it segfaults on this geometry)
 │   ├── cessna/           # legacy git-tracked surface asset (referenced by
-│   │                       #   tests/test_p2_wake_cut.py); not part of any gate ladder
+│   │                       #   tests/A/test_A24_wake_cut.py); not part of any gate ladder
 │   ├── nl7301_2element_2.5d/  # legacy git-tracked two-element asset; no active gate
 │   ├── zeroebwb/         # legacy git-tracked BWB asset; no active gate
 │   ├── onera_m6/         # ✓ [M1] ONERA M6 swept/tapered half wing + embedded wake sheet
@@ -607,140 +608,52 @@ cases/                     # Test cases and reference data
 │                               #   by the IBL floor) + the medium-seed diagnosis
 │                           # (was missing from this tree until 2026-07-19 — the D9 finding)
 
-tests/                     # Unit and gate tests
-├── conftest.py           # ✓ Pytest fixtures: artifacts_dir (persistent, PYFP3D_ARTIFACTS_DIR
-│                           #   overridable), mesh_dir, etc.
-├── test_conftest_artifacts.py       # ✓ Regression test: gate artifacts persist in artifacts/
-├── test_metrics_degenerate.py       # ✓ Regression test: degenerate-tet guard in metrics.py
-├── mesh_utils.py         # ✓ [P1] Dependency-free structured-cube + sphere-shell mesh generators
-├── __init__.py
-├── test_v0_freestream.py # ✓ [P0/P1] Primary regression test (incl. cut-free residual check)
-├── test_v1_surface_mesh.py        # ✓ [V1] surface-mesh DOF/basis/geometry + master-map hook
-├── test_v1_closures.py            # ✓ [V1] closure FD-vs-analytic (both lanes), floors, seeds
-├── test_v1_ibl3.py                # ✓ [V1] IBL3 Jacobian FD, bit-determinism, Newton laminar+turbulent
-├── test_v2_transpiration.py       # ✓ [V2] transpiration assembly/divergence/u_e exactness,
-│                                  #   GV2.1(a) coarse MMS lock, GV2.1(b) Picard legs
-├── test_v2_newton_rhs_channel.py  # ✓ [V2] GV2.1(b)/(c): Newton external_rhs + LS b_base
-│                                  #   bit-identity, Jacobian bit-invariance + FD under lagged ṁ
-├── test_v3_coupling.py            # ✓ [V3] case-builder wiring (airfoil strip + closed body),
-│                                  #   inflow/outflow pinning, 2-iteration coarse smoke
-├── test_v5_above_band_seed.py         # ✓ [V5/GV5.1c] synthetic seed-helper tests (9):
-│                                  #   perturbation mask + calibration bisection + triple
-│                                  #   filter + regression slope + pooled verdict logic
-├── test_v5_near_band_seed.py          # ✓ [V5/GV5.1d] synthetic near-band tests (7):
-│                                  #   window sanity vs both floor bands + the GV5.1c
-│                                  #   stall region / escalation direction / band-entry
-│                                  #   read / near-band calibration / imported-helper id
-├── test_v5_te_outflow.py          # ✓ [V5/GV5.5] TE-outflow row replacement tests (9):
-│                                  #   default-OFF bitwise + residual/J row structure +
-│                                  #   flag-ON FD + J_e zeroing + out-of-pattern guards +
-│                                  #   plate smoke + te_outflow_pairs on the NACA strip
-├── test_meshgen_structured.py     # ✓ [phase 3] structured/hybrid generator locks (11):
-│                                  #   wall-anchored grading (append-only bit-identical prefix,
-│                                  #   exact first step, radii-vs-distances kept SEPARATE on
-│                                  #   purpose) + station count + LE-finer-than-TE + the local
-│                                  #   window's two default bit-identities and its measured
-│                                  #   outside cost + block quality drift lock (AR 5.899,
-│                                  #   min_area 5.08e-06) + TE ray EXACTLY +-y.
-│                                  #   ★ Added because the module had ZERO tests/ coverage: G0
-│                                  #   lived only in a bench script, i.e. on no cadence
-├── test_meshgen_rae2822.py        # ✓ [V5/GV5.2] RAE2822 point-set meshgen tests (5):
-│                                  #   ordinate load (Cook layout) + PCHIP resample
-│                                  #   convention/bounds/clustering + thickness/camber
-│                                  #   signature locks + no-self-intersection + TE wedge
-│                                  #   + the Cp-compare helpers on both committed layouts
-├── test_v5_wing_case.py           # ✓ [V5] build_wing_case wiring on the M6 wall (LE/tip/root/TE
-│                                  #   BC topology, local-x/c transition, scatter/gather + zero-RHS)
-├── v5_state.py                    # ✓ [V5] shared GV5.1 builders: the 2.5-D NACA0012 strip case
-│                                  #   + the loose-k1 state fixture behind all tight-gate tests
-├── test_v5_tight_jacobian.py      # ✓ [V5] tight Stage 1: fixed operators + J_φ,BL FD gate
-├── test_v5_tight_edge.py          # ✓ [V5] tight Stage 2: J_BL,φ = J_e·D_ue·G edge-chain FD gates
-├── test_v5_tight_system.py        # ✓ [V5] tight Stage 3: full-system FD gate + smoke augmented
-│                                  #   Newton (line-search probe guard exercised green)
-├── test_v5_tight_scaled.py        # ✓ [V5/GV5.1b] scaled+damped path: 8 tests = scaling
-│                                  #   identities + μ schedule + floor-stop + k1 smoke
-├── test_v6_wake_sheet.py          # ✓ [V6/GV6.1+GV6.2] wake-sheet W3 construction +
-│                                  #   producer identity (c) + zero-field (a)(i)
-│                                  #   bit-identity + sign-pin MMS (b) + (a)(ii)
-│                                  #   fresh-compile A/B vs the gate-free library +
-│                                  #   fold-pairing structure + GV6.2 wake_l_rel_chords
-│                                  #   plumbing (8)
-├── test_mesh_*.py        # [P0] Gates G0.1–G0.4
-├── test_mesh_adjacency.py           # ✓ [P0] Regression test for build_face_adjacency fix
-├── test_mesh_reader_roundtrip.py    # ✓ [P0] Regression test for write_mesh tag-loss fix
-├── test_laplace_mms.py              # ✓ [P1] Gate G1.1 -- PASSES
-├── test_laplace_cg_iterations.py    # ✓ [P1] Gate G1.2 (formerly G1.3) -- PASSES
-├── test_laplace_sphere.py           # ✓ [P1] Gate G1.6 (formerly G1.2) -- strict xfail, see "Known gaps"
-├── test_laplace_picard.py           # ✓ [P1] Regression test for solve_laplace residual_norm fix
-├── test_m0_extrude.py               # ✓ [M0] Prism-split unit tests (pure numpy, no Gmsh)
-├── test_m0_cylinder.py              # ✓ [M0] Cylinder-flow validation (analytic Cp, spanwise)
-├── test_wall_correction_cylinder.py # ✓ [P1] Gate G1.3 -- completed, acceptance NOT met
-│                                     #   (negative result locked in; acceptance = strict xfail)
-├── test_m0_naca0012.py              # ✓ [M0] NACA0012 family topology/wake-sheet/ingestion
-├── test_p2_wake_cut.py              # ✓ [P2] Cut topology unit tests (synthetic strip, no Gmsh),
-│                                     #   G2.1 + G2.2, assert-fires-on-broken-cut, hard-rule-7
-│                                     #   sweep over every wake-tagged mesh in cases/meshes/
-│                                     #   + [GV5.2] cambered-TE Kutta-probe bisector fallback
-├── test_p2_kutta_naca0012.py        # ✓ [P2] Gates G2.3/G2.4/G2.5 + V2.1–V2.5 artifacts
-├── test_m1_onera_m6.py              # ✓ [M1] M6 family: tags/geometry/wake-tip closure/quality,
-│                                     #   swept-TE station + free-edge cut semantics, G2.1-style
-│                                     #   freestream preservation on the cut coarse mesh
-├── test_p3_assembly.py              # ✓ [P3] Colored-assembly rewrite: fast-vs-reference bit checks
-├── test_p3_subsonic.py              # ✓ [P3] Gates G3.1 + G3.3 (incl. bit-identical Laplace limit)
-├── test_p3_naca0012_m05.py          # ✓ [P3] Gate G3.2 (medium-mesh nested Picard, ~45 s)
-├── test_p4_upwind.py                # ✓ [P4] Gate G4.2 (bitwise subcritical no-op) + upwind units
-├── test_p4_transonic.py             # ✓ [P4] Gates G4.1/G4.3 (coarse smoke always-on; medium gate
-│                                     #   + sweep behind PYFP3D_TRANSONIC_GATES=1)
-├── test_p5_onera_m6.py              # ✓ [P5] 4 fast + 2 gated (G5.1/G5.2 behind
-│                                     #   PYFP3D_TRANSONIC_GATES=1; polish recipe + 3% V6 bound)
-├── test_p6_cp_metric.py             # ✓ [P6] shock-robust sign-alternating sawtooth metric
-├── test_p6_recovery.py              # ✓ [P6] G6.1 recovery smoothing + G6.4 bit-identity
-├── test_p6_weighted_flux.py         # ✓ [P6] opt-in kernel-flux invariants (no-op, determinism,
-│                                     #   weighted=False restores the walk bitwise)
-├── test_p7_diff_flux.py             # ✓ [P7] Gate G7.3: frozen-selection ∂ρ̃/∂φ of the walk flux
-│                                     #   FD-verified (JVP vs shipped rho_tilde_sweep at frozen u;
-│                                     #   all regimes + floor branch; kink-locus guard documented)
-├── test_p8_jacobian.py              # ✓ [P8/N2] assembled Newton Jacobian JVP vs frozen-selection
-│                                     #   residual FD (all regimes, rel ~1e-10 vs 1e-6 tol; kink
-│                                     #   rows lifted from the P7 element guard); pattern-sharing,
-│                                     #   limiter-mask gating, forward-path bit-guard; frozen-
-│                                     #   assignment machinery (bitwise-at-freeze-state + frozen
-│                                     #   JVP); + gated converged-pocket FD on the NEWTON coarse
-│                                     #   M0.80 field (PYFP3D_TRANSONIC_GATES=1 — G8.1 FD clause)
-├── test_p8_newton.py                # ✓ [P8/N3–N5] coupled Newton: Γ-column FD (far-field-column
-                                      #   trap detector), exact Kutta row, far-field Γ-linearity,
-                                      #   GMRES-vs-direct, supersonic nonsymmetry, cl/Γ match vs
-                                      #   P3 Picard, terminal order p_k ~ 2, m_inf=0 single-step;
-                                      #   + gated G8.1 terminal-quadratic runs (coarse M0.80,
-                                      #   medium M0.7875 — re-specced case set, regression-lock
-                                      #   physics bands; NEWTON_TRANSONIC_RECIPE lives here);
-                                      #   ✓ [P8/N6] gated G8.2 M6 medium end-to-end < 300 s
-                                      #   (NEWTON_M6_RECIPE lives here too; skips without the
-                                      #   gitignored onera_m6/*.msh; carries the promoted
-                                      #   G10.2 intermediate_tol=1e-5 since 2026-07-11)
-├── test_p10_continuation.py         # ✓ [P10/G10.2] level-adaptive intermediate tolerance:
-│                                     #   default-path accept_reason lock + subsonic-ramp
-│                                     #   adaptive path (final level strict, Γ matches the
-│                                     #   strict run to 1e-6, total steps not worse)
-└── test_p13_tip_taper.py            # ✓ [P13/G13.2] spanwise loading taper (15): tip_taper=None
-                                      #   is bit-identical; F is geometry-only; compact vs
-                                      #   unbounded support; and the AMPLIFICATION law
-                                      #   Γ/Γ* = F(1−b)/(1−F·b) with the P2 Kutta slope b≈0.93
-                                      #   (F=0.8 ⇒ 0.21×, not 0.8× — the trap that makes r_c
-                                      #   have to stay small)
+tests/                     # 门与单元测试 —— ★★ 2026-08-24 全量重编号为 **A–F 六类**（phase 6）
+│                           #   ★★★ **分层由目录承载**，不再靠环境变量猜：
+│                           #     `pytest tests/A tests/B`  不设门，每次改动都跑
+│                           #     `pytest tests/C tests/E`  快层（收口时跑）
+│                           #     `pytest tests/D`          gated 全集（阶段边界跑）
+│                           #     `pytest tests/F`          可选，含「默认开启」子集
+│                           #   实测规模 2026-08-26：**88 个门文件 / 585 条 `def test_`**，
+│                           #   全套收集 **604 passed + 33 skipped + 2 xfailed**（参数化会展开）
+├── conftest.py           # ✓ `mesh_dir` / `gate_evidence_dir` / `gate_figures_enabled()`
+│                           #   ★★ `artifacts_dir` 与 `gate_artifacts_dir` **已删除**（2026-08-24）：
+│                           #   `artifacts/` 在 `.gitignore` 里 ⇒ 永不进 HEAD ⇒ 按纪律 3 不是证据，
+│                           #   却被 11 处活文档当证据引用。门的图证据现在落在 **`cases/gates/`（已追踪）**
+├── __init__.py, mesh_utils.py, _tol.py, _m1a_case.py, _sphere_case.py, v5_state.py
+│                           #   共享构件（非门）：无依赖网格生成器、容差、M1a/球算例、V5 状态夹具
+├── A/                    # **模块级数值** —— 54 文件 / 452 条。零求解或秒级：核函数、装配、
+│                           #   网格生成器、Jacobian 的 FD 精确性、模块级解析解（裁决②）、
+│                           #   跨路径一致性（裁决③）、以及**库默认值**（A53，读 `inspect.signature`）
+├── B/                    # **前后处理** —— 6 文件 / 35 条。截面切割、力系数积分、锯齿度量（B05）、
+│                           #   截面 cl 的两种算法交叉核对（B06，**只在 2.5-D 上设判据** ——
+│                           #   3-D 展向不均匀会把求解器误差与网格效应混在一起）
+├── C/                    # **解析解 + 图** —— 9 文件 / 24 条。判据形状 = **收敛阶 ∧ 绝对误差不过大**
+│                           #   （裁决③）；整机网格收敛性归此类但**只判阶**（边界裁决①）
+│                           #   ★ 占位 4：C05 nozzle · C06 lifting_cylinder · C07 karman_trefftz · C08 ringleb
+├── D/                    # **参考解 + 图** —— 10 文件 / 25 条。三层参照（裁决三）：
+│                           #   **无粘对 Euler 设门 · 有粘耦合对 RANS 设门 · 对实验记录偏置**；
+│                           #   对实验一律用**实验攻角、不修正**（裁决二）
+│                           #   ★ 占位 6：D05–D07 Euler · D08–D10 RANS（等待参考数据）
+├── E/                    # **回归 / 不变性** —— 3 文件 / 5 条（使用者裁决①立的第六类）
+├── F/                    # **可选 + 基础设施**（边界裁决④，含默认开启子集）—— 6 文件 / 44 条
+│                           #   F07 = 仓库不变量：**不匹配任何写法**，把含 `__file__` 的模块级赋值
+│                           #   **exec 出来看落点**，按**作用域**判名字可见性，并对活代码里每条
+│                           #   `tests.*` import **实际做解析** —— 因为正则版在一轮内漏了 13 种写法
+└── （占位门用 `@pytest.mark.skip` 占住门号而不实现，正是裁决④「暂时没有数据的先占位」的形状）
 
-(This tree covers P0–P13 only. The suite has **63 test files** as of
-2026-07-19: also test_p14_te_pressure, test_p11_curved_walls,
-test_a1_instrumentation, test_m2_wingbody, test_m5_round_tip,
-test_b1..test_b19, test_b22_ls_3d_anchors
-and the mesh/post unit files. `ls tests/test_*.py` is the authoritative list —
-do not read a missing entry here as a missing test.)
+cases/gates/               # ✓ [phase 6] **门的图证据落点，已追踪** —— 替代被删的 `artifacts/`
+│                           #   每个门一个目录（按门号），`INDEX.md` 内嵌全部图；
+│                           #   由 `PYFP3D_GATE_FIGURES=1 pytest tests/C tests/D` 生成
+├── INDEX.md
+├── C01_laplace_mms/  C02_cylinder_wall_correction/  C03_laplace_sphere/
+├── C09_prandtl_glauert_peak/
+└── D01_naca0012_incompressible_panel/  D02_naca0012_m05_panel/  D03_naca0012_m080_shock/
 
-artifacts/                 # Gate outputs (auto-generated, gitignored)
-├── G0.1/                 # Volume conservation heatmap
-├── G0.2/                 # Gradient recovery plots
-├── G0.3/                 # Element coloring 3D render
-└── ...
+（本树的门与测试部分以 `ls tests/*/test_*.py` 为准 —— 此处缺一条不等于缺一个门。
+★★ `artifacts/` 已于 2026-08-24 **删除**：它在 `.gitignore` 里 ⇒ 永不进 HEAD ⇒ 按纪律 3
+不是证据，而当时有 11 处活文档把它当证据引用，其路径在任何新 clone 里都不存在。
+门的图证据现在落在 **`cases/gates/<门号>/`（已追踪）**，见上。）
 
 phases/                    # ★★ ARCHIVE of finished phases (reorganised 2026-08-10, base
 │                           #   commit d224223). TRACKED, not gitignored -- the evidence stays
@@ -957,12 +870,12 @@ CLAUDE.md                 # ✓ Claude Code project instructions (doc map + work
 - **pyfp3d/mesh/coloring.py** — Element graph coloring for @prange
 - **pyfp3d/post/vtk_out.py** — VTK writer (point fields) + PNG/CSV artifact helpers
 - **tests/conftest.py** — Pytest fixtures
-- **tests/test_v0_freestream.py** — Smoke tests + regression baseline ✓
-- **tests/test_mesh_volume.py** — Gate G0.1 (volume conservation) ✓
-- **tests/test_mesh_gradient.py** — Gate G0.2 (gradient recovery) ✓
-- **tests/test_mesh_coloring.py** — Gate G0.3 (element coloring) ✓
-- **tests/test_io_vtk.py** — Gate G0.4 (VTK round-trip) ✓
-- **tests/test_mesh_adjacency.py**, **tests/test_mesh_reader_roundtrip.py** — regression tests for
+- **tests/A/test_A01_freestream_preservation.py** — Smoke tests + regression baseline ✓
+- **tests/A/test_A11_mesh_volume.py** — Gate G0.1 (volume conservation) ✓
+- **tests/A/test_A10_mesh_gradient.py** — Gate G0.2 (gradient recovery) ✓
+- **tests/A/test_A09_mesh_coloring.py** — Gate G0.3 (element coloring) ✓
+- **tests/B/test_B04_vtk_io.py** — Gate G0.4 (VTK round-trip) ✓
+- **tests/A/test_A08_mesh_adjacency.py**, **tests/A/test_A12_mesh_reader_roundtrip.py** — regression tests for
   two bugs found by manual audit (see below)
 - **pyproject.toml** — Build metadata and dependencies
 - **CLAUDE.md** — Claude Code project instructions, auto-loaded each session (replaces the
@@ -989,8 +902,13 @@ regression test:
 - `tests/conftest.py::artifacts_dir` handed out a `tempfile.TemporaryDirectory`, so every gate
   PNG/CSV was deleted at teardown and the repo `artifacts/` directory stayed permanently empty —
   violating the CLAUDE.md/roadmap rule that every visual gate leaves inspectable headless
-  artifacts. Now defaults to the persistent (gitignored) `artifacts/`, overridable via
-  `PYFP3D_ARTIFACTS_DIR`. (`test_conftest_artifacts.py`)
+  artifacts. It was then pointed at the persistent (gitignored) `artifacts/`.
+  ★★★ **勘误 2026-08-24（phase 6）：那次修的是「teardown 不再删」，不是「成为证据」。**
+  `artifacts/` 在 `.gitignore` 里 ⇒ **永不进 HEAD** ⇒ 按纪律 3 **它们不是证据**，而
+  `CLAUDE.md`/`README.md` 同时把它定为视觉门的证据形式 —— **两条规则互相否证**，且已有
+  11 处活文档引用其中在任何新 clone 里都不存在的路径。**`artifacts_dir` 与
+  `test_conftest_artifacts.py` 已删除**；门的图证据改落 **`cases/gates/<门号>/`（已追踪）**，
+  由 `gate_evidence_dir` fixture + `PYFP3D_GATE_FIGURES` 开关产出。
 - `mesh/metrics.py::element_gradients` silently returned zero gradients for |det J| < 1e-20 — an
   absolute threshold that both let coplanar tets corrupt assembly without any error and zeroed
   perfectly well-shaped tiny elements (edge ~1e-7 ⇒ det ~1e-21). Now raises `ValueError` with a
@@ -1031,13 +949,13 @@ file lives at the repo root).
   improvement, see below)
 - **tests/mesh_utils.py**, **cases/meshes/sphere_shell/** — structured-cube (MMS) and sphere-shell
   (G1.6) mesh generators; sphere-shell coarse/medium `.msh` + inspection PNGs are committed
-- **tests/test_laplace_mms.py** — Gate G1.1 (MMS convergence) ✓ — L2 slope ≈ 1.94–1.96 with a
+- **tests/C/test_C01_laplace_mms.py** — Gate G1.1 (MMS convergence) ✓ — L2 slope ≈ 1.94–1.96 with a
   sin·cos manufactured solution and a proper 4-point quadrature-consistent load vector. (A
   harmonic-polynomial exact solution was tried first and rejected: this codebase's structured
   Kuhn-triangulated cube reproduces harmonic quadratics to machine precision at *every* h, giving
   zero convergence-order signal — the same reason central finite differences are exact for
   quadratics.)
-- **tests/test_laplace_cg_iterations.py** — Gate G1.2 (formerly G1.3; CG+AMG mesh-independence) ✓ — iterations
+- **tests/A/test_A22_laplace_cg_iterations.py** — Gate G1.2 (formerly G1.3; CG+AMG mesh-independence) ✓ — iterations
   8→11→14 across an 8×/level node-count increase (n=8,16,32 cube), comfortably under a 2× cap.
 
 ## Known gaps
@@ -1048,7 +966,7 @@ open defect — G1.6 — with its ruled-out fix routes, so nobody re-proposes
 them. Added as a named heading in A3: the references had been pointing at an
 unnamed block since the P1 renumbering.)*
 
-**G1.6 (formerly G1.2; incompressible sphere Cp) is still open** — `tests/test_laplace_sphere.py::test_sphere_cp_medium_mesh`
+**G1.6 (formerly G1.2; incompressible sphere Cp) is still open** — `tests/C/test_C03_laplace_sphere.py::test_sphere_cp_medium_mesh`
 is a `strict=True` xfail against the real <2% criterion, not a loosened threshold:
 - The original `nodal_gradient_recovery` (volume-weighted average of the one-sided tets touching
   each wall node) gave ~26% max / 9% mean Cp error on the medium mesh — systematically low,
@@ -1118,7 +1036,7 @@ is a `strict=True` xfail against the real <2% criterion, not a loosened threshol
     recovery-only oracle error by roughly 20x, but — consistent with recovery not being the
     dominant error source — only trims medium-mesh total error from ~12.0% to ~11.6%. Adopted as
     the default for the G1.6 test since it's a strict, low-risk improvement, but it does not (and
-    was never going to) close the gate alone. See `tests/test_post_surface.py` for regression
+    was never going to) close the gate alone. See `tests/B/test_B01_surface_extraction.py` for regression
     coverage locking in both facts (recovery-only accuracy, and the fact that it's still not
     enough).
 - **Fix routes researched and tiered (2026-07-06, see design.md §5.1 for the full writeup)**:
@@ -1147,7 +1065,7 @@ design.md §5.1.2, oracle results (the committed evidence) in `cases/demo/p1_lap
   with analytic cylinder/sphere implementations, domain-outward facet orientation from the
   owning tet, 3-point edge-midpoint facet quadrature, RHS assembly verified against a
   hand-computed single-facet case); `pyfp3d/post/section_cut.py` (P2's final interface,
-  degenerate single-layer path); `tests/test_wall_correction_cylinder.py` (10 tests);
+  degenerate single-layer path); `tests/C/test_C02_cylinder_wall_correction.py` (10 tests);
   the sphere-oracle experiment (now absorbed into `cases/demo/p1_laplace/run_demo.py`,
   2026-07-07); cylinder `fine.msh` (50.2k tets); shared cylinder-case helpers moved into
   `tests/mesh_utils.py`.
@@ -1170,7 +1088,7 @@ design.md §5.1.2, oracle results (the committed evidence) in `cases/demo/p1_lap
 
 The DP1 "> 5%" branch's curved-element route was built and measured (phase P11, sphere leg;
 full record: phases/p1/docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curved_walls/`; tests
-`tests/test_p11_curved_walls.py`; code `pyfp3d/solve/curved_wall.py` + the opt-in
+`tests/A/test_A29_curved_wall_layer.py`; code `pyfp3d/solve/curved_wall.py` + the opt-in
 `stiffness_delta` hook on `solve_laplace`, default bit-identical):
 
 - **The route is a recorded NEGATIVE.** A verified curved wall-adjacent layer (quadratic
@@ -1198,7 +1116,7 @@ full record: phases/p1/docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curve
   elements".
 - **Route fork RESOLVED 2026-07-22 (user-directed): (a) Option C re-spec ADOPTED.** The active
   G1.6 gate is now the achievable, measured criterion asserted PASSING by
-  `tests/test_laplace_sphere.py::TestG16Respec` (reads P11's committed sweep, no re-solve):
+  `tests/C/test_C03_laplace_sphere.py::TestG16Respec` (reads P11's committed sweep, no re-solve):
   **all-scales-refined φ_w order ≥ 1.8** (E6 icosphere s4→s5 = 1.98; E8 far-refinement = 1.89)
   **+ mean Cp < 1% at h_min 0.03** (E8 h03_far10 = 0.60%). The literal 2%-max-at-medium
   `test_sphere_cp_medium_mesh` **STAYS a strict xfail = the recorded P1 limitation** (it demands
@@ -1218,7 +1136,7 @@ full record: phases/p1/docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curve
   tagged interior edge sheets (the wake) split by the same rule so they coincide exactly with
   tet faces. `assert_quad_split_consistency()` is the M0 preprocessor assert: single-owner tet
   faces must equal the tagged boundary set, interior-sheet faces must have exactly two owner
-  tets; unit tests prove it fires on a deliberately broken split (`tests/test_m0_extrude.py`).
+  tets; unit tests prove it fires on a deliberately broken split (`tests/A/test_A13_meshgen_extrude.py`).
 - **pyfp3d/meshgen/planar.py** — vanilla-Gmsh 2D builders (Distance+Threshold grading like the
   sphere case): `cylinder_annulus_2d()` and `naca0012_wake_2d()` (closed-TE NACA0012, circular
   far field r=15c centered at mid-chord, wake line TE→farfield embedded with
@@ -1232,7 +1150,7 @@ full record: phases/p1/docs/roadmap/track_p.md §P11; demo `cases/demo/p11_curve
   end-to-end check of pipeline + P1 solver: measured max |Cp err| 9.1% (coarse, 6.9k tets) →
   4.5% (medium, 17.3k tets) with quadratic surface recovery — same curved-wall/flat-facet
   variational crime as the G1.6 sphere, converging ~O(h), fully expected on this geometry.
-- **tests/test_m0_extrude.py / test_m0_cylinder.py / test_m0_naca0012.py** — 21 tests covering
+- **tests/A/test_A13_meshgen_extrude.py / test_m0_cylinder.py / test_m0_naca0012.py** — 21 tests covering
   the M0 gate items: reader ingestion, tags, quad-split consistency, wake-sheet topology (one
   connected planar interior sheet TE→farfield, both z-planes, nodes not duplicated), symmetry
   planes planar/disjoint from wall, cylinder Cp vs analytic, spanwise-gradient behavior.
@@ -1291,7 +1209,7 @@ under refinement for solved fields.
   sources + single vortex + Kutta), same closed-TE coordinate set as the mesh so G2.3 is
   method-vs-method; cl(4°) = 0.482556 at N=800, Cp-integration vs Kutta–Joukowski agree to
   0.09%, lift slope 6.91/rad vs thickness-corrected 6.90. Provenance in its README.
-- **Gates** (all green, `tests/test_p2_wake_cut.py` + `tests/test_p2_kutta_naca0012.py`,
+- **Gates** (all green, `tests/A/test_A24_wake_cut.py` + `tests/D/test_D01_naca0012_incompressible_panel.py`,
   ★ readings below were produced into the gitignored `artifacts/G2.{1..5}/`, DELETED 2026-08-24 —
   they are quoted here as the record; regenerate locally by running the P2 gates): G2.1 ‖R‖∞ = 8.4e-13 (folded wake-master rows 6.9e-16); G2.2
   [φ] − Γ < 1e-13; G2.3 medium cl_p = 0.47858 → −0.82% vs panel (coarse −3.0%), Kutta
@@ -1365,7 +1283,7 @@ are kept on purpose so the committed paths stay stable — that gate is now **B5
 - **G1.6 re-spec per Option C — DONE 2026-07-22 (user-directed):** the achievable, measured
   acceptance criterion (all-scales-refined φ_w order ≥1.8 + mean Cp <1% at h_min 0.03, on P11's
   E6/E8 committed sweep — the geometry-consistent all-scales reference) is asserted PASSING by
-  `tests/test_laplace_sphere.py::TestG16Respec`; the literal 2%-max xfail stays = recorded P1
+  `tests/C/test_C03_laplace_sphere.py::TestG16Respec`; the literal 2%-max xfail stays = recorded P1
   limit. See "Known gaps": h-refinement, recovery tweaks, Nitsche and boundary-data corrections
   are all **ruled out with evidence** — do not re-propose them.
 - ~~G1.3/G1.4 oracle experiments~~ — DONE 2026-07-06 with negative results (see the G1.3+G1.4
@@ -1383,16 +1301,16 @@ pip install -e ".[dev]"
 
 ### 2. Run smoke tests
 ```bash
-pytest tests/test_v0_freestream.py -xvs
+pytest tests/A/test_A01_freestream_preservation.py -xvs
 ```
 
 Expected output:
 ```
-tests/test_v0_freestream.py::test_import_pyfp3d PASSED
-tests/test_v0_freestream.py::test_import_physics PASSED
-tests/test_v0_freestream.py::test_isentropic_stagnation PASSED
-tests/test_v0_freestream.py::test_isentropic_freestream PASSED
-tests/test_v0_freestream.py::test_pressure_coefficient_bounds PASSED
+tests/A/test_A01_freestream_preservation.py::test_import_pyfp3d PASSED
+tests/A/test_A01_freestream_preservation.py::test_import_physics PASSED
+tests/A/test_A01_freestream_preservation.py::test_isentropic_stagnation PASSED
+tests/A/test_A01_freestream_preservation.py::test_isentropic_freestream PASSED
+tests/A/test_A01_freestream_preservation.py::test_pressure_coefficient_bounds PASSED
 ```
 
 ### 3. Run physics module directly (self-test)
@@ -1521,7 +1439,7 @@ root-upper-TE separation-patch runaway ṁ_max ×12.4 (GV3.3-stern class),
 medium patch refined away but bounded δ* limit cycle 2–12 %/k, tol 1e-3
 never met; ΔCL DOWN both estimators (medium −2.4 % input-limited); crossflow
 small max|B|/|A| ≤ 0.072; tip mask validated; `build_wing_case` +
-`tests/test_v5_wing_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands; medium
+`tests/A/test_A43_wing_ibl_case.py` (5) new; δ*(z) CSVs feed GV5.3's bands; medium
 wall-time polluted by external load, quoted flagged) · **GV5.1 ✓ EXECUTED
 2026-07-23 (9 PASS / 1 FAIL / 36 RECORDED)** (augmented tight (φ, Γ, BL)
 Newton shipped: `pyfp3d/viscous/tight.py` + `tight_driver.py`,
@@ -1548,7 +1466,7 @@ EXECUTED 2026-07-24 (2 PASS / 0 FAIL / 7 RECORDED adjudicated
 `docs/design_track_v.md` §14)**: the scaled + damped machinery is
 delivered and exact (solver-internal row/column equilibration +
 Levenberg damping + floor-reached stop, flags default OFF = legacy
-bit-identical; `tests/test_v5_tight_scaled.py` (8), tight fleet 28
+bit-identical; `tests/A/test_A47_tight_scaled_newton.py` (8), tight fleet 28
 green); the medium live-seed e2 read on a non-pre-registered ≤1e-10
 threshold = SuperLU pivot-order machine floor through cond ~ 1e10,
 adjudicated PASS under the cond-aware read tol = max(1e-10, 10·κ₁·eps)
@@ -1627,7 +1545,7 @@ path → **GV5.4 ✓ EXECUTED 2026-07-25 (0P/1F/17R,
 `docs/design_track_v.md` §20)**: augmented-step cost on the 124,216-DOF
 M6 medium W2 system (the GV5.1b scaled+damped driver + an injectable
 `step_solve` solve callback — library change, default None = splu
-bit-identical, +2 tests `tests/test_v5_tight_scaled.py`) — band (a)
+bit-identical, +2 tests `tests/A/test_A47_tight_scaled_newton.py`) — band (a)
 RECORDED: augmented step 22.93 s vs the in-session inviscid anchor
 3.05 s/step = **7.53×, above the ≤ ~2× reference band** (recorded
 either way per the registration; 4/5 steps carry capped-GMRES work;
@@ -1673,7 +1591,7 @@ producer (i); the LS leg + the solved wake IBL = recorded follow-ups)
 (0 PASS / 0 FAIL / 24 RECORDED)** (conforming wake-sheet δ* source
 shipped: `pyfp3d/viscous/wake_sheet.py` + the
 `CouplingConfig.wake_transpiration` default-OFF hook = legacy
-bit-identical, `tests/test_v6_wake_sheet.py` (8); VERDICTs
+bit-identical, `tests/A/test_A51_wake_sheet_source.py` (8); VERDICTs
 `bench/studies/v6_1_wake_sheet/VERDICT.md` +
 `bench/studies/v6_2_measured_effect/VERDICT.md` — GV6.1 (a)(i)/(a)(ii)
 δ*_wake = 0 bit-identity PASS, (b) sign-pin MMS PASS (antisym
@@ -1717,7 +1635,7 @@ the tree). What phase five added, none of it navigable from the tree until now:
                                 #   letting through 8/8 provably-wrong nozzle legs because the
                                 #   ratio is SCALE-DEPENDENT (works on lift, which can collapse
                                 #   toward zero; useless on a position). Locked by
-                                #   tests/test_r23_usability.py (9).
+                                #   tests/F/test_F05_usability_anchor.py (9).
     bench/studies/m1a_subcell/          # R14-era: sub-cell shock-position extractor
     bench/studies/m1b_tie/              # D's argmin ties, per-cell vs sub-cell
     bench/studies/m1e_scatter/          # what carries D's station-to-station scatter
@@ -1735,8 +1653,8 @@ the tree). What phase five added, none of it navigable from the tree until now:
     bench/studies/r21d_decompose/       # geometry vs solution split (RETRACTED, see below)
     bench/studies/r22_c_interval/       # the usable upwind_c interval at medium
     bench/studies/n1_nozzle_anchor/     # ★ the anchor validated where TRUTH exists
-    tests/test_r19_gamma_target.py      # 6 locks on the prescribed-circulation path
-    tests/test_r23_usability.py         # 9 locks on the usability criterion
+    tests/A/test_A27_gamma_target.py      # 6 locks on the prescribed-circulation path
+    tests/F/test_F05_usability_anchor.py         # 9 locks on the usability criterion
     phases/p5/docs/dev_phase_five/      # ★ 27 rounds + prereg/verdict/errata + progress.md
                                         #   (ARCHIVED 2026-08-24 by user ruling, with all of
                                         #    phase 2-5; docs/ now holds 4 living documents
@@ -1749,16 +1667,28 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **589 passed / 12 skipped / 2 xfailed** (2026-08-24, measured in full
+Baselines: always-on **605 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+full @400.94 s @8 threads at load 13.7, phase-six 第 10–16 轮).
+★ 相对 604/33/2：删掉退役的 `test_ab_bit_identity_gate_free_library`（plain skip，前提为假）
+**−1 skipped**，F07 第 6 条（活代码内嵌路径必须存在）**+1 passed** ⇒ **604+1 = 605、33−1 = 32**。
+Previous: **604 passed / 33 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+full @573.78 s @8 threads, phase-six 第 10–14 轮).
+★★ 三个数都在账上：上一读数 **586 / 35 / 2** @403 s（重编号之后、A53/B05/B06 之前），
+A53 占位→实门 **+4p/−1s**、B05 占位→实门 **+6p/−1s**、B06 新增 **+7p**、F07 加一条 **+1p**
+⇒ **586 + 18 = 604、35 − 2 = 33、xfailed 不动 = 2**。
+★★★ skipped 从 12 跳到 33 **不是退化，是 A–F 重编号的形状**：C 类 4 个 + D 类 6 个是
+**占位门**（使用者裁决④「暂时没有数据的先占位」——`@pytest.mark.skip` 占住门号而不实现），
+其余是 gated 门与 `PYFP3D_GATE_FIGURES` 未开时的导图腿。
+Previous: **589 passed / 12 skipped / 2 xfailed** (2026-08-24, measured in full
 @690.49 s @8 threads at load 12.6, phase-five R23; 580 + 9 closes exactly, the +9 being
-`tests/test_r23_usability.py`). ★ Fast capability-lock tier re-run at the phase-five close-out
+`tests/F/test_F05_usability_anchor.py`). ★ Fast capability-lock tier re-run at the phase-five close-out
 after the one library change: **5/5 green, 740 s @8 threads at load 11.1** -- a third reading
 against the recorded 891 s and 564 s, so the wall is a calibration and the 5/5 is the result.
 Previous: **479 passed / 12 skipped / 2 xfailed** (2026-08-12 = 474 measured in
 full @478.40 s plus 5 non-interacting soft-membership asserts; earlier it went
 468 → 472 → 468 in one day -- the +4 were the temporary `sigma_scale` instrument's locks
 and were deleted with it at its registered expiry). Earlier the same count (2026-08-11, 494 s @8
-threads quiet; +11 = `tests/test_meshgen_structured.py`, closing the structured
+threads quiet; +11 = `tests/A/test_A18_meshgen_structured_hex.py`, closing the structured
 generator's zero-coverage debt). After the level-set deletion it was **457 / 12 / 2**, gated
 **466 / 1 / 4** (2:08:50), fast tier **5 groups**. Both accounts close item by item —
 phases/p3/docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
@@ -1797,7 +1727,7 @@ significant, L-robust over L_rel {0.5, 1.0, 2.0} c (1.0 c pinned); the XFOIL
 wake direction check Option A — direction agrees, rate 0.454 c vs pinned
 1.0 c recorded); full-suite measured 652 @1455.80 s **@8 threads**
 (temporary 8-core session constraint, user-directed; NOT comparable to the
-16-thread ledger entries); +1 vs 651 = `tests/test_v6_wake_sheet.py` (the
+16-thread ledger entries); +1 vs 651 = `tests/A/test_A51_wake_sheet_source.py` (the
 GV6.2 `wake_l_rel_chords` plumbing test). Previous 651: V6 GV6.1 (the
 conforming wake-sheet δ* source: (a)(i)/(a)(ii) δ*_wake = 0 bit-identity
 PASS — the (a)(ii) harness runs both legs fresh-compile, the numba
@@ -1805,7 +1735,7 @@ cache-load infidelity discipline — (b) sign-pin MMS PASS empirically
 pinning the per-face ½ṁ addendum, (c) W2 TE-continuity every outer PASS;
 (d) Δ-cl +0.00015 / TE-region max |ΔCp| 0.00250 RECORDED for GV6.2);
 full-suite measured 651 @1606.31 s **@8 threads**; +7 vs 644 =
-`tests/test_v6_wake_sheet.py` (7 new: W3 construction, the producer
+`tests/A/test_A51_wake_sheet_source.py` (7 new: W3 construction, the producer
 identity, the zero-field RHS, (a)(i) bit-identity, the sign-pin MMS, (a)(ii)
 fresh-compile A/B, the fold pairing). Previous 644:
 V5 GV5.4 (the augmented-step cost on M6 medium: band (a) RECORDED — the
@@ -1814,7 +1744,7 @@ augmented step 22.93 s vs the inviscid step 3.05 s = 7.53×, above the
 at medium: block-Jacobi diverges, exact-BL Schur stalls 1/4); full-suite
 measured 644 @1230.61 s **@8 threads** (temporary 8-core session constraint,
 user-directed; NOT comparable to the 16-thread ledger entries); +2 vs 642 =
-`tests/test_v5_tight_scaled.py` (2 new: the `step_solve` callback wiring +
+`tests/A/test_A47_tight_scaled_newton.py` (2 new: the `step_solve` callback wiring +
 the default-None splu bit-identity guard). Previous 642:
 V5 GV5.3 (the M6 wing direction+magnitude check vs committed Cp: band (b)
 honest FAIL — the viscous Cp does NOT move toward the committed 7-station

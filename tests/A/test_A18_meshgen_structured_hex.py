@@ -3,7 +3,7 @@
 ★★ Why this file exists. Route (A)'s one surviving deliverable is EXPERIMENTAL CONTROLLABILITY:
 `r_far` / `h_wall_normal` / `n_theta` / `growth` are bit-identical single-variable knobs, which
 phase two's four gmsh knobs were all measured NOT to be. That property is what every reading built
-on this generator rests on -- and until now it was asserted only by `bench/run_hex_g0_single_var.py`,
+on this generator rests on -- and until now it was asserted only by `phases/p3/bench/run_hex_g0_single_var.py`,
 a bench script that runs on no cadence. That is precisely the gap round 2b closed for the conforming
 wing-body transonic capability: the boundary document stated a capability and nothing would go red
 if it broke, right before the work most likely to break it.

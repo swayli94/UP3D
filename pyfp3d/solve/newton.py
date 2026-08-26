@@ -549,13 +549,13 @@ class NewtonWorkspace:
         #: question about a DIFFERENT map. Recording it is the same discipline the project already
         #: imposes on the side-field density source: every consumer of that path must state and
         #: record where its input came from. Consumed by
-        #: bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
+        #: phases/p3/bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
         self.upstream_sigma = np.asarray(upstream).copy()
         #: ★ RECORD ONLY, BOUNDED. The post-shock SET is the object the freeze exists to pin, so
         #: "which cells flip in and out" is the primary datum for diagnosing selection churn --
         #: and `sigma_history` only carries the COUNT. Bounded at 128 entries because a Mach ramp
         #: reuses one workspace across levels and an unbounded list would grow with the ramp.
-        #: Consumed by bench/run_task3_sigma_freeze.py (pre-registration 20260812-1100).
+        #: Consumed by phases/p3/bench/run_task3_sigma_freeze.py (pre-registration 20260812-1100).
         self.shock_set_history.append(np.flatnonzero(self.ent._m1 > 0.0))
         if len(self.shock_set_history) > 128:
             del self.shock_set_history[0]
@@ -742,7 +742,7 @@ def solve_newton_lifting(
     # ★ Also measured and rejected: a Laplace "cheap linearised seed" is far WORSE than
     # none (103.5 s, non-converged, cl_p 18 % off), and a shallow Picard-2 seed is
     # worthless (same wall, 9 Newton steps at level 0 against 3). Evidence:
-    # bench/gate_results/gs33b_seed.csv, phases/p2/docs/dev_phase_two/20260802-2300-noseed-global.md
+    # phases/p2/bench/gate_results/gs33b_seed.csv, phases/p2/docs/dev_phase_two/20260802-2300-noseed-global.md
     n_picard_seed: int = 0,
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
@@ -1743,7 +1743,7 @@ def solve_newton_transonic(
     backported here, so three bench consumers had been reading them
     through `.get(..., <default>)` since the phase-3 deletion and were
     silently getting the REQUESTED Mach back. The worst instance:
-    `bench/run_capability_matrix.py`'s MACH_NOT_ATTAINED guard compares
+    `bench/capability_matrix.py`'s MACH_NOT_ATTAINED guard compares
     `abs(m_att - m)`, which was therefore identically zero -- a guard
     that could not fire, whose own comment said it existed precisely so
     as not to trust the driver flags. (Discipline #9, two paths => a

@@ -135,14 +135,14 @@ tests/F/  test_F01_provenance.py ...            可选开启
 
 | 占位 | 内容 | 解锁条件 |
 |---|---|---|
-| `tests/C/test_C0x_ringleb.py` | Ringleb（判阶次 + 宽绝对带；gmsh 普通网格，**定量分析壁面几何误差**） | 需要 Ringleb 精确解实现 + 网格 |
-| `tests/C/test_C0x_karman_trefftz.py` | Kármán–Trefftz（**精确 Γ** 检验 Kutta） | 需要 KT 变换实现（环量公式**回源读**，不凭记忆） |
-| `tests/C/test_C0x_nozzle.py` | 准一维喷管（唯一带激波的精确解；判据立在**位置**上） | ★ 机器已存在于 `phases/p2/bench/s1_duct/`，**可立即开工** |
-| `tests/C/test_C0x_lifting_cylinder.py` | 带环量圆柱（最便宜的精确 Kutta） | ★ **可立即开工** |
+| `tests/C/test_C08_ringleb.py` | Ringleb（判阶次 + 宽绝对带；gmsh 普通网格，**定量分析壁面几何误差**） | 需要 Ringleb 精确解实现 + 网格 |
+| `tests/C/test_C07_karman_trefftz.py` | Kármán–Trefftz（**精确 Γ** 检验 Kutta） | 需要 KT 变换实现（环量公式**回源读**，不凭记忆） |
+| `tests/C/test_C05_nozzle_quasi1d.py` | 准一维喷管（唯一带激波的精确解；判据立在**位置**上） | ★ 机器已存在于 `phases/p2/bench/s1_duct/`，**可立即开工** |
+| `tests/C/test_C06_lifting_cylinder.py` | 带环量圆柱（最便宜的精确 Kutta） | ★ **可立即开工** |
 | `tests/D/test_D0x_euler_*.py` | 2D-1…2D-6 · 3D-1/3D-2 | **等你补 Euler 数据** |
 | `tests/D/test_D0x_rans_*.py` | R-1…R-7 | **等你补 RANS 数据**（含两个湍流模型） |
-| `tests/A/test_A0x_library_defaults.py` | 库默认值门（承接台账 §1 实测表） | ★ **可立即开工** |
-| `tests/B/test_B0x_sawtooth_metric.py` | 锯齿/振荡度量（**不需要真值**） | ★ **可立即开工** |
+| `tests/A/test_A53_library_defaults.py` | 库默认值门（承接台账 §1 实测表） | ★ **可立即开工** |
+| `tests/B/test_B05_sawtooth_metric.py` | 锯齿/振荡度量（**不需要真值**） | ★ **可立即开工** |
 
 ### 4.3 重编号要护住的东西（用搬迁那套仪器）
 

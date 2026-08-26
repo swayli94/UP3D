@@ -150,3 +150,100 @@ def test_every_cd_gate_has_an_evidence_dir_and_vice_versa(cls):
         "（跑 PYFP3D_GATE_FIGURES=1 pytest tests/%s 生成）：%s" % (cls, cls, missing))
     assert not orphan, (
         "cases/gates/ 下这些目录没有对应的 %s 类门（门被删了？证据该跟着走）：%s" % (cls, orphan))
+
+
+def test_every_tests_import_in_live_code_resolves():
+    """★★★ 活代码（`bench/`、`cases/`、`pyfp3d/`）里每一条 `tests.*` import 都必须解析。
+
+    ★ 这条是被一次**真实失败**逼出来的：2026-08-26 重生成 M3a 时
+    `bench/run_m3_budget.py` 炸在 `from tests import test_p8_newton as _p8` ——
+    重编号的改写**漏了 `as` 这种形式**，而它在**函数体内** ⇒ `--collect-only` 看不见；
+    而 `bench/` **不在任何周期上**，所以只有真跑那个脚本才会发现。
+
+    ⇒ 本条**不匹配写法**，它对每一条 import **实际做解析**（`find_spec` + 属性回退），
+    于是 `from X import Y`、`from X import Y as Z`、`import X` 一视同仁。
+    """
+    import importlib
+    import importlib.util
+    bad = []
+    files = [f for f in glob.glob(str(REPO_ROOT / "**" / "*.py"), recursive=True)
+             if "/phases/" not in f and "/tests/" not in f and "/.git/" not in f]
+    for f in files:
+        try:
+            tree = ast.parse(open(f, encoding="utf-8").read())
+        except SyntaxError:
+            continue
+        for n in ast.walk(tree):
+            pairs = []
+            if isinstance(n, ast.ImportFrom) and (n.module or "").startswith("tests"):
+                pairs = [(n.module, a.name) for a in n.names]
+            elif isinstance(n, ast.Import):
+                pairs = [(a.name, None) for a in n.names if a.name.startswith("tests")]
+            for mod, name in pairs:
+                try:
+                    ok = importlib.util.find_spec(mod) is not None
+                except (ModuleNotFoundError, ValueError):
+                    ok = False
+                if ok and name:
+                    spec = importlib.util.find_spec(mod)
+                    if spec.submodule_search_locations is not None:
+                        try:
+                            ok = importlib.util.find_spec("%s.%s" % (mod, name)) is not None
+                        except ModuleNotFoundError:
+                            ok = False
+                        if not ok:
+                            ok = hasattr(importlib.import_module(mod), name)
+                if not ok:
+                    bad.append("%s:%d -> %s%s" % (
+                        os.path.relpath(f, str(REPO_ROOT)), n.lineno, mod,
+                        "" if name is None else "." + name))
+    assert not bad, (
+        "活代码里这些 tests.* import 解析不了（bench/ 不在任何周期上，"
+        "所以只有真跑才会炸）：\n  " + "\n  ".join(bad))
+
+#: `bench/bitcheck.py` 自己写出的产物 —— 引用它们是**输出路径**，不是失效引用。
+_GENERATED = {"bench/results/bit_after.npz", "bench/results/bit_before.npz"}
+_PATHLIKE = __import__("re").compile(
+    r"(?:bench|cases|docs|phases)/[A-Za-z0-9_/.-]+\.(?:py|md|csv|npz)")
+
+
+def test_every_embedded_repo_path_in_live_code_exists():
+    """★★★ 活代码里内嵌的每一条仓库路径都必须真实存在。
+
+    ★ 这条是被**同一族错误在一天里咬两次**逼出来的（2026-08-26）：归档把文件搬进
+    `phases/p*/` 之后，先是活**文档**里 158 处路径指空，扫完文档才发现**代码**里还有
+    48 处 —— 因为上一版的清扫只覆盖了 `*.md`。**仪器覆盖不到的地方就是缺陷藏身的地方。**
+
+    ★★ 两个具体后果，都不是「文档过期」那么轻：
+      · `CLAUDE.md` 硬规则 #2 让人跑 `pytest tests/test_v0_freestream.py` —— 那个路径已不存在，
+        **规则本身跑不动**；
+      · `pyfp3d/solve/newton.py` 引用 `bench/run_capability_matrix.py`，而那是**本期改名**造成的，  (PATH-EXAMPLE)
+        库文件指向一个不再存在的脚本。
+
+    ★★★ 而修法本身也踩了一次同族的坑，记在这里：朴素子串替换
+    （`docs/roadmap.md` -> `phases/p1/docs/roadmap.md`）会把**已经正确**的那些也换掉，  (PATH-EXAMPLE)
+    造出 `phases/p1/phases/p1/docs/roadmap.md` —— 37 处。  (PATH-EXAMPLE)
+    **替换前必须排除「已经落在正确路径里」的出现。**
+    """
+    bad = []
+    for f in glob.glob(str(REPO_ROOT / "**" / "*.py"), recursive=True):
+        rel = os.path.relpath(f, str(REPO_ROOT))
+        #: 归档是历史快照、`build/` 是构建产物，两者都不在活代码里
+        if rel.startswith(("phases" + os.sep, "build" + os.sep)):
+            continue
+        for i, line in enumerate(
+                open(f, encoding="utf-8", errors="replace").read().split("\n"), 1):
+            for m in _PATHLIKE.findall(line):
+                #: ★★ 哨兵：讲述这类缺陷的散文必须能**举出**失效路径而不被判为犯了它。
+                #: 「提到 ≠ 使用」—— 本门第一次跑就红在自己的 docstring 上，这是同一族
+                #: 错误在一天里的第四次，而这次发生在为抓它而写的门里面。
+                if (m in _GENERATED or "..." in m or "DELETED" in line
+                        or "PATH-EXAMPLE" in line):
+                    continue
+                if not os.path.exists(os.path.join(str(REPO_ROOT), m)):
+                    bad.append("%s:%d -> %s" % (rel, i, m))
+    assert not bad, (
+        "活代码里这些内嵌仓库路径不存在（搬档/改名之后没跟上）：\n  "
+        + "\n  ".join(sorted(set(bad)))
+        + "\n★ 若目标已归档，指向 `phases/p*/...` 的真实位置；若已删除，"
+          "就地写明「已删除」并保留引文作为幸存记录 —— 不要留一个指空的指针。")

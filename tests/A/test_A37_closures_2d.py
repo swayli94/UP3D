@@ -4,7 +4,7 @@ Ungated, no solve. Same reasoning as round 1's locks: a library module whose
 only assertions live in a bench script runs on no cadence at all.
 
 ★ The anchors below come from an INDEPENDENT Falkner-Skan ODE integration
-(`bench/studies/gs41_a2_correlation/results/g_oracle.csv`), not from the
+(`phases/p4/bench/studies/gs41_a2_correlation/results/g_oracle.csv`), not from the
 correlations themselves. That is what makes them a transcription lock rather
 than a tautology.
 """

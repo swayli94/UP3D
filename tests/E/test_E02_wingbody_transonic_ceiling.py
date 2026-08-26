@@ -24,9 +24,9 @@ conforming chain still climbs to M0.84 on the medium wing-body, still lands with
 clamps, and still reports the lift it reported when the capability was recorded.
 
 ★ Every anchor is the value b18's committed evidence recorded, not a fresh reading:
-    cases/demo/b18_wingbody_transonic/results/checks.csv  (GB18.1 row: "B32 taper
+    phases/p1/cases/demo/b18_wingbody_transonic/results/checks.csv  (GB18.1 row: "B32 taper
         climb: m_reached=0.84 (cl_p 0.2738; clamps 0+0)")
-    cases/demo/b18_wingbody_transonic/results/cl_vs_mach.csv  (0.84 conforming medium
+    phases/p1/cases/demo/b18_wingbody_transonic/results/cl_vs_mach.csv  (0.84 conforming medium
         -> cl_p 0.2738)
 and the RECIPE is that demo's `conf_ramp` verbatim -- seed at M0.70 with the probe
 Kutta, then the Mach continuation with pressure Kutta + the production tip taper. The

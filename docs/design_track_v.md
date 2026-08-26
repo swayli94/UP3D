@@ -186,7 +186,7 @@ backtracking merit = 伪时间残差 F_pt = R + w(G−G_old)（步长本就是 F
    Newton 步——伪时间权重非可忽略时线性模型不保证 |R| 下降。实测 FS 减速
    分支（u_e=x^m, m=−0.05）从近解种子（|R|∞≈3.5e-7）出发每一步都被拒、
    CFL 塌到下限停滞。修正：merit 改 F_pt（与设计 §5.3 一致），FS 两支
-   14 步收敛；平板各门无回归（`tests/test_v1_ibl3.py` 双路绿）。
+   14 步收敛；平板各门无回归（`tests/A/test_A35_ibl3_core.py` 双路绿）。
 2. **2-D 参考 march 的起点瞬移 bug（gate 参考码，非求解器）**。
    `march_2d` 初版把种子状态直接放在第一个记录站（xs[0]=x0+0.1）开始积
    分——方程 x-自治，整条参考轨线因此平移 0.1，首站记录的是未积分的入
@@ -440,7 +440,7 @@ newton_history CSV，判决 `VERDICT.md`）。实现决策与结果：
    = merit 相对下降 < 1e-4 连续 3 个接受步。三旗标默认全关 =
    legacy 路径逐位（对 committed k1seed 历史回归 rel ≤ 2e-6 通过；
    tight 舰队 28 passed 两次，执行前后各一；新测试
-   `tests/test_v5_tight_scaled.py` 8 个）。
+   `tests/A/test_A47_tight_scaled_newton.py` 8 个）。
 2. **band (a) 套件精确；medium 活体 e2 = 阈值校准问题，非代数错；
    裁决落地 PASS（2026-07-24 用户）**。良态合成系统上的机器精度
    恒等式 + μ 日程转移全绿。
@@ -519,7 +519,7 @@ session；runner 默认 16 不动，约束经环境变量落地并记入 artifac
    落地）：扰动种子 J 上 e1 2.6e-16/2.3e-16、e2 2.06e-9/2.40e-9
    （容差 3.9e-2/5.2e-2，κ₁ 一范数估计现算）、e3 3.99e-10/2.57e-10。
    套件 37 passed 两次（执行前后；tight 舰队 28 + 新 9，
-   `tests/test_v5_above_band_seed.py` 合成映射测试）。μ 拒绝重试再次
+   `tests/A/test_A48_above_band_seed_maps.py` 合成映射测试）。μ 拒绝重试再次
    为 0（μ 自 1e-6 衰减到 5e-11）——远种子下 Levenberg 臂仍不启用，
    全部全局化由线搜索承担；行/列均衡仍是活性配料。
 5. **medium 不动点在 8 线程下再次散布**（第 4 个不动点 cl 0.28245999，
@@ -572,7 +572,7 @@ artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPO
 4. **band (a) PASS 两腿**（cond-aware e2 容差沿用上轮裁决）：扰动种子
    J 上 e1 2.6e-16/2.3e-16、e2 1.54e-11/1.20e-11（容差 9.2e-2/9.7e-2，
    ~12 个 decade 余量）、e3 6.7e-12/7.1e-12。套件 49 passed 两次
-   （执行前后；tight 舰队 33 + 9 + 新 7 `tests/test_v5_near_band_seed.py`
+   （执行前后；tight 舰队 33 + 9 + 新 7 `tests/A/test_A49_near_band_seed_maps.py`
    合成映射测试）。μ 拒绝重试**第三次为 0**（μ 1e-6 → 5e-11）——
    Levenberg 臂在三类种子（amended / above-band / near-band）下均不
    启用；行/列均衡仍是唯一活性配料。
@@ -606,7 +606,7 @@ artifact，协议 = GV5.1c 逐字 + 新近带窗；helper 自 GV5.1c runner IMPO
    （|dcl_k0| ≤ 1e-8）。
 2. **band (a) PASS 两腿**：变体系统在 amended 种子处的雅可比作用 FD
    最大相对误差 1.79e-7（coarse）/ 1.09e-8（medium），均 < 1e-5——
-   替换行解析精确（9 个新测试 `tests/test_v5_te_outflow.py` 在单元
+   替换行解析精确（9 个新测试 `tests/A/test_A50_te_outflow_rows.py` 在单元
    层面同样锁死：默认 OFF 逐位、行结构、FD、J_e 清零、越 pattern
    守卫、平板 smoke、strip 配对）。
 3. **band (b) honest FAIL（binding，"变差"档）**：变体系统在种子处
@@ -725,7 +725,7 @@ addendum #1 先于重执行提交。问题：在 committed 实验条件（TEST 2
 松环 VII（GV3.1 配方逐字 + GV5.0 翼 case 逐字：翼尖带 z > 0.95·b_semi
 钉扎 + ṁ 遮蔽）是否把 (a) CL 从无黏基线向下推过 A4 地板、(b) 壁面 Cp
 向 committed 7 站实验靠近？FP driver = P14 跨声速配方逐字（M0.70 probe
-种子 → NEWTON_M6_RECIPE ramp 从 `tests/test_p8_newton.py` 导入，pressure
+种子 → NEWTON_M6_RECIPE ramp 从 `tests/E/test_E01_p8_newton_anchors.py` 导入，pressure
 Kutta，n_picard_seed=0；暖 outer 解；FP 侧**无 tip_taper** 使 k=0 解可
 直接对 committed P14 锚点）；coarse 记录、medium binding。全程 8 线程
 临时约束（壁时标记不可比）。
@@ -800,7 +800,7 @@ Schur" 问题：J_BL,BL 的直接消元到底多贵（决定 Schur 路线是否�
 1. **实现（库改动 + 接线守卫）**：`pyfp3d/viscous/tight_driver.py` 的
    `scaled_damped_step` 增可选 `solve(A, b)` 回调、`newton_tight` 增
    `step_solve` 透传（两条路径；默认 None = splu 逐位一致——默认路径
-   不触任何已提交数字）；+2 测试 `tests/test_v5_tight_scaled.py`（回调
+   不触任何已提交数字）；+2 测试 `tests/A/test_A47_tight_scaled_newton.py`（回调
    接线 + 默认逐位一致）。runner 把 splu 与两档块预条件 rung 作为
    `step_solve` 注入同一驱动，步级壁时逐步入 CSV。守卫：W1 = 种子态
    cl_p 对锚（addendum #4 重订 P14 探针 G8.2 锁 0.2646；#1 把容差

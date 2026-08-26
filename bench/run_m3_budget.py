@@ -6,7 +6,7 @@ interpretation rules R1-R4 -- in particular R2, the validity gate that decides w
 the entropy-ON leg is a physics reading at all or the G8.2 3-D donor-cycle defect
 reproducing.
 
-Extractor reused verbatim from bench/studies/v5_3_m6_cp/run.py (same-extractor
+Extractor reused verbatim from phases/p2/bench/studies/v5_3_m6_cp/run.py (same-extractor
 discipline): the same committed experiment file, the same station_rms, the same seven
 stations with the first five outside the tip mask.
 
@@ -178,7 +178,11 @@ def solve(mc, wc, entropy, kutta="probe", n_newton_max=None, taper=True,
         #: ★ R2 of the registration: pinned by an assert against that function's own source, so a
         #: future change there is caught here instead of silently splitting the two paths.
         import inspect
-        from tests import test_p8_newton as _p8
+        #: ★ 2026-08-26 重编号后：test_p8_newton 拆成 A52（驱动性质）+ E01（已提交锚点），
+        #: `_m6_case` 随 E01 走。★ 这一行此前是 `from tests import X as Y` —— 重编号的
+        #: 改写漏了 `as` 这种形式，而它在函数体内 ⇒ 收集看不见，且 bench/ 不在任何周期上，
+        #: 于是只有真跑这个脚本才会炸。F07 现在有一条穷举检查盯着这一类。
+        from tests.E import test_E01_p8_newton_anchors as _p8
         _src = inspect.getsource(_p8._m6_case)
         assert 'tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth", 0.05 * B_SEMI)' in _src, (
             "the production taper construction in test_p8_newton::_m6_case has changed -- this "
@@ -273,6 +277,19 @@ def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0,
                 #: 截面切割是 1-D 切线，没有配对，展向不均匀时锯齿**不抵消**（载荷积分才抵消）。
                 #: 实测 M6 coarse：锯齿中位 0.1742->0.0469，7 站 pooled RMS **-4.10 %**（B05 门）。
                 #: ★ 一遍不是两遍：两遍 LE 带 +8.3 %（G6.3 的「抹掉前缘吸力峰」）。
+                #:
+                #: ★★★ **再基线勘误（2026-08-26）—— 本行移动了已提交证据。**
+                #: `gate_results/m3_budget_head_medium{,_seed5,_seed12}.csv`（phase 3 第 16/17 轮）
+                #: 是**本行改动之前**的读数，在 HEAD 上**不可复现**。单变量实测（medium，生产
+                #: taper，同一个 φ 提取两次）：`pooled_rms_5` **-4.01 %**、`band_LE_upper`
+                #: **-10.36 %**、`band_MID_upper` 仅 -0.44 %；LE 上表面份额 69.9 % -> 63.9 %
+                #: （「LE 主导」结论稳健，**绝对占比 70.35 % 必须带平滑状态引用**）。
+                #: ★ 动的是**经 `section_cp_curve` 的 22 列**；`cl_p`/`cl_kj`/求解器诊断等 16 列
+                #: **一个都没动** —— 载荷直接由 φ 积分，正是「载荷不平滑」裁决的形状。
+                #: ★ `xshock_*` 虽也走 curves，但 5 个未遮蔽站最大只动 **+0.0028 x/c**
+                #: （比激波位置带小一个量级）⇒ (a) 类判据安全。
+                #: ★ 那三个 CSV **刻意不重生成**：重生成 = 静默给一个已关闭轮次再基线。
+                #: 全部证据与推理：`docs/dev_phase_six/20260826-0100-m3a-smoothing-erratum.md`。
                 curves[eta] = section_cp_curve(mc, phi, eta=eta, smooth_passes=1,
                                                b_semi=B_SEMI, m_inf=M_INF)
             per = {}
