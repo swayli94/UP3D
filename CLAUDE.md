@@ -583,7 +583,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **631 passed + 32 skipped +
+3. Full suite: `pytest tests/` — current baseline **639 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @689.35 s @8 threads at
+   load 14.1**, phase-six rounds 10–20).
+   ★★ C08 Ringleb closed the C class: **placeholders in tests/C are now 0**, which
+   discharges user ruling ② ("build every C-class case"). +8 passed, skipped nets
+   to zero (placeholder skip out, figure-export skip in).
+   Previous: **631 passed + 32 skipped +
    2 xfailed, 0 failed** (2026-08-26, **measured in full @573.51 s @8 threads at
    load 14.8**, phase-six rounds 10–19).
    ★ vs the 621/32/2 below: C07 went placeholder → real gate, **+10 passed**,

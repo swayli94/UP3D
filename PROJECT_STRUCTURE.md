@@ -630,7 +630,7 @@ tests/                     # 门与单元测试 —— ★★ 2026-08-24 全量�
 │                           #   3-D 展向不均匀会把求解器误差与网格效应混在一起）
 ├── C/                    # **解析解 + 图** —— 9 文件 / 24 条。判据形状 = **收敛阶 ∧ 绝对误差不过大**
 │                           #   （裁决③）；整机网格收敛性归此类但**只判阶**（边界裁决①）
-│                           #   ★ 占位 1：C08 ringleb（C05/C06/C07 已于 2026-08-26 实现）
+│                           #   ★ 占位 0 —— C05/C06/C07/C08 已于 2026-08-26/27 全部实现（裁决②「C 类全都建立」已完成）
 ├── D/                    # **参考解 + 图** —— 10 文件 / 25 条。三层参照（裁决三）：
 │                           #   **无粘对 Euler 设门 · 有粘耦合对 RANS 设门 · 对实验记录偏置**；
 │                           #   对实验一律用**实验攻角、不修正**（裁决二）
@@ -1667,7 +1667,11 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **631 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+Baselines: always-on **639 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
+full @689.35 s @8 threads at load 14.1, phase-six 第 10–20 轮).
+★★ C08 Ringleb 关闭了 C 类：**tests/C 的占位门为 0**，裁决②「C 类全都建立」完成。
++8 passed，skipped 净变 0。
+Previous: **631 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
 full @573.51 s @8 threads at load 14.8, phase-six 第 10–19 轮).
 ★ 相对 621/32/2：C07 占位 → 实门 **+10 passed**，skipped 净变 0。
 Previous: **621 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
