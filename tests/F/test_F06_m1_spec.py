@@ -52,11 +52,51 @@ def test_thresholds_are_the_ruling(gate):
     assert gate.M1C_TOL == 0.20
 
 
-def test_shock_reference_is_the_committed_one(gate):
-    """★ The script used to carry 0.61 +- 0.02, which appears in nine documents and in NO
-    reference file. The committed reference is 0.62 +- 0.03
-    (cases/reference_data/naca0012_m080/shock_reference.csv)."""
-    assert (gate.SHOCK_REF, gate.SHOCK_TOL) == (0.62, 0.03)
+#: 裁决固定的激波参照（AGARD/Euler 锚点，见 shock_reference.csv 的 provenance 列）
+SHOCK_REF_COMMITTED = (0.62, 0.03)
+
+
+def _read_committed_shock_row():
+    import csv as _csv
+    path = os.path.join(str(REPO_ROOT), "cases", "reference_data",
+                        "naca0012_m080", "shock_reference.csv")
+    with open(path, newline="", encoding="utf-8") as fh:
+        return next(r for r in _csv.DictReader(fh) if r["quantity"] == "upper_shock_x_c")
+
+
+def test_the_committed_shock_reference_has_not_drifted():
+    """★ 已提交的参照本身不许静默漂移。0.61 ± 0.02 曾出现在**九份文档、零个参考文件**里；
+    committed 的是 **0.62 ± 0.03**，且标着 `gated=yes`。"""
+    row = _read_committed_shock_row()
+    got = (float(row["value"]), float(row["tolerance"]))
+    assert got == SHOCK_REF_COMMITTED, (
+        f"shock_reference.csv 的 upper_shock_x_c 从 {SHOCK_REF_COMMITTED} 变成 {got} —— "
+        "若是有意的，改本文件的期望值并按纪律 11 grep 被移动的数字")
+    assert row["gated"] == "yes", "upper_shock_x_c 被标成非 gated，它就不该当判据锚点"
+
+
+def test_the_gate_actually_reads_that_file(gate, tmp_path):
+    """★★★ **行为性地**验这条链是活的：把参照写成一个**改过的临时副本**，
+    读取函数必须返回**改过的值**。
+
+    ★★ **本条的前两版都是坏的，两次都是同一族判据缺陷，记在这里：**
+    ① 第一版 `assert (gate.SHOCK_REF, gate.SHOCK_TOL) == (0.62, 0.03)` —— 而
+    `run_m1_gate.py` 里也是 `SHOCK_REF, SHOCK_TOL = 0.62, 0.03`，**两个硬编码字面量
+    互相印证**，参考文件只在 docstring 里。改 CSV 什么都不会红。
+    ② 第二版让脚本真的读了 CSV，然后断言「门的值 == 文件里的值」—— **按构造恒真**，
+    两边一起动。实测：把 CSV 改成 0.64，门**依然全绿**。
+    ⇒ 一个值和**它自己的来源**相等，不是一条判据。要验的是**改来源、值会跟着动**。
+    """
+    src = _read_committed_shock_row()
+    p = tmp_path / "shock_reference.csv"
+    p.write_text(
+        "quantity,value,tolerance,gated,provenance\n"
+        "upper_shock_x_c,0.6400,0.0500,yes,teeth-probe\n", encoding="utf-8")
+    got = gate._read_shock_reference(str(p))
+    assert got == (0.64, 0.05), (
+        f"读取函数对改过的来源返回 {got} —— 它没有真的在读那个文件")
+    #: ★ 且模块级的取值确实走这条路（不是另一处字面量）
+    assert (gate.SHOCK_REF, gate.SHOCK_TOL) == (float(src["value"]), float(src["tolerance"]))
 
 
 def test_criteria_returns_two_independent_verdicts(gate, rows):

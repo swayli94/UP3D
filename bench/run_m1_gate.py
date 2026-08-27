@@ -72,7 +72,30 @@ M1C_TOL = 0.20
 #: solution that is uniformly wrong -- upwind_c = 1.10 at medium is a measured instance
 #: (converged, 0 clamps, |R| 2.3e-13, Gamma off 7.6x, x_shock 0.657 OUTSIDE the band, and
 #: (c) counts it as a legal leg). See bench/usability.py.
-SHOCK_REF, SHOCK_TOL = 0.62, 0.03
+def _read_shock_reference(path=None):
+    """★★★ **真的去读**已提交的参考文件，而不是把它的值抄成字面量。
+
+    2026-08-27 实测发现的缺陷：本行原先是 `SHOCK_REF, SHOCK_TOL = 0.62, 0.03` —— 一个
+    **硬编码字面量**，而 CLAUDE.md 记的是「it now **reads** the committed 0.62 ± 0.03
+    from cases/reference_data/naca0012_m080/shock_reference.csv」。**值改对了，但「读」这个
+    动作从未发生**：改 CSV 不会让任何东西变红。⇒ 那道为了消灭「一个出现在九份文档、
+    却不在任何参考文件里的数字」而立的门，自己仍拿着一个**与参考文件没有活连接**的数字。
+    ★ 是运行时探针（包住 `open` 跑全套）发现的 —— grep 看得见三个文件"提到"
+    `naca0012_m080`，看不见**没有一个真的打开它**。
+    """
+    import csv as _csv
+    #: ★ `path` 可注入，好让门**行为性地**验这条链是活的（改来源、值跟着动），
+    #: 而不是断言「值 == 它自己的来源」那种按构造恒真的东西。
+    path = path or (REPO / "cases" / "reference_data" / "naca0012_m080"
+                    / "shock_reference.csv")
+    with open(path, newline="", encoding="utf-8") as fh:
+        for row in _csv.DictReader(fh):
+            if row["quantity"] == "upper_shock_x_c":
+                return float(row["value"]), float(row["tolerance"])
+    raise RuntimeError(f"upper_shock_x_c not found in {path}")
+
+
+SHOCK_REF, SHOCK_TOL = _read_shock_reference()
 CS = (1.0, 1.5, 3.0)
 LEVELS = ("coarse", "medium")
 #: ★ THE SEED IS AN AXIS, added 2026-08-05, because it moved a published number.

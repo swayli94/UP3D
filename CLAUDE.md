@@ -583,7 +583,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **639 passed + 32 skipped +
+3. Full suite: `pytest tests/` — current baseline **640 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @687.69 s @8 threads at
+   load 15.0**, phase-six rounds 10–22).
+   ★ +1 vs the 639 below: F06's shock-reference lock split into two (the committed
+   value must not drift, and the gate must ACTUALLY READ it — verified behaviourally).
+   Previous: **639 passed + 32 skipped +
    2 xfailed, 0 failed** (2026-08-27, **measured in full @689.35 s @8 threads at
    load 14.1**, phase-six rounds 10–20).
    ★★ C08 Ringleb closed the C class: **placeholders in tests/C are now 0**, which
@@ -651,6 +656,22 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ Also fixed at source: the gate carried `SHOCK_REF, SHOCK_TOL = 0.61, 0.02`, a number
    that appears in nine documents and in **no reference file**; it now reads the committed
    **0.62 ± 0.03** from `cases/reference_data/naca0012_m080/shock_reference.csv`.
+   ★★★ **ERRATUM 2026-08-27 — "reads" was false, and the correction is the interesting part.**
+   The VALUE was updated to match the committed file, but the code kept a **hard-coded
+   literal**: `bench/run_m1_gate.py` still said `SHOCK_REF, SHOCK_TOL = 0.62, 0.03`, and the
+   lock meant to protect it, `tests/F/test_F06_m1_spec.py`, asserted that literal against
+   **another literal**. Editing the CSV made nothing go red. ⇒ **the gate written to kill "a
+   number with no reference file" carried a number with no LIVE LINK to its reference file.**
+   Now `_read_shock_reference()` actually parses the CSV, and the lock is **behavioural**:
+   it feeds a PERTURBED copy to the reader and requires the value to follow.
+   ★★ Two dead criteria were written before that one worked, both the same family:
+   (i) literal-vs-literal, and (ii) "the gate's value equals the file's value" — which is
+   **true by construction** once the gate reads the file (measured: changing the CSV to 0.64
+   left the suite green). **A value equalling its own source is not a criterion.**
+   ★ Found by a RUNTIME probe (wrap `open`, run the suite, record which
+   `cases/reference_data/` files are actually opened), not by grep: grep sees three files
+   *mentioning* `naca0012_m080` and cannot see that **none of them opens it** — the other two
+   are gated and do not run by default.
    Previous: **589 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-24, **measured in full @690.49 s @8 threads at
    load 12.6**, phase-five R23).

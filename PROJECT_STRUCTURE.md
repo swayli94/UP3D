@@ -1667,7 +1667,10 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **639 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
+Baselines: always-on **640 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
+full @687.69 s @8 threads at load 15.0, phase-six 第 10–22 轮).
+★ +1：F06 的激波参照锁拆成两条（committed 值不许漂移 + 门必须**真的读**它，行为性验证）。
+Previous: **639 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
 full @689.35 s @8 threads at load 14.1, phase-six 第 10–20 轮).
 ★★ C08 Ringleb 关闭了 C 类：**tests/C 的占位门为 0**，裁决②「C 类全都建立」完成。
 +8 passed，skipped 净变 0。
