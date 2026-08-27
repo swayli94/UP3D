@@ -630,7 +630,7 @@ tests/                     # 门与单元测试 —— ★★ 2026-08-24 全量�
 │                           #   3-D 展向不均匀会把求解器误差与网格效应混在一起）
 ├── C/                    # **解析解 + 图** —— 9 文件 / 24 条。判据形状 = **收敛阶 ∧ 绝对误差不过大**
 │                           #   （裁决③）；整机网格收敛性归此类但**只判阶**（边界裁决①）
-│                           #   ★ 占位 4：C05 nozzle · C06 lifting_cylinder · C07 karman_trefftz · C08 ringleb
+│                           #   ★ 占位 1：C08 ringleb（C05/C06/C07 已于 2026-08-26 实现）
 ├── D/                    # **参考解 + 图** —— 10 文件 / 25 条。三层参照（裁决三）：
 │                           #   **无粘对 Euler 设门 · 有粘耦合对 RANS 设门 · 对实验记录偏置**；
 │                           #   对实验一律用**实验攻角、不修正**（裁决二）
@@ -1667,7 +1667,16 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **605 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+Baselines: always-on **631 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+full @573.51 s @8 threads at load 14.8, phase-six 第 10–19 轮).
+★ 相对 621/32/2：C07 占位 → 实门 **+10 passed**，skipped 净变 0。
+Previous: **621 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+full @450.16 s @8 threads at load 4.1, phase-six 第 10–18 轮).
+★ 相对 614/32/2：C05 占位 → 实门 **+7 passed**，skipped 净变 0。
+Previous: **614 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
+full @664.75 s @8 threads at load 15.1, phase-six 第 10–17 轮).
+★ 相对 605/32/2：C06 占位 → 实门 **+9 passed**，skipped 净变 0（占位 −1、导图 +1）。
+Previous: **605 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-26, measured in
 full @400.94 s @8 threads at load 13.7, phase-six 第 10–16 轮).
 ★ 相对 604/33/2：删掉退役的 `test_ab_bit_identity_gate_free_library`（plain skip，前提为假）
 **−1 skipped**，F07 第 6 条（活代码内嵌路径必须存在）**+1 passed** ⇒ **604+1 = 605、33−1 = 32**。

@@ -29,7 +29,7 @@ def gate_evidence_dir(request):
 
     **写与不写**（避免 churn，同时保证图与断言同源）：
       - 平时跑：**不写**，断言对着已提交的 `summary.csv` ⇒ 代码一改答案就红，逼出一次有意的刷新；
-      - `PYFP3D_GATE_FIGURES=1`：同一次计算重写 `summary.csv` + `figures/*.png`。
+      - `PYFP3D_GATE_FIGURES=1`：同一次计算重写 `summary.csv` + `<门号>/*.png`。
     ⇒ 图与断言来自**同一次计算，构造保证**；刷新走本项目已有的再基线勘误纪律。
     """
     #: 门号 = 测试文件名的 <CLASS><nn>_<stem> 段，于是「门 <-> 证据目录」可机械互查
@@ -37,7 +37,10 @@ def gate_evidence_dir(request):
     gate = stem[len("test_"):] if stem.startswith("test_") else stem
     d = REPO_ROOT / "cases" / "gates" / gate
     if os.environ.get("PYFP3D_GATE_FIGURES"):
-        (d / "figures").mkdir(parents=True, exist_ok=True)
+        #: ★ 建门目录本身，不建 `figures/` 子目录 —— 2026-08-26 实测：fixture 建了它，
+        #: 而**八个门一个都没往里写**（PNG 全写在门目录根下），git 又不跟踪空目录，
+        #: 于是它只是本地噪声。**规则与实现不一致，改规则跟实现走。**
+        d.mkdir(parents=True, exist_ok=True)
     return d
 
 

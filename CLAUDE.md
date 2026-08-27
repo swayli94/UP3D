@@ -583,7 +583,22 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **605 passed + 32 skipped +
+3. Full suite: `pytest tests/` — current baseline **631 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @573.51 s @8 threads at
+   load 14.8**, phase-six rounds 10–19).
+   ★ vs the 621/32/2 below: C07 went placeholder → real gate, **+10 passed**,
+   skipped nets to zero (placeholder skip out, figure-export skip in).
+   Previous: **621 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @450.16 s @8 threads at
+   load 4.1**, phase-six rounds 10–18).
+   ★ vs the 614/32/2 below: C05 went placeholder → real gate, **+7 passed**, and
+   skipped nets to zero (placeholder skip out, figure-export skip in).
+   Previous: **614 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @664.75 s @8 threads at
+   load 15.1**, phase-six rounds 10–17).
+   ★ vs the 605/32/2 below: C06 went placeholder → real gate, **+9 passed**, and
+   skipped nets to zero (the placeholder skip goes, the figure-export skip arrives).
+   Previous: **605 passed + 32 skipped +
    2 xfailed, 0 failed** (2026-08-26, **measured in full @400.94 s @8 threads at
    load 13.7**, phase-six rounds 10–16).
    ★ vs the 604/33/2 below: deleting the retired `test_ab_bit_identity_gate_free_library`

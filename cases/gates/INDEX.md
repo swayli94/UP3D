@@ -60,6 +60,79 @@
 *C03_laplace_sphere/sphere_cp_meridian.png*
 
 
+## C05_nozzle_quasi1d
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`C05_nozzle_quasi1d/summary.csv`](C05_nozzle_quasi1d/summary.csv) — 4 行（3 级阶梯 + **反例腿**），列 `nx, h, n_max, converged, reason, n_newton, residual, x_shock, x_s_exact, err_x, err_cells`
+
+★★★ **项目里唯一带激波的精确解。** 左图三级 u(x) 全部贴在精确准一维解上，激波稳定落在
+精确位置 x_s = 12 的**上游**约 0.7 个单元；右图 `|err_x|` 沿一阶线走（实测阶 **0.927 / 0.834**），
+而 `|err_cells|` 几乎是平的（0.651 / 0.685 / 0.768）—— **位置在收敛，捕捉宽度保持亚单元**。
+
+★★★ **CSV 第 4 行不是阶梯的一部分，它是本门最值钱的一条**：从 x_s = 8 的解出发
+（边界数据仍是 x_s = 12 的真值），nx = 200 收敛到 **`reason=tol`、|R| = 1.3e-15**（机器零），
+而激波停在 **x = 7.98**，错 **−40.17 个单元**。而 `verify_uniqueness` 证明**连续解唯一**
+（Δφ 19.3186 > 17.6307）⇒ 那是**离散算子的伪根**。**在一个有真值的案例上，
+`converged` 被证明不是正确性证书** —— `bench/usability.py` 在翼型上只能拿共识当锚点。
+
+★★ **h = 0.05 那条腿 `reason=cap`，本门仍然用它 —— 许可是门自己证的**：迭代上限
+20 → 40 → 80 时残差只在 ~2e-8 的地板上晃（4.45e-08 → 1.89e-08），而 **x_shock 只动
+1.3e-06 = 2.6e-05 个单元** ⇒ 对**位置**可用、对**残差**不可用。
+
+![c05_nozzle_shock.png](C05_nozzle_quasi1d/c05_nozzle_shock.png)
+
+*C05_nozzle_quasi1d/c05_nozzle_shock.png*
+
+
+## C06_lifting_cylinder
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`C06_lifting_cylinder/summary.csv`](C06_lifting_cylinder/summary.csv) — 3 行，列 `level, h_wall, n_nodes, n_wall, cp_max, cp_rms, cl_p, cl_exact, cl_rel, residual, n_kutta`
+
+★★★ **本门的核心是「给进 Γ、量出 cl」** —— 圆柱没有尖尾缘，Kutta 选不出环量，所以
+Γ 被**规定**（`gamma_fixed`，实测 `n_kutta_updates == 0`）；右图里 `cl rel err` 那条线
+走的是**表面 Cp 恢复 + 面积分**，对的是 Kutta–Joukowski 的 `2Γ/(U c)`，两条路毫无交集。
+
+★★ **右图标题「all scales refined together」是判据的一部分，不是描述**：实测把
+`h_far` 钳成固定值（只加密壁面）会让 Cp 阶从 **1.686 塌到 0.325**、cl 误差**完全不动**
+（1.124 % → 1.136 %）—— 与 P11 在球上测到的固定体网格污染地板同一形状。
+
+★ 右图 `cl rel err` 在两个粗级之间**是平的**（3.393 % → 3.477 %，阶 −0.035）：
+xcoarse 只有 598 节点、`h_far` 12 而域半径 15，仍在**前渐近区**。**如实画出、记为
+RECORDED，不纳入收敛判据** —— 收缩只从 coarse → medium 判（实测 3.06×）。
+
+![c06_lifting_cylinder.png](C06_lifting_cylinder/c06_lifting_cylinder.png)
+
+*C06_lifting_cylinder/c06_lifting_cylinder.png*
+
+
+## C07_karman_trefftz
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`C07_karman_trefftz/summary.csv`](C07_karman_trefftz/summary.csv) — 3 行，列 `level, h_wall, n_nodes, n_wall, n_kutta, gamma, gamma_exact, gamma_rel, cl, cl_exact, cl_rel, cp_rms, band_LE, band_MID, band_TE, n_LE, n_MID, n_TE, match_max`
+
+★★★ **唯一能把 Kutta 条件对精确 Γ 检验的门。** C06 的圆柱没有尖尾缘、Γ 是**规定**的；
+KT 有**有限尾缘角**，Kutta **必须自己选出** Γ（`n_kutta` 列 = 2，不是 0），而精确值有解析式。
+medium：**Γ 2.803 % / cl 3.045 %**，两条独立路线（Kutta 行 vs 表面压力积分）**相差 8 %**。
+
+★★★ **右图的标题就是本轮的发现：积分量收敛，前缘点值不收敛 —— 而且在同一个解上。**
+Γ 阶 2.109 / 1.493、cl 阶 1.957 / 1.468、Cp **MID** 带 2.893 / 1.761；而 **LE 带阶 0.085**、
+**TE 带 0.53 / 0.65**。两个慢带都有已定位的成因：
+· **LE** = 本项目 **G1.6 那一族**（P1 场在前缘吸力峰上的固有能力），**首次在有精确解的
+二维翼型上复现**；排除过两个混淆项 —— 折线几何点数 ×20 只让 LE 阶 0.241→0.287，
+oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1574。
+· **TE** = **有限楔角本身**：精确解 |q| 以 (ζ−b)^(τ/π) 趋零，τ=10° 时指数只有 0.0556，
+θ=1e-5 处精确 |q| 还有 0.49 ⇒ **精确解自己就没有干净的驻点**。
+
+★★ **紫线（LE 带）只有两个点，不是漏画**：xcoarse 上 x<0.05 内**一个壁面节点都没有**
+（`n_LE` 列 = 0）。**自变量改变了样本是否存在** ⇒ LE 带只判「显著慢于 MID」（实测 20.6×），
+不判它自己的阶。
+
+![c07_karman_trefftz.png](C07_karman_trefftz/c07_karman_trefftz.png)
+
+*C07_karman_trefftz/c07_karman_trefftz.png*
+
+
 ## C09_prandtl_glauert_peak
 
 **判据读的 CSV**（平时跑就是对着它断言）：
