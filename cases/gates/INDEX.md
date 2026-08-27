@@ -221,3 +221,31 @@ oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1
 **判据读的 CSV**（平时跑就是对着它断言）：
 - [`D03_naca0012_m080_shock/G4.1/summary_coarse.csv`](D03_naca0012_m080_shock/G4.1/summary_coarse.csv) — 27 行，列 `quantity, value`
 
+
+## D11_naca0012_experiment_bias
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`D11_naca0012_experiment_bias/summary.csv`](D11_naca0012_experiment_bias/summary.csv) — 6 行（3 工况 × 2 级），列 `case, level, converged, mode, residual, n_newton, n_limited, n_floored, mach_max, cl_p, rms_upper, rms_lower, pre_shock_rms, post_shock_rms, x_shock, x_shock_exp, shock_offset`
+
+★★★ **本门的产物是"偏置"，不是 pass/fail** —— 裁决三：**对无粘用 Euler 设门、对实验记录偏置**。
+拿一个无粘全速势解对实验做 pass/fail，会把**我们刻意不建模的物理**（边界层位移、
+激波-边界层干涉、分离）算成缺陷。★ 这批数据**在 2026-08-27 之前从未被任何代码读过**，
+发现它的是一个包住 `open` 的**运行时探针**，不是 grep。
+
+★★★ **三个工况按"粘性物理有多重要"干净分层，图上一眼可见**（medium 上表面 RMS）：
+**0.0779（近零升） < 0.3944（α=2°） < 1.5235（近失速）**。左图无粘曲线基本贴住实验点、
+两条激波线几乎重合；中图无粘上表面明显更负、激波远在下游（+0.1219 c）；
+右图前缘吸力峰冲到 −9 而实验约 −7。
+
+★★ **激波前 / 激波后的分离，印证了裁决一「(b) 设门、(d) 只记录」**：M0.803 的激波**前**
+RMS 随加密 **0.0926 → 0.0369 改善**，激波**后** **0.0609 → 0.0807 恶化**。
+⇒ 激波前是无粘模型能负责的地方，激波后不是。
+
+★★ **两处判据是被实测收窄的**：① 「无粘激波在实验激波下游」只挂在 **M0.778 coarse
+（+0.1219 c）**，因为 **M0.803 的偏置跨越零**（coarse −0.0151、medium +0.0129）——
+那一格的激波弱、位置分辨不到 ±0.015，符号在那里没有意义；② M0.778 的 **medium 腿是
+`limit_cycle`**（残差尾巴 2.29e-07 → 3.82e-07 → 2.61e-07，周期 3），**不被任何判据引用**。
+
+![d11_experiment_bias.png](D11_naca0012_experiment_bias/d11_experiment_bias.png)
+
+*D11_naca0012_experiment_bias/d11_experiment_bias.png*

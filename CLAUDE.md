@@ -583,7 +583,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **640 passed + 32 skipped +
+3. Full suite: `pytest tests/` — current baseline **647 passed + 33 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @571.97 s @8 threads at
+   load 15.9**, phase-six rounds 10–23).
+   ★ +7 passed / +1 skipped vs the 640 below = `tests/D/test_D11_naca0012_experiment_bias.py`
+   (7 checks plus its opt-in figure-export leg).
+   Previous: **640 passed + 32 skipped +
    2 xfailed, 0 failed** (2026-08-27, **measured in full @687.69 s @8 threads at
    load 15.0**, phase-six rounds 10–22).
    ★ +1 vs the 639 below: F06's shock-reference lock split into two (the committed

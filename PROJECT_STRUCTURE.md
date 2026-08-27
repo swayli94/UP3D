@@ -1667,7 +1667,10 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **640 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
+Baselines: always-on **647 passed / 33 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
+full @571.97 s @8 threads at load 15.9, phase-six 第 10–23 轮).
+★ +7 passed / +1 skipped = `tests/D/test_D11_naca0012_experiment_bias.py`（7 条 + 导图腿）。
+Previous: **640 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
 full @687.69 s @8 threads at load 15.0, phase-six 第 10–22 轮).
 ★ +1：F06 的激波参照锁拆成两条（committed 值不许漂移 + 门必须**真的读**它，行为性验证）。
 Previous: **639 passed / 32 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in
