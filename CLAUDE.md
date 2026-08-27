@@ -583,7 +583,20 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **647 passed + 33 skipped +
+3. Full suite: `pytest tests/` — current baseline **653 passed + 34 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @809.02 s @8 threads at
+   load 16.0**, phase-six rounds 10–24).
+   ★ +6 passed / +1 skipped = `tests/D/test_D12_rae2822_experiment_bias.py`.
+   ★★ That round also fixed a real library defect: `post/section_cut.py` assigned
+   upper/lower by `dot(mid, hint) > 0`, i.e. **y > 0** — correct for a symmetric
+   section, WRONG for a cambered one. RAE2822's aft LOWER surface has y > 0, so 37
+   of its points (medium) were interleaved into `x_upper`, which made smoothing
+   inert there and contaminated any RMS or cn built on that array. Same global-hint
+   rule that `mesh/wake_cut.py` had already fixed for the Kutta probe (GV5.2
+   addendum #1) and never backported — discipline #9. Now a LOCAL outward-normal
+   test. ★ **Erratum radius measured ZERO**: NACA0012 and M6 section curves are
+   BIT-IDENTICAL across the change; only RAE2822 moves (222/186 → 204/204).
+   Previous: **647 passed + 33 skipped +
    2 xfailed, 0 failed** (2026-08-27, **measured in full @571.97 s @8 threads at
    load 15.9**, phase-six rounds 10–23).
    ★ +7 passed / +1 skipped vs the 640 below = `tests/D/test_D11_naca0012_experiment_bias.py`

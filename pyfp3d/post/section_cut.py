@@ -259,8 +259,9 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
 
     wall = np.asarray(mesh.boundary_faces[wall_tag], dtype=np.int64)
     grad_tri, area, _ = triangle_tangential_gradients(mesh.nodes, wall, phi)
+    #: ★ 侧别判据现在也要用它，所以无条件计算（此前只在 smooth_passes > 0 时算）
+    onrm = wall_outward_normals(mesh.nodes, mesh.elements, wall)
     if smooth_passes > 0:
-        onrm = wall_outward_normals(mesh.nodes, mesh.elements, wall)
         adj = wall_triangle_adjacency(wall)
         grad_tri = smooth_wall_tangential_gradients(
             grad_tri, onrm, area, adj, n_passes=smooth_passes)
@@ -271,9 +272,25 @@ def _wall_section_points(mesh, phi, z: float, u_inf: float,
     idx, mids = _wall_plane_crossings(mesh.nodes, wall, z)
     xs = mids[:, 0]
     cps = _cp_from_q2(q2[idx], m_inf, gamma)
-    # Geometric side hint (conforming path): per-row np.dot preserves the
-    # original summation order -- do NOT vectorize to `mids @ hint`.
-    sides = np.array([float(np.dot(m, hint)) > 0.0 for m in mids], dtype=bool)
+    #: ★★★ **侧别判据：局部外法向，不是全局位置**（2026-08-27 修）。
+    #:
+    #: 原判据是 `dot(mid, hint) > 0`，`hint` 默认 (0,1,0) ⇒ 实际是 **y > 0**。
+    #: 对**对称**翼型正确；对**有弯度**翼型错 —— RAE2822 的尾缘段下表面 y 为正，
+    #: 于是被判成上表面。实测（medium，Case 7）：`x_lower` 在 **0.9100 处截断**，
+    #: 而那些点以 Cp ≈ +0.40 **交错进 `x_upper`**（真上表面在那里 Cp ≈ 0.00），
+    #: 共 **37 点**；coarse 上 19 点。后果是 `cp_upper` 在 x ≳ 0.915 上交错两个分支：
+    #: 图上呈密集锯齿、二阶差分中位 **0.58**、而**平滑无效**（它在交错数组上做平均），
+    #: 并污染任何基于 `cp_upper` 的 RMS 与由上下曲线积分出的 cn。
+    #:
+    #: ★★ 这是一笔**旧账**：同一条 global-hint 规则在 `mesh/wake_cut.py` 的 Kutta 探针
+    #: 上已被 GV5.2 addendum #1 修过（"RAE2822 reflex camber puts BOTH TE flank
+    #: neighbours on the +y side of the TE node"），加了尾缘楔角二等分回退，
+    #: **但从未回移到这里** —— 纪律 #9（两条路径 ⇒ 回移检查）。
+    #:
+    #: ★ 正确判据是局部的：**外法向朝 +hint 的那一面是上表面**。它对弯度免疫，
+    #: 因为翼型下表面无论 y 正负，其外法向总朝下。
+    #: ★ 保留逐行 np.dot 的写法（原注释：保持求和顺序，不要向量化成 `@`）。
+    sides = np.array([float(np.dot(onrm[i], hint)) > 0.0 for i in idx], dtype=bool)
     #: ★ 2026-08-25：多返回 ys = 截面内的**厚度坐标**。截面 Cp 积分出 cl 需要它
     #: （轴向分量要 dy/dx）；此前它被丢在这里，于是「由截面压力分布积分出的截面 cl」
     #: 在库里**无法实现**。返回元数 3 -> 4，两个调用方都在本文件内，已同步。

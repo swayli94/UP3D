@@ -249,3 +249,29 @@ RMS 随加密 **0.0926 → 0.0369 改善**，激波**后** **0.0609 → 0.0807 �
 ![d11_experiment_bias.png](D11_naca0012_experiment_bias/d11_experiment_bias.png)
 
 *D11_naca0012_experiment_bias/d11_experiment_bias.png*
+
+## D12_rae2822_experiment_bias
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`D12_rae2822_experiment_bias/summary.csv`](D12_rae2822_experiment_bias/summary.csv) — 4 行（2 工况 × 2 级），列 `case, level, converged, mode, residual, n_newton, n_limited, n_floored, mach_max, cl_p, cn, cn_exp, cn_rel, rms_upper, rms_lower, x_shock, x_shock_exp, shock_offset`
+
+★★★ **与 D11 同一形状：产物是偏置，不是 pass/fail。** medium 实测 —— **无粘全速势把法向力
+高估 38–55 %**（Case 7 **+54.7 %**、Case 9 **+38.0 %**），**激波压后 ~0.12 c**。两者是同一件事
+的两面：边界层位移把真实激波前移、并使有效弯度下降，无粘模型两样都没有。
+★ 与有粘路径对照：GV5.2 在**耦合**路径上测到激波仍偏后 0.06–0.10 c —— 本门的 0.12 c 是**无粘**量级。
+
+★★ **用 cn 不用 cl，是为了同尺**：实验只有 (x, Cp)、**没有 y** ⇒ 轴向项不可得，两边都只取
+`cn = ∫(cp_l − cp_u) d(x/c)`。
+
+★★★ **这道门在建的过程中查出了一个真实的库缺陷**（已修，见 `pyfp3d/post/section_cut.py`）：
+侧别判据原是 `dot(mid, hint) > 0`，即 **y > 0** —— 对称翼型对，**有弯度翼型错**。
+RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9100 截断**，那 **37 个点**
+以 Cp ≈ +0.40 **交错进 `x_upper`**（真上表面那里 Cp ≈ 0.00）。后果是图上密集锯齿、
+上表面二阶差分中位 **0.58**、**平滑无效**，并污染 `rms_upper` 与 `cn`。
+★★ 它是**看已提交的图**看出来的 —— 而我的前两个解释（绘图未排序 / 真实锯齿）都是错的，
+第三次测量才落到实处。
+★ 修法是局部**外法向**判据；**实测勘误半径为零**：NACA0012 与 M6 的截面曲线**逐位相同**。
+
+![d12_rae2822_bias.png](D12_rae2822_experiment_bias/d12_rae2822_bias.png)
+
+*D12_rae2822_experiment_bias/d12_rae2822_bias.png*
