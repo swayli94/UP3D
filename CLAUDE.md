@@ -583,7 +583,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **653 passed + 34 skipped +
+3. Full suite: `pytest tests/` — current baseline **659 passed + 35 skipped +
+   2 xfailed, 0 failed** (2026-08-28, **measured in full @729.22 s @8 threads at
+   load 7.3**, phase-six rounds 10–26).
+   ★ +6 passed / +1 skipped = `tests/D/test_D13_ibl_vs_xfoil.py` — the loose-coupled
+   IBL against XFOIL 6.99, gated upstream and structure-locked downstream.
+   Previous: **653 passed + 34 skipped +
    2 xfailed, 0 failed** (2026-08-27, **measured in full @809.02 s @8 threads at
    load 16.0**, phase-six rounds 10–24).
    ★ +6 passed / +1 skipped = `tests/D/test_D12_rae2822_experiment_bias.py`.
