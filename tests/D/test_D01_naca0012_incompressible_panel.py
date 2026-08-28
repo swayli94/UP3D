@@ -13,7 +13,8 @@ import csv
 
 import numpy as np
 import pytest
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 import matplotlib
 matplotlib.use("Agg")
@@ -91,8 +92,8 @@ def test_g23_cl_vs_panel_reference(medium_case, coarse_case,
     for level, case in (("coarse", coarse_case), ("medium", medium_case)):
         cl = case["forces"]["cl"]
         cl_g = float(sectional_cl_from_gamma(case["result"]["gamma"])[0])
-        rows.append((level, f"{cl:.6f}", f"{cl_g:.6f}", f"{cl_ref:.6f}",
-                     f"{100 * (cl / cl_ref - 1):.3f}",
+        rows.append((level, fmt(cl), fmt(cl_g), fmt(cl_ref),
+                     fmt(100 * (cl / cl_ref - 1)),
                      case["result"]["n_kutta_updates"]))
 
     gate_dir = gate_evidence_dir / "G2.3"
@@ -123,7 +124,7 @@ def test_g24_gamma_vs_pressure_lift(medium_case, gate_evidence_dir):
     with open(gate_dir / "summary.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["cl_pressure", "cl_gamma", "rel_diff_pct"])
-        w.writerow([f"{cl_p:.6f}", f"{cl_g:.6f}", f"{100 * rel:.4f}"])
+        w.writerow([fmt(cl_p), fmt(cl_g), fmt(100 * rel)])
 
     # V2.4: the two lift routes side by side with the 1% band.
     fig, ax = plt.subplots(figsize=(5, 4))
@@ -318,3 +319,27 @@ def test_section_cut_general_path_linear_exact(coarse_case):
     sec = section_cut(mc, {"f": f}, z=z)
     expected = 2.0 * sec.points2d[:, 0] - 0.5 * sec.points2d[:, 1] + 0.25 * z
     np.testing.assert_allclose(sec.fields["f"], expected, atol=1e-12)
+
+
+
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `G2.3/summary.csv`。四个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `coarse_case` / `medium_case`。
+    ★ `cl_panel_ref` 是**外部参照**（Hess–Smith 面元），门自己直接读，不必二次锁。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self, coarse_case, medium_case):
+        import os
+
+        fresh = {}
+        for lv, c in (("coarse", coarse_case), ("medium", medium_case)):
+            fresh[(lv,)] = {
+                "cl_pressure": float(c["forces"]["cl"]),
+                "cl_gamma": float(sectional_cl_from_gamma(c["result"]["gamma"])[0])}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates",
+                         "D01_naca0012_incompressible_panel", "G2.3"),
+            fresh, ("cl_pressure", "cl_gamma"), key_of=lambda r: (r["level"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                         "tests/D/test_D01_naca0012_incompressible_panel.py")
+        assert n == 4, f"比了 {n} 个数，应为 4（2 级 x 2 列）"

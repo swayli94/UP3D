@@ -42,7 +42,7 @@ def fmt(v):
 
 
 def assert_matches_committed(gate_dir, fresh, measured, rel_tol=DEFAULT_REL_TOL,
-                             key_of=None, refresh_hint=None):
+                             key_of=None, refresh_hint=None, filename="summary.csv"):
     """把**本次算出的**实测值与已提交的 `summary.csv` 逐行比对。
 
     Args:
@@ -58,7 +58,9 @@ def assert_matches_committed(gate_dir, fresh, measured, rel_tol=DEFAULT_REL_TOL,
     ★ 断言消息里带**刷新命令 + 纪律 11 提醒** —— 因为刷新证据往往同时要改门 docstring
     的表、`cases/gates/INDEX.md` 的条目和台账，漏一处就是下一次审计的发现。
     """
-    path = os.path.join(str(gate_dir), "summary.csv")
+    #: ★ `filename` 可传：D03 的证据按级分文件（`summary_coarse.csv`），
+    #: 硬编码 `summary.csv` 会让它找不到而报"证据不存在"。
+    path = os.path.join(str(gate_dir), filename)
     assert os.path.exists(path), (
         f"已提交的证据 {path} 不存在。生成：{refresh_hint or 'PYFP3D_GATE_FIGURES=1 pytest <本门>'}")
     with open(path, newline="", encoding="utf-8") as fh:

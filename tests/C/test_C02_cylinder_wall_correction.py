@@ -57,6 +57,7 @@ from tests.mesh_utils import (
     element_gradients_all,
     run_cylinder_case,
 )
+from tests._gate_evidence import assert_matches_committed, fmt
 from tests.conftest import REPO_ROOT
 
 LEVELS = {"coarse": 0.10, "medium": 0.05, "fine": 0.025}  # h_wall per level
@@ -247,6 +248,48 @@ class TestCylinderOracle:
         )
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与四个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `cylinder_oracle_cases`（module 作用域）已算好的三级。
+    ★ 两行 `slope_*` 的斜率写在 `max_cp_err_uncorrected` 列里（phase-1 时代的布局，
+    刻意不动）—— 所以它们的键是那两个名字，比的列名是那一列。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self, cylinder_oracle_cases):
+        import os
+
+        h = np.array([LEVELS[lv] for lv in LEVELS])
+        e_un = np.array([cylinder_oracle_cases[lv]["uncorrected"]["error"].max()
+                         for lv in LEVELS])
+        e_co = np.array([cylinder_oracle_cases[lv]["corrected"]["error"].max()
+                         for lv in LEVELS])
+        fresh = {}
+        for lv in LEVELS:
+            c = cylinder_oracle_cases[lv]
+            fresh[(lv,)] = {
+                "max_cp_err_uncorrected": float(c["uncorrected"]["error"].max()),
+                "mean_cp_err_uncorrected": float(c["uncorrected"]["error"].mean()),
+                "max_cp_err_corrected": float(c["corrected"]["error"].max()),
+                "mean_cp_err_corrected": float(c["corrected"]["error"].mean()),
+                "spanwise_floor_uncorrected": float(c["w_uncorrected"]),
+                "spanwise_floor_corrected": float(c["w_corrected"]),
+            }
+        fresh[("slope_uncorrected",)] = {
+            "max_cp_err_uncorrected": float(np.polyfit(np.log(h), np.log(e_un), 1)[0])}
+        fresh[("slope_corrected",)] = {
+            "max_cp_err_uncorrected": float(np.polyfit(np.log(h), np.log(e_co), 1)[0])}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates",
+                         "C02_cylinder_wall_correction", "G1.3"),
+            fresh, ("max_cp_err_uncorrected", "mean_cp_err_uncorrected",
+                    "max_cp_err_corrected", "mean_cp_err_corrected",
+                    "spanwise_floor_uncorrected", "spanwise_floor_corrected"),
+            key_of=lambda r: (r["level"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                         "tests/C/test_C02_cylinder_wall_correction.py")
+        assert n >= 20, f"只比了 {n} 个数（3 级 x 6 列 + 2 个斜率 = 20）"
+
+
 class TestG13Artifacts:
     """Headless artifacts per the G1.3 gate spec (roadmap §0.1)."""
 
@@ -350,17 +393,17 @@ class TestG13Artifacts:
                 c = cylinder_oracle_cases[lv]
                 f.write(
                     f"{lv},{LEVELS[lv]},"
-                    f"{c['uncorrected']['error'].max():.6e},"
-                    f"{c['uncorrected']['error'].mean():.6e},"
-                    f"{c['corrected']['error'].max():.6e},"
-                    f"{c['corrected']['error'].mean():.6e},"
+                    f"{fmt(c['uncorrected']['error'].max())},"
+                    f"{fmt(c['uncorrected']['error'].mean())},"
+                    f"{fmt(c['corrected']['error'].max())},"
+                    f"{fmt(c['corrected']['error'].mean())},"
                     f"{np.abs(c['rhs']).max():.3e},"
-                    f"{c['w_uncorrected']:.6e},{c['w_corrected']:.6e},"
+                    f"{fmt(c['w_uncorrected'])},{fmt(c['w_corrected'])},"
                     f"{c['corrected']['n_cg_iterations']},"
                     f"{c['corrected']['residual_norm']:.3e}\n"
                 )
-            f.write(f"slope_uncorrected,,{s_un:.3f},,,,,,,,\n")
-            f.write(f"slope_corrected,,{s_co:.3f},,,,,,,,\n")
+            f.write(f"slope_uncorrected,,{fmt(s_un)},,,,,,,,\n")
+            f.write(f"slope_corrected,,{fmt(s_co)},,,,,,,,\n")
 
         for name in ("cp_theta_overlay.png", "error_vs_h.png",
                      "normal_deviation.png", "section_symmetry_plane.png",

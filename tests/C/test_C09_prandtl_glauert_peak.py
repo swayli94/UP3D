@@ -7,7 +7,8 @@
 import csv
 import numpy as np
 import pytest
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 import matplotlib
 import matplotlib.pyplot as plt
 from pyfp3d.mesh.reader import read_mesh
@@ -43,10 +44,10 @@ class TestG31SphereCompressible:
             w.writerow(["cp_peak_incompressible", "cp_peak_pg_corrected",
                         "cp_peak_compressible", "rel_diff_pct", "n_picard",
                         "picard_converged", "mach2_max"])
-            w.writerow([f"{cp_peak_inc:.6f}", f"{cp_peak_pg:.6f}",
-                        f"{cp_peak_c:.6f}", f"{100 * rel:.4f}",
+            w.writerow([fmt(cp_peak_inc), fmt(cp_peak_pg),
+                        fmt(cp_peak_c), fmt(100 * rel),
                         rc["n_picard"], rc["converged"],
-                        f"{rc['mach2_max']:.4f}"])
+                        fmt(rc['mach2_max'])])
 
         # V3.1: Cp(theta) line cut -- incompressible, PG-corrected,
         # compressible; the amplification must be symmetric fore/aft.
@@ -74,3 +75,33 @@ class TestG31SphereCompressible:
             f"Cp peak {cp_peak_c:.5f} vs PG-corrected {cp_peak_pg:.5f} "
             f"({100 * rel:.2f}% >= 2%)"
         )
+
+
+
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `G3.1/summary.csv`。设计与四个坑见 `tests/_gate_evidence.py`。
+
+    ★★ **本门此前在平时跑里一条活断言都没有** —— 实测 `pytest tests/C/test_C09...`
+    只报 `1 skipped`：唯一的测试类整个挂在 `skipif(not gate_figures_enabled())` 下。
+    ⇒ **本条是它的第一条活断言**，也是本轮转换里价值最高的一处。
+    ★ 零额外计算：用共享 fixture `sphere_medium`。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self, sphere_medium):
+        import os
+
+        case = sphere_medium
+        beta = np.sqrt(1.0 - M_INF_SPHERE ** 2)
+        cp_inc = float(case["cp_inc"].min())
+        fresh = {(): {"cp_peak_incompressible": cp_inc,
+                      "cp_peak_pg_corrected": cp_inc / beta,
+                      "cp_peak_compressible": float(case["cp_c"].min()),
+                      "mach2_max": float(case["result_c"]["mach2_max"])}}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates",
+                         "C09_prandtl_glauert_peak", "G3.1"),
+            fresh, ("cp_peak_incompressible", "cp_peak_pg_corrected",
+                    "cp_peak_compressible", "mach2_max"), key_of=lambda r: (),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                         "tests/C/test_C09_prandtl_glauert_peak.py")
+        assert n == 4, f"比了 {n} 个数，应为 4"

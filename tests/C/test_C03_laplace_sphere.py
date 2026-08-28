@@ -83,6 +83,7 @@ from tests.conftest import gate_figures_enabled
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.post.surface import wall_tangential_gradient_quadratic
 from pyfp3d.solve.picard import solve_laplace
+from tests._gate_evidence import assert_matches_committed, fmt
 from tests.conftest import REPO_ROOT
 
 A = 1.0  # sphere radius
@@ -195,8 +196,8 @@ class TestSphereCpArtifacts:
         csv_file = gate_evidence_dir / "summary.csv"
         with open(csv_file, "w") as f:
             f.write("metric,value\n")
-            f.write(f"max_error,{case['error'].max():.6e}\n")
-            f.write(f"mean_error,{case['error'].mean():.6e}\n")
+            f.write(f"max_error,{fmt(case['error'].max())}\n")
+            f.write(f"mean_error,{fmt(case['error'].mean())}\n")
             f.write(f"n_wall_nodes,{len(case['wall_nodes'])}\n")
             f.write(f"gate_target,0.02\n")
             f.write(f"gate_status,OPEN (see test_sphere_cp_medium_mesh xfail)\n")
@@ -216,6 +217,27 @@ def _read_p11_csv(name):
                     f"cases/demo/p11_curved_walls/run_demo.py")
     with open(path) as f:
         return list(_csv.DictReader(f))
+
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与四个坑见 `tests/_gate_evidence.py`。
+    ★ 本门没有共享 fixture，这一条自己重算 medium 球（实测整个门 2.2 s）。
+    ★ `gate_target` 与 `gate_status` **不进锁**：前者是**判据阈值**、后者是文本 ——
+    见 helper 第 2 条（阈值是标定不是测量）。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self, mesh_dir):
+        import os
+
+        case = run_sphere_case(mesh_dir / "sphere_shell" / "medium.msh")
+        fresh = {("max_error",): {"value": float(case["error"].max())},
+                 ("mean_error",): {"value": float(case["error"].mean())},
+                 ("n_wall_nodes",): {"value": float(len(case["wall_nodes"]))}}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates", "C03_laplace_sphere"),
+            fresh, ("value",), key_of=lambda r: (r["metric"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C03_laplace_sphere.py")
+        assert n == 3, f"比了 {n} 个数，应为 3（max/mean/n_wall_nodes）"
+
 
 
 class TestG16Respec:

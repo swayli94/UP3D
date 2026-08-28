@@ -583,7 +583,19 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **666 passed + 35 skipped +
+3. Full suite: `pytest tests/` — current baseline **674 passed + 33 skipped +
+   2 xfailed, 0 failed** (2026-08-28, **measured in full @1055.94 s @8 threads at
+   load 12.8**, phase-six rounds 10–28).
+   ★★★ **D03's M0.80 transonic shock gate ran on NO cadence** — the 2026-08-24
+   renumbering put `skipif(not gate_figures_enabled())` on its four TESTS (in D03
+   the physics tests are the ones that write evidence), so two checks that had run
+   on every change since phase one needed BOTH that flag and
+   `PYFP3D_TRANSONIC_GATES=1`, a combination no cadence uses. Now split: the guard
+   moved onto the two write calls. Costs 174 s warm, of which 172 s is the
+   Picard drift lock — the pre-renumbering cost, not a new one.
+   ★★ All **14** evidence-writing C/D gates now assert a fresh run against their
+   committed `summary.csv` (`tests/_gate_evidence.py`). C04 and D04 write none.
+   Previous: **666 passed + 35 skipped +
    2 xfailed, 0 failed** (2026-08-28, **measured in full @963.26 s @8 threads at
    load 16.9**, phase-six rounds 10–27).
    ★★ +7 = one evidence-regression lock per converted gate. A runtime probe

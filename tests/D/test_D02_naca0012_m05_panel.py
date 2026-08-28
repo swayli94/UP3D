@@ -17,7 +17,8 @@ import csv
 
 import numpy as np
 import pytest
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 import matplotlib
 matplotlib.use("Agg")
@@ -94,10 +95,10 @@ def test_g32_cl_vs_corrected_panel(medium_case, coarse_case,
         cl = case["forces"]["cl"]
         cl_g = float(sectional_cl_from_gamma(case["result"]["gamma"])[0])
         r = case["result"]
-        rows.append((level, f"{cl:.6f}", f"{cl_g:.6f}", f"{cl_pg:.6f}",
-                     f"{cl_kt:.6f}", f"{cl_ref:.6f}",
-                     f"{100 * (cl / cl_ref - 1):.3f}", r["n_picard"],
-                     r["n_solves_total"], f"{r['mach2_max']:.4f}"))
+        rows.append((level, fmt(cl), fmt(cl_g), fmt(cl_pg),
+                     fmt(cl_kt), fmt(cl_ref),
+                     fmt(100 * (cl / cl_ref - 1)), r["n_picard"],
+                     r["n_solves_total"], fmt(r["mach2_max"])))
 
     gate_dir = gate_evidence_dir / "G3.2"
     gate_dir.mkdir(parents=True, exist_ok=True)
@@ -219,3 +220,30 @@ def test_v32_cp_and_mach_curves(medium_case, reference_mesh_dir,
     assert curve["cp_upper"][-1] > 0.0
     # Subcritical everywhere (G4.2's nu == 0 regime): max local M < 1.
     assert medium_case["result"]["mach2_max"] < 1.0
+
+
+
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `G3.2/summary.csv`。四个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `coarse_case` / `medium_case`。
+    ★ `cl_ref_pg` / `cl_ref_kt` / `cl_ref_mid` 是**外部参照**，不在这里二次锁。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self, coarse_case, medium_case):
+        import os
+
+        fresh = {}
+        for lv, c in (("coarse", coarse_case), ("medium", medium_case)):
+            r = c["result"]
+            fresh[(lv,)] = {
+                "cl_pressure": float(c["forces"]["cl"]),
+                "cl_gamma": float(sectional_cl_from_gamma(r["gamma"])[0]),
+                "mach2_max": float(r["mach2_max"])}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates",
+                         "D02_naca0012_m05_panel", "G3.2"),
+            fresh, ("cl_pressure", "cl_gamma", "mach2_max"),
+            key_of=lambda r: (r["level"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                         "tests/D/test_D02_naca0012_m05_panel.py")
+        assert n == 6, f"比了 {n} 个数，应为 6（2 级 x 3 列）"

@@ -19,7 +19,8 @@ O(h) H1 trend appears.
 
 import numpy as np
 import pytest
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 from pyfp3d.mesh.metrics import compute_tet_volumes
 from pyfp3d.solve.picard import solve_laplace
@@ -120,6 +121,32 @@ class TestLaplaceMMS:
         assert slope >= 1.9, f"MMS L2 convergence slope {slope:.3f} < 1.9 (errors: {err})"
 
 
+
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与四个坑见 `tests/_gate_evidence.py`。
+
+    ★ 本门没有共享 fixture，所以这一条**自己重算一遍** —— 实测整个门 1.4 s，
+    MMS 是纯 Laplace 立方体，代价可以忽略。
+    ★ `fit_slope` 那一行的斜率写在 `h` 列里（phase-1 时代的布局，刻意不动），
+    所以它的键是 `("fit_slope",)`、比的列名是 `h`。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self):
+        import os
+
+        levels = [run_mms_case(n) for n in (4, 8, 16)]
+        h = np.array([lvl["h"] for lvl in levels])
+        err = np.array([lvl["l2_error"] for lvl in levels])
+        slope = float(np.polyfit(np.log(h), np.log(err), 1)[0])
+        fresh = {(str(lvl["n"]),): {"l2_error": lvl["l2_error"]} for lvl in levels}
+        fresh[("fit_slope",)] = {"h": slope}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates", "C01_laplace_mms"),
+            fresh, ("l2_error", "h"), key_of=lambda r: (r["n"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C01_laplace_mms.py")
+        assert n >= 4, f"只比了 {n} 个数（3 级 l2_error + 1 个 fit_slope）"
+
+
 class TestLaplaceMMSArtifacts:
     """Generate visual artifacts for G1.1."""
 
@@ -154,8 +181,10 @@ class TestLaplaceMMSArtifacts:
         with open(csv_file, "w") as f:
             f.write("n,h,l2_error,cg_iterations\n")
             for lvl in levels:
-                f.write(f"{lvl['n']},{lvl['h']},{lvl['l2_error']:.6e},{lvl['n_cg_iterations']}\n")
-            f.write(f"fit_slope,{slope:.4f},,\n")
+                #: ★ 实测列 `.9e`（`_gate_evidence.fmt`）—— 证据按真值精度存
+                f.write(f"{lvl['n']},{lvl['h']},{fmt(lvl['l2_error'])},"
+                        f"{lvl['n_cg_iterations']}\n")
+            f.write(f"fit_slope,{fmt(slope)},,\n")
         assert csv_file.exists()
 
 

@@ -1,2 +1,2 @@
 cp_peak_incompressible,cp_peak_pg_corrected,cp_peak_compressible,rel_diff_pct,n_picard,picard_converged,mach2_max
--1.278467,-1.340197,-1.335914,0.3196,11,True,0.2288
+-1.278466595e+00,-1.340197146e+00,-1.335913795e+00,3.196060455e-01,11,True,2.287886138e-01

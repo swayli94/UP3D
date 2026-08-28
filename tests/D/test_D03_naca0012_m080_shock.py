@@ -37,7 +37,8 @@ import os
 
 import numpy as np
 import pytest
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
@@ -168,8 +169,6 @@ def _assert_g41(case, reference_mesh_dir):
     )
 
 
-@pytest.mark.skipif(not gate_figures_enabled(),
-                    reason="C/D 证据图只在 PYFP3D_GATE_FIGURES=1 时写盘 —— 平时不写，避免每次 pytest 都脏工作树（2026-08-24）")
 def test_p4_picard_path_historical_regression(reference_mesh_dir, gate_evidence_dir):
     """★ NOT A PHYSICS GATE -- a drift lock on the Picard-continuation path.
 
@@ -191,7 +190,30 @@ def test_p4_picard_path_historical_regression(reference_mesh_dir, gate_evidence_
     case = _transonic_case(
         REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh",
         entropy_correction=False)
-    _write_g41_summary(case, "coarse", gate_evidence_dir)
+    #: ★ 只有写盘受图开关守卫；**物理判据不受**。2026-08-24 的重编号
+    #: 把 `skipif(not gate_figures_enabled())` 加在了**测试本身**上，于是
+    #: `test_p4_picard_path_historical_regression` 与 `test_g41_transonic_coarse_newton`
+    #: 这两条**原本每次改动都跑**的判据，变成只在生成图时才跑；而另两条
+    #: `@run_gates` 的则需要**两个标志同时成立** —— 项目的四种跑法没有一种这样跑
+    #: ⇒ **这道 M0.80 跨声速激波门在任何周期上都不跑**。实测三种跑法皆 4 skipped。
+    if gate_figures_enabled():
+        _write_g41_summary(case, "coarse", gate_evidence_dir)
+
+    #: ★★★ 证据回归锁：**新鲜计算 → 与已提交 CSV 比**（四个坑见 `tests/_gate_evidence.py`）。
+    #: 零额外计算 —— 用的就是上面刚算完的 `case`。
+    rep_up, rep_lo = case["shock"]["upper"], case["shock"]["lower"]
+    fresh = {
+        ("upper_x_shock",): {"value": float(rep_up["x_shock"])},
+        ("cl_pressure",): {"value": float(case["forces"]["cl"])},
+        ("gamma",): {"value": float(case["result"]["gamma"][0])},
+        ("mach_max",): {"value": float(np.sqrt(case["result"]["mach2_max"]))},
+    }
+    assert_matches_committed(
+        os.path.join(str(REPO_ROOT), "cases", "gates",
+                     "D03_naca0012_m080_shock", "G4.1"),
+        fresh, ("value",), key_of=lambda r: (r["quantity"],), filename="summary_coarse.csv",
+        refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                     "tests/D/test_D03_naca0012_m080_shock.py")
     r, up = case["result"], case["shock"]["upper"]
     assert r["engineering_converged"], r.get("not_converged_reason")
     assert not r["converged"], (
@@ -211,8 +233,6 @@ def test_p4_picard_path_historical_regression(reference_mesh_dir, gate_evidence_
 #: x_shock 0.6073 at coarse, inside the Euler-anchored band 0.62 +- 0.03 (-0.0127 from
 #: its centre), where the isentropic value 0.6581 fell outside. Recorded because a
 #: prediction that is checked is worth more than one that is quietly dropped.
-@pytest.mark.skipif(not gate_figures_enabled(),
-                    reason="C/D 证据图只在 PYFP3D_GATE_FIGURES=1 时写盘 —— 平时不写，避免每次 pytest 都脏工作树（2026-08-24）")
 def test_g41_transonic_coarse_newton(reference_mesh_dir, gate_evidence_dir):
     """Gate G4.1 on the Newton path: the shock position of a state that IS a
     solution, against the Euler-anchored reference band."""
@@ -250,8 +270,6 @@ def test_g41_transonic_coarse_newton(reference_mesh_dir, gate_evidence_dir):
     "reasons, then, that the medium ON answer is not yet a stable deliverable: it is "
     "expected to fail, and a pass is environment luck rather than a fix. The coarse leg "
     "(test_g41_transonic_coarse_newton) is robust and asserts normally."))
-@pytest.mark.skipif(not gate_figures_enabled(),
-                    reason="C/D 证据图只在 PYFP3D_GATE_FIGURES=1 时写盘 —— 平时不写，避免每次 pytest 都脏工作树（2026-08-24）")
 def test_g41_transonic_medium_gate(reference_mesh_dir, gate_evidence_dir):
     """Gate G4.1 = V4 on the medium mesh, on the Newton path (GS1b.8)."""
     from tests.conftest import REPO_ROOT
@@ -260,13 +278,18 @@ def test_g41_transonic_medium_gate(reference_mesh_dir, gate_evidence_dir):
     r = case["result"]
     assert r["converged"] and not r["clamped"], (
         f"Newton path not converged: |R| = {r['residual_history'][-1]:.2e}")
-    _write_g41_summary(case, "medium", gate_evidence_dir)
+    #: ★ 只有写盘受图开关守卫；**物理判据不受**。2026-08-24 的重编号
+    #: 把 `skipif(not gate_figures_enabled())` 加在了**测试本身**上，于是
+    #: `test_p4_picard_path_historical_regression` 与 `test_g41_transonic_coarse_newton`
+    #: 这两条**原本每次改动都跑**的判据，变成只在生成图时才跑；而另两条
+    #: `@run_gates` 的则需要**两个标志同时成立** —— 项目的四种跑法没有一种这样跑
+    #: ⇒ **这道 M0.80 跨声速激波门在任何周期上都不跑**。实测三种跑法皆 4 skipped。
+    if gate_figures_enabled():
+        _write_g41_summary(case, "medium", gate_evidence_dir)
     _assert_g41(case, reference_mesh_dir)
 
 
 @run_gates
-@pytest.mark.skipif(not gate_figures_enabled(),
-                    reason="C/D 证据图只在 PYFP3D_GATE_FIGURES=1 时写盘 —— 平时不写，避免每次 pytest 都脏工作树（2026-08-24）")
 def test_g43_robustness_sweep(gate_evidence_dir):
     """Gate G4.3: M in {0.74..0.82} x alpha in {0, 1.25} deg, ONE parameter set
     (TRANSONIC_DEFAULTS) -- a DRIVER-ROBUSTNESS sweep: does the Picard continuation
