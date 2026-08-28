@@ -47,6 +47,7 @@ from pyfp3d.post.section_cut import section_cp_curve
 from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
+from tests._gate_evidence import assert_matches_committed, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 CASES = (
@@ -247,6 +248,27 @@ class TestWhatIsOnlyRecorded:
             f"两工况的过升不再同量级（{100*a:+.1f} % vs {100*b:+.1f} %，比 {a/b:.2f}）")
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与四个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `runs` 已算好的四条腿 —— **含 Case 9 的 coarse 钳制腿**：
+    它的数字不被任何**判据**引用，但它**是**已提交证据的一部分，所以要锁住不许漂移。"""
+
+    def test_fresh_run_reproduces_the_committed_summary(self, runs):
+        fresh = {(nm, lv): dict(mach_max=runs[(nm, lv)]["mach_max"],
+                                cl_p=runs[(nm, lv)]["cl"], cn=runs[(nm, lv)]["cn"],
+                                cn_exp=runs[(nm, lv)]["cn_exp"],
+                                rms_upper=runs[(nm, lv)]["rms_upper"],
+                                rms_lower=runs[(nm, lv)]["rms_lower"])
+                 for nm, _, _, _ in CASES for lv in LEVELS}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates",
+                         "D12_rae2822_experiment_bias"),
+            fresh, ("mach_max", "cl_p", "cn", "cn_exp", "rms_upper", "rms_lower"),
+            key_of=lambda r: (r["case"], r["level"]),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                         "tests/D/test_D12_rae2822_experiment_bias.py")
+        assert n >= 24, f"只比了 {n} 个数（4 腿 x 6 列 = 24）"
+
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
 def test_export_rae2822_bias_figure(runs, gate_evidence_dir):
@@ -294,9 +316,9 @@ def test_export_rae2822_bias_figure(runs, gate_evidence_dir):
                        else f"{d['x_shock'] - d['x_shock_exp']:+.4f}")
                 w.writerow([name, lv, d["converged"], d["mode"], f"{d['residual']:.3e}",
                             d["n_newton"], d["n_limited"], d["n_floored"],
-                            f"{d['mach_max']:.4f}", f"{d['cl']:.6f}", f"{d['cn']:.4f}",
-                            f"{d['cn_exp']:.4f}", f"{d['cn']/d['cn_exp']-1.0:+.4f}",
-                            f"{d['rms_upper']:.4f}", f"{d['rms_lower']:.4f}",
-                            "" if d["x_shock"] is None else f"{d['x_shock']:.4f}",
-                            "" if d["x_shock_exp"] is None else f"{d['x_shock_exp']:.4f}",
+                            fmt(d["mach_max"]), fmt(d["cl"]), fmt(d["cn"]),
+                            fmt(d["cn_exp"]), fmt(d["cn"] / d["cn_exp"] - 1.0),
+                            fmt(d["rms_upper"]), fmt(d["rms_lower"]),
+                            "" if d["x_shock"] is None else fmt(d["x_shock"]),
+                            "" if d["x_shock_exp"] is None else fmt(d["x_shock_exp"]),
                             off])

@@ -36,7 +36,8 @@ import numpy as np
 import pytest
 
 from tests import _nozzle_case as NZ
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 M_INF = 0.80
 UPWIND_C = 1.5
@@ -221,6 +222,23 @@ class TestConvergedIsNotCorrect:
             "本条记录的是「收敛到一个无激波解」这种失败形状，前提变了请重新测量")
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与三个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `sweep` 已算好的结果（**反例腿不在 sweep 里**，它由 §
+    `TestConvergedIsNotCorrect` 单独求解，因此不进本锁）。"""
+
+    def test_fresh_run_reproduces_the_committed_summary(self, sweep):
+        fresh = {("ladder", str(nx)): dict(x_shock=sweep[nx]["x_shock"],
+                                  err_x=sweep[nx]["err_x"],
+                                  err_cells=sweep[nx]["err_cells"])
+                 for nx, _ in LEVELS}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates", "C05_nozzle_quasi1d"),
+            fresh, ("x_shock", "err_x", "err_cells"),
+            key_of=lambda r: (r["leg"], r["nx"]),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C05_nozzle_quasi1d.py")
+        assert n >= 9, f"只比了 {n} 个数（3 级 x 3 列 = 9）"
+
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
 def test_export_nozzle_figure(sweep, gate_evidence_dir):
@@ -257,14 +275,16 @@ def test_export_nozzle_figure(sweep, gate_evidence_dir):
 
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["nx", "h", "n_max", "converged", "reason", "n_newton",
+        #: ★ `leg` 列是 2026-08-28 加的：阶梯腿与反例腿都是 nx = 200，
+        #: 没有它键就不唯一，证据锁会比错行（`tests/_gate_evidence.py` 的重复键守卫）。
+        w.writerow(["leg", "nx", "h", "n_max", "converged", "reason", "n_newton",
                     "residual", "x_shock", "x_s_exact", "err_x", "err_cells"])
         for nx, _ in LEVELS:
             d = sweep[nx]
-            w.writerow([nx, f"{d['h']:.5f}", d["n_max"], d["converged"], d["reason"],
-                        d["n_newton"], f"{d['residual']:.3e}", f"{d['x_shock']:.6f}",
-                        d["x_s_exact"], f"{d['err_x']:.6f}", f"{d['err_cells']:.4f}"])
+            w.writerow(["ladder", nx, f"{d['h']:.5f}", d["n_max"], d["converged"], d["reason"],
+                        d["n_newton"], f"{d['residual']:.3e}", fmt(d["x_shock"]),
+                        d["x_s_exact"], fmt(d["err_x"]), fmt(d["err_cells"])])
         cx = _solve(200, n_max=80, x_s_init=8.0)
-        w.writerow([200, f"{cx['h']:.5f}", 80, cx["converged"], cx["reason"],
-                    cx["n_newton"], f"{cx['residual']:.3e}", f"{cx['x_shock']:.6f}",
-                    cx["x_s_exact"], f"{cx['err_x']:.6f}", f"{cx['err_cells']:.4f}"])
+        w.writerow(["counterexample", 200, f"{cx['h']:.5f}", 80, cx["converged"], cx["reason"],
+                    cx["n_newton"], f"{cx['residual']:.3e}", fmt(cx["x_shock"]),
+                    cx["x_s_exact"], fmt(cx["err_x"]), fmt(cx["err_cells"])])

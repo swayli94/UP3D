@@ -37,7 +37,8 @@ import pytest
 from pyfp3d.physics.isentropic import mach_number_squared
 from tests import _ringleb_case as RB
 from tests._nozzle_case import DuctSystem
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 LEVELS = (0.12, 0.08, 0.055)
 H_STUDY = 0.08                      # 耗散扫描所在的级
@@ -195,6 +196,28 @@ class TestArtificialDissipationPricedAgainstTruth:
         assert rel < 0, f"生产配置不再低估峰值 Mach（{100*rel:+.2f} %）—— 耗散的方向变了"
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与三个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `sweep` 已算好的五条腿（`upwind_c` 扫描 + `m_crit` 腿）。"""
+
+    def test_fresh_run_reproduces_the_committed_summary(self, sweep):
+        fresh = {}
+        for C in C_SWEEP:
+            d = sweep[C]
+            fresh[(f"C={C}",)] = dict(r_exact=d["r_exact"], rms=d["rms"],
+                                      rms_sup=d["rms_sup"], rms_sub=d["rms_sub"],
+                                      m_num_max=d["m_num_max"])
+        d = sweep["mcrit120"]
+        fresh[("m_crit=1.20",)] = dict(r_exact=d["r_exact"], rms=d["rms"],
+                                       rms_sup=d["rms_sup"], rms_sub=d["rms_sub"],
+                                       m_num_max=d["m_num_max"])
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates", "C08_ringleb"), fresh,
+            ("r_exact", "rms", "rms_sup", "rms_sub", "m_num_max"),
+            key_of=lambda r: (r["leg"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C08_ringleb.py")
+        assert n >= 25, f"只比了 {n} 个数（5 腿 x 5 列 = 25）"
+
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
 def test_export_ringleb_figure(cases, prod, sweep, gate_evidence_dir):
@@ -236,12 +259,12 @@ def test_export_ringleb_figure(cases, prod, sweep, gate_evidence_dir):
         for C in C_SWEEP:
             d = sweep[C]
             w.writerow([f"C={C}", H_STUDY, C, MCRIT_PROD, d["converged"], d["reason"],
-                        d["n_newton"], f"{d['res']:.3e}", f"{d['r_exact']:.3e}",
-                        f"{d['rms']:.6f}", f"{d['rms_sup']:.6f}", f"{d['rms_sub']:.6f}",
-                        d["n_sup"], d["n_cell"], f"{d['m_num_max']:.4f}",
-                        f"{d['m_ex_max']:.4f}"])
+                        d["n_newton"], f"{d['res']:.3e}", fmt(d["r_exact"]),
+                        fmt(d["rms"]), fmt(d["rms_sup"]), fmt(d["rms_sub"]),
+                        d["n_sup"], d["n_cell"], fmt(d["m_num_max"]),
+                        fmt(d["m_ex_max"])])
         d = sweep["mcrit120"]
         w.writerow(["m_crit=1.20", H_STUDY, UPWIND_PROD, 1.20, d["converged"], d["reason"],
-                    d["n_newton"], f"{d['res']:.3e}", f"{d['r_exact']:.3e}",
-                    f"{d['rms']:.6f}", f"{d['rms_sup']:.6f}", f"{d['rms_sub']:.6f}",
-                    d["n_sup"], d["n_cell"], f"{d['m_num_max']:.4f}", f"{d['m_ex_max']:.4f}"])
+                    d["n_newton"], f"{d['res']:.3e}", fmt(d["r_exact"]),
+                    fmt(d["rms"]), fmt(d["rms_sup"]), fmt(d["rms_sub"]),
+                    d["n_sup"], d["n_cell"], fmt(d["m_num_max"]), fmt(d["m_ex_max"])])

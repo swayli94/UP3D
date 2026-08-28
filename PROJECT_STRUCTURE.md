@@ -1667,7 +1667,11 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **659 passed / 35 skipped / 2 xfailed, 0 failed** (2026-08-28, measured in
+Baselines: always-on **666 passed / 35 skipped / 2 xfailed, 0 failed** (2026-08-28, measured in
+full @963.26 s @8 threads at load 16.9, phase-six 第 10–27 轮).
+★★ +7 = 每道已转换的门各一条「新鲜计算 vs 已提交证据」锁（`tests/_gate_evidence.py`）。
+实测 19 个证据 CSV 里 16 个无人读 ⇒ `conftest` 那句承诺是假的；**已转换 7 道、剩 7 道**。
+Previous: **659 passed / 35 skipped / 2 xfailed, 0 failed** (2026-08-28, measured in
 full @729.22 s @8 threads at load 7.3, phase-six 第 10–26 轮).
 ★ +6 passed / +1 skipped = `tests/D/test_D13_ibl_vs_xfoil.py`（松耦合 IBL 对 XFOIL 6.99）。
 Previous: **653 passed / 34 skipped / 2 xfailed, 0 failed** (2026-08-27, measured in

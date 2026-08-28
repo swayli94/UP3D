@@ -264,6 +264,82 @@ class TestRecorded:
                 f"（实测 0.89–1.12）—— 若耦合真的学会区分两面了这是好消息，请走勘误")
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ **把 `tests/conftest.py` 的承诺变成事实。**
+
+    那份 fixture 的文档串写着「平时跑**不写**，**断言对着已提交的 `summary.csv`** ⇒
+    代码一改答案就红，逼出一次有意的刷新」。**实测 2026-08-28：那是假的。**
+    包住 `open` 跑全套，`cases/gates/` 下 **19 个证据 CSV 里 16 个无人读** ——
+    门重算一遍，然后对着测试文件里的**硬编码字面量**断言，CSV 是**只写不读**的产物。
+    C/D 门断言里的 81 个浮点字面量中，**71 个**在 **13 道完全不读自己证据**的门里。
+
+    ★★ 后果是**两个方向**都会静默漂移：有人用 `PYFP3D_GATE_FIGURES=1` 刷新了 CSV，
+    新数进 git 而**没有任何东西比对它与门断言的那个数**；反之有人改了门里的字面量而
+    CSV 没刷新，两者分家。**这与 F06 那次（字面量对字面量、参考文件从没被打开）
+    是同一个缺陷，只是这次是整类的。**
+
+    ★★★ **设计上的坑（本 session 已踩三次，写在这里免得再犯）**：不能写成
+    「门的值 == CSV 的值」而门的值又是**从 CSV 读**的 —— 那**按构造恒真**
+    （F06 实测：改 CSV 到 0.64，全套依然绿）。正确形状是 **门重算 → 与 CSV 比**，
+    **CSV 是实测值的唯一真值来源**；断言阈值（`UP_RATIO_LO` 那些）保持写死，
+    因为它们是**标定**不是测量。
+
+    ★ 零额外计算：本条用的是 `runs` fixture 已经算好的结果。
+    """
+
+    #: 实测的新鲜计算 vs 已提交 CSV 的最大相对差（见 test 内的断言消息）。
+    #: ★ 解是确定性的（Picard + IBL，无随机源），所以这个容差是**机器/线程**级别的余量，
+    #: 不是物理容差。若它需要放宽，那本身就是一个要查的信号。
+    REL_TOL = 1e-6
+
+    def test_fresh_run_reproduces_the_committed_summary(self, runs):
+        r"""逐行比对 `cases/gates/D13_ibl_vs_xfoil/summary.csv` 的**实测列**
+        （`dstar_ibl` / `cf_ibl` / `asym_ibl` 与 cl 行）与本次运行的结果。
+
+        ★ 只锁**我们算的**那些列；`*_xfoil` 列另有真值来源
+        （`cases/reference_data/naca0012_viscous_xfoil/`），由 `_xfoil_reference()`
+        直接读取，不需要在这里二次锁。
+        """
+        import csv as _csv
+        path = os.path.join(str(REPO_ROOT), "cases", "gates", "D13_ibl_vs_xfoil",
+                            "summary.csv")
+        assert os.path.exists(path), (
+            f"已提交的证据 {path} 不存在 —— 用 "
+            "`PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D13_ibl_vs_xfoil.py` 生成")
+        with open(path, newline="", encoding="utf-8") as fh:
+            rows = list(_csv.DictReader(fh))
+        assert rows, "证据 CSV 是空的"
+
+        worst, n = 0.0, 0
+        for r in rows:
+            lv = r["level"]
+            if r["surface"] == "cl":
+                got, want = runs[lv]["cl"], float(r["dstar_ibl"])
+                pairs = [("cl", got, want)]
+            else:
+                i = list(X_ALL).index(float(r["x_c"]))
+                d = runs[lv][r["surface"]]
+                pairs = [("dstar_ibl", float(d["ds"][i]), float(r["dstar_ibl"])),
+                         ("cf_ibl", float(d["cf"][i]), float(r["cf_ibl"])),
+                         ("asym_ibl",
+                          float(runs[lv]["upper"]["ds"][i] / runs[lv]["lower"]["ds"][i]),
+                          float(r["asym_ibl"]))]
+            for name, got, want in pairs:
+                n += 1
+                rel = abs(got - want) / max(abs(want), 1e-30)
+                if rel > worst:
+                    worst = rel
+                assert rel <= self.REL_TOL, (
+                    f"{lv}/{r['surface']}/x={r['x_c']} 的 {name}："
+                    f"本次算出 {got:.6e}，已提交证据是 {want:.6e}（相对差 {rel:.2e}）\n"
+                    "  ★ 若这是有意的代码改动：用 "
+                    "`PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D13_ibl_vs_xfoil.py` "
+                    "刷新证据，**并按纪律 11 grep 被移动的数字** —— "
+                    "本门 docstring 的两张表、`cases/gates/INDEX.md` 的 D13 条目、"
+                    "以及 `docs/dev_phase_six/20260828-0100-ibl-xfoil-recon.md` 都引用它们。")
+        assert n >= 100, f"只比了 {n} 个数，证据 CSV 可能被截断了"
+
+
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
 def test_export_ibl_xfoil_figure(runs, ref, gate_evidence_dir):
@@ -320,11 +396,15 @@ def test_export_ibl_xfoil_figure(runs, ref, gate_evidence_dir):
             for side in ("upper", "lower"):
                 s = d[side]
                 for i, xq in enumerate(X_ALL):
-                    w.writerow([lv, side, f"{xq:.2f}", f"{s['ds'][i]:.6e}",
-                                f"{s['ds_ref'][i]:.6e}", f"{s['ratio'][i]:.4f}",
-                                f"{s['cf'][i]:.6e}", f"{s['cf_ref'][i]:.6e}",
-                                f"{d['upper']['ds'][i]/d['lower']['ds'][i]:.4f}",
-                                f"{d['upper']['ds_ref'][i]/d['lower']['ds_ref'][i]:.4f}"])
-            w.writerow([lv, "cl", "-", f"{d['cl']:.6f}", f"{CL_XFOIL_VISCOUS:.6f}",
-                        f"{d['cl']/CL_XFOIL_VISCOUS:.4f}", "-",
-                        f"{CL_INVISCID:.6f}", "-", "-"])
+                    #: ★★★ **实测列一律 `.9e`** —— 2026-08-28 实测：原先 `asym_ibl` 按
+                    #: `.4f` 写盘，于是"新鲜计算 vs 已提交证据"的回归锁在 3.9e-05 上红，
+                    #: 而那**不是求解器的差异，是写盘精度**。⇒ **证据要按真值精度存，
+                    #: 不是按显示精度存**，否则它当不了真值来源。
+                    w.writerow([lv, side, f"{xq:.2f}", f"{s['ds'][i]:.9e}",
+                                f"{s['ds_ref'][i]:.9e}", f"{s['ratio'][i]:.9e}",
+                                f"{s['cf'][i]:.9e}", f"{s['cf_ref'][i]:.9e}",
+                                f"{d['upper']['ds'][i]/d['lower']['ds'][i]:.9e}",
+                                f"{d['upper']['ds_ref'][i]/d['lower']['ds_ref'][i]:.9e}"])
+            w.writerow([lv, "cl", "-", f"{d['cl']:.9e}", f"{CL_XFOIL_VISCOUS:.9e}",
+                        f"{d['cl']/CL_XFOIL_VISCOUS:.9e}", "-",
+                        f"{CL_INVISCID:.9e}", "-", "-"])

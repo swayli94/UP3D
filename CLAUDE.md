@@ -583,7 +583,16 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **659 passed + 35 skipped +
+3. Full suite: `pytest tests/` — current baseline **666 passed + 35 skipped +
+   2 xfailed, 0 failed** (2026-08-28, **measured in full @963.26 s @8 threads at
+   load 16.9**, phase-six rounds 10–27).
+   ★★ +7 = one evidence-regression lock per converted gate. A runtime probe
+   (wrap `open`, run the suite) measured that **16 of 19 gate-evidence CSVs were
+   read by nobody** — gates recomputed and asserted against hard-coded literals,
+   so `tests/conftest.py`'s promise that assertions run against the committed
+   `summary.csv` was false. `tests/_gate_evidence.py` now holds the shared
+   machinery; **7 gates converted, 7 still to go** (C01/C02/C03/C09/D01/D02/D03).
+   Previous: **659 passed + 35 skipped +
    2 xfailed, 0 failed** (2026-08-28, **measured in full @729.22 s @8 threads at
    load 7.3**, phase-six rounds 10–26).
    ★ +6 passed / +1 skipped = `tests/D/test_D13_ibl_vs_xfoil.py` — the loose-coupled

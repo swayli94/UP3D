@@ -41,7 +41,8 @@ from pyfp3d.post.surface import (wall_force_coefficients,
                                  wall_tangential_gradient_quadratic)
 from pyfp3d.solve.picard import solve_laplace_lifting
 from tests._kt_case import KarmanTrefftz
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 LEVELS = (("xcoarse", 0.08), ("coarse", 0.04), ("medium", 0.02))
 BANDS = (("LE", 0.0, 0.05), ("MID", 0.05, 0.90), ("TE", 0.90, 1.01))
@@ -282,6 +283,27 @@ class TestPointwiseVersusIntegrated:
                 "RMS 不具代表性")
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与三个坑见 `tests/_gate_evidence.py`。
+    ★ 零额外计算：用 `sweep` 已算好的结果。"""
+
+    def test_fresh_run_reproduces_the_committed_summary(self, sweep):
+        fresh = {(n,): dict(gamma=sweep[n]["gamma"], gamma_rel=sweep[n]["gamma_rel"],
+                            cl=sweep[n]["cl"], cl_rel=sweep[n]["cl_rel"],
+                            cp_rms=sweep[n]["cp_rms"],
+                            band_LE=sweep[n]["bands"]["LE"],
+                            band_MID=sweep[n]["bands"]["MID"],
+                            band_TE=sweep[n]["bands"]["TE"])
+                 for n, _ in LEVELS}
+        cols = ("gamma", "gamma_rel", "cl", "cl_rel", "cp_rms",
+                "band_LE", "band_MID", "band_TE")
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates", "C07_karman_trefftz"),
+            fresh, cols, key_of=lambda r: (r["level"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C07_karman_trefftz.py")
+        #: ★ xcoarse 的 band_LE 是 nan（那一级没有 LE 节点，见 (e)），helper 会跳过它
+        assert n >= 21, f"只比了 {n} 个数（3 级 x 8 列 - 1 个 nan = 23 上下）"
+
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
 def test_export_kt_figure(sweep, kt, gate_evidence_dir):
@@ -326,9 +348,9 @@ def test_export_kt_figure(sweep, kt, gate_evidence_dir):
         for name, _ in LEVELS:
             d = sweep[name]
             w.writerow([name, d["h"], d["n_nodes"], d["n_wall"], d["n_kutta"],
-                        f"{d['gamma']:.6f}", f"{kt.gamma:.6f}", f"{d['gamma_rel']:.6e}",
-                        f"{d['cl']:.6f}", f"{kt.cl:.6f}", f"{d['cl_rel']:.6e}",
-                        f"{d['cp_rms']:.6f}",
-                        *[f"{d['bands'][b]:.6f}" for b, _, _ in BANDS],
+                        fmt(d["gamma"]), fmt(kt.gamma), fmt(d["gamma_rel"]),
+                        fmt(d["cl"]), fmt(kt.cl), fmt(d["cl_rel"]),
+                        fmt(d["cp_rms"]),
+                        *[fmt(d["bands"][b]) for b, _, _ in BANDS],
                         *[d["counts"][b] for b, _, _ in BANDS],
                         f"{d['match_max']:.3e}"])

@@ -45,7 +45,8 @@ from pyfp3d.meshgen.planar import airfoil_wake_2d
 from pyfp3d.post.surface import (wall_force_coefficients,
                                  wall_tangential_gradient_quadratic)
 from pyfp3d.solve.picard import solve_laplace_lifting
-from tests.conftest import gate_figures_enabled
+from tests._gate_evidence import assert_matches_committed, fmt
+from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 #: 半径与圆心 —— 对齐 `airfoil_wake_2d` 的翼型约定（弦长 1，远场圆心硬编码在 (0.5, 0)）
 A, XC = 0.5, 0.5
@@ -238,6 +239,26 @@ class TestKuttaJoukowski:
             f"（相对 {100*d['cl_rel']:.3f} %）")
 
 
+class TestCommittedEvidenceIsLoadBearing:
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv` —— 把 `conftest` 的承诺变成事实。
+    设计与三个坑见 `tests/_gate_evidence.py`（不能「值 == 它自己的来源」·
+    判据阈值不进 CSV · 证据按真值精度存）。★ 零额外计算：用的是 `sweep` 已算好的结果。
+    """
+
+    def test_fresh_run_reproduces_the_committed_summary(self, sweep):
+        fresh = {(name,): dict(cp_max=sweep[name]["cp_max"],
+                               cp_rms=sweep[name]["cp_rms"],
+                               cl_p=sweep[name]["cl"],
+                               cl_rel=sweep[name]["cl_rel"])
+                 for name, _ in LEVELS}
+        n = assert_matches_committed(
+            os.path.join(str(REPO_ROOT), "cases", "gates", "C06_lifting_cylinder"),
+            fresh, ("cp_max", "cp_rms", "cl_p", "cl_rel"),
+            key_of=lambda r: (r["level"],),
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C06_lifting_cylinder.py")
+        assert n >= 12, f"只比了 {n} 个数（3 级 x 4 列 = 12）"
+
+
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
 def test_export_lifting_cylinder_figure(sweep, gate_evidence_dir):
@@ -280,6 +301,8 @@ def test_export_lifting_cylinder_figure(sweep, gate_evidence_dir):
         for name, _ in LEVELS:
             d = sweep[name]
             w.writerow([name, d["h"], d["n_nodes"], d["n_wall"],
-                        f"{d['cp_max']:.6e}", f"{d['cp_rms']:.6e}",
-                        f"{d['cl']:.6f}", f"{d['cl_exact']:.6f}",
-                        f"{d['cl_rel']:.6e}", f"{d['residual']:.3e}", d["n_kutta"]])
+                        #: ★ 实测列一律 `.9e`（`_gate_evidence.fmt`）—— 证据要按真值精度存，
+                        #: 不是显示精度；理由见 `tests/_gate_evidence.py` 的第 3 条。
+                        fmt(d["cp_max"]), fmt(d["cp_rms"]),
+                        fmt(d["cl"]), fmt(d["cl_exact"]),
+                        fmt(d["cl_rel"]), f"{d['residual']:.3e}", d["n_kutta"]])
