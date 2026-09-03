@@ -240,57 +240,107 @@ SHOCK_COLUMNS = ['level', 'eta_requested', 'eta_grid', 'surface', 'has_shock',
                  'x_shock', 'n_cells', 'monotone', 'cp_min', 'cp_pre_shock',
                  'cp_post_shock', 'cp_critical', 'upstream_depth',
                  'detector_premise']
-GC_COLUMNS = ['quantity', 'L1', 'L2', 'L3', 'delta_L1_L2', 'delta_L2_L3',
-              'ratio', 'asymptotic', 'error_bar']
+#: built dynamically in main() -- the rung list is not fixed at three
+GC_BASE = ['quantity']
 
 
-def grid_convergence(rows_by_level, shock_by_level):
-    """Per quantity: the three rungs, both deltas, and whether the deltas are
-    SHRINKING.
+def implied_order(h, vals, i):
+    """The order p that reproduces the observed delta ratio at triple i.
 
-    ★★ ``ratio = |L2->L3| / |L1->L2|``.  Below 1 the rung-to-rung differences
-    are shrinking and ``delta_L2_L3`` is usable as an error bar; at or above 1
-    the ladder has not reached the asymptotic range and the quantity is
-    RECORDED with no error bar, however small the delta happens to look.  This
-    is the distinction the previous, inconsistent ladder could not make.
+    ★★★ THE RATIO NEEDS A CALIBRATION AND FOR A LONG TIME HAD NONE.  Comparing
+    it against 1.0 asks only "did the deltas stop shrinking"; it does not ask
+    whether they shrank at the rate a converging scheme produces.  For a
+    p-order quantity the ratio is ``|h3^p - h2^p| / |h2^p - h1^p|`` -- a
+    property of the LADDER as well as of p.  On this ladder (h ~ N^(-1/3) on
+    the total point count, near-uniform at r = 1.376 / 1.340) that is 0.496 at
+    p = 2 and 0.675 at p = 1, so "ratio < 1" admits order-0.2 convergence.
+
+    ★ Reporting the implied order is also what lets a reader price an error
+    bar: at p = 0.68 halving it needs a 2.8x point-count increase, not 1.4x.
+
+    ★★ This is how the first-order defect was found -- cd's ratio of 0.744
+    implies p = 0.68, which a kappa = 1/3 scheme should not give, and that
+    inconsistency pointed at the scheme rather than at any single number.
     """
-    out = []
-    q = {}
-    for lv, r in rows_by_level.items():
+    h1, h2, h3 = h[i], h[i + 1], h[i + 2]
+    d12, d23 = vals[i + 1] - vals[i], vals[i + 2] - vals[i + 1]
+    if d12 == 0:
+        return float('inf'), float('nan')
+    ratio = abs(d23) / abs(d12)
+    ps = np.linspace(0.01, 6.0, 6000)
+    rr = np.abs(h3 ** ps - h2 ** ps) / np.abs(h2 ** ps - h1 ** ps)
+    j = int(np.argmin(np.abs(rr - ratio)))
+    p = float(ps[j]) if abs(rr[j] - ratio) < 5e-3 else float('nan')
+    return ratio, p
+
+
+def grid_convergence(rows_by_level, shock_by_level, order):
+    """Per quantity: every rung, every delta, and the ratio + implied order on
+    EVERY consecutive triple.
+
+    ★★ With four rungs the two triples answer different questions: the finest
+    one gives the error bar, and the pair together says whether the quantity is
+    ENTERING the asymptotic range (ratio falling) or leaving it.  Three rungs
+    could only ever give a single number with nothing to compare it to.
+
+    The error bar comes from the FINEST triple, and only when that triple is
+    asymptotic AND the quantity's detector premise held on every rung.
+    """
+    lv = [l for l in order if l in rows_by_level]
+    N = np.array([float(rows_by_level[l]['points']) for l in lv])
+    h = N ** (-1.0 / 3.0)
+    h = h / h[0]
+
+    q, bad = {}, set()
+    for l in lv:
         for k in ('cl', 'cd', 'cd_pressure', 'cm_quarter_chord'):
-            q.setdefault(k, {})[lv] = float(r[k])
-    bad = set()
-    for lv, sh in shock_by_level.items():
-        for s in sh:
-            if s['x_shock'] == '' or s['surface'] != 'upper':
-                continue
-            name = f"x_shock_upper_eta{s['eta_requested']}"
-            q.setdefault(name, {})[lv] = float(s['x_shock'])
-            # ★ the suction peak is tabulated for the same reason: it is the
-            #   quantity whose EXPERIMENT bias has no predictable sign, and
-            #   this table is where that claim has to be measured rather than
-            #   asserted.  It comes out non-asymptotic on every station.
-            q.setdefault(f"cp_min_upper_eta{s['eta_requested']}",
-                         {})[lv] = float(s['cp_min'])
-            # ★ one bad rung disqualifies the whole ladder for that station:
-            #   the deltas would be differences between DIFFERENT FEATURES.
-            if s['detector_premise'].startswith('FAILS'):
-                bad.add(name)
-    for name, v in q.items():
-        if not all(l in v for l in ('L1', 'L2', 'L3')):
+            q.setdefault(k, {})[l] = float(rows_by_level[l][k])
+    for l, sh in shock_by_level.items():
+        if l not in lv:
             continue
-        d12, d23 = v['L2'] - v['L1'], v['L3'] - v['L2']
-        ratio = abs(d23) / abs(d12) if d12 else float('inf')
-        asym = ratio < 1.0 and name not in bad
-        why = ('NONE (detector premise fails -- Cp*-grazing)' if name in bad
-               else 'NONE (not asymptotic)')
-        out.append(dict(
-            quantity=name,
-            L1=f"{v['L1']:.6f}", L2=f"{v['L2']:.6f}", L3=f"{v['L3']:.6f}",
-            delta_L1_L2=f'{d12:+.6f}', delta_L2_L3=f'{d23:+.6f}',
-            ratio=f'{ratio:.3f}', asymptotic='yes' if asym else 'no',
-            error_bar=f'{abs(d23):.6f}' if asym else why))
-    return out
+        for sr in sh:
+            if sr['surface'] != 'upper' or sr['x_shock'] == '':
+                continue
+            name = f"x_shock_upper_eta{sr['eta_requested']}"
+            q.setdefault(name, {})[l] = float(sr['x_shock'])
+            q.setdefault(f"cp_min_upper_eta{sr['eta_requested']}",
+                         {})[l] = float(sr['cp_min'])
+            # ★ one bad rung disqualifies the station: the deltas would be
+            #   differences between DIFFERENT FEATURES.
+            if sr['detector_premise'].startswith('FAILS'):
+                bad.add(name)
+
+    out = []
+    for name, v in q.items():
+        if not all(l in v for l in lv):
+            continue
+        vals = np.array([v[l] for l in lv])
+        rec = {'quantity': name}
+        for l in lv:
+            rec[l] = f'{v[l]:.6f}'
+        for i in range(len(lv) - 1):
+            rec[f'delta_{lv[i]}_{lv[i+1]}'] = f'{vals[i+1] - vals[i]:+.6f}'
+        last = None
+        for i in range(len(lv) - 2):
+            r, p = implied_order(h, vals, i)
+            tag = f'{lv[i]}{lv[i+1]}{lv[i+2]}'
+            rec[f'ratio_{tag}'] = f'{r:.3f}'
+            rec[f'order_{tag}'] = ('' if p != p else f'{p:.2f}')
+            last = (r, tag)
+        asym = last is not None and last[0] < 1.0 and name not in bad
+        rec['asymptotic'] = 'yes' if asym else 'no'
+        rec['basis'] = last[1] if last else ''
+        rec['error_bar'] = (f'{abs(vals[-1] - vals[-2]):.6f}' if asym else
+                            ('NONE (detector premise fails -- Cp*-grazing)'
+                             if name in bad else 'NONE (not asymptotic)'))
+        out.append(rec)
+    cols = (GC_BASE + list(lv)
+            + [f'delta_{lv[i]}_{lv[i+1]}' for i in range(len(lv) - 1)]
+            + sum([[f'ratio_{lv[i]}{lv[i+1]}{lv[i+2]}',
+                    f'order_{lv[i]}{lv[i+1]}{lv[i+2]}']
+                   for i in range(len(lv) - 2)], [])
+            + ['asymptotic', 'basis', 'error_bar'])
+    return out, cols
 
 
 def write_csv(path: Path, columns, rows):
@@ -308,7 +358,10 @@ def main(argv=None):
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--from-runs', required=True,
                    help='directory holding <LEVEL>_safe/ run directories')
-    p.add_argument('--levels', nargs='*', default=['L1', 'L2', 'L3', 'REF'])
+    p.add_argument('--levels', nargs='*',
+                   default=['L1', 'L2', 'L3', 'L4', 'REF'])
+    p.add_argument('--suffix', default='',
+                   help="run-dir suffix, e.g. '_safe'")
     p.add_argument('--out', default=None)
     a = p.parse_args(argv)
 
@@ -318,7 +371,7 @@ def main(argv=None):
     by_level, sh_by_level = {}, {}
 
     for lv in a.levels:
-        d = root / f'{lv}_safe'
+        d = root / f'{lv}{a.suffix}'
         if not (d / 'cfl3d.out').is_file():
             print(f'  ! {lv}: no run in {d}')
             continue
@@ -396,9 +449,11 @@ def main(argv=None):
     write_csv(out / 'forces.csv', FORCE_COLUMNS, forces)
     write_csv(out / 'cp_stations.csv', CP_COLUMNS, cps)
     write_csv(out / 'shock.csv', SHOCK_COLUMNS, shocks)
-    gc = grid_convergence({k: v for k, v in by_level.items() if k != 'REF'},
-                          {k: v for k, v in sh_by_level.items() if k != 'REF'})
-    write_csv(out / 'grid_convergence.csv', GC_COLUMNS, gc)
+    ladder = [l for l in a.levels if l != 'REF']
+    gc, gc_cols = grid_convergence(
+        {k: v for k, v in by_level.items() if k != 'REF'},
+        {k: v for k, v in sh_by_level.items() if k != 'REF'}, ladder)
+    write_csv(out / 'grid_convergence.csv', gc_cols, gc)
     n_as = sum(1 for r in gc if r['asymptotic'] == 'yes')
     print(f'\n  asymptotic: {n_as} of {len(gc)} quantities have an error bar')
     for r in gc:

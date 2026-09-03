@@ -255,14 +255,28 @@ RANS_FALLBACK = dict(NCYC=2000, CFL_START=0.05, CFL_RAMP=20.0,
 # entirely first order, and both had to be discarded.  The .inp files showed
 # the requested RKAP0 = 0.3333 in every case, so reading the deck could not
 # catch it.
-for _name, _r in (('EULER_SOLVER', EULER_SOLVER), ('RANS_SOLVER', RANS_SOLVER),
-                  ('RANS_FALLBACK', RANS_FALLBACK)):
-    if _r['NITFO'] >= _r['NCYC']:
-        raise ValueError(
-            f"{_name}: NITFO={_r['NITFO']} >= NCYC={_r['NCYC']} -- the finest "
-            f"grid would run FIRST ORDER throughout (resid.F:141).  Raise NCYC; "
-            f"the first-order startup is load-bearing on the transonic cases.")
-del _name, _r
+def validate_recipes(recipes=None):
+    """Raise if any recipe would run first order throughout.
+
+    Called at import below.  It is a FUNCTION so the guard itself can be
+    tested behaviourally -- feeding it a deliberately bad recipe must make it
+    fire.  A guard nobody has seen fail is not known to work; F06's
+    literal-against-literal criterion is the standing example.
+    """
+    if recipes is None:
+        recipes = {'EULER_SOLVER': EULER_SOLVER, 'RANS_SOLVER': RANS_SOLVER,
+                   'RANS_FALLBACK': RANS_FALLBACK}
+    for name, r in recipes.items():
+        if r['NITFO'] >= r['NCYC']:
+            raise ValueError(
+                f"{name}: NITFO={r['NITFO']} >= NCYC={r['NCYC']} -- the finest "
+                f"grid would run FIRST ORDER throughout (resid.F:141).  Raise "
+                f"NCYC; the first-order startup is load-bearing on the "
+                f"transonic cases.")
+    return True
+
+
+validate_recipes()
 
 
 def default_solver(case: 'Case') -> dict:
