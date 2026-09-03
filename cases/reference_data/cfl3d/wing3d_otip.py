@@ -453,7 +453,24 @@ M6_REFERENCE_PARAMS = dict(n_foil=161, n_wake=61, n_grow=81, n_tail=17,
 #: RANS needs more wall-normal points than Euler at the same rung, because y+ 1
 #: puts the first cell ~2e-06 chords out and the layer count has to bridge from
 #: there to the far field with a sane growth ratio.
-M6_RANS_NGROW = {'L1': 65, 'L2': 89, 'L3': 105, 'REF': 105}
+M6_RANS_NGROW = {'L1': 89, 'L2': 109, 'L3': 129, 'REF': 105}
+
+#: ★★ The basin depth is a PER-LADDER constant, and the two ladders need
+#: different ones.  RANS holds y+ = 1, so its first cell is ~1000x smaller than
+#: the Euler grid's, and the same k index reaches a completely different
+#: physical depth; the joint (n_grow, k_crit) search that matches the depth
+#: across rungs therefore lands somewhere else for RANS.  Measured spreads:
+#:
+#:     Euler  basin 0.236 c   n_grow  61/ 77/101   depth spread 1.0031x
+#:     RANS   basin 0.824 c   n_grow  89/109/129   depth spread 1.0026x
+#:
+#: (before the search: 1.26x and 1.28x respectively, both non-monotone.)
+#: ★ The two ladders differing here is a GRID choice, not a geometry one -- the
+#: wing surface is bit-identical in both (the tip stays at full thickness), and
+#: each ladder is internally consistent, which is what an error bar needs.  It
+#: is recorded so nobody later reads it as the two datasets disagreeing about
+#: the wing.
+M6_BASIN_DEPTH = {'euler': 0.236, 'rans': 0.824}
 
 
 def build_m6(level='L3', model='euler', y_plus=1.0,
@@ -478,6 +495,7 @@ def build_m6(level='L3', model='euler', y_plus=1.0,
     else:
         wall = dict(y_plus=y_plus, re_chord=re_chord)
         lv['n_grow'] = M6_RANS_NGROW[level]
+    wall['basin_depth'] = M6_BASIN_DEPTH[model]
 
     xu, yu, xl, yl, _ = m6_section()
     cr, ct, span = M6_CHORD_ROOT, M6_CHORD_TIP, M6_SPAN

@@ -632,6 +632,55 @@ in 3-D alike.**  How each side is built:
 resolved on every RANS rung, and the Euler rungs carry no wall clustering at
 all.
 
+### `euler_onera_m6/` — the D07 dataset
+
+Written by `generate_m6_reference.py` from a finished ladder; it performs no
+solve. Condition: **M 0.8395, α 3.06°** (AGARD AR-138 TEST 2308 verbatim,
+α experimental and uncorrected), Euler, `Re` 14.62e6 on the **root chord**
+(the grid is normalised to root chord = 1, so the experiment's Re_MAC 11.72e6
+rescales by `chord_root/chord_MAC`).
+
+| file | contents |
+|---|---|
+| `forces.csv` | one row per rung (L1/L2/L3 + REF): cl, cd, cd_pressure, cd_friction, cm, plus the RAW `SREF = 1` values, the reference area, residual caliber, grid counts |
+| `cp_stations.csv` | Cp at the **seven measured stations** y/b = 0.20/0.44/0.65/0.80/0.90/0.96/0.99, upper and lower, per rung |
+| `shock.csv` | shock position / pre- and post-shock Cp per station, derived with **our own** `pyfp3d.post.shock` operator |
+| `grid_convergence.csv` | both deltas, their ratio, and whether the quantity is asymptotic |
+
+★★★ **The deck carries `SREF = 1.00`** (as the reference implementation's does),
+so CFL3D's reported CL/CD are **not** normalised by the wing area. The published
+columns are divided by the exposed half-planform area in root-chord units,
+`0.5(1 + c_t/c_r)(b/c_r)` = **1.15932**, and the raw values are kept in
+`cl_raw_sref1` / `cd_raw_sref1` so the conversion is auditable. Unconverted,
+L3's CL reads 0.3321 where the M6 inviscid value at this condition is
+~0.28–0.30; converted, **0.2864** lands in that band.
+
+★★ **The error bar is decided by whether the rung-to-rung differences are
+SHRINKING**, not by their size: `ratio = |Δ(L2→L3)| / |Δ(L1→L2)|`. Below 1 the
+delta is usable as an error bar; at or above 1 the ladder has not reached the
+asymptotic range and the quantity is RECORDED with **no** error bar, however
+small the delta looks. **9 of 11 quantities pass:**
+
+| quantity | ratio | error bar |
+|---|---|---|
+| cd, cd_pressure | 0.744 | 0.003144 |
+| cm (quarter-chord) | 0.056 | 0.000095 |
+| shock x/c at y/b = 0.20 / 0.44 / 0.65 / 0.80 / 0.90 / 0.99 | 0.20 … 0.81 | 0.0034 … 0.0423 |
+| **cl** | **1.737** | **NONE — not asymptotic** |
+| **shock x/c at y/b = 0.96** | **1.388** | **NONE — not asymptotic** |
+
+⇒ **cd, cm and six of the seven shock positions may be gated; cl may not.**
+cl integrates the whole surface including the fast-moving outboard shock, so it
+inherits the one station that has not converged. Sanity: the shock sweeps
+forward outboard — 0.668 / 0.605 / 0.543 / 0.467 / 0.375 / 0.278 — the M6
+λ-shock pattern, with the tip station at 0.469.
+
+★ The ladder is one consistent family, which the previous one was not: basin
+depth 0.2361 / 0.2361 / 0.2368 (spread **1.0031×**, against 1.26× and
+non-monotone before), `n_tail` 9/17/25 and `n_grow` 61/77/101 both monotone,
+0 negative cells, tip at full thickness on every rung. `REF` is the
+cross-checked configuration and is deliberately NOT a ladder rung.
+
 ### Convergence caliber — Euler runs, RANS does not
 
 Measured on the 0.59 M coarse level, M 0.8395 / α 3.06 (Euler unless stated):
