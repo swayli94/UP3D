@@ -524,6 +524,21 @@ def read_history(path: Path):
     cl / cd / cdp / cdv and reproduce it exactly (cl 0.34823944,
     cd = cdp 0.022600953, cdv 0), so the named mapping holds and only the tail
     is extra.  Read as p[3:9] and do not widen it without re-checking.
+
+    ★★★ **DO NOT take force coefficients out of this file.**  Use
+    ``read_forces`` (the ``cfl3d.out`` SUMMARY) instead.  User warning
+    2026-09-03, confirmed by measurement: the rows around the end of a run are
+    not all complete totals.  On a MULTIBLOCK grid the final iteration writes
+    **one row per block** -- measured on the 7-block M6 grid, ``it = 3000``
+    appears 7 times and the ``blk = 1`` row gives cd **0.034203** against the
+    complete total **0.033666**, a **1.6 %** error.  Only the highest-block row
+    is the full sum, so "the last row" is right by FILE ORDER and not by
+    construction.  (The user also reports rows appearing BEYOND the requested
+    cycle count on some setups; that did not reproduce here -- max it was
+    exactly ncyc*mseq -- which is a reason to stop relying on row position, not
+    a reason to doubt the report.)
+
+    ⇒ What this file is for here: the RESIDUAL history, column 3.
     """
     rows = []
     for line in open(path, errors='replace'):
@@ -539,7 +554,13 @@ def read_history(path: Path):
 
 
 def convergence(hist) -> dict:
-    """Residual caliber: final value and decades dropped on the finest level."""
+    """Residual caliber: final value and decades dropped on the finest level.
+
+    ★ Takes the residual only, never the force columns -- see read_history.
+    The per-block rows at the first and last iteration of a level are included
+    deliberately: for a residual they are all legitimate readings of the same
+    sweep, and the min/max over the level is what the caliber wants.
+    """
     if hist is None:
         return dict(resid_final='', resid_decades='', ncyc_total='')
     lev = hist[:, 0]

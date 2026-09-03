@@ -572,6 +572,29 @@ difference is **ours** and already documented, not the reference's.
 the 3-D assembly is transfinite interpolation and distribution algebra in
 numpy, the same split `cgrid_gmsh.py` already uses here.
 
+### ★★★ Where the force coefficients must be read from
+
+★★ **Take cl/cd/cm from the `cfl3d.out` SUMMARY, never from
+`clcd_total.dat` / `clcd_wall.dat`.** User warning 2026-09-03, confirmed here by
+measurement: the rows at the end of a run are not all complete totals. On a
+MULTIBLOCK grid the final iteration writes **one row per block** — on the
+7-block M6 grid `it = 3000` appears 7 times, and the `blk = 1` row gives
+cd **0.034203** against the complete total **0.033666**, a **1.6 % error**. Only
+the highest-block row is the full sum, so "read the last row" is correct by
+FILE ORDER rather than by construction.
+
+★ The user also reports rows appearing *beyond* the requested cycle count
+(e.g. 2000–2012 for `ncyc` 2000), with the values there wrong, and advises
+reading the second-to-last requested step. That did not reproduce on this
+build — max `it` was exactly `ncyc*mseq` in every run here — which is a reason
+to stop relying on row position, not a reason to doubt the report.
+
+⇒ The 2-D datasets in this directory were **already** reading the SUMMARY, and
+they are single-block, so they carry no duplicate rows: measured, `it = 5999`
+and `it = 6000` agree to the 8th digit and the committed 6-decimal values are
+identical either way. **No committed 2-D number is affected.** `clcd_total.dat`
+is used here for the RESIDUAL history only.
+
 ### ★★★ Verified against an independent implementation
 
 `tools/cgrid` is not just a model — it is the **verification baseline**, being a
