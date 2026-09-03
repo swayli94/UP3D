@@ -517,9 +517,33 @@ cases/                     # Test cases and reference data
 │   ├── naca0012_m05/     # ✓ [P3] the same panel solution under Prandtl-Glauert AND
 │   │                             #   Karman-Tsien corrections (G3.2 reference = PG/KT
 │   │                             #   midpoint + inside-bracket assert; README provenance)
-│   └── naca0012_m080/    # ✓ [P4] transonic shock reference: Euler anchor (~0.60c upper,
-│                                 #   ~0.35c lower) + documented conservative-FP aft-shift band;
-│                                 #   README records that no open FP table was retrievable
+│   ├── naca0012_m080/    # ✓ [P4] transonic shock reference: Euler anchor (~0.60c upper,
+│   │                             #   ~0.35c lower) + documented conservative-FP aft-shift band;
+│   │                             #   README records that no open FP table was retrievable.
+│   │                             #   ★ 2026-09-03: the same condition now ALSO has a directly
+│   │                             #   measured CFL3D Euler shock, 0.6413 +/- 0.0017 (see cfl3d/)
+│   ├── naca0012_experiment/      # ✓ 3 measured Cp conditions (M0.352/0.778/0.803)
+│   ├── naca0012_viscous_xfoil/   # ✓ [Track V] XFOIL 6.99 delta*/c_f/polar, M0.5 Re 3e6,
+│   │                             #   xtr005 + xtr030
+│   ├── onera_m6_experiment/      # ✓ AGARD AR-138 TEST 2308, 7-station Cp
+│   ├── rae2822_experiment/       # ✓ Case 7 + Case 9/10 measured Cp
+│   └── cfl3d/            # ✓ [phase 6, 2026-09-03] CFL3D 6.7 Euler + RANS reference for
+│                                 #   D05/D06/D08/D09 -- the section-4 data request of the gate
+│                                 #   taxonomy note. Four dataset dirs (euler_naca0012,
+│                                 #   euler_rae2822, rans_naca0012, rans_rae2822), each with
+│                                 #   per-surface cp_*.csv, forces.csv (integrals + cd split +
+│                                 #   convergence caliber + y+), shock.csv (derived with OUR
+│                                 #   pyfp3d.post.shock operator), grid_convergence.csv (the
+│                                 #   L2->L3 error bar) and, for RANS, turbulence_spread.csv
+│                                 #   (|SST-SA| = the gate's noise floor).
+│                                 #   ★ Three-rung ladder, alpha = experimental UNCORRECTED,
+│                                 #   geometry from OUR pyfp3d.meshgen.planar (never the CFL3D
+│                                 #   repo's own ordinates). cgrid_gmsh.py is VENDORED verbatim
+│                                 #   (md5 in README); the solver binary is the gitignored
+│                                 #   external tools/cfl3d_seq and run dirs go to
+│                                 #   tools/cfl3d_work/. ★★ 3-D M6 (D07/D10) NOT here -- it
+│                                 #   needs a structured C-H wing grid that does not exist;
+│                                 #   README section 6 states why.
 ├── demo/                 # ✓ Per-phase evidence demos (phases/p1/docs/demo_report.md; one
 │   ├── README.md         #   self-checking run_demo.py + committed results/ per phase)
 │   ├── _common.py        #   shared chart style + CheckList acceptance recorder
