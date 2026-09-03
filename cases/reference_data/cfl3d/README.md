@@ -646,6 +646,8 @@ rescales by `chord_root/chord_MAC`).
 | `cp_stations.csv` | Cp at the **seven measured stations** y/b = 0.20/0.44/0.65/0.80/0.90/0.96/0.99, upper and lower, per rung |
 | `shock.csv` | shock position / pre- and post-shock Cp per station, derived with **our own** `pyfp3d.post.shock` operator |
 | `grid_convergence.csv` | both deltas, their ratio, and whether the quantity is asymptotic |
+| `experiment_bias.csv` | the bias against the committed seven-station experiment, per station |
+| `cp_vs_experiment.png` | the Cp comparison figure (all three rungs + experiment) |
 
 ★★★ **The deck carries `SREF = 1.00`** (as the reference implementation's does),
 so CFL3D's reported CL/CD are **not** normalised by the wing area. The published
@@ -659,27 +661,102 @@ L3's CL reads 0.3321 where the M6 inviscid value at this condition is
 SHRINKING**, not by their size: `ratio = |Δ(L2→L3)| / |Δ(L1→L2)|`. Below 1 the
 delta is usable as an error bar; at or above 1 the ladder has not reached the
 asymptotic range and the quantity is RECORDED with **no** error bar, however
-small the delta looks. **9 of 11 quantities pass:**
+small the delta looks. **8 of 18 quantities pass:**
 
 | quantity | ratio | error bar |
 |---|---|---|
 | cd, cd_pressure | 0.744 | 0.003144 |
 | cm (quarter-chord) | 0.056 | 0.000095 |
-| shock x/c at y/b = 0.20 / 0.44 / 0.65 / 0.80 / 0.90 / 0.99 | 0.20 … 0.81 | 0.0034 … 0.0423 |
+| shock x/c at y/b = 0.20 / 0.44 / 0.65 / 0.80 / 0.90 | 0.20 … 0.81 | 0.0034 … 0.0423 |
 | **cl** | **1.737** | **NONE — not asymptotic** |
 | **shock x/c at y/b = 0.96** | **1.388** | **NONE — not asymptotic** |
+| **shock x/c at y/b = 0.99** | 0.337 | **NONE — detector premise fails** |
+| **cp_min at all seven stations** | **1.42 … 3.03** | **NONE — not asymptotic** |
 
-⇒ **cd, cm and six of the seven shock positions may be gated; cl may not.**
-cl integrates the whole surface including the fast-moving outboard shock, so it
-inherits the one station that has not converged. Sanity: the shock sweeps
-forward outboard — 0.668 / 0.605 / 0.543 / 0.467 / 0.375 / 0.278 — the M6
-λ-shock pattern, with the tip station at 0.469.
+⇒ **cd, cm and five of the seven shock positions may be gated; cl may not, and
+neither may any suction peak.** cl integrates the whole surface including the
+fast-moving outboard shock, so it inherits the stations that have not
+converged. Sanity: the shock sweeps forward outboard — 0.668 / 0.605 / 0.543 /
+0.467 / 0.375 / 0.278 — the M6 λ-shock pattern.
+
+★★★ **ERRATUM 2026-09-03, and the correction is the interesting part.** The
+first version of this table read **9 of 11**, gating the y/b = 0.99 shock
+position on a delta ratio of **0.337**. That station is now **WITHDRAWN**, and
+it was not caught by the ratio — the ratio *passed*. `shock_metrics` returns,
+by its own documented contract, the **LAST** supersonic→subsonic crossing of
+Cp\*, which is the terminating shock only when the flow just upstream is
+DECISIVELY supersonic. At the tip station Cp instead *grazes* Cp\* = −0.328
+over a long plateau (x/c 0.24 → 0.47 reads −0.45, −0.33, −0.33), so the last
+crossing lands at **0.469** where the actual compression is at **0.236** — a
+quarter of a chord. ⇒ **a shrinking delta is not evidence of correctness: the
+ladder was converging steadily onto a non-feature.** `shock.csv` now carries
+`upstream_depth` and `detector_premise` so the artifact declares itself, and
+`grid_convergence` refuses a bar for any station whose premise fails on **any**
+rung — one bad rung means the deltas are differences between *different
+features*.
+
+★★ The fix is deliberately **not** "use a different rule at that station". The
+pyFP3D side of every D07 comparison is read with this same `shock_metrics`; a
+reference side read with a different rule would make the two numbers different
+things. The threshold (`DEPTH_MIN` = 0.05) is a **CALIBRATION** of a measured
+4× gap — the five genuine stations read 0.175–0.438 on every rung, the tip
+reads 0.045 / 0.017 / 0.005, and the experiment's own curves read 0.349–0.808
+outboard — with the same status as the EW forcing and the taper `r_c`.
+
+★ The same erratum retired the y/b = 0.96 mystery: its ratio 1.388 is not
+"not asymptotic yet" but a **feature change across rungs** — upstream depth
+0.083 / 0.108 (marginal) at L1/L2 against 0.413 (genuine) at L3, i.e. the
+ladder was comparing a grazing crossing against a real shock.
 
 ★ The ladder is one consistent family, which the previous one was not: basin
 depth 0.2361 / 0.2361 / 0.2368 (spread **1.0031×**, against 1.26× and
 non-monotone before), `n_tail` 9/17/25 and `n_grow` 61/77/101 both monotone,
 0 negative cells, tip at full thickness on every rung. `REF` is the
 cross-checked configuration and is deliberately NOT a ladder rung.
+
+### The bias against the committed experiment — RECORDED, not a gate
+
+`compare_m6_experiment.py` writes `experiment_bias.csv` and
+`cp_vs_experiment.png`. It is a **recorded bias** because the experiment sits
+one model level away from an Euler solution (ruling 3: the gate against
+experiment belongs to FP+IBL). Its direction is therefore written down **in
+advance**: the experiment is viscous, boundary-layer displacement reduces the
+effective camber and pushes the shock **upstream**, so an inviscid solution at
+the same α must place its shock **further aft**. And per the criterion-defect
+list, the opposite outcome is given a landing spot: a Euler shock *upstream* of
+the measured one would be an **anomaly**, not better agreement.
+
+Measured, L3 against the experiment interpolated onto the measured x/c:
+
+| y/b | RMS upper | RMS lower | RMS pooled | x_shock exp | x_shock Euler | Δx |
+|---|---|---|---|---|---|---|
+| 0.20 | 0.0916 | 0.0613 | 0.0830 | 0.6386 | 0.6680 | +0.0295 |
+| 0.44 | 0.1207 | 0.0548 | 0.1041 | 0.5699 | 0.6049 | +0.0350 |
+| 0.65 | 0.1302 | 0.0332 | 0.1088 | 0.4970 | 0.5435 | +0.0464 |
+| 0.80 | 0.1371 | 0.0311 | 0.1134 | 0.3964 | 0.4670 | +0.0706 |
+| 0.90 | 0.1522 | 0.0370 | 0.1280 | 0.3034 | 0.3753 | +0.0719 |
+| 0.96 | 0.1112 | 0.0381 | 0.0947 | 0.2533 | 0.2784 | +0.0251 |
+| 0.99 | 0.1610 | 0.0615 | 0.1380 | 0.2137 | *(withdrawn)* | — |
+
+**Shock aft of the experiment at 6 of 6 readable stations, by 0.025–0.072 c**,
+growing outboard — the predicted direction, with no anomaly. Pooled Cp RMS
+0.083–0.138 (mean 0.110), and the **upper surface carries 3–4× the lower
+surface's** RMS, which is where the two mechanisms live: the shock displacement
+and the leading-edge peak.
+
+★★★ **A CORRECTION TO THE PREDICTION, not to the data.** The first version of
+this comparison also predicted the inviscid suction peak would be **deeper**,
+and duly reported all six stations as "half the mechanism missing". That was a
+defect in the prediction: the peak has a second mechanism of the **opposite**
+sign — a finite grid always under-resolves a leading-edge suction peak, making
+it shallower — and on this ladder that one dominates. Measured: `cp_min`
+deepens **monotonically** across all three rungs at every station, and the
+L2→L3 step alone covers **37–66 %** of the whole remaining gap to the
+experiment (every `cp_min_upper_eta*` row is non-asymptotic, ratios 1.42–3.03).
+**A quantity still moving by half its own residual gap cannot test a model
+difference.** ⇒ the peak comparison is RECORDED with no predicted sign; only
+the shock position carries one. This is why `cp_min` was added to
+`grid_convergence.csv`: the claim had to be measured, not asserted.
 
 ### Convergence caliber — Euler runs, RANS does not
 

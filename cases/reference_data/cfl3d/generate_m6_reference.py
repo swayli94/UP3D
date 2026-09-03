@@ -169,6 +169,51 @@ def station_cp(rows, jte0, jte1, z_tip):
     return out
 
 
+def upstream_supersonic_depth(x, cp, x_shock, window=0.08):
+    """How far BELOW Cp* the flow gets in the ``window`` just upstream of the
+    detected crossing.
+
+    ★★★ THIS IS A PREMISE CHECK ON THE DETECTOR, not a physical quantity.
+    ``shock_metrics`` returns, by its own documented contract, the **LAST**
+    supersonic->subsonic crossing of Cp*.  That is the terminating shock only
+    when the flow upstream of it is DECISIVELY supersonic.  Where a section
+    instead carries a long marginally-sonic plateau -- Cp hovering within a
+    few hundredths of Cp* -- the "last crossing" is wherever the plateau
+    finally drifts above Cp*, which can sit a quarter of a chord downstream of
+    the actual compression.  Measured on the M6 tip station: the compression
+    is at x/c 0.236 and the last crossing is at 0.469.
+
+    Returning a small number therefore means **the detector's premise fails
+    here and its output is not a shock position** -- not that the shock is
+    weak.  The reference dataset publishes this column so the artifact
+    declares itself, and ``grid_convergence`` refuses an error bar for any
+    station where it fails on any rung.
+
+    ★ The fix is deliberately NOT "use a different rule at that station".
+    The pyFP3D side of every D07 comparison is read with this SAME
+    ``shock_metrics``; a reference side read with a different rule would make
+    the two numbers different things, which is the criterion defect this
+    project has now hit six times.
+    """
+    x = np.asarray(x, float)
+    cp = np.asarray(cp, float)
+    m = (x > x_shock - window) & (x < x_shock)
+    if not m.any():
+        return float('nan')
+    return float(cp_critical(MACH) - cp[m].min())
+
+
+#: below this the upstream flow is not decisively supersonic and the detected
+#: crossing is a Cp*-grazing artifact.  Calibrated on the measured spread, not
+#: chosen by hand: the five stations with a genuine terminating shock read
+#: 0.175-0.438 on every rung, the tip station reads 0.045/0.017/0.005, and the
+#: experiment's own curves read 0.349-0.808 at the six outboard stations.  Any
+#: cut inside 0.05-0.17 separates the same two groups, so the number is a
+#: CALIBRATION of a 4x gap, with the same status as the EW forcing and the
+#: taper r_c -- it is not a physical threshold.
+DEPTH_MIN = 0.05
+
+
 def split_surfaces(st):
     """Split one station's contour at the leading edge (minimum x/c)."""
     i = int(np.argmin(st['x_c']))
@@ -193,7 +238,8 @@ CP_COLUMNS = ['level', 'eta_requested', 'eta_grid', 'x_c', 'y_c', 'cp',
               'surface']
 SHOCK_COLUMNS = ['level', 'eta_requested', 'eta_grid', 'surface', 'has_shock',
                  'x_shock', 'n_cells', 'monotone', 'cp_min', 'cp_pre_shock',
-                 'cp_post_shock', 'cp_critical']
+                 'cp_post_shock', 'cp_critical', 'upstream_depth',
+                 'detector_premise']
 GC_COLUMNS = ['quantity', 'L1', 'L2', 'L3', 'delta_L1_L2', 'delta_L2_L3',
               'ratio', 'asymptotic', 'error_bar']
 
@@ -213,24 +259,37 @@ def grid_convergence(rows_by_level, shock_by_level):
     for lv, r in rows_by_level.items():
         for k in ('cl', 'cd', 'cd_pressure', 'cm_quarter_chord'):
             q.setdefault(k, {})[lv] = float(r[k])
+    bad = set()
     for lv, sh in shock_by_level.items():
         for s in sh:
             if s['x_shock'] == '' or s['surface'] != 'upper':
                 continue
-            q.setdefault(f"x_shock_upper_eta{s['eta_requested']}", {})[lv] = \
-                float(s['x_shock'])
+            name = f"x_shock_upper_eta{s['eta_requested']}"
+            q.setdefault(name, {})[lv] = float(s['x_shock'])
+            # ★ the suction peak is tabulated for the same reason: it is the
+            #   quantity whose EXPERIMENT bias has no predictable sign, and
+            #   this table is where that claim has to be measured rather than
+            #   asserted.  It comes out non-asymptotic on every station.
+            q.setdefault(f"cp_min_upper_eta{s['eta_requested']}",
+                         {})[lv] = float(s['cp_min'])
+            # ★ one bad rung disqualifies the whole ladder for that station:
+            #   the deltas would be differences between DIFFERENT FEATURES.
+            if s['detector_premise'].startswith('FAILS'):
+                bad.add(name)
     for name, v in q.items():
         if not all(l in v for l in ('L1', 'L2', 'L3')):
             continue
         d12, d23 = v['L2'] - v['L1'], v['L3'] - v['L2']
         ratio = abs(d23) / abs(d12) if d12 else float('inf')
-        asym = ratio < 1.0
+        asym = ratio < 1.0 and name not in bad
+        why = ('NONE (detector premise fails -- Cp*-grazing)' if name in bad
+               else 'NONE (not asymptotic)')
         out.append(dict(
             quantity=name,
             L1=f"{v['L1']:.6f}", L2=f"{v['L2']:.6f}", L3=f"{v['L3']:.6f}",
             delta_L1_L2=f'{d12:+.6f}', delta_L2_L3=f'{d23:+.6f}',
             ratio=f'{ratio:.3f}', asymptotic='yes' if asym else 'no',
-            error_bar=f'{abs(d23):.6f}' if asym else 'NONE (not asymptotic)'))
+            error_bar=f'{abs(d23):.6f}' if asym else why))
     return out
 
 
@@ -306,7 +365,7 @@ def main(argv=None):
                                     cp=f"{side['cp'][i]:.6f}",
                                     surface=name))
                 m = shock_metrics(side['x_c'], side['cp'], MACH)
-                pre = post = ''
+                pre = post = depth = premise = ''
                 if m['has_shock']:
                     xs = m['x_shock']
                     xa = side['x_c'][order]
@@ -314,6 +373,10 @@ def main(argv=None):
                     pre = f'{float(np.interp(xs - 0.05, xa, ca)):.6f}'
                     if xs + 0.05 <= xa.max():
                         post = f'{float(np.interp(xs + 0.05, xa, ca)):.6f}'
+                    dep = upstream_supersonic_depth(xa, ca, xs)
+                    depth = f'{dep:.6f}'
+                    premise = ('ok' if dep >= DEPTH_MIN else
+                               'FAILS -- Cp*-grazing, not a shock position')
                 rec = dict(level=lv, eta_requested=f'{eta:.2f}',
                            eta_grid=f"{st[eta]['eta_grid']:.4f}",
                            surface=name, has_shock=int(m['has_shock']),
@@ -322,7 +385,8 @@ def main(argv=None):
                            n_cells=m['n_cells'], monotone=int(m['monotone']),
                            cp_min=f"{m['cp_min']:.6f}", cp_pre_shock=pre,
                            cp_post_shock=post,
-                           cp_critical=f'{cp_critical(MACH):.6f}')
+                           cp_critical=f'{cp_critical(MACH):.6f}',
+                           upstream_depth=depth, detector_premise=premise)
                 shocks.append(rec)
                 lv_sh.append(rec)
         sh_by_level[lv] = lv_sh
