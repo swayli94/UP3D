@@ -242,6 +242,29 @@ RANS_FALLBACK = dict(NCYC=2000, CFL_START=0.05, CFL_RAMP=20.0,
                      IFLAGTS=500, NITFO=1500, MSEQ=3)
 
 
+# ★★★ EVERY recipe must satisfy NITFO < NCYC, or the finest mesh-sequence level
+# runs FIRST ORDER for the whole solve and nothing says so.
+# cfl3d/libs/resid.F:141 gates the requested RKAP0 behind `icyc >= nitfo+1`,
+# and mgblk.F:416 sets `nitfo = nitfo1(iseq)` immediately before
+# `do 7000 icyc=1,ncyc` -- so icyc restarts at 1 on each level and is compared
+# against that level's own nitfo.
+#
+# These three 2-D recipes were CHECKED and are correct (0/1000, 500/2000,
+# 1500/2000).  The check is here anyway, at import time, because the 3-D M6
+# ladders were NOT: they carried nitfo 1000 with ncyc 1000 and 800, ran
+# entirely first order, and both had to be discarded.  The .inp files showed
+# the requested RKAP0 = 0.3333 in every case, so reading the deck could not
+# catch it.
+for _name, _r in (('EULER_SOLVER', EULER_SOLVER), ('RANS_SOLVER', RANS_SOLVER),
+                  ('RANS_FALLBACK', RANS_FALLBACK)):
+    if _r['NITFO'] >= _r['NCYC']:
+        raise ValueError(
+            f"{_name}: NITFO={_r['NITFO']} >= NCYC={_r['NCYC']} -- the finest "
+            f"grid would run FIRST ORDER throughout (resid.F:141).  Raise NCYC; "
+            f"the first-order startup is load-bearing on the transonic cases.")
+del _name, _r
+
+
 def default_solver(case: 'Case') -> dict:
     return dict(EULER_SOLVER if case.ivisc == 0 else RANS_SOLVER)
 

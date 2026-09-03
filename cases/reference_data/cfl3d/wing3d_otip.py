@@ -439,6 +439,47 @@ M6_LEVELS = {
                n_span=45, n_side=45, h1_euler=1.414e-3),
     'L3': dict(n_foil=161, n_wake=61, n_grow=101, n_tail=25,
                n_span=61, n_side=61, h1_euler=1.000e-3),
+    # ★★ L4 (added 2026-09-03, user-approved) is the FOURTH rung, and it exists
+    # because three rungs could not answer three separate questions -- see
+    # ``M6_LADDER_RATIOS`` below.  It continues r ~ 1.35 in the TOTAL POINT
+    # COUNT, which is the measure on which this ladder is near-uniform, and
+    # keeps the h1 ratio at the ladder's own sqrt(2).
+    # ★ EULER ONLY.  There is no ``M6_RANS_NGROW['L4']``: a 12 M-point RANS
+    # rung is not affordable here, and inventing one would put an untested
+    # n_grow into the RANS ladder whose basin depth nobody had matched.
+    'L4': dict(n_foil=217, n_wake=81, n_grow=133, n_tail=33,
+               n_span=81, n_side=81, h1_euler=7.072e-4),
+}
+
+#: ★★★ THE RATIO CRITERION NEEDS A CALIBRATION, and until 2026-09-03 it had
+#: none: ``ratio = |d(L2->L3)| / |d(L1->L2)|`` was compared against **1.0**,
+#: which is not the value a converging quantity produces -- it is merely the
+#: value above which the deltas stop shrinking at all.
+#:
+#: For a p-order quantity on rungs with mesh parameter h, the ratio is
+#: ``|h3^p - h2^p| / |h2^p - h1^p|``, and it depends on the LADDER, not only on
+#: p.  The defensible scalar h for a grid that refines every direction at a
+#: slightly different rate is ``h ~ N^(-1/3)`` on the total point count, and on
+#: THAT measure this ladder is near-uniform -- measured r = 1.376 (L1->L2) and
+#: 1.340 (L2->L3), a ratio-of-ratios of 1.027, against 1.494/1.331 if one reads
+#: the chordwise count instead.  The predicted ratios follow:
+#:
+#:     p = 2.00  ->  0.496        p = 0.75  ->  0.729
+#:     p = 1.50  ->  0.579        p = 0.50  ->  0.787
+#:     p = 1.00  ->  0.675        p = 0.25  ->  0.849
+#:
+#: ⇒ "ratio < 1" admits a quantity converging at order 0.2.  The published
+#: table therefore reports the IMPLIED ORDER beside the ratio, and a reader who
+#: wants to halve an error bar can compute what that costs: at p = 0.68 (cd's
+#: measured order) halving needs a 2.8x point-count increase, not 1.4x.
+#:
+#: ★ This is the same defect as the four in the phase-three list, in its
+#: "threshold with no calibration" form: a number picked because it is round.
+M6_LADDER_RATIOS = {
+    'mesh_parameter': 'h ~ N^(-1/3), total point count',
+    'r_L1_L2': 1.376, 'r_L2_L3': 1.340,
+    'predicted_ratio': {2.0: 0.496, 1.5: 0.579, 1.0: 0.675,
+                        0.75: 0.729, 0.5: 0.787, 0.25: 0.849},
 }
 
 #: ★ The reference implementation's own parameter set, kept SEPARATE from the
@@ -494,6 +535,13 @@ def build_m6(level='L3', model='euler', y_plus=1.0,
         wall = dict(h1=h1_euler)
     else:
         wall = dict(y_plus=y_plus, re_chord=re_chord)
+        if level not in M6_RANS_NGROW:
+            raise KeyError(
+                f'level {level!r} has no RANS wall-normal count.  It is an '
+                f'EULER-ONLY rung: the RANS ladder needs its own (n_grow, '
+                f'k_crit) search against basin depth '
+                f'{M6_BASIN_DEPTH["rans"]}, and no untested value may be '
+                f'substituted.  Have {sorted(M6_RANS_NGROW)}.')
         lv['n_grow'] = M6_RANS_NGROW[level]
     wall['basin_depth'] = M6_BASIN_DEPTH[model]
 
@@ -962,6 +1010,30 @@ class WingOTip:
         is the MAC-based experimental value rescaled to the root chord.  Getting
         this wrong is a silent 24 % error in Re.
         """
+        # ★★★ nitfo >= ncyc SILENTLY MAKES THE WHOLE RUN FIRST ORDER.
+        # cfl3d/libs/resid.F:141 is
+        #     if (icyc >= nitfo+1 and level >= lglobal):  rkap = rkap0
+        #     elif level >= lglobal:                      rkap = -3.  ! 1st order
+        # and mgblk.F:416 sets `nitfo = nitfo1(iseq)` right before
+        # `do 7000 icyc=1,ncyc`, so icyc RESTARTS at 1 on every mesh-sequence
+        # level and is compared against that level's own nitfo.  With
+        # nitfo >= ncyc the condition is never satisfied on the finest grid and
+        # the requested RKAP0 never switches on.
+        #
+        # Measured cost of not having this guard: the entire M6 Euler ladder
+        # (nitfo 1000 / ncyc 1000) and the entire M6 RANS ladder (nitfo 1000 /
+        # ncyc 800) ran first order and had to be discarded.  The deck ASKED
+        # for kappa = 1/3 and the .inp file shows RKAP0 = 0.3333 in both, which
+        # is why reading the input could not catch it -- a requested parameter
+        # is not the active one.
+        if nitfo >= ncyc:
+            raise ValueError(
+                f'nitfo={nitfo} >= ncyc={ncyc}: the finest grid would run '
+                f'FIRST ORDER for the whole solve (resid.F:141 needs '
+                f'icyc >= nitfo+1, and icyc restarts per mesh-sequence level). '
+                f'Use ncyc > nitfo -- the first-order startup is load-bearing '
+                f'on this case, so raise ncyc rather than lowering nitfo.')
+
         s = self.sec_proto
         gn = len(self.grid)
         nwk, ntl = s.n_wake, s.n_tail

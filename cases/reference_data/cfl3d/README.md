@@ -632,7 +632,18 @@ in 3-D alike.**  How each side is built:
 resolved on every RANS rung, and the Euler rungs carry no wall clustering at
 all.
 
-### `euler_onera_m6/` — the D07 dataset
+### `euler_onera_m6/` — the D07 dataset ★★★ WITHDRAWN 2026-09-03
+
+> **This dataset is a FIRST-ORDER solution and is withdrawn.** `NITFO = 1000`
+> with `NCYC = 1000` never satisfies `resid.F:141`'s `icyc >= nitfo+1` on the
+> finest grid (`icyc` restarts per mesh-sequence level, `mgblk.F:416`), so the
+> requested `RKAP0 = 0.3333` never switched on. Full statement, including which
+> published readings are *confounded* rather than merely inaccurate:
+> [`euler_onera_m6/WITHDRAWN.md`](euler_onera_m6/WITHDRAWN.md) and
+> `docs/dev_phase_six/20260903-0200-cfl3d-first-order-defect.md`.
+> **The four 2-D datasets are unaffected** (their `NITFO` < `NCYC`, now
+> asserted at import). A four-rung second-order replacement is running.
+
 
 Written by `generate_m6_reference.py` from a finished ladder; it performs no
 solve. Condition: **M 0.8395, α 3.06°** (AGARD AR-138 TEST 2308 verbatim,
