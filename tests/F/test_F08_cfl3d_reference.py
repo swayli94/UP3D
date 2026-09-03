@@ -142,3 +142,103 @@ class TestImpliedOrder:
         rs = [G.implied_order(h, 1.0 + 0.3 * h ** p, 0)[0]
               for p in (0.25, 0.5, 1.0, 1.5, 2.0)]
         assert all(a > b for a, b in zip(rs, rs[1:])), rs
+
+
+class TestRunStatus:
+    """A CFL3D summary is NOT evidence that the solve finished.
+
+    ★★★ Measured: the M6 L2 rung died with `NaN detected after residual
+    evaluation, block 1 cycle 540` and still wrote a SUMMARY OF FORCES giving
+    cl = +0.339608.  A runner that checked for the summary reported it "ok" and
+    would have published a diverging state as reference data.
+
+    ★★ Three wrong detectors preceded the right one, and each was caught only
+    by running it against cases whose outcome was already known:
+      1. "NaN appears in cfl3d.out"  -- the message is written to cfl3d.error;
+      2. "a SUMMARY block exists"    -- failed runs write one too;
+      3. "cfl3d.error is non-empty"  -- SUCCESSFUL runs write to it as well,
+         and in fact the normal-termination banner appears nowhere else.
+    The authoritative field is the error CODE.  These synthetic cases lock all
+    four behaviours so no future simplification can reintroduce any of them.
+    """
+
+    OK_ERR = ' error code:\n   0\n\n execution terminated normally\n'
+    BAD_ERR = (' error code:\n  -1\n\n abnormal termination due to cfl3d '
+               'error check\n (error message follows)\n\n dump of unit 11 '
+               '(main output) buffer:\n\n NaN detected after residual '
+               'evaluation, block   1 cycle  540\n')
+    INP = ('      NCYC    MGLEVG     NEMGL     NITFO\n'
+           '      1500         1         0       500\n'
+           '      1500         2         0       500\n'
+           '      1500         3         0       500\n')
+
+    def _case(self, tmp_path, err, last_it, with_summary=True):
+        d = tmp_path
+        (d / 'cfl3d.inp').write_text(self.INP)
+        rows = ['Variables = LV BLK IT res']
+        for lv in (1, 2, 3):
+            for it in range(1, 1501):
+                g = (lv - 1) * 1500 + it
+                if g > last_it:
+                    break
+                rows.append(f'{lv:6d}{1:4d}{g:7d}  0.1E-06  0.1E-06  '
+                            f'0.33E+00  0.15E-01  0.15E-01  0.0E+00  0.0E+00')
+        (d / 'clcd_total.dat').write_text('\n'.join(rows) + '\n')
+        if err is not None:
+            (d / 'cfl3d.error').write_text(err)
+        out = 'blah\n'
+        if with_summary:
+            # ★ verbatim the shape CFL3D writes, so read_summary really parses
+            #   it -- the trap is only live if the reader would have returned a
+            #   number for this dead run.
+            out += ('SUMMARY OF FORCES AND MOMENTS - ALL GLOBAL BLOCKS\n\n'
+                    '          CL                CD               CDp'
+                    '               CDv\n'
+                    '  0.33960762016E+00  0.14795440792E-01'
+                    '  0.14795440792E-01  0.00000000000E+00\n'
+                    '          CZ                CY               CX'
+                    '            wetted area\n'
+                    '  0.1E-01  0.3E+00  -0.2E-02  0.15E+01\n')
+        (d / 'cfl3d.out').write_text(out)
+        return d
+
+    def test_completed_run_is_ok(self, tmp_path):
+        import generate_m6_reference as G
+        self._case(tmp_path, self.OK_ERR, 4500)
+        ok, why, last, want = G.run_status(tmp_path)
+        assert ok, why
+        assert (last, want) == (4500, 4500)
+
+    def test_diverged_run_is_rejected_despite_its_summary(self, tmp_path):
+        """The exact L2 failure: died at 3539 of 4500, summary present."""
+        import generate_m6_reference as G
+        self._case(tmp_path, self.BAD_ERR, 3539, with_summary=True)
+        ok, why, last, want = G.run_status(tmp_path)
+        assert not ok
+        assert 'DIVERGED' in why and 'cycle  540' in why
+        # and the summary really is there, i.e. the trap is live
+        got = G.read_summary(tmp_path / 'cfl3d.out')
+        assert got['CL'] == pytest.approx(0.33960762016), (
+            'the trap must be live: the reader returns a number for this '
+            'DEAD run, which is exactly why run_status is required')
+
+    def test_nonempty_error_file_is_not_failure(self, tmp_path):
+        """Guards against the third wrong detector."""
+        import generate_m6_reference as G
+        self._case(tmp_path, self.OK_ERR, 4500)
+        assert (tmp_path / 'cfl3d.error').stat().st_size > 0
+        assert G.run_status(tmp_path)[0] is True
+
+    def test_short_run_with_code_zero_is_rejected(self, tmp_path):
+        """Code 0 but the counter never reached mseq*ncyc."""
+        import generate_m6_reference as G
+        self._case(tmp_path, self.OK_ERR, 3000)
+        ok, why, last, want = G.run_status(tmp_path)
+        assert not ok, why
+        assert (last, want) == (3000, 4500), (last, want)
+
+    def test_still_running_is_not_reported_as_success(self, tmp_path):
+        import generate_m6_reference as G
+        self._case(tmp_path, None, 3490)
+        ok, why, _, _ = G.run_status(tmp_path)
+        assert not ok and 'STILL RUNNING' in why

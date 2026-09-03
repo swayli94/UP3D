@@ -38,6 +38,8 @@ import re
 import sys
 from pathlib import Path
 
+import re
+
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
@@ -65,6 +67,65 @@ MACH, ALPHA = 0.8395, 3.06
 # ---------------------------------------------------------------------------
 #  readers
 # ---------------------------------------------------------------------------
+
+def deck_ncyc(d: Path):
+    """-> (ncyc, mseq) from the deck.
+
+    ★ mseq must come from the DECK, not from the highest level seen in the
+    history file: a run that died before reaching the finest sequence level
+    writes no rows for it, so a file-derived mseq makes the run look complete
+    one level early.
+    """
+    t = (d / 'cfl3d.inp').read_text().splitlines()
+    for i, l in enumerate(t):
+        if 'NCYC' in l and 'NITFO' in l:
+            rows = []
+            for k in range(i + 1, len(t)):
+                p = t[k].split()
+                if len(p) != 4 or not p[0].lstrip('-').isdigit():
+                    break
+                rows.append(int(p[0]))
+            return rows[0], len(rows)
+    raise RuntimeError('no NCYC block')
+
+
+def run_status(d: Path):
+    """-> (ok: bool, detail: str, last_it: int, want_it: int)
+
+    ★★ ``cfl3d.error`` is written on BOTH outcomes and is the authoritative
+    field; the normal-termination banner appears nowhere else (not in
+    cfl3d.out, not on stdout).  Success is `error code: 0`, failure is
+    `error code: -1` followed by the message.  Three wrong versions of this
+    function preceded the right one -- "NaN in cfl3d.out" (the message is not
+    there), "a SUMMARY exists" (CFL3D writes one while dying), and "the error
+    file is non-empty" (so is a successful run's).  Each was caught only by
+    running it against cases whose answer was already known.
+    """
+    d = Path(d)
+    rows = ([l.split() for l in (d / 'clcd_total.dat').read_text().splitlines()
+             if l.split() and l.split()[0].isdigit()]
+            if (d / 'clcd_total.dat').is_file() else [])
+    last_it = max((int(r[2]) for r in rows), default=0)
+    nlv = max((int(r[0]) for r in rows), default=0)
+    ncyc, mseq = deck_ncyc(d)
+    want = mseq * ncyc
+
+    ef = d / 'cfl3d.error'
+    if not (ef.is_file() and ef.stat().st_size):
+        return False, f'STILL RUNNING at IT {last_it}/{want}', last_it, want
+    txt = ef.read_text(errors='replace')
+    m = re.search(r'error code:\s*(-?\d+)', txt)
+    code = int(m.group(1)) if m else None
+    if code is None:
+        return False, 'cfl3d.error has no error code', last_it, want
+    if code != 0:
+        lines = [l.strip() for l in txt.splitlines() if l.strip()]
+        return False, f'DIVERGED (code {code}): {lines[-1]}', last_it, want
+    if want and last_it < want:
+        return False, f'code 0 but stopped at IT {last_it}/{want}', last_it, want
+    return True, f'ok, IT {last_it}/{want}', last_it, want
+
+
 
 def read_summary(out: Path) -> dict:
     """cl / cd / cdp / cdv / wetted area from the cfl3d.out SUMMARY.
@@ -375,6 +436,19 @@ def main(argv=None):
         if not (d / 'cfl3d.out').is_file():
             print(f'  ! {lv}: no run in {d}')
             continue
+        # ★★★ A DIVERGED RUN STILL WRITES A SUMMARY.  CFL3D emits
+        # "SUMMARY OF FORCES" on its way out of a failed solve, so reading the
+        # summary is NOT evidence the solve finished.  Measured: the M6 L2 rung
+        # died with `NaN ... block 1 cycle 540` and its summary said
+        # cl = +0.339608, which a runner checking only for the summary reported
+        # as "ok" and would have published.  Success is established from
+        # cfl3d.error's error code -- the only field that distinguishes the two,
+        # and the only place the normal-termination banner is written.
+        ok, why, last_it, want_it = run_status(d)
+        if not ok:
+            raise RuntimeError(
+                f'{lv}: refusing to publish -- {why}.  A CFL3D summary exists '
+                f'for failed runs too, so it is not evidence of convergence.')
         g = build_m6(level=lv, model='euler', verbose=False)
         s = g.sec_proto
         smry = read_summary(d / 'cfl3d.out')
