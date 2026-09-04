@@ -58,6 +58,37 @@ MACH = 0.8395
 STATIONS = (0.20, 0.44, 0.65, 0.80, 0.90, 0.96, 0.99)
 
 
+def experiment_bracket(x, x_shock):
+    """Width of the experimental interval containing the Cp* crossing.
+
+    ★★★ A shock position INFERRED from discretely sampled Cp cannot be located
+    more precisely than the sampling interval that brackets the crossing --
+    roughly half of it, geometrically.  The M6 experiment samples every
+    0.040-0.050 c, so a computed-vs-measured displacement smaller than
+    ~0.020 c carries NO information about the shock's true position.
+
+    ★★ Measured, and it changes the verdict: at SECOND order every station's
+    displacement is 0.11-0.62x the local bracket, i.e. the direction test has
+    NO POWER against this experiment at all.  The FIRST-order dataset's
+    displacements (+0.025..+0.072 c, up to 1.4x the bracket) only looked
+    convincing because the solution was wrong by more than the reference could
+    resolve -- fixing the scheme removed the "signal".
+
+    ⇒ This is the criterion-defect family again, in its own distinctive form:
+    the criterion compared a quantity against a reference whose RESOLUTION is
+    coarser than every difference being reported.
+    """
+    x = np.asarray(x, float)
+    i = int(np.searchsorted(x, x_shock))
+    return float(x[min(i, len(x) - 1)] - x[max(i - 1, 0)])
+
+
+#: a displacement below this fraction of the experimental bracket is
+#: UNRESOLVABLE.  0.5 is the geometric half-interval, i.e. a CALIBRATION of the
+#: reference's sampling, with the same status as the EW forcing and DEPTH_MIN.
+RESOLVE_FRAC = 0.5
+
+
 def read_experiment():
     """Seven zones of NP, X/L, Y/b, Z/L, Cp.
 
@@ -91,7 +122,7 @@ def read_experiment():
     return out
 
 
-def read_cfl3d(level='L3'):
+def read_cfl3d(level='L4'):
     rows = [r for r in csv.DictReader(open(DATA / 'cp_stations.csv'))
             if r['level'] == level]
     out = {}
@@ -108,8 +139,8 @@ def read_cfl3d(level='L3'):
 
 def main():
     exp = read_experiment()
-    lev = {l: read_cfl3d(l) for l in ('L1', 'L2', 'L3')}
-    cfd = lev['L3']
+    lev = {l: read_cfl3d(l) for l in ('L1', 'L2', 'L3', 'L4')}
+    cfd = lev['L4']          # the bias is read on the FINEST rung
 
     rows = []
     for eta in STATIONS:
@@ -163,9 +194,17 @@ def main():
             dpk = sc['cp_min'] - se['cp_min']
             rec['d_x_shock'] = f'{dx:+.6f}'
             rec['d_cp_min'] = f'{dpk:+.6f}'
-            # inviscid at the same alpha: shock DOWNSTREAM.  Both signs are
-            # stated so the opposite outcome has a landing spot.
-            if dx <= 0:
+            brk = experiment_bracket(exp[ekey]['upper'][0], se['x_shock'])
+            rec['exp_bracket'] = f'{brk:.4f}'
+            rec['dx_over_bracket'] = f'{abs(dx) / brk:.2f}'
+            if abs(dx) < RESOLVE_FRAC * brk:
+                # ★ THE RESOLUTION GATE COMES BEFORE THE SIGN.  Reading a sign
+                #   off a difference finer than the reference's own sampling is
+                #   reading noise -- in either direction.
+                rec['direction'] = (
+                    f'UNRESOLVABLE -- |dx| is {abs(dx)/brk:.2f}x the '
+                    f'experiment\'s own {brk:.4f} c sampling interval')
+            elif dx <= 0:
                 rec['direction'] = ('ANOMALY -- shock UPSTREAM of experiment, '
                                     'contradicts the viscous mechanism')
             else:
@@ -177,7 +216,8 @@ def main():
     cols = ['eta', 'eta_experiment', 'rms_upper', 'n_upper', 'rms_lower',
             'n_lower', 'rms_pooled', 'x_shock_experiment', 'x_shock_euler',
             'd_x_shock', 'cp_min_experiment', 'cp_min_euler', 'd_cp_min',
-            'depth_experiment', 'depth_euler', 'direction']
+            'depth_experiment', 'depth_euler', 'exp_bracket',
+            'dx_over_bracket', 'direction']
     with open(DATA / 'experiment_bias.csv', 'w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction='ignore')
         w.writeheader()
@@ -193,9 +233,14 @@ def main():
               f'  {r["direction"]}')
     p = [float(r['rms_pooled']) for r in rows]
     print(f'\n  pooled RMS {min(p):.4f} .. {max(p):.4f}  mean {np.mean(p):.4f}')
-    ok = [r for r in rows if r['direction'].startswith('as predicted')]
-    print(f'  direction as predicted at {len(ok)} of {len(rows)} stations; '
-          f'{len(rows) - len(ok)} withdrawn on the detector premise')
+    # ★ the previous version counted every non-"as predicted" row as
+    #   "withdrawn on the detector premise", which mislabelled an ANOMALY and
+    #   an UNRESOLVABLE as a detector problem.  Count each class.
+    from collections import Counter
+    cls = Counter(r['direction'].split(' --')[0].split(' (')[0]
+                  for r in rows)
+    print('  direction verdicts: ' + ', '.join(
+        f'{k} {v}' for k, v in sorted(cls.items(), key=lambda kv: -kv[1])))
 
     # ---------------- figure ----------------
     import matplotlib
@@ -205,9 +250,10 @@ def main():
     fig, axes = plt.subplots(2, 4, figsize=(17.5, 8.2), sharex=True)
     for ax, eta in zip(axes.ravel(), STATIONS):
         ekey = min(exp, key=lambda z: abs(z - eta))
-        for lv, sty in (('L1', dict(lw=0.8, ls=':', color='#9aa0a6')),
-                        ('L2', dict(lw=0.9, ls='--', color='#5b8def')),
-                        ('L3', dict(lw=1.7, color='#1a56db'))):
+        for lv, sty in (('L1', dict(lw=0.7, ls=':', color='#b0b6bd')),
+                        ('L2', dict(lw=0.8, ls=':', color='#9aa0a6')),
+                        ('L3', dict(lw=0.9, ls='--', color='#5b8def')),
+                        ('L4', dict(lw=1.7, color='#1a56db'))):
             for side in ('upper', 'lower'):
                 x, cp = lev[lv][eta][side]
                 ax.plot(x, cp, label=f'CFL3D Euler {lv}'
@@ -242,29 +288,29 @@ def main():
     axes.ravel()[-1].text(
         0.02, 0.95,
         'ONERA M6, AGARD AR-138 TEST 2308\n'
-        'M 0.8395, alpha 3.06 (experimental, UNCORRECTED)\n\n'
-        'CFL3D EULER vs VISCOUS experiment: the bias\n'
-        'direction is KNOWN IN ADVANCE -- inviscid at the\n'
-        'same alpha carries more lift and its shock sits\n'
-        'FURTHER AFT.  A shock further FORWARD than the\n'
-        'measurement would contradict that and would be\n'
-        'an anomaly, not better agreement.\n\n'
+        'M 0.8395, alpha 3.06 (experimental, UNCORRECTED)\n'
+        'CFL3D Euler, SECOND ORDER (RKAP0 1/3, ICHK 2)\n\n'
         'RECORDED bias, not a gate (ruling 3: the gate\n'
         'against experiment belongs to FP+IBL, not to a\n'
         'model one level away).\n\n'
-        'Only the SHOCK POSITION has a predicted sign.\n'
-        'The suction peak does not: it is still deepening\n'
-        'monotonically with refinement, the last rung\n'
-        'covering 37-66% of the gap to experiment, so\n'
-        'grid truncation dominates it.\n\n'
+        '*** THE SHOCK-POSITION TEST HAS NO POWER HERE.\n'
+        'The experiment samples Cp every 0.040-0.050 c,\n'
+        'and 5 of 7 displacements are 0.14-0.42x that\n'
+        'interval -- finer than the reference can locate\n'
+        'a shock.  Only y/b = 0.20 (0.61x) resolves, and\n'
+        'it agrees.  The FIRST-order dataset looked\n'
+        'convincing (+0.025..+0.072 c, up to 1.4x) only\n'
+        'because it was wrong by more than the experiment\n'
+        'could resolve; fixing the scheme removed the\n'
+        '"signal".  The pooled Cp RMS is the bias that\n'
+        'survives -- it compares Cp AT the measured\n'
+        'points and infers no position.\n\n'
         'Dash-dot = detected shock (blue Euler, red exp).\n'
         'Green dashes = Cp* = -0.328.\n\n'
-        'y/b = 0.99 is WITHDRAWN: Cp grazes Cp* over a\n'
-        'long plateau there, so the detector\'s "last\n'
-        'sonic crossing" lands 0.23c aft of the actual\n'
-        'compression.  Its delta ratio was 0.337 -- it\n'
-        'would have PASSED the convergence test, on a\n'
-        'non-feature.',
+        'y/b = 0.99 WITHDRAWN: Cp grazes Cp* over a long\n'
+        'plateau, so the detector\'s "last sonic crossing"\n'
+        'is not the compression.  Its premise fails on L1\n'
+        'AND on L4 -- refinement does not cure it.',
         va='top', ha='left', fontsize=8.5, family='monospace')
     fig.suptitle('D07 Euler reference vs the committed seven-station '
                  'experiment', fontsize=12)

@@ -532,7 +532,11 @@ def main(argv=None):
     print(f'\n  asymptotic: {n_as} of {len(gc)} quantities have an error bar')
     for r in gc:
         if r['asymptotic'] != 'yes':
-            print(f"    RECORDED only: {r['quantity']} (ratio {r['ratio']})")
+            # ★ the ratio column is named after the triple it came from
+            #   (ratio_L2L3L4 etc.), so read it via the row's own 'basis'.
+            key = f"ratio_{r['basis']}"
+            print(f"    RECORDED only: {r['quantity']} "
+                  f"({key} {r.get(key, '?')})")
     return 0
 
 
