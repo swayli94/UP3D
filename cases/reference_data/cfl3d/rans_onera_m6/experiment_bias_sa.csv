@@ -1,0 +1,8 @@
+eta,eta_experiment,rms_upper,n_upper,rms_lower,n_lower,rms_pooled,x_shock_experiment,x_shock_euler,d_x_shock,cp_min_experiment,cp_min_euler,d_cp_min,depth_experiment,depth_euler,exp_bracket,dx_over_bracket,direction
+0.20,0.200,0.106670,23,0.041437,11,0.090845,0.638561,0.650989,+0.012429,-1.069000,-0.957320,+0.111680,0.068846,0.365507,0.0500,0.25,UNRESOLVABLE -- |dx| is 0.25x the experiment's own 0.0500 c sampling interval
+0.44,0.440,0.083026,23,0.033774,11,0.070938,0.569938,0.572722,+0.002784,-1.127000,-1.085570,+0.041430,0.372846,0.431671,0.0500,0.06,UNRESOLVABLE -- |dx| is 0.06x the experiment's own 0.0500 c sampling interval
+0.65,0.650,0.075926,23,0.025635,11,0.064127,0.497029,0.495910,-0.001119,-1.181000,-1.126531,+0.054469,0.396846,0.417633,0.0501,0.02,UNRESOLVABLE -- |dx| is 0.02x the experiment's own 0.0501 c sampling interval
+0.80,0.800,0.087661,22,0.025785,11,0.073107,0.396433,0.392123,-0.004309,-1.206000,-1.146913,+0.059087,0.348846,0.338956,0.0496,0.09,UNRESOLVABLE -- |dx| is 0.09x the experiment's own 0.0496 c sampling interval
+0.90,0.900,0.099017,31,0.032598,14,0.084171,0.303351,0.304017,+0.000666,-1.194000,-1.162509,+0.031491,0.652846,0.702457,0.0400,0.02,UNRESOLVABLE -- |dx| is 0.02x the experiment's own 0.0400 c sampling interval
+0.96,0.960,0.080344,31,0.026950,14,0.068358,0.253318,0.246698,-0.006620,-1.227000,-1.201495,+0.025505,0.807846,0.689272,0.0399,0.17,UNRESOLVABLE -- |dx| is 0.17x the experiment's own 0.0399 c sampling interval
+0.99,0.990,0.142552,31,0.032394,14,0.119689,0.213742,0.277009,+0.063267,-1.291000,-1.208963,+0.082037,0.589846,0.247966,0.0400,1.58,"RECORDED, no predicted sign (viscous vs viscous); dx +0.0633 = 1.58x the bracket"

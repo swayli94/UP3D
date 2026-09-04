@@ -37,6 +37,7 @@ Writes euler_onera_m6/experiment_bias.csv and euler_onera_m6/cp_vs_experiment.pn
 
 from __future__ import annotations
 
+import argparse
 import csv
 import sys
 from pathlib import Path
@@ -53,7 +54,11 @@ from generate_m6_reference import (                        # noqa: E402
     DEPTH_MIN, upstream_supersonic_depth)
 
 EXP = REPO / 'cases' / 'reference_data' / 'onera_m6_experiment' / 'experiment-Cp.dat'
+#: set by main() from --dataset; both 3-D datasets share the cp_stations schema
 DATA = HERE / 'euler_onera_m6'
+#: ★ True only for the Euler dataset.  Gates the inviscid-vs-viscous direction
+#: prediction, which has no basis when both sides are viscous.
+INVISCID = True
 MACH = 0.8395
 STATIONS = (0.20, 0.44, 0.65, 0.80, 0.90, 0.96, 0.99)
 
@@ -122,9 +127,16 @@ def read_experiment():
     return out
 
 
-def read_cfl3d(level='L4'):
+def read_cfl3d(level='L4', turb=None):
+    """Cp at the stations, for one rung and (for RANS) one turbulence model."""
     rows = [r for r in csv.DictReader(open(DATA / 'cp_stations.csv'))
-            if r['level'] == level]
+            if r['level'] == level
+            and (turb is None or r.get('turb', 'none') == turb)]
+    if not rows:
+        raise RuntimeError(
+            f'{DATA}/cp_stations.csv has no rows for level={level!r} '
+            f'turb={turb!r} -- check the ladder actually reached that rung '
+            f'rather than publishing an empty comparison')
     out = {}
     for r in rows:
         k = (float(r['eta_requested']), r['surface'])
@@ -137,10 +149,36 @@ def read_cfl3d(level='L4'):
     return res
 
 
-def main():
+def main(argv=None):
+    global DATA
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--dataset', default='euler_onera_m6')
+    ap.add_argument('--level', default=None,
+                    help='rung to read the bias on; default = the finest '
+                         'present in the dataset')
+    ap.add_argument('--turb', default=None, help='rans only, e.g. sst')
+    ap.add_argument('--levels-plot', default=None,
+                    help='comma-separated rungs to draw; default = all present')
+    a = ap.parse_args(argv)
+    global INVISCID
+    DATA = HERE / a.dataset
+    INVISCID = 'euler' in a.dataset
+
+    present = sorted({r['level'] for r in
+                      csv.DictReader(open(DATA / 'cp_stations.csv'))
+                      if r['level'] != 'REF'})
+    # ★ the FINEST rung, taken from the file rather than hard-coded: reading a
+    #   bias on L3 while an L4 exists would compare the experiment against a
+    #   rung the dataset itself supersedes.
+    level = a.level or sorted(present)[-1]
+    plot_levels = (a.levels_plot.split(',') if a.levels_plot else present)
+    turb = a.turb
     exp = read_experiment()
-    lev = {l: read_cfl3d(l) for l in ('L1', 'L2', 'L3', 'L4')}
-    cfd = lev['L4']          # the bias is read on the FINEST rung
+    lev = {l: read_cfl3d(l, turb) for l in plot_levels}
+    cfd = lev[level]         # the bias is read on the FINEST rung present
+    tag = f' [{turb}]' if turb else ''
+    print(f'  dataset {a.dataset}{tag}, bias read on {level} '
+          f'(rungs present: {", ".join(present)})')
 
     rows = []
     for eta in STATIONS:
@@ -204,6 +242,22 @@ def main():
                 rec['direction'] = (
                     f'UNRESOLVABLE -- |dx| is {abs(dx)/brk:.2f}x the '
                     f'experiment\'s own {brk:.4f} c sampling interval')
+            elif not INVISCID:
+                # ★★★ THE PREDICTION IS EULER-ONLY AND MUST NOT BE
+                #   TRANSPLANTED.  Its whole basis is that an INVISCID
+                #   solution at the same alpha lacks the boundary-layer
+                #   displacement that moves the measured shock upstream.  A
+                #   RANS solution HAS that displacement, so there is no
+                #   inviscid/viscous gap to predict a sign from: what remains
+                #   between RANS and the experiment is turbulence modelling,
+                #   transition placement and wind-tunnel corrections, none of
+                #   which has a pre-registered direction here.
+                #   Applying the Euler clause to RANS would have reported
+                #   "as predicted" and "ANOMALY" verdicts with no premise
+                #   behind either.
+                rec['direction'] = (f'RECORDED, no predicted sign (viscous vs '
+                                    f'viscous); dx {dx:+.4f} = '
+                                    f'{abs(dx) / brk:.2f}x the bracket')
             elif dx <= 0:
                 rec['direction'] = ('ANOMALY -- shock UPSTREAM of experiment, '
                                     'contradicts the viscous mechanism')
@@ -250,13 +304,17 @@ def main():
     fig, axes = plt.subplots(2, 4, figsize=(17.5, 8.2), sharex=True)
     for ax, eta in zip(axes.ravel(), STATIONS):
         ekey = min(exp, key=lambda z: abs(z - eta))
-        for lv, sty in (('L1', dict(lw=0.7, ls=':', color='#b0b6bd')),
-                        ('L2', dict(lw=0.8, ls=':', color='#9aa0a6')),
-                        ('L3', dict(lw=0.9, ls='--', color='#5b8def')),
-                        ('L4', dict(lw=1.7, color='#1a56db'))):
+        styles = {'L1': dict(lw=0.7, ls=':', color='#b0b6bd'),
+                  'L2': dict(lw=0.8, ls=':', color='#9aa0a6'),
+                  'L3': dict(lw=0.9, ls='--', color='#5b8def'),
+                  'L4': dict(lw=1.7, color='#1a56db')}
+        for lv in plot_levels:
+            sty = dict(styles.get(lv, dict(lw=1.2, color='#1a56db')))
+            if lv == level:
+                sty.update(lw=1.7, ls='-', color='#1a56db')
             for side in ('upper', 'lower'):
                 x, cp = lev[lv][eta][side]
-                ax.plot(x, cp, label=f'CFL3D Euler {lv}'
+                ax.plot(x, cp, label=f'CFL3D {lv}{tag}'
                         if side == 'upper' else None, **sty)
         for side, mk in (('upper', 'o'), ('lower', 's')):
             xe, cpe = exp[ekey][side]
@@ -285,36 +343,78 @@ def main():
     for ax in axes[:, 0]:
         ax.set_ylabel('$C_p$')
     axes.ravel()[-1].axis('off')
-    axes.ravel()[-1].text(
-        0.02, 0.95,
-        'ONERA M6, AGARD AR-138 TEST 2308\n'
-        'M 0.8395, alpha 3.06 (experimental, UNCORRECTED)\n'
-        'CFL3D Euler, SECOND ORDER (RKAP0 1/3, ICHK 2)\n\n'
-        'RECORDED bias, not a gate (ruling 3: the gate\n'
-        'against experiment belongs to FP+IBL, not to a\n'
-        'model one level away).\n\n'
-        '*** THE SHOCK-POSITION TEST HAS NO POWER HERE.\n'
-        'The experiment samples Cp every 0.040-0.050 c,\n'
-        'and 5 of 7 displacements are 0.14-0.42x that\n'
-        'interval -- finer than the reference can locate\n'
-        'a shock.  Only y/b = 0.20 (0.61x) resolves, and\n'
-        'it agrees.  The FIRST-order dataset looked\n'
-        'convincing (+0.025..+0.072 c, up to 1.4x) only\n'
-        'because it was wrong by more than the experiment\n'
-        'could resolve; fixing the scheme removed the\n'
-        '"signal".  The pooled Cp RMS is the bias that\n'
-        'survives -- it compares Cp AT the measured\n'
-        'points and infers no position.\n\n'
-        'Dash-dot = detected shock (blue Euler, red exp).\n'
-        'Green dashes = Cp* = -0.328.\n\n'
-        'y/b = 0.99 WITHDRAWN: Cp grazes Cp* over a long\n'
-        'plateau, so the detector\'s "last sonic crossing"\n'
-        'is not the compression.  Its premise fails on L1\n'
-        'AND on L4 -- refinement does not cure it.',
-        va='top', ha='left', fontsize=8.5, family='monospace')
-    fig.suptitle('D07 Euler reference vs the committed seven-station '
-                 'experiment', fontsize=12)
-    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    # ★★★ THE CAPTION IS COMPUTED FROM `rows`, NOT WRITTEN AS PROSE.
+    #   The first RANS figure inherited the Euler caption verbatim and so
+    #   asserted "only y/b = 0.20 resolves" (it is y/b = 0.99 for RANS), the
+    #   Euler first-order displacement range, and a premise failing "on L1 AND
+    #   L4" when this dataset has no L4.  Stale text on a regenerated artifact
+    #   is the erratum-checklist class; deriving it removes the failure mode.
+    res = [r for r in rows if r['direction'].startswith(('as predicted',
+                                                         'RECORDED, no'))]
+    unres = [r for r in rows if r['direction'].startswith('UNRESOLVABLE')]
+    wd = [r for r in rows if r['direction'].startswith('WITHDRAWN')]
+    brks = [float(r['exp_bracket']) for r in rows if r.get('exp_bracket')]
+    fr = [float(r['dx_over_bracket']) for r in unres
+          if r.get('dx_over_bracket')]
+    pooled = [float(r['rms_pooled']) for r in rows]
+    lines = [
+        'ONERA M6, AGARD AR-138 TEST 2308',
+        'M 0.8395, alpha 3.06 (experimental, UNCORRECTED)',
+        f'CFL3D {"Euler" if INVISCID else "RANS"}, SECOND ORDER '
+        f'(RKAP0 1/3, ICHK 2){tag}',
+        f'bias read on {level}; rungs drawn: {", ".join(plot_levels)}',
+        '',
+        'RECORDED bias, not a gate.',
+    ]
+    lines += ([
+        '(ruling 3: the gate against experiment belongs',
+        'to FP+IBL, not to a model one level away.)',
+        '',
+        'PREDICTED SIGN: inviscid at the same alpha lacks',
+        'the boundary-layer displacement that moves the',
+        'measured shock upstream, so its shock must sit',
+        'AFT.  A shock forward of the measurement would',
+        'be an ANOMALY, not better agreement.',
+    ] if INVISCID else [
+        '',
+        '*** NO PREDICTED SIGN.  The Euler prediction',
+        '(inviscid lacks the displacement that moves the',
+        'measured shock upstream) has NO basis here --',
+        'RANS HAS that displacement.  What is left is',
+        'turbulence modelling, transition and tunnel',
+        'corrections, none with a pre-registered',
+        'direction.  So the shock rows are RECORDED.',
+    ])
+    lines += [
+        '',
+        '*** RESOLUTION GATE.  The experiment samples Cp',
+        f'every {min(brks):.3f}-{max(brks):.3f} c, so a shock position',
+        'inferred from it is good to about half that.',
+        f'{len(unres)} of {len(rows)} displacements are '
+        + (f'{min(fr):.2f}-{max(fr):.2f}x' if fr else 'n/a'),
+        'that interval => UNRESOLVABLE, in either sign.',
+    ]
+    if res:
+        lines.append('Resolvable: ' + ', '.join(
+            f"y/b {r['eta']} ({r['dx_over_bracket']}x)" for r in res))
+    lines += [
+        '',
+        f'What survives: pooled Cp RMS {min(pooled):.4f}-{max(pooled):.4f},',
+        'comparing Cp AT the measured points and',
+        'inferring no position.',
+        '',
+        'Dash-dot = detected shock (blue CFD, red exp).',
+        'Green dashes = Cp* = -0.328.',
+    ]
+    if wd:
+        lines += ['', 'WITHDRAWN (Cp*-grazing, the detector\'s "last sonic',
+                  'crossing" is not the compression): '
+                  + ', '.join(f"y/b {r['eta']}" for r in wd)]
+    axes.ravel()[-1].text(0.02, 0.98, '\n'.join(lines), va='top', ha='left',
+                          fontsize=8.2, family='monospace')
+    fig.suptitle(f'CFL3D {"Euler" if INVISCID else "RANS"}{tag} reference vs '
+                 f'the committed seven-station experiment', fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
     out = DATA / 'cp_vs_experiment.png'
     fig.savefig(out, dpi=125)
     print(f'  -> {out.relative_to(REPO)}')

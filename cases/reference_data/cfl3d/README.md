@@ -775,6 +775,79 @@ because the two mechanisms (viscous decambering vs. finite-grid
 under-resolution) remain opposed — but the reason is now "two competing
 mechanisms", not "the quantity has not converged".
 
+### `rans_onera_m6/` — the D10 dataset
+
+Three rungs × two turbulence models, all six legs at `ICHK 2` and IT 4500/4500:
+`L1` 0.902 M · `L2` 2.319 M · `L3` 5.107 M, SST (`ivisc 7`) and SA
+(`ivisc 6`), `y+ = 1`, `edvislim 1.e05`, otherwise the D07 recipe verbatim.
+
+| level | model | cl | cd | cd_friction |
+|---|---|---|---|---|
+| L1 | SST | 0.276815 | 0.018098 | 0.005117 |
+| L2 | SST | 0.273147 | 0.017646 | 0.005142 |
+| L3 | SST | 0.272204 | 0.017492 | 0.005162 |
+| L1 | SA | 0.286999 | 0.019141 | 0.005717 |
+| L2 | SA | 0.282138 | 0.018588 | 0.005741 |
+| L3 | SA | 0.280566 | 0.018373 | 0.005747 |
+
+**26 of 36 quantities carry an error bar.**
+
+★★★ **THE TURBULENCE MODEL, NOT THE GRID, IS THE DOMINANT UNCERTAINTY.**
+`turbulence_spread.csv` gives |SST − SA| per level: in `cl` it is
+**3.07–3.68 %**, against a rung-to-rung grid delta of **0.35 %**. ⇒ the model
+spread is **9.5×** the grid delta, so a gate built on the grid error bar alone
+would claim a precision this dataset does not have. **Quote both floors.**
+
+★★ **D10's error bars are weaker than D07's, and the reason is on record.**
+This ladder has **three** rungs, and D07 had just demonstrated what a fourth
+rung does: it flipped `cl` from ratio 0.153 (implied order 5.80, apparently
+beautifully converged) to **3.161**, and `cm` from 0.051 to 7.587. Here SST
+reads `cl` ratio 0.257 (implied order **4.01**) and `cd` 0.341 (**3.07**) — the
+same "too good for a second-order scheme" signature, unchecked. The deltas are
+at least same-signed and monotone, which Euler's `cl` was not. **A fourth RANS
+rung was deliberately not run**: it costs ~9.4 h per leg and needs its own
+`(n_grow, k_crit)` basin search (`M6_RANS_NGROW` has no `L4` entry by design),
+and it would tighten the *smaller* of two uncertainties while the 3.3 % model
+spread does not move.
+
+★ `cd_friction` — the quantity only RANS provides — converges **slowly**:
+ratio 0.800, implied order 0.15. Its error bar is real but its trend is nearly
+flat, so refinement is not the lever there.
+
+★ **The y+ requirement is met where it matters, and the exception is
+measured.** See `yplus_*` in `forces.csv`: the **wing surface** (99 % of the
+wetted area, all of the friction drag) reads y+ avg **0.647–0.693**, max 1.26,
+with **0 points above 5 on every leg**. The **blunt TE base** reads y+
+**231–321**. Neither the wing figure nor the aggregate (12.2–13.2) may be
+quoted alone as "the y+" — see the header note on `yplus_patches`.
+
+### The bias against the committed experiment, RANS side
+
+`experiment_bias_{sst,sa}.csv` + `cp_vs_experiment_{sst,sa}.png`, read on `L3`.
+
+★★ **RANS improves the Cp agreement and cannot demonstrate it on the shock
+position.** Pooled Cp RMS drops from Euler's **0.1065** to **0.0778 (SST)** /
+**0.0816 (SA)**, a 24–27 % improvement, and the shock displacements shrink to
+**|Δx| ≤ 0.012 c** at six of seven stations — 2–4× closer than Euler. But the
+experiment samples Cp every 0.040–0.050 c, so those six are **0.02–0.30× the
+bracket and remain UNRESOLVABLE**. Only y/b = 0.99 resolves (1.60×).
+
+★★★ **AND THERE IS NO PREDICTED SIGN ON THE RANS SIDE.** The Euler direction
+clause rests entirely on an *inviscid* solution lacking the boundary-layer
+displacement that moves the measured shock upstream. RANS **has** that
+displacement, so the premise is gone; what remains between RANS and the
+experiment is turbulence modelling, transition placement and wind-tunnel
+corrections, none of which carries a pre-registered direction here. The first
+run of this comparison **transplanted the Euler clause** and duly reported
+"as predicted" and "ANOMALY" verdicts with no premise behind either; the
+direction test is now Euler-gated and the RANS shock rows are RECORDED.
+
+★ Two tables disagree about y/b = 0.99 **by design, and both are right**: its
+detector premise FAILS on L1 (upstream depth 0.024/0.028) and passes on L2/L3
+(0.175–0.261), so `grid_convergence.csv` withdraws it — across rungs the
+deltas would mix a Cp\*-grazing artifact with a real shock — while the bias,
+read on L3 alone, is a legitimate reading.
+
 ### Convergence caliber — Euler runs, RANS does not
 
 Measured on the 0.59 M coarse level, M 0.8395 / α 3.06 (Euler unless stated):
