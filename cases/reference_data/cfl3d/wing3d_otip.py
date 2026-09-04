@@ -987,7 +987,7 @@ class WingOTip:
 
     def write_inp(self, path, mach=0.8395, alpha=3.06, beta=0.0,
                   re_mil=14.62, tinf=460.0, ivisc=7, cfl=0.8, cfl_max=5.0,
-                  iflagts=2000, ncyc=1000, mseq=3, nitfo=0, nwrest=5000,
+                  iflagts=2000, ncyc=1000, mseq=3, nitfo=0, nwrest=5000, ichk=0,
                   sref=1.0, cref=1.0, bref=1.0, xmc=0.25,
                   keywords=None):
         """The 7-block ``cfl3d.inp`` for this topology.
@@ -1086,7 +1086,7 @@ class WingOTip:
         w(f'{-abs(cfl):10.2f}{0:10d}{iflagts:10d}{cfl_max:10.2f}{0:10d}'
           f'{7.5:10.4f}')
         w('     NGRID   NPLOT3D    NPRINT    NWREST      ICHK       I2D    NTSTEP       ITA')
-        w(f'{-gn:10d}{gn:10d}{-1:10d}{nwrest:10d}{0:10d}{0:10d}{1:10d}{1:10d}')
+        w(f'{-gn:10d}{gn:10d}{-1:10d}{nwrest:10d}{ichk:10d}{0:10d}{1:10d}{1:10d}')
         w('       NCG       IEM  IADVANCE    IFORCE  IVISC(I)  IVISC(J)  IVISC(K)')
         rep(f'{2:10d}{0:10d}{0:10d}{333:10d}{ivisc:10d}{ivisc:10d}{ivisc:10d}')
         w('      IDIM      JDIM      KDIM')

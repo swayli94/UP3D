@@ -242,3 +242,55 @@ class TestRunStatus:
         self._case(tmp_path, None, 3490)
         ok, why, _, _ = G.run_status(tmp_path)
         assert not ok and 'STILL RUNNING' in why
+
+
+class TestIchkPositivityLimiter:
+    """ICHK gates CFL3D's positivity limiter on the RECONSTRUCTED state.
+
+    ``cfl3d/libs/xlim.F`` ends with
+
+        c     cap density and pressure
+        c     - ensures that they stay positive
+              if (ichk.eq.2) call prolim (n,x1,x2,xc,leq)
+              if (ichk.eq.3) call prolim2(n,x1,x2,xc,leq)
+
+    so with ICHK = 0 second-order MUSCL may reconstruct a negative density at a
+    strong shock, which is a NaN.  ★ Measured on the M6 L2 rung, everything
+    else held identical:
+
+        ICHK 0  ->  DIVERGED, NaN at icyc 540
+        ICHK 2  ->  ok 4500/4500, cl +0.341771, cd 0.013982
+        ICHK 3  ->  ok 4500/4500, cl +0.341767, cd 0.013982
+
+    ★★ The two limiters AGREE to 1.2e-05 in cl and to six digits in cd, which
+    is what makes this a fix rather than a tuning knob: it prevents an
+    inadmissible state without shaping the answer.
+
+    ★★★ Before this was found, four startup variants had been tried and all
+    four died -- at CFL-on-death spanning 0.73 to 1.93, a 2.6x range, always
+    36-75 cycles after the second-order switch.  CFL was never the controlling
+    variable; slowing the ramp only postponed the failure.
+    """
+
+    @pytest.mark.parametrize('ichk', [0, 2, 3])
+    def test_write_inp_emits_the_ichk_it_was_given(self, tmp_path, ichk):
+        """Behavioural: the parameter must reach the deck.
+
+        An accepted-but-ignored parameter is the same defect as F06's
+        literal-against-literal criterion -- the caller would believe the
+        limiter was on while every deck carried 0.
+        """
+        import wing3d_otip as W
+        g = W.build_m6(level='L1', model='euler', verbose=False)
+        f = tmp_path / 'cfl3d.inp'
+        g.write_inp(f, mach=0.8395, alpha=3.06, re_mil=14.62, ivisc=0,
+                    nitfo=500, ncyc=1500, ichk=ichk)
+        lines = f.read_text().splitlines()
+        for i, ln in enumerate(lines):
+            if 'ICHK' in ln and 'NGRID' in ln:
+                assert int(lines[i + 1].split()[4]) == ichk, (
+                    f'ICHK field is {lines[i + 1].split()[4]!r}, expected '
+                    f'{ichk}: write_inp accepted the parameter without '
+                    f'emitting it')
+                return
+        pytest.fail('no NGRID/ICHK header in the deck')
