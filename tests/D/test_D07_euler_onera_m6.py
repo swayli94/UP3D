@@ -45,6 +45,7 @@ import numpy as np
 import pytest
 
 from tests.conftest import REPO_ROOT, gate_figures_enabled
+from tests.D._cfl3d_cp import cp_rms, read_3d_cp
 from tests._gate_evidence import assert_matches_committed, fmt
 
 REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
@@ -52,6 +53,9 @@ REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
 M_INF, ALPHA = 0.8395, 3.06
 LEVELS = ("coarse", "medium")
 ETAS = (0.44, 0.65, 0.90)
+#: ★ 参考数据集的**七个实验站位** —— Cp 图画全部七个，
+#:   而设门只用 ETAS 那三个（其余站位的参考激波前提未逐一核过）。
+CP_ETAS = (0.20, 0.44, 0.65, 0.80, 0.90, 0.96, 0.99)
 
 # —— 判据（标定，不是实测值）——
 SHOCK_CONTRACT_MIN = 1.5     # 每个站位 coarse->medium 的收缩：实测 9.5 / 2.2 / 1.8
@@ -90,21 +94,41 @@ def _one(level):
     from pyfp3d.mesh.reader import read_mesh
     from pyfp3d.mesh.wake_cut import cut_wake
     from pyfp3d.post.surface import planform_area
+    from pyfp3d.meshgen.wing3d import B_SEMI
+    from pyfp3d.post.section_cut import section_cp_curve
     r, forces, shocks, wall = _m6_case(level, m_inf=M_INF, alpha=ALPHA)
     mc, _wc = cut_wake(read_mesh(os.path.join(
         str(REPO_ROOT), "cases", "meshes", "onera_m6", f"{level}.msh")))
+    #: ★★ Cp 分布是主图（使用者裁决 2026-09-05）：三维上尤其如此 ——
+    #:   一个 cl 把七个站位、上下表面、激波位置全压成一个数。
+    curves = {e: section_cp_curve(mc, r["phi"], eta=e, b_semi=B_SEMI,
+                                  m_inf=M_INF)
+              for e in CP_ETAS}
     return dict(
         cl=float(forces["cl"]), shocks={k: float(v) for k, v in shocks.items()},
         converged=bool(r.get("converged")),
         residual=float(np.asarray(r["residual_history"], float)[-1]),
         mach_max=float(np.sqrt(r["mach2_max"])),
         s_ref_discrete=float(planform_area(mc.nodes,
-                                           mc.boundary_faces["wall"])))
+                                           mc.boundary_faces["wall"])),
+        curves=curves)
 
 
 @pytest.fixture(scope="module")
 def runs():
-    return {lv: _one(lv) for lv in LEVELS}
+    """★★ 每站位的 Cp RMS 进证据 —— Cp 是主要比较量，只画在 PNG 里的量
+    改一行代码不会有任何东西变红。"""
+    out = {}
+    for lv in LEVELS:
+        d = _one(lv)
+        for e in CP_ETAS:
+            rc = read_3d_cp(REF_DIR, "L4", e, "none")
+            for side in ("upper", "lower"):
+                d[f"cp_rms_{side}_eta{e:.2f}"] = cp_rms(
+                    rc[side][0], rc[side][1], d["curves"][e][f"x_{side}"],
+                    d["curves"][e][f"cp_{side}"])[0]
+        out[lv] = d
+    return out
 
 
 @pytest.fixture(scope="module")
@@ -174,6 +198,24 @@ class TestWhatIsOnlyRecorded:
             f"was a definition difference, now it looks like discretisation")
 
 
+    def test_the_suction_deficit_grows_outboard(self, runs):
+        """★★★ 这是 Cp 图揭示、而 cl 藏住的东西（使用者裁决 2026-09-05：
+        Cp 分布才是验证计算的东西）。
+
+        实测 medium 上表面 Cp RMS 沿展向单调增大：
+        0.127 / 0.162 / 0.161 / 0.184 / 0.222 / 0.223 / 0.244 ——
+        pyFP3D 的前缘吸力峰与超声速平台在每个站位都偏浅，**越往翼尖越重**。
+        ⇒ −9.17 % 的 cl 亏损**不是均匀偏置**，参考面积口径那 0.96 % 只是零头。
+        **记录，不设门**：它是一个待解释的结构，不是一个要收紧的目标。"""
+        r = [runs["medium"][f"cp_rms_upper_eta{e:.2f}"] for e in CP_ETAS]
+        assert all(np.isfinite(v) for v in r), r
+        assert max(r) < 0.5, f"upper-surface Cp RMS blew up: {r}"
+        assert r[-1] > r[0], (
+            f"the outboard Cp RMS is no longer the largest ({r[0]:.4f} at "
+            f"y/b 0.20 vs {r[-1]:.4f} at 0.99) -- the recorded spanwise "
+            f"structure changed and needs re-reading")
+
+
 class TestReferenceIsLoadBearing:
     def test_gate_actually_reads_the_reference(self, tmp_path):
         import csv
@@ -195,7 +237,8 @@ class TestReferenceIsLoadBearing:
 
 
 class TestCommittedEvidenceIsLoadBearing:
-    MEASURED = ("cl", "residual", "mach_max", "s_ref_discrete")
+    MEASURED = (tuple(f"cp_rms_upper_eta{e:.2f}" for e in CP_ETAS)
+                + ("cl", "residual", "mach_max", "s_ref_discrete"))
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
         fresh = {lv: {k: fmt(runs[lv][k]) for k in self.MEASURED}
@@ -223,6 +266,8 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         w.writerow(["level", "n_threads", "mach", "alpha_deg", "cl",
                     "cl_ref_cfl3d_L4", "d_cl_rel", "residual", "converged",
                     "mach_max", "s_ref_discrete", "s_ref_analytic"]
+                   + [f"cp_rms_upper_eta{e:.2f}" for e in CP_ETAS]
+                   + [f"cp_rms_lower_eta{e:.2f}" for e in CP_ETAS]
                    + [f"x_shock_eta{e}" for e in ETAS]
                    + [f"d_x_shock_eta{e}" for e in ETAS])
         ana = 0.5 * (0.8059 + 0.4529) * 1.1963
@@ -234,28 +279,64 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
                         fmt(d["residual"]), int(d["converged"]),
                         fmt(d["mach_max"]), fmt(d["s_ref_discrete"]),
                         f"{ana:.6f}"]
+                       + [fmt(d[f"cp_rms_upper_eta{e:.2f}"]) for e in CP_ETAS]
+                       + [fmt(d[f"cp_rms_lower_eta{e:.2f}"]) for e in CP_ETAS]
                        + [fmt(d["shocks"][e]) for e in ETAS]
                        + [f'{d["shocks"][e] - sh[e]["x"]:+.6f}' for e in ETAS])
 
-    fig, ax = plt.subplots(1, 2, figsize=(11, 4.4))
-    x = np.arange(len(ETAS))
-    for k, lv in enumerate(LEVELS):
-        ax[0].bar(x + k * 0.35 - 0.18,
-                  [abs(runs[lv]["shocks"][e] - sh[e]["x"]) for e in ETAS],
-                  0.33, label=lv)
-    ax[0].set_xticks(x), ax[0].set_xticklabels([f"eta {e}" for e in ETAS])
-    ax[0].set_ylabel("|shock offset| vs CFL3D L4")
-    ax[0].set_title("GATED: contracts 9.5x / 2.2x / 1.8x", fontsize=9)
-    ax[0].legend(fontsize=8), ax[0].grid(alpha=.3, axis="y")
-    ax[1].bar(LEVELS, [abs(runs[lv]["cl"] - ref["L4"]["cl"])
-                       / ref["L4"]["cl"] * 100 for lv in LEVELS],
-              color="#c0392b")
-    ax[1].set_ylabel("|d cl| %")
-    ax[1].set_title("RECORDED: cl error GROWS, 6.06 % -> 9.17 %", fontsize=9,
-                    color="#c0392b")
-    ax[1].grid(alpha=.3, axis="y")
-    fig.suptitle("D07  pyFP3D inviscid vs CFL3D Euler, ONERA M6 TEST 2308 -- "
-                 "the shock converges while the lift does not", fontsize=10)
+    fig, axes = plt.subplots(2, 4, figsize=(19, 8.4))
+    for k, e in enumerate(CP_ETAS):
+        ax = axes.ravel()[k]
+        rc = read_3d_cp(REF_DIR, "L4", e, "none")
+        for side, ls in (("upper", "-"), ("lower", "--")):
+            ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.5,
+                    label="CFL3D Euler L4" if side == "upper" else None)
+        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+                        ("medium", dict(lw=1.4, color="#1a56db"))):
+            cur = runs[lv]["curves"][e]
+            for side in ("upper", "lower"):
+                ax.plot(cur[f"x_{side}"], cur[f"cp_{side}"],
+                        label=f"pyFP3D {lv}" if side == "upper" else None,
+                        **sty)
+        cur = runs["medium"]["curves"][e]
+        ru = cp_rms(rc["upper"][0], rc["upper"][1],
+                    cur["x_upper"], cur["cp_upper"])[0]
+        gated = e in ETAS
+        if gated:
+            ax.axvline(sh[e]["x"], color="#c0392b", ls="-.", lw=0.9)
+            ax.axvline(runs["medium"]["shocks"][e], color="#1a56db",
+                       ls="-.", lw=0.9)
+        ax.set_title(f'y/b = {e:.2f}   Cp RMS upper {ru:.4f}'
+                     + ("   [shock GATED]" if gated else ""), fontsize=9,
+                     color=("black" if gated else "#555555"))
+        ax.invert_yaxis(), ax.grid(alpha=.3), ax.set_xlabel("x/c")
+        if k == 0:
+            ax.set_ylabel("$C_p$"), ax.legend(fontsize=7)
+    axes.ravel()[7].axis("off")
+    axes.ravel()[7].text(0.02, 0.98,
+        "D07  pyFP3D inviscid vs CFL3D Euler\n"
+        "ONERA M6, M 0.8395 / alpha 3.06 (TEST 2308)\n\n"
+        "Cp at all SEVEN measured stations; the three\n"
+        "with dash-dot shock markers are the GATED ones\n"
+        "(their reference shock passes the dataset's own\n"
+        "Cp*-grazing premise; y/b = 0.99 is WITHDRAWN on\n"
+        "the reference side, so it is drawn but not\n"
+        "gated).\n\n"
+        "*** THE TWO HALVES GO OPPOSITE WAYS.\n"
+        "Shock offsets CONTRACT under refinement --\n"
+        "9.5x / 2.2x / 1.8x at y/b 0.44 / 0.65 / 0.90 --\n"
+        "while cl DIVERGES, -6.06 % to -9.17 %.\n"
+        "So the shocks are gated and the lift recorded;\n"
+        "neither half may speak for the whole.\n\n"
+        "*** Reference-area caliber: pyFP3D uses the\n"
+        "DISCRETE planform 0.760177, the reference the\n"
+        "ANALYTIC 0.752951 -- +0.96 %, and it does NOT\n"
+        "shrink with refinement, so it is a definition\n"
+        "difference (the rounded tip cap) worth about a\n"
+        "tenth of the -9.17 %.",
+        va="top", ha="left", fontsize=8.2, family="monospace")
+    fig.suptitle("D07  pyFP3D inviscid vs CFL3D Euler, ONERA M6 -- "
+                 "Cp at the seven measured stations", fontsize=11)
     fig.tight_layout()
     fig.savefig(os.path.join(str(gate_evidence_dir), "d07_vs_cfl3d_euler.png"),
                 dpi=130)

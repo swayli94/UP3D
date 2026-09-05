@@ -20,6 +20,24 @@ r"""D08 — pyFP3D FP+IBL vs CFL3D RANS — NACA0012（R-1..R-4）。
 **H 族**：H 偏小 ⇒ 摩擦偏高 ⇒ 边界层过于饱满）。本门**记录**这个方向，
 把带内包含设成**将来**的判据。
 
+## ★★★ Cp 图说了 cl 那个数说反的一件事 —— 两个都要报
+
+**Cp 分布几乎重合**：medium 对 SST 的 Cp RMS **0.0414 / 0.0415**，而参考自身的
+Cp 带宽是 **0.0306 / 0.0289** ⇒ 只有 **1.3×** 带宽。而 cl 却差 **+10.2 %**。
+
+两者不矛盾，而且这正是**为什么 Cp 才是主要比较量**：
+**一个小的、分布式的 Cp 偏置积分出可见的 cl 差**。cl ≈ 0.25 上 +10 % 是
+Δcl ≈ 0.025，摊在弦上就是 ~0.025 的平均 Cp 差 —— 与 RMS 0.041 同量级。
+⇒ 分歧**不是**激波或前缘峰上的局部大偏差（此工况 M0.50 无激波，前缘峰吻合），
+**是一个铺开的小偏置**。
+
+★ 图上 x/c ≈ 0.30（trip 0.30 那幅）有一个可见的尖折 —— 我们**瞬时**切换转捩，
+参考是渐变。这与 D13/GV3.1 记录的"cf +44 % 只出现在转捩后第一个站位"是
+同一件事。
+
+⇒ **两个读数都报**：Cp 上"接近但未入带（1.3× 带宽）"，cl 上"高出带 +10.2 %
+且加密远离"。只报后者会把这道门说得比实际更糟；只报前者会漏掉那个积分效应。
+
 ## ★ 三条工况被排除，理由是**口径**不是难度
 
 `rans_naca0012/` 另有 M0.352/α12.86、M0.778/α2.03、M0.803/α−0.1，
@@ -36,10 +54,12 @@ import pytest
 
 from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
+from pyfp3d.post.section_cut import section_cp_curve
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.viscous.coupling import (CouplingConfig, build_airfoil_case,
                                      make_picard_lifting_driver,
                                      run_loose_coupling)
+from tests.D._cfl3d_cp import band_from_two, cp_rms, read_2d_cp
 from tests._gate_evidence import assert_matches_committed, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
@@ -96,14 +116,35 @@ def _one(level, m, a, re_c, xtr):
                                 mc.boundary_faces["wall"],
                                 np.asarray(res.phi), alpha_deg=a, u_inf=1.0,
                                 s_ref=dz, m_inf=m)
+    #: ★★ Cp 分布是主图，而且这里的参考是**两个湍流模型** ⇒ Cp 上也是一条
+    #:   **带**。带宽就是这道门在 Cp 上的分辨底噪（实测上表面最大 0.031）。
+    cur = section_cp_curve(mc, np.asarray(res.phi),
+                           z=float(np.mean(mc.nodes[:, 2])),
+                           smooth_passes=1, m_inf=m)
     return dict(cl=float(f["cl"]), n_outer=int(res.n_outer),
-                converged=bool(res.converged))
+                converged=bool(res.converged), curve=cur)
+
+
+def _with_cp(d, cid):
+    """Cp RMS 对 **SST** 与对 **SA**，外加带宽 —— 参考是一条带，
+    所以"我们离参考多远"本身也是一个区间。"""
+    for tb in ("sst", "sa"):
+        rc = read_2d_cp(REF_DIR, cid, "L3", tb)
+        for side in ("upper", "lower"):
+            d[f"cp_rms_{side}_{tb}"] = cp_rms(
+                rc[side][0], rc[side][1], d["curve"][f"x_{side}"],
+                d["curve"][f"cp_{side}"])[0]
+    sst = read_2d_cp(REF_DIR, cid, "L3", "sst")
+    sa = read_2d_cp(REF_DIR, cid, "L3", "sa")
+    _x, lo, hi = band_from_two(sst["upper"], sa["upper"])
+    d["cp_band_width_upper"] = float(np.max(hi - lo))
+    return d
 
 
 @pytest.fixture(scope="module")
 def runs():
-    return {(nm, lv): _one(lv, m, a, re_c, xtr)
-            for nm, _c, m, a, re_c, xtr in CASES for lv in LEVELS}
+    return {(nm, lv): _with_cp(_one(lv, m, a, re_c, xtr), cid)
+            for nm, cid, m, a, re_c, xtr in CASES for lv in LEVELS}
 
 
 @pytest.fixture(scope="module")
@@ -121,6 +162,20 @@ def _rel_to_band(cl, lo, hi):
 class TestWhatIsGateable:
     r"""★ 目前**没有一条腿落在带内**，所以能设门的是"分歧仍在记录带内"
     加上参考侧那条带本身是良态的。"""
+
+    def test_the_cp_band_is_the_resolution_floor_in_cp(self, runs):
+        """★★ 参考在 **Cp 上**也是一条带 —— 实测上表面最大宽度 0.031。
+        我们对 SST 与对 SA 的 Cp RMS 之差不可能小于它，否则"我们更接近哪个
+        模型"就是在读噪声。"""
+        for nm, *_ in CASES:
+            r = runs[(nm, "medium")]
+            bw = r["cp_band_width_upper"]
+            assert 0.005 < bw < 0.20, f"{nm}: implausible Cp band width {bw:.4f}"
+            spread = abs(r["cp_rms_upper_sst"] - r["cp_rms_upper_sa"])
+            assert spread < 2.0 * bw, (
+                f"{nm}: our RMS to SST and to SA differ by {spread:.4f}, more "
+                f"than twice the band's own width {bw:.4f} -- the two "
+                f"references are being compared through different things")
 
     def test_reference_band_is_well_posed(self, band):
         """★ 带宽必须有限且非零 —— 一个塌成一点的带会让下面的判据变成
@@ -158,6 +213,24 @@ class TestWhatIsGateable:
         assert "NOT gate material" in cal["n0012_m0352_a12.86"]["note"], (
             "the reference no longer flags the near-stall case as non-gate "
             "material -- re-read its note before using it")
+
+
+    def test_cp_agreement_is_much_closer_than_cl_suggests(self, runs, band):
+        """★★★ 记录 Cp 与 cl 两个读数**不一致**这件事本身。
+
+        实测 medium：Cp RMS 对 SST 是 0.0414 / 0.0415（带宽的 1.3 倍），
+        而 cl 高出带 +10.2 % / +6.1 %。⇒ 分歧是一个**铺开的小偏置**，
+        不是局部大偏差 —— 这正是"Cp 分布才最能验证计算"的具体体现。
+        若哪天 Cp RMS 也涨到带宽的数倍，那说明出现了**局部**结构差，
+        本条会红，届时该去看图而不是看数。"""
+        for nm, cid, *_ in CASES:
+            r = runs[(nm, "medium")]
+            ratio = r["cp_rms_upper_sst"] / r["cp_band_width_upper"]
+            assert ratio < 4.0, (
+                f"{nm}: Cp RMS {r['cp_rms_upper_sst']:.4f} is {ratio:.1f}x the "
+                f"band width {r['cp_band_width_upper']:.4f} -- the "
+                f"disagreement is no longer a small distributed offset; "
+                f"read the Cp figure for the local structure")
 
 
 class TestWhatIsOnlyRecorded:
@@ -202,10 +275,14 @@ class TestReferenceIsLoadBearing:
 
 
 class TestCommittedEvidenceIsLoadBearing:
-    MEASURED = ("cl",)
+    MEASURED = ("cp_rms_upper_sst", "cp_rms_upper_sa", "cp_rms_lower_sst",
+                "cp_rms_lower_sa", "cp_band_width_upper", "cl")
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
-        fresh = {f"{nm}|{lv}": {"cl": fmt(runs[(nm, lv)]["cl"])}
+        #: ★ 跟着 `MEASURED` 走，不要硬编码列名 —— 本门原来写死 {"cl": ...}，
+        #:   于是新加的 cp_rms 列在**本次运行**这一侧根本不存在，锁比不到它们。
+        fresh = {f"{nm}|{lv}": {k: fmt(runs[(nm, lv)][k])
+                                for k in self.MEASURED}
                  for nm, *_ in CASES for lv in LEVELS}
         assert_matches_committed(
             gate_evidence_dir, fresh, self.MEASURED,
@@ -226,7 +303,10 @@ def test_export_evidence(runs, band, gate_evidence_dir):
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w",
               newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["case", "level", "n_threads", "x_tr", "cl", "cl_sst",
+        w.writerow(["case", "level", "n_threads", "x_tr",
+                    "cp_rms_upper_sst", "cp_rms_upper_sa",
+                    "cp_rms_lower_sst", "cp_rms_lower_sa",
+                    "cp_band_width_upper", "cl", "cl_sst",
                     "cl_sa", "band_lo", "band_hi", "rel_to_band",
                     "n_outer", "converged"])
         for nm, cid, _m, _a, _re, xtr in CASES:
@@ -234,27 +314,72 @@ def test_export_evidence(runs, band, gate_evidence_dir):
             lo, hi = sorted((d["sst"]["cl"], d["sa"]["cl"]))
             for lv in LEVELS:
                 r = runs[(nm, lv)]
-                w.writerow([nm, lv, nthr, xtr, fmt(r["cl"]),
+                w.writerow([nm, lv, nthr, xtr,
+                            fmt(r["cp_rms_upper_sst"]), fmt(r["cp_rms_upper_sa"]),
+                            fmt(r["cp_rms_lower_sst"]), fmt(r["cp_rms_lower_sa"]),
+                            fmt(r["cp_band_width_upper"]), fmt(r["cl"]),
                             f'{d["sst"]["cl"]:.6f}', f'{d["sa"]["cl"]:.6f}',
                             f"{lo:.6f}", f"{hi:.6f}",
                             f'{_rel_to_band(r["cl"], lo, hi):+.6e}',
                             r["n_outer"], int(r["converged"])])
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
-    for k, (nm, cid, *_rest) in enumerate(CASES):
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
+    for k, (nm, cid, _m, _a, _re, xtr) in enumerate(CASES):
         ax = axes[k]
-        d = band[cid]
-        lo, hi = sorted((d["sst"]["cl"], d["sa"]["cl"]))
-        ax.axhspan(lo, hi, color="#c0392b", alpha=.2,
-                   label="CFL3D RANS band (SST-SA)")
-        ax.plot(LEVELS, [runs[(nm, lv)]["cl"] for lv in LEVELS], "o-",
-                color="#1a56db", label="pyFP3D FP+IBL")
-        ax.set_title(f"{nm}  (trip {_rest[-1]})\nrefinement moves AWAY",
-                     fontsize=9, color="#c0392b")
-        ax.set_ylabel("cl"), ax.grid(alpha=.3), ax.legend(fontsize=8)
-    fig.suptitle("D08  pyFP3D FP+IBL vs the CFL3D RANS BAND -- the reference "
-                 "is two turbulence models, so the criterion is containment",
-                 fontsize=10)
+        sst = read_2d_cp(REF_DIR, cid, "L3", "sst")
+        sa = read_2d_cp(REF_DIR, cid, "L3", "sa")
+        for side in ("upper", "lower"):
+            bx, blo, bhi = band_from_two(sst[side], sa[side])
+            ax.fill_between(bx, blo, bhi, color="#c0392b", alpha=.30,
+                            lw=0, label="CFL3D RANS band (SST-SA)"
+                            if side == "upper" else None)
+        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+                        ("medium", dict(lw=1.4, color="#1a56db"))):
+            cur = runs[(nm, lv)]["curve"]
+            for side in ("upper", "lower"):
+                ax.plot(cur[f"x_{side}"], cur[f"cp_{side}"],
+                        label=f"pyFP3D FP+IBL {lv}" if side == "upper"
+                        else None, **sty)
+        cur = runs[(nm, "medium")]["curve"]
+        ru = cp_rms(sst["upper"][0], sst["upper"][1],
+                    cur["x_upper"], cur["cp_upper"])[0]
+        bw = float(np.max(band_from_two(sst["upper"], sa["upper"])[2]
+                          - band_from_two(sst["upper"], sa["upper"])[1]))
+        ax.set_title(f'{nm}  (trip {xtr})\n'
+                     f'Cp RMS vs SST {ru:.4f}   band width {bw:.4f}',
+                     fontsize=9)
+        ax.invert_yaxis(), ax.grid(alpha=.3), ax.set_xlabel("x/c")
+        if k == 0:
+            ax.set_ylabel("$C_p$"), ax.legend(fontsize=7)
+    axes[2].axis("off")
+    axes[2].text(0.02, 0.98,
+        "D08  pyFP3D FP+IBL vs the CFL3D RANS BAND\n"
+        "NACA0012, M 0.50 / alpha 2.0 / Re 3e6\n\n"
+        "*** THE REFERENCE IS A BAND, NOT A CURVE.\n"
+        "Every condition carries SST and SA, so the\n"
+        "shaded region is the reference and its width\n"
+        "is this gate's resolution floor in Cp\n"
+        "(max 0.031 on the upper surface).  Comparing\n"
+        "to one model would mean picking a turbulence\n"
+        "model as truth by fiat.\n\n"
+        "*** BOTH READINGS, because they disagree:\n"
+        "In Cp the curves nearly coincide -- RMS 0.041\n"
+        "against a band width of 0.031, i.e. 1.3x.\n"
+        "In cl no leg is inside the band and BOTH move\n"
+        "AWAY under refinement --\n"
+        "trip 0.05 goes +7.2 % to +10.2 %, trip 0.30\n"
+        "crosses from -1.9 % BELOW to +6.1 % ABOVE.\n"
+        "Same signature D13 recorded against XFOIL and\n"
+        "attributed to the turbulent closure's H family.\n"
+        "They are consistent: a SMALL DISTRIBUTED Cp\n"
+        "offset integrates into a visible cl gap -- which\n"
+        "is exactly why Cp is the primary comparison.\n\n"
+        "Three further conditions are excluded for\n"
+        "CALIBER, not difficulty: CFL3D ran them fully\n"
+        "turbulent against our fixed trip.",
+        va="top", ha="left", fontsize=8.2, family="monospace")
+    fig.suptitle("D08  pyFP3D FP+IBL vs the CFL3D RANS band, NACA0012 -- "
+                 "Cp distributions with the SST-SA band", fontsize=11)
     fig.tight_layout()
     fig.savefig(os.path.join(str(gate_evidence_dir), "d08_vs_rans_band.png"),
                 dpi=130)

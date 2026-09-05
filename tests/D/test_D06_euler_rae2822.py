@@ -48,6 +48,7 @@ from pyfp3d.post.section_cut import section_cp_curve
 from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
+from tests.D._cfl3d_cp import cp_rms, read_2d_cp
 from tests._gate_evidence import assert_matches_committed, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
@@ -126,13 +127,26 @@ def _one(level, m_inf, alpha):
         n_limited=int(r.get("n_limited", 0)),
         n_floored=int(r.get("n_floored", 0)),
         sigma_frozen=bool(frz.get("frozen_in_transient", False)),
+        #: ★ Cp 曲线带出来，因为图必须是 Cp 分布而不是力系数柱状图
+        #:   （使用者裁决 2026-09-05）：一个 cl 是一个数，Cp 显示差在哪里。
+        curve=cur,
     )
+
+
+def _with_cp_rms(d, cid):
+    """★★ Cp RMS 是主要比较量 ⇒ 必须进证据 CSV，不能只活在 PNG 里。"""
+    rc = read_2d_cp(REF_DIR, cid, "L3", "none")
+    for side in ("upper", "lower"):
+        d[f"cp_rms_{side}"] = cp_rms(
+            rc[side][0], rc[side][1],
+            d["curve"][f"x_{side}"], d["curve"][f"cp_{side}"])[0]
+    return d
 
 
 @pytest.fixture(scope="module")
 def runs():
-    return {(nm, lv): _one(lv, m, a) for nm, _c, m, a, _k in CASES
-            for lv in LEVELS}
+    return {(nm, lv): _with_cp_rms(_one(lv, m, a), cid)
+            for nm, cid, m, a, _k in CASES for lv in LEVELS}
 
 
 @pytest.fixture(scope="module")
@@ -219,7 +233,8 @@ class TestReferenceIsLoadBearing:
 
 
 class TestCommittedEvidenceIsLoadBearing:
-    MEASURED = ("cl", "cd", "x_shock", "residual")
+    MEASURED = ("cp_rms_upper", "cp_rms_lower", "cl", "cd", "x_shock",
+                "residual")
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
         fresh = {f"{nm}|{lv}": {k: fmt(runs[(nm, lv)][k]) for k in self.MEASURED}
@@ -248,7 +263,8 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         # ★★ 线程数进证据：收敛旗标是"算例 x 线程数"的联合性质，
         #    不带线程数的旗标是无意义的（项目里 gated count 那条同理）。
         nthr = os.environ.get("NUMBA_NUM_THREADS", "unset")
-        w.writerow(["case", "level", "kind", "n_threads", "mach", "alpha_deg", "cl", "cd",
+        w.writerow(["case", "level", "kind", "n_threads", "mach", "alpha_deg",
+                    "cp_rms_upper", "cp_rms_lower", "cl", "cd",
                     "x_shock", "residual", "converged", "n_limited",
                     "n_floored", "sigma_frozen", "cl_ref_cfl3d", "d_cl_rel",
                     "x_shock_ref", "d_x_shock", "ref_shock_uncertainty",
@@ -259,7 +275,9 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
             for lv in LEVELS:
                 d = runs[(nm, lv)]
                 dx = d["x_shock"] - xr
-                w.writerow([nm, lv, kind, nthr, m, a, fmt(d["cl"]), fmt(d["cd"]),
+                w.writerow([nm, lv, kind, nthr, m, a,
+                            fmt(d["cp_rms_upper"]), fmt(d["cp_rms_lower"]),
+                            fmt(d["cl"]), fmt(d["cd"]),
                             fmt(d["x_shock"]), fmt(d["residual"]),
                             int(d["converged"]), d["n_limited"],
                             d["n_floored"], int(d["sigma_frozen"]),
@@ -268,21 +286,52 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
                             f"{xr:.6f}", f"{dx:+.6f}", f"{u:.6f}",
                             f"{abs(dx) / u:.2f}"])
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     for k, (nm, cid, m, a, kind) in enumerate(CASES):
         ax = axes[k]
-        d = runs[(nm, "medium")]
-        ax.bar(["pyFP3D", "CFL3D Euler"], [d["cl"], ref[cid]["cl"]],
-               color=["#1a56db", "#c0392b"])
-        lab = "GATED" if kind == "gate" else "RECORDED"
-        conv = "" if d["converged"] else "  NOT CONVERGED"
-        ax.set_title(f'{nm}  [{lab}]{conv}\ncl {d["cl"]:.6f} vs '
-                     f'{ref[cid]["cl"]:.6f}', fontsize=9,
-                     color=("black" if d["converged"] else "#c0392b"))
-        ax.grid(alpha=.3, axis="y")
-    fig.suptitle("D06  pyFP3D inviscid vs CFL3D Euler on RAE2822 -- the "
-                 "0.38 % agreement is on a leg that DID NOT CONVERGE",
-                 fontsize=10)
+        rc = read_2d_cp(REF_DIR, cid, "L3", "none")
+        for side, ls in (("upper", "-"), ("lower", "--")):
+            ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
+                    label="CFL3D Euler L3" if side == "upper" else None)
+        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+                        ("medium", dict(lw=1.4, color="#1a56db"))):
+            cur = runs[(nm, lv)]["curve"]
+            for side in ("upper", "lower"):
+                ax.plot(cur[f"x_{side}"], cur[f"cp_{side}"],
+                        label=f"pyFP3D {lv}" if side == "upper" else None,
+                        **sty)
+        cur = runs[(nm, "medium")]["curve"]
+        ru = cp_rms(rc["upper"][0], rc["upper"][1],
+                    cur["x_upper"], cur["cp_upper"])[0]
+        rl = cp_rms(rc["lower"][0], rc["lower"][1],
+                    cur["x_lower"], cur["cp_lower"])[0]
+        ax.axvline(_reference_shock(cid), color="#c0392b", ls="-.", lw=0.9)
+        ax.axvline(runs[(nm, "medium")]["x_shock"], color="#1a56db",
+                   ls="-.", lw=0.9)
+        ax.set_title(f'{nm}  [GATED]\nCp RMS upper {ru:.4f}  lower {rl:.4f}',
+                     fontsize=9)
+        ax.invert_yaxis(), ax.grid(alpha=.3), ax.set_xlabel("x/c")
+        if k == 0:
+            ax.set_ylabel("$C_p$"), ax.legend(fontsize=7)
+    axes[2].axis("off")
+    axes[2].text(0.02, 0.98,
+        "D06  pyFP3D inviscid vs CFL3D Euler, RAE2822\n\n"
+        "Cp is the primary comparison; the dash-dot\n"
+        "lines are the detected shocks (red CFL3D,\n"
+        "blue pyFP3D).\n\n"
+        "BOTH legs GATED: dcl +3.53 % and +0.27 %.\n\n"
+        "*** The shock difference IS resolvable here\n"
+        "(35x the reference's own L2->L3 delta of\n"
+        "0.00088), where on NACA0012 M0.75 the same\n"
+        "comparison is 0.26x and UNRESOLVABLE.\n"
+        "A reference's resolution is a PER-CASE\n"
+        "property, not a dataset property.\n\n"
+        "*** The shock sits DOWNSTREAM of CFL3D here\n"
+        "and UPSTREAM on NACA0012 -- three geometries,\n"
+        "two directions, so no registered sign.",
+        va="top", ha="left", fontsize=8.2, family="monospace")
+    fig.suptitle("D06  pyFP3D inviscid vs CFL3D Euler, RAE2822 -- "
+                 "Cp distributions", fontsize=11)
     fig.tight_layout()
     fig.savefig(os.path.join(str(gate_evidence_dir), "d06_vs_cfl3d_euler.png"),
                 dpi=130)

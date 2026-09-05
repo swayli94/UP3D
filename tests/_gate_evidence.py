@@ -64,8 +64,27 @@ def assert_matches_committed(gate_dir, fresh, measured, rel_tol=DEFAULT_REL_TOL,
     assert os.path.exists(path), (
         f"已提交的证据 {path} 不存在。生成：{refresh_hint or 'PYFP3D_GATE_FIGURES=1 pytest <本门>'}")
     with open(path, newline="", encoding="utf-8") as fh:
-        rows = list(csv.DictReader(fh))
+        reader = csv.DictReader(fh)
+        header = list(reader.fieldnames or [])
+        rows = list(reader)
     assert rows, f"{path} 是空的"
+
+    #: ★★★ **表头缺列必须响，不能静默跳过**（2026-09-05 实测发现）。
+    #: 原实现是 `if col not in r or r[col] in ("", "-", "nan"): continue`，
+    #: 于是往 `measured` 里加一列而不刷新 CSV，锁**照样绿**且那一列**永不被
+    #: 检查**；反过来若有人把某列从导出腿删掉，锁也照样绿。
+    #: 这正是本模块 docstring 里那条「16 个证据 CSV 无人读」的缺陷，只是换了
+    #: 一层：CSV 被读了，但被比较的列可以悄悄消失。
+    #: ★ 区分两件事：**列不在表头** = schema 漂移 = 响；
+    #: **列在表头但本行为空/nan** = 确实没测到 = 跳过（并计数，见下）。
+    missing_cols = [c for c in measured if c not in header]
+    assert not missing_cols, (
+        f"{path} 的表头缺少被锁的实测列 {missing_cols}。\n"
+        f"  表头现有：{header}\n"
+        f"  ★ 这不是容差问题，是 schema 漂移：这些列现在**完全没有被比较**。\n"
+        f"  刷新：{refresh_hint or 'PYFP3D_GATE_FIGURES=1 pytest <本门>'}\n"
+        f"  ★ 刷新后按纪律 11 grep 被移动的数字（门 docstring 的表、"
+        f"cases/gates/INDEX.md、台账）。")
 
     if key_of is None:
         def key_of(r):
@@ -86,18 +105,26 @@ def assert_matches_committed(gate_dir, fresh, measured, rel_tol=DEFAULT_REL_TOL,
         seen[k] = len(seen) + 1
 
     n = 0
+    #: ★ 逐列计数：表头有这一列、但**每一行都是空/nan**时，它同样从未被比较。
+    #: 只有全局 `n > 0` 守不住这一种，因为别的列会把计数撑起来。
+    per_col = {c: 0 for c in measured}
+    #: ★ 分开记：CSV 那侧全空 vs **本次运行**那侧没产出这一列。
+    #: 一个触发正确却把原因说错的守卫，会把人指到错的文件里去。
+    absent_in_fresh = {c: 0 for c in measured}
     for r in rows:
         k = key_of(r)
         if k not in fresh:
             continue
         for col in measured:
-            if col not in r or r[col] in ("", "-", "nan"):
+            if r[col] in ("", "-", "nan"):
                 continue
             want = float(r[col])
             got = fresh[k].get(col)
             if got is None:
+                absent_in_fresh[col] += 1
                 continue
             n += 1
+            per_col[col] += 1
             rel = abs(float(got) - want) / max(abs(want), 1e-30)
             assert rel <= rel_tol, (
                 f"{k} 的 {col}：本次算出 {float(got):.9e}，已提交证据是 {want:.9e}"
@@ -108,4 +135,20 @@ def assert_matches_committed(gate_dir, fresh, measured, rel_tol=DEFAULT_REL_TOL,
     assert n > 0, (
         f"{path} 里没有一行与本次运行的键对上（比了 0 个数）——"
         " 键的构造变了？这种情况下断言会**静默通过**，所以这一条必须在。")
+    never = [c for c, v in per_col.items() if v == 0]
+    if never:
+        from_fresh = [c for c in never if absent_in_fresh[c] > 0]
+        from_csv = [c for c in never if absent_in_fresh[c] == 0]
+        msg = [f"{path}：被锁的实测列一次都没有被比较 —— "
+               f"它们现在是**装饰**，改了不会让任何东西变红。"]
+        if from_fresh:
+            msg.append(
+                f"  ★ {from_fresh}：**本次运行**没有产出这些列 —— "
+                f"`fresh` 字典少了它们（常见原因：`fresh` 里硬编码了列名，"
+                f"没有跟着 `measured` 走）。要改的是**门文件**，不是 CSV。")
+        if from_csv:
+            msg.append(
+                f"  ★ {from_csv}：已提交 CSV 里这些列**每一行都是空/nan** —— "
+                f"要么让它真的被算出来，要么把它从 `measured` 里去掉。")
+        raise AssertionError("\n".join(msg))
     return n
