@@ -76,7 +76,8 @@ def _read_reference(path=None):
     out = {}
     with open(p) as fh:
         for r in csv.DictReader(fh):
-            if r["level"] == "L3":
+            #: ★ 读**最细**档（2026-09-05 起参考有 L4）
+            if r["level"] == "L4":
                 out[r["case"]] = dict(cl=float(r["cl"]), cd=float(r["cd"]))
     if not out:
         raise RuntimeError(f"{p}: no L3 rows -- the reference layout changed")
@@ -84,11 +85,21 @@ def _read_reference(path=None):
 
 
 def _reference_uncertainty():
+    """参考自身的**散布**（各档极差）。
+
+    ★★ 不是单一的 `delta_L2_L3`：对一个判定不稳的量，最后一步的差可能恰好
+    很小而该量仍在各档间游走 —— **游走的范围才是不确定度**，且无论收敛与否
+    都有定义。
+    """
     import csv
     out = {}
     with open(os.path.join(REF_DIR, "grid_convergence.csv")) as fh:
         for r in csv.DictReader(fh):
-            out[(r["case"], r["quantity"])] = abs(float(r["delta_L2_L3"]))
+            vals = [float(r[lv]) for lv in ("L1", "L2", "L3", "L4")
+                    if r.get(lv)]
+            out[(r["case"], r["quantity"])] = (max(vals) - min(vals)
+                                               if len(vals) >= 2
+                                               else float("nan"))
     return out
 
 
@@ -96,7 +107,7 @@ def _reference_shock(case):
     import csv
     with open(os.path.join(REF_DIR, "shock.csv")) as fh:
         for r in csv.DictReader(fh):
-            if (r["case"] == case and r["level"] == "L3"
+            if (r["case"] == case and r["level"] == "L4"
                     and r["surface"] == "upper" and r.get("x_shock")):
                 return float(r["x_shock"])
     return float("nan")
@@ -135,7 +146,7 @@ def _one(level, m_inf, alpha):
 
 def _with_cp_rms(d, cid):
     """★★ Cp RMS 是主要比较量 ⇒ 必须进证据 CSV，不能只活在 PNG 里。"""
-    rc = read_2d_cp(REF_DIR, cid, "L3", "none")
+    rc = read_2d_cp(REF_DIR, cid, "L4", "none")
     for side in ("upper", "lower"):
         d[f"cp_rms_{side}"] = cp_rms(
             rc[side][0], rc[side][1],
@@ -175,7 +186,12 @@ class TestWhatIsGateable:
             f"> {CL_BAND_M0730*100:.0f} %")
 
     def test_shock_difference_is_resolvable_against_this_reference(self, runs):
-        """★★ 与 D05 的 M0.75 相反：这里差是参考自身不确定度的 35×，**可分辨**。
+        """★★ 与 D05 的 M0.75 相反：这里的差远大于参考自身的散布，**可分辨**。
+
+        ★ **数字更正 2026-09-05**：原来按单一的 `delta_L2_L3` = 0.00088 说
+        "35×"。改用**散布**（四档 0.63302 → 0.62986，极差 **0.003169**）后是
+        **9.8×** —— **结论不变，倍数缩水四倍**。单一的最后差把参照物说得
+        比它实际更精确。
 
         锁住的是"可分辨"这个前提本身。若参考日后放松到不可分辨，本条会红，
         那时上面那条激波比较就该改成 RECORDED —— 与 D05 的镜像断言配对。"""
@@ -219,7 +235,7 @@ class TestReferenceIsLoadBearing:
             rows = list(csv.DictReader(fh))
             cols = list(rows[0].keys())
         for r in rows:
-            if r["case"] == "rae2822_m0725_a2.55" and r["level"] == "L3":
+            if r["case"] == "rae2822_m0725_a2.55" and r["level"] == "L4":
                 r["cl"] = f"{float(r['cl']) + 0.4321:.6f}"
         dst = tmp_path / "forces.csv"
         with open(dst, "w", newline="") as fh:
@@ -289,10 +305,10 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     for k, (nm, cid, m, a, kind) in enumerate(CASES):
         ax = axes[k]
-        rc = read_2d_cp(REF_DIR, cid, "L3", "none")
+        rc = read_2d_cp(REF_DIR, cid, "L4", "none")
         for side, ls in (("upper", "-"), ("lower", "--")):
             ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
-                    label="CFL3D Euler L3" if side == "upper" else None)
+                    label="CFL3D Euler L4" if side == "upper" else None)
         for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
                         ("medium", dict(lw=1.4, color="#1a56db"))):
             cur = runs[(nm, lv)]["curve"]

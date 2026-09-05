@@ -212,8 +212,13 @@ def run_one(case: R.Case, level: R.Level, workroot: Path, rec: dict,
             needs_solve: bool, solver: Path) -> dict:
     d = case_dir(case, level, workroot)
     tag = f'{case.tag}/{case.turb_model}/{level.name}'
+    #: ★★ `wall_s` 对缓存行留**空**，不写 0.0。
+    #: 实测 2026-09-05：一次 `--derive-only` 重导会把每一行的 wall_s 写成 0.0，
+    #: 于是四个数据集里这一列**全是 0**，看起来像"从没记录过"，实际是
+    #: "被重导抹掉了"。更糟的是混用：缓存行 0.0、实跑行真实秒数，
+    #: **同一列在不同行里意思不同**。一个表示"没测"的 0 是谎；空是实话。
     run = (R.run_case(d, solver) if needs_solve
-           else dict(status='cached', wall_s=0.0))
+           else dict(status='cached', wall_s=''))
 
     # ★ Retry ONCE with the gentler startup.  It fires only where the first
     # attempt already diverged, so it cannot move a result that would have been
@@ -396,9 +401,71 @@ def derive_shock(dsdir: Path, rows: list[dict]) -> list[dict]:
 
 GC_QUANTITIES = ('cl', 'cd', 'cd_pressure', 'cd_friction',
                  'cm_quarter_chord')
+#: ★★ 2-D mesh parameter: ``h ~ N^(-1/2)`` on the cell count.  The 3-D
+#: datasets use ``N^(-1/3)``; using the 3-D exponent here would misread every
+#: implied order.  Measured on the three-rung ladder (nj x nk = 281x49 /
+#: 393x69 / 561x97): r = 1.4034 and 1.4166, ratio-of-ratios 0.9907 --
+#: near-uniform, so a p-order quantity gives **0.518 at p = 2** and
+#: **0.729 at p = 1**.
+#:
+#: ★★★ The counts are READ FROM `forces.csv`, not hard-coded.  A hard-coded
+#: tuple silently goes stale the moment a rung is added -- which it was, on
+#: 2026-09-05 -- and every implied order computed against a stale h is wrong
+#: without saying so.
+
+
+def _mesh_sizes(rows):
+    """{level: nj*nk} straight from the committed rows."""
+    out = {}
+    for r in rows:
+        if r.get('nj') and r.get('nk'):
+            out[r['level']] = int(r['nj']) * int(r['nk'])
+    return out
+
+
+def _implied_order_2d(vals, ns):
+    """(ratio, implied order p) for three rungs on the 2-D ladder.
+
+    ★★★ WHY THIS COLUMN EXISTS, added 2026-09-05.  This function's own
+    docstring used to say the delta was "reported as an interval, not
+    extrapolated -- three rungs ... do not by themselves establish an
+    asymptotic order", which is true and was a deliberate choice.  D07 then
+    showed something sharper on the 3-D ladder: three rungs can report a ratio
+    that looks BEAUTIFULLY converged and is an accidental sign crossing --
+    cl read 0.153 (implied order 5.80) on three rungs and 3.161 once a fourth
+    was added.  So "we did not establish an order" is not the same as "the
+    delta is a usable error bar", and the table now says which.
+
+    ★ Comparing the ratio against 1.0 is also uncalibrated: 1.0 is merely
+    where the deltas stop shrinking, not what a converging quantity produces.
+    The implied order is reported beside it so a reader can price the bar.
+    """
+    import numpy as _np
+    h = _np.array(ns, float) ** -0.5
+    h = h / h[0]
+    d12, d23 = vals[1] - vals[0], vals[2] - vals[1]
+    if d12 == 0.0:
+        return float('nan'), float('nan')
+    ratio = abs(d23) / abs(d12)
+    ps = _np.linspace(0.01, 6.0, 6000)
+    rr = _np.abs(h[2] ** ps - h[1] ** ps) / _np.abs(h[1] ** ps - h[0] ** ps)
+    j = int(_np.argmin(_np.abs(rr - ratio)))
+    p = float(ps[j]) if abs(rr[j] - ratio) < 5e-3 else float('nan')
+    return ratio, p
+
+
+GC_LEVELS = ('L1', 'L2', 'L3', 'L4')
+#: ★★ 两个相邻三元组，与三维数据集同形。三档只给**一个**比值、没有可比对象；
+#: 两个三元组能回答三档回答不了的问题：这个量是在**进入**渐近区（比值下降）
+#: 还是在离开。
+GC_TRIPLES = (('L1', 'L2', 'L3'), ('L2', 'L3', 'L4'))
 GC_COLUMNS = (['case', 'turb_model', 'quantity']
-              + ['L1', 'L2', 'L3']
-              + ['delta_L2_L3', 'rel_delta_L2_L3'])
+              + list(GC_LEVELS)
+              + ['delta_L1_L2', 'delta_L2_L3', 'delta_L3_L4',
+                 'rel_delta_finest']
+              + sum([[f'ratio_{"".join(t)}', f'order_{"".join(t)}']
+                     for t in GC_TRIPLES], [])
+              + ['basis', 'asymptotic', 'error_bar'])
 
 
 def derive_grid_convergence(rows: list[dict], shock: list[dict]) -> list[dict]:
@@ -406,9 +473,30 @@ def derive_grid_convergence(rows: list[dict], shock: list[dict]) -> list[dict]:
 
     ★ That delta IS the error bar the data request asks for (item 3): a single
     grid is one number with no uncertainty, and a reference without an
-    uncertainty cannot carry a gate.  It is reported as an interval, not
-    extrapolated -- three rungs at ratio ~sqrt(2) in every direction do not by
-    themselves establish an asymptotic order on a shocked solution.
+    uncertainty cannot carry a gate.
+
+    ★★★ **BUT THE DELTA IS ONLY AN ERROR BAR WHEN THE DELTAS ARE SHRINKING**
+    (added 2026-09-05).  This docstring used to stop at "reported as an
+    interval, not extrapolated -- three rungs at ratio ~sqrt(2) do not by
+    themselves establish an asymptotic order", which is true and was a
+    deliberate choice.  D07 then measured something sharper on the 3-D ladder:
+    a quantity can be NOT CONVERGING AT ALL and still publish a small-looking
+    last delta.  Measured here on the 2-D datasets the first time this test was
+    run: **20 of 106 quantities have ratio >= 1**, i.e. their deltas are
+    GROWING, and every one of them was carrying `delta_L2_L3` as if it were an
+    error bar.  The worst are rans_rae2822's M0.730 `cd_pressure` (ratio 37.0)
+    and `x_shock_upper` (43.8).
+
+    ⇒ `error_bar` is now NONE unless the ratio is below 1, and `implied_order`
+    is reported beside the ratio because "ratio < 1" is itself uncalibrated:
+    on this ladder p = 2 gives 0.518 and p = 1 gives 0.729, so a ratio of 0.95
+    passes while representing an order near zero.
+
+    ★ Three rungs still cannot tell genuine high order from an accidental sign
+    crossing -- D07's cl went 0.153 (implied 5.80) to 3.161 when a fourth rung
+    was added.  A suspiciously LOW ratio here (several read 0.016-0.083) is
+    therefore flagged in `asymptotic` as `yes (3-rung, unchecked)`, not as a
+    clean pass.
     """
     by_case: dict[tuple, dict] = {}
     for row in rows:
@@ -425,17 +513,79 @@ def derive_grid_convergence(rows: list[dict], shock: list[dict]) -> list[dict]:
         key = (s['case'], s['turb_model'], f'x_shock_{s["surface"]}')
         by_case.setdefault(key, {})[s['level']] = float(s['x_shock'])
 
+    sizes = _mesh_sizes(rows)
+
     out = []
     for (case, turb, q), vals in sorted(by_case.items()):
-        r = dict(case=case, turb_model=turb, quantity=q,
-                 L1='', L2='', L3='', delta_L2_L3='', rel_delta_L2_L3='')
-        for lev, v in vals.items():
-            r[lev] = f'{v:.6f}'
-        if 'L2' in vals and 'L3' in vals:
-            d = vals['L3'] - vals['L2']
-            r['delta_L2_L3'] = f'{d:.6f}'
-            scale = max(abs(vals['L3']), 1e-12)
-            r['rel_delta_L2_L3'] = f'{d / scale:.4%}'
+        r = dict(case=case, turb_model=turb, quantity=q)
+        for lev in GC_LEVELS:
+            r[lev] = f'{vals[lev]:.6f}' if lev in vals else ''
+        for a, b in zip(GC_LEVELS, GC_LEVELS[1:]):
+            r[f'delta_{a}_{b}'] = (f'{vals[b] - vals[a]:+.6f}'
+                                   if a in vals and b in vals else '')
+        present = [lv for lv in GC_LEVELS if lv in vals]
+        r['rel_delta_finest'] = ''
+        if len(present) >= 2:
+            a, b = present[-2], present[-1]
+            scale = max(abs(vals[b]), 1e-12)
+            r['rel_delta_finest'] = f'{(vals[b] - vals[a]) / scale:.4%}'
+
+        last = None
+        for t in GC_TRIPLES:
+            kr, ko = f'ratio_{"".join(t)}', f'order_{"".join(t)}'
+            r[kr] = r[ko] = ''
+            if not all(lv in vals and lv in sizes for lv in t):
+                continue
+            ratio, pp = _implied_order_2d([vals[lv] for lv in t],
+                                          [sizes[lv] for lv in t])
+            if ratio != ratio:                        # the coarse delta is 0
+                r[kr] = 'UNDEFINED (coarse delta = 0)'
+                last = (float('nan'), t)
+                continue
+            r[kr] = f'{ratio:.3f}'
+            r[ko] = '' if pp != pp else f'{pp:.2f}'
+            last = (ratio, t)
+
+        #: ★★★ 判定是**三分的**，不是二分的（2026-09-05 实测逼出来的）。
+        #: 加第四档后 **131 个量里 41 个判定翻转（31 %），而且双向**
+        #: （24 个 PASS→FAIL、17 个 FAIL→PASS）。
+        #: ⇒ 对这些量，"渐近与否"**在这条阶梯上无法决定** —— 三档表此前是在
+        #: 静默地给出两个可能答案中的一个。它们既不是误差棒，也不是干净的失败。
+        #:
+        #: ★★ **一个被测量否掉的解释，记在这里免得有人重走**：我先怀疑翻转是
+        #: "两个极小数之比由噪声主导"。**证伪** —— 翻转组与稳定组的差值量级
+        #: 基本相同（|delta_finest|/|value| 中位数 3.4e-03 vs 4.6e-03），
+        #: 而且在 1e-5..1e-3 与 >1e-3 两个桶里翻转率都是 34–35 %。
+        #: 不是噪声地板效应。
+        ratios = [r[f'ratio_{"".join(t)}'] for t in GC_TRIPLES]
+        both = [x for x in ratios if x and 'UNDEF' not in x]
+        unstable = (len(both) == 2
+                    and (float(both[0]) < 1.0) != (float(both[1]) < 1.0))
+        r['basis'] = ''.join(last[1]) if last else ''
+        if last is None:
+            r['asymptotic'] = 'undefined'
+            r['error_bar'] = 'NONE (fewer than three rungs)'
+        elif last[0] != last[0]:
+            r['asymptotic'] = 'undefined'
+            r['error_bar'] = ('NONE (the coarse delta of the finest triple is '
+                              'exactly zero -- nothing to compare against)')
+        elif unstable:
+            r['asymptotic'] = 'unstable (the two triples disagree)'
+            r['error_bar'] = (
+                f'NONE (ratio {both[0]} on {"".join(GC_TRIPLES[0])} but '
+                f'{both[1]} on {"".join(GC_TRIPLES[1])} -- one more rung '
+                f'flips the verdict, so this ladder cannot decide)')
+        elif last[0] >= 1.0:
+            r['asymptotic'] = 'no'
+            r['error_bar'] = 'NONE (deltas are GROWING, not shrinking)'
+        else:
+            fine = [lv for lv in GC_LEVELS if lv in vals][-2:]
+            bar = abs(vals[fine[1]] - vals[fine[0]])
+            n_tri = len(both)
+            r['asymptotic'] = ('yes' if n_tri >= 2 else
+                               'yes (3-rung, unchecked)' if last[0] < 0.2 else
+                               'yes (3-rung)')
+            r['error_bar'] = f'{bar:.6f}'
         out.append(r)
     return out
 

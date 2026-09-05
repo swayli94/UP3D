@@ -38,6 +38,15 @@ Cp 带宽是 **0.0306 / 0.0289** ⇒ 只有 **1.3×** 带宽。而 cl 却差 **+
 ⇒ **两个读数都报**：Cp 上"接近但未入带（1.3× 带宽）"，cl 上"高出带 +10.2 %
 且加密远离"。只报后者会把这道门说得比实际更糟；只报前者会漏掉那个积分效应。
 
+## ★★ 带的一条边自己没有收敛 —— 说出来，不掩盖
+
+实测 2026-09-05（参考本轮加了第四档 L4 与三分判定）：`xtr030` 的 **SA 边 cl
+判定是 `unstable`** —— 三档三元组给 ratio 1.434、四档三元组给 0.002，
+**多一档就翻**，这条阶梯**决定不了**它是否收敛。
+
+这**不**使这道门作废：带宽 1.8 %–2.7 % 远大于任何网格差。但"落在带内"
+这个判据的**一侧，其位置本身带着未确立的网格误差** —— 必须写明。
+
 ## ★ 三条工况被排除，理由是**口径**不是难度
 
 `rans_naca0012/` 另有 M0.352/α12.86、M0.778/α2.03、M0.803/α−0.1，
@@ -81,7 +90,8 @@ def _read_band(path=None):
     out = {}
     with open(p) as fh:
         for r in csv.DictReader(fh):
-            if r["level"] == "L3":
+            #: ★ 读**最细**档（2026-09-05 起参考有 L4）
+            if r["level"] == "L4":
                 out.setdefault(r["case"], {})[r["turb_model"]] = dict(
                     cl=float(r["cl"]), cd=float(r["cd"]),
                     cdv=float(r["cd_friction"]))
@@ -97,7 +107,7 @@ def _transition_caliber(path=None):
     out = {}
     with open(p) as fh:
         for r in csv.DictReader(fh):
-            if r["level"] == "L3":
+            if r["level"] == "L4":
                 out[r["case"]] = dict(x_tr=r["x_tr"], note=r["note"])
     return out
 
@@ -129,13 +139,13 @@ def _with_cp(d, cid):
     """Cp RMS 对 **SST** 与对 **SA**，外加带宽 —— 参考是一条带，
     所以"我们离参考多远"本身也是一个区间。"""
     for tb in ("sst", "sa"):
-        rc = read_2d_cp(REF_DIR, cid, "L3", tb)
+        rc = read_2d_cp(REF_DIR, cid, "L4", tb)
         for side in ("upper", "lower"):
             d[f"cp_rms_{side}_{tb}"] = cp_rms(
                 rc[side][0], rc[side][1], d["curve"][f"x_{side}"],
                 d["curve"][f"cp_{side}"])[0]
-    sst = read_2d_cp(REF_DIR, cid, "L3", "sst")
-    sa = read_2d_cp(REF_DIR, cid, "L3", "sa")
+    sst = read_2d_cp(REF_DIR, cid, "L4", "sst")
+    sa = read_2d_cp(REF_DIR, cid, "L4", "sa")
     _x, lo, hi = band_from_two(sst["upper"], sa["upper"])
     d["cp_band_width_upper"] = float(np.max(hi - lo))
     return d
@@ -176,6 +186,36 @@ class TestWhatIsGateable:
                 f"{nm}: our RMS to SST and to SA differ by {spread:.4f}, more "
                 f"than twice the band's own width {bw:.4f} -- the two "
                 f"references are being compared through different things")
+
+    def test_the_band_edges_declare_their_own_convergence(self):
+        """★★★ 带的**边**也是网格解，它们各自是否收敛必须被读出来。
+
+        实测 2026-09-05：`xtr030` 的 **SA 边 cl 的 ratio = 1.434**，即它的
+        相邻差在**变大** —— 带的一条边没有确立网格收敛。这不使这道门作废
+        （带宽 1.8 % 仍然远大于任何网格差），但它必须**被说出来**：
+        "落在带内"这个判据的一侧，其位置本身带着未确立的网格误差。
+
+        ★ 本条不要求边都收敛（那会因为参考的性质而红），只要求
+        **判定被记录且可读** —— 参考数据集从 2026-09-05 起带 `asymptotic` 列。"""
+        import csv
+        seen = {}
+        with open(os.path.join(REF_DIR, "grid_convergence.csv")) as fh:
+            for r in csv.DictReader(fh):
+                if r["quantity"] == "cl":
+                    seen[(r["case"], r["turb_model"])] = r["asymptotic"]
+        for _nm, cid, *_ in CASES:
+            for tb in ("sst", "sa"):
+                v = seen.get((cid, tb))
+                assert v, (
+                    f"{cid}/{tb}: the reference no longer declares an "
+                    f"asymptotic verdict for cl -- the band edge's own grid "
+                    f"convergence has become unreadable")
+        #: 记录当前状态，供读者对照 docstring 的表
+        assert seen[("n0012_m0500_a2.00_xtr030", "sa")].startswith("unstable"), (
+            f"the xtr030 SA band edge is now "
+            f"{seen[('n0012_m0500_a2.00_xtr030', 'sa')]!r} -- its convergence "
+            f"has become decidable on this ladder; say so in the docstring "
+            f"and tighten the reading")
 
     def test_reference_band_is_well_posed(self, band):
         """★ 带宽必须有限且非零 —— 一个塌成一点的带会让下面的判据变成
@@ -262,7 +302,7 @@ class TestReferenceIsLoadBearing:
             cols = list(rows[0].keys())
         for r in rows:
             if (r["case"] == "n0012_m0500_a2.00_xtr005"
-                    and r["level"] == "L3" and r["turb_model"] == "sst"):
+                    and r["level"] == "L4" and r["turb_model"] == "sst"):
                 r["cl"] = f"{float(r['cl']) + 0.3141:.6f}"
         dst = tmp_path / "forces.csv"
         with open(dst, "w", newline="") as fh:
@@ -326,8 +366,8 @@ def test_export_evidence(runs, band, gate_evidence_dir):
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     for k, (nm, cid, _m, _a, _re, xtr) in enumerate(CASES):
         ax = axes[k]
-        sst = read_2d_cp(REF_DIR, cid, "L3", "sst")
-        sa = read_2d_cp(REF_DIR, cid, "L3", "sa")
+        sst = read_2d_cp(REF_DIR, cid, "L4", "sst")
+        sa = read_2d_cp(REF_DIR, cid, "L4", "sa")
         for side in ("upper", "lower"):
             bx, blo, bhi = band_from_two(sst[side], sa[side])
             ax.fill_between(bx, blo, bhi, color="#c0392b", alpha=.30,

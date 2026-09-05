@@ -110,7 +110,9 @@ def _read_reference(path=None):
     out = {}
     with open(p) as fh:
         for r in csv.DictReader(fh):
-            if r["level"] == "L3":
+            #: ★ 读**最细**档。2026-09-05 起参考有 L4；继续读 L3 会把
+            #:   pyFP3D 与一个被参考自己取代了的档位相比。
+            if r["level"] == "L4":
                 out[r["case"]] = dict(cl=float(r["cl"]), cd=float(r["cd"]),
                                       cm=float(r["cm_quarter_chord"]))
     if not out:
@@ -119,13 +121,27 @@ def _read_reference(path=None):
 
 
 def _read_reference_delta(path=None):
-    """参考自身的 L2→L3 差 = 它的不确定度（**不是**经检验的误差棒，见 docstring）。"""
+    """参考自身的 L2→L3 差 **和它的渐近判定**。
+
+    ★★★ 2026-09-05 起参考数据集自己带 `ratio` / `asymptotic` / `error_bar`。
+    本函数一并读出来，因为**"最后一步的差"只有在差在缩小时才是误差棒**，
+    而这道门用到的那一个恰恰不是（见下）。
+    """
     import csv
     p = path or os.path.join(REF_DIR, "grid_convergence.csv")
     out = {}
     with open(p) as fh:
         for r in csv.DictReader(fh):
-            out[(r["case"], r["quantity"])] = abs(float(r["delta_L2_L3"]))
+            vals = [float(r[lv]) for lv in ("L1", "L2", "L3", "L4")
+                    if r.get(lv)]
+            out[(r["case"], r["quantity"])] = dict(
+                #: ★★★ **散布**（各档极差），不是单一的最后差。
+                #: 对一个判定不稳的量，"最后一步的差"可能恰好很小而该量仍在
+                #: 各档间游走；**它游走的范围才是参照物的不确定度**，
+                #: 而且无论收敛与否都有定义。
+                scatter=(max(vals) - min(vals)) if len(vals) >= 2 else float("nan"),
+                delta=abs(float(r["delta_L2_L3"])) if r["delta_L2_L3"] else float("nan"),
+                asymptotic=r["asymptotic"].split(" (")[0])
     return out
 
 
@@ -167,7 +183,7 @@ def _one(level, m_inf, alpha):
 def _with_cp_rms(d, cid):
     """★★ Cp RMS 是**主要**比较量（使用者裁决 2026-09-05），所以它必须进证据
     CSV 并被回归锁覆盖 —— 只画在 PNG 里的量，改一行代码没有任何东西会红。"""
-    rc = read_2d_cp(REF_DIR, cid, "L3", "none")
+    rc = read_2d_cp(REF_DIR, cid, "L4", "none")
     for side in ("upper", "lower"):
         if side in rc:
             d[f"cp_rms_{side}"] = cp_rms(
@@ -267,21 +283,38 @@ class TestWhatIsOnlyRecorded:
     def test_m075_shock_is_unresolvable_against_this_reference(self, runs):
         """★★★ pyFP3D 与 CFL3D 差 0.0047，而 CFL3D 自身的 L2→L3 差是 0.018。
 
-        差比参照物自身的不确定度小 3.8 倍 ⇒ **不可分辨**。这条断言把该事实
-        锁住：如果哪天参考的不确定度收紧到能分辨这个差，本条会红，
-        那时才该去写一条真正的激波位置判据。"""
+        差比参照物自身的散布小 3.8 倍 ⇒ **不可分辨**。
+
+        ★★ **两次更正 2026-09-05**。(1) 这条原来把单一的 `delta_L2_L3`
+        （0.018）叫作参考的"不确定度"。(2) 加了第四档后该量的判定是
+        **unstable** —— 三档三元组给 ratio 2.483、四档三元组给 0.217，
+        **多一档就翻**，所以这条阶梯**决定不了**它是否收敛。
+
+        ⇒ 改用**散布**（各档极差）：参考自身四档读
+        **0.28502 / 0.27776 / 0.29578 / 0.29970**，极差 **0.021941**，
+        而且非单调。pyFP3D 与它差 0.0047 = 散布的 **0.21 倍** ⇒ **不可分辨**，
+        而且理由比原来更硬：参照物**本身就在 0.022 弦长的范围里游走**。
+
+        ★ 本条断言那个"定不了"的状态仍然如此 —— 若参考哪天在这条阶梯上
+        收敛了，才谈得上写一条真正的激波位置判据。"""
         d = _read_reference_delta()
-        unc = d[("n0012_m0750_a0.00", "x_shock_upper")]
+        ref = d[("n0012_m0750_a0.00", "x_shock_upper")]
+        assert ref["asymptotic"] in ("no", "unstable"), (
+            f"the reference's own M0.75 shock is now {ref['asymptotic']!r} -- "
+            f"its convergence has become decidable on this ladder, so the "
+            f"'doubly unresolvable' reading no longer applies and this row "
+            f"should be re-specified")
+        unc = ref["scatter"]
         got = runs[("M0.75_a0.00", "medium")]["x_shock"]
         import csv
         with open(os.path.join(REF_DIR, "shock.csv")) as fh:
             want = next(float(r["x_shock"]) for r in csv.DictReader(fh)
                         if r["case"] == "n0012_m0750_a0.00"
-                        and r["level"] == "L3" and r["surface"] == "upper")
+                        and r["level"] == "L4" and r["surface"] == "upper")
         diff = abs(got - want)
         assert diff < RESOLVABLE_FRAC * unc, (
             f"the pyFP3D-vs-CFL3D shock difference {diff:.6f} now EXCEEDS the "
-            f"reference's own L2->L3 uncertainty {unc:.6f} -- it has become "
+            f"reference's own across-rung SCATTER {unc:.6f} -- it has become "
             f"resolvable, so this RECORDED row should be re-specified as a "
             f"real criterion")
 
@@ -301,7 +334,7 @@ class TestReferenceIsLoadBearing:
             rows = list(csv.DictReader(fh))
             cols = rows[0].keys()
         for r in rows:
-            if r["case"] == "n0012_m0500_a2.00" and r["level"] == "L3":
+            if r["case"] == "n0012_m0500_a2.00" and r["level"] == "L4":
                 r["cl"] = f"{float(r['cl']) + 0.1234:.6f}"
         with open(dst, "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(cols))
@@ -377,11 +410,11 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
     fig, axes = plt.subplots(2, 4, figsize=(19, 8.4))
     for k, (nm, cid, m, a, kind) in enumerate(CASES):
         ax = axes.ravel()[k]
-        rc = read_2d_cp(REF_DIR, cid, "L3", "none")
+        rc = read_2d_cp(REF_DIR, cid, "L4", "none")
         for side, ls in (("upper", "-"), ("lower", "--")):
             if side in rc:
                 ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
-                        label="CFL3D Euler L3" if side == "upper" else None)
+                        label="CFL3D Euler L4" if side == "upper" else None)
         for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
                         ("medium", dict(lw=1.4, color="#1a56db"))):
             cur = runs[(nm, lv)]["curve"]

@@ -145,6 +145,17 @@ EULER_LEVELS = (
     Level('L1', n_foil=101, n_wake=41, n_grow=49, h1=2.000e-3),
     Level('L2', n_foil=141, n_wake=57, n_grow=69, h1=1.414e-3),
     Level('L3', n_foil=201, n_wake=81, n_grow=97, h1=1.000e-3),
+    #: ★★★ L4 (2026-09-05).  Three rungs give ONE ratio with nothing to
+    #: compare it against, and D07 measured what that costs on the 3-D ladder:
+    #: cl read ratio 0.153 (implied order 5.80, apparently beautifully
+    #: converged) on three rungs and **3.161** once a fourth was added, while
+    #: cm went 0.051 -> 7.587.  Both were accidental sign crossings.
+    #: The first run of the asymptotic test on THESE datasets flagged six
+    #: quantities with ratio < 0.2 -- the same signature, unchecked.
+    #: ★ Continues the ladder's own r ~ sqrt(2); every count stays 4m+1, which
+    #: the mesh sequencing (ncg 2, mseq 3) requires.
+    #: ★ Cost measured, not guessed: one L3 Euler leg is 34 s.
+    Level('L4', n_foil=281, n_wake=113, n_grow=137, h1=7.071e-4),
 )
 
 #: RANS ladder.  y+ is held at 1 on every rung -- a RANS result whose boundary
@@ -157,6 +168,10 @@ RANS_LEVELS = (
     Level('L1', n_foil=101, n_wake=41, n_grow=97, y_plus=1.0),
     Level('L2', n_foil=141, n_wake=57, n_grow=129, y_plus=1.0),
     Level('L3', n_foil=201, n_wake=81, n_grow=161, y_plus=1.0),
+    #: ★ L4 keeps y+ = 1 like every other RANS rung -- the wall spacing is
+    #: PINNED by y+, so the fourth rung refines the outer layer and the wake,
+    #: exactly as L1->L3 do.  The growth ratio continues down (~1.11 -> ~1.09).
+    Level('L4', n_foil=281, n_wake=113, n_grow=225, y_plus=1.0),
 )
 
 

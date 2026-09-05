@@ -1,25 +1,25 @@
-case,turb_model,quantity,L1,L2,L3,delta_L2_L3,rel_delta_L2_L3
-rae2822_m0725_a2.55,sa,cd,0.015421,0.015100,0.014890,-0.000210,-1.4103%
-rae2822_m0725_a2.55,sa,cd_friction,0.006290,0.006336,0.006366,0.000030,0.4713%
-rae2822_m0725_a2.55,sa,cd_pressure,0.009131,0.008764,0.008524,-0.000240,-2.8156%
-rae2822_m0725_a2.55,sa,cl,0.834231,0.831949,0.828962,-0.002987,-0.3603%
-rae2822_m0725_a2.55,sa,cm_quarter_chord,0.102108,0.101088,0.100169,-0.000919,-0.9174%
-rae2822_m0725_a2.55,sa,x_shock_upper,0.572623,0.567255,0.564370,-0.002885,-0.5112%
-rae2822_m0725_a2.55,sst,cd,0.012844,0.012500,0.012340,-0.000160,-1.2966%
-rae2822_m0725_a2.55,sst,cd_friction,0.005548,0.005577,0.005591,0.000014,0.2504%
-rae2822_m0725_a2.55,sst,cd_pressure,0.007296,0.006923,0.006749,-0.000174,-2.5782%
-rae2822_m0725_a2.55,sst,cl,0.763774,0.760278,0.758396,-0.001882,-0.2482%
-rae2822_m0725_a2.55,sst,cm_quarter_chord,0.087915,0.086684,0.086039,-0.000645,-0.7497%
-rae2822_m0725_a2.55,sst,x_shock_upper,0.539565,0.535324,0.530951,-0.004373,-0.8236%
-rae2822_m0730_a3.19,sa,cd,0.026640,0.026693,0.026765,0.000072,0.2690%
-rae2822_m0730_a3.19,sa,cd_friction,0.006034,0.006088,0.006122,0.000034,0.5554%
-rae2822_m0730_a3.19,sa,cd_pressure,0.020605,0.020606,0.020643,0.000037,0.1792%
-rae2822_m0730_a3.19,sa,cl,0.938540,0.943500,0.946428,0.002928,0.3094%
-rae2822_m0730_a3.19,sa,cm_quarter_chord,0.108423,0.109015,0.109410,0.000395,0.3610%
-rae2822_m0730_a3.19,sa,x_shock_upper,0.612698,0.612165,0.613147,0.000982,0.1602%
-rae2822_m0730_a3.19,sst,cd,0.020866,0.020829,0.020903,0.000074,0.3540%
-rae2822_m0730_a3.19,sst,cd_friction,0.005259,0.005277,0.005289,0.000012,0.2269%
-rae2822_m0730_a3.19,sst,cd_pressure,0.015607,0.015552,0.015614,0.000062,0.3971%
-rae2822_m0730_a3.19,sst,cl,0.843724,0.848186,0.852269,0.004083,0.4791%
-rae2822_m0730_a3.19,sst,cm_quarter_chord,0.086413,0.086838,0.087414,0.000576,0.6589%
-rae2822_m0730_a3.19,sst,x_shock_upper,0.571770,0.571711,0.574298,0.002587,0.4505%
+case,turb_model,quantity,L1,L2,L3,L4,delta_L1_L2,delta_L2_L3,delta_L3_L4,rel_delta_finest,ratio_L1L2L3,order_L1L2L3,ratio_L2L3L4,order_L2L3L4,basis,asymptotic,error_bar
+rae2822_m0725_a2.55,sa,cd,0.015421,0.015100,0.014890,0.014744,-0.000321,-0.000210,-0.000146,-0.9902%,0.654,1.17,0.695,1.65,L2L3L4,yes,0.000146
+rae2822_m0725_a2.55,sa,cd_friction,0.006290,0.006336,0.006366,0.006393,+0.000046,+0.000030,+0.000027,0.4223%,0.652,1.18,0.900,0.82,L2L3L4,yes,0.000027
+rae2822_m0725_a2.55,sa,cd_pressure,0.009131,0.008764,0.008524,0.008350,-0.000367,-0.000240,-0.000174,-2.0838%,0.654,1.18,0.725,1.52,L2L3L4,yes,0.000174
+rae2822_m0725_a2.55,sa,cl,0.834231,0.831949,0.828962,0.825885,-0.002282,-0.002987,-0.003077,-0.3726%,1.309,,1.030,0.38,L2L3L4,no,"NONE (deltas are GROWING, not shrinking)"
+rae2822_m0725_a2.55,sa,cm_quarter_chord,0.102108,0.101088,0.100169,0.099367,-0.001020,-0.000919,-0.000802,-0.8071%,0.901,0.11,0.873,0.92,L2L3L4,yes,0.000802
+rae2822_m0725_a2.55,sa,x_shock_upper,0.572623,0.567255,0.564370,0.561430,-0.005368,-0.002885,-0.002940,-0.5237%,0.537,1.83,1.019,0.42,L2L3L4,unstable (the two triples disagree),"NONE (ratio 0.537 on L1L2L3 but 1.019 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0725_a2.55,sst,cd,0.012844,0.012500,0.012340,0.012242,-0.000344,-0.000160,-0.000098,-0.8005%,0.465,2.31,0.613,2.07,L2L3L4,yes,0.000098
+rae2822_m0725_a2.55,sst,cd_friction,0.005548,0.005577,0.005591,0.005610,+0.000029,+0.000014,+0.000019,0.3387%,0.483,2.18,1.357,,L2L3L4,unstable (the two triples disagree),"NONE (ratio 0.483 on L1L2L3 but 1.357 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0725_a2.55,sst,cd_pressure,0.007296,0.006923,0.006749,0.006633,-0.000373,-0.000174,-0.000116,-1.7488%,0.466,2.30,0.667,1.79,L2L3L4,yes,0.000116
+rae2822_m0725_a2.55,sst,cl,0.763774,0.760278,0.758396,0.756239,-0.003496,-0.001882,-0.002157,-0.2852%,0.538,1.82,1.146,0.04,L2L3L4,unstable (the two triples disagree),"NONE (ratio 0.538 on L1L2L3 but 1.146 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0725_a2.55,sst,cm_quarter_chord,0.087915,0.086684,0.086039,0.085468,-0.001231,-0.000645,-0.000571,-0.6681%,0.524,1.91,0.885,0.87,L2L3L4,yes,0.000571
+rae2822_m0725_a2.55,sst,x_shock_upper,0.539565,0.535324,0.530951,0.529151,-0.004241,-0.004373,-0.001800,-0.3402%,1.031,,0.412,3.37,L2L3L4,unstable (the two triples disagree),"NONE (ratio 1.031 on L1L2L3 but 0.412 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sa,cd,0.026640,0.026693,0.026765,0.026808,+0.000053,+0.000072,+0.000043,0.1604%,1.358,,0.597,2.15,L2L3L4,unstable (the two triples disagree),"NONE (ratio 1.358 on L1L2L3 but 0.597 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sa,cd_friction,0.006034,0.006088,0.006122,0.006151,+0.000054,+0.000034,+0.000029,0.4715%,0.630,1.30,0.853,0.99,L2L3L4,yes,0.000029
+rae2822_m0730_a3.19,sa,cd_pressure,0.020605,0.020606,0.020643,0.020656,+0.000001,+0.000037,+0.000013,0.0629%,37.000,,0.351,3.89,L2L3L4,unstable (the two triples disagree),"NONE (ratio 37.000 on L1L2L3 but 0.351 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sa,cl,0.938540,0.943500,0.946428,0.948015,+0.004960,+0.002928,+0.001587,0.1674%,0.590,1.52,0.542,2.47,L2L3L4,yes,0.001587
+rae2822_m0730_a3.19,sa,cm_quarter_chord,0.108423,0.109015,0.109410,0.109605,+0.000592,+0.000395,+0.000195,0.1779%,0.667,1.11,0.494,2.77,L2L3L4,yes,0.000195
+rae2822_m0730_a3.19,sa,x_shock_upper,0.612698,0.612165,0.613147,0.613254,-0.000533,+0.000982,+0.000107,0.0174%,1.842,,0.109,,L2L3L4,unstable (the two triples disagree),"NONE (ratio 1.842 on L1L2L3 but 0.109 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sst,cd,0.020866,0.020829,0.020903,0.020878,-0.000037,+0.000074,-0.000025,-0.1197%,2.000,,0.338,4.02,L2L3L4,unstable (the two triples disagree),"NONE (ratio 2.000 on L1L2L3 but 0.338 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sst,cd_friction,0.005259,0.005277,0.005289,0.005304,+0.000018,+0.000012,+0.000015,0.2828%,0.667,1.11,1.250,,L2L3L4,unstable (the two triples disagree),"NONE (ratio 0.667 on L1L2L3 but 1.250 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sst,cd_pressure,0.015607,0.015552,0.015614,0.015574,-0.000055,+0.000062,-0.000040,-0.2568%,1.127,,0.645,1.90,L2L3L4,unstable (the two triples disagree),"NONE (ratio 1.127 on L1L2L3 but 0.645 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sst,cl,0.843724,0.848186,0.852269,0.853030,+0.004462,+0.004083,+0.000761,0.0892%,0.915,0.06,0.186,6.00,L2L3L4,yes,0.000761
+rae2822_m0730_a3.19,sst,cm_quarter_chord,0.086413,0.086838,0.087414,0.087381,+0.000425,+0.000576,-0.000033,-0.0378%,1.355,,0.057,,L2L3L4,unstable (the two triples disagree),"NONE (ratio 1.355 on L1L2L3 but 0.057 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
+rae2822_m0730_a3.19,sst,x_shock_upper,0.571770,0.571711,0.574298,0.575636,-0.000059,+0.002587,+0.001338,0.2324%,43.847,,0.517,2.62,L2L3L4,unstable (the two triples disagree),"NONE (ratio 43.847 on L1L2L3 but 0.517 on L2L3L4 -- one more rung flips the verdict, so this ladder cannot decide)"
