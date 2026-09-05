@@ -61,6 +61,10 @@ EXP_STATIONS = (0.20, 0.44, 0.65, 0.80, 0.90, 0.96, 0.99)
 #: into wing coefficients.
 S_HALF = 0.5 * (1.0 + M6_CHORD_TIP / M6_CHORD_ROOT) * (M6_SPAN / M6_CHORD_ROOT)
 
+#: 默认是 TEST 2308（3D-1）。★ 3D-2（M 0.50 / α 3.06）用 `--mach 0.50`
+#: 写到**单独目录**：`cp_stations.csv` / `shock.csv` 只按 level+turb 索引，
+#: 把第二个工况塞进同一份文件会**撞键**；两个工况的口径也不同
+#: （跨声速那条与实验逐字配对，亚声速那条没有实验可配）。
 MACH, ALPHA = 0.8395, 3.06
 
 
@@ -469,12 +473,22 @@ def grid_convergence(rows_by_level, shock_by_level, order):
         if l not in lv:
             continue
         for sr in sh:
-            if sr['surface'] != 'upper' or sr['x_shock'] == '':
+            if sr['surface'] != 'upper':
+                continue
+            # ★★ The suction peak does NOT depend on a shock existing, and at a
+            #    SUBSONIC condition it is the quantity most worth checking.
+            #    An earlier version skipped the whole row when `x_shock` was
+            #    empty, so cp_min was silently dropped from every shock-free
+            #    case: the 3D-2 dataset (M 0.50) came out with FOUR quantities
+            #    where it should have eleven.  ★ It was caught by the count
+            #    looking too small, not by the code reading wrong -- which is
+            #    why the generator prints "N of M quantities" at all.
+            q.setdefault(f"cp_min_upper_eta{sr['eta_requested']}",
+                         {})[l] = float(sr['cp_min'])
+            if sr['x_shock'] == '':
                 continue
             name = f"x_shock_upper_eta{sr['eta_requested']}"
             q.setdefault(name, {})[l] = float(sr['x_shock'])
-            q.setdefault(f"cp_min_upper_eta{sr['eta_requested']}",
-                         {})[l] = float(sr['cp_min'])
             # ★ one bad rung disqualifies the station: the deltas would be
             #   differences between DIFFERENT FEATURES.
             if sr['detector_premise'].startswith('FAILS'):
@@ -571,7 +585,16 @@ def main(argv=None):
     p.add_argument('--suffix', default='',
                    help="run-dir suffix, e.g. '_safe' (euler only)")
     p.add_argument('--out', default=None)
+    p.add_argument('--mach', type=float, default=None,
+                   help='override the condition (default 0.8395 = TEST 2308)')
+    p.add_argument('--alpha', type=float, default=None)
     a = p.parse_args(argv)
+
+    global MACH, ALPHA
+    if a.mach is not None:
+        MACH = a.mach
+    if a.alpha is not None:
+        ALPHA = a.alpha
 
     root = Path(a.from_runs)
     default_out = f'{a.model}_onera_m6'

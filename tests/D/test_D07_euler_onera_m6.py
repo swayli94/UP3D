@@ -1,10 +1,38 @@
-r"""D07 — pyFP3D 无粘 vs CFL3D Euler — ONERA M6（3D-1）。
+r"""D07 — pyFP3D 无粘 vs CFL3D Euler — ONERA M6（3D-1 + 3D-2）。
 
 工况：**M 0.8395 / α 3.06**，AGARD AR-138 TEST 2308 逐字（α 实验值不修正）。
 参考 `euler_onera_m6/` 四档 + REF，本门读 **L4**（最细，11.278 M 点）。
 
-★ 占位期的 docstring 还列了 M0.50/α3.06 —— **参考数据集里没有那个工况**，
-所以本门不含它；要补就得先补参考。
+**3D-2 = M 0.50 / α 3.06** 于 2026-09-05 补齐，参考在
+`euler_onera_m6_m050/`（四档，**4/4 力系数量带误差棒**）。数据请求点名它的理由是
+"项目的 M6 / 翼身**亚声速**锚点（B9、B32 的 M0.5）**目前完全没有外部参照**"。
+
+★★★ **我对这条的预期是错的，而项目自己的笔记里就写着为什么。** 我预期
+"亚临界是全速势最占便宜的地方"（D05 二维 M0.50 实测 +0.04 %），因此这条会给出
+一道**紧**门。实测 −1.54 %（coarse）→ **−6.89 %**（medium），**误差随加密变大**，
+与跨声速那条同型。原因是 **M∞ = 0.50 时 M_max 已到 0.9964** —— 这个工况
+**根本不是亚临界**。CLAUDE.md 的操作笔记里有这条：
+*"M6 at α 3.06 is NOT subcritical at M0.70 — measured M_max 1.5358"*。
+**该查它，而不是从"M0.50 听起来是亚声速"推断。**
+
+★★ **但它给出了比一道紧门更有价值的东西。** 两个工况的 Cp 展向结构几乎相同：
+
+| | M 0.50 | M 0.8395 |
+|---|---|---|
+| 上表面 Cp RMS（y/b 0.20 → 0.99）| 0.0799 → 0.1491 | 0.127 → 0.244 |
+| **外/内比** | **1.87** | **1.92** |
+| M_max（medium）| 0.996 | 1.995 |
+
+⇒ **越往翼尖越重的吸力亏损不是激波现象** —— 它在没有激波的 M0.50 上形状几乎
+一致，只是幅度约 60 %。病因被缩小到"**沿展向作用、外翼更重、与马赫数无关**"。
+★ 一个已知候选：生产配置的 `tip_taper`（`vanish_smooth`, 0.05·b_semi）在两条上
+都开着，CLAUDE.md 记它代价 **−1.3 % cl_p** 且作用在翼尖 —— 但那只占 −6.89 %
+的五分之一，**至多是部分原因，不归因**。
+
+★ **3D-2 走的是另一条求解路径**，这是它的意义而不是麻烦：`_m6_case` 驱动
+`solve_newton_transonic`，后者直接拒绝 M 0.50（"upward ramp only: m_inf 0.5 <
+m_start 0.7"）—— Mach 阶梯是为跨声速存在的。这条工况要锚定的那些亚声速锚点
+（B9、B32 的 M0.5）走的正是 `solve_newton_lifting`，所以本门也走它。
 
 ---
 
@@ -341,3 +369,137 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
     fig.savefig(os.path.join(str(gate_evidence_dir), "d07_vs_cfl3d_euler.png"),
                 dpi=130)
     plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+#  3D-2 — M 0.50 / alpha 3.06（另一条求解路径：solve_newton_lifting）
+# ---------------------------------------------------------------------------
+
+REF_DIR_M050 = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
+                            "euler_onera_m6_m050")
+M_INF_SUB = 0.50
+#: 记录带（标定）：实测 medium −6.89 %
+SUBSONIC_CL_RECORD_MAX = 0.15
+#: 展向结构：外/内 Cp RMS 之比，实测 1.87（跨声速 1.92）
+SPANWISE_RATIO_MIN = 1.2
+
+
+def _read_reference_m050(path=None):
+    import csv
+    p = path or os.path.join(REF_DIR_M050, "forces.csv")
+    out = {}
+    with open(p) as fh:
+        for r in csv.DictReader(fh):
+            out[r["level"]] = dict(cl=float(r["cl"]), cd=float(r["cd"]))
+    if "L4" not in out:
+        raise RuntimeError(f"{p}: no L4 row -- the 3D-2 reference is missing")
+    return out
+
+
+def _one_m050(level):
+    """★ `solve_newton_lifting`，不是 `solve_newton_transonic` —— 见 docstring。"""
+    from bench.recipes import NEWTON_M6_RECIPE
+    from pyfp3d.constraints.wake import tip_taper_factors
+    from pyfp3d.mesh.reader import read_mesh
+    from pyfp3d.mesh.wake_cut import cut_wake
+    from pyfp3d.meshgen.wing3d import B_SEMI
+    from pyfp3d.post.section_cut import section_cp_curve
+    from pyfp3d.post.surface import planform_area, wall_force_coefficients
+    from pyfp3d.solve.newton import solve_newton_lifting
+    mc, wc = cut_wake(read_mesh(os.path.join(
+        str(REPO_ROOT), "cases", "meshes", "onera_m6", f"{level}.msh")))
+    taper = tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth",
+                              0.05 * B_SEMI)
+    kw = dict(NEWTON_M6_RECIPE["newton_kw"], tip_taper=taper)
+    r = solve_newton_lifting(mc, wc, m_inf=M_INF_SUB, alpha_deg=ALPHA, **kw)
+    s_ref = planform_area(mc.nodes, mc.boundary_faces["wall"])
+    f = wall_force_coefficients(mc.nodes, mc.elements,
+                                mc.boundary_faces["wall"], r["phi"],
+                                alpha_deg=ALPHA, s_ref=s_ref, m_inf=M_INF_SUB)
+    out = dict(cl=float(f["cl"]), converged=bool(r.get("converged")),
+               residual=float(np.asarray(r["residual_history"], float)[-1]),
+               mach_max=float(np.sqrt(r["mach2_max"])))
+    if level == "medium":
+        for e in CP_ETAS:
+            cur = section_cp_curve(mc, r["phi"], eta=e, b_semi=B_SEMI,
+                                   m_inf=M_INF_SUB)
+            rc = read_3d_cp(REF_DIR_M050, "L4", e, "none")
+            out[f"cp_rms_upper_eta{e:.2f}"] = cp_rms(
+                rc["upper"][0], rc["upper"][1],
+                cur["x_upper"], cur["cp_upper"])[0]
+    return out
+
+
+@pytest.fixture(scope="module")
+def runs_m050():
+    return {lv: _one_m050(lv) for lv in LEVELS}
+
+
+class TestSubsonicCondition3D2:
+    r"""★ 3D-2：本工况填的是一个**完全空白**（M6 亚声速无任何外部参照）。"""
+
+    def test_both_levels_converge(self, runs_m050):
+        """★ 与跨声速那条不同，这里两档都收敛得很干净（|R| ~8e-15）——
+        所以下面的读数不带"收敛与否"的混淆项。"""
+        for lv in LEVELS:
+            assert runs_m050[lv]["converged"], f"{lv} did not converge"
+            assert runs_m050[lv]["residual"] < 1e-10
+
+    def test_this_condition_is_not_actually_subcritical(self, runs_m050):
+        """★★★ 锁住那个把我的预期推翻的事实：**M∞ = 0.50 而 M_max ≈ 1.0**。
+
+        实测 0.9592（coarse）/ **0.9964**（medium）。⇒ "亚声速"是个误称，
+        这条工况处在临界边缘，所以不能指望它像二维 M0.50 那样给 +0.04 %。
+        若哪天 M_max 明显掉下来，本条会红 —— 那说明几何或配置变了，
+        而上面那些读数的前提也就变了。"""
+        assert 0.85 < runs_m050["medium"]["mach_max"] < 1.15, (
+            f'M_max {runs_m050["medium"]["mach_max"]:.4f} is no longer near '
+            f'critical -- the "not actually subcritical" reading that explains '
+            f'this condition\'s behaviour needs re-checking')
+
+    def test_lift_deficit_is_recorded_and_grows(self, runs_m050):
+        """★★ 与 3D-1 同型：误差**随加密变大**（−1.54 % → −6.89 %）。
+        **记录，不设门。** 若它开始收缩，本条会红 —— 那是好消息，
+        届时应把这条腿升级为设门。"""
+        want = _read_reference_m050()["L4"]["cl"]
+        e = {lv: abs(runs_m050[lv]["cl"] - want) / abs(want) for lv in LEVELS}
+        assert e["medium"] <= SUBSONIC_CL_RECORD_MAX, (
+            f'cl error {e["medium"]*100:.2f} % exceeds the recording band')
+        assert e["medium"] > e["coarse"], (
+            f'the 3D-2 cl error now CONTRACTS ({e["coarse"]*100:.2f} % -> '
+            f'{e["medium"]*100:.2f} %) -- an improvement; re-specify as gated')
+
+    def test_the_spanwise_deficit_is_not_a_shock_phenomenon(self, runs_m050):
+        """★★★ 本门最有价值的一条，而它需要**两个工况**才能说。
+
+        上表面 Cp RMS 沿展向增大，两个工况的外/内比几乎相同：
+        **M 0.50 给 1.87，M 0.8395 给 1.92** —— 而 M 0.50 上**没有激波**
+        （M_max 0.996）。⇒ 那个越往翼尖越重的吸力亏损**与激波无关**，
+        病因被缩小到"沿展向作用、外翼更重、与马赫数无关"。
+
+        ★ 已知候选：`tip_taper`（−1.3 % cl_p，作用在翼尖，两条都开着）——
+        但它只占 −6.89 % 的五分之一，**至多是部分原因，不归因**。"""
+        r = [runs_m050["medium"][f"cp_rms_upper_eta{e:.2f}"] for e in CP_ETAS]
+        assert all(np.isfinite(v) for v in r), r
+        assert r[-1] / r[0] >= SPANWISE_RATIO_MIN, (
+            f"the spanwise growth is gone at M 0.50 ({r[0]:.4f} at y/b 0.20 vs "
+            f"{r[-1]:.4f} at 0.99, ratio {r[-1]/r[0]:.2f}) -- the deficit may "
+            f"be shock-related after all; re-read against 3D-1's 1.92")
+
+    def test_reference_reader_follows_a_perturbed_copy(self, tmp_path):
+        import csv
+        src = os.path.join(REF_DIR_M050, "forces.csv")
+        with open(src) as fh:
+            rows = list(csv.DictReader(fh))
+            cols = list(rows[0].keys())
+        for r in rows:
+            if r["level"] == "L4":
+                r["cl"] = f"{float(r['cl']) + 0.2222:.6f}"
+        dst = tmp_path / "forces.csv"
+        with open(dst, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=cols)
+            w.writeheader()
+            w.writerows(rows)
+        base = _read_reference_m050()["L4"]["cl"]
+        pert = _read_reference_m050(str(dst))["L4"]["cl"]
+        assert abs((pert - base) - 0.2222) < 1e-9

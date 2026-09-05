@@ -721,6 +721,42 @@ and it is deliberately **not** a ladder rung.
 Refinement does not cure the Cp\*-grazing; see `upstream_depth` in
 `shock.csv`.
 
+### `euler_onera_m6_m050/` — the D07 dataset's SECOND condition (3D-2)
+
+**M 0.50, α 3.06°**, four rungs, same recipe as the transonic ladder
+(`NITFO 500 / NCYC 1500 / ICHK 2`) so the two conditions are one family.
+The data request named it because *"the project's M6 / wing-body SUBSONIC
+anchors (B9, B32's M0.5) have NO external reference at all"* — every other
+requested condition merely strengthens a reference that already existed.
+
+| rung | points | cl | cd |
+|---|---|---|---|
+| L1 | 0.769 M | 0.221896 | 0.004876 |
+| L2 | 2.002 M | 0.220773 | 0.004670 |
+| L3 | 4.813 M | 0.220604 | 0.004569 |
+| **L4** | **11.278 M** | **0.220676** | **0.004527** |
+
+★★ **All four force coefficients carry an error bar** — cl's two triples read
+0.150 / 0.426 and cd's 0.490 / 0.416, both asymptotic — against the transonic
+condition where cl is 3.161 and RECORDED only. Four of the seven `cp_min`
+stations also carry one.
+
+★★★ **This condition is NOT subcritical, and that is the point.** At M∞ = 0.50
+the M6 at α 3.06 still reaches **M_max 0.9964** on the medium mesh. The
+project's own operating notes already say so — *"M6 at α 3.06 is NOT
+subcritical at M0.70 — measured M_max 1.5358"* — so "M 0.50 sounds subsonic"
+is not a safe inference and the note is the thing to read.
+
+★★ **What the second condition buys, and it needs BOTH to say it**: the
+upper-surface Cp RMS grows outboard with almost the same ratio at the two
+Machs — **1.87 at M 0.50 against 1.92 at M 0.8395** — and M 0.50 has **no
+shock**. ⇒ the outboard-growing suction deficit is **not a shock phenomenon**.
+Looking at 3D-1 alone could not rule that out.
+
+★ Note that the two conditions exercise **different solver paths** on our side:
+`solve_newton_transonic` refuses M 0.50 outright ("upward ramp only"), so the
+subsonic anchors this dataset serves run `solve_newton_lifting`.
+
 ### The bias against the committed experiment — RECORDED, not a gate
 
 `compare_m6_experiment.py` writes `experiment_bias.csv` and
