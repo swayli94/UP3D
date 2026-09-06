@@ -22,9 +22,23 @@ D05 的 M0.80/α1.25 medium,9 条腿单变量):
 的形状。所以本门**外部设 `OPENBLAS_NUM_THREADS=8` 与 `=16` 各跑一次真实求解,
 要求结果逐位相同** —— 子进程,因为线程数必须在 numpy 导入前生效。
 
-★ 载体取**便宜且对 BLAS 敏感**的一条:2.5-D NACA0012 coarse 的亚声速 Newton。
-用 M0.80 那条(真正暴露问题的)要 200+ 步,太贵;而只要固定生效,
-**任何**算例都该位确定 —— 位确定是全局性质,不是逐算例性质。
+## ★★★ 载体必须是**实测敏感**的,这一条是踩出来的
+
+本门第一版用 coarse M0.50 作载体,**G-TEETH 当场失败**:停用固定它照样绿。
+再测 coarse M0.80/α1.25 与 coarse M0.75/α0 —— **也都逐位相同**。
+⇒ 我在第一版 docstring 里写的「位确定是全局性质,不是逐算例性质」是**推理,
+而且被测量否掉了**:OPENBLAS 敏感性**不是普遍性质**,它只出现在那几条
+**病态腿**上(medium 的 M0.80 / M0.803,迭代路径对 1e-15 扰动敏感)。
+⇒ 载体只能用 **medium M0.80/α1.25**,并**故意用 `n_newton_max = 80`**
+(它在这个预算下不收敛 —— 本门判的是**位相同**,与收敛无关;实测
+OPENBLAS 1 vs 8 给 0.34009652307781807 vs 0.34011432026323)。
+
+## 判据为什么能有牙
+
+`pyfp3d/__init__.py` **强制覆盖**(不是 `setdefault`),所以探针即便外部设
+`OPENBLAS_NUM_THREADS=8/16`,库也会压成 1 ⇒ 两条腿必须逐位相同。
+**G-TEETH 用逃生舱 `PYFP3D_ALLOW_BLAS_THREADS=1`**:放行外部值 ⇒ 两条腿走
+不同的 OPENBLAS ⇒ 本门必红。**于是验证「固定会不会失效」不需要改库文件。**
 """
 import json
 import os
@@ -44,18 +58,20 @@ from pyfp3d.mesh.reader import read_mesh
 from pyfp3d.mesh.wake_cut import cut_wake
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
-p = os.path.join(%r, "cases", "meshes", "naca0012_2.5d", "coarse.msh")
+p = os.path.join(%r, "cases", "meshes", "naca0012_2.5d", "medium.msh")
 mc, wc = cut_wake(read_mesh(p))
-r = solve_newton_lifting(mc, wc, m_inf=0.50, alpha_deg=2.0, upwind_c=1.5,
-                         m_crit=0.95, precond="direct", n_picard_seed=5,
-                         n_newton_max=60, tol_residual=1e-10)
+r = solve_newton_lifting(mc, wc, m_inf=0.80, alpha_deg=1.25, upwind_c=1.5,
+                         m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
+                         precond="direct", direct_refactor_every=4,
+                         n_picard_seed=5, n_newton_max=80)
 f = wall_force_coefficients(mc.nodes, mc.elements, mc.boundary_faces["wall"],
-                            np.asarray(r["phi"]), alpha_deg=2.0, u_inf=1.0,
-                            s_ref=float(np.ptp(mc.nodes[:, 2])), m_inf=0.50)
+                            np.asarray(r["phi"]), alpha_deg=1.25, u_inf=1.0,
+                            s_ref=float(np.ptp(mc.nodes[:, 2])), m_inf=0.80)
 print("OUT " + json.dumps({
     "cl": repr(float(f["cl"])),
     "resid": repr(float(np.asarray(r["residual_history"], float)[-1])),
     "blas_seen": os.environ.get("OPENBLAS_NUM_THREADS"),
+    "blas_ext": os.environ.get("PYFP3D_PROBE_EXT_BLAS"),
 }))
 '''
 
@@ -65,6 +81,7 @@ def _run(blas):
     env = dict(os.environ)
     for v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
         env[v] = str(blas)
+    env["PYFP3D_PROBE_EXT_BLAS"] = str(blas)   # 记录外部值,供前提断言比对
     env["NUMBA_NUM_THREADS"] = "4"
     env["PYTHONNOUSERSITE"] = "1"
     out = subprocess.run(
@@ -77,9 +94,9 @@ def _run(blas):
 
 @pytest.fixture(scope="module")
 def pair():
-    p = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "coarse.msh"
+    p = REPO_ROOT / "cases" / "meshes" / "naca0012_2.5d" / "medium.msh"
     if not p.exists():                       # 与 W0.1 同一条约定
-        pytest.skip("naca0012_2.5d/coarse.msh not generated")
+        pytest.skip("naca0012_2.5d/medium.msh not generated")
     return _run(8), _run(16)
 
 
@@ -92,8 +109,11 @@ class TestBlasReductionOrderDoesNotMoveTheAnswer:
           外部显式设的 8 / 16 会被保留,正是本门需要的对照。
         """
         a, b = pair
-        assert a["blas_seen"] != b["blas_seen"], (
-            f"两条腿看到的 BLAS 设置相同({a['blas_seen']}) —— 对照没建立起来")
+        assert a["blas_ext"] != b["blas_ext"], (
+            f"两条腿的**外部** OPENBLAS 设置相同({a['blas_ext']}) —— 对照没建立起来")
+        assert a["blas_seen"] == b["blas_seen"] == "1", (
+            f"库没有把 OPENBLAS 压成 1(实际 {a['blas_seen']} / {b['blas_seen']})"
+            " —— 强制覆盖失效,多半是 numpy 在 pyfp3d 之前被导入")
 
     def test_the_answer_is_bit_identical_across_blas_settings(self, pair):
         """★★★ 本门的判据:**逐位相同**。

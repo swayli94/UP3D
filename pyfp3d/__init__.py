@@ -34,14 +34,26 @@ import os
 #: 之后没有自由度,结果**位确定**;而 numba 的并行(真正的热点:装配、迎风扫描、
 #: σ 输运)**一点不受影响** —— 实测 A/B/C/F 四层墙钟只涨 **4.5 %**。
 #:
-#: ★ `setdefault` 而不是硬写:显式设了环境变量的调用方(例如**故意**做跨 BLAS
-#: A/B 的探针)仍然说了算,否则那类测量就做不成了。
+#: ★★★ **单变量分离的结果(2026-09-06 补做)**:自变量**只有
+#: `OPENBLAS_NUM_THREADS`**。固定 `NUMBA_NUM_THREADS=8`、分离 OMP 与 OPENBLAS:
+#:   OMP 1→8 而 OPENBLAS 固定 ⇒ cl **逐位不变**(0.34009652307781807)
+#:   OPENBLAS 1→8 而 OMP 固定 ⇒ cl **变**(0.34011432026323)
+#: ⇒ `OMP_NUM_THREADS` 无影响。★ 第一次归因时我把 OMP/OPENBLAS/MKL **三个一起
+#: 改**,那是「把两个旋钮当一个拧」——结论侥幸没错,但当时并未被分离验证过。
+#: 其余几个变量一并固定只是**无害的保险**,不是实测的自变量。
+#:
+#: ★★ **强制覆盖,不是 `setdefault`。** 目标恰恰是「外部环境不该决定结果」,
+#: 而 `setdefault` 会把决定权留给外部环境,等于没固定。
+#: ⇒ 逃生舱 `PYFP3D_ALLOW_BLAS_THREADS=1`:**只给故意做跨 OPENBLAS A/B 的探针用**
+#: (归因就是这么做的)。`tests/F/test_F09` 的 G-TEETH 也用它 —— 于是验证「固定
+#: 会不会失效」**不需要改库文件**。
 #: ★★ 这几行只在 numpy **尚未导入**时有效,所以必须待在本文件顶部,而本文件
-#: **不 import numpy**。真正的验收是**行为的**,见
-#: `tests/F/test_F09_blas_determinism.py`;「环境变量被设了」不是判据。
-for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
-           "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
-    os.environ.setdefault(_v, "1")
+#: **不 import numpy**。真正的验收是**行为的**,见 `tests/F/test_F09`;
+#: 「环境变量被设了」不是判据(那是 F06 那族字面量对字面量的错误)。
+if os.environ.get("PYFP3D_ALLOW_BLAS_THREADS") != "1":
+    for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+               "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+        os.environ[_v] = "1"
 
 # Development mode flag: PYFP3D_NOJIT=1 disables Numba JIT for debugging
 NOJIT = os.environ.get("PYFP3D_NOJIT", "0") == "1"
