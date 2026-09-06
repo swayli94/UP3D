@@ -67,6 +67,13 @@ CP_MAX_MEDIUM = 0.15     # 实测 0.1009
 CP_RMS_MEDIUM = 0.08     # 实测 0.0517
 CL_REL_MEDIUM = 0.02     # 实测 0.01136
 CL_CONTRACTION = 2.0     # coarse -> medium 至少收缩 2x；实测 3.477/1.136 = 3.06
+#: ★★ 2026-09-06 审计实测：coarse 的 cl_rel 在跨网格实现时落在 [1.81 %, 3.90 %]
+#: ⇒ 上面这个比值的取值范围是 [1.90, 4.10]，**跨过 2.0 这个阈值**。
+#: 注释里的「余量 53 %」小于它自己输入量的未测噪声。**登记未修**（改它要走再基线），
+#: 而下面 W1.3 的两条判据正是照着这个教训设计的。
+#: —— W1.3 / H14（标定；依据见 TestDAlembertSpuriousDrag 的两张表）——
+CD_MAX_MEDIUM = 8.0e-3       # 实测实现最大 4.637e-3（r_far 扫描），余量 1.7x
+CD_CONTRACTION_FULL = 10.0   # xcoarse -> medium 实测 62x
 
 
 def _exact_cp(theta):
@@ -110,11 +117,15 @@ def _one_level(h, gamma=GAMMA):
     f = wall_force_coefficients(mc.nodes, mc.elements, wf, phi,
                                 alpha_deg=0.0, u_inf=U_INF, s_ref=dz, m_inf=0.0)
     cl_exact = 2.0 * gamma / (U_INF * 2.0 * A)
+    #: ★★ W1.3 / H14: d'Alembert —— 无粘亚临界物体的压差阻力**精确为零**
+    #: （带环量也一样：Kutta-Joukowski 的力与来流严格垂直）。
+    #: ⇒ |cd| 是一个**不需要任何参考数据的纯误差范数**。
     return dict(
         h=h, n_nodes=int(mc.nodes.shape[0]), n_wall=int(wall.size),
         theta=theta, cp=cp, err=err,
         cp_max=float(np.max(np.abs(err))), cp_rms=float(np.sqrt(np.mean(err ** 2))),
         cl=float(f["cl"]), cl_exact=cl_exact,
+        cd_spurious=abs(float(f["cd_pressure"])),
         cl_rel=float(abs(f["cl"] - cl_exact) / cl_exact),
         residual=float(r["residual_norm"]), n_kutta=int(r["n_kutta_updates"]),
         r_wall_dev=float(np.max(np.abs(
@@ -196,6 +207,53 @@ class TestConvergence:
         """★ 单调性是比阶更弱、但比阶更难作弊的条件：三级误差必须逐级下降。"""
         vals = [sweep[n]["cp_rms"] for n, _ in LEVELS]
         assert vals[0] > vals[1] > vals[2], f"rms ΔCp 非单调: {vals}"
+
+
+class TestDAlembertSpuriousDrag:
+    r"""★★★ W1.3 / H14（2026-09-06）：**阻力此前 5 个门读它、0 个门断言它。**
+
+    而这里有一条**免费、精确、且比升力灵敏得多**的判据：d'Alembert ——
+    无粘亚临界物体的压差阻力精确为 0，**带环量也一样**（KJ 的力与来流严格垂直）。
+    ⇒ `|cd|` 不是「与参考的差」，它**就是误差本身**，不需要任何参考数据。
+
+    **实测（r_far = 15 这一族）**：xcoarse **1.805e-01** → coarse **3.219e-02**
+    （5.61x）→ medium **2.902e-03**（11.09x）⇒ 观察阶 **2.49 / 3.47**。
+    对照同一批解的 `cl_rel`（3.39 % → 3.48 % → 1.14 %，**粗端根本不收缩**）：
+    **杂散阻力比升力灵敏得多，也干净得多。**
+
+    ★★★ **判据形状是被噪声决定的，不是被实测值决定的**（H17 的纪律用在这里）。
+    先量了 `|cd|` 的**网格实现噪声**（惰性旋钮 `r_far ∈ [15, 40]`，h 固定，
+    唯一变的是 gmsh 返回哪张三角剖分）：
+
+    | h | \|cd\| 范围 | 极差 |
+    |---|---|---|
+    | 0.04 | 1.510e-02 … 3.219e-02 | **81.8 % of mean** |
+    | 0.02 | 2.677e-03 … 4.637e-03 | **52.7 % of mean** |
+
+    ⇒ 一个「medium ≤ 2x 实测值」的带**会被一次重剖分打红**。所以：
+    (a) 绝对带按**实测到的实现最大值**（4.637e-3）定，不是按这一族的读数定；
+    (b) 收缩比**跨两级**取（xcoarse → medium，实测 **62x**），因为相邻级的比值
+        在跨实现时落进 [3.3, 12.0]，一个 3.0 的阈值只剩 1.1x 余量 —— 那正是
+        本文件自己的 `CL_CONTRACTION`（3.06 vs 2.0，注释写「余量 53 %」）
+        踩到的坑。
+    """
+
+    def test_spurious_drag_at_medium(self, sweep):
+        d = sweep["medium"]
+        assert d["cd_spurious"] <= CD_MAX_MEDIUM, (
+            f"spurious cd {d['cd_spurious']:.4e} > {CD_MAX_MEDIUM:.1e} "
+            f"(exact is 0 by d'Alembert)")
+
+    def test_spurious_drag_is_monotone_in_h(self, sweep):
+        v = [sweep[n]["cd_spurious"] for n, _ in LEVELS]
+        assert v[0] > v[1] > v[2], f"|cd| not monotone in h: {v}"
+
+    def test_spurious_drag_contracts_across_the_full_ladder(self, sweep):
+        """★ 跨**两级**取比值 —— 相邻级的比值在跨网格实现时不稳（见 docstring）。"""
+        r = sweep["xcoarse"]["cd_spurious"] / sweep["medium"]["cd_spurious"]
+        assert r >= CD_CONTRACTION_FULL, (
+            f"xcoarse->medium spurious-drag contraction {r:.1f}x "
+            f"< {CD_CONTRACTION_FULL}x")
 
 
 class TestKuttaJoukowski:

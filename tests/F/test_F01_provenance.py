@@ -20,7 +20,10 @@ import json
 import numpy as np
 import pytest
 
+import pathlib
+
 from pyfp3d.mesh.manifest import (
+    MANIFEST_SUFFIX,
     describe_difference,
     manifest_path,
     mesh_fingerprint,
@@ -227,6 +230,67 @@ class TestWriteMeshEmitsManifest:
     def test_read_manifest_is_none_when_absent(self, tmp_path):
         """The normal state for a mesh generated before GS4.0."""
         assert read_manifest(tmp_path / "nothing.msh") is None
+
+
+class TestCommittedManifestsMatchTheMeshOnDisk:
+    r"""★★★ W1.4 / H4（2026-09-06）：**manifest 终于有了一个跑在周期上的消费者。**
+
+    `pyfp3d/mesh/manifest.py` 是为「跨网格代」那次**五天的债**专门造的：
+    2026-08-04 `coarse.msh` / `medium.msh` 在 flat → round 改名时被重生成，
+    **那次几何改动在 git 里完全不可见**，由此产生的 2.0 % 差异在**八份文档**里
+    被当作「未解释」传了五天。20 份 manifest 已提交。
+
+    ★★ 但审计实测：**活的消费者只有 `bench/stamp_mesh_axes.py` 一个，而 `bench/`
+    不在任何测试收集里** ⇒ **G-CADENCE 不满足**。本文件此前只测 manifest 这台
+    机器本身（路径命名、extra 字段、缺失返回 None），**不比对任何一张真实网格**。
+    ⇒ 那台机器造出来要堵的那个洞，一直开着。
+
+    ★ 与计划书的偏差，写明：计划写的是「session 级 fixture，读盘网格时校验」。
+    这里改成**一条走查全部已提交 manifest 的测试** —— 效果相同（任何一张漂移的
+    网格都会红），而且**不给每个读网格的门加运行时开销**，也不依赖各门是否
+    走同一个读取入口。
+
+    ★ 风险面是**集中**的：M6 / 翼身那一族 `.msh` 是 gitignored + 随手重生成的
+    （D04 D07 E01 E02 全读它们）；2-D 那一族是**已提交**的，没有这个风险。
+    """
+
+    def _pairs(self):
+        root = REPO_ROOT / "cases" / "meshes"
+        return [(m, pathlib.Path(str(m)[: -len(MANIFEST_SUFFIX)]))
+                for m in sorted(root.rglob("*" + MANIFEST_SUFFIX))]
+
+    def test_there_are_committed_manifests_to_check(self):
+        """前提断言：manifest 一份都没有的话，下面那条会**空跑成绿**。"""
+        assert len(self._pairs()) >= 10, (
+            f"只找到 {len(self._pairs())} 份 manifest —— 前提变了")
+
+    def test_every_present_mesh_matches_its_committed_manifest(self):
+        """在场的每一张网格，`sha256` 必须等于已提交 manifest 里的那个。
+
+        ★ 网格不在场 ⇒ **跳过那一张**（gitignored + 可再生，与 W0.1 同一条约定），
+        不是失败。
+        ★ G-DOMAIN：相反结果 = 全部匹配 ⇒ 静默通过；**红了意味着「你手上的网格
+        不是产出已提交证据的那一张」**，处置是重生成或走再基线勘误，
+        **不是改 manifest**。
+        """
+        drifted, checked = [], 0
+        for man, msh in self._pairs():
+            if not msh.exists():
+                continue
+            checked += 1
+            committed = read_manifest(msh) or {}
+            live = mesh_fingerprint(msh)
+            if committed.get("sha256") != live["sha256"]:
+                drifted.append("%s\n      %s" % (
+                    msh.relative_to(REPO_ROOT),
+                    describe_difference(committed, live)))
+        if checked == 0:
+            pytest.skip("no meshes on disk to check (clean clone)")
+        assert not drifted, (
+            "这些网格与已提交的 manifest 不符 —— 你手上的网格**不是**产出已提交\n"
+            "证据的那一张（这正是 2026-08-04 那次五天的债的形状）：\n    "
+            + "\n    ".join(drifted)
+            + "\n★ 修法是重生成正确的网格，或走再基线勘误清单；**不是改 manifest**。")
 
 
 class TestDescribeDifference:

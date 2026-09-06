@@ -96,6 +96,11 @@ NEAR_ZERO_ABS_MAX = 0.05    # M0.803/α−0.1 |Δcl| 绝对：实测 0.0135
 #: ★ 与参考自身不确定度比较时的"可分辨"下限，形式与 D07 的 RESOLVE_FRAC 相同：
 #: 差必须超过参照物自身 L2→L3 差的这个倍数才谈得上比较。
 RESOLVABLE_FRAC = 1.0
+#: —— W1.3 / H14 的三条（标定；依据见 TestDAlembertOnTheProductionPath 的表）——
+#: ★ 网格已提交 ⇒ 无网格实现噪声，带可以比 C06 紧。
+DALEMBERT_CD_MAX = 3.0e-3      # 无激波腿 medium |cd|：实测 1.564e-3 / 1.266e-3
+DALEMBERT_CONTRACTION = 2.0    # coarse -> medium：实测 3.18x / 3.23x
+WAVE_DRAG_MIN = 5.0e-3         # 带激波腿 medium |cd| 下界：实测 7.6e-3 … 3.8e-2
 
 
 def _read_reference(path=None):
@@ -253,6 +258,84 @@ class TestWhatIsGateable:
             f"{rel*100:.2f} % > {TRANSONIC_CL_MAX*100:.0f} %")
 
 
+class TestDAlembertOnTheProductionPath:
+    r"""★★★ W1.3 / H14（2026-09-06）：**杂散阻力 —— 生产 Newton 路径上的免费误差范数。**
+
+    审计实测：`cd` / `cd_pressure` 在 D05 D06 D07 D08 D10 **五个门里被读取**、
+    写进证据 CSV，**而没有一条 `assert` 碰过它**。本条是第一条。
+
+    判据不需要任何参考数据：**无激波的无粘二维解，压差阻力精确为 0**
+    （d'Alembert；二维无诱导阻力，无激波则无波阻）。⇒ `|cd|` 就是误差本身。
+
+    ★★★ **判据自己划定作用域，靠的是实测量而不是假设**：用 `x_shock` 是否为
+    NaN 把「无激波腿」挑出来 —— 不是按 M∞ 猜。实测结果正好说明为什么必须这样：
+
+    | 腿 | x_shock | cd coarse → medium | 比值 |
+    |---|---|---|---|
+    | M0.50/α2.0 | — | 4.970e-03 → 1.564e-03 | **3.18x** |
+    | M0.72/α0 | — | 4.082e-03 → 1.266e-03 | **3.23x** |
+    | M0.75/α0 | 0.292 / 0.300 | 4.115e-03 → 1.311e-03 | 3.14x |
+    | M0.80/α1.25 | 0.614 / 0.599 | 1.985e-02 → 1.818e-02 | 1.09x |
+    | M0.778/α2.03 | 0.596 / 0.702 | 2.592e-02 → 3.799e-02 | **0.68x** |
+    | M0.803/α−0.1 | 0.462 / 0.490 | 7.829e-03 → 7.625e-03 | 1.03x |
+
+    ⇒ **两族的行为截然不同**，而分界线是激波而不是马赫数：跨声速腿的 `cd`
+    **不收缩**（甚至增长），因为那是**真实的波阻**，不是误差。
+    ★ M0.75/α0 检测到一道弱激波但 `cd` 仍按无激波的方式收缩 ⇒ 那道激波的波阻
+    **低于离散误差**。它**被排除在设门之外**（它的 x_shock 非 NaN），
+    只作为记录 —— 一个量的作用域要按判别式划，不按「看起来像」划。
+
+    ★ 这里的网格是**已提交**的（`naca0012_2.5d`），所以没有 C06 那种
+    网格实现噪声的问题，带可以比 C06 紧。
+    """
+
+    #: 无激波腿由 x_shock 为 NaN **判别**出来，不是按名字写死
+    def _shock_free(self, runs):
+        return [nm for nm, _c, _m, _a, _k in CASES
+                if all(not np.isfinite(runs[(nm, lv)]["x_shock"])
+                       for lv in LEVELS)]
+
+    def test_the_shock_free_set_is_what_we_think_it_is(self, runs):
+        """前提断言：判别式必须挑出恰好那两条腿。"""
+        got = self._shock_free(runs)
+        assert got == ["M0.50_a2.00", "M0.72_a0.00"], (
+            f"shock-free legs moved: {got} -- the criterion's DOMAIN changed, "
+            "re-read the table in this class's docstring before touching bands")
+
+    def test_shock_free_pressure_drag_approaches_zero(self, runs):
+        for nm in self._shock_free(runs):
+            got = abs(runs[(nm, "medium")]["cd"])
+            assert got <= DALEMBERT_CD_MAX, (
+                f"{nm}: spurious cd {got:.4e} > {DALEMBERT_CD_MAX:.1e} "
+                f"-- exact is 0 (no shock, 2-D, inviscid)")
+
+    def test_shock_free_pressure_drag_contracts(self, runs):
+        for nm in self._shock_free(runs):
+            c = abs(runs[(nm, "coarse")]["cd"])
+            m = abs(runs[(nm, "medium")]["cd"])
+            assert c / m >= DALEMBERT_CONTRACTION, (
+                f"{nm}: spurious cd contracts only {c / m:.2f}x "
+                f"(< {DALEMBERT_CONTRACTION}) -- {c:.3e} -> {m:.3e}")
+
+    def test_the_transonic_legs_are_outside_this_criterion(self, runs):
+        """★★ G-DOMAIN **被断言出来，不是被声明出来**：带激波的腿 `cd` 既大
+        又不收缩 ⇒ 那是真实波阻，把 d'Alembert 判据套上去就是**把物理当缺陷**。
+        这一条红了意味着作用域变了，要重读上表。"""
+        for nm, _c, _m, _a, _k in CASES:
+            if nm in self._shock_free(runs):
+                continue
+            if nm == "M0.75_a0.00":
+                continue          # 弱激波，波阻低于离散误差 —— 见 docstring
+            c = abs(runs[(nm, "coarse")]["cd"])
+            m = abs(runs[(nm, "medium")]["cd"])
+            assert m >= WAVE_DRAG_MIN, (
+                f"{nm}: cd {m:.3e} < {WAVE_DRAG_MIN:.0e} -- a shocked leg with "
+                "no wave drag; the shock-free discriminator may be wrong")
+            assert c / m < DALEMBERT_CONTRACTION, (
+                f"{nm}: shocked-leg cd contracts {c / m:.2f}x like a pure error "
+                "norm -- if that is real, the wave drag has vanished")
+
+
 class TestWhatIsOnlyRecorded:
     r"""★★ 跨声速举力腿：两条不收敛、五条全部熵修正冻结。**记录，不设门。**"""
 
@@ -349,7 +432,19 @@ class TestReferenceIsLoadBearing:
 
 
 class TestCommittedEvidenceIsLoadBearing:
-    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计见 `tests/_gate_evidence.py`。"""
+    r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计见 `tests/_gate_evidence.py`。
+
+    ★★★ **这条锁要在 16 线程下跑**（2026-09-06 实测，W1.3 顺带查出）。
+    已提交 CSV 的 `n_threads` 列写着 **16**，而本门 docstring 第 1 节记着
+    M0.80 那条腿**在 8 线程上 80 步封顶、16 线程上收敛到 |R| 2.9e-13，cl 差
+    0.36 %**。⇒ 8 线程跑这条锁**必红，而那是环境红不是回归红**：
+    实测同一份代码 `@8t` FAIL / `@16t` PASS。
+
+    ★ **登记未修**（H29）：本门刻意「不对 `converged` 设任何断言」，因为旗标不稳；
+    但**证据锁本身仍然继承了那份不稳定**。修法（属于 W2 而不是 W1）是让锁按
+    `n_threads` 分档、或对那条腿放宽到跨线程分歧之上 —— 两者都动既有判据，
+    要走预注册。在此之前：**跑 D 类锁请用 16 线程**（纪律 #1 的上限，也是本 CSV 的口径）。
+    """
 
     #: ★ cp_rms_* 在前：它是主要比较量
     MEASURED = ("cp_rms_upper", "cp_rms_lower", "cl", "cd", "x_shock",
