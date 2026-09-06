@@ -710,6 +710,16 @@ def _sigma_freeze_report(sigma_history):
     return out
 
 
+#: ★ `design.md` §12 risk 3 的那个数,**第一次出现在代码里**(W2.4,2026-09-06)。
+#: 它是**模型有效性**的界,不是求解器的阈值:上游法向马赫数超过约 1.3 之后,
+#: 等熵跳跃与真实激波强度的偏离开始显著,全速势的激波"偏强、偏后"。
+_FP_SHOCK_VALIDITY_MACH = 1.35
+#: ★ §12 risk 2 登记的非唯一带下沿(M∞ ≈ 0.82–0.85)。冷启动进入这一带时提示,
+#: 因为 §12 的缓解措施是"always ramp Mach upward from a subcritical converged state",
+#: 而冷启动**不满足**它。实测见 `tests/D/test_D14`。
+_FP_NONUNIQUE_MACH = 0.82
+
+
 def solve_newton_lifting(
     mesh_cut,
     wc,
@@ -1580,6 +1590,31 @@ def solve_newton_lifting(
               f"period {_sig_report['churn_period']}) -- the entropy correction riding this "
               f"answer was frozen at a state the field has since left; see result["
               f"'sigma_freeze_report']")
+
+    #: ★★★ W2.4 / H12（2026-09-06）：兑现 `design.md` §12 **登记了但从未实现**的两条
+    #: 运行时缓解。审计实测:改这一版之前,**全库唯一的运行时警告就是上面那条
+    #: sigma-freeze** —— §12 risk 3 逐字要求的 "warn at runtime when max(M) exceeds
+    #: 1.35" 在代码里**不存在**,`1.35` 只出现在 `kernels/entropy.py` 的一段推导注释里。
+    #:
+    #: ★ 两条都**只打印,不改数值也不拒绝** ⇒ 位相同由构造保证(与上面 sigma-freeze
+    #: 同一形状:REPORT,不是 refuse)。把它们升格成拒绝会动既有能力锚点,那是
+    #: 另一次预注册的事。
+    _m_max = float(np.sqrt(mach2_max))
+    if _m_max > _FP_SHOCK_VALIDITY_MACH:
+        print(f"  [pyfp3d] validity WARNING: max local M = {_m_max:.4f} > "
+              f"{_FP_SHOCK_VALIDITY_MACH} -- design.md sec 12 risk 3: beyond a normal-shock "
+              f"upstream Mach of about 1.3 the ISENTROPIC jump misses the shock strength, so "
+              f"the full-potential shock is progressively wrong (too strong, and displaced). "
+              f"This is a MODEL validity limit, not a solver failure.")
+    if phi_init is None and m_inf >= _FP_NONUNIQUE_MACH:
+        print(f"  [pyfp3d] branch WARNING: cold start at M_inf = {m_inf:.4f} >= "
+              f"{_FP_NONUNIQUE_MACH} with no phi_init -- design.md sec 12 risk 2 registers "
+              f"Steinhoff-Jameson non-uniqueness for the CONSERVATIVE full-potential equation "
+              f"near M 0.82-0.85, and its stated mitigation is 'always ramp Mach upward from a "
+              f"subcritical converged state'. A cold start does NOT do that, so which branch "
+              f"this lands on is not determined by the physics alone. Measured instance: "
+              f"tests/D/test_D14 -- at alpha = 0, M 0.86, changing ONLY n_picard_seed gives "
+              f"four converged, zero-clamp solutions with cl from -0.0059 to +0.4360.")
 
     return {
         "seed_fallback": _fallback,
