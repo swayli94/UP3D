@@ -14,7 +14,14 @@ r"""D13 — 松耦合 IBL 对 XFOIL 6.99：**上游设门、下游锁结构**（
 
 ---
 
-## 实测基线（`bench/gate_results/ibl_vs_xfoil_recon.csv`，两级各 3 个外迭代）
+## 实测基线（两级各 3 个外迭代）
+
+★ **本门的活基线是它自己的 `cases/gates/D13_ibl_vs_xfoil/summary.csv`**，由
+`TestCommittedEvidenceIsLoadBearing` 逐列比对。
+★★ 下表的数字与第 25 轮侦察记录 `bench/gate_results/ibl_vs_xfoil_recon.csv`
+同源，但**本门不读那个文件** —— 它是一次性的轮次记录，**没有生产者也没有读者**
+（W0.5 / H5，2026-09-06 核实）。**不要把它当成可刷新的基线引用**：按纪律 12，
+松耦合环 run-to-run 不可复现，所以「重跑一遍刷新它」这个动作本身就是错的。
 
 **(a) 上游 δ\*（x/c ≤ 0.30）我们/XFOIL 的比值**
 

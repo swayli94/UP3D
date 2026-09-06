@@ -406,8 +406,15 @@ def _one_m050(level):
     from pyfp3d.post.section_cut import section_cp_curve
     from pyfp3d.post.surface import planform_area, wall_force_coefficients
     from pyfp3d.solve.newton import solve_newton_lifting
-    mc, wc = cut_wake(read_mesh(os.path.join(
-        str(REPO_ROOT), "cases", "meshes", "onera_m6", f"{level}.msh")))
+    #: ★ 网格缺失必须 **skip 而不是 error**（W0.1 / H1, 2026-09-06）。主腿经
+    #: `_m6_case` 继承 `tests/E/test_E01…:159-160` 的守卫，**这条 m050 腿绕过了它**
+    #: ⇒ `onera_m6/*.msh` 被 gitignore，干净 clone 上这里是硬 FileNotFoundError。
+    p = os.path.join(str(REPO_ROOT), "cases", "meshes", "onera_m6",
+                     f"{level}.msh")
+    if not os.path.exists(p):
+        pytest.skip(f"onera_m6/{level}.msh not generated; run "
+                    "cases/meshes/onera_m6/generate_onera_m6.py")
+    mc, wc = cut_wake(read_mesh(p))
     taper = tip_taper_factors(wc.station_z, B_SEMI, "vanish_smooth",
                               0.05 * B_SEMI)
     kw = dict(NEWTON_M6_RECIPE["newton_kw"], tip_taper=taper)

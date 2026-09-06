@@ -8,7 +8,18 @@ Phase two GS0.2, decision D1 (phases/p2/docs/dev_phase_two/roadmap.md §7):
   * `np.array_equal` (bit identity) is reserved for the one claim it can
     actually support: "this code did not execute a different arithmetic path",
     i.e. the SAME array object/buffer is returned (e.g. nu == 0 makes
-    `rho_tilde` hand back `rho`). Mark those `@pytest.mark.identity`.
+    `rho_tilde` hand back `rho`).
+
+    ★★ 2026-09-06 (gate audit W0.6 / H28): this bullet used to end "Mark those
+    `@pytest.mark.identity`." **That marker never existed** -- zero uses in
+    `tests/`, and never registered in `pyproject.toml`, so the sentence
+    described a mechanism the repo does not have. The DISCIPLINE above is real
+    and stays; the PROMISE is deleted rather than implemented, because
+    implementing it means classifying **145 `array_equal` call sites across 31
+    files** one by one, which is a judgement-heavy task of its own and not a
+    tidy-up. Registering an unused marker would only move the falsehood from
+    "the marker doesn't exist" to "nothing uses it".
+    ⇒ If the marker is ever wanted, that classification IS the work.
   * "these two computations are mathematically equal" does NOT justify bit
     identity: two kernels summing the same terms in a different order differ
     by ~1 ULP. Measured on this repo (audit 2026-07-28 §6.2): 244 of 4051

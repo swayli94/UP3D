@@ -25,57 +25,29 @@ from tests._sphere_case import M_INF_SPHERE, run_sphere_pair, sphere_medium
 
 
 class TestG31SphereCompressible:
-    @pytest.mark.skipif(not gate_figures_enabled(),
-                        reason="C/D 证据图只在 PYFP3D_GATE_FIGURES=1 时写盘 —— 平时不写，避免每次 pytest 都脏工作树（2026-08-24）")
-    def test_g31_cp_peak_vs_pg(self, sphere_medium, gate_evidence_dir):
+    r"""★★★ 判据**常跑**（W0.4 / H19，2026-09-06）。
+
+    改这一条之前，整个类挂在 `skipif(not gate_figures_enabled())` 下，于是
+    **PG 的 2 % 判据在平时跑里根本不执行** —— 与其余 C 门的形状正好相反
+    （它们判据常跑、出图 opt-in）。而计算早就在共享 fixture `sphere_medium`
+    里，所以把断言移出来是**零额外计算**。
+    ★ 图与 CSV 仍只在 `PYFP3D_GATE_FIGURES=1` 时写盘（见文件末的导出腿），
+    并且**用同一个 module 级 fixture** ⇒ 图与断言同源，由构造保证。
+    """
+
+    def test_g31_cp_peak_vs_pg(self, sphere_medium):
         """G3.1: |Cp_peak(FP, M=0.3) - Cp_peak(incompressible)/beta| < 2%."""
         case = sphere_medium
         beta = np.sqrt(1.0 - M_INF_SPHERE**2)
-        cp_peak_inc = float(case["cp_inc"].min())
-        cp_peak_pg = cp_peak_inc / beta
+        cp_peak_pg = float(case["cp_inc"].min()) / beta
         cp_peak_c = float(case["cp_c"].min())
         rel = abs(cp_peak_c - cp_peak_pg) / abs(cp_peak_pg)
 
-        rc = case["result_c"]
-        gate_dir = gate_evidence_dir / "G3.1"
-        gate_dir.mkdir(parents=True, exist_ok=True)
-        with open(gate_dir / "summary.csv", "w", newline="") as f:
-            w = csv.writer(f)
-            w.writerow(["cp_peak_incompressible", "cp_peak_pg_corrected",
-                        "cp_peak_compressible", "rel_diff_pct", "n_picard",
-                        "picard_converged", "mach2_max"])
-            w.writerow([fmt(cp_peak_inc), fmt(cp_peak_pg),
-                        fmt(cp_peak_c), fmt(100 * rel),
-                        rc["n_picard"], rc["converged"],
-                        fmt(rc['mach2_max'])])
-
-        # V3.1: Cp(theta) line cut -- incompressible, PG-corrected,
-        # compressible; the amplification must be symmetric fore/aft.
-        theta = np.degrees(np.arccos(np.clip(case["cos_theta"], -1, 1)))
-        order = np.argsort(theta)
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(theta[order], case["cp_inc"][order], ".", ms=2, color="0.6",
-                label="incompressible (same mesh)")
-        ax.plot(theta[order], case["cp_inc"][order] / beta, "-", lw=1.0,
-                color="tab:green", label="PG-corrected incompressible")
-        ax.plot(theta[order], case["cp_c"][order], ".", ms=2,
-                color="tab:red", label=f"full potential M={M_INF_SPHERE}")
-        ax.invert_yaxis()
-        ax.set_xlabel("theta (deg, from +x stagnation)")
-        ax.set_ylabel("Cp")
-        ax.set_title(f"V3.1 sphere Cp at M={M_INF_SPHERE} (medium): "
-                     f"peak diff {100 * rel:.2f}% vs PG")
-        ax.legend()
-        fig.savefig(gate_dir / "v3_1_sphere_cp.png", dpi=150,
-                    bbox_inches="tight")
-        plt.close(fig)
-
-        assert rc["converged"]
+        assert case["result_c"]["converged"]
         assert rel < 0.02, (
             f"Cp peak {cp_peak_c:.5f} vs PG-corrected {cp_peak_pg:.5f} "
             f"({100 * rel:.2f}% >= 2%)"
         )
-
 
 
 class TestCommittedEvidenceIsLoadBearing:
@@ -105,3 +77,51 @@ class TestCommittedEvidenceIsLoadBearing:
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
                          "tests/C/test_C09_prandtl_glauert_peak.py")
         assert n == 4, f"比了 {n} 个数，应为 4"
+
+
+@pytest.mark.skipif(not gate_figures_enabled(),
+                    reason="C/D 证据图只在 PYFP3D_GATE_FIGURES=1 时写盘 —— "
+                           "平时不写，避免每次 pytest 都脏工作树（2026-08-24）")
+def test_export_c09_evidence(sphere_medium, gate_evidence_dir):
+    """★ 只导出，不判定 —— 判据在 `TestG31SphereCompressible`（常跑）。
+
+    ★★ 同一个 module 级 fixture ⇒ 图 / CSV / 断言来自**同一次计算**，构造保证。
+    """
+    case = sphere_medium
+    beta = np.sqrt(1.0 - M_INF_SPHERE**2)
+    cp_peak_inc = float(case["cp_inc"].min())
+    cp_peak_pg = cp_peak_inc / beta
+    cp_peak_c = float(case["cp_c"].min())
+    rel = abs(cp_peak_c - cp_peak_pg) / abs(cp_peak_pg)
+    rc = case["result_c"]
+
+    gate_dir = gate_evidence_dir / "G3.1"
+    gate_dir.mkdir(parents=True, exist_ok=True)
+    with open(gate_dir / "summary.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["cp_peak_incompressible", "cp_peak_pg_corrected",
+                    "cp_peak_compressible", "rel_diff_pct", "n_picard",
+                    "picard_converged", "mach2_max"])
+        w.writerow([fmt(cp_peak_inc), fmt(cp_peak_pg),
+                    fmt(cp_peak_c), fmt(100 * rel),
+                    rc["n_picard"], rc["converged"], fmt(rc['mach2_max'])])
+
+    # V3.1: Cp(theta) line cut -- incompressible, PG-corrected, compressible;
+    # the amplification must be symmetric fore/aft.
+    theta = np.degrees(np.arccos(np.clip(case["cos_theta"], -1, 1)))
+    order = np.argsort(theta)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(theta[order], case["cp_inc"][order], ".", ms=2, color="0.6",
+            label="incompressible (same mesh)")
+    ax.plot(theta[order], case["cp_inc"][order] / beta, "-", lw=1.0,
+            color="tab:green", label="PG-corrected incompressible")
+    ax.plot(theta[order], case["cp_c"][order], ".", ms=2,
+            color="tab:red", label=f"full potential M={M_INF_SPHERE}")
+    ax.invert_yaxis()
+    ax.set_xlabel("theta (deg, from +x stagnation)")
+    ax.set_ylabel("Cp")
+    ax.set_title(f"V3.1 sphere Cp at M={M_INF_SPHERE} (medium): "
+                 f"peak diff {100 * rel:.2f}% vs PG")
+    ax.legend()
+    fig.savefig(gate_dir / "v3_1_sphere_cp.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)

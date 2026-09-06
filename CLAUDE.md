@@ -665,8 +665,16 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    phase-six rounds 10–14).
    ★★★ **The layout changed: tests now live in `tests/A..F/`, and the TIER IS THE
    DIRECTORY** — `pytest tests/A tests/B` (ungated, every change) · `tests/C tests/E`
-   (fast tier, every close-out) · `tests/D` (the gated set, phase boundaries) ·
+   (fast tier, every close-out) · `tests/D` (external references) ·
    `tests/F` (opt-in, with a default-on subset). 88 gate files / 585 `def test_`.
+   ★★ **ERRATUM 2026-09-06 (gate audit W0.7 / H25): `tests/D` is NOT "the gated set".**
+   Measured: **2 of 13** D files carry `PYFP3D_TRANSONIC_GATES` (D03, D04) — D05–D13
+   arrived 2026-09-03/05 ungated, so they run on the DEFAULT cadence. That is the
+   intended state (a code-to-code reference gate that only runs at phase boundaries
+   would be 6x rarer than the tier it anchors); **the doc was the thing that was
+   wrong, so the doc follows the implementation.** The gated set is now defined by the
+   ENV VAR, not by a directory: `PYFP3D_TRANSONIC_GATES=1` unlocks 7 files
+   (A21 A28 A30 D03 D04 E01 E02), and that is what a phase boundary runs.
    ★★ All three numbers close: the previous reading was **586 / 35 / 2** @403 s (after
    the renumbering, before A53/B05/B06). A53 placeholder→real gate **+4p/−1s**, B05
    placeholder→real gate **+6p/−1s**, B06 new **+7p**, F07 one more check **+1p**

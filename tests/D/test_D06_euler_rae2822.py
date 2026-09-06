@@ -1,7 +1,8 @@
 r"""D06 — pyFP3D 无粘 vs CFL3D Euler — RAE2822（2D-5..2D-6）。
 
 Case 7 M0.725/α2.55 · Case 9/10 M0.730/α3.19（`euler_rae2822/`，2 工况 × 3 档）。
-α 一律**实验值不修正**（裁决二）。本门读参考的 **L3**。
+α 一律**实验值不修正**（裁决二）。本门读参考的**最细档 L4**
+（2026-09-05 参考补第四档；★ 力系数与 Cp 必须读**同一档**）。
 
 ---
 
@@ -70,7 +71,7 @@ RESOLVABLE_FRAC = 1.0       # 与参考自身 L2→L3 差比较的可分辨下�
 
 
 def _read_reference(path=None):
-    """读已提交的 CFL3D 参考（L3）。★ 行为验证见 `TestReferenceIsLoadBearing`。"""
+    """读已提交的 CFL3D 参考（**L4**，最细档）。★ 行为验证见 `TestReferenceIsLoadBearing`。"""
     import csv
     p = path or os.path.join(REF_DIR, "forces.csv")
     out = {}
@@ -80,7 +81,7 @@ def _read_reference(path=None):
             if r["level"] == "L4":
                 out[r["case"]] = dict(cl=float(r["cl"]), cd=float(r["cd"]))
     if not out:
-        raise RuntimeError(f"{p}: no L3 rows -- the reference layout changed")
+        raise RuntimeError(f"{p}: no L4 rows -- the reference layout changed")
     return out
 
 

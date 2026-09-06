@@ -201,6 +201,60 @@ def test_every_tests_import_in_live_code_resolves():
         "活代码里这些 tests.* import 解析不了（bench/ 不在任何周期上，"
         "所以只有真跑才会炸）：\n  " + "\n  ".join(bad))
 
+
+def test_no_live_code_imports_a_bare_test_module():
+    r"""★★★ 活代码不得 import **裸的** `test_*` 模块名 —— 必须走 `tests.` 包形式。
+
+    ★★ 这一条是上面那条的**盲区补丁**（W0.2 / H2，2026-09-06）。
+    上面那条按 `mod.startswith("tests")` 过滤，于是
+
+        sys.path.insert(0, os.path.join(REPO, "tests"))
+        from test_p8_newton import _m6_case          # ← 裸名，看不见
+
+    **整个形式对它不可见**。实测后果：2026-08-24 的重编号把
+    `tests/test_p8_newton.py` 拆成 `tests/A/test_A52…` + `tests/E/test_E01…`，
+    `bench/run_g82_anchor_check.py:36` 就此坏掉，而**没有任何东西变红** ——
+    `bench/` 不在任何周期上，而唯一该抓它的守卫看不见这种写法。
+    ⇒ **修了那一处 import 而不补这条，就是修症状留盲区**（本项目记过多次）。
+
+    判据形状是**禁止一种写法**，不是"解析得了就行"：裸名只有靠
+    `sys.path` 注入 `tests/` 才解析得动，而那个注入正是让它对守卫隐形的机制。
+    ⇒ G-DOMAIN：相反结果 = 活代码里一条裸 `test_*` import 都没有 ⇒ 静默通过。
+    """
+    bad = []
+    #: ★ 扫描范围 = **活代码的三个根**，与上一条 docstring 自述的口径一致
+    #: （`bench/`、`cases/`、`pyfp3d/`）。
+    #: ★★ 上一条实际扫的是「除 phases/ 与 tests/ 之外的一切」，于是它把 **vendored 的
+    #: `tools/cgrid/`** 也扫了进去 —— 那是第三方 C-grid 生成器，我们的 import 约定
+    #: 对它不适用，而 `ast.parse` 它会吐 6 条 `invalid escape sequence`
+    #: DeprecationWarning（实测：本条按同样口径扫会把它们翻倍成 12 条）。
+    #: ⇒ 本条按**声明的口径**扫。上一条的范围与它自述不符是一处**已登记未修**的
+    #: G-DOMAIN 小瑕疵（改它会动一条既有守卫的行为，不属于仪器批）。
+    files = [f for root in ("bench", "cases", "pyfp3d")
+             for f in glob.glob(str(REPO_ROOT / root / "**" / "*.py"),
+                                recursive=True)
+             if "/phases/" not in f and "/tests/" not in f and "/.git/" not in f]
+    for f in files:
+        try:
+            tree = ast.parse(open(f, encoding="utf-8").read())
+        except SyntaxError:
+            continue
+        for n in ast.walk(tree):
+            mods = []
+            if isinstance(n, ast.ImportFrom) and n.level == 0:
+                mods = [n.module or ""]
+            elif isinstance(n, ast.Import):
+                mods = [a.name for a in n.names]
+            for mod in mods:
+                if mod.split(".")[0].startswith("test_"):
+                    bad.append("%s:%d -> %s" % (
+                        os.path.relpath(f, str(REPO_ROOT)), n.lineno, mod))
+    assert not bad, (
+        "活代码里有**裸 test_* 模块名** import —— 它们只有靠 sys.path 注入 "
+        "tests/ 才能解析，而那正是让上一条守卫看不见它们的机制。\n"
+        "★ 改成包形式，例如 `from tests.E.test_E01_p8_newton_anchors import "
+        "_m6_case`：\n  " + "\n  ".join(bad))
+
 #: `bench/bitcheck.py` 自己写出的产物 —— 引用它们是**输出路径**，不是失效引用。
 _GENERATED = {"bench/results/bit_after.npz", "bench/results/bit_before.npz"}
 _PATHLIKE = __import__("re").compile(

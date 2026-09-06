@@ -2,7 +2,8 @@ r"""D05 — pyFP3D 无粘 vs CFL3D Euler — NACA0012（2D-1..2D-4）。
 
 工况（`cases/reference_data/cfl3d/euler_naca0012/`，6 工况 × 3 档）：
 M0.50/α2.0 · **M0.80/α1.25 = M1 靶子本身** · M0.72 与 M0.75/α0 ·
-M0.778/α2.03 · M0.803/α−0.1。参考侧的档 L1/L2/L3，本门读 **L3**。
+M0.778/α2.03 · M0.803/α−0.1。参考侧的档 **L1–L4**，本门读**最细的 L4**
+（2026-09-05 参考补第四档；★ 力系数与 Cp 必须读**同一档**，否则是跨档比较）。
 
 ---
 
@@ -98,7 +99,7 @@ RESOLVABLE_FRAC = 1.0
 
 
 def _read_reference(path=None):
-    """从**已提交的 CSV** 读 CFL3D 参考，L3 档。
+    """从**已提交的 CSV** 读 CFL3D 参考，**L4（最细）**档。
 
     ★★★ 这是 F06 那次的教训：门里写死一个字面量、再拿它和另一个字面量断言，
     改参考文件什么都不会红。本函数**真的解析文件**，并且
@@ -116,7 +117,7 @@ def _read_reference(path=None):
                 out[r["case"]] = dict(cl=float(r["cl"]), cd=float(r["cd"]),
                                       cm=float(r["cm_quarter_chord"]))
     if not out:
-        raise RuntimeError(f"{p}: no L3 rows -- the reference layout changed")
+        raise RuntimeError(f"{p}: no L4 rows -- the reference layout changed")
     return out
 
 

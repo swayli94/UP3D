@@ -59,15 +59,8 @@ htmlcov/
 .env
 .env.*
 
-# Mesh files
-cases/meshes/onera_m6/*.msh
-
 # Large generated meshes (regenerate: python cases/meshes/onera_m6/generate_onera_m6.py)
 cases/meshes/onera_m6/*.msh
-
-# M4 wake-free M6 family (same policy; regenerate:
-# python cases/meshes/onera_m6_wakefree/generate_onera_m6_wakefree.py)
-cases/meshes/onera_m6_wakefree/*.msh
 
 # M5 rounded-tip M6 family (same policy; regenerate:
 # python cases/meshes/onera_m6_roundtip/generate_onera_m6_roundtip.py)
@@ -89,10 +82,6 @@ cases/meshes/fuselage_bor/*.msh
 # regenerate: python cases/meshes/naca0012_2.5d/generate_naca0012.py --level fine)
 cases/meshes/naca0012_2.5d/fine.msh
 
-# M3 wake-free family: coarse is committed, medium/fine stay local (7.9 MB+;
-# regenerate: python cases/meshes/naca0012_wakefree_2.5d/generate_naca0012_wakefree.py)
-cases/meshes/naca0012_wakefree_2.5d/medium.msh
-cases/meshes/naca0012_wakefree_2.5d/fine.msh
 
 # Result *.npz commit policy (user directive 2026-07-19): commit only SMALL
 # npz NEWLY COMPUTED on the kimi branch itself (currently: b25 f1_*, b28 f2_*). npz

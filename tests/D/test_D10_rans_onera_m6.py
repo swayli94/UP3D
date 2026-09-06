@@ -79,8 +79,18 @@ def probe():
     from pyfp3d.viscous.coupling import (CouplingConfig, build_wing_case,
                                          make_picard_lifting_driver,
                                          run_loose_coupling)
-    mc, wc = cut_wake(read_mesh(os.path.join(
-        str(REPO_ROOT), "cases", "meshes", "onera_m6", "coarse.msh")))
+    #: ★★ 网格缺失必须 **skip 而不是 error**（W0.1 / H1, 2026-09-06）。
+    #: `onera_m6/*.msh` 被 gitignore ⇒ 干净 clone 上这里曾是硬 FileNotFoundError，
+    #: 与 A16/A17/A43/B05/D04/E01 的 skip 约定直接冲突。
+    #: ★ 守卫必须在 `try` **之前**：这个 fixture 的 try 存在是为了把**耦合环的失败
+    #: 形状**捕获成数据，把一个 FileNotFoundError 混进去会让
+    #: `test_it_fails_in_the_recorded_way`（断言 err == "RuntimeError"）报假红。
+    p = os.path.join(str(REPO_ROOT), "cases", "meshes", "onera_m6",
+                     "coarse.msh")
+    if not os.path.exists(p):
+        pytest.skip("onera_m6/coarse.msh not generated; run "
+                    "cases/meshes/onera_m6/generate_onera_m6.py")
+    mc, wc = cut_wake(read_mesh(p))
     cfg = CouplingConfig(re_chord=RE_MAC / MAC, m_inf=M_INF, alpha_deg=ALPHA,
                          x_tr_upper=X_TR, x_tr_lower=X_TR)
     case = build_wing_case(mc.nodes, mc.elements, mc.boundary_faces["wall"],
