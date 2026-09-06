@@ -95,21 +95,37 @@ class TestVTKRoundTrip:
                     f"Field '{name}' mismatch: max diff {np.max(np.abs(data_flat - data_read_flat))}"
     
     def test_roundtrip_cell_fields(self):
-        """Write and read cell data, verify identity."""
+        r"""Write and read cell data, verify identity -- **the values, not the count**.
+
+        ★★ W3.7 / H23（2026-09-06）：这一条原来只断言 `len(fields_read) > 0`，
+        而文件自述是 "verify identity" —— **它检验不了任何值**，写出去的数全错也照样绿。
+        原注释 "meshio may store cell data under different keys" 说对了现象，
+        却拿它当放弃检验的理由。
+
+        ★ 实测清楚了那个「不同的键」到底是什么，于是它可以被**断言**而不是被绕开：
+        写 `element_id` 形状 `(5,)` ⇒ 读回 `cell_element_id` 形状 `(5, 1)`。
+        ⇒ 键名前缀与形状都是 `vtk_out` 的**契约**，现在两者都锁住;
+        值按展平后**逐位**比较。
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             nodes, elements, _, cell_data = create_unit_cube_with_fields()
-            
             filepath = Path(tmpdir) / "test.vtu"
-            
-            # Write
             write_vtu(filepath, nodes, elements, cell_data=cell_data)
-            
-            # Read
             _, _, fields_read = read_vtu(filepath)
-            
-            # Note: meshio may store cell data under different keys
-            # Just verify that some cell data was written/read
-            assert len(fields_read) > 0, "No fields read from VTU"
+
+            assert fields_read, "VTU 里没有读回任何场"
+            for key, want in cell_data.items():
+                got_key = f"cell_{key}"          # ★ 实测的键名契约
+                assert got_key in fields_read, (
+                    f"cell 场 {key!r} 读回时应叫 {got_key!r}；实际有 "
+                    f"{sorted(fields_read)} —— 键名契约变了")
+                got = np.asarray(fields_read[got_key])
+                assert got.shape == (np.asarray(want).size, 1), (
+                    f"{got_key} 形状 {got.shape}，应为 "
+                    f"{(np.asarray(want).size, 1)} —— 形状契约变了")
+                assert np.array_equal(got.ravel(), np.asarray(want).ravel()), (
+                    f"{got_key} 的**值**没有 roundtrip:"
+                    f"{got.ravel()} vs {np.asarray(want).ravel()}")
     
     def test_roundtrip_all_fields(self):
         """Write and read all data together."""
