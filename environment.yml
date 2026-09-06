@@ -75,6 +75,12 @@ dependencies:
   # --- test and dev tooling ---
   - pytest>=7.4
   - pytest-timeout
+  #: ★ coverage（使用者裁决 2026-09-06，门审计 W3.8）。回答的是立项文书 §2 那个
+  #: 零覆盖的问题：「哪些代码没有任何东西读它」。
+  #: ★★ 用它时**必须配 `PYFP3D_NOJIT=1` 再跑一遍**：JIT 打开时 `@njit` 函数体
+  #: 不进覆盖率统计，只测一遍会把**整个 kernel 层读成未覆盖**。
+  #: ★ 走 conda-forge，不用 pip —— 与本文件开头那条「pip 会重新引入 shadowing」同因。
+  - coverage>=7.0
 
   # --- used by a few evidence/comparison helpers (tests/test_meshgen_rae2822.py) ---
   #: found missing by the first full-suite run in this env: 2 ModuleNotFoundError, not a
