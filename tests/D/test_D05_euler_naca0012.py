@@ -444,11 +444,24 @@ class TestCommittedEvidenceIsLoadBearing:
     但**证据锁本身仍然继承了那份不稳定**。修法（属于 W2 而不是 W1）是让锁按
     `n_threads` 分档、或对那条腿放宽到跨线程分歧之上 —— 两者都动既有判据，
     要走预注册。在此之前：**跑 D 类锁请用 16 线程**（纪律 #1 的上限，也是本 CSV 的口径）。
+    
+    ★★★ **`residual` 退出数值锁 —— 2026-09-06 修掉的一处判据缺陷**（W1 收口实测）。
+
+    残差是**解算过程的诊断**，不是**答案**：在机器零附近它的末位就是舍入本身。
+    逐列实测（8 线程 vs 已提交的 16 线程证据，**同一份代码**）：
+    D05 的 `residual` 最坏相对差 **3.47e+06**、D06 **2.97e-01**、D07 **1.55e-02**
+    —— 而 D07 的**十个物理列全部 0.00e+00，逐位相同**。
+    D07 那一行最说明问题：**7.285e-15 对 7.174e-15 被算成「相对差 1.55e-02」，
+    绝对差却只有 1e-16**。用 `rel_tol = 1e-6` 锁这种量，锁的是舍入对舍入。
+
+    ⇒ 该列**留在证据 CSV 里**（它是有用的记录），但**不进数值锁**；有意义的断言是
+    **量级**（「这条腿收敛了」），那由本门自己的收敛/状态断言负责。
+    ★ 这**不是放宽容差**：`tests/_gate_evidence.py` 明写「若容差需要放宽，那本身就是
+    一个要查的信号」—— 查的结果是**这一列从一开始就不该进值锁**。
     """
 
     #: ★ cp_rms_* 在前：它是主要比较量
-    MEASURED = ("cp_rms_upper", "cp_rms_lower", "cl", "cd", "x_shock",
-                "residual")
+    MEASURED = ("cp_rms_upper", "cp_rms_lower", "cl", "cd", "x_shock")
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
         fresh = {f"{nm}|{lv}": {k: fmt(runs[(nm, lv)][k]) for k in self.MEASURED}
