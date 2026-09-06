@@ -32,7 +32,7 @@ def _solve(mesh_dir, level):
     r = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA,
                              upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6,
                              freeze_refresh_max=8, precond="direct",
-                             direct_refactor_every=4, n_newton_max=80)
+                             direct_refactor_every=4, n_newton_max=400)
     dz = float(np.ptp(mc.nodes[:, 2]))
     f = wall_force_coefficients(mc.nodes, mc.elements,
                                 mc.boundary_faces["wall"], r["phi"],

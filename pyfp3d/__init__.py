@@ -20,5 +20,28 @@ __author__ = "swayli94"
 
 import os
 
+#: ★★★ W2/H30(2026-09-06,使用者裁决):**把 BLAS 固定成单线程。**
+#:
+#: 实测(`bench/studies/gate_audit_20260905/results/thread_attribution_D05_M080.csv`,
+#: D05 的 M0.80/α1.25 medium,9 条腿单变量):
+#:   * 按 **BLAS** 线程数分组,每档只有一个 cl 值   {1:1, 8:1, 16:1}
+#:   * 按 numba 线程数分组,每档有多个 cl 值        {1:3, 8:2, 16:2}
+#:   ⇒ **结果是 BLAS 线程数的函数;numba 不是自变量**(1/8/16 逐位相同,
+#:     与 `tests/A/test_A02` 早就断言的「着色装配跨线程数位可复现」一致)。
+#:   ⇒ 同配置重复跑逐位相同 ⇒ **不是竞态**,是多线程 BLAS 的**归约顺序**。
+#:
+#: 这几道门不是效率门,**结果依赖线程数本身就是错误**(使用者裁决)。固定成 1
+#: 之后没有自由度,结果**位确定**;而 numba 的并行(真正的热点:装配、迎风扫描、
+#: σ 输运)**一点不受影响** —— 实测 A/B/C/F 四层墙钟只涨 **4.5 %**。
+#:
+#: ★ `setdefault` 而不是硬写:显式设了环境变量的调用方(例如**故意**做跨 BLAS
+#: A/B 的探针)仍然说了算,否则那类测量就做不成了。
+#: ★★ 这几行只在 numpy **尚未导入**时有效,所以必须待在本文件顶部,而本文件
+#: **不 import numpy**。真正的验收是**行为的**,见
+#: `tests/F/test_F09_blas_determinism.py`;「环境变量被设了」不是判据。
+for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+           "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ.setdefault(_v, "1")
+
 # Development mode flag: PYFP3D_NOJIT=1 disables Numba JIT for debugging
 NOJIT = os.environ.get("PYFP3D_NOJIT", "0") == "1"

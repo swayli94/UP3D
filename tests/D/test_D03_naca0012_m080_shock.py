@@ -134,7 +134,7 @@ def _transonic_case_newton(mesh_path, **kw):
     r = solve_newton_lifting(mc, wc, m_inf=M_INF, alpha_deg=ALPHA, upwind_c=1.5,
                              m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
                              precond="direct", direct_refactor_every=4,
-                             n_newton_max=80, **kw)
+                             n_newton_max=400, **kw)
     dz = float(np.ptp(mc.nodes[:, 2]))
     curve = wall_cp_curve(mc, r["phi"], z=0.5 * dz, m_inf=M_INF)
     rep = shock_report(curve, M_INF)

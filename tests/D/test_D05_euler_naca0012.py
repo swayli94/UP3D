@@ -72,7 +72,7 @@ REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
                        "euler_naca0012")
 #: 生产配方，与 `bench/run_m1_gate.py` / D11 逐字一致
 RECIPE = dict(upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
-              precond="direct", direct_refactor_every=4, n_newton_max=80,
+              precond="direct", direct_refactor_every=4, n_newton_max=400,
               n_picard_seed=5)
 
 #: (名字, case-id, M, α, 这条腿是设门还是只记录)

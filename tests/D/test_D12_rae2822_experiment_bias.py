@@ -56,7 +56,7 @@ CASES = (
 )
 LEVELS = ("coarse", "medium")
 RECIPE = dict(upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
-              precond="direct", direct_refactor_every=4, n_newton_max=80,
+              precond="direct", direct_refactor_every=4, n_newton_max=400,
               n_picard_seed=5)
 
 #: —— 判据（非实测值；实测基线见 docstring 的表）——

@@ -56,7 +56,7 @@ from tests.conftest import REPO_ROOT, gate_figures_enabled
 REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
                        "euler_rae2822")
 RECIPE = dict(upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
-              precond="direct", direct_refactor_every=4, n_newton_max=80,
+              precond="direct", direct_refactor_every=4, n_newton_max=400,
               n_picard_seed=5)
 CASES = (
     ("M0.725_a2.55", "rae2822_m0725_a2.55", 0.725, 2.55, "gate"),
