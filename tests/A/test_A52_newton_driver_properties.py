@@ -271,3 +271,72 @@ def test_newton_incompressible_single_step(coarse_mesh):
     r_p2 = solve_laplace_lifting(mc, wc, alpha_deg=ALPHA)
     assert np.max(np.abs(np.asarray(r["gamma"])
                          - np.asarray(r_p2["gamma"]))) < 1e-7
+
+
+class TestPreconditionersAreAccelerationNotPhysics:
+    r"""★★★ W3.7 / H20（2026-09-06）：**三个预条件子必须给同一个答案。**
+
+    审计实测:`precond="ilu"` 在 `newton.py:1346` 实装,而 **`tests/` 里零引用**
+    —— 一条上线的代码路径,没有任何东西跑过它。
+    ⇒ 处置本来是二选一(补冒烟 / 声明弃用)。**先量再定**:实测它跑得通,
+    且与 `direct` 一致到 **1.63e-13** ⇒ 不该弃用,该补锁。
+
+    判据形状不是「ilu 能跑」,而是 **预条件子是加速手段,不该改变答案**:
+    三条腿的 cl 必须一致到远严于任何物理判据的带。
+    ★ 带取 `1e-9`(实测最坏 1.6e-13,余量 ~6000x)—— 它**不是**机器零:
+    三者走不同的 Krylov 迭代序列,终止在 `tol_residual` 附近的不同点上,
+    所以位相同在原理上就不该期待。
+    ★ G-DOMAIN:相反结果 = 某个预条件子给出不同的 cl ⇒ 那是**求解器缺陷**
+    (预条件子改变了解),不是容差问题,**不要放宽这条带**。
+    """
+
+    #: 实测 2026-09-06(coarse, M0.50/α2.0):
+    #:   direct cl=0.277589780302  amg cl=0.277589780299  ilu cl=0.277589780302
+    PRECOND_CL_TOL = 1e-9
+
+    def test_direct_amg_ilu_agree(self, coarse_mesh):
+        mc, wc = coarse_mesh
+        dz = float(np.ptp(mc.nodes[:, 2]))
+        cl = {}
+        for pc in ("direct", "amg", "ilu"):
+            r = solve_newton_lifting(mc, wc, m_inf=0.50, alpha_deg=2.0,
+                                     upwind_c=1.5, m_crit=0.95, precond=pc,
+                                     n_picard_seed=5, n_newton_max=400)
+            assert r["converged"], f"precond={pc} 不收敛 —— 前提变了"
+            f = wall_force_coefficients(mc.nodes, mc.elements,
+                                        mc.boundary_faces["wall"],
+                                        np.asarray(r["phi"]), alpha_deg=2.0,
+                                        u_inf=1.0, s_ref=dz, m_inf=0.50)
+            cl[pc] = float(f["cl"])
+        base = cl["direct"]
+        for pc in ("amg", "ilu"):
+            rel = abs(cl[pc] - base) / abs(base)
+            assert rel <= self.PRECOND_CL_TOL, (
+                f"precond={pc} 的 cl {cl[pc]:.12f} 与 direct {base:.12f} "
+                f"差 {rel:.2e} > {self.PRECOND_CL_TOL:.0e} —— **预条件子改变了解**,"
+                "这是求解器缺陷,不是容差问题")
+
+    def test_the_ilu_path_is_actually_reached(self, coarse_mesh):
+        """前提断言:`precond="ilu"` 真的走到了 ILU 分支,不是被静默回退。
+
+        ★ 少了它,上一条可能只是「三次都跑了 direct」⇒ 按构造恒真。
+
+        ★★ **补丁必须打在消费者模块上,不是定义模块上**(2026-09-06 实测踩到)。
+        `newton.py:71` 写的是 `from pyfp3d.solve.linear import
+        build_ilu_preconditioner`,名字在 **import 时**就绑进了 `newton` 的命名空间;
+        去 patch `pyfp3d.solve.linear` 的属性**打不到它**,于是这条前提断言会
+        报一个**假红**(我第一版就是这么写的,被它自己红出来的)。
+        """
+        import pyfp3d.solve.newton as N
+        seen = []
+        orig = N.build_ilu_preconditioner
+        N.build_ilu_preconditioner = lambda *a, **k: (seen.append(1), orig(*a, **k))[1]
+        try:
+            mc, wc = coarse_mesh
+            solve_newton_lifting(mc, wc, m_inf=0.50, alpha_deg=2.0, upwind_c=1.5,
+                                 m_crit=0.95, precond="ilu", n_picard_seed=5,
+                                 n_newton_max=400)
+        finally:
+            N.build_ilu_preconditioner = orig
+        assert seen, "precond='ilu' 没有调用 build_ilu_preconditioner —— 被静默回退了"
+
