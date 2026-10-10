@@ -12,9 +12,17 @@ Case 7 M0.725/α2.55 · Case 9/10 M0.730/α3.19（`euler_rae2822/`，2 工况 ×
 `assert not converged`。**那条断言自己红了**（测试跑在 8 线程），才把问题揪出来。
 项目纪律 #1 是**上限 16，含 BLAS/OMP**。@16 线程重测：
 
+★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
+docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md §3）。M0.725 medium 是
+**近简并敏感腿**：跨 BLAS 档落在邻近吸引子上，cl 1.016752 → 1.016375、dx +0.0319 →
++0.0318、Δcl（按门实际读的 L4 参考）+3.58 % → +3.55 %，第一行三格已同步。
+★ 既有遗留，与本轮无关：本表 CFL3D 列与 M0.730 行的 Δcl 是 **L3** 档口径 —— 门自
+2026-09-05 起读 L4（cl 0.981571 / 1.113160，对应 Δcl 实为 +3.55 % / +0.06 %，
+可分辨倍数现为 10.0×）。L3→L4 的整表更正另立案，判据带不受影响。
+
 | 工况（medium） | pyFP3D cl | CFL3D cl | Δcl | dx | @6t | @8t | **@16t** |
 |---|---|---|---|---|---|---|---|
-| M0.725/α2.55 | 1.016760 | 0.982077 | **+3.53 %** | +0.0309 | ✓ | ✓ | ✓ |
+| M0.725/α2.55 | 1.016375 | 0.982077 | **+3.55 %** | +0.0318 | ✓ | ✓ | ✓ |
 | M0.730/α3.19 | 1.113866 | 1.110904 | **+0.27 %** | +0.0051 | ✗ | ✓ | **✓** |
 
 M0.730 medium 逐线程：4 线程 ✗（|R| 5.5e-06，80 步封顶）· 6 线程 ✗（2.9e-06）·
@@ -24,7 +32,7 @@ M0.730 medium 逐线程：4 线程 ✗（|R| 5.5e-06，80 步封顶）· 6 线�
 ⇒ 本门**不对 `converged` 设任何断言**，只把它连同线程数写进证据；
 **设门依据是分歧的大小**。
 
-★ **误差跨零翻号**：两例都是 coarse 负、medium 正（−6.84 → +3.53、
+★ **误差跨零翻号**：两例都是 coarse 负、medium 正（−6.84 → +3.55、
 −32.8 → +0.27）。跨零的"一致"更像**穿越**而非收缩 —— 与 D07 上 cl 三档
 ratio 0.153、第四档翻成 3.161 是同一个签名。所以只在**幅度**上设带，
 并明写它不单调收缩。
@@ -65,7 +73,7 @@ CASES = (
 LEVELS = ("coarse", "medium")
 
 # —— 判据（标定，不是实测值）——
-CL_BAND = 0.06              # M0.725 medium |Δcl|：实测 0.0353
+CL_BAND = 0.06              # M0.725 medium |Δcl|：实测 0.0355
 CL_BAND_M0730 = 0.03        # M0.730 medium |Δcl|：实测 0.0027
 RESOLVABLE_FRAC = 1.0       # 与参考自身 L2→L3 差比较的可分辨下限
 
@@ -168,7 +176,7 @@ def ref():
 
 class TestWhatIsGateable:
     def test_m0725_lift_magnitude(self, runs, ref):
-        """幅度带，**不是**收缩判据：误差跨零（coarse −6.84 % → medium +3.53 %），
+        """幅度带，**不是**收缩判据：误差跨零（coarse −6.84 % → medium +3.55 %），
         所以不能要求单调收缩，只能要求 medium 的幅度在带内。"""
         got = runs[("M0.725_a2.55", "medium")]["cl"]
         want = ref["rae2822_m0725_a2.55"]["cl"]
@@ -356,7 +364,7 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         "Cp is the primary comparison; the dash-dot\n"
         "lines are the detected shocks (red CFL3D,\n"
         "blue pyFP3D).\n\n"
-        "BOTH legs GATED: dcl +3.53 % and +0.27 %.\n\n"
+        "BOTH legs GATED: dcl +3.55 % and +0.27 %.\n\n"
         "*** The shock difference IS resolvable here\n"
         "(35x the reference's own L2->L3 delta of\n"
         "0.00088), where on NACA0012 M0.75 the same\n"

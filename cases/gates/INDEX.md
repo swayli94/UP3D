@@ -225,7 +225,7 @@ oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1
 ## D11_naca0012_experiment_bias
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`D11_naca0012_experiment_bias/summary.csv`](D11_naca0012_experiment_bias/summary.csv) — 6 行（3 工况 × 2 级），列 `case, level, converged, mode, residual, n_newton, n_limited, n_floored, mach_max, cl_p, rms_upper, rms_lower, pre_shock_rms, post_shock_rms, x_shock, x_shock_exp, shock_offset`
+- [`D11_naca0012_experiment_bias/summary.csv`](D11_naca0012_experiment_bias/summary.csv) — 6 行（3 工况 × 2 级），列 `case, level, blas_threads, converged, mode, residual, n_newton, n_limited, n_floored, mach_max, cl_p, rms_upper, rms_lower, pre_shock_rms, post_shock_rms, x_shock, x_shock_exp, shock_offset`
 
 ★★★ **本门的产物是"偏置"，不是 pass/fail** —— 裁决三：**对无粘用 Euler 设门、对实验记录偏置**。
 拿一个无粘全速势解对实验做 pass/fail，会把**我们刻意不建模的物理**（边界层位移、
@@ -233,7 +233,7 @@ oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1
 发现它的是一个包住 `open` 的**运行时探针**，不是 grep。
 
 ★★★ **三个工况按"粘性物理有多重要"干净分层，图上一眼可见**（medium 上表面 RMS）：
-**0.0779（近零升） < 0.3944（α=2°） < 1.5235（近失速）**。左图无粘曲线基本贴住实验点、
+**0.0779（近零升） < 0.3945（α=2°） < 1.5235（近失速）**。左图无粘曲线基本贴住实验点、
 两条激波线几乎重合；中图无粘上表面明显更负、激波远在下游（+0.1219 c）；
 右图前缘吸力峰冲到 −9 而实验约 −7。
 
@@ -253,7 +253,7 @@ RMS 随加密 **0.0926 → 0.0369 改善**，激波**后** **0.0609 → 0.0807 �
 ## D12_rae2822_experiment_bias
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`D12_rae2822_experiment_bias/summary.csv`](D12_rae2822_experiment_bias/summary.csv) — 4 行（2 工况 × 2 级），列 `case, level, converged, mode, residual, n_newton, n_limited, n_floored, mach_max, cl_p, cn, cn_exp, cn_rel, rms_upper, rms_lower, x_shock, x_shock_exp, shock_offset`
+- [`D12_rae2822_experiment_bias/summary.csv`](D12_rae2822_experiment_bias/summary.csv) — 4 行（2 工况 × 2 级），列 `case, level, blas_threads, converged, mode, residual, n_newton, n_limited, n_floored, mach_max, cl_p, cn, cn_exp, cn_rel, rms_upper, rms_lower, x_shock, x_shock_exp, shock_offset`
 
 ★★★ **与 D11 同一形状：产物是偏置，不是 pass/fail。** medium 实测 —— **无粘全速势把法向力
 高估 38–55 %**（Case 7 **+54.7 %**、Case 9 **+38.0 %**），**激波压后 ~0.12 c**。两者是同一件事
@@ -279,7 +279,7 @@ RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9
 ## D13_ibl_vs_xfoil
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`D13_ibl_vs_xfoil/summary.csv`](D13_ibl_vs_xfoil/summary.csv) — 50 行（2 级 × 2 面 × 12 站 + 2 行 cl），列 `level, surface, x_c, dstar_ibl, dstar_xfoil, dstar_ratio, cf_ibl, cf_xfoil, asym_ibl, asym_xfoil`
+- [`D13_ibl_vs_xfoil/summary.csv`](D13_ibl_vs_xfoil/summary.csv) — 50 行（2 级 × 2 面 × 12 站 + 2 行 cl），列 `level, surface, x_c, blas_threads, dstar_ibl, dstar_xfoil, dstar_ratio, cf_ibl, cf_xfoil, asym_ibl, asym_xfoil`
 
 ★★ **XFOIL 6.99 是本项目对边界层量的指定参照**（外部代码、非本仓依赖、不由被检验的求解器派生）。
 工况与参考**逐字一致**：NACA0012、M 0.5 / Re 3.0e6 / α 2° / x_tr 0.05 双面。
@@ -292,7 +292,7 @@ RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9
 **图上四板，三条现象一个根因：**
 · **右上**：灰带是 (a) 的设门区间（x ≤ 0.30）。**实线（上表面）在带内，虚线（下表面）冲到 1.5–1.74**
 —— 这就是 (a) **只门上表面**的理由：两面共用一个带子要放宽到 0.8–1.85，近乎空判据。
-带外一路**单调下滑到 0.46–0.70** = **(c)**。
+带外一路**单调下滑到 0.47–0.70** = **(c)**。
 · **左下** c_f：转捩峰形状对得上，但 XFOIL 峰 0.0079 / 我们 0.0055，而**下游我们反而更高**
 （0.0027 vs 0.0010）。
 · **右下**（最干净的一张）：上/下 δ* 之比，**XFOIL 全程 1.26–1.49**（α=+2° 该有的上厚下薄），
@@ -301,8 +301,8 @@ RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9
 ⇒ 三者都是「**边界层对压力梯度响应太弱**」，即湍流闭合关系的 **H 族**：H 偏小 ⇒ 摩擦偏高 ⇒
 边界层更饱满 ⇒ **既长不快（下游漂移），也分不开上下面**。**一个根因，所以锁在一起。**
 
-★ **(d)**：**加密使耦合效应变弱** —— cl 离 XFOIL 从 +2.3 % 走到 +5.6 %（medium 反而更靠近无粘
-0.2921），尾缘 δ* 比 0.524 → 0.464；而 δ* 分布本身两级几乎重合 ⇒ **不是网格分辨率问题**。
+★ **(d)**：**加密使耦合效应变弱** —— cl 离 XFOIL 从 +2.3 % 走到 +5.3 %（medium 反而更靠近无粘
+0.2921），尾缘 δ* 比 0.524 → 0.466；而 δ* 分布本身两级几乎重合 ⇒ **不是网格分辨率问题**。
 
 ![d13_ibl_vs_xfoil.png](D13_ibl_vs_xfoil/d13_ibl_vs_xfoil.png)
 
@@ -344,7 +344,7 @@ cl 五位相同）。**旗标在两个方向上随线程数翻转而答案不动
 
 ## D06 — pyFP3D 无粘 vs CFL3D Euler，RAE2822
 
-两条腿**都设门**（@16 线程均收敛）：M0.725/α2.55 **+3.53 %**、
+两条腿**都设门**（@16 线程均收敛）：M0.725/α2.55 **+3.55 %**、
 M0.730/α3.19 **+0.27 %**。
 
 ★★★ 这道门里曾有一条 `assert not converged` —— 把一个**环境依赖结果里坏的
@@ -402,12 +402,17 @@ pyFP3D 的前缘吸力峰与超声速平台**每站都偏浅**，上表面 Cp RM
 
 | 工况 | coarse | medium | RANS 带 | 带宽 |
 |---|---|---|---|---|
-| M0.50/α2.0 trip 0.05 | +7.2 % | **+10.2 %** | [0.2500, 0.2569] | 2.7 % |
-| M0.50/α2.0 trip 0.30 | **−1.9 %** | **+6.1 %** | [0.2612, 0.2658] | 1.8 % |
+| M0.50/α2.0 trip 0.05 | +7.2 % | **+10.3 %** | [0.2501, 0.2568] | 2.7 % |
+| M0.50/α2.0 trip 0.30 | **−1.9 %** | **+6.1 %** | [0.2613, 0.2658] | 1.8 % |
 
 **两条腿都在加密时向上跑**，trip 0.30 还从带下穿到带上 —— 与 D13 的
-"cl 离 XFOIL 从 +2.3 % 走到 +5.6 %" 同一签名。目前没有一条落在带内，
+"cl 离 XFOIL 从 +2.3 % 走到 +5.3 %" 同一签名。目前没有一条落在带内，
 带内包含设为**将来**的判据。
+
+★ **2026-10-10：证据按真 BLAS=1 重刷** —— xtr030 medium 的 cl 跨 BLAS 档切换吸引子
+（rel_to_band −1.6 % → **+6.1 %**，n_outer 7 → 4；xtr005 medium +9.3 % → +10.3 %）。
+固定 BLAS=1 下两次独立运行**逐位复现**。登记与锁形状裁决见
+`tests/D/test_D08_rans_naca0012.py` docstring 的「2026-10-10：BLAS 吸引子切换登记」节。
 
 ★ 另三条工况排除的理由是**口径**（CFL3D 全湍流 vs 我们固定转捩），
 而且**参考自己的 `note` 就写着** near-stall 那条 "deliberately NOT gate
@@ -417,8 +422,8 @@ material" —— 参考的作者已经做过一次设门/记录判断，读它�
 一条**带**，带宽（上表面最大 **0.031**）就是这道门在 Cp 上的分辨底噪。
 
 ★★ **两个读数不一致，两个都报**：Cp 上几乎重合（RMS **0.041**，即带宽的
-**1.3 倍**），cl 上却高出带 **+10.2 %**。不矛盾 —— 一个**铺开的小偏置**积分出
-可见的 cl 差（Δcl ≈ 0.025 摊在弦上 ≈ 0.025 的平均 Cp 差，与 RMS 同量级）。
+**1.3 倍**），cl 上却高出带 **+10.3 %**。不矛盾 —— 一个**铺开的小偏置**积分出
+可见的 cl 差（Δcl ≈ 0.027 摊在弦上 ≈ 0.027 的平均 Cp 差，与 RMS 同量级）。
 ⇒ 分歧**不是**局部大偏差。只报 cl 会把这道门说得比实际糟。
 
 ![d08_vs_rans_band.png](D08_rans_naca0012/d08_vs_rans_band.png)
