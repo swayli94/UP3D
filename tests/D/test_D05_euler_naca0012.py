@@ -13,21 +13,21 @@ M0.778/α2.03 · M0.803/α−0.1。参考侧的档 **L1–L4**，本门读**最�
 BLAS/OMP**。由此得出的"跨声速举力腿不能设门"是**测量条件的产物**：
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）。M0.778 medium 的
-pyFP3D cl 格已同步（0.706178 → 0.706233）；本轮其余移动在 4–5 位引用精度以下，各格未动。
-★ 两个**既有**遗留，与本轮无关、仅标注不改写：(i) 本表 CFL3D 列是 **L3** 档读数，而门自
-2026-09-05 起读 L4（M0.80 的 L4 是 0.348881，对应 Δcl −2.16 % 而非 −1.98 %）；
-(ii) 收敛列来自 BLAS=24 时代的线程扫描 —— 本轮 M0.803 medium 在 16 线程 + BLAS=1 下
-**收敛**（|R| 2.2e-13，见新 CSV），表中的 @16t ✗ 是旧档读数。判据带均不受影响。
+docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md），本表已按现行证据整表
+同步：**CFL3D 列改读 L4**（原 0.284256/0.348239/0.490875/−0.028789 是 L3 档读数，
+Δcl 列随之按 L4 重算）；M0.778 medium 的 pyFP3D cl 0.706178 → 0.706233；
+**收敛列改按 committed CSV 读**（8t·BLAS=24 与 16t·BLAS=1 两档逐行一致）——
+下方那段 @8t/@16t 翻转叙事是 BLAS=24 时代特定轮次的实测记录，保留作「不设
+converged 判据」的原始依据，但它不钉在某个固定线程数上。判据带均不受影响。
 
-| 算例（medium） | pyFP3D cl | CFL3D cl | Δcl | @8t 收敛 | **@16t 收敛** |
-|---|---|---|---|---|---|
-| M0.50/α2.0 | 0.284372 | 0.284256 | **+0.04 %** | ✓ | ✓ |
-| M0.72/α0 | 0.001164 | 0.000000 | — | ✓ | ✓ |
-| M0.75/α0 | 0.001273 | 0.000000 | — | ✓ | ✓ |
-| **M0.80/α1.25** | 0.341340 | 0.348239 | **−1.98 %** | ✗ | **✓** |
-| M0.778/α2.03 | 0.706233 | 0.490875 | +43.9 % | ✗ | ✗ |
-| **M0.803/α−0.10** | −0.042311 | −0.028789 | −47 % | **✓** | **✗** |
+| 算例（medium） | pyFP3D cl | CFL3D cl（L4） | Δcl | 收敛（committed CSV） |
+|---|---|---|---|---|
+| M0.50/α2.0 | 0.284372 | 0.284510 | **−0.05 %** | ✓ |
+| M0.72/α0 | 0.001164 | 0.000000 | — | ✓ |
+| M0.75/α0 | 0.001273 | 0.000000 | — | ✓ |
+| **M0.80/α1.25** | 0.341340 | 0.348881 | **−2.16 %** | ✓ |
+| M0.778/α2.03 | 0.706233 | 0.491706 | +43.6 % | **✗**（limit_cycle） |
+| **M0.803/α−0.10** | −0.042314 | −0.028571 | −48 % | ✓ |
 
 ★★★ **收敛旗标在两个方向上都随线程数翻转，而 cl 五位不变。**
 M0.80 在 8/12 线程 80 步封顶（|R| ~1e-06）、16 线程收敛到 |R| 2.9e-13，cl 差
@@ -41,8 +41,8 @@ M0.80 在 8/12 线程 80 步封顶（|R| ~1e-06）、16 线程收敛到 |R| 2.9e
 把一个环境依赖的结果、而且是**坏的那一侧**焊进门里；**是那条断言自己红了**
 才把问题揪出来，不是复核。）
 
-★★ **近零升力必须用绝对量**。M0.803/α−0.1 的参考 cl 是 **−0.0288**，
-所以"−47 %"的分母近零 —— 绝对差只有 **0.0135**。这与 α = 0 两例是同一条：
+★★ **近零升力必须用绝对量**。M0.803/α−0.1 的参考 cl 是 **−0.0286**（L4），
+所以"−48 %"的分母近零 —— 绝对差只有 **0.0137**。这与 α = 0 两例是同一条：
 **相对还是绝对，取决于基线，不存在一个总是对的选择。**
 
 ★ 一条被测量否掉的预期：我按教科书预期"全位势的激波应落在 Euler **下游**"。
@@ -50,10 +50,12 @@ NACA0012 上**实测是上游**（4/5），而 RAE2822 上是**下游**（D06）
 **没有一致方向，所以没有可登记的符号。**
 
 ★★★ **M0.75 的激波位置对这份参考不可分辨。** pyFP3D 与 CFL3D 差 **0.0047**，
-而 CFL3D 自身的 L2→L3 差是 **0.018026**（且**非单调**：0.285 → 0.278 → 0.296），
-差比参照物自身的不确定度小 **3.8 倍** ⇒ 与 D07 对实验那次同一条判据。
-★ 对照 D06：RAE2822 的参考紧到 0.00088，同样的比较在那里**可分辨**（35×）——
+而 CFL3D 自身四档的**散布**是 **0.0219**（且**非单调**：0.285 → 0.278 → 0.296 → 0.300），
+差比参照物自身的不确定度小 **4.7 倍** ⇒ 与 D07 对实验那次同一条判据。
+★ 对照 D06：RAE2822 的参考散布紧到 **0.0032**，同样的比较在那里**可分辨**（10.0×）——
 **参照物的分辨率是逐例的性质，不是数据集的性质。**
+（口径：0.018026 / 0.00088 是旧的 L2→L3 最后差，2026-09-05 已更正为**散布** ——
+见本门 `TestWhatIsOnlyRecorded` 的更正记录与 D06 docstring；数值为 2026-10-10 现行 CSV。）
 
 ## ★ 这份参考自己的短板，如实记下
 
@@ -95,12 +97,12 @@ CASES = (
 LEVELS = ("coarse", "medium")
 
 # —— 判据（标定，不是实测值；实测基线见 docstring 的表）——
-SUBCRIT_CL_MAX = 0.010      # 亚临界 |Δcl|/cl：实测 medium 0.0004
-SUBCRIT_CONTRACT = 2.0      # coarse -> medium 必须收缩：实测 0.0235/0.0004 = 57x
+SUBCRIT_CL_MAX = 0.010      # 亚临界 |Δcl|/cl：实测 medium 0.0005
+SUBCRIT_CONTRACT = 2.0      # coarse -> medium 必须收缩：实测 0.0243/0.0005 = 50x
 ZERO_LIFT_CL_MAX = 0.005    # α=0 的 |cl| 绝对带：实测 0.0012 / 0.0013
-TRANSONIC_CL_MAX = 0.05     # M0.80/α1.25（M1 靶子）|Δcl|/cl：实测 0.0198
-#: ★ 近零升力用**绝对**带（参考 cl = −0.0288，相对判据的分母近零）
-NEAR_ZERO_ABS_MAX = 0.05    # M0.803/α−0.1 |Δcl| 绝对：实测 0.0135
+TRANSONIC_CL_MAX = 0.05     # M0.80/α1.25（M1 靶子）|Δcl|/cl：实测 0.0216
+#: ★ 近零升力用**绝对**带（参考 cl = −0.0286（L4），相对判据的分母近零）
+NEAR_ZERO_ABS_MAX = 0.05    # M0.803/α−0.1 |Δcl| 绝对：实测 0.0137
 #: ★ 与参考自身不确定度比较时的"可分辨"下限，形式与 D07 的 RESOLVE_FRAC 相同：
 #: 差必须超过参照物自身 L2→L3 差的这个倍数才谈得上比较。
 RESOLVABLE_FRAC = 1.0
@@ -224,7 +226,7 @@ class TestWhatIsGateable:
 
     def test_subcritical_lift_matches_cfl3d_euler(self, runs, ref):
         """M0.50/α2.0：全位势与 Euler 在亚临界下应当一致，因为两者的模型差
-        （熵、涡量）在无激波时消失。实测 medium 0.04 %。"""
+        （熵、涡量）在无激波时消失。实测 medium 0.05 %（L4 口径）。"""
         got = runs[("M0.50_a2.00", "medium")]["cl"]
         want = ref["n0012_m0500_a2.00"]["cl"]
         rel = abs(got - want) / abs(want)
@@ -234,7 +236,7 @@ class TestWhatIsGateable:
             f"= {rel*100:.3f} % > {SUBCRIT_CL_MAX*100:.1f} %")
 
     def test_subcritical_lift_contracts_with_refinement(self, runs, ref):
-        """★ 一个不收缩的一致只是巧合。coarse 2.35 % -> medium 0.04 %。"""
+        """★ 一个不收缩的一致只是巧合。coarse 2.43 % -> medium 0.05 %（L4 口径）。"""
         want = ref["n0012_m0500_a2.00"]["cl"]
         e = {lv: abs(runs[("M0.50_a2.00", lv)]["cl"] - want) / abs(want)
              for lv in LEVELS}
@@ -254,7 +256,7 @@ class TestWhatIsGateable:
 
 
     def test_m1_target_condition_lift(self, runs, ref):
-        """★★ M0.80/α1.25 = **M1 靶子本身**。@16 线程收敛，Δcl −1.98 %。
+        """★★ M0.80/α1.25 = **M1 靶子本身**。@16 线程收敛，Δcl −2.16 %（L4 口径）。
 
         ★ 本条**不断言 `converged`** —— 那个旗标在 8/12 线程是 False、16 线程
         是 True，而 cl 只差 0.36 %。断言旗标就是把线程数焊进门里。"""
@@ -363,8 +365,8 @@ class TestWhatIsOnlyRecorded:
         assert isinstance(r["sigma_churn"], bool)
 
     def test_near_zero_lift_uses_an_absolute_band(self, runs, ref):
-        """★★ M0.803/α−0.1 的"−47 %"分母近零（参考 cl −0.0288）。
-        绝对差 0.0135 —— 大，但只有相对数字的三分之一那么骇人。
+        """★★ M0.803/α−0.1 的"−48 %"分母近零（参考 cl −0.0286，L4）。
+        绝对差 0.0137 —— 大，但只有相对数字的三分之一那么骇人。
         **RECORDED**：它超出 M0.50 的绝对误差 100 倍，是真实分歧。"""
         got = runs[("M0.803_a-0.10", "medium")]["cl"]
         want = ref["n0012_m0803_am0.10"]["cl"]
@@ -573,12 +575,12 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         "number, and two curves 2 % apart may differ\n"
         "at the shock, the LE peak or the TE unloading\n"
         "-- or at two places that cancel.\n\n"
-        "GATED (5 of 7 legs): subcritical cl +0.04 %,\n"
+        "GATED (5 of 7 legs): subcritical cl -0.05 %,\n"
         "alpha = 0 on an ABSOLUTE band, and the M1\n"
-        "target M0.80/alpha1.25 at -1.98 %.\n\n"
-        "RECORDED: M0.778 (+43.9 %) and M0.803, whose\n"
-        "'-47 %' is a near-zero denominator -- its\n"
-        "absolute gap is 0.0135.\n\n"
+        "target M0.80/alpha1.25 at -2.16 %.\n\n"
+        "RECORDED: M0.778 (+43.6 %) and M0.803, whose\n"
+        "'-48 %' is a near-zero denominator -- its\n"
+        "absolute gap is 0.0137.\n\n"
         "*** The convergence flag is NOT gated: it\n"
         "flips in BOTH directions with thread count\n"
         "while cl moves by 0.15-0.36 %.  n_threads is\n"

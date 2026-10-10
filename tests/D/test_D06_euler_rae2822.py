@@ -15,15 +15,15 @@ Case 7 M0.725/α2.55 · Case 9/10 M0.730/α3.19（`euler_rae2822/`，2 工况 ×
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
 docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md §3）。M0.725 medium 是
 **近简并敏感腿**：跨 BLAS 档落在邻近吸引子上，cl 1.016752 → 1.016375、dx +0.0319 →
-+0.0318、Δcl（按门实际读的 L4 参考）+3.58 % → +3.55 %，第一行三格已同步。
-★ 既有遗留，与本轮无关：本表 CFL3D 列与 M0.730 行的 Δcl 是 **L3** 档口径 —— 门自
-2026-09-05 起读 L4（cl 0.981571 / 1.113160，对应 Δcl 实为 +3.55 % / +0.06 %，
-可分辨倍数现为 10.0×）。L3→L4 的整表更正另立案，判据带不受影响。
++0.0318、Δcl +3.58 % → +3.55 %。
+★ 同日：本表 **CFL3D 列与全部派生量已改读 L4**（M0.730 行整行同步：cl 1.113852、
+Δcl +0.27 % → +0.06 %、dx +0.0051 → +0.0052；第一行参考格 0.982077 → 0.981571）——
+原 L3 档口径的遗留自此核销，判据带不受影响。
 
-| 工况（medium） | pyFP3D cl | CFL3D cl | Δcl | dx | @6t | @8t | **@16t** |
+| 工况（medium） | pyFP3D cl | CFL3D cl（L4） | Δcl | dx | @6t | @8t | **@16t** |
 |---|---|---|---|---|---|---|---|
-| M0.725/α2.55 | 1.016375 | 0.982077 | **+3.55 %** | +0.0318 | ✓ | ✓ | ✓ |
-| M0.730/α3.19 | 1.113866 | 1.110904 | **+0.27 %** | +0.0051 | ✗ | ✓ | **✓** |
+| M0.725/α2.55 | 1.016375 | 0.981571 | **+3.55 %** | +0.0318 | ✓ | ✓ | ✓ |
+| M0.730/α3.19 | 1.113852 | 1.113160 | **+0.06 %** | +0.0052 | ✗ | ✓ | **✓** |
 
 M0.730 medium 逐线程：4 线程 ✗（|R| 5.5e-06，80 步封顶）· 6 线程 ✗（2.9e-06）·
 8 线程 ✓（**2.96e-13**）· 12 线程 ✓（3.1e-13），而 **cl 在四者间只差 0.15 %**。
@@ -32,19 +32,21 @@ M0.730 medium 逐线程：4 线程 ✗（|R| 5.5e-06，80 步封顶）· 6 线�
 ⇒ 本门**不对 `converged` 设任何断言**，只把它连同线程数写进证据；
 **设门依据是分歧的大小**。
 
-★ **误差跨零翻号**：两例都是 coarse 负、medium 正（−6.84 → +3.55、
-−32.8 → +0.27）。跨零的"一致"更像**穿越**而非收缩 —— 与 D07 上 cl 三档
+★ **误差跨零翻号**：两例都是 coarse 负、medium 正（−6.79 → +3.55、
+−33.2 → +0.06）。跨零的"一致"更像**穿越**而非收缩 —— 与 D07 上 cl 三档
 ratio 0.153、第四档翻成 3.161 是同一个签名。所以只在**幅度**上设带，
 并明写它不单调收缩。
 
 ★ **方向不设门，因为它在两个翼型上相反**：NACA0012 上 pyFP3D 的激波在 CFL3D
-**上游**（D05，4/5），RAE2822 上在**下游**（+0.031 / +0.005）。
+**上游**（D05，4/5），RAE2822 上在**下游**（+0.032 / +0.005）。
 
 ## ★ 与 D05 相反的一点：这份参考紧到能分辨
 
-RAE2822 参考自身的 L2→L3 激波差是 **0.00088 / 0.00100**，pyFP3D 与它差
-0.0309 / 0.0051 ⇒ **35× / 5×，可分辨**。D05 的 M0.75 是 0.26×，不可分辨。
+RAE2822 参考自身的激波位置**散布**（L1–L4 极差）是 **0.0032 / 0.0024**，pyFP3D 与它差
+0.0318 / 0.0052 ⇒ **10.0× / 2.2×，可分辨**。D05 的 M0.75 是 0.21×，不可分辨。
 **同一条判据，两个相反的结论 —— 参照物的分辨率是逐例的性质。**
+（口径：0.00088 / 0.00100 与 "35×" 是旧的 L2→L3 最后差，2026-09-05 已更正为**散布** ——
+见 `test_shock_difference_is_resolvable_against_this_reference` 的更正记录；数值为 2026-10-10 现行 CSV。）
 """
 import os
 
@@ -74,7 +76,7 @@ LEVELS = ("coarse", "medium")
 
 # —— 判据（标定，不是实测值）——
 CL_BAND = 0.06              # M0.725 medium |Δcl|：实测 0.0355
-CL_BAND_M0730 = 0.03        # M0.730 medium |Δcl|：实测 0.0027
+CL_BAND_M0730 = 0.03        # M0.730 medium |Δcl|：实测 0.0006
 RESOLVABLE_FRAC = 1.0       # 与参考自身 L2→L3 差比较的可分辨下限
 
 
@@ -176,7 +178,7 @@ def ref():
 
 class TestWhatIsGateable:
     def test_m0725_lift_magnitude(self, runs, ref):
-        """幅度带，**不是**收缩判据：误差跨零（coarse −6.84 % → medium +3.55 %），
+        """幅度带，**不是**收缩判据：误差跨零（coarse −6.79 % → medium +3.55 %），
         所以不能要求单调收缩，只能要求 medium 的幅度在带内。"""
         got = runs[("M0.725_a2.55", "medium")]["cl"]
         want = ref["rae2822_m0725_a2.55"]["cl"]
@@ -186,7 +188,7 @@ class TestWhatIsGateable:
             f"> {CL_BAND*100:.0f} %")
 
     def test_m0730_lift_magnitude(self, runs, ref):
-        """@16 线程 Δcl = +0.27 %。★ 同样**不断言 `converged`**。"""
+        """@16 线程 Δcl = +0.06 %（L4 口径）。★ 同样**不断言 `converged`**。"""
         got = runs[("M0.730_a3.19", "medium")]["cl"]
         want = ref["rae2822_m0730_a3.19"]["cl"]
         rel = abs(got - want) / abs(want)
@@ -199,7 +201,7 @@ class TestWhatIsGateable:
 
         ★ **数字更正 2026-09-05**：原来按单一的 `delta_L2_L3` = 0.00088 说
         "35×"。改用**散布**（四档 0.63302 → 0.62986，极差 **0.003169**）后是
-        **9.8×** —— **结论不变，倍数缩水四倍**。单一的最后差把参照物说得
+        **9.8×**（2026-10-10 现行口径 10.0×）—— **结论不变，倍数缩水四倍**。单一的最后差把参照物说得
         比它实际更精确。
 
         锁住的是"可分辨"这个前提本身。若参考日后放松到不可分辨，本条会红，
@@ -364,11 +366,11 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         "Cp is the primary comparison; the dash-dot\n"
         "lines are the detected shocks (red CFL3D,\n"
         "blue pyFP3D).\n\n"
-        "BOTH legs GATED: dcl +3.55 % and +0.27 %.\n\n"
+        "BOTH legs GATED: dcl +3.55 % and +0.06 %.\n\n"
         "*** The shock difference IS resolvable here\n"
-        "(35x the reference's own L2->L3 delta of\n"
-        "0.00088), where on NACA0012 M0.75 the same\n"
-        "comparison is 0.26x and UNRESOLVABLE.\n"
+        "(10x the reference's own L1-L4 spread of\n"
+        "0.0032), where on NACA0012 M0.75 the same\n"
+        "comparison is 0.21x and UNRESOLVABLE.\n"
         "A reference's resolution is a PER-CASE\n"
         "property, not a dataset property.\n\n"
         "*** The shock sits DOWNSTREAM of CFL3D here\n"

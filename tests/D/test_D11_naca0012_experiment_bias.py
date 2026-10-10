@@ -73,7 +73,7 @@ RECIPE = dict(upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
 PRE_SHOCK_MAX = 0.06        # M0.803 medium 激波前 RMS：实测 0.0369
 PRE_SHOCK_CONTRACT = 1.5    # coarse -> medium 收缩：实测 0.0926/0.0369 = 2.51x
 CL_NEAR_ZERO = 0.10         # 对称翼型 α = −0.10°：实测 |cl_p| = 0.0423
-STRATIFY = 1.5              # 相邻层级的 RMS 比：实测 0.0633 -> 0.3986 -> 1.5477
+STRATIFY = 1.5              # 相邻层级的 RMS 比：实测 0.0779 -> 0.3945 -> 1.5235（5.1x / 3.9x）
 SHOCK_AFT_MIN = 0.0         # 无粘激波必须在实验激波**下游**：实测 +0.013 / +0.122
 
 
@@ -215,7 +215,8 @@ class TestWhatIsGateableAgainstExperiment:
 
     def test_the_three_cases_stratify_by_how_viscous_they_are(self, runs):
         r"""★★★ **本门最结构性的一条**：无粘模型的误差必须随"该工况多依赖粘性物理"单调增长。
-        实测 medium 上表面 RMS：**0.0633（近零升） < 0.3986（α=2°） < 1.5477（近失速）**。
+        实测 medium 上表面 RMS：**0.0779（近零升） < 0.3945（α=2°） < 1.5235（近失速）**
+        （相邻比 5.1× / 3.9×）。
 
         ★ 这不是精度判据，是**适用范围**判据：它一旦破了，说明三个工况的相对难度变了，
         而本门的整套"记录偏置"叙述就要重读。
@@ -244,7 +245,7 @@ class TestWhatIsOnlyRecorded:
             "好消息，但本门把 (d) 排除在判据外的理由变了，请走纪律 11 勘误")
 
     def test_near_stall_is_out_of_the_inviscid_envelope(self, runs):
-        r"""★ M0.352 α = 12.86°：上表面 RMS **1.0451 → 1.5477**，且**加密使其恶化**。
+        r"""★ M0.352 α = 12.86°：上表面 RMS **1.0291 → 1.5235**，且**加密使其恶化**。
         近失速的分离流不在无粘全速势的包络内 —— **记录这个事实，而不是给它一个容差**。
         ★★ 该工况**没有可比的激波结构**，而这一点要按实测说，不能靠推断：检波器确实
         在实验数据上报出一个"最大正跳"，位置 **x = 0.0237**（本条断言它 < 0.05）——

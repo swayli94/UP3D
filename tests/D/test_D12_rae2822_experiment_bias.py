@@ -28,8 +28,8 @@ rms_upper / shock_offset / cn 三格已同步（0.3257 → 0.3253、+0.1243 → 
 （α 这个量级下轴向项约占 1 %，B06 在 α=6° 实测 1.01 %。）
 
 ★★★ **Case 9 的 coarse 腿是 `clamping`，而它与 D11 的失败方向恰好相反**：
-13 limited / **2857 floored**、**M_max 撞上 `m_cap = 3.0`**（分类器：
-`clamping, clamps 13/2857`）。按模式表，`clamping` 指向 **physics/geometry** ——
+18 limited / **2859 floored**、**M_max 撞上 `m_cap = 3.0`**（分类器：
+`clamping, clamps 18/2859`）。按模式表，`clamping` 指向 **physics/geometry** ——
 coarse 网格分辨不了 α=3.19° 的流动。
 ★ 而 D11 里是 **coarse 成功、medium 极限环**；这里是 **coarse 钳制、medium 干净**。
 **两个方向都出现过 ⇒ "细网格更可靠"不是一条可以默认的假设**，每个工况都要自己量。
@@ -65,7 +65,8 @@ RECIPE = dict(upwind_c=1.5, m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
               n_picard_seed=5)
 
 #: —— 判据（非实测值；实测基线见 docstring 的表）——
-OVERLIFT_MAX = 0.80      # cn 相对偏置上界：实测 +0.526 / +0.363
+OVERLIFT_MAX = 0.80      # cn 相对偏置上界：实测 +0.5466 / +0.3804（2026-10-10 committed CSV；
+                         # 此前注释写 +0.526 / +0.363 —— 两代证据之前的读数，已失配，勘误）
 SHOCK_AFT_MIN = 0.05     # 激波后移下界：实测 +0.1241 / +0.1194，远超分辨散布
 CN_EXP = {"Case7_M0.725_a2.55": 0.6576, "Case9_M0.73_a3.19": 0.8077}
 
@@ -223,7 +224,7 @@ class TestWhatIsOnlyRecorded:
             "粗网格误差可能在抵消模型误差，请记录")
 
     def test_the_coarse_case9_leg_is_clamping_and_is_not_quoted(self, runs):
-        r"""★★★ Case 9 的 **coarse** 腿是 `clamping`：**13 limited / 2857 floored**，
+        r"""★★★ Case 9 的 **coarse** 腿是 `clamping`：**18 limited / 2859 floored**，
         **M_max 撞上 `m_cap = 3.0`**。按模式表，`clamping` 指向 **physics/geometry** ——
         coarse 网格分辨不了 α=3.19° 的流动，它的每一个数都不作数。
 
@@ -238,7 +239,7 @@ class TestWhatIsOnlyRecorded:
             "失败模式变了，修法也就不同（见 CLAUDE.md 的模式表）")
         assert c["n_floored"] > 500 and c["mach_max"] >= 2.99, (
             f"钳制规模变了：{c['n_limited']}/{c['n_floored']}，M_max {c['mach_max']:.4f}"
-            "（实测 13/2857，M_max 撞 m_cap=3.0）")
+            "（实测 18/2859，M_max 撞 m_cap=3.0）")
         assert m["converged"] and m["n_limited"] == 0 and m["n_floored"] == 0, (
             "Case 9 medium 不再干净 —— 那个反转（coarse 坏 / medium 好）没了")
 

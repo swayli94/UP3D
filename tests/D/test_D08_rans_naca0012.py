@@ -28,7 +28,8 @@ docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；两个 med
 ## ★★★ Cp 图说了 cl 那个数说反的一件事 —— 两个都要报
 
 **Cp 分布几乎重合**：medium 对 SST 的 Cp RMS **0.0414 / 0.0412**，而参考自身的
-Cp 带宽是 **0.0306 / 0.0289** ⇒ 只有 **1.3×** 带宽。而 cl 却差 **+10.3 %**。
+Cp 带宽是 **0.0417 / 0.0452** ⇒ RMS 只有带宽的 **0.99× / 0.91×**（基本贴在带上）。
+而 cl 却差 **+10.3 %**。
 
 两者不矛盾，而且这正是**为什么 Cp 才是主要比较量**：
 **一个小的、分布式的 Cp 偏置积分出可见的 cl 差**。cl ≈ 0.25 上 +10 % 是
@@ -40,7 +41,7 @@ Cp 带宽是 **0.0306 / 0.0289** ⇒ 只有 **1.3×** 带宽。而 cl 却差 **+
 参考是渐变。这与 D13/GV3.1 记录的"cf +44 % 只出现在转捩后第一个站位"是
 同一件事。
 
-⇒ **两个读数都报**：Cp 上"接近但未入带（1.3× 带宽）"，cl 上"高出带 +10.3 %
+⇒ **两个读数都报**：Cp 上"接近但未入带（≈1.0× 带宽）"，cl 上"高出带 +10.3 %
 且加密远离"。只报后者会把这道门说得比实际更糟；只报前者会漏掉那个积分效应。
 
 ## ★★ 带的一条边自己没有收敛 —— 说出来，不掩盖
@@ -168,7 +169,7 @@ def _one(level, m, a, re_c, xtr):
                                 np.asarray(res.phi), alpha_deg=a, u_inf=1.0,
                                 s_ref=dz, m_inf=m)
     #: ★★ Cp 分布是主图，而且这里的参考是**两个湍流模型** ⇒ Cp 上也是一条
-    #:   **带**。带宽就是这道门在 Cp 上的分辨底噪（实测上表面最大 0.031）。
+    #:   **带**。带宽就是这道门在 Cp 上的分辨底噪（实测上表面最大 0.045）。
     cur = section_cp_curve(mc, np.asarray(res.phi),
                            z=float(np.mean(mc.nodes[:, 2])),
                            smooth_passes=1, m_inf=m)
@@ -215,7 +216,7 @@ class TestWhatIsGateable:
     加上参考侧那条带本身是良态的。"""
 
     def test_the_cp_band_is_the_resolution_floor_in_cp(self, runs):
-        """★★ 参考在 **Cp 上**也是一条带 —— 实测上表面最大宽度 0.031。
+        """★★ 参考在 **Cp 上**也是一条带 —— 实测上表面最大宽度 0.045。
         我们对 SST 与对 SA 的 Cp RMS 之差不可能小于它，否则"我们更接近哪个
         模型"就是在读噪声。"""
         for nm, *_ in CASES:
@@ -299,7 +300,7 @@ class TestWhatIsGateable:
     def test_cp_agreement_is_much_closer_than_cl_suggests(self, runs, band):
         """★★★ 记录 Cp 与 cl 两个读数**不一致**这件事本身。
 
-        实测 medium：Cp RMS 对 SST 是 0.0414 / 0.0412（带宽的 1.3 倍），
+        实测 medium：Cp RMS 对 SST 是 0.0414 / 0.0412（带宽的 0.99 倍），
         而 cl 偏离带 +10.3 % / +6.1 %。⇒ 分歧是一个**铺开的小偏置**，
         不是局部大偏差 —— 这正是"Cp 分布才最能验证计算"的具体体现。
         若哪天 Cp RMS 也涨到带宽的数倍，那说明出现了**局部**结构差，
@@ -444,12 +445,12 @@ def test_export_evidence(runs, band, gate_evidence_dir):
         "Every condition carries SST and SA, so the\n"
         "shaded region is the reference and its width\n"
         "is this gate's resolution floor in Cp\n"
-        "(max 0.031 on the upper surface).  Comparing\n"
+        "(max 0.045 on the upper surface).  Comparing\n"
         "to one model would mean picking a turbulence\n"
         "model as truth by fiat.\n\n"
         "*** BOTH READINGS, because they disagree:\n"
         "In Cp the curves nearly coincide -- RMS 0.041\n"
-        "against a band width of 0.031, i.e. 1.3x.\n"
+        "against a band width of 0.045, i.e. 1.0x.\n"
         "In cl no leg is inside the band and BOTH move\n"
         "AWAY under refinement --\n"
         "trip 0.05 goes +7.2 % to +10.3 %, trip 0.30\n"
