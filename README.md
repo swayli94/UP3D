@@ -71,8 +71,12 @@ PYFP3D_TRANSONIC_GATES=1 pytest tests/                          # full gated set
 - ★ **Quote a gated test count with its thread count.** One leg is deliberately
   a non-strict xfail because its outcome flips between 8 and 16 threads.
 
-Baselines (2026-08-16): ungated `479 passed + 12 skipped + 2 xfailed` @8 threads;
-gated `488 passed + 1 skipped + 3 xfailed + 1 xpassed` @16 threads.
+Baselines (2026-10-10, measured): ungated `803 passed + 32 skipped + 2 xfailed, 0 failed`
+@16 threads (runtime BLAS pinning active — actual BLAS = 1);
+gated `812 passed + 21 skipped + 3 xfailed + 1 xpassed, 0 failed` @8 threads (1:14:28).
+The library pins BLAS to one thread at runtime (H30: answers must not depend on thread
+count); `n_threads` provenance columns in gate evidence read the library, not the env.
+Previous (2026-08-16): ungated `479 + 12 + 2` @8t; gated `488 + 1 + 3 + 1 XPASS` @16t.
 
 `PYFP3D_NOJIT=1` swaps `@njit` for identity so print/pdb work.
 

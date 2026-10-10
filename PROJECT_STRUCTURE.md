@@ -1691,10 +1691,10 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **674 passed / 33 skipped / 2 xfailed, 0 failed** (2026-08-28, measured in
+Baselines: always-on **803 passed / 32 skipped / 2 xfailed, 0 failed** (2026-10-10, measured @16 threads, runtime BLAS pinning active; gated 812/21/3/1 @8t same day; previous 674/33/2 on 2026-08-28
 full @1055.94 s @8 threads at load 12.8, phase-six 第 10–28 轮).
 ★★★ D03 的 M0.80 跨声速激波门此前**在任何周期上都不跑**（重编号把图开关加在了物理判据上，
-需两个标志同开）—— 已拆开。★★ **14 道**写证据的 C/D 门现在都对已提交 CSV 做新鲜复算比对。
+需两个标志同开）—— 已拆开。★★ **19 道**写证据的 C/D 门现在都对已提交 CSV 做新鲜复算比对（2026-10-10 实数：C 类 8 + D 类 11；证据 CSV 带 `blas_threads` 出处列）。
 Previous: **666 passed / 35 skipped / 2 xfailed, 0 failed** (2026-08-28, measured in
 full @963.26 s @8 threads at load 16.9, phase-six 第 10–27 轮).
 ★★ +7 = 每道已转换的门各一条「新鲜计算 vs 已提交证据」锁（`tests/_gate_evidence.py`）。

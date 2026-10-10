@@ -587,7 +587,16 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **674 passed + 33 skipped +
+3. Full suite: `pytest tests/` — current baseline **803 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-10-10, **measured in full @1591–1633 s @16 threads,
+   three consecutive close-outs**, phase-six rounds 33–36; runtime BLAS pinning
+   active, so the answer-bearing thread count is 1 and numba is not a variable).
+   Gated full set re-measured same day: **812 passed + 21 skipped + 3 xfailed +
+   1 xpassed, 0 failed @1:14:28 @8 threads** — and the XPASS is the point:
+   `test_g41_transonic_medium_gate`, whose non-strict xfail records "converges
+   at 16t, not at 8t", now **converges at 8 numba threads with BLAS pinned**,
+   i.e. the flip was BLAS all along (the mark's retirement is registered).
+   Previous: **674 passed + 33 skipped +
    2 xfailed, 0 failed** (2026-08-28, **measured in full @1055.94 s @8 threads at
    load 12.8**, phase-six rounds 10–28).
    ★★★ **D03's M0.80 transonic shock gate ran on NO cadence** — the 2026-08-24
