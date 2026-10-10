@@ -2,7 +2,11 @@
 
 3D unstructured-mesh **full-potential** transonic flow solver (Python + Numba):
 one scalar φ per node, Galerkin P1 tets, artificial-density upwinding in supersonic
-zones, wake cut + Kutta condition for lift. Target: wings at M∞ 0.3–0.87,
+zones, wake cut + Kutta condition for lift. Target: wings at M∞ 0.3–0.87
+(★ 2026-10-10 使用者裁决(H11):α = 0 的**实测**可信上界只有 **M 0.78–0.80** —
+— D14 实测 M0.78 cl/带 = 0.012、M0.80 = 1.33 且线程不稳,design.md §2/§12 登记的
+Steinhoff–Jameson 低升力非唯一带 0.82–0.85 是**非唯一区,不是能力**;
+包线数字本身按裁决保留,低升力端的有效包线以该带为界),
 workstation-scale (minutes for 1–3 M nodes).
 
 ## Document map (read the relevant one before coding)

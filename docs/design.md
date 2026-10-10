@@ -12,6 +12,9 @@ acceptance test; do not advance phases until the gate passes.
 **Target problem.** Steady transonic external flow over wings and wing-body
 configurations, freestream Mach 0.3–0.87, attached or mildly shocked flow
 (local normal-shock Mach ≲ 1.3). Isentropic, irrotational, inviscid.
+★ 2026-10-10 使用者裁决(H11 缩包线):上界 0.87 是**声明**;α = 0 / 低升力的
+**实测**可信上界为 **M 0.78–0.80**(D14:`tests/D/test_D14_alpha0_transonic_nonuniqueness.py`),
+§2/§12 登记的 Steinhoff–Jameson 带(0.82–0.85,低升力)为非唯一区,不计入能力包线。
 
 **What FP buys over Euler.** One scalar unknown φ per node instead of five
 conservative variables; elliptic-dominated operator amenable to strong implicit
