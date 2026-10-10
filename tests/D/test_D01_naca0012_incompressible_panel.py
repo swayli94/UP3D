@@ -96,10 +96,14 @@ def test_g23_cl_vs_panel_reference(medium_case, coarse_case,
                      fmt(100 * (cl / cl_ref - 1)),
                      case["result"]["n_kutta_updates"]))
 
-    gate_dir = gate_evidence_dir / "G2.3"
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    with open(gate_dir / "summary.csv", "w", newline="") as f:
-        csv.writer(f).writerows(rows)
+    #: ★ 写盘受图开关守卫(2026-10-10 补上):此前**每次默认跑都改写已跟踪证据**
+    #: (工作树变脏,且有被 `git add -A` 当证据提交的风险)——正是本文件出图腿的
+    #: skip 理由写的那条约定「平时不写,避免每次 pytest 都脏工作树(2026-08-24)」。
+    if gate_figures_enabled():
+        gate_dir = gate_evidence_dir / "G2.3"
+        gate_dir.mkdir(parents=True, exist_ok=True)
+        with open(gate_dir / "summary.csv", "w", newline="") as f:
+            csv.writer(f).writerows(rows)
 
     med = medium_case["result"]
     assert med["kutta_converged"]

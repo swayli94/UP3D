@@ -338,10 +338,14 @@ def test_g43_robustness_sweep(gate_evidence_dir):
                          f"{rep['upper']['x_shock']:.4f}",
                          f"{forces['cl']:.5f}", r["n_limited"]))
 
-    gate_dir = gate_evidence_dir / "G4.3"
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    with open(gate_dir / "summary.csv", "w", newline="") as f:
-        csv.writer(f).writerows(rows)
+    #: ★ 写盘受图开关守卫(2026-10-10 补上):G4.3 的 summary.csv 虽未跟踪,
+    #: 但「写证据 = opt-in」是本仓库的统一约定(避免门控跑在工作树里留下
+    #: 没人审过的新证据文件)。
+    if gate_figures_enabled():
+        gate_dir = gate_evidence_dir / "G4.3"
+        gate_dir.mkdir(parents=True, exist_ok=True)
+        with open(gate_dir / "summary.csv", "w", newline="") as f:
+            csv.writer(f).writerows(rows)
     # The committed V4.3 dashboard is produced by the demo (see docstring).
 
     for (alpha, m), (r, rep, _f) in results.items():

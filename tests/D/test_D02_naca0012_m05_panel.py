@@ -100,10 +100,13 @@ def test_g32_cl_vs_corrected_panel(medium_case, coarse_case,
                      fmt(100 * (cl / cl_ref - 1)), r["n_picard"],
                      r["n_solves_total"], fmt(r["mach2_max"])))
 
-    gate_dir = gate_evidence_dir / "G3.2"
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    with open(gate_dir / "summary.csv", "w", newline="") as f:
-        csv.writer(f).writerows(rows)
+    #: ★ 写盘受图开关守卫(2026-10-10 补上):同 D01 —— 此前每次默认跑都改写
+    #: 已跟踪证据(含 n_picard 这种随环境漂移的列),违反本文件出图腿的约定。
+    if gate_figures_enabled():
+        gate_dir = gate_evidence_dir / "G3.2"
+        gate_dir.mkdir(parents=True, exist_ok=True)
+        with open(gate_dir / "summary.csv", "w", newline="") as f:
+            csv.writer(f).writerows(rows)
 
     med = medium_case["result"]
     assert med["converged"] and med["kutta_converged"]
@@ -169,50 +172,54 @@ def test_v32_cp_and_mach_curves(medium_case, reference_mesh_dir,
                           z=0.5 * medium_case["dz"], m_inf=M_INF)
     x_ref, cp_ref, up_ref = _reference_cp(reference_mesh_dir)
 
-    gate_dir = gate_evidence_dir / "G3.2"
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    with open(gate_dir / "v3_2_cp_curves.csv", "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["x_c", "cp", "surface"])
-        for xx, cc in zip(curve["x_upper"], curve["cp_upper"]):
-            w.writerow([f"{xx:.6f}", f"{cc:.6f}", "upper"])
-        for xx, cc in zip(curve["x_lower"], curve["cp_lower"]):
-            w.writerow([f"{xx:.6f}", f"{cc:.6f}", "lower"])
+    #: ★ 整段写盘(CSV + PNG)受图开关守卫(2026-10-10 补上):此前每次默认跑
+    #: 都改写已跟踪的 `v3_2_cp_curves.csv` 与 `v3_2_cp_mach_vs_reference.png`。
+    #: 下面的物理断言(吸力峰 / 亚声速)不受守卫,照常每次跑。
+    if gate_figures_enabled():
+        gate_dir = gate_evidence_dir / "G3.2"
+        gate_dir.mkdir(parents=True, exist_ok=True)
+        with open(gate_dir / "v3_2_cp_curves.csv", "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["x_c", "cp", "surface"])
+            for xx, cc in zip(curve["x_upper"], curve["cp_upper"]):
+                w.writerow([f"{xx:.6f}", f"{cc:.6f}", "upper"])
+            for xx, cc in zip(curve["x_lower"], curve["cp_lower"]):
+                w.writerow([f"{xx:.6f}", f"{cc:.6f}", "lower"])
 
-    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
-    ax.plot(x_ref[up_ref], cp_ref[up_ref], "-", color="0.4", lw=1.2,
-            label="panel + Karman-Tsien, upper")
-    ax.plot(x_ref[~up_ref], cp_ref[~up_ref], "--", color="0.4", lw=1.2,
-            label="panel + Karman-Tsien, lower")
-    ax.plot(curve["x_upper"], curve["cp_upper"], ".", ms=3, color="tab:red",
-            label="pyFP3D upper")
-    ax.plot(curve["x_lower"], curve["cp_lower"], ".", ms=3, color="tab:blue",
-            label="pyFP3D lower")
-    ax.invert_yaxis()
-    ax.set_xlabel("x/c"); ax.set_ylabel("Cp"); ax.legend()
-    ax.set_title(f"V3.2 NACA0012 M={M_INF} alpha={ALPHA_DEG} Cp (medium)")
+        fig, (ax, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
+        ax.plot(x_ref[up_ref], cp_ref[up_ref], "-", color="0.4", lw=1.2,
+                label="panel + Karman-Tsien, upper")
+        ax.plot(x_ref[~up_ref], cp_ref[~up_ref], "--", color="0.4", lw=1.2,
+                label="panel + Karman-Tsien, lower")
+        ax.plot(curve["x_upper"], curve["cp_upper"], ".", ms=3, color="tab:red",
+                label="pyFP3D upper")
+        ax.plot(curve["x_lower"], curve["cp_lower"], ".", ms=3, color="tab:blue",
+                label="pyFP3D lower")
+        ax.invert_yaxis()
+        ax.set_xlabel("x/c"); ax.set_ylabel("Cp"); ax.legend()
+        ax.set_title(f"V3.2 NACA0012 M={M_INF} alpha={ALPHA_DEG} Cp (medium)")
 
-    # Surface local Mach from the same Cp points (via q^2 -> M^2 needs the
-    # tangential q2; reuse the Cp -> M mapping through isentropic relations
-    # is indirect, so recompute from the curve q2 = inverse not needed:
-    # plot local Mach from element q2 on the wall Cp positions instead).
-    for side, color in (("upper", "tab:red"), ("lower", "tab:blue")):
-        x = curve[f"x_{side}"]
-        cp = curve[f"cp_{side}"]
-        # invert the exact isentropic Cp(q2) for q2, then M(q2)
-        gam = 1.4
-        rho_pow = 1.0 + 0.5 * gam * M_INF**2 * cp  # rho^gamma
-        q2 = 1.0 - (rho_pow ** ((gam - 1.0) / gam) - 1.0) / (
-            0.5 * (gam - 1.0) * M_INF**2
-        )
-        m_loc = np.sqrt([mach_number_squared(float(q), M_INF) for q in q2])
-        ax2.plot(x, m_loc, ".", ms=3, color=color, label=f"pyFP3D {side}")
-    ax2.axhline(1.0, color="k", lw=0.8, ls=":")
-    ax2.set_xlabel("x/c"); ax2.set_ylabel("local Mach"); ax2.legend()
-    ax2.set_title("surface local Mach (subcritical: M < 1 everywhere)")
-    fig.savefig(gate_dir / "v3_2_cp_mach_vs_reference.png", dpi=150,
-                bbox_inches="tight")
-    plt.close(fig)
+        # Surface local Mach from the same Cp points (via q^2 -> M^2 needs the
+        # tangential q2; reuse the Cp -> M mapping through isentropic relations
+        # is indirect, so recompute from the curve q2 = inverse not needed:
+        # plot local Mach from element q2 on the wall Cp positions instead).
+        for side, color in (("upper", "tab:red"), ("lower", "tab:blue")):
+            x = curve[f"x_{side}"]
+            cp = curve[f"cp_{side}"]
+            # invert the exact isentropic Cp(q2) for q2, then M(q2)
+            gam = 1.4
+            rho_pow = 1.0 + 0.5 * gam * M_INF**2 * cp  # rho^gamma
+            q2 = 1.0 - (rho_pow ** ((gam - 1.0) / gam) - 1.0) / (
+                0.5 * (gam - 1.0) * M_INF**2
+            )
+            m_loc = np.sqrt([mach_number_squared(float(q), M_INF) for q in q2])
+            ax2.plot(x, m_loc, ".", ms=3, color=color, label=f"pyFP3D {side}")
+        ax2.axhline(1.0, color="k", lw=0.8, ls=":")
+        ax2.set_xlabel("x/c"); ax2.set_ylabel("local Mach"); ax2.legend()
+        ax2.set_title("surface local Mach (subcritical: M < 1 everywhere)")
+        fig.savefig(gate_dir / "v3_2_cp_mach_vs_reference.png", dpi=150,
+                    bbox_inches="tight")
+        plt.close(fig)
 
     # Suction peak amplified vs the incompressible panel level (-0.61 at
     # alpha=2 scales to ~ -0.70 PG / -0.74 KT); smooth TE recovery.

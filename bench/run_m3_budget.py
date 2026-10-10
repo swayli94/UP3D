@@ -258,7 +258,13 @@ def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0,
 
             # ---- B3: the R2 validity gate, read BEFORE any RMS is quoted -----
             smin = r.get("sigma_min")
-            sconv = r.get("sigma_converged", r.get("entropy_converged"))
+            #: ★ 2026-10-10 修复(独立审计发现):这里原来读
+            #: `r.get("sigma_converged", r.get("entropy_converged"))` —— **两个键都
+            #: 不存在**,真键是 `sigma_transport_converged`(newton.py 返回字典)。
+            #: 旧写法让 sconv 恒为 None ⇒ 下面 R2 的 transport 支路
+            #: `(sconv is None or bool(sconv))` 按构造恒真、永不触发 ——
+            #: 与 GS4.0 的 `m_last_converged` 事故同族(读了一个没人写的键)。
+            sconv = r.get("sigma_transport_converged")
             nsh, m1 = r.get("n_shock_cells"), r.get("m1_max")
             nflr = r.get("n_floored")
             print(f"  B3 entropy health: sigma_min={smin} n_shock={nsh} "

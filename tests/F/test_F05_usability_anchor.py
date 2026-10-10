@@ -105,7 +105,11 @@ def test_axes_are_mandatory():
 
 def test_calibration_is_documented():
     """★ The threshold is a CALIBRATION; its derivation must stay in the docstring."""
-    import usability
+    #: ★ 2026-10-10 修复(独立审计发现):这里原来是裸 `import usability` ——
+    #: 它只在 `bench/` 已被别的模块( bench/failure_modes.py 的模块级
+    #: `sys.path.insert`,经 D11/D12 收集期 import)加进 sys.path 时才能解析,
+    #: **本文件单跑即 ModuleNotFoundError**。改成与同文件第 14 行一致的包路径。
+    from bench import usability
     d = usability.__doc__
     assert "CALIBRATION" in d and "1.47" in d and "8.48" in d
     assert 1.47 < ANCHOR_RATIO_MAX < 8.48, "the threshold must sit in the measured gap"
