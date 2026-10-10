@@ -1,5 +1,5 @@
 """Track V V5 Stage 3 -- the augmented (tight) Newton driver (binding:
-docs/roadmap/track_v.md GV5.1 + the 2026-07-22 pre-registered FD note;
+phases/p1/docs/roadmap/track_v.md GV5.1 + the 2026-07-22 pre-registered FD note;
 design: bench/studies/v5_tight_coupling/PRE_REGISTRATION.md).
 
 The pre-registered full state, residual and Jacobian (PRE_REGISTRATION
@@ -536,7 +536,7 @@ def _block_max(pack: TightPack, F: np.ndarray) -> np.ndarray:
 # PRE_REGISTRATION.md): solver-internal only -- the assembled F/J are
 # bit-identical to GV5.1 (the FD verdicts stand); these helpers only
 # transform the assembled operators. Design inputs: the committed IBL-floor
-# diagnosis (bench/studies/v5_ibl_floor/results/findings.md).
+# diagnosis (phases/p2/bench/studies/v5_ibl_floor/results/findings.md).
 # ---------------------------------------------------------------------------
 
 MU0 = 1.0e-6       # Levenberg-style damping, initial value
@@ -659,7 +659,7 @@ def newton_tight(
     (scaling=None, lm_damping=False, floor_stop=False) keep the legacy
     path bit-for-bit (the committed GV5.1 runner reproduces).
 
-    GV5.4 (bench/studies/v5_4_cost/PRE_REGISTRATION.md): step_solve is
+    GV5.4 (phases/p2/bench/studies/v5_4_cost/PRE_REGISTRATION.md): step_solve is
     an optional linear-solve callback (A, b) -> y with A y = b replacing
     the splu step on BOTH paths (the block-preconditioned GMRES
     injection; on the GV5.1b path it receives the SCALED + damped

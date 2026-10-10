@@ -40,7 +40,7 @@ demo `cases/demo/p11_curved_walls/`（14 PASS+2 XFAIL）、tests
 B21 态证据全面刷新 + 3-D LS 数字首次上测试锁。** B15 demo **20/20**（B20 时代
 17/20；缓存删净、零 `cached` 行）、B14 demo **7/7**（曾 5/7；medium schur
 1.47×、precond →1.8%）；★ coarse ramp 也被 B21 移动（γ 0.0848→**0.084931**，
-如实披露）。★★ **N3 缺口关闭**：`tests/test_b22_ls_3d_anchors.py`（+2 gated）
+如实披露）。★★ **N3 缺口关闭**：`phases/p1/tests/test_b22_ls_3d_anchors.py`（+2 gated）
 重解 committed coarse/medium ramp 并绝对断言 m_final/γ/M_max/钳位——两天内两次
 re-baseline 套件全绿的"无报警"状态到此为止。★ re-baseline 勘误清单入流程
 （CLAUDE.md 步骤 5 + 纪律 #11）。★ 下一相位分析
@@ -120,7 +120,7 @@ M0.6625**。GB20.7 扫 freeze_tol 1e-3→1e-6 只把天花板挪到 0.675，遂�
 一个都不会动。★ **GB19.4 ✓ 阴性如实记录——没有任何收敛收益**：γ 0.07212068 到 8 位、
 M_max 1.134235 到 6 位完全相同，步数不变，**+3.6% 墙钟**；那个平台是 **B15 的选择 churn
 极限环**，精确导数治不了不连续选择 ⇒ **本阶段不得被记为收敛改善**，它买到的是**正确性**
-（现在是 Newton 而非 quasi-Newton）。**GB19.5 ✓** 新增 `tests/test_b19_jacobian_3d.py`（+3）
+（现在是 Newton 而非 quasi-Newton）。**GB19.5 ✓** 新增 `phases/p1/tests/test_b19_jacobian_3d.py`（+3）
 堵住盲区；★★ **勘误：盲区此前被说错**（C1 原文与我自己的第一版测试都错）——quasi-2D 有
 **129** 个 mixed-side plain 元素而非零，它为零的是**能读到 aux** 的那一类（129 个里 0 个
 接触 cut 节点），这才是真正的不变量。
@@ -269,7 +269,7 @@ conforming（全新能力，Newton）在中网格 M0.5 升力一致到 cl_p 0.4%
   ṁ_max ×12.4（GV3.3 尾部同类），medium 加密消除斑块但留有界 δ* 极限环（2–12 %/k）不达 tol 1e-3；
   ΔCL 双估计量下行（coarse −5.2 %/−4.8 %，medium −2.4 %/−2.1 % 输入受限）；横流首次活体 3-D 演习
   max|B|/|A| ≤ 0.072；翼尖掩蔽有效；新增 `viscous/coupling.py::build_wing_case` +
-  `tests/test_v5_wing_case.py` (5)；δ*(z) CSV 喂 GV5.3 带预注册；medium 壁时被外部负载污染，引用须带旗标）
+  `tests/A/test_A43_wing_ibl_case.py` (5)；δ*(z) CSV 喂 GV5.3 带预注册；medium 壁时被外部负载污染，引用须带旗标）
   （gate 按 B32/A4 现状重定规格，同日三分重排：V1 独立 IBL3 核心（GV1.1 解析/自相似对标）· V2 transpiration 通道
   （GV2.1 精确性 + ṁ=0 逐位 + FD）· V3 松耦合（GV3.1 NACA0012 对 committed XFOIL 引 A4 输入带 · GV3.2 松耦合 ≤10 次 →
   V4 跳过判据 · GV3.3 机身旋成体冒烟，唯一机身-alone 项）；V4 ⊘ 跳过 2026-07-22（原可选 quasi-simultaneous，判据满足）；V5 紧耦合 ✓ CLOSED 2026-07-25（入口 GV5.0 M6 亚声速
@@ -420,7 +420,7 @@ max |ΔCp| 0.00250 = A4 输入带的 0.022×/0.051× = 不显著，L_rel {0.5,1.
 扫描稳健；XFOIL 尾迹方向检查 Option A——方向一致，速率 0.454c vs 钉死 1.0c
 照录——VERDICT `bench/studies/v6_2_measured_effect/VERDICT.md`）：全套件
 实测 652 @1455.80 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程
-账目不可直接比）；+1 vs 下档 651 = `tests/test_v6_wake_sheet.py`（GV6.2
+账目不可直接比）；+1 vs 下档 651 = `tests/A/test_A51_wake_sheet_source.py`（GV6.2
 `wake_l_rel_chords` plumbing 测试））。
 上一档 651+25+2（2026-07-25 Track V **V6 GV6.1
 执行**（conforming 尾迹面 δ* 源：(a)(i)/(a)(ii) δ*_wake = 0 逐位一致
@@ -428,14 +428,14 @@ PASS——(a)(ii) 双腿 fresh-compile，numba cache-load 不实性纪律——(
 MMS PASS 经验钉住每面 ½ṁ addendum，(c) W2 每 outer PASS，(d) Δ-cl +0.00015 /
 TE 区 max |ΔCp| 0.00250 照录——VERDICT
 `bench/studies/v6_1_wake_sheet/VERDICT.md`）：全套件实测 651
-@1606.31 s **@8 线程**；+7 vs 下档 644 = `tests/test_v6_wake_sheet.py`（7 新））。
+@1606.31 s **@8 线程**；+7 vs 下档 644 = `tests/A/test_A51_wake_sheet_source.py`（7 新））。
 上一档 644+25+2（2026-07-25 Track V **V5 GV5.4
 执行**（M6 medium 增广步成本：band (a) RECORDED——增广步 22.93 s vs 无黏步
 3.05 s = 7.53×，高于 ≤~2× 带；band (b) honest FAIL——块预条件在 medium 不工作
 （block-Jacobi 发散、exact-BL Schur 1/4 步收敛）——VERDICT
 `bench/studies/v5_4_cost/VERDICT.md`）：全套件实测 644
 @1230.61 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
-比）；+2 vs 下档 642 = `tests/test_v5_tight_scaled.py`（2 新：`step_solve` 回调
+比）；+2 vs 下档 642 = `tests/A/test_A47_tight_scaled_newton.py`（2 新：`step_solve` 回调
 接线 + 默认 None splu 逐位一致守卫））。
 上一档 642+25+2（2026-07-25 Track V **V5 GV5.3
 执行**（M6 机翼方向+量级检查对 committed Cp：band (b) honest FAIL——黏性 Cp **没有**
@@ -449,50 +449,50 @@ input-limited，Δcl_KJ −2.20 % 向下但低于 A4 地板——VERDICT
 所有计算激波在实验带下游 0.06–0.10c，4 腿仅 1 收敛——VERDICT
 `bench/studies/v5_2_rae2822/VERDICT.md`）：全套件实测 642
 @1245.33 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
-比）；+6 vs 下档 636 = `tests/test_meshgen_rae2822.py`（5）+
-`tests/test_p2_wake_cut.py::test_kutta_probes_cambered_te`（1））。
+比）；+6 vs 下档 636 = `tests/A/test_A19_meshgen_rae2822.py`（5）+
+`tests/A/test_A24_wake_cut.py::test_kutta_probes_cambered_te`（1））。
 上一档 636+25+2（2026-07-24 Track V **V5 GV5.5
 执行**（TE 带 (B,δ) 公式层破地板独立项：V1 TE 出流行替换**不破地板**——binding
 m2 = 5554×/245998× 地板，"变差"档；破坏峰值在 LE 吸力区而非 TE；flag 保持默认
 OFF——VERDICT `bench/studies/v5_5_te_floor/VERDICT.md`）：全套件实测 636
 @1402.11 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
-比）；+9 vs 下档 627 = `tests/test_v5_te_outflow.py`（9））。
+比）；+9 vs 下档 627 = `tests/A/test_A50_te_outflow_rows.py`（9））。
 上一档 627+25+2（2026-07-24 Track V **V5 GV5.1d
 执行**（近带种子读地板紧邻处二次盆：同样无盆——近带种子立即停滞，coarse 爬至
 24× 地板未进带，medium 首步推离带；binding medium median p = 1.17 honest FAIL——
 VERDICT `bench/studies/v5_1d_near_band_window/VERDICT.md`）：全套件实测 627
 @1340.77 s **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接
 比；壁时明显低于同线程数 GV5.1c 账目的 3903 s——机器/缓存条件不同，标记引用）；
-+7 vs 下档 620 = `tests/test_v5_near_band_seed.py`（7））。
++7 vs 下档 620 = `tests/A/test_A49_near_band_seed_maps.py`（7））。
 上一档 620+25+2（2026-07-24 Track V **V5 GV5.1c
 执行**（above-band 种子读地板前 slope-2 窗：地板之上无二次收缩——λ 封顶折半 +
 中程停滞，binding medium median p = 0.56 honest FAIL——VERDICT
 `bench/studies/v5_1c_above_band_window/VERDICT.md`）：全套件实测 620 @3903.16 s
 **@8 线程**（本 session 临时 8 核约束，用户定；与 16 线程账目不可直接比，
-机器空载）；+9 vs 下档 611 = `tests/test_v5_above_band_seed.py`（9））。
+机器空载）；+9 vs 下档 611 = `tests/A/test_A48_above_band_seed_maps.py`（9））。
 上一档 611+25+2（2026-07-24 Track V **V5 GV5.1b
 执行**（scaled+damped 增广 Newton：机构精确交付，band (b) 窗口问题重构——VERDICT
 `bench/studies/v5_1b_scaled_newton/VERDICT.md`）：全套件实测 611 @6556.77 s
 @16 线程（wall 受合租负载 ~70–80 污染，标记引用；GV5.1 时空载为 1537 s）；
-+8 vs 下档 603 = `tests/test_v5_tight_scaled.py`（8））。
++8 vs 下档 603 = `tests/A/test_A47_tight_scaled_newton.py`（8））。
 上一档 603+25+2（2026-07-23 Track V **V5 GV5.1 执行**（增广紧耦合 (φ, Γ, U)
 Newton：band (a) FD 精确性两级 PASS，band (b) 二次尾段被 IBL 地板挡住 HONEST
 FAIL——VERDICT `bench/studies/v5_tight_coupling/VERDICT.md`）：全套件实测
-603 @1537.09 s @16 线程；+20 vs 下档 583 = `tests/test_v5_tight_jacobian.py`（8）+
-`tests/test_v5_tight_edge.py`（7）+ `tests/test_v5_tight_system.py`（5））。
+603 @1537.09 s @16 线程；+20 vs 下档 583 = `tests/A/test_A44_tight_jacobian.py`（8）+
+`tests/A/test_A45_tight_edge.py`（7）+ `tests/A/test_A46_tight_system.py`（5））。
 上一档 583+25+2（2026-07-23 Track V **V5 GV5.0 执行**（M6 亚声速松耦合桥，
 RECORDED 入口检查）：全套件实测 583 @1218.05 s @16 线程；+5 vs 下档 578 =
-`tests/test_v5_wing_case.py`（5））。
+`tests/A/test_A43_wing_ibl_case.py`（5））。
 上一档 578+25+2（2026-07-22 Track V **V3 松耦合交付 + GV3.1/3.2/3.3 执行**：
 全套件实测 578 @1637.39 s @16 线程；+7 vs 下档 571 =
-`tests/test_v3_coupling.py`（7））。
+`tests/A/test_A42_loose_coupling.py`（7））。
 上一档 571+25+2（2026-07-22 Track V **V2 transpiration 通道 + GV2.1**：实测
-571 @1321.89 s；+17 vs 554 = `tests/test_v2_transpiration.py`（9）+
-`tests/test_v2_newton_rhs_channel.py`（8）；NOJIT 路 17/17 绿）。
+571 @1321.89 s；+17 vs 554 = `tests/A/test_A40_transpiration_channel.py`（9）+
+`tests/A/test_A41_transpiration_newton_rhs.py`（8）；NOJIT 路 17/17 绿）。
 上一档 554+25+2（2026-07-22 Track V **V1 IBL3
 core 交付 + GV1.1 执行**：全套件实测 554 @1462.64 s @16 线程；+35 vs 下档 519 =
-`tests/test_v1_surface_mesh.py`（13）+ `tests/test_v1_closures.py`（17）
-+ `tests/test_v1_ibl3.py`（5）；NOJIT 路 35/35 绿）。
+`tests/A/test_A33_ibl_surface_mesh.py`（13）+ `tests/A/test_A34_ibl_closures_3d.py`（17）
++ `tests/A/test_A35_ibl3_core.py`（5）；NOJIT 路 35/35 绿）。
 上一档 519+25+2（2026-07-22 B28–B32 收尾 **+ G1.6
 Option C 重定规格**：全套件实测 516 @1223.39 s，+ 3 条 `test_laplace_sphere.py::TestG16Respec`
 断言（读 P11 已提交 sweep CSV、无交互）= 519。516 明细：B28–B32 收尾：
@@ -503,19 +503,19 @@ Option C 重定规格**：全套件实测 516 @1223.39 s，+ 3 条 `test_laplace
 `test_b1_cut_elements.py::TestInboardFragmentClip`（4）+ 同文件 foot-preference 锁（1）
 + `test_m2_wingbody.py` 水线延伸锁（1）；实测 1100.63 s @16 线程）。
 上一档 473+25+2（2026-07-19 P11 曲面壁元：+8 passed = ungated
-`tests/test_p11_curved_walls.py`；实测 1124.94 s @16 线程）。
+`tests/A/test_A29_curved_wall_layer.py`；实测 1124.94 s @16 线程）。
 上一档 465+25+2（2026-07-19 B22 3-D LS 锚锁：
-+2 skipped = gated `tests/test_b22_ls_3d_anchors.py`；实测 1127.38 s @16 线程）。
++2 skipped = gated `phases/p1/tests/test_b22_ls_3d_anchors.py`；实测 1127.38 s @16 线程）。
 上一档 465+23+2（2026-07-19 B21 freeze 捕获对齐：
-+1 skipped = `tests/test_b15_ls_newton_freeze.py` 的 gated 3-D 捕获一致性锁；
++1 skipped = `phases/p1/tests/test_b15_ls_newton_freeze.py` 的 gated 3-D 捕获一致性锁；
 实测 1105.87 s @16 线程）。
 上一档 465+22+2（2026-07-18 B19 LS-Newton Jacobian 精确化：
-+2 passed / +1 skipped = `tests/test_b19_jacobian_3d.py`；实测 1101.50 s @16 线程）。
-上一档 463+21+2（2026-07-18 A3 审查响应，+3 = `tests/test_mesh_reader_roundtrip.py`）。上一档 460+21+2（2026-07-18 B18 翼身跨声速，+4 =
-`tests/test_b18_wingbody_transonic.py`，均 ungated）。
++2 passed / +1 skipped = `phases/p1/tests/test_b19_jacobian_3d.py`；实测 1101.50 s @16 线程）。
+上一档 463+21+2（2026-07-18 A3 审查响应，+3 = `tests/A/test_A12_mesh_reader_roundtrip.py`）。上一档 460+21+2（2026-07-18 B18 翼身跨声速，+4 =
+`phases/p1/tests/test_b18_wingbody_transonic.py`，均 ungated）。
 重 gate 走 `PYFP3D_TRANSONIC_GATES=1`；M6 `.msh` gitignored，16 条 M1 测试在
 本地未生成网格时跳过（`cases/meshes/onera_m6/generate_onera_m6.py`，~30 s）。
-内核/装配改动后先跑 `tests/test_v0_freestream.py`。
+内核/装配改动后先跑 `tests/A/test_A01_freestream_preservation.py`。
 
 **基线演进**（近期；完整记录在各 track 台账）：182+8+2（P8）→ 184（P10 G10.2）→
 218（B1）→ 229（B2）→ 276+17+2（B7，719 s）→ 291（P13/G13.2）→ 294（M1b）→
@@ -523,16 +523,16 @@ Option C 重定规格**：全套件实测 516 @1223.39 s，+ 3 条 `test_laplace
 384（B12+B13，此二者曾漏记，395=375+9+11 才对账）→ 395（B15）→ 396（B15 勘误）
 → **399+18+2（M2 机身+远场重定规格 2026-07-16：+3 = 比例规则锁 + 已提交 census CSV 锁
 + 远场净空锁；实测 973.59 s @8 线程）**。★ 该次实测报的是 **406**：当时工作区里还带着
-Track A **尚未提交**的 7 个 A1 测试（`tests/test_a1_instrumentation.py`，单独实测 7 passed），
+Track A **尚未提交**的 7 个 A1 测试（`tests/F/test_F04_instrumentation.py`，单独实测 7 passed），
 406 − 7 = 399 才是 M2 这次的账；A1 落地后基线即为 406（已兑现）
-→ **421+18+2（P14，2026-07-17：+15 = `tests/test_p14_te_pressure.py`；实测
+→ **421+18+2（P14，2026-07-17：+15 = `tests/A/test_A25_te_pressure_kutta.py`；实测
 1015.17 s @8 线程；406 + 15 = 421 逐项对账，零回归）**
 → 429+19+2（B14 Schur+AMG：+8/+1）→ 442+20+2（B9 翼身跨模型：+13/+1，1084.20 s
 @16 线程）→ 450+21+2（B16 远场 aux 钉扎，2026-07-17：+8 passed / +1 skipped =
-`tests/test_b16_farfield_aux.py`；8 ungated（其中 2 条依赖翼身网格，CI 无网格时跳过）
+`phases/p1/tests/test_b16_farfield_aux.py`；8 ungated（其中 2 条依赖翼身网格，CI 无网格时跳过）
 + 1 门控 GB16.3 跳过）→ 456+21+2（B17 远场 pin_gamma，2026-07-18：+6 =
-`tests/test_b17_farfield_pin_gamma.py`，6 ungated；1097.11 s @16 线程；解决 GB16.4）
-→ **460+21+2（B18 翼身跨声速，2026-07-18：+4 = `tests/test_b18_wingbody_transonic.py`，
+`phases/p1/tests/test_b17_farfield_pin_gamma.py`，6 ungated；1097.11 s @16 线程；解决 GB16.4）
+→ **460+21+2（B18 翼身跨声速，2026-07-18：+4 = `phases/p1/tests/test_b18_wingbody_transonic.py`，
 4 ungated；翼身跨声速 ramp 在门控 demo；执行 GB16.6 债）**
 → 463+21+2（A3 审查响应，2026-07-18：+3 reader 锁）→ 465+22+2（B19，2026-07-18：
 +2/+1 = `test_b19_jacobian_3d.py`；B20 重基线 2026-07-19 复测不变）
@@ -573,7 +573,7 @@ Track A **尚未提交**的 7 个 A1 测试（`tests/test_a1_instrumentation.py`
   权重修复（B8 backlog 记录未排期）；B14 ✓（2026-07-17 建成，`precond="schur"`）——
   剩余未建 = fine 内存受限路线（AMG O(n) + 薄带 LU，无全尺寸 splu）。
 - **N3 流程缺口 ✓ 已由 B22 关闭（2026-07-19）**：3-D LS 核心数字（M6 coarse/medium
-  ramp 的 m_final/γ/M_max/钳位）现由 `tests/test_b22_ls_3d_anchors.py` 的 gated
+  ramp 的 m_final/γ/M_max/钳位）现由 `phases/p1/tests/test_b22_ls_3d_anchors.py` 的 gated
   绝对锚锁重解+断言——下一次无声 re-baseline 会使套件报警；B15/B14 demo 已按
   B21 数字刷新（20/20、7/7）。仍开放：M6 medium M_max 2.4818 只有 LS-vs-LS 共模
   验证（conforming 记录 1.995 是**跨网格族**比较，勿引作缺陷；同族核对 = 便宜

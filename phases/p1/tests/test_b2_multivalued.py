@@ -1,6 +1,6 @@
 """
 Track B / B2 gate: multivalued (CutFEM-style) FE assembly on the level-set
-cut mesh (docs/roadmap.md Track B B2; docs/design_track_b.md sections
+cut mesh (phases/p1/docs/roadmap.md Track B B2; phases/p1/docs/design_track_b.md sections
 2.1/2.5, D6).
 
 B2 delivers the extended-DOF assembly (kernels/cut_assembly.py,

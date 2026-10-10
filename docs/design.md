@@ -12,6 +12,9 @@ acceptance test; do not advance phases until the gate passes.
 **Target problem.** Steady transonic external flow over wings and wing-body
 configurations, freestream Mach 0.3–0.87, attached or mildly shocked flow
 (local normal-shock Mach ≲ 1.3). Isentropic, irrotational, inviscid.
+★ 2026-10-10 使用者裁决(H11 缩包线):上界 0.87 是**声明**;α = 0 / 低升力的
+**实测**可信上界为 **M 0.78–0.80**(D14:`tests/D/test_D14_alpha0_transonic_nonuniqueness.py`),
+§2/§12 登记的 Steinhoff–Jameson 带(0.82–0.85,低升力)为非唯一区,不计入能力包线。
 
 **What FP buys over Euler.** One scalar unknown φ per node instead of five
 conservative variables; elliptic-dominated operator amenable to strong implicit
@@ -594,7 +597,7 @@ Implementation notes (binding for the eventual implementation):
 - Freestream-preservation check: uniform flow φ = U∞·x does not satisfy the
   sphere wall condition, so a nonzero correction term on wall-bearing meshes is
   expected; but it must be confirmed that the V0 freestream gate
-  (`tests/test_v0_freestream.py`, which uses wall-free / all-far-field
+  (`tests/A/test_A01_freestream_preservation.py`, which uses wall-free / all-far-field
   configurations) never triggers this correction path.
 - Prerequisite: consistent wall-facet winding — the existing winding assert in
   `_wall_vertex_normals` is a precondition for this correction and must not be
@@ -606,7 +609,7 @@ Implementation notes (binding for the eventual implementation):
 Option A/B route, to be exercised before the sphere (gate G1.3 precedes
 G1.4). Rationale: it exhibits the **same** curved-wall variational crime,
 already quantified — max |Cp err| 0.091 (coarse) → 0.045 (medium), ~O(h)
-(`tests/test_m0_cylinder.py`); every geometric ingredient Option A needs is
+(`tests/A/test_A14_meshgen_cylinder.py`); every geometric ingredient Option A needs is
 available in closed form; the meshes are cheap (6.9k / 17.3k tets); and the
 diagnostic is a one-dimensional curve Cp(θ).
 
@@ -670,7 +673,7 @@ Theoretical expectations and ceiling (recorded to manage expectations):
 
 The G1.3 cylinder pre-study and the G1.4 sphere oracle run the same day
 falsified the expectation above (full evidence: roadmap G1.3/G1.4 entries;
-`tests/test_wall_correction_cylinder.py`; `artifacts/G1.3/`; oracle results in
+`tests/C/test_C02_cylinder_wall_correction.py`; `artifacts/G1.3/` (★ `artifacts/` was DELETED 2026-08-24 -- it was gitignored local output, never in HEAD, so by discipline 3 it was never evidence; regenerate locally by running the test); oracle results in
 `cases/demo/p1_laplace/results/`, demo absorbed there 2026-07-07). The
 mechanism, in hindsight elementary:
 
@@ -746,7 +749,7 @@ verification yardstick.
 
 The DP1 "> 5%" branch's curved-element route, opened as phase P11 (roadmap
 track_p.md §P11; scope = the sphere/Laplace leg first, per
-docs/analysis/next_phase_priorities_2026-07-19.md). Design chosen to make the
+phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md). Design chosen to make the
 smallest change that moves the *integration domain* — the thing G1.3/G1.4
 proved is actually wrong — while leaving DOFs, sparsity, SPD-ness and every
 committed solver path untouched:
@@ -863,7 +866,7 @@ dM²/du² > 0 the chain is positive (μ grows with speed, as it must); the earli
 "−" here was a transcription typo. The shipped derivative
 (`kernels/upwind.py::rho_tilde_sensitivities_sweep`, P7) uses the + sign and
 matches a central difference of the shipped flux at frozen selection to
-~4e-10 in every regime, `tests/test_p7_diff_flux.py`). **(B.4) is nonzero**: the
+~4e-10 in every regime, `tests/A/test_A03_differentiated_flux.py`). **(B.4) is nonzero**: the
 current element's residual depends on the *upstream* element's DOFs, so the
 Newton stencil is **wider than Picard** — the sparsity map and element coloring
 must be rebuilt from the element + upstream graph.
@@ -1153,10 +1156,10 @@ second — otherwise model error and code error are confounded.
 
 ---
 
-## 11. Development roadmap (moved to roadmap.md + docs/roadmap/)
+## 11. Development roadmap (moved to roadmap.md + phases/p1/docs/roadmap/)
 
-> The roadmap lives in [docs/roadmap.md](../phases/p1/docs/roadmap.md) (track index + working
-> rules) with one file per track under [docs/roadmap/](../phases/p1/docs/roadmap): Track P (solver
+> The roadmap lives in [phases/p1/docs/roadmap.md](../phases/p1/docs/roadmap.md) (track index + working
+> rules) with one file per track under [phases/p1/docs/roadmap/](../phases/p1/docs/roadmap): Track P (solver
 > P0–P13), Track M (meshing M0–M5), Track B (level-set wake B1–B15; numerics
 > spec [design_track_b.md](../phases/p1/docs/design_track_b.md)), Track V (viscous–inviscid
 > coupling V1–V4 — phase IDs distinct from the §10 validation-case IDs V0–V6).

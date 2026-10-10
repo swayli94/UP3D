@@ -1,6 +1,6 @@
 """GS3.3b: can a cheap linearised seed replace the 14.44 s Picard warm start?
 
-Pre-registered in docs/dev_phase_two/20260802-2000-gs33b-prereg.md, committed before this
+Pre-registered in phases/p2/docs/dev_phase_two/20260802-2000-gs33b-prereg.md, committed before this
 file. Criteria P1 (the ramp must converge), P2 (the RAMP's wall must beat the baseline --
 not the seed line, because a worse seed can hand its saving back as Newton steps), P3
 (invariance RECORDED rather than vetoed, since a seed is a legitimate algorithmic choice

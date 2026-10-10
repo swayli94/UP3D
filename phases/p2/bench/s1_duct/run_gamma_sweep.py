@@ -1,7 +1,7 @@
 """GS1.7: sweep the circulation on each mesh level and separate the FIELD map
 from the CLOSURE root.
 
-Protocol pre-registered in docs/dev_phase_two/20260729-0010-s1-gamma-sweep.md.
+Protocol pre-registered in phases/p2/docs/dev_phase_two/20260729-0010-s1-gamma-sweep.md.
 
 For every mesh level and every Gamma in a per-level window, the FIELD is solved
 self-consistently with the Kutta row removed (so no compatibility assumption is

@@ -374,6 +374,72 @@ def sectional_cl_from_gamma(
     return 2.0 * np.atleast_1d(np.asarray(gamma, dtype=np.float64)) / (u_inf * chord)
 
 
+def sectional_cl_from_cp(curve, alpha_deg: float = 0.0) -> float:
+    """截面升力系数，**由截面压力分布积分**（与 `sectional_cl_from_gamma` 互为校核）。
+
+    ★★ 2026-08-25 新增（使用者裁决）。此前库里**只有** Γ-based 的
+    `sectional_cl_from_gamma`；压力积分的版本在全翼层面有（`wall_force_coefficients`，
+    G2.4 把两者卡在 < 1 %），**截面层面没有** —— 而截面正是与实验/参考做对比的地方。
+
+    ★ 它此前也**无法实现**：`_wall_section_points` 拿到三维中点后只把 x 传下去，
+    y 被丢在那里，而轴向分量需要 dy/dx。2026-08-25 把 `ys` 贯通之后才成立。
+
+    公式（把围线积分投影到弦向两轴，标准薄翼型写法）::
+
+        cn = ∮ (cp_lower - cp_upper) d(x/c)          法向力（垂直弦线）
+        ca = ∮ (cp_upper dy_upper - cp_lower dy_lower) / c   轴向力（沿弦线）
+        cl = cn cos(alpha) - ca sin(alpha)
+
+    ★★★ **平滑：按「逐点还是积分」区分，而本函数是积分量。**
+
+    - **逐点 Cp**（画图、对实验的 RMS）**要**平滑：实测 M6 coarse 一遍把截面锯齿中位
+      0.1742 -> 0.0469，7 站 pooled RMS **-4.10 %**（`tests/B/test_B05`）;
+    - **cl 这类积分量**：实测平滑让本函数与 `sectional_cl_from_gamma` **更不一致**
+      （2.5-D medium M0.5：0.150 % -> 0.458 %；coarse：0.826 % -> 1.421 %，四组同向），
+      方向与 G6.3 在**全翼**上的读数一致（`CL_p` 2.40 % -> 3.35 %）。
+      ⇒ **本函数默认喂未平滑的曲线。**
+
+    ★ **机理未定，不要在这里写解释。** 我曾写过「积分本身恢复了 ±配对」——
+    那是**未验证的机理**：非结构三角形网格展向不均匀时，截面切出的上下表面
+    **本来就不对称**，抵消无从保证（使用者 2026-08-25 指出）。
+    ⇒ 上面两行是**实测方向**，不是原因。
+
+    Args:
+        curve: `section_cp_curve` / `wall_cp_curve` 的返回 dict，需含
+            `x_upper/cp_upper/x_lower/cp_lower`，以及（轴向分量需要的）
+            `y_upper/y_lower`。**y 缺失时只算 cn 分量并在 alpha != 0 时报错** ——
+            静默丢掉轴向项会让 alpha 大时的 cl 无声偏小。
+        alpha_deg: 迎角（度）。
+
+    Returns:
+        float: 截面 cl。
+    """
+    a = np.deg2rad(float(alpha_deg))
+    xu = np.asarray(curve["x_upper"], dtype=np.float64)
+    cu = np.asarray(curve["cp_upper"], dtype=np.float64)
+    xl = np.asarray(curve["x_lower"], dtype=np.float64)
+    cl_ = np.asarray(curve["cp_lower"], dtype=np.float64)
+    if xu.size < 2 or xl.size < 2:
+        raise ValueError("sectional_cl_from_cp: 每侧至少需要 2 个点 "
+                         f"(upper={xu.size}, lower={xl.size})")
+    #: 法向力：两侧都插到同一组 x/c 上再作差 —— 两侧的采样点**不重合**，
+    #: 直接分别积分再相减会引入一个与网格有关的差（这正是「两个数不是同一件东西」）。
+    xg = np.linspace(max(xu.min(), xl.min()), min(xu.max(), xl.max()), 401)
+    cn = float(np.trapezoid(np.interp(xg, xl, cl_) - np.interp(xg, xu, cu), xg))
+    yu, yl = curve.get("y_upper"), curve.get("y_lower")
+    if yu is None or yl is None:
+        if abs(a) > 1e-12:
+            raise ValueError(
+                "sectional_cl_from_cp: curve 里没有 y_upper/y_lower，无法算轴向分量，"
+                "而 alpha != 0 时它进入 cl。请用带几何的 section_cp_curve 结果 "
+                "(2026-08-25 起它输出 y_*)，或显式传 alpha_deg=0")
+        return cn
+    yu = np.asarray(yu, dtype=np.float64); yl = np.asarray(yl, dtype=np.float64)
+    ca = float(np.trapezoid(np.interp(xg, xu, cu), np.interp(xg, xu, yu))
+               - np.trapezoid(np.interp(xg, xl, cl_), np.interp(xg, xl, yl)))
+    return cn * np.cos(a) - ca * np.sin(a)
+
+
 def planform_area(
     nodes: np.ndarray,
     wall_faces: np.ndarray,

@@ -3,9 +3,9 @@
 - **Date**: 2026-07-17 21:13 CST
 - **Auditor**: Kimi Code CLI (independent of the main authoring agent)
 - **Scope**: cross-document consistency of `README.md`, `CLAUDE.md`,
-  `PROJECT_STRUCTURE.md`, `docs/agent-rules.md`, `docs/roadmap.md`,
-  `docs/roadmap/track_*.md`, `docs/overview.md`, `docs/demo_report.md`,
-  `docs/demo_report/track_*.md`, `docs/analysis/`, plus existence checks of
+  `PROJECT_STRUCTURE.md`, `docs/agent-rules.md`, `phases/p1/docs/roadmap.md`,
+  `phases/p1/docs/roadmap/track_*.md`, `docs/overview.md`, `phases/p1/docs/demo_report.md`,
+  `phases/p1/docs/demo_report/track_*.md`, `phases/p1/docs/analysis/`, plus existence checks of
   referenced paths and spot-checks of claimed numbers against committed CSVs
   and `pytest --collect-only` counts.
 - **Method note**: this audit did NOT re-run any solver; wall-clock numbers are
@@ -77,9 +77,9 @@
   day, contradicting its own date.
 
 ### 2. [status contradiction] M2 solver-leg closure inconsistent across authoritative track files
-- **Location**: `docs/roadmap/track_m.md:46` (M2 title "◐"), `:164`
+- **Location**: `phases/p1/docs/roadmap/track_m.md:46` (M2 title "◐"), `:164`
   ("[ ] Solver leg = Track B / B9" unchecked), `:247` (ledger M2 ◐) vs
-  `docs/roadmap/track_b.md:986` (B9 ledger tail "**Closes the solver leg of
+  `phases/p1/docs/roadmap/track_b.md:986` (B9 ledger tail "**Closes the solver leg of
   Track M's M2**") and `docs/agent-rules.md:121-123` ("M2 solver leg CLOSED
   by B9 2026-07-17").
 - **Detail**: the B9 close-out (e215ff7) ticked GB9.1–9.6 but did not tick the
@@ -97,14 +97,14 @@
   content — self-contradictory.
 
 ### 4. [number inconsistency] GB15.3 timings: demo_report still carries superseded pre-CSV values
-- **Location**: `docs/demo_report/track_b.md:1022-1024` ("Picard 44.0 s /
+- **Location**: `phases/p1/docs/demo_report/track_b.md:1022-1024` ("Picard 44.0 s /
   Newton 8.1 s (5.4×) / 6.8 s (6.5×)").
 - **Evidence**: committed CSVs say **41.9 s / 7.5 s / 5.6× / 6.5 s**
   (`cases/demo/b15_ls_newton_ramp/results/checks.csv`, `summary.csv`);
-  `docs/roadmap/track_b.md:992` ledger already has the corrected 41.9/7.5/5.6×.
+  `phases/p1/docs/roadmap/track_b.md:992` ledger already has the corrected 41.9/7.5/5.6×.
   agent-rules.md:152 explicitly warns the archive's GB15.3 timings are pre-CSV,
   yet the same pre-CSV numbers remain in demo_report/track_b.md.
-  `docs/analysis/capability_review_2026-07-15.md:29-31` also has 44.0/8.1 and
+  `phases/p1/docs/analysis/capability_review_2026-07-15.md:29-31` also has 44.0/8.1 and
   writes "5.2×" — 44.0/8.1 = 5.43, internally inconsistent (minor; analysis
   docs are dated snapshots).
 
@@ -135,7 +135,7 @@
   pairs are used interchangeably across 6 documents with no note of provenance.
 
 ### 7. [renumbering leftover] track_p.md live text still uses "P9" in its old meaning (curved elements)
-- **Location**: `docs/roadmap/track_p.md:415` (P5 title "V6 < 1% deferred to
+- **Location**: `phases/p1/docs/roadmap/track_p.md:415` (P5 title "V6 < 1% deferred to
   **P9 curved elements**"), `:513-516`, `:585-586` (G6.3 "→ **P9** (curved
   elements)"), `:748`.
 - **Detail**: after the 2026-07-11 renumbering, P9 = grid-convergence
@@ -147,7 +147,7 @@
   (overview.md:70-71 "not a P11 problem"), making the old deferral doubly stale.
 
 ### 8. [number inconsistency] roadmap.md renumbering counts wrong
-- **Location**: `docs/roadmap.md:29-30`: "renumbered **twice** on Track P
+- **Location**: `phases/p1/docs/roadmap.md:29-30`: "renumbered **twice** on Track P
   (2026-07-08 and 2026-07-11) and **twice** on Track B (2026-07-12 and
   2026-07-13)".
 - **Evidence**: actually 3+3 — `track_p.md:867` "two same-day insertions"
@@ -157,21 +157,21 @@
 
 ### 9. [document-map gaps] three file listings omit Track A files
 - **Location**: `CLAUDE.md:32-34` (demo_report section lists only
-  "`track_p.md`, `track_m.md`, `track_b.md`"); `docs/demo_report.md:5-8`
+  "`track_p.md`, `track_m.md`, `track_b.md`"); `phases/p1/docs/demo_report.md:5-8`
   (same enumeration); `docs/overview.md:33` (document map writes
   "[roadmap/track_{p,m,b,v}.md]").
-- **Evidence**: `docs/demo_report/track_a.md` and `docs/roadmap/track_a.md`
+- **Evidence**: `phases/p1/docs/demo_report/track_a.md` and `phases/p1/docs/roadmap/track_a.md`
   both exist and these same documents link them in their own Track A rows —
   the listings lag the 2026-07-15 track creation.
 
 ### 10. [stale headers] four file headers / ledger blurbs not refreshed after close-outs
-- `docs/demo_report/track_a.md:7`: header still "(A1 ◐, opened 2026-07-15)" —
+- `phases/p1/docs/demo_report/track_a.md:7`: header still "(A1 ◐, opened 2026-07-15)" —
   A1 ✓ 2026-07-16, A2 ✓ 2026-07-17.
-- `docs/demo_report/track_b.md:8`: header enumeration "B1–B5 ✓ B7 ✓ …
+- `phases/p1/docs/demo_report/track_b.md:8`: header enumeration "B1–B5 ✓ B7 ✓ …
   B11–B15 ✓" omits **B9 ✓** (the same file has the B9 close-out at :1214).
-- `docs/roadmap/track_b.md:966`: ledger status line "…B1 CLOSED 2026-07-11…;
+- `phases/p1/docs/roadmap/track_b.md:966`: ledger status line "…B1 CLOSED 2026-07-11…;
   **next = B2**" (B2 long closed).
-- `docs/roadmap/track_a.md:257`: ledger status line "**B9 stays NEXT**" (B9
+- `phases/p1/docs/roadmap/track_a.md:257`: ledger status line "**B9 stays NEXT**" (B9
   closed; the :239 scope guard is a historical arbitration record and fine,
   the status line is not).
 
@@ -198,7 +198,7 @@
   that path anymore.
 
 ### 13. [number inconsistency] track_a.md GA1.2 reconciliation (398/405) superseded same-day by final account (399/406)
-- **Location**: `docs/roadmap/track_a.md:61-65`: "re-spec'd the M2 body later
+- **Location**: `phases/p1/docs/roadmap/track_a.md:61-65`: "re-spec'd the M2 body later
   the same day (**+2 tests, 396 → 398**) … post-A1 number as **405**".
 - **Evidence**: `overview.md:58-61` and `agent-rules.md:197-200` both say
   **+3 → 399 → 406** (and 406+15=421 builds on 406). Context: track_a was
@@ -233,6 +233,6 @@
 - No solver/test-suite re-runs beyond the one full pytest pass documented in
   the header (plus `pytest --collect-only` counts); wall-clock numbers taken
   from documents as-is.
-- `docs/analysis/` capability reviews are dated snapshots with their own
-  disclaimers; not audited line-by-line beyond finding 4. `docs/archive/` not
+- `phases/p1/docs/analysis/` capability reviews are dated snapshots with their own
+  disclaimers; not audited line-by-line beyond finding 4. `phases/p1/docs/archive/` not
   held to currency standards per the rules.

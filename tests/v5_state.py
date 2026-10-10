@@ -1,8 +1,8 @@
 """Track V V5 shared case/state builders (GV5.1).
 
 The 2.5-D NACA0012 coarse wake-cut strip configuration and the loose-loop
-k=1 state point, factored out of tests/test_v5_tight_jacobian.py so the
-Stage-1 (J_phi,BL) and Stage-2 (J_BL,phi, tests/test_v5_tight_edge.py)
+k=1 state point, factored out of tests/A/test_A44_tight_jacobian.py so the
+Stage-1 (J_phi,BL) and Stage-2 (J_BL,phi, tests/A/test_A45_tight_edge.py)
 gates probe the SAME pre-registered state (the k=1 builder is verbatim
 the Stage-1 module's k1_state fixture body; mirrors coupling.py:689-806).
 """

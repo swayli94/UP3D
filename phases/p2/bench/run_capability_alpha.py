@@ -1,6 +1,6 @@
 """The capability matrix's alpha axis: can lowering alpha buy back an M_max-limited level?
 
-Pre-registered in docs/dev_phase_two/20260803-1100-alpha-axis-prereg.md, committed before
+Pre-registered in phases/p2/docs/dev_phase_two/20260803-1100-alpha-axis-prereg.md, committed before
 this file was written.
 
 The 13-cell matrix walked M_inf only and held alpha at each case's convention (M6 3.06 deg,

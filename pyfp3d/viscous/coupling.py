@@ -1,5 +1,5 @@
 """Track V V3 -- loose viscous-inviscid coupling driver (binding:
-docs/roadmap/track_v.md "V3 -- Loose coupling (2.5-D ladder + fuselage
+phases/p1/docs/roadmap/track_v.md "V3 -- Loose coupling (2.5-D ladder + fuselage
 smoke)", 2026-07-22 re-spec).
 
 The loose loop (roadmap text): FP solve -> u_e -> IBL3 solve -> m_dot ->

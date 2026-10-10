@@ -98,7 +98,7 @@ CONF `newton_kw` 增加 `tip_taper=tip_taper_factors(station_z, B_SEMI,
    （conf cl 降 → gap 预注册预期 ~2%，gate ≤5% 不变）、GB18.4 峰值
    记录行、GB18.5 cl_fus 比例、天花板记录语（"M0.80+ stalls" 按实测
    改写）；
-4. `demo_report.md` / `docs/roadmap/track_b.md` / `docs/agent-rules.md`
+4. `demo_report.md` / `phases/p1/docs/roadmap/track_b.md` / `docs/agent-rules.md`
    相关数字同步。
 
 **护栏**：每腿 corrM ≤1.3；钳制计数全报（honesty，非零不记"干净"）；

@@ -2,7 +2,7 @@
 UNIQUELY determined by the boundary data, with an exact quasi-1-D reference.
 
 Why Case B replaced Case A (recorded in
-docs/dev_phase_two/20260728-1640-s1-shock-bench.md §4): in a CONSTANT-area duct
+phases/p2/docs/dev_phase_two/20260728-1640-s1-shock-bench.md §4): in a CONSTANT-area duct
 every shock position is an exact solution AND a smooth (shock-free) solution
 satisfies the same two Dirichlet conditions -- measured: the Newton, started
 exactly on the shocked solution, converges to residual 1e-16 on the smooth

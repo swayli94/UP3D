@@ -3,7 +3,7 @@
 **Committed before the first code change** (Track-V discipline). Date:
 2026-07-25. Branch `kimi/track-v6-gv6-0`.
 
-**Gate text** (`docs/roadmap/track_v.md`, V6): *"**GV6.1 conforming sheet
+**Gate text** (`phases/p1/docs/roadmap/track_v.md`, V6): *"**GV6.1 conforming sheet
 source**: δ*_wake enters via the `constraints/wake.py` reduce RHS
 (Tᵀ b_wake); TE thickness continuity asserted; δ*_wake = 0
 **bit-identical**."*

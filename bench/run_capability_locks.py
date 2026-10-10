@@ -46,6 +46,16 @@ DEFAULT_THREADS = "8"
 for _v in THREAD_VARS:
     os.environ.setdefault(_v, DEFAULT_THREADS)
 
+#: ★ 2026-10-10(H30 层 2 返工,预注册 20261010-1100):pyfp3d 现在对已加载的
+#: OpenBLAS 做**运行时**单线程固定,优先级高于 env。本层的 G8.2 墙钟预算与位级
+#: 锚都是在 **BLAS=8** 标定的 ⇒ 子进程显式走逃生舱(见 main() 里的 SUBPROCESS_ENV),
+#: 线程数仍由上面的 env 钉 8。
+#: ★★ 第一版把 `os.environ.setdefault("PYFP3D_ALLOW_BLAS_THREADS", "1")` 放在了
+#: **模块级** —— 当天全套即抓到:F01 在收集期 import 本模块 ⇒ 逃生舱泄漏进整个
+#: pytest 进程的 os.environ ⇒ F09 的探针子进程继承它 ⇒ F09 两条红。
+#: (证据锁不受影响:pyfp3d 在 A 类收集期就已完成固定,库状态不随后续 env 变动回退。)
+#: ⇒ 逃生舱只能设在**子进程的 env** 上,模块 import 不得有这个副作用。
+
 #: (node id, what it locks). Chosen for anchors that are cheap; the heavy RAMPS are in
 #: the excluded list below with their measured costs, so the trade-off is visible.
 #: ★★ TWO LOCKS REMOVED 2026-08-10 by the phases/ reorganisation, and this is a
@@ -61,14 +71,23 @@ for _v in THREAD_VARS:
 #: is archived with the route. ⇒ this tier is now 4 groups, all CONFORMING:
 #: M1a, the seed fallback, the wing-body conforming locks, P8's G8.1/G8.2, and
 #: (added 2026-08-11) the wing-body transonic ceiling -- 5 groups.
+#: ★★★ 2026-08-24 重编号（裁决 ④）：节点从 `tests/test_*.py` 改为 `tests/<CLASS>/test_<C><nn>_*.py`。
+#: 分层现在由**目录**承载（裁决 ⑤）:
+#:     pytest tests/A tests/B     未门控套件
+#:     pytest tests/C tests/E     快层（本文件）
+#:     pytest tests/D             门控全集
+#:     tests/F                    可选开启（F 允许有默认开启子集）
+#: ★★ 这一层的五组按新分类是 **1 个 A + 1 个 C-相关 + 3 个 E** —— 使用者的反问「快层不算 A 类吗」
+#: 是对的：`seed_fallback` 与 `b9` 实测**全是机制/拓扑断言，零物理值** ⇒ 纯 A。
+#: ★ 而 E01/E02/E03 是「等参照到位就搬空」的中转站：CFL3D Euler 一到，E01/E03 升格 D。
 LOCKS = (
-    ("tests/test_s1_m1a_envelope.py",
+    ("tests/E/test_E03_m1a_level_lock.py",
      "M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05)"),
-    ("tests/test_seed_fallback.py",
+    ("tests/A/test_A30_seed_fallback_contract.py",
      "the cold-start seed fallback, incl. the real NACA M0.80 medium recovery"),
-    ("tests/test_b9_wingbody_conforming.py",
+    ("tests/A/test_A28_wingbody_topology.py",
      "wing-body conforming: junction loading, the B8 lift-loss detector"),
-    ("tests/test_p8_newton.py",
+    ("tests/E/test_E01_p8_newton_anchors.py",
      "G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06)"),
     #: ★ ADDED 2026-08-11, and the reason is worth stating: this lock was written in
     #: phase 3 precisely so the conforming WING-BODY transonic capability (M0.84, cl_p
@@ -77,7 +96,7 @@ LOCKS = (
     #: in the 2 h gated set, i.e. 6x less often than the tier it belongs to. Measured
     #: 652 s standalone; with the level-set locks gone this tier was down to 252 s, so
     #: adding it lands the tier back at the ~15 min scale it was designed around.
-    ("tests/test_b32_wingbody_conforming_transonic.py",
+    ("tests/E/test_E02_wingbody_transonic_ceiling.py",
      "the conforming WING-BODY transonic ceiling: M0.84 reached, 0 clamps, cl_p"),
 )
 
@@ -87,8 +106,8 @@ LOCKS = (
 NOT_COVERED = (
     ("phases/p1/tests/test_b22_ls_3d_anchors.py::test_m6_medium_ramp_anchor  [ARCHIVED]",
      "~35 min. strict-xfail since 2026-08-09, and the xfail still RUNS the solve"),
-    ("tests/test_p4_transonic.py", "~32 min, dominated by the G4.1 medium gate"),
-    ("tests/test_p5_onera_m6.py", "45-75 min from scratch (M6 medium continuation+polish)"),
+    ("tests/D/test_D03_naca0012_m080_shock.py", "~32 min, dominated by the G4.1 medium gate"),
+    ("tests/D/test_D04_onera_m6_experiment.py", "45-75 min from scratch (M6 medium continuation+polish)"),
     ("phases/p1/tests/test_b14_schur_ls.py  [ARCHIVED]", "M6 medium Schur/lagged-LU arms"),
     ("phases/p1/tests/test_b15_ls_newton_freeze.py  [ARCHIVED]", "the M6 medium M0.84 freeze ramp (~515 s idle)"),
     #: ★ GS4.0 2026-08-16: was listed as `tests/test_b18_wingbody_transonic.py`, a path
@@ -177,11 +196,17 @@ def main():
     except OSError:                                   # pragma: no cover - non-Linux
         pass
     print()
+    #: 子进程显式走 BLAS 逃生舱(理由见文件头 2026-10-10 注记):本层的墙钟预算与
+    #: 位级锚在 BLAS=8 标定,而 pyfp3d 的运行时固定优先于 env,会把子进程压成 1。
+    #: ★ 只能在子进程 env 上设 —— 模块级 setdefault 会随 import 泄漏进宿进程
+    #: (2026-10-10 全套实测抓到:F01 收集期 import 本模块 ⇒ F09 探针被放行 ⇒ 红)。
+    sub_env = dict(os.environ)
+    sub_env["PYFP3D_ALLOW_BLAS_THREADS"] = "1"
     rows, t_all = [], time.perf_counter()
     for node, what in LOCKS:
         t0 = time.perf_counter()
         p = subprocess.run([sys.executable, "-m", "pytest", node, "-q", "--tb=line"],
-                           cwd=REPO, capture_output=True, text=True)
+                           cwd=REPO, capture_output=True, text=True, env=sub_env)
         dt = time.perf_counter() - t0
         tail = [l for l in p.stdout.splitlines() if " passed" in l or " failed" in l
                 or " error" in l]

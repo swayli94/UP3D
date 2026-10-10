@@ -1,6 +1,6 @@
 """GV5.6 Schur-aware reduced-space preconditioner for the augmented step.
 
-Binding text: docs/roadmap/track_v.md GV5.6 (the GV5.4 registered
+Binding text: phases/p1/docs/roadmap/track_v.md GV5.6 (the GV5.4 registered
 follow-up, opening user-adjudicated 2026-07-25); pre-registered:
 cases/analysis/v5_6_schur_prec/PRE_REGISTRATION.md (committed BEFORE the
 first code change).

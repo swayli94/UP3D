@@ -188,7 +188,7 @@ is not evidence** (the 2026-07-13 audit rule).
   coarse ramp γ 0.084931 / M_max 1.3684); **the N3 gap is closed** — gated anchor locks now re-solve the committed M6 coarse+medium ramps
   and assert m_final/γ/M_max/clamps absolutely, so the next silent re-baseline fails the suite; CLAUDE.md workflow step 5 + agent-rules
   discipline #11 gained the re-baseline erratum checklist; next-phase priority analysis in
-  `docs/analysis/next_phase_priorities_2026-07-19.md` (recommends P11) — [track_b](demo_report/track_b.md)
+  `phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md` (recommends P11) — [track_b](demo_report/track_b.md)
 - **Track B** B23 wing-body junction discriminator — `cases/analysis/b23_junction_discriminator/` — pre-registered D-campaign, committed
   CSV/PNG — closed 2026-07-19: the junction pocket is **lift/wake-coupled, NOT geometric** — α=0 clean at both levels (Mmax 0.66/0.64,
   cl_fus ≈ 0 self-check), pocket appears with α and grows superlinearly (medium α=3.06 corrM **14.66**, 104 supersonic elements, peak BEHIND

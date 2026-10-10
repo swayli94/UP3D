@@ -1,7 +1,7 @@
 """Step 0 of the LE-mechanism factorial: where is the window in which a SHOCK is
 present AND refinement is usable?
 
-Pre-registered in docs/dev_phase_two/20260806-0000-le-mechanism-prereg2.md sec 1b
+Pre-registered in phases/p2/docs/dev_phase_two/20260806-0000-le-mechanism-prereg2.md sec 1b
 (addendum #1, user 2026-08-06, committed before this file was written).
 
 Why this step exists: the first-version factorial found that at M0.8395 every

@@ -1,7 +1,7 @@
 """GS1.1 Case B sweep: where does the SHIPPED shock operator put a shock whose
 exact position is uniquely determined?
 
-Protocol (pre-registered, docs/dev_phase_two/20260728-1640-s1-shock-bench.md):
+Protocol (pre-registered, phases/p2/docs/dev_phase_two/20260728-1640-s1-shock-bench.md):
 
   * Laval nozzle, choked, exact quasi-1-D shock at x_s = 12.0 of a duct of
     length 20, shock upstream Mach 1.30; uniqueness of the boundary-value

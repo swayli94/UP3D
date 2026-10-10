@@ -1,6 +1,6 @@
 """GV5.1 augmented (tight) Newton gates -- AMENDED protocol (Track V5).
 
-Binding text: docs/roadmap/track_v.md GV5.1; pre-registered:
+Binding text: phases/p1/docs/roadmap/track_v.md GV5.1; pre-registered:
 bench/studies/v5_tight_coupling/PRE_REGISTRATION.md Addendum 2
 (2026-07-23, user-adjudicated seed amendment, committed at 606b149
 BEFORE this execution). Trigger: the k=1-seed coarse leg (71df59a,

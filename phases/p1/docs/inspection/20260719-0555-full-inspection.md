@@ -65,7 +65,7 @@
 
 **A3 响应文档的一处夸大**：response 称 finding 2（M2 权威矛盾）"resolved in
 track_m's title, checkbox **and ledger**"——title/checkbox 确已修，但
-**ledger 行 `docs/roadmap/track_m.md:247` 仍 `| M2 | ◐ |`**，`docs/roadmap.md:13`
+**ledger 行 `phases/p1/docs/roadmap/track_m.md:247` 仍 `| M2 | ◐ |`**，`phases/p1/docs/roadmap.md:13`
 与 `docs/overview.md:131` 也仍写 "M2 ◐"。权威级矛盾以缩小的形式残留至今。
 
 ### 1.2 B19/B20 修复正确性（本轮重点复核，公式级）
@@ -101,7 +101,7 @@ track_m's title, checkbox **and ledger**"——title/checkbox 确已修，但
   `newton_side_data` computes, so the frozen sweep reproduces the live density
   **bitwise** at the freeze point"（`:730-732`）在 mixed-side plain 触-cut 元素
   上破裂。
-- **本轮已用探针实测确认**（`docs/inspection/20260719-n1-freeze-probe.py`，
+- **本轮已用探针实测确认**（`phases/p1/docs/inspection/20260719-n1-freeze-probe.py`，
   M6 coarse、M0.70 seeded 跨声速态，与 GB19.6 同一工况）：shipped 捕获与
   B20-patched 捕获的选择差异——upper 侧 **upstream 83 个元素不同、branch 9 个
   不同**，且差异**全部**落在 aux-touching mixed-plain 类上（83/83、7/7；
@@ -230,7 +230,7 @@ knob 与 `:30` "knob is REMOVED" 同文件矛盾。
 **D10 [pre-existing] 三处更老的 doc 债**：`design.md` §12 risk 1 仍写"TE nodes
 not duplicated"（P2 早已重定规格为 duplicated，单值 TE 是"定量错误"）；P13
 动机段仍说 tip 修复"交给 Track B / B10 rescope"（G13.2 已记 superseded，B10
-条目无回指）；`docs/analysis/capability_review_2026-07-15.md` 无 superseded
+条目无回指）；`phases/p1/docs/analysis/capability_review_2026-07-15.md` 无 superseded
 banner（其 LS medium M0.84"已演示"恰是 GB20.7 现状 FAIL 的案例）。
 
 **D11 [trivial]** 时序漂移：GB15.3 文档 41.9/7.5/5.6×/6.5 vs 现 CSV
@@ -338,7 +338,7 @@ GB17.2 "~22%" vs CSV 20.1%/19.4%（参照基不同）。
     机翼侧元素（`track_m.md` M2）。
 12. **N1**（本轮新增，已实测确认）：`freeze_side_state` 未打 B20 补丁；
     M6 coarse M0.70 下选择差异 83 upstream + 9 branch（探针：
-    `docs/inspection/20260719-n1-freeze-probe.py`）。
+    `phases/p1/docs/inspection/20260719-n1-freeze-probe.py`）。
 13. **流程缺口**：3-D LS 数字无测试锁（N3）；re-baseline 旧章节勘误无流程
     （§2 流程建议）。
 

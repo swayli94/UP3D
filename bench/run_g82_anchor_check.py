@@ -31,12 +31,18 @@ import numpy as np                                                  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, REPO)
-sys.path.insert(0, os.path.join(REPO, "tests"))
+#: ★★ NO `sys.path.insert(REPO/"tests")` (removed 2026-09-06, W0.2 / H2).
+#: That hack is what let this file import a BARE module name -- and a bare name
+#: is invisible to F07's live-code import check, which filters on the `tests.`
+#: prefix. So the 2026-08-24 renumbering broke this script (test_p8_newton.py
+#: was split into tests/A/test_A52... + tests/E/test_E01...) and NOTHING went
+#: red, because `bench/` is on no cadence and the guard could not see the form.
+#: ⇒ the package-qualified import below is now also the thing F07 enforces.
 
-from test_p8_newton import _m6_case                                 # noqa: E402
+from tests.E.test_E01_p8_newton_anchors import _m6_case             # noqa: E402
 
 CSV = os.path.join(HERE, "gate_results", "g82_anchor_check.csv")
-#: the committed bands, copied from tests/test_p8_newton.py lines 616-642
+#: the committed bands, copied from tests/E/test_E01_p8_newton_anchors.py
 ANCHORS = (
     ("cl",           0.268691, 0.005),
     ("m_max",        1.99687,  0.05),

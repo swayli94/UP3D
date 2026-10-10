@@ -5,7 +5,7 @@ incompressible sphere, Cp vs 1 - 9/4 sin^2(theta)).
 Two concentric spheres (r=1 "wall", r=r_out "farfield") are cut with the
 OpenCASCADE kernel to leave the shell as the fluid volume; mesh size is
 graded fine near the wall and coarse near the far field via a Distance +
-Threshold field, per docs/roadmap.md Sec 0.1 tooling policy (gmsh CLI/API,
+Threshold field, per phases/p1/docs/roadmap.md Sec 0.1 tooling policy (gmsh CLI/API,
 -format msh4).
 
 Usage:

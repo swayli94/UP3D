@@ -21,7 +21,7 @@ so a rename either rewrites committed evidence (the G3 hazard) or leaves stale
 CSVs behind. This is the same information at a fraction of the risk.
 
 ★ `extra` is quarantined from `sha256` by construction (locked by
-tests/test_gs40_provenance.py), so stamping cannot change a mesh's identity.
+tests/F/test_F01_provenance.py), so stamping cannot change a mesh's identity.
 ★ It records h_far and h_far/h_wall rather than a boolean "clamped": the ratio
 IS the question ("is this level on the refinement ray?"), and 120 versus less
 answers it without trusting my reading of the clamp logic.

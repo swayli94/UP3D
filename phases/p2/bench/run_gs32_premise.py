@@ -1,6 +1,6 @@
 """GS3.2 premise check: is the 480-iteration AMG count caused by the EXTRUSION?
 
-Pre-registered in docs/dev_phase_two/20260802-0600-gs32-prereg.md, committed before this
+Pre-registered in phases/p2/docs/dev_phase_two/20260802-0600-gs32-prereg.md, committed before this
 file was written. The audit charged the 2.5-D mesh's bad AMG behaviour (480 CG iterations
 against 13-16 on the 3-D wing meshes) to the one-prism-layer extrusion. But a 2.5-D
 mesh's anisotropy has two sources -- the IN-PLANE grading, which a true 2-D triangle mesh

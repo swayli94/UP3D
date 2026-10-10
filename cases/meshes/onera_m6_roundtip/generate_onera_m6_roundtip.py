@@ -1,6 +1,6 @@
 """
 M5 deliverable: ONERA M6 half-wing tet mesh family with a ROUNDED TIP CAP
-(docs/roadmap.md Track M gate M5; consumed by solver phase P13/G13.3).
+(phases/p1/docs/roadmap.md Track M gate M5; consumed by solver phase P13/G13.3).
 
 WHY THIS FAMILY EXISTS. The M1 family closes the wing with a FLAT tip cap --
 a documented deliberate simplification, standard for FP validation meshes.

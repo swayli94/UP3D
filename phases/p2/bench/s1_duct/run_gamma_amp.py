@@ -2,7 +2,7 @@
 physical or an implementation artefact?
 
 Three measurements (pre-registered in
-docs/dev_phase_two/20260728-1930-s1-gamma-amplification.md):
+phases/p2/docs/dev_phase_two/20260728-1930-s1-gamma-amplification.md):
 
   A  estimator cross-check: sweep the artificial-dissipation constant C with
      BOTH Kutta estimators -- "probe" (potential-jump at a wall probe node) and

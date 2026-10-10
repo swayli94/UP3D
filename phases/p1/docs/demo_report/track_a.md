@@ -27,7 +27,7 @@ vs `a1_m6_*` (3-D) — both legs share `results/`.
 ## Track A / A3 — is the level-set Newton Jacobian exact in 3-D? (`cases/analysis/c1_ls_jacobian_fd/`, 2026-07-18)
 
 **Why this exists.** The 2026-07-17 independent Kimi code review
-(`docs/inspection/20260717-2348-code-review.md`, finding C1) argued that
+(`phases/p1/docs/inspection/20260717-2348-code-review.md`, finding C1) argued that
 `newton_terms23_side_coo` mis-maps its columns on **mixed-side plain
 elements** — uncut tets whose four nodes straddle the wake level set. Those
 exist only in 3-D. `mass_conservation_coo` assembles them with the SIDE-field

@@ -1,7 +1,7 @@
 # GV6.1 VERDICT — conforming wake-sheet δ* source
 
 - Date: 2026-07-25 · Branch: `kimi/track-v6-gv6-1`
-- Binding text: `docs/roadmap/track_v.md` GV6.1
+- Binding text: `phases/p1/docs/roadmap/track_v.md` GV6.1
 - Pre-registration: [PRE_REGISTRATION.md](PRE_REGISTRATION.md) **including
   the 2026-07-25 addendum** (the per-face ½ṁ_wake recipe; committed BEFORE
   the first code change, commit `f4e90de`, per the §7 amendment

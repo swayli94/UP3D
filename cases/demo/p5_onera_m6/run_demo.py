@@ -1,7 +1,7 @@
 """
 P5 demo -- 3D validation on the ONERA M6 wing (gates G5.1, G5.2).
 
-What this shows, per docs/roadmap.md P5 and cases/reference_data/onera_m6_m084:
+What this shows, per phases/p1/docs/roadmap.md P5 and cases/reference_data/onera_m6_m084:
   1. G5.1: M_inf = 0.84, alpha = 3.06 deg transonic lifting solution on the
      swept M6 half wing. Sectional Cp(x/c) at eta = 0.44/0.65/0.90 against the
      AGARD-anchored full-potential scatter band, with the upper-surface shock
@@ -22,7 +22,7 @@ What this shows, per docs/roadmap.md P5 and cases/reference_data/onera_m6_m084:
   re-emits the figures (fast). Force a fresh solve only when the
   solver/mesh/reference actually changed AND you will commit the refresh:
       PYFP3D_P5_RESOLVE=1 python cases/demo/p5_onera_m6/run_demo.py
-  The numeric gate is tests/test_p5_onera_m6.py (heavy asserts behind
+  The numeric gate is tests/D/test_D04_onera_m6_experiment.py (heavy asserts behind
   PYFP3D_TRANSONIC_GATES=1); this demo refreshes the committed evidence PNGs.
 
 Standalone + self-checking:  python cases/demo/p5_onera_m6/run_demo.py

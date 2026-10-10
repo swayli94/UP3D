@@ -1,6 +1,6 @@
 """Registered item 0: a truly far-field-only arm, via the domain RADIUS `r_far`.
 
-Pre-registered in docs/dev_phase_two/20260809-2000-farfield-arm-prereg.md, committed
+Pre-registered in phases/p2/docs/dev_phase_two/20260809-2000-farfield-arm-prereg.md, committed
 before this file was written. Purpose is CLOSE-OUT -- settle whether the far field
 itself controls the LE band so the capability boundary can state it -- not capability.
 

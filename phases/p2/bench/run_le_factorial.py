@@ -1,6 +1,6 @@
 """Task 4: is the M6 LE Cp deficit LE-LOCAL, or the surrounding mesh's pollution floor?
 
-Pre-registered in docs/dev_phase_two/20260805-1600-le-mechanism-prereg.md, committed
+Pre-registered in phases/p2/docs/dev_phase_two/20260805-1600-le-mechanism-prereg.md, committed
 BEFORE this file was written -- read that for the legs, the criteria, the five guards
 and the cost gates. The short version:
 

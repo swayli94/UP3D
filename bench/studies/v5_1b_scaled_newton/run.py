@@ -4,7 +4,7 @@ window.
 Binding text: bench/studies/v5_1b_scaled_newton/PRE_REGISTRATION.md
 (committed at 8b7793f BEFORE the first execution, per discipline). Design
 inputs: the committed IBL-floor diagnosis
-(bench/studies/v5_ibl_floor/results/findings.md). Solver-internal only:
+(phases/p2/bench/studies/v5_ibl_floor/results/findings.md). Solver-internal only:
 the assembled F/J are bit-identical to GV5.1 (the committed FD verdicts
 stand) -- this runner exercises newton_tight(scaling="rowcol",
 lm_damping=True, floor_stop=True), the pre-registered R/C equilibration +

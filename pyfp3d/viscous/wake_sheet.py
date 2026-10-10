@@ -1,5 +1,5 @@
 """Track V V6 -- the conforming wake-sheet delta* source (binding:
-docs/roadmap/track_v.md GV6.1; pre-registration
+phases/p1/docs/roadmap/track_v.md GV6.1; pre-registration
 bench/studies/v6_1_wake_sheet/PRE_REGISTRATION.md including the
 2026-07-25 addendum; GV6.0 ruling: Option A + producer (i),
 phases/p1/cases/analysis/v6_0_design_adjudication/DESIGN_ADJUDICATION.md).

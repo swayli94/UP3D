@@ -1,7 +1,7 @@
 # PRE-REGISTRATION — GV5.1b: scaled + damped augmented Newton, the pre-floor quadratic window
 
 Committed BEFORE the first execution, per discipline. Gate:
-`docs/roadmap/track_v.md` V5 ("next = GV5.1b design" after the
+`phases/p1/docs/roadmap/track_v.md` V5 ("next = GV5.1b design" after the
 IBL-floor diagnosis). Design inputs: the committed diagnosis
 `../v5_ibl_floor/results/findings.md` (= `docs/design_track_v.md`
 §13): (i) the raw cond 4e10–4e13 of J_BL,BL is mostly a scaling

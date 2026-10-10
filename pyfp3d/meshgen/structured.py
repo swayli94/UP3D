@@ -23,7 +23,7 @@ cut into two triangles by a fixed diagonal rule, so one hex becomes 6 tets. The 
 route (A) is being tested for -- an orthogonal near-wall layer and independently controllable
 grading -- lives in the 2-D quad grid, not in the element type.
 
-⚠ Registered risk (docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §2): splitting a hex
+⚠ Registered risk (phases/p3/docs/dev_phase_three/20260811-0300-hex-mesh-prereg.md §2): splitting a hex
 introduces DIAGONAL faces, so the face-neighbour graph is not grid-aligned and the upstream-donor
 gain this route is meant to deliver may be partly lost in the split. That is measured, not assumed.
 And an O-grid wall is still FLAT FACETS: the O(h) facet-normal error does not go away here.
@@ -633,7 +633,7 @@ def airfoil_surface_distribution(
 
     ★★ `local_window = (x0, x1)` with `local_factor > 1` adds LOCAL chordwise refinement inside
     that chord band on BOTH surfaces, and is the one capability task 3 needs
-    (docs/dev_phase_three/20260811-1500-task3-refinement-paradox-prereg.md): refine ONLY the
+    (phases/p3/docs/dev_phase_three/20260811-1500-task3-refinement-paradox-prereg.md): refine ONLY the
     shock band and leave everything else alone, so "the shock region's resolution" can be
     separated from "the global cell count". Phase two could never run that leg -- all four of its
     generator knobs were measured out of scope -- so it could only refine globally and could not

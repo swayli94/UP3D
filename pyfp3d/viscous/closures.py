@@ -39,7 +39,7 @@ are computed but unused upstream of x_tr).
 
 # ---------------------------------------------------------------------------
 # ★★ The `D-*` decision identifiers used in this file, audited in phase-5 round 6
-# (F8, docs/dev_phase_five/20260822-1400-f8-verdict.md). "Appears in a document" is
+# (F8, phases/p5/docs/dev_phase_five/20260822-1400-f8-verdict.md). "Appears in a document" is
 # not "is defined there" -- the audit classified each by whether any record says
 # WHAT THE DECISION IS:
 #
@@ -118,8 +118,8 @@ A1_BRADSHAW = 0.15    # Reynolds stress anisotropy ratio a1 (D13 (30))
 # making the shipped 0.09 1.31x it -- and since Ctau_eq goes as c_l squared, about
 # 1.73x in CtauEQ. RECORDED, NOT ADOPTED: round 7's addendum 1 required BOTH
 # readings to pass before the value could move, and the global one does not.
-# Verdicts: docs/dev_phase_five/20260822-1200-f2-verdict.md (provenance)
-#           docs/dev_phase_five/20260822-1700-f2f4f6-verdict.md (proxy calibration)
+# Verdicts: phases/p5/docs/dev_phase_five/20260822-1200-f2-verdict.md (provenance)
+#           phases/p5/docs/dev_phase_five/20260822-1700-f2f4f6-verdict.md (proxy calibration)
 C_L_DEFAULT = 0.09    # outer dissipation length L = C_L * delta
 CTAU_LAM = 1.0e-8     # pinned laminar stress level (D-TR; << Ctaucrit)
 GAMMA_AIR = 1.4
@@ -228,7 +228,7 @@ ETA_LAM, W_LAM = _gauss_table(24)
 # Turbulent. ★★ The claim that used to stand here -- "24 points resolve the
 # near-wall log-region variation for delta+ up to O(1e5) (unit-tested)" -- is FALSE
 # in BOTH halves, measured in phase-5 round 3
-# (docs/dev_phase_five/20260822-0600-f3-verdict.md):
+# (phases/p5/docs/dev_phase_five/20260822-0600-f3-verdict.md):
 #
 #   1. "(unit-tested)": nothing in tests/ asserts anything about ETA_TURB. The only
 #      Spalding lock tests the y+ -> u+ -> y+ INVERSION, not the quadrature.

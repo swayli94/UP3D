@@ -1,6 +1,6 @@
 """
 Track B / B1 gate: level-set wake + cut-element identification
-(docs/roadmap.md Track B B1; docs/design_track_b.md sections 3, 5.7).
+(phases/p1/docs/roadmap.md Track B B1; phases/p1/docs/design_track_b.md sections 3, 5.7).
 
 Dual-mesh rule (roadmap Track B working rules):
 

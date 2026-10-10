@@ -76,7 +76,7 @@ LEGS = [(0.0375, "budget_limited"), (0.030, "clamping"),
         (0.0325, "untested"), (0.035, "untested")]
 #: ★ 2026-08-05: set PYFP3D_LE16_ONLY to a comma-separated r_c list to re-run a subset.
 #: Added for the sigma-transport re-measurement: the fix
-#: (docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md) can only flip the
+#: (phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md) can only flip the
 #: verdict of a leg that was refused ON SIGMA, and 0.0325 is the only one -- the other
 #: three carry clamping or limit-cycle evidence, so for them the fix is a ~1e-11
 #: reassociation. Re-running all four costs 3.4 h; this leg alone is ~27 min.

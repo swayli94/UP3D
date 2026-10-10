@@ -1,0 +1,8 @@
+eta,eta_experiment,rms_upper,n_upper,rms_lower,n_lower,rms_pooled,x_shock_experiment,x_shock_euler,d_x_shock,cp_min_experiment,cp_min_euler,d_cp_min,depth_experiment,depth_euler,exp_bracket,dx_over_bracket,direction
+0.20,0.200,0.146516,23,0.042946,11,0.122957,0.638561,0.669056,+0.030496,-1.069000,-0.986346,+0.082654,0.068846,0.378376,0.0500,0.61,as predicted (shock aft of experiment)
+0.44,0.440,0.112610,23,0.033943,11,0.094610,0.569938,0.591181,+0.021244,-1.127000,-1.100646,+0.026354,0.372846,0.464553,0.0500,0.42,UNRESOLVABLE -- |dx| is 0.42x the experiment's own 0.0500 c sampling interval
+0.65,0.650,0.128055,23,0.027397,11,0.106469,0.497029,0.511501,+0.014472,-1.181000,-1.140716,+0.040284,0.396846,0.462500,0.0501,0.29,UNRESOLVABLE -- |dx| is 0.29x the experiment's own 0.0501 c sampling interval
+0.80,0.800,0.116324,22,0.027179,11,0.096266,0.396433,0.403172,+0.006739,-1.206000,-1.160652,+0.045348,0.348846,0.351074,0.0496,0.14,UNRESOLVABLE -- |dx| is 0.14x the experiment's own 0.0496 c sampling interval
+0.90,0.900,0.161559,31,0.034289,14,0.135450,0.303351,0.315731,+0.012380,-1.194000,-1.174166,+0.019834,0.652846,0.720847,0.0400,0.31,UNRESOLVABLE -- |dx| is 0.31x the experiment's own 0.0400 c sampling interval
+0.96,0.960,0.101486,31,0.039051,14,0.087004,0.253318,0.246486,-0.006832,-1.227000,-1.202647,+0.024353,0.807846,0.840255,0.0399,0.17,UNRESOLVABLE -- |dx| is 0.17x the experiment's own 0.0399 c sampling interval
+0.99,0.990,0.113029,31,0.074902,14,0.102695,0.213742,0.543425,+0.329683,-1.291000,-1.344605,-0.053605,0.589846,0.019663,,,WITHDRAWN -- detector premise fails (Cp*-grazing); dx is not a shock bias

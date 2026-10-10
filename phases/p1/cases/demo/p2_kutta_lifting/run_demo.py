@@ -2,7 +2,7 @@
 P2 demo -- wake cut, circulation and Kutta condition evidence
 (gates G2.1-G2.5, all closed; NACA0012 alpha = 4 deg, incompressible).
 
-What this shows, per docs/roadmap.md P2 and docs/demo_report.md:
+What this shows, per phases/p1/docs/roadmap.md P2 and phases/p1/docs/demo_report.md:
   1. G2.1: the wake cut adds zero spurious residual -- phi = x with
      Gamma = 0 is preserved to machine zero on the cut mesh, including
      the folded wake-master rows.

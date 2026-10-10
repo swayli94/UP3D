@@ -1,5 +1,5 @@
 """Track V V5 Stages 1+2 -- fixed/linear sparse operators of the augmented
-Newton system (binding: docs/roadmap/track_v.md GV5.1 + the 2026-07-22
+Newton system (binding: phases/p1/docs/roadmap/track_v.md GV5.1 + the 2026-07-22
 pre-registered FD note; design: bench/studies/v5_tight_coupling/
 PRE_REGISTRATION.md).
 

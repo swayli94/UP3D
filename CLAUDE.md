@@ -2,31 +2,51 @@
 
 3D unstructured-mesh **full-potential** transonic flow solver (Python + Numba):
 one scalar φ per node, Galerkin P1 tets, artificial-density upwinding in supersonic
-zones, wake cut + Kutta condition for lift. Target: wings at M∞ 0.3–0.87,
+zones, wake cut + Kutta condition for lift. Target: wings at M∞ 0.3–0.87
+(★ 2026-10-10 使用者裁决(H11):α = 0 的**实测**可信上界只有 **M 0.78–0.80** —
+— D14 实测 M0.78 cl/带 = 0.012、M0.80 = 1.33 且线程不稳,design.md §2/§12 登记的
+Steinhoff–Jameson 低升力非唯一带 0.82–0.85 是**非唯一区,不是能力**;
+包线数字本身按裁决保留,低升力端的有效包线以该带为界),
 workstation-scale (minutes for 1–3 M nodes).
 
 ## Document map (read the relevant one before coding)
 
-★★ **LAYOUT CHANGED 2026-08-10 — read this before following any path below.** Finished
-phases were archived into **`phases/p1/`** and **`phases/p2/`** (tracked, not gitignored, so
-the evidence stays in HEAD). The link targets in this map were repointed mechanically, so a
-line reading `[docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical,
-the file now lives in the archive.** What stayed in place is what phase 3 still needs, and the
-rule was measurable — *if a surviving test or script reads it, it stays*:
+★★ **LAYOUT — read this before following any path below.** Finished phases are archived
+into **`phases/p1/` … `phases/p5/`** (tracked, not gitignored, so the evidence stays in HEAD).
+The link targets in this map were repointed mechanically, so a line reading
+`[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical, the file now
+lives in the archive.** What stays in place is what the CURRENT phase needs, and the rule is
+measurable — *if a surviving test or script reads it, it stays*. Measured state **2026-08-24**:
 
-- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **73 test files (every conforming
-  anchor)**; the 18 pure level-set test files are archived, since deleting them is phase 3's
-  first task;
-- `bench/` keeps the **7-module closure** behind the five product metrics **plus
+- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **72 test files** — ★ **every one of
+  them exercises live code** (all 72 have passing items in the gated set), so by the archive's
+  own rule **no test file is archivable**; the 18 pure level-set files went with their deleted
+  route, and phase 2–5 deleted no route. Phase 1's number here used to read "73"; it is 72.
+- `bench/` keeps the **7-module closure** behind the product metrics **plus
   `bench/gate_results/`** — the capability boundary cites those CSVs by path;
-- `cases/demo/` keeps **9 of 33** and `cases/analysis/` **10 of 33** subdirectories, the ones
-  kept tests actually read (e.g. `cases/demo/p11_curved_walls/`, which
-  `tests/test_laplace_sphere.py` reads for the LIVE G1.6 Option C gate);
-- `docs/` keeps overview, design, design_track_v, agent-rules, inspection/, and the **six
-  phase-three-facing** files in `docs/dev_phase_two/` (roadmap, progress, the capability
-  boundary, the level-set inventory, the precond decision record, the template).
+- `cases/demo/` keeps **6** subdirectories, the ones kept tests actually read (e.g.
+  `cases/demo/p11_curved_walls/`, which `tests/C/test_C03_laplace_sphere.py` reads for the LIVE G1.6
+  Option C gate). ★ **`cases/analysis/` NO LONGER EXISTS** — merged into `bench/studies/` in
+  `7edce18` (user ruling: `bench/` and `cases/analysis/` were two homes for one thing). The
+  historical copy keeps the old name at `phases/p1/cases/analysis/`, deliberately.
+- ★★★ `docs/` holds **only 4 living documents plus the current phase**: `overview.md`,
+  `design.md`, `design_track_v.md`, `agent-rules.md`, and `dev_phase_six/`. **User ruling
+  2026-08-24: every phase-2…5 document moved into `phases/p*/`, and `docs/inspection/` was
+  DELETED** — audit reports now archive with their phase (`phases/p{1,2,3}/docs/inspection/`),
+  and a new report is written into the current phase's directory. Prior analysis and documents
+  are **reference material only**; phase 6 tracks what is still in force itself.
+  ⇒ **`docs/dev_phase_six/20260824-0300-carried-forward.md` is the single live landing point**
+  for anything the archived files used to state: the **measured** library defaults (`ew_eta0` =
+  `ew_eta_max` = 1e-6, `entropy_correction=True`, `tip_cap="round"`, `upwind_c=1.5`, `m_crit`
+  0.95, `m_cap` 3.0 — read with `inspect.signature`, not copied), the rulings still in force
+  (D5 executed, D2 activated; ★ D1/D3/D4 explicitly **not** re-checked), and the do-not-reopen
+  list. ★ The capability boundary is now archived at
+  `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` and is still the only
+  document stating what the solver can do — **producing phase 6's own is a phase-6 deliverable**;
+  until then, cite the archived original rather than paraphrasing it.
+  ★ Round-file template: `phases/p2/docs/dev_phase_two/_TEMPLATE.md`.
 
-**Start here for phase 3:** [docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
+**Start here:** [phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
 then [phases/README.md](phases/README.md) for what was archived and how to get a
 guaranteed-runnable phase-1/2 tree (`git worktree add ../up3d-prereorg d224223`).
 
@@ -37,9 +57,9 @@ resolve through one hop.
 - [docs/overview.md](docs/overview.md) — human-readable snapshot: per-track
   status table, **document map** (which file is authoritative for what, and when
   to update it), regression-baseline lineage, long-standing open items.
-- [docs/roadmap.md](phases/p1/docs/roadmap.md) — **active tracker index**: working rules,
+- [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md) — **active tracker index**: working rules,
   gate-ID/renumbering conventions, one-line status per track. The phase entries,
-  gate checklists and progress ledgers live in **[docs/roadmap/](phases/p1/docs/roadmap)**
+  gate checklists and progress ledgers live in **[phases/p1/docs/roadmap/](phases/p1/docs/roadmap)**
   (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B32
   level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
   transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
@@ -70,19 +90,19 @@ resolve through one hop.
   variational crime), route fork = user's call** —
   `track_v.md` V1–V4 viscous, designed-not-started, `track_a.md` A1–A3
   verification & analysis; **A3 ✓ CLOSED 2026-07-18** = the response to the
-  2026-07-17 independent inspection (docs/inspection/; the 2026-07-19
+  2026-07-17 independent inspection (phases/p1/docs/inspection/; the 2026-07-19
   second-round inspection's N1/D1–D10 findings were executed by B21 + the
   errata wave). **Next phase = user's call.**)
   "What phase are we in" and "what gate is open" live there, nowhere
   else. Track B numerics live in a separate spec,
-  [docs/design_track_b.md](phases/p1/docs/design_track_b.md) (it supersedes DN1).
+  [phases/p1/docs/design_track_b.md](phases/p1/docs/design_track_b.md) (it supersedes DN1).
 - [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
   wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
   strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12); §11 is a
-  pointer to roadmap.md + docs/roadmap/ since 2026-07-15.
-- [docs/demo_report.md](phases/p1/docs/demo_report.md) — **evidence dossier index** (per-
+  pointer to roadmap.md + phases/p1/docs/roadmap/ since 2026-07-15.
+- [phases/p1/docs/demo_report.md](phases/p1/docs/demo_report.md) — **evidence dossier index** (per-
   phase directory table); the evidence sections live in
-  **[docs/demo_report/](phases/p1/docs/demo_report)** (`track_p.md`, `track_m.md`,
+  **[phases/p1/docs/demo_report/](phases/p1/docs/demo_report)** (`track_p.md`, `track_m.md`,
   `track_b.md`, `track_a.md`): one self-checking demo per phase under `cases/demo/<phase>/`
   with committed figures + measured gate numbers. When a phase closes, add its
   demo section to the matching track file and a row to the index.
@@ -92,8 +112,8 @@ resolve through one hop.
   script, no CSV, no cached `.npz` — after a P11 ledger status had already been
   changed on its strength. If a run is too expensive to repeat, that is the
   reason to commit its CSV, not a reason to skip it.
-- [docs/analysis/](phases/p1/docs/analysis) — analysis/review reports (capability
-  reviews etc.), dated snapshots, non-normative. [docs/archive/](phases/p1/docs/archive)
+- [phases/p1/docs/analysis/](phases/p1/docs/analysis) — analysis/review reports (capability
+  reviews etc.), dated snapshots, non-normative. [phases/p1/docs/archive/](phases/p1/docs/archive)
   — historical archives (e.g. the pre-2026-07-15 agent-rules narrative);
   never a coding spec (rule 11). `docs/discussion_notes/` was **DELETED
   2026-07-14** (commit 0e4895a; history via
@@ -203,7 +223,7 @@ cycles intact so they still collapse and are still refused, termination test unc
 Measured A/B: acceptance flips False -> True while sigma_min and cl_p agree to 10 digits with
 identical refresh and step counts (`bench/gate_results/sigma_fix_verify{,_prefix}.csv`) —
 so it changes the VERDICT, not the numbers. Note:
-`docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
+`phases/p2/docs/dev_phase_two/20260805-0200-sigma-transport-root-cause.md`.
 Do not re-attribute this to the tip: the affected elements span the whole mesh (z/b 0.002-1.650).
 
 ## ★★ Four criterion defects in four rounds, all the same shape (2026-08-12, measured)
@@ -325,7 +345,7 @@ crashing: `bench/run_capability_matrix.py`'s `MACH_NOT_ATTAINED` guard compared 
 `m_att` was identically `m`, i.e. **a guard that could not fire**, whose own comment said it existed so
 as not to trust the driver flags. ⇒ `newton.py::_ramp_honesty_fields` now provides all three
 (`m_final`, `m_last_converged`, `target_reached`) on the conforming ramp, unit-tested without a solve
-in `tests/test_gs40_provenance.py`. **Read them directly; do not `.get` them with a default** — a
+in `tests/F/test_F01_provenance.py`. **Read them directly; do not `.get` them with a default** — a
 missing key is a library regression and must be loud. `solve_newton_lifting` (single Mach) does not
 have them, and there the state is at `m_inf` by construction. The per-level `converged` flags still
 live in `level_results`, which is what the three fields are derived from.
@@ -549,16 +569,129 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
 
 ## Workflow
 
-1. Before coding: find the open gate in the current phase's docs/roadmap/ entry
-   and plan against its acceptance criterion. Every visual gate needs a headless artifact
-   (`artifacts/<gate_id>/*.png` + `summary.csv`; matplotlib `Agg`, PyVista
-   off-screen — never GUI-only checks).
+1. Before coding: find the open gate in the current phase's phases/p1/docs/roadmap/ entry
+   and plan against its acceptance criterion. Every visual gate must be **headless** —
+   matplotlib `Agg`, PyVista off-screen, never a GUI-only check.
+   ★★★ **But a headless plot is not evidence unless it is COMMITTED** (discipline 3), and the
+   old `artifacts/<gate_id>/` target was **gitignored** — 0 tracked files — so for years the
+   rule demanded an artifact and the repository guaranteed it never reached HEAD, while 11 live
+   documents cited `artifacts/G1.3/` and `artifacts/G2.{1..5}/` as if they existed in a fresh
+   clone. `artifacts/` was DELETED 2026-08-24. ⇒ **C/D-class figures write to the TRACKED
+   `cases/gates/<gate_id>/`**, via the `gate_evidence_dir` fixture (keyed by the test file's
+   own stem, so the gate ID and its evidence directory cannot drift apart — `tests/F` asserts
+   that correspondence in BOTH directions). Generating them is opt-in: the export legs skip
+   unless `PYFP3D_GATE_FIGURES=1`, because committing a PNG per run is pure binary churn.
+   A/B/E/F incidental plots go to a gitignored scratch dir. `cases/gates/INDEX.md` embeds
+   every committed figure, so the evidence is readable without running anything.
+   ★ Headless still applies to all of it: matplotlib `Agg`, PyVista off-screen, never a
+   GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
-   `pytest tests/test_v0_freestream.py`
-3. Full suite: `pytest tests/` — current baseline **595 passed + 12 skipped +
+   `pytest tests/A/test_A01_freestream_preservation.py`
+3. Full suite: `pytest tests/` — current baseline **674 passed + 33 skipped +
+   2 xfailed, 0 failed** (2026-08-28, **measured in full @1055.94 s @8 threads at
+   load 12.8**, phase-six rounds 10–28).
+   ★★★ **D03's M0.80 transonic shock gate ran on NO cadence** — the 2026-08-24
+   renumbering put `skipif(not gate_figures_enabled())` on its four TESTS (in D03
+   the physics tests are the ones that write evidence), so two checks that had run
+   on every change since phase one needed BOTH that flag and
+   `PYFP3D_TRANSONIC_GATES=1`, a combination no cadence uses. Now split: the guard
+   moved onto the two write calls. Costs 174 s warm, of which 172 s is the
+   Picard drift lock — the pre-renumbering cost, not a new one.
+   ★★ All **14** evidence-writing C/D gates now assert a fresh run against their
+   committed `summary.csv` (`tests/_gate_evidence.py`). C04 and D04 write none.
+   Previous: **666 passed + 35 skipped +
+   2 xfailed, 0 failed** (2026-08-28, **measured in full @963.26 s @8 threads at
+   load 16.9**, phase-six rounds 10–27).
+   ★★ +7 = one evidence-regression lock per converted gate. A runtime probe
+   (wrap `open`, run the suite) measured that **16 of 19 gate-evidence CSVs were
+   read by nobody** — gates recomputed and asserted against hard-coded literals,
+   so `tests/conftest.py`'s promise that assertions run against the committed
+   `summary.csv` was false. `tests/_gate_evidence.py` now holds the shared
+   machinery; **7 gates converted, 7 still to go** (C01/C02/C03/C09/D01/D02/D03).
+   Previous: **659 passed + 35 skipped +
+   2 xfailed, 0 failed** (2026-08-28, **measured in full @729.22 s @8 threads at
+   load 7.3**, phase-six rounds 10–26).
+   ★ +6 passed / +1 skipped = `tests/D/test_D13_ibl_vs_xfoil.py` — the loose-coupled
+   IBL against XFOIL 6.99, gated upstream and structure-locked downstream.
+   Previous: **653 passed + 34 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @809.02 s @8 threads at
+   load 16.0**, phase-six rounds 10–24).
+   ★ +6 passed / +1 skipped = `tests/D/test_D12_rae2822_experiment_bias.py`.
+   ★★ That round also fixed a real library defect: `post/section_cut.py` assigned
+   upper/lower by `dot(mid, hint) > 0`, i.e. **y > 0** — correct for a symmetric
+   section, WRONG for a cambered one. RAE2822's aft LOWER surface has y > 0, so 37
+   of its points (medium) were interleaved into `x_upper`, which made smoothing
+   inert there and contaminated any RMS or cn built on that array. Same global-hint
+   rule that `mesh/wake_cut.py` had already fixed for the Kutta probe (GV5.2
+   addendum #1) and never backported — discipline #9. Now a LOCAL outward-normal
+   test. ★ **Erratum radius measured ZERO**: NACA0012 and M6 section curves are
+   BIT-IDENTICAL across the change; only RAE2822 moves (222/186 → 204/204).
+   Previous: **647 passed + 33 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @571.97 s @8 threads at
+   load 15.9**, phase-six rounds 10–23).
+   ★ +7 passed / +1 skipped vs the 640 below = `tests/D/test_D11_naca0012_experiment_bias.py`
+   (7 checks plus its opt-in figure-export leg).
+   Previous: **640 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @687.69 s @8 threads at
+   load 15.0**, phase-six rounds 10–22).
+   ★ +1 vs the 639 below: F06's shock-reference lock split into two (the committed
+   value must not drift, and the gate must ACTUALLY READ it — verified behaviourally).
+   Previous: **639 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-27, **measured in full @689.35 s @8 threads at
+   load 14.1**, phase-six rounds 10–20).
+   ★★ C08 Ringleb closed the C class: **placeholders in tests/C are now 0**, which
+   discharges user ruling ② ("build every C-class case"). +8 passed, skipped nets
+   to zero (placeholder skip out, figure-export skip in).
+   Previous: **631 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @573.51 s @8 threads at
+   load 14.8**, phase-six rounds 10–19).
+   ★ vs the 621/32/2 below: C07 went placeholder → real gate, **+10 passed**,
+   skipped nets to zero (placeholder skip out, figure-export skip in).
+   Previous: **621 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @450.16 s @8 threads at
+   load 4.1**, phase-six rounds 10–18).
+   ★ vs the 614/32/2 below: C05 went placeholder → real gate, **+7 passed**, and
+   skipped nets to zero (placeholder skip out, figure-export skip in).
+   Previous: **614 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @664.75 s @8 threads at
+   load 15.1**, phase-six rounds 10–17).
+   ★ vs the 605/32/2 below: C06 went placeholder → real gate, **+9 passed**, and
+   skipped nets to zero (the placeholder skip goes, the figure-export skip arrives).
+   Previous: **605 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @400.94 s @8 threads at
+   load 13.7**, phase-six rounds 10–16).
+   ★ vs the 604/33/2 below: deleting the retired `test_ab_bit_identity_gate_free_library`
+   (a plain skip whose premise was false) is **−1 skipped**, and F07's 6th check
+   (every embedded repo path in live code must exist) is **+1 passed** ⇒
+   **604 + 1 = 605, 33 − 1 = 32, xfailed unmoved = 2**.
+   Previous: **604 passed + 33 skipped +
+   2 xfailed, 0 failed** (2026-08-26, **measured in full @573.78 s @8 threads**,
+   phase-six rounds 10–14).
+   ★★★ **The layout changed: tests now live in `tests/A..F/`, and the TIER IS THE
+   DIRECTORY** — `pytest tests/A tests/B` (ungated, every change) · `tests/C tests/E`
+   (fast tier, every close-out) · `tests/D` (external references) ·
+   `tests/F` (opt-in, with a default-on subset). 88 gate files / 585 `def test_`.
+   ★★ **ERRATUM 2026-09-06 (gate audit W0.7 / H25): `tests/D` is NOT "the gated set".**
+   Measured: **2 of 13** D files carry `PYFP3D_TRANSONIC_GATES` (D03, D04) — D05–D13
+   arrived 2026-09-03/05 ungated, so they run on the DEFAULT cadence. That is the
+   intended state (a code-to-code reference gate that only runs at phase boundaries
+   would be 6x rarer than the tier it anchors); **the doc was the thing that was
+   wrong, so the doc follows the implementation.** The gated set is now defined by the
+   ENV VAR, not by a directory: `PYFP3D_TRANSONIC_GATES=1` unlocks 7 files
+   (A21 A28 A30 D03 D04 E01 E02), and that is what a phase boundary runs.
+   ★★ All three numbers close: the previous reading was **586 / 35 / 2** @403 s (after
+   the renumbering, before A53/B05/B06). A53 placeholder→real gate **+4p/−1s**, B05
+   placeholder→real gate **+6p/−1s**, B06 new **+7p**, F07 one more check **+1p**
+   ⇒ **586 + 18 = 604, 35 − 2 = 33, xfailed unmoved = 2**.
+   ★★★ **skipped 12 → 33 is the SHAPE of the renumbering, not a regression**: 4 C-class
+   and 6 D-class files are **PLACEHOLDER gates** (user ruling ④ "暂时没有数据的先占位" —
+   `@pytest.mark.skip` holds the gate ID while the reference data is pending); the rest
+   are gated locks and the figure-export legs that skip unless `PYFP3D_GATE_FIGURES=1`.
+   ★ `artifacts/` and its fixture are GONE — see workflow step 1 above.
+   Previous: **595 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-24, **measured in full @716.81 s @8 threads at
    load 14.9**, the M1 re-spec).
-   ★★★ +6 vs the 589 below = `tests/test_m1_respec.py`, and **589 + 6 = 595 closes
+   ★★★ +6 vs the 589 below = `tests/F/test_F06_m1_spec.py`, and **589 + 6 = 595 closes
    exactly** with skipped/xfailed unmoved. It locks a **USER RULING of 2026-08-24**:
    **M1 (a) deleted as a criterion, (b) and (c) relaxed from 3 % to 20 %, and split into
    two INDEPENDENT metrics M1b and M1c.** ★ This is the **first relaxation of a target
@@ -579,10 +712,26 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ Also fixed at source: the gate carried `SHOCK_REF, SHOCK_TOL = 0.61, 0.02`, a number
    that appears in nine documents and in **no reference file**; it now reads the committed
    **0.62 ± 0.03** from `cases/reference_data/naca0012_m080/shock_reference.csv`.
+   ★★★ **ERRATUM 2026-08-27 — "reads" was false, and the correction is the interesting part.**
+   The VALUE was updated to match the committed file, but the code kept a **hard-coded
+   literal**: `bench/run_m1_gate.py` still said `SHOCK_REF, SHOCK_TOL = 0.62, 0.03`, and the
+   lock meant to protect it, `tests/F/test_F06_m1_spec.py`, asserted that literal against
+   **another literal**. Editing the CSV made nothing go red. ⇒ **the gate written to kill "a
+   number with no reference file" carried a number with no LIVE LINK to its reference file.**
+   Now `_read_shock_reference()` actually parses the CSV, and the lock is **behavioural**:
+   it feeds a PERTURBED copy to the reader and requires the value to follow.
+   ★★ Two dead criteria were written before that one worked, both the same family:
+   (i) literal-vs-literal, and (ii) "the gate's value equals the file's value" — which is
+   **true by construction** once the gate reads the file (measured: changing the CSV to 0.64
+   left the suite green). **A value equalling its own source is not a criterion.**
+   ★ Found by a RUNTIME probe (wrap `open`, run the suite, record which
+   `cases/reference_data/` files are actually opened), not by grep: grep sees three files
+   *mentioning* `naca0012_m080` and cannot see that **none of them opens it** — the other two
+   are gated and do not run by default.
    Previous: **589 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-24, **measured in full @690.49 s @8 threads at
    load 12.6**, phase-five R23).
-   ★ +9 vs the 580 below = `tests/test_r23_usability.py`, locking `bench/usability.py`
+   ★ +9 vs the 580 below = `tests/F/test_F05_usability_anchor.py`, locking `bench/usability.py`
    — **580 + 9 = 589 closes exactly**, skipped/xfailed unmoved, `pyfp3d/` untouched.
    ★★ **What it is for.** Measured: at medium/alpha 1.25/seed 0, `upwind_c = 1.10`
    converged to **|R| 2.28e-13 with ZERO clamps** on a root whose Gamma was **7.6x**
@@ -607,7 +756,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    Previous: **580 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-23, **measured in full @780.32 s @8 threads at
    load 12.2**, phase-five R19).
-   ★ +6 vs the 574 below = `tests/test_r19_gamma_target.py`, and **574 + 6 = 580
+   ★ +6 vs the 574 below = `tests/A/test_A27_gamma_target.py`, and **574 + 6 = 580
    closes exactly with skipped/xfailed unmoved** — which is the point: R19 is the
    **first change to `pyfp3d/` in twenty rounds** (`gamma_target`, prescribed
    circulation on the Newton path) and it **moved no existing test**.
@@ -723,7 +872,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    with their load; never as a cost.
    Previous: **552 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, GS4.1 round 5 = the turbulent closure).
-   ★ +10 vs the 542 below = `tests/test_gs41_turbulent_closure.py`. Wall 1052 s @8
+   ★ +10 vs the 542 below = `tests/A/test_A39_turbulent_closure.py`. Wall 1052 s @8
    threads at load average **16.7** — the box was genuinely busy in this window, which
    also explains the 875 s reading below; quote suite walls with their load, never as a
    cost.
@@ -739,7 +888,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    a 1.8x spread with an identical result. Load average at launch was only 1.26, so the
    cause is NOT established; quote suite walls flagged and never as a cost, per the logged
    precedent of 1.6x/1.9x/5.4x spreads on bit-identical answers).
-   ★ +5 vs the 537 below = `tests/test_gs41_closures_audit.py` (one finding, five
+   ★ +5 vs the 537 below = `tests/A/test_A38_closures_source_audit.py` (one finding, five
    assertions), which locks the audit's
    ROOT CAUSE (the kinetic-energy integrand is degree 21, so 8-point Gauss is short) and
    NOT the error magnitude — so it stays true whether or not the quadrature is fixed.
@@ -751,7 +900,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    for those two thicknesses.
    Previous: **537 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-19, **measured in full @485.74 s @8 threads**, GS4.1 round 3).
-   ★ +16 vs the 521 below = `tests/test_gs41_closures_2d.py` (route (a2)'s correlation
+   ★ +16 vs the 521 below = `tests/A/test_A37_closures_2d.py` (route (a2)'s correlation
    closure). **Skipped and xfailed did not move.** ★ Two of the 16 are structural rather
    than numeric: the two closure families must not import each other (`closures.py` owns the
    3-D IBL, `closures_2d.py` owns the 2-D strip — see its docstring), and the profile-path
@@ -759,7 +908,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    number.
    Previous: **521 passed + 12 skipped +
    2 xfailed, 0 failed** (2026-08-18, **measured in full @472.19 s @8 threads**, GS4.1 round 1).
-   ★ +21 vs the 500 below = `tests/test_gs41_strip2d.py` (the 2-D strip core's locks).
+   ★ +21 vs the 500 below = `tests/A/test_A36_strip2d_core.py` (the 2-D strip core's locks).
    **Skipped and xfailed did not move** — the round touched no solve, and `strip2d.py` is a
    new module rather than a change to one. ★ Two of those 21 assert a **recorded FAIL's own
    numbers** (the closure family's flat-plate fixed point sits +4.52 % in H and +6.94 % in
@@ -769,7 +918,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    2 xfailed, 0 failed** (2026-08-17, **measured in full @465.24 s @8 threads**, GS4.0 + the
    R1 addendum). ★ 499 + 1 = the capability-matrix stale-schema lock.
    Previous within GS4.0: **499 + 12 + 2** (@477.27 s @8 threads).
-   ★ +20 vs the 479 below = `tests/test_gs40_provenance.py` (the GS4.0 instrument locks:
+   ★ +20 vs the 479 below = `tests/F/test_F01_provenance.py` (the GS4.0 instrument locks:
    the ramp honesty fields, the mesh manifest, the fast tier's node-list check). **Skipped
    and xfailed did not move**, which is the point: GS4.0 was an instrument round and had no
    licence to change a solve. ★ An independent full run of the 479 baseline was made the
@@ -784,7 +933,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ Earlier the same day it went 468 → 472 → 468 and that is
    an account closing, not churn: the +4 were the TEMPORARY `sigma_scale` instrument's
    locks, and they were deleted WITH the instrument at its registered expiry
-   (docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
+   (phases/p3/docs/dev_phase_three/20260812-0500-sigma-strength-verdict.md §6). A knob kept
    "in case we need it again" is how temporary knobs become permanent.
    ★★ Same disposal applied at the phase-3 close-out (2026-08-16) to `capture_select` /
    `capture_select_abs`, whose route K3 had measured HARMFUL (cl spread 1.21 % → 7.47 % on the
@@ -797,7 +946,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    2 xfailed, 0 failed** (2026-08-11, measured 494.47 s @8 threads on a quiet box;
    the 930.97 s recorded below was the same 8 threads UNDER LOAD — a 1.9x spread on
    wall time with the same result, so quote suite walls flagged, never as a cost).
-   ★ +11 vs the 457 below = `tests/test_meshgen_structured.py` (phase 3 task 3):
+   ★ +11 vs the 457 below = `tests/A/test_A18_meshgen_structured_hex.py` (phase 3 task 3):
    `pyfp3d/meshgen/structured.py` had ZERO tests/ coverage — G0's bit-identical
    single-variable knobs, the one thing route (A) actually delivered, were asserted
    only by a bench script, i.e. on no cadence. Same gap round 2b closed for the
@@ -873,13 +1022,13 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ **Step 6, added 2026-08-09: when a criterion is RETIRED or re-specified, grep its
    numbers and wording across `tests/` too** — B28 retired the fuselage-lift premise in
    the demo and the matching assertion sat in a gated test until 2026-08-09.
-   ★ **Phase THREE (opened 2026-08-11) records rounds in `docs/dev_phase_three/`**
+   ★ **Phase THREE (opened 2026-08-11) records rounds in `phases/p3/docs/dev_phase_three/`**
    (its own progress.md); the PLAN and rulings D1–D5 still live in
-   docs/dev_phase_two/roadmap.md, and docs/dev_phase_two/README.md holds the per-file
+   phases/p2/docs/dev_phase_two/roadmap.md, and phases/p2/docs/dev_phase_two/README.md holds the per-file
    checklist for when those six files may move to `phases/p2/docs/`.
    ★★★ **Phase THREE CLOSED 2026-08-16** (ruling D7; all three tasks on `main` — ① via PR #26,
    ②③ via PR #27 `d5efe53`). **PHASE 4'S SINGLE ENTRY POINT IS
-   [docs/dev_phase_three/20260816-1000-gs41-initiation.md](docs/dev_phase_three/20260816-1000-gs41-initiation.md)**
+   [phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md](phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md)**
    — read its §0 before anything else: it is self-contained by design (handover baselines, the items
    D7 assigned forward, the six things that must not be silently changed, and the two measured
    conclusions GS4.1 must carry — **P1 = 6.07× now but crosses the band's floor at the next level**,
@@ -887,12 +1036,12 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    ★ It stays where it is; phase 4's own progress.md **links** it rather than copying it — a copied
    entry point forks from its original, which is the failure this project has logged repeatedly.
    ★ **Phase TWO uses a different surface list**, because the phase-one docs below are
-   frozen (docs/dev_phase_two/roadmap.md §8): (1) `docs/dev_phase_two/progress.md` — one
+   frozen (phases/p2/docs/dev_phase_two/roadmap.md §8): (1) `phases/p2/docs/dev_phase_two/progress.md` — one
    row, plus **its own 阶段进度概览 and 产品指标追踪 tables** (they live in progress.md,
-   NOT in the roadmap); (2) `docs/dev_phase_two/roadmap.md` when a ruling or a stage
+   NOT in the roadmap); (2) `phases/p2/docs/dev_phase_two/roadmap.md` when a ruling or a stage
    disposition moves; (3) the round file
    itself; (4) this file's **baseline line** when the suite count moves; (5)
-   `docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
+   `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` when a measurement moves a
    capability claim; ★ **(6) PROJECT_STRUCTURE.md** — added 2026-08-10 after checking it
    and finding phase two absent from it ENTIRELY: neither `bench/` nor `docs/` was in the
    directory tree and the footer baseline still read the phase-one 652, so ~70 round files
@@ -901,7 +1050,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    off the phase-two list is how it rotted again. Steps 0 and 6 and the erratum checklist
    apply to both lists.
    For a **phase-one** close-out:
-   tick the gate in the phase's `docs/roadmap/track_*.md` entry, then update
+   tick the gate in the phase's `phases/p1/docs/roadmap/track_*.md` entry, then update
    **all five** surfaces, because each has gone stale at least once by being
    "obvious enough to skip":
    1. that track file's **progress ledger** (bullet entry + track-status line;
@@ -948,5 +1097,5 @@ phases V1–V4 are distinct from the validation-case IDs V0–V6). Track P was
 renumbered 2026-07-08 and 2026-07-11, Track B 2026-07-12 (×2) and 2026-07-13 —
 docs before those dates use the then-current IDs (e.g. pre-2026-07-11 "P9
 curved walls"/"P10 backlog" read as P11/P12). The one-line convention summary
-and per-phase mapping notes live in docs/roadmap.md and the affected
-docs/roadmap/ entries.
+and per-phase mapping notes live in phases/p1/docs/roadmap.md and the affected
+phases/p1/docs/roadmap/ entries.

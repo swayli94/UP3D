@@ -1,6 +1,6 @@
 """GV3.3 fuselage body-of-revolution smoke (Track V3).
 
-Binding text: docs/roadmap/track_v.md GV3.3 (2026-07-22, user-directed);
+Binding text: phases/p1/docs/roadmap/track_v.md GV3.3 (2026-07-22, user-directed);
 pre-registered bands: cases/analysis/v3_fuselage_smoke/PRE_REGISTRATION.md
 (committed before the first execution). Regenerates every CSV/PNG in
 results/ and exits 0 iff all pre-registered assertions hold.

@@ -556,7 +556,7 @@ fixed at continuation-PATH level only (m_start 0.30 + n_picard_seed 12 ⇒ clean
  wide-envelope sweep demo lives on the cheap 2.5D M3). Suite baseline now **218+8+2** (was 184+8+2;
  +34 B1 dual-mesh tests, some skip without the local wake-free meshes;
  full suite measured 409 s at the 8-thread cap alongside the running P9 demo —
- the 302 s G8.3 number remains the 16-thread reference). Track B numerics spec = [docs/design_track_b.md](../design_track_b.md)
+ the 302 s G8.3 number remains the 16-thread reference). Track B numerics spec = [phases/p1/docs/design_track_b.md](../design_track_b.md)
  (2026-07-11, López-dissertation cross-check, supersedes DN1:
  3D wake BC = g₁+g₂ two-component LS, implicit Kutta via TE duplication + wake-LS, ε side-shift for on-wake nodes, full-element
  cut integration, per-side upwind states, nonsymmetric system → GMRES);
@@ -802,11 +802,11 @@ fixed at continuation-PATH level only (m_start 0.30 + n_picard_seed 12 ⇒ clean
  G1.6 sphere-Cp (strict xfail) awaits its **Option C acceptance re-spec**;
  curved/isoparametric wall elements separately scoped (design.md §5.1.2);
  do not propose h-refinement, recovery tweaks, Nitsche, or boundary-data corrections for G1.6 — ruled out with evidence —
- per [docs/roadmap.md](../roadmap.md).
+ per [phases/p1/docs/roadmap.md](../roadmap.md).
 
 Authoritative docs (the ONLY documents development plans against):
 - [docs/design.md](../../../../docs/design.md): theory, discretization, architecture, and validation formulas.
-- [docs/roadmap.md](../roadmap.md): phases, gates, and progress ledger.
+- [phases/p1/docs/roadmap.md](../roadmap.md): phases, gates, and progress ledger.
 
 NOT authoritative (and now removed): `docs/discussion_notes/` (DN1–DN6,
 PLAN.md) was discussion/reference material only; it was **deleted 2026-07-14**

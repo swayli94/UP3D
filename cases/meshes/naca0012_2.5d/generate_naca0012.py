@@ -1,6 +1,6 @@
 """
 M0 deliverable: single-layer extruded NACA0012 quasi-2D mesh family
-(docs/roadmap.md Track M, gate link G2.5).
+(phases/p1/docs/roadmap.md Track M, gate link G2.5).
 
 The 2D airfoil domain (closed sharp TE, circular far field of radius R_FAR
 centered at mid-chord) is meshed with vanilla Gmsh, with the wake line

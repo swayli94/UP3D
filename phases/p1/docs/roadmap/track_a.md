@@ -287,7 +287,7 @@ no-op on committed data — each verified as such, not assumed.
   (0.17/0.36 vs 0.15/0.34) is documented at its source rather than
   "fixed" — switching `p14/run_demo.py`'s rounded `LS_REF` to a CSV read would
   move the committed `checks.csv` and force a re-run of a heavy demo for a
-  0.02pp rounding difference; (b) the dated `docs/analysis/` snapshot keeps its
+  0.02pp rounding difference; (b) the dated `phases/p1/docs/analysis/` snapshot keeps its
   original prose plus an erratum, per the "dated snapshots are not maintained
   documents" rule.
 - [x] **GA3.2 — C2/C3 backported to the conforming Newton** (`solve/newton.py`).
@@ -437,7 +437,7 @@ that stood here is superseded: B9 closed 2026-07-17.)*
   close-out ritual extended to FIVE surfaces + a backport check** (CLAUDE.md step 5; agent-rules disciplines #9/#10) —
   the audit's findings were mostly close-out debt, concentrated in exactly the two surfaces the old two-item ritual omitted.
   **NO `pyfp3d/` numerics change.** Suite **463 + 21 + 2** (+3 reader). Response report:
-  `docs/inspection/20260718-response-to-kimi-inspection.md`. ★ **Errata (2026-07-19, from the Kimi second-round audit):** (1) the **P2**
+  `phases/p1/docs/inspection/20260718-response-to-kimi-inspection.md`. ★ **Errata (2026-07-19, from the Kimi second-round audit):** (1) the **P2**
   physics-bounds contradiction is **BACKLOG, not fixed** — previously recorded only in the response doc;
   now also here and as a comment at `pyfp3d/physics/isentropic.py::validate_physics_bounds`; (2) the claim "M2 authority contradiction
   resolved in title, checkbox AND ledger" was overstated — the `track_m.md` ledger row (and the roadmap.md/overview.md M lines) still read ◐

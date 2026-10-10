@@ -1,7 +1,7 @@
 # PRE-REGISTRATION — GV5.1c: the above-band seed — a true read of the pre-floor slope-2 window
 
 Committed BEFORE the first execution, per discipline. Gate:
-`docs/roadmap/track_v.md` V5 follow-up **GV5.1c** (2026-07-24,
+`phases/p1/docs/roadmap/track_v.md` V5 follow-up **GV5.1c** (2026-07-24,
 user-directed). Design inputs: the committed GV5.1b VERDICT
 (`../v5_1b_scaled_newton/VERDICT.md` §4–5 — the amended seeds sit at
 1.00× the diagnosed floor, INSIDE the 10× floor band from iteration 0,
@@ -113,7 +113,7 @@ probes).
   approach, it does not touch the floor).
 - Breaking the floor itself is OUT of scope here — it is the
   separately registered TE-band (B, δ) formulation item
-  (`docs/roadmap/track_v.md` V5 **GV5.5**, registered 2026-07-24,
+  (`phases/p1/docs/roadmap/track_v.md` V5 **GV5.5**, registered 2026-07-24,
   user-directed).
 
 ## Out of scope

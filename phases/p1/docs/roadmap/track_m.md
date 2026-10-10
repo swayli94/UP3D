@@ -1,6 +1,6 @@
 # pyFP3D Roadmap — Track M (mesh generation M0–M5)
 
-> Split verbatim from `docs/roadmap.md` on 2026-07-15 (content unchanged; only
+> Split verbatim from `phases/p1/docs/roadmap.md` on 2026-07-15 (content unchanged; only
 > this header and the ledger heading were added). Global working rules, gate-ID
 > conventions and the track index live in [roadmap.md](../roadmap.md); the
 > human-readable status snapshot is [overview.md](../../../../docs/overview.md).

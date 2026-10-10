@@ -2,7 +2,7 @@
 
 Asked directly by the user 2026-08-05 after the M1 re-measurement found the seed
 default's 5 -> 0 flip breaking NACA0012 M0.80 medium
-(docs/dev_phase_two/20260805-1200-m1-remeasure.md sec 2).
+(phases/p2/docs/dev_phase_two/20260805-1200-m1-remeasure.md sec 2).
 
 HYPOTHESIS, WRITTEN BEFORE RUNNING. GS3.3b's own comment in tests/test_p8_newton.py
 scoped its seed change with a stated safety condition:

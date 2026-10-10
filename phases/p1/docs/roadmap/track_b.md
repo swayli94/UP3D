@@ -1,6 +1,6 @@
 # pyFP3D Roadmap — Track B (level-set embedded wake B1–B27)
 
-> Split verbatim from `docs/roadmap.md` on 2026-07-15 (content unchanged; only
+> Split verbatim from `phases/p1/docs/roadmap.md` on 2026-07-15 (content unchanged; only
 > this header and the ledger heading were added). Global working rules, gate-ID
 > conventions and the track index live in [roadmap.md](../roadmap.md); the
 > human-readable status snapshot is [overview.md](../../../../docs/overview.md).
@@ -2037,8 +2037,8 @@ skipped.
 ### B21 — Freeze-capture alignment with the B20 density (the Kimi-inspection N1 fix) ✓ CLOSED 2026-07-19 (NEW; appended after B20, no renumber; executes the 2026-07-19 second-round inspection's N1 finding)
 
 **Trigger.** The 2026-07-19 Kimi inspection
-(`docs/inspection/20260719-0555-full-inspection.md`, N1) found — and confirmed
-with a committed probe (`docs/inspection/20260719-n1-freeze-probe.py`) — that
+(`phases/p1/docs/inspection/20260719-0555-full-inspection.md`, N1) found — and confirmed
+with a committed probe (`phases/p1/docs/inspection/20260719-n1-freeze-probe.py`) — that
 `freeze_side_state` was the ONE consumer of the side q²/ρ path the B20 patch
 missed: it captured the frozen (upstream, branch) selection on the UNPATCHED
 side field while `newton_side_data` applies `_apply_main_density` first. The
@@ -2148,7 +2148,7 @@ re-baseline erratum process rule; (4) the next-phase priority re-assessment.
   inspection's §2 recommendation; its D1/D2/D7/D8 were all products of this
   rule not existing.
 - [~] **GB22.5 — next-phase priority re-assessment (RECORDED, decision =
-  user).** `docs/analysis/next_phase_priorities_2026-07-19.md`: recommends
+  user).** `phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md`: recommends
   **P11 (curved wall elements) first** — post-B20/B21 the wing-body line has
   no numerical suspects left, and the G1.6 faceted-geometry root now owns
   three refinement-worsening wounds (sphere Cp 11.6 %, GB9.4 fuselage lift
@@ -2557,14 +2557,14 @@ blocks nothing in P7–P12, and M2 (wing-body) wants it.
   committed coarse (~35 s) + medium (~9 min) ramps and asserts m_final/γ/M_max/clamps absolutely (γ rtol 1e-4 = 20× the measured run-to-run
   spread, 4 orders under a B20-sized move) — the alarm that did not exist when the suite stayed green through two re-baselines.
   **GB22.4 ✓** CLAUDE.md step-5 re-baseline erratum checklist + agent-rules discipline #11.
-  **GB22.5 RECORDED** `docs/analysis/next_phase_priorities_2026-07-19.md` — recommends **P11 first** (G1.6 owns three refinement-worsening
+  **GB22.5 RECORDED** `phases/p1/docs/analysis/next_phase_priorities_2026-07-19.md` — recommends **P11 first** (G1.6 owns three refinement-worsening
   wounds; wing-body line has no numerical suspects left), LS fine second, Track V after P11 (V1 ladder parallelizable);
   decision = user. Backport N/A.
 - B21 — ✓ — 2026-07-19 — **Freeze-capture alignment with the B20 density (the Kimi-inspection N1 fix) —
   restores the M6-medium M0.84 ramp and OVERTURNS GB20.7.** `freeze_side_state` was the one consumer of the side q²/ρ path the B20 patch
   missed: it captured (upstream, branch) on the UNPATCHED side field while `newton_side_data` patches first —
   probe-confirmed **83 upstream + 9 branch** selection differences vs the live system (M6 coarse seeded M0.70, all aux-touching mixed-plain;
-  `docs/inspection/20260719-n1-freeze-probe.py`). Pre-B20 both were consistently unpatched;
+  `phases/p1/docs/inspection/20260719-n1-freeze-probe.py`). Pre-B20 both were consistently unpatched;
   **B20's partial patch CREATED the inconsistency** ⇒ every armed freeze locked a selection the live system would not make = the actual
   mechanism of the "GB20.7 capability loss". **Fix = one line** (capture runs `_apply_main_density`); 2.5-D bit-identical.
   **GB21.1 ✓** committed recipe reaches **M0.84 again**: γ **0.088343** (pre-B20 0.088338), M_max 2.4818, res 9.0e-14, 0 lim/1 flr, **515

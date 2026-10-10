@@ -1,6 +1,6 @@
 """
 Track B / B6 gate: transonic + Mach continuation on the level-set path
-(docs/roadmap.md Track B B6; docs/design_track_b.md §5.2/D10).
+(phases/p1/docs/roadmap.md Track B B6; phases/p1/docs/design_track_b.md §5.2/D10).
 
 What B6 adds over B3/B4 (subsonic lifting):
 
@@ -253,6 +253,6 @@ def test_g_b6_m080_coarse_neumann(mesh_dir):
     # side did not move -- but that means the two wake paths now run DIFFERENT DENSITY
     # LAWS by default, and every cross-model comparison (B9's 0.4 %/0.6 % agreement,
     # B27's cross-model rows) is now entropy-corrected conforming versus isentropic LS.
-    # Registered as an open item in docs/dev_phase_two/roadmap.md; the band below is
+    # Registered as an open item in phases/p2/docs/dev_phase_two/roadmap.md; the band below is
     # left at the historical value rather than silently re-anchored to 0.6196.
     assert abs(sh["x_shock"] - 0.658) < 0.06

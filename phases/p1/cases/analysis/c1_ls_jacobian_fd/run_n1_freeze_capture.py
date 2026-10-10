@@ -10,7 +10,7 @@ OTHER axis that sweep structurally cannot see: `freeze_side_state` captured the
 frozen Newton finish iterated on a selection the live system would not make
 (measured: 83 upstream + 9 branch differences on M6 coarse at a seeded M0.70
 state, all on aux-touching mixed-plain elements;
-docs/inspection/20260719-n1-freeze-probe.py).
+phases/p1/docs/inspection/20260719-n1-freeze-probe.py).
 
 That capture is now patched (multivalued.py `freeze_side_state`, B20/N1). This
 script re-runs the SAME committed B15 M6-medium call as run_gb207_recipe.py,

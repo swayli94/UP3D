@@ -1,6 +1,6 @@
 """GS1.2b: can pseudo-transient continuation replace the Mach ramp?
 
-Pre-registered in docs/dev_phase_two/20260728-2030-s1-ptc.md.
+Pre-registered in phases/p2/docs/dev_phase_two/20260728-2030-s1-ptc.md.
 
 The ramp was measured to fail under refinement (GS1.2 Q2): at h_wall = 0.005c it
 cannot reach M0.7875/alpha1.25 (dies at M0.741) nor M0.80/alpha0 (dies at

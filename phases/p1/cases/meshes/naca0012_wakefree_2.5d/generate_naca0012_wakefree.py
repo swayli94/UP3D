@@ -1,6 +1,6 @@
 """
 M3 deliverable: wake-free ("O-mesh style") single-layer extruded NACA0012
-quasi-2D mesh family (docs/roadmap.md Track M M3; design_track_b.md §5.7).
+quasi-2D mesh family (phases/p1/docs/roadmap.md Track M M3; design_track_b.md §5.7).
 
 Identical pipeline to the M0 family (cases/meshes/naca0012_2.5d) except the
 wake line is NOT embedded: the mesh topology knows nothing about the wake --

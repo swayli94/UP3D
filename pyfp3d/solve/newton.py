@@ -43,7 +43,7 @@ is a Picard stabilizer -- it would destroy quadratic convergence); no
 pseudo-transient term (phase two GS1.2b measured a SER-scheduled one to be
 strictly worse than plain Newton here, and removed the dormant fixed-shift
 `ptc_dtau` it replaced -- see
-docs/dev_phase_two/20260728-2030-s1-ptc.md). Transonic runs MAY wrap this in
+phases/p2/docs/dev_phase_two/20260728-2030-s1-ptc.md). Transonic runs MAY wrap this in
 the upward-only Mach continuation of solve_newton_transonic (M_crit and upwind_c held FIXED
 within the ramp, Lopez Tables 4.7/4.8/4.13).
 """
@@ -272,7 +272,7 @@ class NewtonWorkspace:
         self.shock_set_history = []
         #: ★★ capture SELECTION was tried here and REMOVED 2026-08-16. K3 measured the rule HARMFUL
         #: (balanced panel [0, 5]: cl spread 1.21 % -> 7.47 %, and it lost a seed), so the route is
-        #: dead -- see docs/dev_phase_three/20260812-2300-capture-selection-verdict.md. The knob went
+        #: dead -- see phases/p3/docs/dev_phase_three/20260812-2300-capture-selection-verdict.md. The knob went
         #: with it rather than surviving as a default-OFF option, on this project's own rule that a
         #: knob kept "in case we need it again" is how temporary knobs become permanent. The freeze
         #: keeps the LAST refresh, and the honest reading of that stays in the sigma-freeze report:
@@ -539,7 +539,7 @@ class NewtonWorkspace:
         # over a donor cycle -- 57 floored cells, |R| 2.49e-06 un-converged (the
         # G8.2 signature; the two collapse routes are locked in
         # tests/test_s1b_entropy.py). Pre-registered
-        # docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
+        # phases/p2/docs/dev_phase_two/20260731-2000-entropy-mcap-prereg.md.
         sig = self.ent.sigma(state["q2l"], upstream, self.m_inf, self.gamma_air,
                              lim=state["lim"])
         #: ★ RECORD ONLY -- no switch, no numerical effect (one int64 copy). The map this refresh
@@ -549,13 +549,13 @@ class NewtonWorkspace:
         #: question about a DIFFERENT map. Recording it is the same discipline the project already
         #: imposes on the side-field density source: every consumer of that path must state and
         #: record where its input came from. Consumed by
-        #: bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
+        #: phases/p3/bench/run_task3_sigma_charge_count.py (pre-registration 20260812-0700).
         self.upstream_sigma = np.asarray(upstream).copy()
         #: ★ RECORD ONLY, BOUNDED. The post-shock SET is the object the freeze exists to pin, so
         #: "which cells flip in and out" is the primary datum for diagnosing selection churn --
         #: and `sigma_history` only carries the COUNT. Bounded at 128 entries because a Mach ramp
         #: reuses one workspace across levels and an unbounded list would grow with the ramp.
-        #: Consumed by bench/run_task3_sigma_freeze.py (pre-registration 20260812-1100).
+        #: Consumed by phases/p3/bench/run_task3_sigma_freeze.py (pre-registration 20260812-1100).
         self.shock_set_history.append(np.flatnonzero(self.ent._m1 > 0.0))
         if len(self.shock_set_history) > 128:
             del self.shock_set_history[0]
@@ -710,6 +710,16 @@ def _sigma_freeze_report(sigma_history):
     return out
 
 
+#: ★ `design.md` §12 risk 3 的那个数,**第一次出现在代码里**(W2.4,2026-09-06)。
+#: 它是**模型有效性**的界,不是求解器的阈值:上游法向马赫数超过约 1.3 之后,
+#: 等熵跳跃与真实激波强度的偏离开始显著,全速势的激波"偏强、偏后"。
+_FP_SHOCK_VALIDITY_MACH = 1.35
+#: ★ §12 risk 2 登记的非唯一带下沿(M∞ ≈ 0.82–0.85)。冷启动进入这一带时提示,
+#: 因为 §12 的缓解措施是"always ramp Mach upward from a subcritical converged state",
+#: 而冷启动**不满足**它。实测见 `tests/D/test_D14`。
+_FP_NONUNIQUE_MACH = 0.82
+
+
 def solve_newton_lifting(
     mesh_cut,
     wc,
@@ -742,7 +752,7 @@ def solve_newton_lifting(
     # ★ Also measured and rejected: a Laplace "cheap linearised seed" is far WORSE than
     # none (103.5 s, non-converged, cl_p 18 % off), and a shallow Picard-2 seed is
     # worthless (same wall, 9 Newton steps at level 0 against 3). Evidence:
-    # bench/gate_results/gs33b_seed.csv, docs/dev_phase_two/20260802-2300-noseed-global.md
+    # phases/p2/bench/gate_results/gs33b_seed.csv, phases/p2/docs/dev_phase_two/20260802-2300-noseed-global.md
     n_picard_seed: int = 0,
     n_newton_max: int = 30,
     tol_residual: float = 1e-10,
@@ -818,7 +828,7 @@ def solve_newton_lifting(
     #: because it is the tool for ON/OFF comparisons.
     entropy_correction: bool = True,
     #: ★★ Part 3 of the sigma-freeze round (pre-registered addendum #1 of
-    #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md). Width, in M^2 units, of a
+    #: phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md). Width, in M^2 units, of a
     #: CONTINUOUS ramp replacing the post-shock membership test's two hard switches -- the measured
     #: source of the selection limit cycle (a cell on the sonic line flips on an infinitesimal phi
     #: change while its factor JUMPS by 1 - sigma_RH). 0.0 = the hard test = today, BIT-IDENTICAL.
@@ -1479,7 +1489,7 @@ def solve_newton_lifting(
     finalize(timings, time.perf_counter() - t_wall0)
     # ---- COLD-START SEED FALLBACK (user ruling 2026-08-05) --------------------
     #
-    # MEASURED mechanism (docs/dev_phase_two/20260805-2200-seed-exposure.md): the
+    # MEASURED mechanism (phases/p2/docs/dev_phase_two/20260805-2200-seed-exposure.md): the
     # 2026-08-02 flip of n_picard_seed's default 5 -> 0 does not fail on its own. It
     # fails on a CONJUNCTION -- no seed, AND a cold start directly at a supercritical
     # M_inf, AND a mesh fine enough to resolve the supersonic pocket. NACA0012 M0.80:
@@ -1567,7 +1577,7 @@ def solve_newton_lifting(
     #: ★ This REPORTS; it does not refuse. Promoting it to a refusal (like
     #: sigma_transport_not_converged) is a CONTRACT change that could turn committed capability
     #: anchors red, so the trigger rate on those anchors is measured first and the promotion is
-    #: the user's call. Pre-registration: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md.
+    #: the user's call. Pre-registration: phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md.
     #: ★ tau is a CALIBRATION, not a guarantee (the EW forcing / taper r_c / descent10 lesson), so
     #: the raw last delta is reported alongside the flag and the verdict reports sensitivity.
     _sig_report = _sigma_freeze_report(sigma_history)
@@ -1580,6 +1590,31 @@ def solve_newton_lifting(
               f"period {_sig_report['churn_period']}) -- the entropy correction riding this "
               f"answer was frozen at a state the field has since left; see result["
               f"'sigma_freeze_report']")
+
+    #: ★★★ W2.4 / H12（2026-09-06）：兑现 `design.md` §12 **登记了但从未实现**的两条
+    #: 运行时缓解。审计实测:改这一版之前,**全库唯一的运行时警告就是上面那条
+    #: sigma-freeze** —— §12 risk 3 逐字要求的 "warn at runtime when max(M) exceeds
+    #: 1.35" 在代码里**不存在**,`1.35` 只出现在 `kernels/entropy.py` 的一段推导注释里。
+    #:
+    #: ★ 两条都**只打印,不改数值也不拒绝** ⇒ 位相同由构造保证(与上面 sigma-freeze
+    #: 同一形状:REPORT,不是 refuse)。把它们升格成拒绝会动既有能力锚点,那是
+    #: 另一次预注册的事。
+    _m_max = float(np.sqrt(mach2_max))
+    if _m_max > _FP_SHOCK_VALIDITY_MACH:
+        print(f"  [pyfp3d] validity WARNING: max local M = {_m_max:.4f} > "
+              f"{_FP_SHOCK_VALIDITY_MACH} -- design.md sec 12 risk 3: beyond a normal-shock "
+              f"upstream Mach of about 1.3 the ISENTROPIC jump misses the shock strength, so "
+              f"the full-potential shock is progressively wrong (too strong, and displaced). "
+              f"This is a MODEL validity limit, not a solver failure.")
+    if phi_init is None and m_inf >= _FP_NONUNIQUE_MACH:
+        print(f"  [pyfp3d] branch WARNING: cold start at M_inf = {m_inf:.4f} >= "
+              f"{_FP_NONUNIQUE_MACH} with no phi_init -- design.md sec 12 risk 2 registers "
+              f"Steinhoff-Jameson non-uniqueness for the CONSERVATIVE full-potential equation "
+              f"near M 0.82-0.85, and its stated mitigation is 'always ramp Mach upward from a "
+              f"subcritical converged state'. A cold start does NOT do that, so which branch "
+              f"this lands on is not determined by the physics alone. Measured instance: "
+              f"tests/D/test_D14 -- at alpha = 0, M 0.86, changing ONLY n_picard_seed gives "
+              f"four converged, zero-clamp solutions with cl from -0.0059 to +0.4360.")
 
     return {
         "seed_fallback": _fallback,
@@ -1743,7 +1778,7 @@ def solve_newton_transonic(
     backported here, so three bench consumers had been reading them
     through `.get(..., <default>)` since the phase-3 deletion and were
     silently getting the REQUESTED Mach back. The worst instance:
-    `bench/run_capability_matrix.py`'s MACH_NOT_ATTAINED guard compares
+    `bench/capability_matrix.py`'s MACH_NOT_ATTAINED guard compares
     `abs(m_att - m)`, which was therefore identically zero -- a guard
     that could not fire, whose own comment said it existed precisely so
     as not to trust the driver flags. (Discipline #9, two paths => a

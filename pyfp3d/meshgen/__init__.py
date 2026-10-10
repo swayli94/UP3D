@@ -1,5 +1,5 @@
 """
-meshgen: scripted quasi-2D mesh generation (docs/roadmap.md Track M).
+meshgen: scripted quasi-2D mesh generation (phases/p1/docs/roadmap.md Track M).
 
 M0 deliverable: single-layer extruded quasi-2D tet meshes built from a
 vanilla-Gmsh 2D triangulation (planar.py) and a globally consistent

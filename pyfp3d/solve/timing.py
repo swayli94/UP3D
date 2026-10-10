@@ -23,7 +23,7 @@ exclusive -- a region timed as `residual` must not also contain an
 assembly (the level-set residual does, and `newton_ls._System` splits it
 out explicitly).
 
-Reference: docs/roadmap/track_a.md A1.
+Reference: phases/p1/docs/roadmap/track_a.md A1.
 """
 
 import time

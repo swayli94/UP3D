@@ -1,7 +1,7 @@
 # PRE-REGISTRATION — GV5.2: RAE2822 transonic VII vs committed experiment
 
 Committed BEFORE the first code change, per discipline. Gate:
-`docs/roadmap/track_v.md` V5 **GV5.2** (registered in the V5 design;
+`phases/p1/docs/roadmap/track_v.md` V5 **GV5.2** (registered in the V5 design;
 user-sequenced 2026-07-24: GV5.1d → GV5.5 ✓ → **GV5.2** → GV5.3 →
 GV5.4). Executed under the **temporary 8-thread session constraint**
 (runner default 16; wall times flagged non-comparable).

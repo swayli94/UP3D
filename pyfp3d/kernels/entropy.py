@@ -20,10 +20,10 @@ parameter by that round's own Q5. Reading: on this discretisation the
 field, because the shock is smeared over 2-3 IRREGULAR tet cells and the
 per-cell compression noise is the same size as the discrimination needed.
 The chain-free code is in git history at 774ef96; the round file is
-docs/dev_phase_two/20260731-0000-s1b-chainfree-sigma.md.
+phases/p2/docs/dev_phase_two/20260731-0000-s1b-chainfree-sigma.md.
 
 Phase-two gate GS1b.3. Pre-registration:
-docs/dev_phase_two/20260729-0700-s1b-entropy-implementation.md.
+phases/p2/docs/dev_phase_two/20260729-0700-s1b-entropy-implementation.md.
 
 WHY THIS EXISTS (measured, not assumed). At a fixed transonic condition the
 computed lift does not converge under refinement (M0.7875/alpha1.25:
@@ -43,7 +43,7 @@ streamlines, rho0 = p0/(R*T0) and T0 is preserved across a shock, so
 with sigma = p02/p01 the Rankine-Hugoniot total-pressure ratio at the pre-shock
 Mach number. Applying that factor makes the full-potential mass-conservation jump
 reproduce Rankine-Hugoniot identically (verified to 0.0000 % for M1 = 1.15..1.60
-in bench/s1_duct/run_entropy_premise.py). It is NOT sigma^(1/(gamma-1)) -- that
+in phases/p2/bench/s1_duct/run_entropy_premise.py). It is NOT sigma^(1/(gamma-1)) -- that
 form (inherited from some phase-one notes) applies the exponent twice; the
 numerical check settles it: at M1 = 1.35 sigma^1 gives the R-H ratio 1.60278
 while sigma^(1/(gamma-1)) gives 1.38162.
@@ -195,7 +195,7 @@ def shock_factor_sweep(
             continue                      # own speed non-physical: no correction
         m2e = mach_number_squared(q2[e], m_inf, gamma)
         #: ★★ `soft_eps` (phase 3, 2026-08-12, pre-registered addendum #1 of
-        #: docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md): the MEMBERSHIP test below is
+        #: phases/p3/docs/dev_phase_three/20260812-1100-sigma-freeze-prereg.md): the MEMBERSHIP test below is
         #: a HARD switch, and that is the measured source of the selection limit cycle -- a cell
         #: sitting on the sonic line flips on an infinitesimal change in phi while its s JUMPS by
         #: 1 - sigma_RH(M1). Measured: max|dsigma| pins at exactly that jump (1.55e-2 <-> a cell at
@@ -440,7 +440,7 @@ class EntropyOperator:
     MAX_WALK_DEFAULT = 512
     #: knee fraction for the pre-shock walk (see shock_factor_sweep). 0.3 is the
     #: measured middle of an insensitive band; sensitivity is reported by
-    #: bench/s1_duct/run_entropy_knee.py.
+    #: bench/s1_duct/run_entropy_knee.py (DELETED 2026-08-24 with the phase-2 bench archive -- not in phases/ either; the reading it produced is quoted here and is the surviving record).
     KNEE_FRAC_DEFAULT = 0.3
 
     def __init__(self, n_elements: int, n_round: int = N_ROUND_DEFAULT,

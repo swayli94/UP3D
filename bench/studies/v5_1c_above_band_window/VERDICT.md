@@ -1,6 +1,6 @@
 # GV5.1c VERDICT — the above-band seed: the pre-floor slope-2 window measured — NO quadratic regime above the floor
 
-Gate: `docs/roadmap/track_v.md` V5 follow-up **GV5.1c** (2026-07-24,
+Gate: `phases/p1/docs/roadmap/track_v.md` V5 follow-up **GV5.1c** (2026-07-24,
 user-directed). Pre-registration: `PRE_REGISTRATION.md` (committed
 1e90d59 BEFORE the first execution). Runner: `run.py` (regenerates
 every artifact in `results/`; the GV5.1b runner's seed/protocol

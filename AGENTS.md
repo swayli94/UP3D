@@ -1,7 +1,7 @@
 # AGENTS.md — 跨 agent 协作规则（Kimi / Claude 共用）
 
 本文件是仓库级 agent 规则。项目工作规则仍以 [CLAUDE.md](CLAUDE.md)、
-[docs/agent-rules.md](docs/agent-rules.md)、[docs/roadmap.md](phases/p1/docs/roadmap.md)
+[docs/agent-rules.md](docs/agent-rules.md)、[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)
 为准；本文件只补充**多 agent 并行开发的 git 协作模式**。
 
 ## Git 协作模式（最高优先级）
@@ -28,7 +28,7 @@ Kimi 必须遵守：
 ## 项目关键纪律速记（详细版见 docs/agent-rules.md）
 
 - 线程上限 16，含 BLAS/OMP：`NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16`。
-- kernel/assembly 改动后先跑 `pytest tests/test_v0_freestream.py`，再跑更大范围。
+- kernel/assembly 改动后先跑 `pytest tests/A/test_A01_freestream_preservation.py`，再跑更大范围。
 - 证据纪律：结论必须有已提交的 artifact（PNG/CSV）；只写在 .md 里的数字不算证据。
 - 不重算贵重已提交 artifact（P4 heavy demo ~40 min、P5 medium 45–75 min 等），
   以 committed CSV/PNG 为准。
