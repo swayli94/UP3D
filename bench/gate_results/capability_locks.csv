@@ -1,6 +1,6 @@
 node,locks,returncode,summary,wall_s
-tests/E/test_E03_m1a_level_lock.py,M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05),0,============================== 3 passed in 3.61s ===============================,3.8
-tests/A/test_A30_seed_fallback_contract.py,"the cold-start seed fallback, incl. the real NACA M0.80 medium recovery",0,============================== 6 passed in 43.40s ==============================,43.6
-tests/A/test_A28_wingbody_topology.py,"wing-body conforming: junction loading, the B8 lift-loss detector",0,============================== 9 passed in 11.69s ==============================,12.0
-tests/E/test_E01_p8_newton_anchors.py,G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06),0,"=================== 2 passed, 1 xfailed in 78.96s (0:01:18) ====================",79.2
-tests/E/test_E02_wingbody_transonic_ceiling.py,"the conforming WING-BODY transonic ceiling: M0.84 reached, 0 clamps, cl_p",0,======================== 1 passed in 375.86s (0:06:15) =========================,376.1
+tests/E/test_E03_m1a_level_lock.py,M1a: the in-envelope three-level convergence (re-spec'd 2026-08-05),0,============================== 3 passed in 4.23s ===============================,4.5
+tests/A/test_A30_seed_fallback_contract.py,"the cold-start seed fallback, incl. the real NACA M0.80 medium recovery",0,============================== 6 passed in 53.70s ==============================,54.0
+tests/A/test_A28_wingbody_topology.py,"wing-body conforming: junction loading, the B8 lift-loss detector",0,============================== 9 passed in 9.24s ===============================,9.5
+tests/E/test_E01_p8_newton_anchors.py,G8.1/G8.2 conforming Newton anchors (G8.2 re-anchored 2026-08-06),0,"=================== 2 passed, 1 xfailed in 85.52s (0:01:25) ====================",85.8
+tests/E/test_E02_wingbody_transonic_ceiling.py,"the conforming WING-BODY transonic ceiling: M0.84 reached, 0 clamps, cl_p",0,======================== 1 passed in 395.72s (0:06:35) =========================,396.0
