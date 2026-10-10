@@ -53,6 +53,39 @@ import os
 import sys
 import warnings
 
+
+def _loaded_openblas_paths():
+    """已加载进本进程的 libopenblas 路径(Linux:/proc/self/maps)。"""
+    paths = set()
+    try:
+        with open("/proc/self/maps") as fh:
+            for _line in fh:
+                _parts = _line.split()
+                if _parts and "libopenblas" in _parts[-1]:
+                    paths.add(_parts[-1])
+    except OSError:
+        pass
+    return sorted(paths)
+
+
+def blas_thread_count():
+    """**库实际在用的** OpenBLAS 线程数 —— 读库,不读环境变量。
+
+    ★ 「环境变量不是库的状态」(H30 层 2,2026-10-10):OpenBLAS 只在加载时读一次
+    env,之后 env 说什么都不算数。证据/脚本的出处列必须读库。
+    多个已加载 OpenBLAS 取**最大**(任何未钉住的库都要显形);找不到/读不了返回
+    None(调用方应把 None 当"出处未知"响亮处理,不是当 1)。
+    """
+    import ctypes
+    counts = []
+    for _p in _loaded_openblas_paths():
+        try:
+            counts.append(ctypes.CDLL(_p).openblas_get_num_threads())
+        except (OSError, AttributeError):
+            return None
+    return max(counts) if counts else None
+
+
 if os.environ.get("PYFP3D_ALLOW_BLAS_THREADS") != "1":
     for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
                "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
@@ -69,22 +102,14 @@ if os.environ.get("PYFP3D_ALLOW_BLAS_THREADS") != "1":
         if "numpy" not in sys.modules:
             return  # numpy 未加载:上面的 env 覆盖会在它加载时生效,无库可钉
         import ctypes
-        paths = set()
-        try:
-            with open("/proc/self/maps") as fh:
-                for _line in fh:
-                    _parts = _line.split()
-                    if _parts and "libopenblas" in _parts[-1]:
-                        paths.add(_parts[-1])
-        except OSError:
-            paths = set()
+        paths = _loaded_openblas_paths()
         if not paths:
             warnings.warn(
                 "pyfp3d: numpy 已导入但未在 /proc/self/maps 找到已加载的 "
                 "libopenblas —— BLAS 运行时固定可能未生效(只剩 env 路径)",
                 stacklevel=2)
             return
-        for _p in sorted(paths):
+        for _p in paths:
             try:
                 _lib = ctypes.CDLL(_p)
                 _lib.openblas_set_num_threads(1)
@@ -98,6 +123,7 @@ if os.environ.get("PYFP3D_ALLOW_BLAS_THREADS") != "1":
                     stacklevel=2)
 
     _pin_loaded_blas_single_thread()
+
 
 # Development mode flag: PYFP3D_NOJIT=1 disables Numba JIT for debugging
 NOJIT = os.environ.get("PYFP3D_NOJIT", "0") == "1"

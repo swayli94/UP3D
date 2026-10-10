@@ -43,6 +43,7 @@ from pyfp3d.post.section_cut import wall_cp_curve              # noqa: E402
 from pyfp3d.post.shock import shock_report                     # noqa: E402
 from pyfp3d.post.surface import wall_force_coefficients        # noqa: E402
 from pyfp3d.solve.newton import solve_newton_lifting           # noqa: E402
+from pyfp3d import blas_thread_count                           # noqa: E402
 sys.path.insert(0, str(HERE))
 from failure_modes import classify_failure               # noqa: E402
 
@@ -131,6 +132,11 @@ THIRD_SEED = 12
 def main():
     print("threads (per-leg wall times are reported, so this is part of the result): "
           + ", ".join(f"{v}={os.environ[v]}" for v in THREAD_VARS))
+    #: ★ 2026-10-10:「环境变量不是库的状态」—— 上面是 env,**库实际**是下面这个
+    #: (运行时 BLAS 固定生效后,env=8 而库=1;两行都必须是真的,这份脚本恰恰把
+    #: per-leg 墙钟写进证据)。
+    print(f"  library actual BLAS threads (read from the lib, not env): "
+          f"{blas_thread_count()}")
     try:
         print(f"machine load average: {os.getloadavg()[0]:.1f} over {os.cpu_count()} cpus")
     except OSError:                                   # pragma: no cover - non-Linux
@@ -184,7 +190,12 @@ def main():
                     mc, wc, m_inf=M_INF, alpha_deg=ALPHA, upwind_c=C,
                     m_crit=0.95, freeze_tol=1e-6, freeze_refresh_max=8,
                     precond="direct", direct_refactor_every=4,
-                    n_newton_max=80, n_picard_seed=seed, **kw_density)
+                    #: ★ 2026-10-10:80 → 400,与答案门(D03/D05/D06/D11/D12)对齐。
+                    #: H30 已归因 80 对 M1 靶子腿不够(停在 80 步、0 钳制);
+                    #: 本门是产品指标门,断言的是答案,按那份预注册自己的划分
+                    #: 标准属于「答案门」。A 类机制测试(A27/A30/A06)的 80 是
+                    #: **测试对象**,不经过本脚本,不受影响。
+                    n_newton_max=400, n_picard_seed=seed, **kw_density)
                 err = ""
             except Exception as exc:                           # noqa: BLE001
                 rows.append(dict(level=level, C=C, n_picard_seed=seed,
@@ -227,6 +238,8 @@ def main():
                              sigma_min=r.get("sigma_min"),
                              n_shock_cells=r.get("n_shock_cells"),
                              n_newton=len(hist),
+                             #: ★ 出处列读库,不读 env(2026-10-10;与六门证据同口径)
+                             blas_threads=blas_thread_count(),
                              #: ★ pre-registered instrumentation (2026-08-10, rule R1):
                              #: a seed-0 leg that converges may have been rescued by the
                              #: clamped-triggered fallback, and without this flag that

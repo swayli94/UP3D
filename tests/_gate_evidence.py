@@ -44,23 +44,12 @@ def blas_thread_count():
     用途：证据 CSV 的 `blas_threads` 出处列。`n_threads` 记的是 numba 线程数，
     而 H30 实测结果只随 **BLAS** 线程数动 —— 真正影响答案的旋钮此前没有列，
     这正是 2026-09-06 那批证据「锁在一个没记下来的档位上」的直接原因。
-    多个已加载 OpenBLAS 取**最大**（任何未钉住的库都要显形）；找不到返回 None
-    （锁机器会按「本次运行没有产出这一列」响亮地红，不静默）。
+    ★ 2026-10-10（M1 门轮）：实现提为 `pyfp3d.blas_thread_count`（公共 API，
+    bench 脚本也从库读，不走 bench←tests 依赖）；本函数改为委托，
+    六门既有 import 不变。多个已加载 OpenBLAS 取最大；找不到返回 None。
     """
-    import ctypes
-    counts = []
-    try:
-        with open("/proc/self/maps") as fh:
-            paths = sorted({ln.split()[-1] for ln in fh
-                            if "libopenblas" in ln.split()[-1]})
-    except OSError:
-        return None
-    for p in paths:
-        try:
-            counts.append(ctypes.CDLL(p).openblas_get_num_threads())
-        except (OSError, AttributeError):
-            return None
-    return max(counts) if counts else None
+    from pyfp3d import blas_thread_count as _btc
+    return _btc()
 
 
 def fmt(v):

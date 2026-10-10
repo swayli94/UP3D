@@ -146,6 +146,11 @@ NUMBA_NUM_THREADS={16,8} OMP_NUM_THREADS={1,8} OPENBLAS_NUM_THREADS={1,8} \
 
 ### 4.4 ★★ M1 门的 80 步预算(线索,未验证)
 
+> **勘误标注(2026-10-10,第 35 轮)**:本条线索已重跑闭合 —— 预算假设**被否**:
+> 80 步停在 limit_cycle 的 medium seed-0 C=3.0 腿在 400 步**仍 limit_cycle**
+> (|R| 4.7e-07,cl 不动)⇒ M1c seed-0 的覆盖失败**不是预算缺陷**。
+> 见 [20261010-1500-m1-gate-budget-verdict.md](20261010-1500-m1-gate-budget-verdict.md)。
+
 - `bench/run_m1_gate.py:187` 仍是 `n_newton_max=80`。H30 层 1 按预注册 §2
   **有意不改 `bench/`**,理由是「A 类机制测试依赖预算耗尽的行为」。但 M1 门是**产品指标门**,
   断言的是答案,按那份预注册自己的划分标准应属于「答案门」。
