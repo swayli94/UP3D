@@ -50,10 +50,54 @@ import os
 #: ★★ 这几行只在 numpy **尚未导入**时有效,所以必须待在本文件顶部,而本文件
 #: **不 import numpy**。真正的验收是**行为的**,见 `tests/F/test_F09`;
 #: 「环境变量被设了」不是判据(那是 F06 那族字面量对字面量的错误)。
+import sys
+import warnings
+
 if os.environ.get("PYFP3D_ALLOW_BLAS_THREADS") != "1":
     for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
                "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
         os.environ[_v] = "1"
+
+    #: ★★★ 2026-10-10(H30 层 2 返工,预注册 20261010-1100):**env 覆盖只在 numpy
+    #: 尚未导入时有效**(OpenBLAS 只在加载时读一次),而 pytest 的测试模块普遍
+    #: 先 `import numpy` 再 `import pyfp3d` ⇒ 在套件进程里上面的 env 写入是
+    #: **写给空气的**(实测:env 显示 "1",库实际跑 16/24)。⇒ numpy 已在场的
+    #: 情形改为**运行时固定**:从 /proc/self/maps 找已加载的 libopenblas,直接调
+    #: `openblas_set_num_threads(1)` —— 对已加载的库有效(实测 16→1)。
+    #: ★ 找不到已加载的库就 **warn,不静默**(env 路径仍在,是"尽力 + 响亮")。
+    def _pin_loaded_blas_single_thread():
+        if "numpy" not in sys.modules:
+            return  # numpy 未加载:上面的 env 覆盖会在它加载时生效,无库可钉
+        import ctypes
+        paths = set()
+        try:
+            with open("/proc/self/maps") as fh:
+                for _line in fh:
+                    _parts = _line.split()
+                    if _parts and "libopenblas" in _parts[-1]:
+                        paths.add(_parts[-1])
+        except OSError:
+            paths = set()
+        if not paths:
+            warnings.warn(
+                "pyfp3d: numpy 已导入但未在 /proc/self/maps 找到已加载的 "
+                "libopenblas —— BLAS 运行时固定可能未生效(只剩 env 路径)",
+                stacklevel=2)
+            return
+        for _p in sorted(paths):
+            try:
+                _lib = ctypes.CDLL(_p)
+                _lib.openblas_set_num_threads(1)
+                if _lib.openblas_get_num_threads() != 1:
+                    warnings.warn(
+                        f"pyfp3d: openblas_set_num_threads(1) 后 {_p} 仍报 "
+                        f"{_lib.openblas_get_num_threads()} 线程", stacklevel=2)
+            except (OSError, AttributeError) as _e:
+                warnings.warn(
+                    f"pyfp3d: 无法对已加载的 {_p} 做运行时线程固定: {_e}",
+                    stacklevel=2)
+
+    _pin_loaded_blas_single_thread()
 
 # Development mode flag: PYFP3D_NOJIT=1 disables Numba JIT for debugging
 NOJIT = os.environ.get("PYFP3D_NOJIT", "0") == "1"

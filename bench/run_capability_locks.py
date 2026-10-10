@@ -46,6 +46,16 @@ DEFAULT_THREADS = "8"
 for _v in THREAD_VARS:
     os.environ.setdefault(_v, DEFAULT_THREADS)
 
+#: ★ 2026-10-10(H30 层 2 返工,预注册 20261010-1100):pyfp3d 现在对已加载的
+#: OpenBLAS 做**运行时**单线程固定,优先级高于 env。本层的 G8.2 墙钟预算与位级
+#: 锚都是在 **BLAS=8** 标定的 ⇒ 子进程显式走逃生舱(见 main() 里的 SUBPROCESS_ENV),
+#: 线程数仍由上面的 env 钉 8。
+#: ★★ 第一版把 `os.environ.setdefault("PYFP3D_ALLOW_BLAS_THREADS", "1")` 放在了
+#: **模块级** —— 当天全套即抓到:F01 在收集期 import 本模块 ⇒ 逃生舱泄漏进整个
+#: pytest 进程的 os.environ ⇒ F09 的探针子进程继承它 ⇒ F09 两条红。
+#: (证据锁不受影响:pyfp3d 在 A 类收集期就已完成固定,库状态不随后续 env 变动回退。)
+#: ⇒ 逃生舱只能设在**子进程的 env** 上,模块 import 不得有这个副作用。
+
 #: (node id, what it locks). Chosen for anchors that are cheap; the heavy RAMPS are in
 #: the excluded list below with their measured costs, so the trade-off is visible.
 #: ★★ TWO LOCKS REMOVED 2026-08-10 by the phases/ reorganisation, and this is a
@@ -186,11 +196,17 @@ def main():
     except OSError:                                   # pragma: no cover - non-Linux
         pass
     print()
+    #: 子进程显式走 BLAS 逃生舱(理由见文件头 2026-10-10 注记):本层的墙钟预算与
+    #: 位级锚在 BLAS=8 标定,而 pyfp3d 的运行时固定优先于 env,会把子进程压成 1。
+    #: ★ 只能在子进程 env 上设 —— 模块级 setdefault 会随 import 泄漏进宿进程
+    #: (2026-10-10 全套实测抓到:F01 收集期 import 本模块 ⇒ F09 探针被放行 ⇒ 红)。
+    sub_env = dict(os.environ)
+    sub_env["PYFP3D_ALLOW_BLAS_THREADS"] = "1"
     rows, t_all = [], time.perf_counter()
     for node, what in LOCKS:
         t0 = time.perf_counter()
         p = subprocess.run([sys.executable, "-m", "pytest", node, "-q", "--tb=line"],
-                           cwd=REPO, capture_output=True, text=True)
+                           cwd=REPO, capture_output=True, text=True, env=sub_env)
         dt = time.perf_counter() - t0
         tail = [l for l in p.stdout.splitlines() if " passed" in l or " failed" in l
                 or " error" in l]
