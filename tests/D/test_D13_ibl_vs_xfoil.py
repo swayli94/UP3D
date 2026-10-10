@@ -72,6 +72,7 @@ from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.viscous import closures as C
 from pyfp3d.viscous.coupling import (CouplingConfig, build_airfoil_case,
                                      make_picard_lifting_driver, run_loose_coupling)
+from tests._gate_evidence import blas_thread_count
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 M_INF, ALPHA, RE = 0.5, 2.0, 3.0e6
@@ -301,11 +302,14 @@ class TestCommittedEvidenceIsLoadBearing:
 
     def test_fresh_run_reproduces_the_committed_summary(self, runs):
         r"""逐行比对 `cases/gates/D13_ibl_vs_xfoil/summary.csv` 的**实测列**
-        （`dstar_ibl` / `cf_ibl` / `asym_ibl` 与 cl 行）与本次运行的结果。
+        （`dstar_ibl` / `cf_ibl` / `asym_ibl` 与 cl 行，外加出处列 `blas_threads`）
+        与本次运行的结果。
 
         ★ 只锁**我们算的**那些列；`*_xfoil` 列另有真值来源
         （`cases/reference_data/naca0012_viscous_xfoil/`），由 `_xfoil_reference()`
         直接读取，不需要在这里二次锁。
+        ★ `blas_threads` 不是物理量，是库实际在用的 BLAS 线程数（H30 实测答案
+        只随它动）；每一行都是同一个值，与实测列走同一台 rel_tol 机器。
         """
         import csv as _csv
         path = os.path.join(str(REPO_ROOT), "cases", "gates", "D13_ibl_vs_xfoil",
@@ -316,6 +320,16 @@ class TestCommittedEvidenceIsLoadBearing:
         with open(path, newline="", encoding="utf-8") as fh:
             rows = list(_csv.DictReader(fh))
         assert rows, "证据 CSV 是空的"
+        #: ★ 与 `tests/_gate_evidence.py` 同一条规矩：表头缺被锁的列 = schema 漂移
+        #:   = 响，不能静默跳过。
+        assert "blas_threads" in rows[0], (
+            f"{path} 的表头缺少被锁的出处列 ['blas_threads'] —— 这不是容差问题，"
+            "是 schema 漂移。刷新：`PYFP3D_GATE_FIGURES=1 pytest "
+            "tests/D/test_D13_ibl_vs_xfoil.py`")
+        bt = blas_thread_count()
+        assert bt is not None, (
+            "blas_thread_count() 没找到已加载的 OpenBLAS —— "
+            "本次运行无法产出 blas_threads 这一列")
 
         worst, n = 0.0, 0
         for r in rows:
@@ -331,6 +345,7 @@ class TestCommittedEvidenceIsLoadBearing:
                          ("asym_ibl",
                           float(runs[lv]["upper"]["ds"][i] / runs[lv]["lower"]["ds"][i]),
                           float(r["asym_ibl"]))]
+            pairs.append(("blas_threads", float(bt), float(r["blas_threads"])))
             for name, got, want in pairs:
                 n += 1
                 rel = abs(got - want) / max(abs(want), 1e-30)
@@ -396,8 +411,9 @@ def test_export_ibl_xfoil_figure(runs, ref, gate_evidence_dir):
 
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["level", "surface", "x_c", "dstar_ibl", "dstar_xfoil", "dstar_ratio",
-                    "cf_ibl", "cf_xfoil", "asym_ibl", "asym_xfoil"])
+        w.writerow(["level", "surface", "x_c", "blas_threads", "dstar_ibl",
+                    "dstar_xfoil", "dstar_ratio", "cf_ibl", "cf_xfoil",
+                    "asym_ibl", "asym_xfoil"])
         for lv in LEVELS:
             d = runs[lv]
             for side in ("upper", "lower"):
@@ -407,11 +423,13 @@ def test_export_ibl_xfoil_figure(runs, ref, gate_evidence_dir):
                     #: `.4f` 写盘，于是"新鲜计算 vs 已提交证据"的回归锁在 3.9e-05 上红，
                     #: 而那**不是求解器的差异，是写盘精度**。⇒ **证据要按真值精度存，
                     #: 不是按显示精度存**，否则它当不了真值来源。
-                    w.writerow([lv, side, f"{xq:.2f}", f"{s['ds'][i]:.9e}",
+                    w.writerow([lv, side, f"{xq:.2f}", blas_thread_count(),
+                                f"{s['ds'][i]:.9e}",
                                 f"{s['ds_ref'][i]:.9e}", f"{s['ratio'][i]:.9e}",
                                 f"{s['cf'][i]:.9e}", f"{s['cf_ref'][i]:.9e}",
                                 f"{d['upper']['ds'][i]/d['lower']['ds'][i]:.9e}",
                                 f"{d['upper']['ds_ref'][i]/d['lower']['ds_ref'][i]:.9e}"])
-            w.writerow([lv, "cl", "-", f"{d['cl']:.9e}", f"{CL_XFOIL_VISCOUS:.9e}",
+            w.writerow([lv, "cl", "-", blas_thread_count(), f"{d['cl']:.9e}",
+                        f"{CL_XFOIL_VISCOUS:.9e}",
                         f"{d['cl']/CL_XFOIL_VISCOUS:.9e}", "-",
                         f"{CL_INVISCID:.9e}", "-", "-"])

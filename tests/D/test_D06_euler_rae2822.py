@@ -50,7 +50,7 @@ from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
 from tests.D._cfl3d_cp import cp_rms, read_2d_cp
-from tests._gate_evidence import assert_matches_committed, fmt
+from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
@@ -250,10 +250,15 @@ class TestReferenceIsLoadBearing:
 
 
 class TestCommittedEvidenceIsLoadBearing:
-    MEASURED = ("cp_rms_upper", "cp_rms_lower", "cl", "cd", "x_shock")
+    MEASURED = ("cp_rms_upper", "cp_rms_lower", "cl", "cd", "x_shock",
+                "blas_threads")
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
-        fresh = {f"{nm}|{lv}": {k: fmt(runs[(nm, lv)][k]) for k in self.MEASURED}
+        #: ★ blas_threads 不在 runs 里（它是库实际在用的 BLAS 线程数，不是算出来
+        #:   的量 —— H30 实测答案只随它动），从库读、跟着 MEASURED 进锁。
+        fresh = {f"{nm}|{lv}": {**{k: fmt(runs[(nm, lv)][k]) for k in self.MEASURED
+                                   if k != "blas_threads"},
+                                "blas_threads": fmt(blas_thread_count())}
                  for nm, _c, _m, _a, _k in CASES for lv in LEVELS}
         assert_matches_committed(
             gate_evidence_dir, fresh, self.MEASURED,
@@ -292,10 +297,12 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         w = csv.writer(fh)
         # ★★ 线程数进证据：收敛旗标是"算例 x 线程数"的联合性质，
         #    不带线程数的旗标是无意义的（项目里 gated count 那条同理）。
+        # ★ n_threads 是 numba 的旋钮；blas_threads 是库实际在用的 BLAS
+        #    线程数（H30 实测答案只随它动）—— 两个都记。
         nthr = os.environ.get("NUMBA_NUM_THREADS", "unset")
-        w.writerow(["case", "level", "kind", "n_threads", "mach", "alpha_deg",
-                    "cp_rms_upper", "cp_rms_lower", "cl", "cd",
-                    "x_shock", "residual", "converged", "n_limited",
+        w.writerow(["case", "level", "kind", "n_threads", "blas_threads",
+                    "mach", "alpha_deg", "cp_rms_upper", "cp_rms_lower", "cl",
+                    "cd", "x_shock", "residual", "converged", "n_limited",
                     "n_floored", "sigma_frozen", "cl_ref_cfl3d", "d_cl_rel",
                     "x_shock_ref", "d_x_shock", "ref_shock_uncertainty",
                     "dx_over_ref_uncertainty"])
@@ -305,7 +312,7 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
             for lv in LEVELS:
                 d = runs[(nm, lv)]
                 dx = d["x_shock"] - xr
-                w.writerow([nm, lv, kind, nthr, m, a,
+                w.writerow([nm, lv, kind, nthr, blas_thread_count(), m, a,
                             fmt(d["cp_rms_upper"]), fmt(d["cp_rms_lower"]),
                             fmt(d["cl"]), fmt(d["cd"]),
                             fmt(d["x_shock"]), fmt(d["residual"]),

@@ -85,7 +85,7 @@ from pyfp3d.viscous.coupling import (CouplingConfig, build_airfoil_case,
                                      make_picard_lifting_driver,
                                      run_loose_coupling)
 from tests.D._cfl3d_cp import band_from_two, cp_rms, read_2d_cp
-from tests._gate_evidence import assert_matches_committed, fmt
+from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
@@ -332,13 +332,17 @@ class TestReferenceIsLoadBearing:
 
 class TestCommittedEvidenceIsLoadBearing:
     MEASURED = ("cp_rms_upper_sst", "cp_rms_upper_sa", "cp_rms_lower_sst",
-                "cp_rms_lower_sa", "cp_band_width_upper", "cl")
+                "cp_rms_lower_sa", "cp_band_width_upper", "cl", "blas_threads")
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
         #: ★ 跟着 `MEASURED` 走，不要硬编码列名 —— 本门原来写死 {"cl": ...}，
         #:   于是新加的 cp_rms 列在**本次运行**这一侧根本不存在，锁比不到它们。
-        fresh = {f"{nm}|{lv}": {k: fmt(runs[(nm, lv)][k])
-                                for k in self.MEASURED}
+        #:   唯一例外是 blas_threads：它不在 runs 里（是库实际在用的 BLAS 线程数，
+        #:   不是算出来的量 —— H30 实测答案只随它动），从库读、单独塞进 fresh。
+        fresh = {f"{nm}|{lv}": {**{k: fmt(runs[(nm, lv)][k])
+                                   for k in self.MEASURED
+                                   if k != "blas_threads"},
+                                "blas_threads": fmt(blas_thread_count())}
                  for nm, *_ in CASES for lv in LEVELS}
         assert_matches_committed(
             gate_evidence_dir, fresh, self.MEASURED,
@@ -359,7 +363,7 @@ def test_export_evidence(runs, band, gate_evidence_dir):
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w",
               newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["case", "level", "n_threads", "x_tr",
+        w.writerow(["case", "level", "n_threads", "blas_threads", "x_tr",
                     "cp_rms_upper_sst", "cp_rms_upper_sa",
                     "cp_rms_lower_sst", "cp_rms_lower_sa",
                     "cp_band_width_upper", "cl", "cl_sst",
@@ -370,7 +374,7 @@ def test_export_evidence(runs, band, gate_evidence_dir):
             lo, hi = sorted((d["sst"]["cl"], d["sa"]["cl"]))
             for lv in LEVELS:
                 r = runs[(nm, lv)]
-                w.writerow([nm, lv, nthr, xtr,
+                w.writerow([nm, lv, nthr, blas_thread_count(), xtr,
                             fmt(r["cp_rms_upper_sst"]), fmt(r["cp_rms_upper_sa"]),
                             fmt(r["cp_rms_lower_sst"]), fmt(r["cp_rms_lower_sa"]),
                             fmt(r["cp_band_width_upper"]), fmt(r["cl"]),

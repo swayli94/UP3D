@@ -49,7 +49,7 @@ from pyfp3d.post.section_cut import section_cp_curve
 from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
-from tests._gate_evidence import assert_matches_committed, fmt
+from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 #: 实验工况**逐字照抄**文件名，且按裁决二使用**实验攻角、不修正**
@@ -290,16 +290,18 @@ class TestCommittedEvidenceIsLoadBearing:
                                 cl_p=runs[(nm, lv)]["cl"],
                                 rms_upper=runs[(nm, lv)]["rms_upper"],
                                 pre_shock_rms=runs[(nm, lv)]["pre"],
-                                post_shock_rms=runs[(nm, lv)]["post"])
+                                post_shock_rms=runs[(nm, lv)]["post"],
+                                blas_threads=fmt(blas_thread_count()))
                  for nm, _, _, _ in CASES for lv in LEVELS}
         n = assert_matches_committed(
             os.path.join(str(REPO_ROOT), "cases", "gates",
                          "D11_naca0012_experiment_bias"),
-            fresh, ("mach_max", "cl_p", "rms_upper", "pre_shock_rms", "post_shock_rms"),
+            fresh, ("mach_max", "cl_p", "rms_upper", "pre_shock_rms",
+                    "post_shock_rms", "blas_threads"),
             key_of=lambda r: (r["case"], r["level"]),
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
                          "tests/D/test_D11_naca0012_experiment_bias.py")
-        assert n >= 24, f"只比了 {n} 个数（6 腿 x 5 列 − 2 个 nan = 28 上下）"
+        assert n >= 24, f"只比了 {n} 个数（6 腿 x 6 列 − 2 个 nan = 34 上下）"
 
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
@@ -339,8 +341,9 @@ def test_export_experiment_bias_figure(runs, gate_evidence_dir):
 
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["case", "level", "converged", "mode", "residual", "n_newton",
-                    "n_limited", "n_floored", "mach_max", "cl_p", "rms_upper",
+        w.writerow(["case", "level", "blas_threads", "converged", "mode",
+                    "residual", "n_newton", "n_limited", "n_floored",
+                    "mach_max", "cl_p", "rms_upper",
                     "rms_lower", "pre_shock_rms", "post_shock_rms",
                     "x_shock", "x_shock_exp", "shock_offset"])
         for name, _, _, _ in CASES:
@@ -348,7 +351,8 @@ def test_export_experiment_bias_figure(runs, gate_evidence_dir):
                 d = runs[(name, lv)]
                 off = ("" if d["x_shock"] is None or d["x_shock_exp"] is None
                        else f"{d['x_shock'] - d['x_shock_exp']:+.4f}")
-                w.writerow([name, lv, d["converged"], d["mode"], f"{d['residual']:.3e}",
+                w.writerow([name, lv, blas_thread_count(), d["converged"],
+                            d["mode"], f"{d['residual']:.3e}",
                             d["n_newton"], d["n_limited"], d["n_floored"],
                             fmt(d["mach_max"]), fmt(d["cl"]),
                             fmt(d["rms_upper"]), fmt(d["rms_lower"]),

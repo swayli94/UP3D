@@ -47,7 +47,7 @@ from pyfp3d.post.section_cut import section_cp_curve
 from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
-from tests._gate_evidence import assert_matches_committed, fmt
+from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 CASES = (
@@ -258,16 +258,18 @@ class TestCommittedEvidenceIsLoadBearing:
                                 cl_p=runs[(nm, lv)]["cl"], cn=runs[(nm, lv)]["cn"],
                                 cn_exp=runs[(nm, lv)]["cn_exp"],
                                 rms_upper=runs[(nm, lv)]["rms_upper"],
-                                rms_lower=runs[(nm, lv)]["rms_lower"])
+                                rms_lower=runs[(nm, lv)]["rms_lower"],
+                                blas_threads=fmt(blas_thread_count()))
                  for nm, _, _, _ in CASES for lv in LEVELS}
         n = assert_matches_committed(
             os.path.join(str(REPO_ROOT), "cases", "gates",
                          "D12_rae2822_experiment_bias"),
-            fresh, ("mach_max", "cl_p", "cn", "cn_exp", "rms_upper", "rms_lower"),
+            fresh, ("mach_max", "cl_p", "cn", "cn_exp", "rms_upper",
+                    "rms_lower", "blas_threads"),
             key_of=lambda r: (r["case"], r["level"]),
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
                          "tests/D/test_D12_rae2822_experiment_bias.py")
-        assert n >= 24, f"只比了 {n} 个数（4 腿 x 6 列 = 24）"
+        assert n >= 24, f"只比了 {n} 个数（4 腿 x 7 列 = 28）"
 
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
@@ -305,16 +307,18 @@ def test_export_rae2822_bias_figure(runs, gate_evidence_dir):
 
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["case", "level", "converged", "mode", "residual", "n_newton",
-                    "n_limited", "n_floored", "mach_max", "cl_p", "cn", "cn_exp",
-                    "cn_rel", "rms_upper", "rms_lower", "x_shock", "x_shock_exp",
+        w.writerow(["case", "level", "blas_threads", "converged", "mode",
+                    "residual", "n_newton", "n_limited", "n_floored",
+                    "mach_max", "cl_p", "cn", "cn_exp", "cn_rel",
+                    "rms_upper", "rms_lower", "x_shock", "x_shock_exp",
                     "shock_offset"])
         for name, _, _, _ in CASES:
             for lv in LEVELS:
                 d = runs[(name, lv)]
                 off = ("" if d["x_shock"] is None or d["x_shock_exp"] is None
                        else f"{d['x_shock'] - d['x_shock_exp']:+.4f}")
-                w.writerow([name, lv, d["converged"], d["mode"], f"{d['residual']:.3e}",
+                w.writerow([name, lv, blas_thread_count(), d["converged"],
+                            d["mode"], f"{d['residual']:.3e}",
                             d["n_newton"], d["n_limited"], d["n_floored"],
                             fmt(d["mach_max"]), fmt(d["cl"]), fmt(d["cn"]),
                             fmt(d["cn_exp"]), fmt(d["cn"] / d["cn_exp"] - 1.0),
