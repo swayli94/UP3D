@@ -16,7 +16,7 @@ Everything else mirrors the NACA0012 M0 family (embedded wake line
 TE -> farfield, circular far field R_FAR centered at mid-chord, the same
 Distance+Threshold size recipe, single-layer z extrusion, prism -> 3 tets
 min-global-index rule, tags wall / farfield / symmetry / wake). Levels:
-coarse + medium ONLY (fine registered, not built).
+xcoarse + coarse + medium (fine never registered).
 
 Usage:
     python generate_rae2822.py --level coarse --level medium
@@ -49,12 +49,12 @@ R_FAR = 15.0  # far-field radius in chords, centered at (0.5, 0)
 DAT = Path(__file__).parent / "rae2822.dat"
 
 
-def _level_params(h_wall: float) -> dict:
+def _level_params(h_wall: float, clamp_h_far: bool = True) -> dict:
     """Everything derived from the single wall-size parameter h."""
     return dict(
         h_wall=h_wall,
         h_wake=3.0 * h_wall,
-        h_far=min(3.0, 150.0 * h_wall),
+        h_far=(min(3.0, 150.0 * h_wall) if clamp_h_far else 150.0 * h_wall),
         dist_min=0.1,
         dist_max=6.0,
         wake_dist_max=1.5,
@@ -64,6 +64,18 @@ def _level_params(h_wall: float) -> dict:
 
 
 LEVELS = {
+    #: ★ `xcoarse` added 2026-10-10 (W2.1a: D05/D06 need a third rung to read a
+    #: convergence order at all -- two levels admit none). h_wall 0.040 = a clean
+    #: 2x step, and `clamp_h_far=False` is LOAD-BEARING (same lesson as the
+    #: naca0012_2.5d family, whose LEVELS comment records it): with the clamp,
+    #: h_far would pin at 3.0 exactly as at `coarse`, so the first refinement
+    #: interval would not refine the far field AT ALL and any order read off it
+    #: would be meaningless. (`coarse` itself sits exactly AT the clamp threshold
+    #: -- 150 x 0.020 = 3.0 -- so it is unclamped and the existing ladder is
+    #: clean.) The airfoil surface stays well resolved because n_half is floored
+    #: at 80: 100 points per side at coarse against 80 here, a 25 % reduction,
+    #: not a 2x one.
+    "xcoarse": _level_params(0.040, clamp_h_far=False),
     "coarse": _level_params(0.020),
     "medium": _level_params(0.010),
 }

@@ -62,6 +62,10 @@ NACA0012 上**实测是上游**（4/5），而 RAE2822 上是**下游**（D06）
 2-D 参考表只有 `delta_L2_L3`，**没有** 3-D 那套"相邻差是否在缩小"的渐近检验
 （D07 上第四档把 cl 从"收敛得极好"翻成"不渐近"）。所以这里的 `delta_L2_L3`
 是**最后一步的差**，不是经检验的误差棒。M0.50 的 `cd` 相对差 **−48 %** 就是例子。
+
+★ 2026-10-10（W2.1a）：证据加 **xcoarse** 第三档 —— 只进证据 / 锁 / 图 /
+`grid_convergence_ours.csv`（RECORDED，用参照侧 `implied_order` 仪器），
+**不进任何判据**；判据的定义域是 `GATE_LEVELS`。
 """
 import os
 
@@ -94,7 +98,12 @@ CASES = (
     ("M0.778_a2.03", "n0012_m0778_a2.03", 0.778, 2.03, "record"),
     ("M0.803_a-0.10", "n0012_m0803_am0.10", 0.803, -0.10, "record"),
 )
-LEVELS = ("coarse", "medium")
+#: 判据的定义域 —— 带、收缩比、激波判别全部只在这两级上校准，不随证据加档
+#: （W2.1a 预注册 C2：xcoarse 进任何既有物理判据即越界）。
+GATE_LEVELS = ("coarse", "medium")
+#: 证据层级（runs fixture / summary.csv / 证据锁 / 对照图 /
+#: grid_convergence_ours.csv）。xcoarse 只进证据与误差棒，不进判据。
+LEVELS = ("xcoarse", "coarse", "medium")
 
 # —— 判据（标定，不是实测值；实测基线见 docstring 的表）——
 SUBCRIT_CL_MAX = 0.010      # 亚临界 |Δcl|/cl：实测 medium 0.0005
@@ -239,7 +248,7 @@ class TestWhatIsGateable:
         """★ 一个不收缩的一致只是巧合。coarse 2.43 % -> medium 0.05 %（L4 口径）。"""
         want = ref["n0012_m0500_a2.00"]["cl"]
         e = {lv: abs(runs[("M0.50_a2.00", lv)]["cl"] - want) / abs(want)
-             for lv in LEVELS}
+             for lv in GATE_LEVELS}
         assert e["coarse"] / e["medium"] >= SUBCRIT_CONTRACT, (
             f"subcritical cl error must contract: coarse {e['coarse']*100:.3f} % "
             f"-> medium {e['medium']*100:.3f} % is only "
@@ -301,9 +310,10 @@ class TestDAlembertOnTheProductionPath:
 
     #: 无激波腿由 x_shock 为 NaN **判别**出来，不是按名字写死
     def _shock_free(self, runs):
+        #: ★ 判据域是 GATE_LEVELS（收缩带在这两级上校准）—— xcoarse 不参与判别。
         return [nm for nm, _c, _m, _a, _k in CASES
                 if all(not np.isfinite(runs[(nm, lv)]["x_shock"])
-                       for lv in LEVELS)]
+                       for lv in GATE_LEVELS)]
 
     def test_the_shock_free_set_is_what_we_think_it_is(self, runs):
         """前提断言：判别式必须挑出恰好那两条腿。"""
@@ -530,6 +540,14 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
                             int(d["sigma_frozen"]), int(d["sigma_churn"]),
                             f"{cref:.6f}", dcl])
 
+    #: ★ W2.1a：我方三级网格收敛读数（RECORDED，不进值锁）—— 估计器与判定
+    #:   词汇都是参照侧的（见 tests/D/_grid_convergence.py 的 docstring）。
+    from tests.D._grid_convergence import write_grid_convergence_ours
+    write_grid_convergence_ours(
+        os.path.join(str(gate_evidence_dir), "grid_convergence_ours.csv"),
+        runs, [nm for nm, *_ in CASES], LEVELS,
+        os.path.join(str(REPO_ROOT), "cases", "meshes", "naca0012_2.5d"))
+
     # ★★★ Cp 分布是主图。柱状图只留一格作附注 —— 一个 cl 是一个数，
     #     两条曲线差 2 % 可能来自激波位置、前缘峰或尾缘卸载中的任何一处，
     #     甚至来自互相抵消的两处；**Cp 显示差在哪里**。
@@ -541,7 +559,8 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
             if side in rc:
                 ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
                         label="CFL3D Euler L4" if side == "upper" else None)
-        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+        for lv, sty in (("xcoarse", dict(lw=0.7, ls="--", color="#c7ccd4")),
+                        ("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
                         ("medium", dict(lw=1.4, color="#1a56db"))):
             cur = runs[(nm, lv)]["curve"]
             for side in ("upper", "lower"):

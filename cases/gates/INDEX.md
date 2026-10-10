@@ -313,6 +313,11 @@ RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9
 
 ## D05 — pyFP3D 无粘 vs CFL3D Euler，NACA0012
 
+★ 2026-10-10(W2.1a):证据加 **xcoarse 第三档**;我方三级网格收敛读数在
+[`D05_euler_naca0012/grid_convergence_ours.csv`](D05_euler_naca0012/grid_convergence_ours.csv)
+(RECORDED,不进值锁;`implied_order` 与三分判定词汇与参照侧逐字一致,
+三档看不到 unstable —— 判定口径写在文件头)。
+
 **七条腿里五条设门**（含 **M1 靶子条件 M0.80/α1.25 本身**，Δcl −2.16 %），
 两条只记录。设门/记录的划分依据是**分歧的大小**，不是收敛旗标 —— 见下。
 
@@ -347,6 +352,9 @@ limit_cycle —— 旗标随 (numba × BLAS) 联合漂移，CSV 现带 `n_thread
 ---
 
 ## D06 — pyFP3D 无粘 vs CFL3D Euler，RAE2822
+
+★ 2026-10-10(W2.1a):同 D05,第三档 + 我方收敛读数在
+[`D06_euler_rae2822/grid_convergence_ours.csv`](D06_euler_rae2822/grid_convergence_ours.csv)。
 
 两条腿**都设门**（@16 线程均收敛）：M0.725/α2.55 **+3.55 %**、
 M0.730/α3.19 **+0.06 %**（Δcl 均为 L4 口径，2026-10-10 同步）。

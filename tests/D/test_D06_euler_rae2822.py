@@ -47,6 +47,10 @@ RAE2822 参考自身的激波位置**散布**（L1–L4 极差）是 **0.0032 / 
 **同一条判据，两个相反的结论 —— 参照物的分辨率是逐例的性质。**
 （口径：0.00088 / 0.00100 与 "35×" 是旧的 L2→L3 最后差，2026-09-05 已更正为**散布** ——
 见 `test_shock_difference_is_resolvable_against_this_reference` 的更正记录；数值为 2026-10-10 现行 CSV。）
+
+★ 2026-10-10（W2.1a）：证据加 **xcoarse** 第三档 —— 只进证据 / 锁 / 图 /
+`grid_convergence_ours.csv`（RECORDED，用参照侧 `implied_order` 仪器），
+**不进任何判据**（本门判据全部点名层级，不经过 `LEVELS`）。
 """
 import os
 
@@ -72,7 +76,11 @@ CASES = (
     ("M0.725_a2.55", "rae2822_m0725_a2.55", 0.725, 2.55, "gate"),
     ("M0.730_a3.19", "rae2822_m0730_a3.19", 0.730, 3.19, "gate"),
 )
-LEVELS = ("coarse", "medium")
+#: 证据层级（runs / summary.csv / 证据锁 / 图 / grid_convergence_ours.csv）。
+#: xcoarse 只进证据：本门判据全部用 "coarse" / "medium" 字面量点名层级、
+#: 不经过 LEVELS，所以扩档碰不到判据域 —— W2.1a 预注册 C2。
+#: （D05 的同结构判据域由 GATE_LEVELS 显式隔开。）
+LEVELS = ("xcoarse", "coarse", "medium")
 
 # —— 判据（标定，不是实测值）——
 CL_BAND = 0.06              # M0.725 medium |Δcl|：实测 0.0355
@@ -333,6 +341,14 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
                             f"{xr:.6f}", f"{dx:+.6f}", f"{u:.6f}",
                             f"{abs(dx) / u:.2f}"])
 
+    #: ★ W2.1a：我方三级网格收敛读数（RECORDED，不进值锁）—— 估计器与判定
+    #:   词汇都是参照侧的（见 tests/D/_grid_convergence.py 的 docstring）。
+    from tests.D._grid_convergence import write_grid_convergence_ours
+    write_grid_convergence_ours(
+        os.path.join(str(gate_evidence_dir), "grid_convergence_ours.csv"),
+        runs, [nm for nm, *_ in CASES], LEVELS,
+        os.path.join(str(REPO_ROOT), "cases", "meshes", "rae2822_2.5d"))
+
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     for k, (nm, cid, m, a, kind) in enumerate(CASES):
         ax = axes[k]
@@ -340,7 +356,8 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         for side, ls in (("upper", "-"), ("lower", "--")):
             ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
                     label="CFL3D Euler L4" if side == "upper" else None)
-        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+        for lv, sty in (("xcoarse", dict(lw=0.7, ls="--", color="#c7ccd4")),
+                        ("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
                         ("medium", dict(lw=1.4, color="#1a56db"))):
             cur = runs[(nm, lv)]["curve"]
             for side in ("upper", "lower"):
