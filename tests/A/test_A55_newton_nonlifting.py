@@ -19,6 +19,11 @@ residual_history、newton_orders、timings 全部在位 —— 这正是它相�
   C5  熵修正在新入口可用且默认 ON:熵 ON 的 sphere 腿收敛,且亚声速下
       sigma ≡ 1(与 OFF 位相同 —— 惰性是逐位的,不是近似的)。
 
+W2.2b(20261011-1300 预注册)扩两条机制腿:处方 Dirichlet 模式
+(dirichlet_nodes/dirichlet_values 取代 farfield 默认)的销钉读回 +
+「自由流等价值 ⇔ farfield 默认」逐位一致(§4 第二条 kill 的适定形式),
+以及处方模式与 lifting 形状/复用 workspace 的互斥报错。
+
 实测(2026-10-11,16 线程,sphere medium 16793 节点):
   C1 |Δφ|∞ = 6.0e-12(带 1e-8),peak-Cp 差 7.3e-11(带 1e-6);
   C2 n_newton = 1,|Δφ| vs solve_laplace(rtol=1e-13) = 5.8e-12;
@@ -217,3 +222,66 @@ def test_kutta_options_rejected_on_raw_mesh(sphere):
         NewtonWorkspace(mesh, None, gamma_target=np.zeros(1))
     with pytest.raises(ValueError, match="wake cut"):
         NewtonWorkspace(mesh, None, kutta_estimator="pressure")
+
+
+class TestPrescribedDirichlet:
+    """W2.2b:处方 Dirichlet 模式(C05/C08 的入口形状)的机制锁 —— sphere
+    coarse 上跑,与上面的 farfield 默认腿同一个网格族。
+
+    ★ 等价位同腿就是预注册 §4 第二条 kill criterion 的**适定形式**:把远场
+    节点上的自由流值原样作为处方值给出,与默认 farfield 路径**本该等价**
+    ⇒ 必须逐位相同(同一批 dir_red/vals0_red ⇒ 同一条求解链路)。红了 =
+    处方链路的实现错了,不是容差问题。
+    """
+
+    def test_pinned_bitexact_and_farfield_equivalent(self):
+        from tests.conftest import REPO_ROOT
+
+        mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "sphere_shell"
+                         / "coarse.msh")
+        ff = np.unique(mesh.boundary_faces["farfield"])
+        vals = mesh.nodes[ff, 0].copy()     # alpha=0, u_inf=1 自由流,逐位等于默认
+        a = solve_newton_nonlifting(mesh, m_inf=M_INF)
+        b = solve_newton_nonlifting(mesh, m_inf=M_INF, dirichlet_nodes=ff,
+                                    dirichlet_values=vals)
+        assert a["converged"] and b["converged"], (
+            "处方腿/默认腿不收敛 —— 前提变了")
+        assert np.array_equal(np.asarray(b["phi"])[ff], vals), (
+            "收敛态的处方节点值不等于处方值 —— Dirichlet 没压住(读回断言)")
+        assert np.array_equal(np.asarray(a["phi"]), np.asarray(b["phi"])), (
+            "处方(自由流等价值)与 farfield 默认不逐位相同 —— 预注册 §4 kill:"
+            "本该等价的两条链路给出了不同答案,实现错了")
+
+    def test_validation_and_mutual_exclusion(self):
+        from tests.conftest import REPO_ROOT
+
+        mesh = read_mesh(REPO_ROOT / "cases" / "meshes" / "sphere_shell"
+                         / "coarse.msh")
+        ff = np.unique(mesh.boundary_faces["farfield"])
+        vals = mesh.nodes[ff, 0].copy()
+        # 只给一个、长度不齐、节点越界 —— 全部必须显式报错
+        with pytest.raises(ValueError, match="together"):
+            solve_newton_nonlifting(mesh, m_inf=M_INF, dirichlet_nodes=ff)
+        with pytest.raises(ValueError, match="together"):
+            solve_newton_nonlifting(mesh, m_inf=M_INF, dirichlet_values=vals)
+        with pytest.raises(ValueError, match="equal length"):
+            solve_newton_nonlifting(mesh, m_inf=M_INF,
+                                    dirichlet_nodes=ff[:3],
+                                    dirichlet_values=vals)
+        with pytest.raises(ValueError, match="out of range"):
+            solve_newton_nonlifting(
+                mesh, m_inf=M_INF,
+                dirichlet_nodes=np.append(ff, len(mesh.nodes)),
+                dirichlet_values=np.append(vals, 0.0))
+        # 与 lifting 形状互斥(wc 给定时不许带处方)
+        from pyfp3d.mesh.wake_cut import cut_wake
+        mc, wc = cut_wake(read_mesh(REPO_ROOT / "cases" / "meshes"
+                                    / "naca0012_2.5d" / "xcoarse.msh"))
+        with pytest.raises(ValueError, match="wc=None"):
+            NewtonWorkspace(mc, wc, dirichlet_nodes=np.array([0]),
+                            dirichlet_values=np.array([0.0]))
+        # 与复用 workspace 互斥(处方只能进 NewtonWorkspace 构造器)
+        ws = NewtonWorkspace(mesh, None)
+        with pytest.raises(ValueError, match="workspace"):
+            solve_newton_nonlifting(mesh, m_inf=M_INF, workspace=ws,
+                                    dirichlet_nodes=ff, dirichlet_values=vals)

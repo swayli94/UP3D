@@ -63,11 +63,19 @@
 ## C05_nozzle_quasi1d
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`C05_nozzle_quasi1d/summary.csv`](C05_nozzle_quasi1d/summary.csv) — 4 行（3 级阶梯 + **反例腿**），列 `nx, h, n_max, converged, reason, n_newton, residual, x_shock, x_s_exact, err_x, err_cells`
+- [`C05_nozzle_quasi1d/summary.csv`](C05_nozzle_quasi1d/summary.csv) — 5 行（3 级阶梯 + **反例腿** + **生产腿**），列 `nx, h, n_max, converged, reason, n_newton, residual, x_shock, x_s_exact, err_x, err_cells`
 
 ★★★ **项目里唯一带激波的精确解。** 左图三级 u(x) 全部贴在精确准一维解上，激波稳定落在
 精确位置 x_s = 12 的**上游**约 0.7 个单元；右图 `|err_x|` 沿一阶线走（实测阶 **0.927 / 0.834**），
 而 `|err_cells|` 几乎是平的（0.651 / 0.685 / 0.768）—— **位置在收敛，捕捉宽度保持亚单元**。
+
+★★★ **W2.2b（2026-10-11）：精确解从本轮起也经过生产驱动器。** CSV 第 5 行
+（`leg=production`，nx = 200）是 `solve_newton_nonlifting` 腿：熵修正 ON、m_cap/
+钳制记账在位、`precond="direct"`（amg 在本案不收敛，N6 登记的激波软模态机制）。
+**实测它出带**：err_cells = **−2.7752**（阶梯腿带内最大 |0.77|）—— 归因对照
+（生产驱动器 + 熵 OFF）与 DuctSystem 腿**逐位全等**，所以出带完全来自熵修正
+（sigma_min = 0.988 把激波往上游多抹 2.1 个单元）。按预注册 §4 记录为生产配置在
+精确解上的**已知代价**，判据带不放宽；断言以「缺陷仍在」的形状锁住它。
 
 ★★★ **CSV 第 4 行不是阶梯的一部分，它是本门最值钱的一条**：从 x_s = 8 的解出发
 （边界数据仍是 x_s = 12 的真值），nx = 200 收敛到 **`reason=tol`、|R| = 1.3e-15**（机器零），
@@ -136,11 +144,18 @@ oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1
 ## C08_ringleb
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`C08_ringleb/summary.csv`](C08_ringleb/summary.csv) — 5 行（`upwind_c` 扫描 + `m_crit` 腿），列 `leg, h, upwind_c, m_crit, converged, reason, n_newton, residual, r_exact, rms, rms_sup, rms_sub, n_sup, n_cell, m_num_max, m_ex_max`
+- [`C08_ringleb/summary.csv`](C08_ringleb/summary.csv) — 6 行（`upwind_c` 扫描 + `m_crit` 腿 + **生产腿**），列 `leg, h, upwind_c, m_crit, converged, reason, n_newton, residual, r_exact, rms, rms_sup, rms_sub, n_sup, n_cell, m_num_max, m_ex_max`
 
 ★★★ **唯一 2-D 跨声速精确解，而且是全速势方程本身的解。** 与 C05 的分工是它存在的理由：
 喷管里**有激波** ⇒ 数值解本该与等熵精确解不同，那里只能判**激波位置**；Ringleb 的超声速
 口袋是**无激波、光滑**的 ⇒ **人工密度加的每一分耗散都是纯误差**。
+
+★★★ **W2.2b（2026-10-11）：精确解从本轮起也经过生产驱动器。** CSV 第 6 行
+（`leg=production`，h = 0.08）是 `solve_newton_nonlifting` 腿：熵修正 ON、生产默认
+amg（本案收敛，18 步）。读数**在带内但方向混合**：超声速 RMS 0.1001 → **0.1269**
+（带 0.13，熵修正在无激波口袋开火，n_shock = 53 = GS1b.10 的过生产机制）；
+峰值 Mach 却从低估 −2.26 % 变**高估 +1.01 %**（1.2590 vs 精确 1.2464）——
+绝对值更准、符号翻了。两个方向都登记（G-DOMAIN），不当好消息收下。
 
 ★★★ **左图把归因画死了**：速度误差**几乎只存在于精确声速线（黑）圈出的口袋里** ——
 口袋内低估、紧下游高估，其余全场近零。右图是**剂量-响应**：超声速区 RMS

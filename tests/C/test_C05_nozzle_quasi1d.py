@@ -29,12 +29,43 @@ Newton 收敛到 **`converged=True`, `reason=tol`, |R| = 1.30e-15**，而激波�
 
 ★ nx = 100 的同一条腿更极端：收敛到 |R| = 1.32e-12，而 `shock_from_profile` 返回
 **nan** —— 整场亚声速，激波**根本不存在**了。
+
+---
+
+★★★ **W2.2b（2026-10-11，预注册 20261011-1300）：精确解从本轮起也经过生产驱动器。**
+新增「生产腿」（`TestProductionDriverLeg`，与 DuctSystem 腿**并列、不取代**）：
+同一离散、同一进出口 Dirichlet 数据，但走 `solve_newton_nonlifting` ——
+熵修正 ON（GS1b.11 默认）、m_cap/钳制记账在位、EW/线搜索全局化、`precond="direct"`。
+
+**为什么不是生产默认的 amg**：amg 预条件子在本案**不收敛**（残差降到 ~4e-6 后单调
+回升；EW forcing 拧到 1e-10 一样）—— 这是 N6 已登记的激波位置软模态机制（AMG 建在
+SPD Picard 块上压不住它，精确 LU 步才恢复二次收敛），本案规模的生产配方（M1/E01）
+本来就是 `direct`。ilu 腿（10 步、机器零）与 direct 的读数差 1.8e-08 个单元，
+佐证「预条件子只是加速手段」。这不是本轮的新缺陷。
+
+**实测读数（nx=200，2026-10-11）** —— 预注册 §4 的 kill 形状**触发了，如实记录**：
+
+| 腿 | 收敛 | x_shock | err_cells |
+|---|---|---|---|
+| DuctSystem（熵 OFF，committed） | ✓ 5 步 | 11.93155274 | **−0.6845** |
+| 生产 direct + 熵 **OFF**（归因对照） | ✓ 5 步，\|R\|=1.24e-12 | 11.93155274 | **−0.6845**（与上行**逐位**全等，\|Δφ\|∞ = 0.0） |
+| 生产 direct + 熵 **ON**（=生产腿） | ✓ 10 步，\|R\|=9.2e-15 | 11.72247838 | **−2.7752** ✗ 出带 |
+
+⇒ **全局化/驱动器不动答案**（熵 OFF 时生产驱动器与 DuctSystem 的收敛态**逐位相同**，
+x_shock 差 0.0 个单元）；出带完全来自**熵修正**（sigma_min = 0.988，激波被往上游
+多抹了 2.1 个单元 —— 喷管的等熵 FP 激波本就在精确位置上游，R-H 修正把它推得更远，
+方向与翼型相反）。
+σ 刷新 cap 敏感度实测:cap 8 → 16 时读数动 2e-4 个单元 ⇒ 这是熵修正**系统**的性质,
+不是冻结噪声。这是 **m_cap/熵修正在精确解上的已知代价**,按预注册 §4 记录于此,
+判据带（CELLS_MAX = 1.00）**不放宽**;生产腿在断言里以「缺陷仍在」的形状锁住
+（同 `TestConvergedIsNotCorrect` 的先例）。
 """
 import os
 
 import numpy as np
 import pytest
 
+from pyfp3d.solve.newton import solve_newton_nonlifting
 from tests import _nozzle_case as NZ
 from tests._gate_evidence import assert_matches_committed, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
@@ -118,6 +149,123 @@ def _solve(nx, n_max, x_s_init=None, upwind_c=UPWIND_C):
 @pytest.fixture(scope="module")
 def sweep():
     return {nx: _solve(nx, n_max) for nx, n_max in LEVELS}
+
+
+#: W2.2b 生产腿的 medium 级（既有阶梯的中级；不新增网格级）。
+PROD_NX = 200
+#: 生产腿的配方:precond="direct" 的归因写在模块 docstring(amg 在本案不收敛,
+#: N6 已登记的激波软模态机制;本案规模的生产配方本来就是 direct)。
+PROD_KW = dict(precond="direct")
+
+
+def _solve_production(nx, entropy=True, upwind_c=UPWIND_C):
+    """W2.2b 生产腿:同一离散、同一 Dirichlet 数据,走生产驱动器
+    `solve_newton_nonlifting`(熵修正默认 ON、m_cap/钳制记账在位)。
+    读数后处理与 `_solve` 逐字同族(shock_from_profile / mdot 的 R 求和),
+    只是 mdot 的残差用**生产通量**(含 sigma 的 rho_tilde)对工作区求值。"""
+    ex = _exact()
+    ny = max(6, nx // 16)
+    mesh = NZ.nozzle_mesh(nx, ny)
+    dir_nodes = np.unique(np.concatenate([
+        mesh.boundary_faces["inlet"].ravel(),
+        mesh.boundary_faces["outlet"].ravel()]))
+    dir_vals = ex["phi_of_x"](mesh.nodes[dir_nodes, 0])
+    phi0 = ex["phi_of_x"](mesh.nodes[:, 0])
+    r = solve_newton_nonlifting(
+        mesh, m_inf=M_INF, upwind_c=upwind_c, dirichlet_nodes=dir_nodes,
+        dirichlet_values=dir_vals, phi_init=phi0,
+        entropy_correction=entropy, **PROD_KW)
+    phi = np.asarray(r["phi"], dtype=np.float64)
+    ws = r["workspace"]
+    #: 收敛态的**生产通量**残差(sigma 含在 state["rho_t"] 里 —— ws.sigma_frozen
+    #: 是驱动器留下的最后一个刷新,与报告的收敛态同属一个系统)。
+    _, _, state = ws.eval_residual(phi[ws.free], np.zeros(0), upwind_c,
+                                   0.95, 3.0, 0.05)
+    R = ws.op.assemble_residual(state["phi_cut"], state["rho_t"])
+    inlet = np.unique(mesh.boundary_faces["inlet"].ravel())
+    outlet = np.unique(mesh.boundary_faces["outlet"].ravel())
+    dz = float(np.ptp(mesh.nodes[:, 2]))
+    mdot_in, mdot_out = float(R[inlet].sum()), float(R[outlet].sum())
+    mdot_exact = float(ex["mdot"]) * dz
+    #: 激波读数走与 `_solve` 完全同一套后处理(DuctSystem 只做 reader,不做求解)
+    sysd = NZ.DuctSystem(mesh, m_inf=M_INF, upwind_c=upwind_c)
+    xc, ux = NZ.element_u(sysd, phi)
+    x_shock, n_sup, xb, ub = NZ.shock_from_profile(xc, ux, ex["u_star"], nx)
+    h = NZ.LENGTH / nx
+    err = (x_shock - ex["x_s"]) if np.isfinite(x_shock) else float("nan")
+    return dict(nx=nx, h=h, n_max=30,  # 生产腿的迭代预算列 = n_newton_max 默认
+                x_shock=float(x_shock), err_x=float(err),
+                err_cells=float(err / h), converged=bool(r["converged"]),
+                reason=str(r["accept_reason"]), n_newton=int(r["n_newton"]),
+                residual=float(r["residual_history"][-1]),
+                x_s_exact=float(ex["x_s"]), u_star=float(ex["u_star"]),
+                mdot_in=mdot_in, mdot_out=mdot_out, mdot_exact=mdot_exact,
+                mdot_imbalance=abs(mdot_in + mdot_out) / mdot_exact,
+                mdot_rel_err=abs(abs(mdot_out) - mdot_exact) / mdot_exact,
+                n_limited=int(r["n_limited"]), n_floored=int(r["n_floored"]),
+                sigma_min=(None if r["sigma_min"] is None
+                           else float(r["sigma_min"])),
+                n_shock_cells=r["n_shock_cells"], xb=xb, ub=ub)
+
+
+@pytest.fixture(scope="module")
+def production():
+    return _solve_production(PROD_NX)
+
+
+class TestProductionDriverLeg:
+    """★★★ W2.2b:精确解第一次走**生产** Newton 驱动器(读数表见模块 docstring)。
+
+    ★ 判据带**不放宽**:CELLS_MAX 照旧属于阶梯腿;生产腿的出带按预注册 §4 以
+    「缺陷仍在」的形状锁(好消息变红也要走纪律 11 勘误)。"""
+
+    def test_production_leg_converges_with_clamp_books_clean(self, production):
+        """前提:生产腿收敛、钳制记账在位且干净、熵修正确实 ON。"""
+        d = production
+        assert d["converged"] and d["reason"] == "tol", (
+            f"生产腿不收敛(reason={d['reason']}, |R|={d['residual']:.2e})—— "
+            "前提变了,先归因(本案 amg 不收敛是已登记机制,见模块 docstring)")
+        assert d["n_limited"] == 0 and d["n_floored"] == 0, (
+            f"生产腿出现钳制(lim={d['n_limited']}, flr={d['n_floored']})—— "
+            "m_cap/rho_floor 介入了喷管激波,这本身是要登记的现象")
+        assert d["sigma_min"] is not None and d["sigma_min"] < 1.0, (
+            "熵修正没有真的作用于激波(sigma_min=1)—— 生产腿没跑在生产配置")
+
+    def test_entropy_off_control_reproduces_the_ductsystem_leg(self, sweep):
+        """归因对照:生产驱动器 + 熵 OFF 必须复现 DuctSystem 腿的读数
+        (同一离散系统、同一精确内解 ⇒ 全局化不动答案)。实测逐位到 9 位有效数字
+        (x_shock 11.93155274 全等)。"""
+        d = _solve_production(PROD_NX, entropy=False)
+        ref = sweep[PROD_NX]
+        assert d["converged"]
+        assert abs(d["err_cells"]) <= CELLS_MAX, (
+            f"熵 OFF 的生产腿 err_cells={d['err_cells']:.4f} 出带 —— "
+            "不是熵修正的代价,是驱动器本身改了答案,必须归因")
+        moved = abs(d["x_shock"] - ref["x_shock"]) / ref["h"]
+        assert moved < 1e-3, (
+            f"生产(熵 OFF) vs DuctSystem 激波位置差 {moved:.2e} 个单元 —— "
+            "两个驱动器在同一离散上不再一致(实测 0.0,逐位)")
+
+    def test_production_leg_out_of_band_is_locked_as_known_cost(self, production,
+                                                                sweep):
+        """★ 预注册 §4 的 kill 形状,**如实记录**:熵修正 ON(生产默认)把激波
+        推到 −2.7752 个单元,出了 CELLS_MAX = 1.00 的带。**带不放宽**;本条以
+        「缺陷仍在」锁住它 —— 若将来修回带内,那是好消息,但必须走纪律 11
+        勘误(能力边界文书与本表都以这个出带读数为前提)。"""
+        d = production
+        assert abs(d["err_cells"]) > CELLS_MAX, (
+            f"生产腿(熵 ON)回到带内 err_cells={d['err_cells']:.4f} —— "
+            "若求解器/熵修正真被修好这是好消息,但请走勘误:模块 docstring 的"
+            "W2.2b 表、本断言与 cases/gates/C05_nozzle_quasi1d/summary.csv "
+            "的生产行都要重读")
+        #: 方向也是内容:偏差仍在**上游**侧(与阶梯腿同号),且更远了
+        assert d["err_cells"] < 0.0, (
+            f"生产腿的激波偏差翻号(err_cells={d['err_cells']:+.4f})—— "
+            "抹激波的方向变了,那是迎风/熵链路的方向性问题")
+        delta = d["err_cells"] - sweep[PROD_NX]["err_cells"]
+        assert delta < -1.0, (
+            f"熵 ON 使激波多偏上游 {delta:+.3f} 个单元(实测 -2.09)—— "
+            "幅度离开实测值,熵修正的剂量变了")
 
 
 class TestExactSolutionIsWellPosed:
@@ -334,9 +482,10 @@ class TestGlobalMassConservation:
 class TestCommittedEvidenceIsLoadBearing:
     r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与三个坑见 `tests/_gate_evidence.py`。
     ★ 零额外计算：用 `sweep` 已算好的结果（**反例腿不在 sweep 里**，它由 §
-    `TestConvergedIsNotCorrect` 单独求解，因此不进本锁）。"""
+    `TestConvergedIsNotCorrect` 单独求解，因此不进本锁）加 W2.2b 的生产腿
+    （`production` fixture 已算，单独一行进锁）。"""
 
-    def test_fresh_run_reproduces_the_committed_summary(self, sweep):
+    def test_fresh_run_reproduces_the_committed_summary(self, sweep, production):
         fresh = {("ladder", str(nx)): dict(x_shock=sweep[nx]["x_shock"],
                                   err_x=sweep[nx]["err_x"],
                                   err_cells=sweep[nx]["err_cells"],
@@ -347,17 +496,23 @@ class TestCommittedEvidenceIsLoadBearing:
                                   mdot_exact=sweep[nx]["mdot_exact"],
                                   mdot_rel_err=sweep[nx]["mdot_rel_err"])
                  for nx, _ in LEVELS}
+        #: ★ W2.2b:生产腿行进同一个锁（新增行；既有行逐位不动，锁自证）。
+        fresh[("production", str(PROD_NX))] = dict(
+            x_shock=production["x_shock"], err_x=production["err_x"],
+            err_cells=production["err_cells"], mdot_out=production["mdot_out"],
+            mdot_exact=production["mdot_exact"],
+            mdot_rel_err=production["mdot_rel_err"])
         n = assert_matches_committed(
             os.path.join(str(REPO_ROOT), "cases", "gates", "C05_nozzle_quasi1d"),
             fresh, ("x_shock", "err_x", "err_cells",
                     "mdot_out", "mdot_exact", "mdot_rel_err"),
             key_of=lambda r: (r["leg"], r["nx"]),
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C05_nozzle_quasi1d.py")
-        assert n >= 18, f"只比了 {n} 个数（3 级 x 6 列 = 18）"
+        assert n >= 24, f"只比了 {n} 个数（(3 级阶梯 + 1 生产腿) x 6 列 = 24）"
 
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
-def test_export_nozzle_figure(sweep, gate_evidence_dir):
+def test_export_nozzle_figure(sweep, production, gate_evidence_dir):
     import csv
 
     import matplotlib
@@ -409,3 +564,7 @@ def test_export_nozzle_figure(sweep, gate_evidence_dir):
             w.writerow(_row("ladder", nx, n_max, sweep[nx]))
         w.writerow(_row("counterexample", 200, 80,
                         _solve(200, n_max=80, x_s_init=8.0)))
+        #: ★ W2.2b:生产腿行(`n_max` 列 = 驱动器的 n_newton_max 默认 30;
+        #: `reason` 列 = accept_reason)。既有行逐位不动,本行只是新增。
+        w.writerow(_row("production", PROD_NX, production["n_max"],
+                        production))

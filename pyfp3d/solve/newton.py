@@ -186,6 +186,14 @@ class NewtonWorkspace:
     lives in wc-is-None branches; the lifting path's expressions and their
     evaluation order are byte-for-byte the pre-G10.1 ones.
 
+    W2.2b: on TOP of wc=None, `dirichlet_nodes`/`dirichlet_values` select
+    the prescribed-Dirichlet mode (the C05/C08 shape -- exact-solution phi
+    pinned on inlet/outlet nodes): the pair REPLACES the freestream
+    farfield default, riding the same vals0_red link with the numbers
+    taken from the argument. Mutually exclusive with the lifting shape
+    (explicit ValueError). None/None (the default) is byte-for-byte the
+    W2.2a workspace.
+
     `kutta_estimator` selects the Kutta closure residual F (P14):
       "probe" (default, BIT-IDENTICAL): F = tip_taper * kutta_targets - Gamma
         with the constant sparse row K and dF/dGamma = -I exactly.
@@ -254,7 +262,9 @@ class NewtonWorkspace:
                  gamma_target: Optional[np.ndarray] = None,
                  kutta_estimator: str = "probe",
                  external_rhs: Optional[np.ndarray] = None,
-                 sigma_soft_eps: float = 0.0, sigma_soft_q: float = 1.0):
+                 sigma_soft_eps: float = 0.0, sigma_soft_q: float = 1.0,
+                 dirichlet_nodes: Optional[np.ndarray] = None,
+                 dirichlet_values: Optional[np.ndarray] = None):
         self.mesh_cut = mesh_cut
         self.wc = wc
         self.alpha_deg = float(alpha_deg)
@@ -281,6 +291,47 @@ class NewtonWorkspace:
                     "kutta_estimator is a Kutta-row option and needs a wake "
                     "cut (wc); the non-lifting workspace has no Kutta row")
             tip_taper = np.ones(0, dtype=np.float64)
+        # W2.2b: prescribed Dirichlet mode (non-lifting only) -- the caller
+        # pins THESE nodes to THESE values (e.g. the exact solution on a
+        # duct's inlet/outlet, C05/C08), REPLACING the freestream farfield
+        # default. The values ride the same vals0_red link as the farfield
+        # construction (set_mach reads them instead of recomputing the
+        # freestream), so the residual/Jacobian chain is untouched; only the
+        # source of the numbers differs. Mutually exclusive with the lifting
+        # shape (wc given): there the far field carries the vortex basis and
+        # is not node-wise overridable.
+        if dirichlet_nodes is not None or dirichlet_values is not None:
+            if wc is not None:
+                raise ValueError(
+                    "dirichlet_nodes/dirichlet_values are the non-lifting "
+                    "prescribed-Dirichlet mode and need wc=None")
+            if dirichlet_nodes is None or dirichlet_values is None:
+                raise ValueError(
+                    "dirichlet_nodes and dirichlet_values must be given "
+                    "together")
+            dirichlet_nodes = np.asarray(dirichlet_nodes, dtype=np.int64)
+            dirichlet_values = np.asarray(dirichlet_values, dtype=np.float64)
+            if (dirichlet_nodes.ndim != 1
+                    or dirichlet_values.shape != dirichlet_nodes.shape):
+                raise ValueError(
+                    "dirichlet_nodes and dirichlet_values must be 1-D of "
+                    "equal length, got "
+                    f"{dirichlet_nodes.shape} vs {dirichlet_values.shape}")
+            if len(dirichlet_nodes) == 0:
+                raise ValueError("dirichlet_nodes is empty")
+            if (dirichlet_nodes.min() < 0
+                    or dirichlet_nodes.max() >= len(mesh_cut.nodes)):
+                raise ValueError(
+                    f"dirichlet_nodes out of range [0, {len(mesh_cut.nodes)})")
+            if not np.all(np.isfinite(dirichlet_values)):
+                raise ValueError("dirichlet_values must be finite")
+            #: as-GIVEN order; _ff_keep/_ff_idx (built from the same array
+            #: below) align the values onto the sorted-unique dir_red, so
+            #: unsorted input is handled, not just tolerated.
+            self._dirichlet_prescribed = (dirichlet_nodes.copy(),
+                                          dirichlet_values.copy())
+        else:
+            self._dirichlet_prescribed = None
         # P13/G13.2 tip-edge desingularization: per-station loading taper
         # F_j (constraints/wake.py::tip_taper_factors). The accepted
         # circulation becomes Gamma_eff = F_j * Gamma_Kutta, so BOTH the
@@ -372,9 +423,13 @@ class NewtonWorkspace:
         # Dirichlet pattern is Gamma-, rho- and beta-independent: fix the
         # split once (identical construction to solve_subsonic_lifting).
         if wc is None:
-            # G10.1: freestream-only far field, no vortex basis.
-            dir_nodes, _ = _farfield_dirichlet_nonlifting(
-                mesh_cut, alpha_deg, u_inf)
+            if self._dirichlet_prescribed is not None:
+                # W2.2b: prescribed nodes REPLACE the farfield default.
+                dir_nodes = self._dirichlet_prescribed[0]
+            else:
+                # G10.1: freestream-only far field, no vortex basis.
+                dir_nodes, _ = _farfield_dirichlet_nonlifting(
+                    mesh_cut, alpha_deg, u_inf)
         else:
             dir_nodes, _ = farfield_dirichlet(
                 mesh_cut, wc, alpha_deg, np.zeros(self.n_st), u_inf,
@@ -462,11 +517,18 @@ class NewtonWorkspace:
         self.m_inf = float(m_inf)
         self.beta = float(np.sqrt(1.0 - m_inf ** 2))
         if self.wc is None:
-            # G10.1: freestream-only (Mach-independent) far field. The
-            # unit-Gamma probing loop below runs zero times (n_st = 0), so
-            # V_red stays the empty (n_dir, 0) basis.
-            _, vals0 = _farfield_dirichlet_nonlifting(
-                self.mesh_cut, self.alpha_deg, self.u_inf)
+            if self._dirichlet_prescribed is not None:
+                # W2.2b: the prescribed values ARE the (Mach-independent)
+                # Dirichlet data -- the same vals0_red link, with the
+                # numbers coming from the argument instead of the
+                # freestream construction.
+                vals0 = self._dirichlet_prescribed[1]
+            else:
+                # G10.1: freestream-only (Mach-independent) far field. The
+                # unit-Gamma probing loop below runs zero times (n_st = 0), so
+                # V_red stays the empty (n_dir, 0) basis.
+                _, vals0 = _farfield_dirichlet_nonlifting(
+                    self.mesh_cut, self.alpha_deg, self.u_inf)
         else:
             _, vals0 = farfield_dirichlet(
                 self.mesh_cut, self.wc, self.alpha_deg, np.zeros(self.n_st),
@@ -1836,6 +1898,8 @@ def solve_newton_nonlifting(
     sigma_soft_eps: float = 0.0,
     sigma_soft_q: float = 1.0,
     verbose: bool = False,
+    dirichlet_nodes: Optional[np.ndarray] = None,
+    dirichlet_values: Optional[np.ndarray] = None,
 ) -> Dict[str, object]:
     """
     G10.1 (W2.2a): the PRODUCTION Newton driver on a RAW (uncut) mesh --
@@ -1854,7 +1918,9 @@ def solve_newton_nonlifting(
     Args:
         mesh: the RAW mesh (NOT passed through cut_wake); needs
             boundary_faces["farfield"] -- the far field prescribed there is
-            freestream_phi(alpha_deg, u_inf), no vortex basis.
+            freestream_phi(alpha_deg, u_inf), no vortex basis. See
+            dirichlet_nodes for the prescribed-Dirichlet mode, which does
+            not read boundary_faces at all.
         m_inf, alpha_deg, u_inf, gamma_air: freestream state.
         upwind_c / m_crit / m_cap / rho_floor, phi_init, n_picard_seed,
         n_newton_max, tol_residual, ew_*, amg_rebuild_every, precond,
@@ -1867,6 +1933,24 @@ def solve_newton_nonlifting(
             gamma_target, kutta_estimator, external_rhs). The Mach-RAMP
             wrapper solve_newton_transonic stays lifting-only (G10.1
             scope); a raw-mesh level solve is all this entry is.
+        dirichlet_nodes, dirichlet_values (W2.2b): prescribed-Dirichlet
+            mode -- pin THESE raw-mesh nodes to THESE values (e.g. the
+            exact quasi-1D solution on a nozzle's inlet/outlet, C05/C08),
+            REPLACING the freestream farfield default. The pair rides the
+            workspace's vals0_red link (NewtonWorkspace docstring), so
+            residual/Jacobian/clamp/entropy bookkeeping are the production
+            ones; every boundary face NOT covered by dirichlet_nodes takes
+            the kernel's natural (do-nothing, zero-flux) condition -- the
+            same assemble_residual behaviour the Picard drivers and
+            DuctSystem rely on. Both or neither; mutually exclusive with a
+            reused workspace carrying its own mode (the prescription then
+            belongs to the NewtonWorkspace constructor). Note the
+            cold-start seed fallback (solve_newton_lifting) rebuilds the
+            workspace from ITS OWN arguments, which do not carry the
+            prescription: in prescribed mode pass phi_init or
+            n_picard_seed > 0 (both keep the fallback inert); a fired AND
+            accepted fallback raises rather than return a farfield-BC
+            state.
 
     Returns the solve_newton_lifting result dict verbatim (phi on the RAW
     mesh, n_nodes entries). Keys that are Kutta concepts are present but
@@ -1877,7 +1961,18 @@ def solve_newton_nonlifting(
     inner solve (precond="direct") -- one Newton step reproduces the P1
     Laplace solution to machine roundoff (A55 C2).
     """
-    return solve_newton_lifting(
+    prescribed = dirichlet_nodes is not None or dirichlet_values is not None
+    if prescribed:
+        if workspace is not None:
+            raise ValueError(
+                "a reused workspace carries its own Dirichlet mode: build "
+                "the NewtonWorkspace with dirichlet_nodes/dirichlet_values "
+                "and pass workspace=..., not both")
+        workspace = NewtonWorkspace(
+            mesh, None, alpha_deg, u_inf, gamma_air,
+            dirichlet_nodes=dirichlet_nodes, dirichlet_values=dirichlet_values,
+            sigma_soft_eps=sigma_soft_eps, sigma_soft_q=sigma_soft_q)
+    result = solve_newton_lifting(
         mesh, None, m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
         gamma_air=gamma_air, upwind_c=upwind_c, m_crit=m_crit, m_cap=m_cap,
         rho_floor=rho_floor, phi_init=phi_init, gamma_init=None,
@@ -1895,6 +1990,16 @@ def solve_newton_nonlifting(
         sigma_soft_eps=sigma_soft_eps, sigma_soft_q=sigma_soft_q,
         verbose=verbose,
     )
+    if (prescribed and result["seed_fallback"]["fired"]
+            and result["seed_fallback"]["accepted"]):
+        raise RuntimeError(
+            "the cold-start seed fallback fired and its retry was accepted, "
+            "but the retry's workspace was rebuilt from solve_newton_"
+            "lifting's own arguments, which do not carry the prescribed "
+            "Dirichlet data -- the returned state solved the FARFIELD "
+            "problem. Pass phi_init (a warm start) or n_picard_seed > 0, "
+            "both of which keep the fallback inert, and rerun.")
+    return result
 
 
 def _ramp_honesty_fields(level_results, m_inf: float, converged: bool) -> dict:
