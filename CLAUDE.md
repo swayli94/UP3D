@@ -40,13 +40,15 @@ measurable — *if a surviving test or script reads it, it stays*. Measured stat
   `ew_eta_max` = 1e-6, `entropy_correction=True`, `tip_cap="round"`, `upwind_c=1.5`, `m_crit`
   0.95, `m_cap` 3.0 — read with `inspect.signature`, not copied), the rulings still in force
   (D5 executed, D2 activated; ★ D1/D3/D4 explicitly **not** re-checked), and the do-not-reopen
-  list. ★ The capability boundary is now archived at
-  `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` and is still the only
-  document stating what the solver can do — **producing phase 6's own is a phase-6 deliverable**;
-  until then, cite the archived original rather than paraphrasing it.
+  list. ★ Phase 6's own capability boundary now exists:
+  **[docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md)
+  (2026-10-11)** — cite IT for the current state. The phase-2 original stays archived at
+  `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md`; cite it only for
+  statements the phase-6 document has not re-measured (it is a historical snapshot,
+  not the live state).
   ★ Round-file template: `phases/p2/docs/dev_phase_two/_TEMPLATE.md`.
 
-**Start here:** [phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
+**Start here:** [docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md),
 then [phases/README.md](phases/README.md) for what was archived and how to get a
 guaranteed-runnable phase-1/2 tree (`git worktree add ../up3d-prereorg d224223`).
 
