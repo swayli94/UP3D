@@ -14,7 +14,7 @@ All functions use SoA arrays and are @njit-compatible.
 
 import numba
 import numpy as np
-from typing import Tuple, Dict, List
+from typing import Tuple
 
 # Module-level type constants: numba's typed.Dict.empty() needs key_type/
 # value_type resolved as compile-time global constants inside @njit code, not
@@ -276,52 +276,6 @@ def build_face_adjacency(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
                 first_owner[key] = e * 4 + f
 
     return face_neighbors, face_orientations
-
-
-@numba.njit(cache=True)
-def precompute_face_normals(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
-    """
-    Outward unit normals of each tet's 4 faces, in the SAME local-face
-    order as build_face_adjacency (face f is opposite local node f), so
-    face_normals[e, f] pairs with face_neighbors[e, f].
-
-    Used by the P4 upstream-element search (design.md Sec 3 step 1: the
-    upstream neighbor u(e) is the face-neighbor whose outward normal is
-    most anti-aligned with V_e). Precomputed once per mesh.
-
-    Args:
-        nodes: (n_nodes, 3) nodal coordinates
-        elements: (n_tets, 4) tetrahedral connectivity
-
-    Returns:
-        face_normals: (n_tets, 4, 3) outward unit normals
-    """
-    face_defs = np.array(
-        [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]], dtype=np.int32
-    )
-    n_tets = len(elements)
-    normals = np.empty((n_tets, 4, 3), dtype=np.float64)
-
-    for e in range(n_tets):
-        tet = elements[e]
-        for f in range(4):
-            a = nodes[tet[face_defs[f, 0]]]
-            b = nodes[tet[face_defs[f, 1]]]
-            c = nodes[tet[face_defs[f, 2]]]
-            d = nodes[tet[f]]  # opposite vertex (local node f)
-
-            nx = (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1])
-            ny = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2])
-            nz = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-            # Orient away from the opposite vertex (outward from the tet).
-            if nx * (a[0] - d[0]) + ny * (a[1] - d[1]) + nz * (a[2] - d[2]) < 0.0:
-                nx, ny, nz = -nx, -ny, -nz
-            norm = np.sqrt(nx * nx + ny * ny + nz * nz)
-            normals[e, f, 0] = nx / norm
-            normals[e, f, 1] = ny / norm
-            normals[e, f, 2] = nz / norm
-
-    return normals
 
 
 @numba.njit(cache=True)

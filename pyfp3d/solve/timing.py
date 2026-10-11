@@ -27,7 +27,7 @@ Reference: phases/p1/docs/roadmap/track_a.md A1.
 """
 
 import time
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable
 
 # Ordered so a stacked bar chart reads seed -> assembly -> ... -> other.
 PHASES = ("seed", "assembly", "precond", "linsolve", "residual", "kutta")
@@ -95,13 +95,3 @@ def step_delta(timings: Dict[str, float],
 def snapshot(timings: Dict[str, float]) -> Dict[str, float]:
     """Copy of the running phase counters (the `prev` of `step_delta`)."""
     return {p: timings[p] for p in PHASES}
-
-
-def records_to_columns(records: List[Dict]) -> Dict[str, list]:
-    """Transpose a `step_records` list into column arrays for CSV export."""
-    keys: List[str] = []
-    for r in records:
-        for k in r:
-            if k not in keys:
-                keys.append(k)
-    return {k: [r.get(k) for r in records] for k in keys}

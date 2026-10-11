@@ -62,7 +62,7 @@ Nothing imports this module unless kutta_estimator="pressure" is requested
 (G14.4: the probe default is untouched work- and bit-wise).
 """
 
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 import scipy.sparse as sp

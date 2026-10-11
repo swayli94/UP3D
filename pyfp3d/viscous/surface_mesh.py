@@ -62,8 +62,6 @@ if os.environ.get("PYFP3D_NOJIT", "0") == "1":
 
         return _identity
 else:
-    from numba import prange
-
     def _njit(*args, **kwargs):
         return numba.njit(*args, **kwargs)
 

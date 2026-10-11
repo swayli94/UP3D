@@ -23,22 +23,6 @@ def _element_gradients_and_centroids(nodes: np.ndarray, elements: np.ndarray, ph
     return grad_elem, centroids
 
 
-def _node_to_element_patches(elements: np.ndarray, n_nodes: int):
-    """CSR-style (offsets, element_ids) map from node -> incident elements."""
-    n_tets = len(elements)
-    flat_nodes = elements.reshape(-1)
-    flat_elems = np.repeat(np.arange(n_tets), 4)
-
-    order = np.argsort(flat_nodes, kind="stable")
-    sorted_nodes = flat_nodes[order]
-    sorted_elems = flat_elems[order]
-
-    counts = np.bincount(sorted_nodes, minlength=n_nodes)
-    offsets = np.zeros(n_nodes + 1, dtype=np.int64)
-    np.cumsum(counts, out=offsets[1:])
-    return offsets, sorted_elems
-
-
 def nodal_gradient_recovery(nodes: np.ndarray, elements: np.ndarray, phi: np.ndarray) -> np.ndarray:
     """
     Recover a nodal gradient field from the element-constant P1 gradient by

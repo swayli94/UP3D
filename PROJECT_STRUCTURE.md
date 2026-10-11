@@ -11,8 +11,7 @@ pyfp3d/                    # Main package
 │   ├── __init__.py
 │   ├── reader.py         # [P0] meshio → SoA arrays + boundary tags
 │   ├── metrics.py        # [P0] volumes, gradients, face adjacency; ✓ [P3] adds
-│   │                       #   precompute_element_geometry (B_e/V_e once per mesh);
-│   │                       #   ✓ [P4] precompute_face_normals (adjacency-ordered outward)
+│   │                       #   precompute_element_geometry (B_e/V_e once per mesh)
 │   ├── coloring.py       # [P0] element graph coloring; ✓ [P3] greedy loop numba-jitted
 │   │                       #   (same visit order => identical assignment) + color_partition_csr
 │   └── wake_cut.py       # ✓ [P2] wake-sheet node duplication (per-node flood-fill side
@@ -398,7 +397,7 @@ pyfp3d/                    # Main package
 └── post/                 # Post-processing
     ├── __init__.py
     ├── vtk_out.py        # [P0] Write .vtu for ParaView; also the PNG/CSV gate-artifact helpers
-    │                       #      (export_error_heatmap, export_matplotlib_plot) live here, not
+    │                       #      (export_matplotlib_plot 等) live here, not
     │                       #      in a separate artifacts.py
     ├── shock.py          # ✓ [P4] shock monitors: Cp* sonic-crossing detection, shock x/c,
     │                       #      jump-width cell count, monotonicity + expansion-shock detectors

@@ -59,24 +59,6 @@ def density_isentropic(q_squared, M_inf, gamma=GAMMA):
 
 
 @numba.njit(cache=True)
-def speed_of_sound_squared(q_squared, M_inf, gamma=GAMMA):
-    r"""
-    Nondimensional speed of sound squared, a² = 1/M∞² + (γ−1)/2 · (1 − q²).
-
-    Derived from (2.4) in design.md.
-
-    Args:
-        q_squared: Nondimensional speed squared
-        M_inf: Freestream Mach number
-        gamma: Specific heat ratio
-
-    Returns:
-        a² (nondimensional)
-    """
-    return 1.0 / (M_inf ** 2) + 0.5 * (gamma - 1.0) * (1.0 - q_squared)
-
-
-@numba.njit(cache=True)
 def mach_number_squared(q_squared, M_inf, gamma=GAMMA):
     r"""
     Local Mach number squared: M²(q²) = q² M∞² / a².
@@ -204,32 +186,6 @@ def mach_squared_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
     """
     D = 1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2 * (1.0 - q_squared)
     return M_inf ** 2 * (1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2) / (D * D)
-
-
-@numba.njit(cache=True)
-def upwind_factor(q_squared, M_inf, M_crit=M_CRIT_DEFAULT, C=UPWIND_CONST_DEFAULT, gamma=GAMMA):
-    r"""
-    Artificial compressibility upwinding factor ν.
-
-    ν(q²) = C · max(0, 1 − M_c² / M²)
-
-    Activates (ν > 0) only when local Mach exceeds critical threshold M_c ≈ 0.95–1.0.
-    Subsonic regions (ν = 0) remain central and second-order accurate.
-
-    From design.md §3, equation (3.2).
-
-    Args:
-        q_squared: Nondimensional speed squared
-        M_inf: Freestream Mach number
-        M_crit: Critical Mach for switch (default 0.95)
-        C: Upwinding coefficient (default 1.5)
-        gamma: Specific heat ratio
-
-    Returns:
-        ν ∈ [0, C], the upwinding weight
-    """
-    M_sq = mach_number_squared(q_squared, M_inf, gamma)
-    return C * max(0.0, 1.0 - (M_crit ** 2) / max(M_sq, M_crit ** 2))
 
 
 @numba.njit(cache=True)

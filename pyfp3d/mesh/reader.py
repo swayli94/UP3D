@@ -13,7 +13,7 @@ Reference: design.md §4 (Mesh Requirements), §7 (Architecture)
 
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 import meshio
 
 
