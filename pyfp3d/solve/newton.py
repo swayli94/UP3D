@@ -46,6 +46,15 @@ strictly worse than plain Newton here, and removed the dormant fixed-shift
 phases/p2/docs/dev_phase_two/20260728-2030-s1-ptc.md). Transonic runs MAY wrap this in
 the upward-only Mach continuation of solve_newton_transonic (M_crit and upwind_c held FIXED
 within the ramp, Lopez Tables 4.7/4.8/4.13).
+
+G10.1 (W2.2a, 2026-10-11): NewtonWorkspace also accepts wc=None -- a RAW
+(uncut) mesh with no wake constraint. The reduction is then the identity,
+there are no stations (n_st = 0: no Kutta row, no Gamma unknowns) and the
+far field is freestream-only (no vortex basis); solve_newton_nonlifting is
+the corresponding entry point. Everything on the wc-is-None path is an
+ADDED branch -- the lifting path's expressions and their evaluation order
+are untouched, so its answers are bit-identical BY CONSTRUCTION (the A55
+C4 guard and the pre/post phi cache of the W2.2a report measure it).
 """
 
 import time
@@ -98,6 +107,48 @@ class _EliminatedKuttaRow:
 
 
 
+def _farfield_dirichlet_nonlifting(mesh, alpha_deg, u_inf):
+    """Freestream-only far-field Dirichlet data on a RAW mesh (G10.1):
+    (nodes, values) with values = freestream_phi -- no vortex correction,
+    because no circulation exists to correct for. This is exactly the
+    Gamma == 0 remnant of constraints/dirichlet.farfield_dirichlet (its
+    vortex term is additive and beta only scales that term), so the two
+    constructions coincide wherever the lifting one is evaluated at
+    Gamma = 0."""
+    ff_nodes = np.unique(
+        np.asarray(mesh.boundary_faces["farfield"], dtype=np.int64))
+    return ff_nodes, freestream_phi(mesh.nodes[ff_nodes], alpha_deg, u_inf)
+
+
+class _IdentityConstraint:
+    """WakeConstraint-shaped IDENTITY reduction for a RAW mesh (G10.1,
+    wc=None): n_cut == n_red, T = I, no slaves, no stations.
+
+    Only the members the Newton workspace/driver consume are provided
+    (T, n_reduced, expand, reduce_operator, to_reduced_dirichlet).
+    reduce_operator returns (A, empty H) directly instead of forming the
+    T-products: with T = I those products are the identity map on values,
+    so skipping them changes no number -- and no lifting code path ever
+    sees this class. The Picard-side members (A_reduced, reduced_rhs,
+    update_matrix) do not exist here by design: the Newton driver does not
+    read them, and building them would be dead work."""
+
+    def __init__(self, n_nodes: int):
+        self.T = sp.identity(n_nodes, format="csr")
+        self.n_reduced = n_nodes
+
+    def reduce_operator(self, A):
+        return A.tocsr(), sp.csr_matrix((A.shape[0], 0), dtype=np.float64)
+
+    def expand(self, phi_red, gamma):
+        return np.array(phi_red, dtype=np.float64, copy=True)
+
+    def to_reduced_dirichlet(self, dirichlet_nodes, dirichlet_values):
+        nodes = np.asarray(dirichlet_nodes, dtype=np.int64)
+        red_nodes, idx = np.unique(nodes, return_index=True)
+        return red_nodes, np.asarray(dirichlet_values,
+                                     dtype=np.float64)[idx]
+
 
 #: GS1b.5(a): how many times the frozen entropy factor is rebuilt during a solve.
 #: An ALGORITHMIC CONSTANT, deliberately not a driver argument -- roadmap
@@ -125,6 +176,15 @@ class NewtonWorkspace:
     far-field basis (vals0_red, V_red). Reused across the Mach levels of
     solve_newton_transonic (set_mach re-derives only the beta-dependent
     far-field basis).
+
+    G10.1 (W2.2a): wc = None builds the NON-LIFTING workspace on a RAW
+    (uncut) mesh -- `mesh_cut` is then simply that mesh. The reduction is
+    the identity (_IdentityConstraint), n_st = 0 (no Kutta row K, no Gamma
+    unknowns; tip_taper / gamma_target / kutta_estimator="pressure" are
+    rejected as meaningless there), and set_mach's far field is
+    freestream-only (V_red stays the empty (n_dir, 0) basis). All of it
+    lives in wc-is-None branches; the lifting path's expressions and their
+    evaluation order are byte-for-byte the pre-G10.1 ones.
 
     `kutta_estimator` selects the Kutta closure residual F (P14):
       "probe" (default, BIT-IDENTICAL): F = tip_taper * kutta_targets - Gamma
@@ -202,6 +262,25 @@ class NewtonWorkspace:
         self.gamma_air = float(gamma_air)
         self.vortex_center = vortex_center
         self.spanwise = bool(farfield_spanwise_gamma)
+        # G10.1 (W2.2a): wc = None builds the NON-LIFTING workspace on a RAW
+        # (uncut) mesh -- identity reduction, no stations, freestream-only
+        # far field (class docstring). The Kutta-row options are meaningless
+        # without stations and are rejected; the empty tip_taper substituted
+        # here makes the UNTOUCHED legacy expressions below evaluate with
+        # n_st = 0 (the `tip_taper is None` ternary takes its asarray branch
+        # and never reads wc, and np.all(empty == 1.0) is True so
+        # _taper_active is False).
+        if wc is None:
+            if tip_taper is not None or gamma_target is not None:
+                raise ValueError(
+                    "tip_taper/gamma_target are Kutta-row options and need "
+                    "a wake cut (wc); the non-lifting workspace has no "
+                    "stations")
+            if kutta_estimator != "probe":
+                raise ValueError(
+                    "kutta_estimator is a Kutta-row option and needs a wake "
+                    "cut (wc); the non-lifting workspace has no Kutta row")
+            tip_taper = np.ones(0, dtype=np.float64)
         # P13/G13.2 tip-edge desingularization: per-station loading taper
         # F_j (constraints/wake.py::tip_taper_factors). The accepted
         # circulation becomes Gamma_eff = F_j * Gamma_Kutta, so BOTH the
@@ -223,7 +302,7 @@ class NewtonWorkspace:
             raise ValueError(
                 f"gamma_target must be ({wc.n_stations},), got "
                 f"{self.gamma_target.shape}")
-        if self.tip_taper.shape != (wc.n_stations,):
+        if wc is not None and self.tip_taper.shape != (wc.n_stations,):
             raise ValueError(
                 f"tip_taper must be ({wc.n_stations},), got "
                 f"{self.tip_taper.shape}")
@@ -278,16 +357,29 @@ class NewtonWorkspace:
         #: keeps the LAST refresh, and the honest reading of that stays in the sigma-freeze report:
         #: the last refresh is often the WORST (seed 0: ... 1.49, 1.33, 1.95 -- a transient spike,
         #: frozen forever), which is a DEFECT that is reported, not a knob that is offered.
-        self.con = WakeConstraint(self.op.assemble_matrix(), wc)
+        if wc is None:
+            # G10.1: identity reduction on the raw mesh -- no slaves, so
+            # there is nothing to eliminate. The stiffness assembly
+            # WakeConstraint would precompute here is Picard-side state
+            # (A_reduced/_h) that the Newton driver never reads, so it is
+            # not built.
+            self.con = _IdentityConstraint(len(mesh_cut.nodes))
+        else:
+            self.con = WakeConstraint(self.op.assemble_matrix(), wc)
         self.n_red = self.con.n_reduced
-        self.n_st = wc.n_stations
+        self.n_st = wc.n_stations if wc is not None else 0
 
         # Dirichlet pattern is Gamma-, rho- and beta-independent: fix the
         # split once (identical construction to solve_subsonic_lifting).
-        dir_nodes, _ = farfield_dirichlet(
-            mesh_cut, wc, alpha_deg, np.zeros(self.n_st), u_inf,
-            vortex_center, beta=1.0, spanwise_gamma=self.spanwise,
-        )
+        if wc is None:
+            # G10.1: freestream-only far field, no vortex basis.
+            dir_nodes, _ = _farfield_dirichlet_nonlifting(
+                mesh_cut, alpha_deg, u_inf)
+        else:
+            dir_nodes, _ = farfield_dirichlet(
+                mesh_cut, wc, alpha_deg, np.zeros(self.n_st), u_inf,
+                vortex_center, beta=1.0, spanwise_gamma=self.spanwise,
+            )
         dir_red, _ = self.con.to_reduced_dirichlet(
             dir_nodes, np.zeros(len(dir_nodes)))
         is_dir = np.zeros(self.n_red, dtype=bool)
@@ -316,31 +408,38 @@ class NewtonWorkspace:
             self.cvs = TEControlVolumes(mesh_cut, wc,
                                         dirichlet_nodes=dir_nodes)
 
-        # K = dF/dphi_free: station row j holds +1/n_j at that station's
-        # upper TE probes and -1/n_j at the lower (kutta_targets is the
-        # per-station MEAN of probe jumps, so shared probes -- adjacent
-        # stations reusing a node, the P5-recorded robustness item --
-        # simply appear in both rows, which IS the derivative).
-        counts = np.bincount(wc.te_station, minlength=self.n_st).astype(
-            np.float64)
-        probe_nodes = np.concatenate([wc.kutta_upper, wc.kutta_lower])
-        assert np.all(probe_nodes < self.n_red), (
-            "Kutta probes must be original (non-slave) nodes")
-        assert not is_dir[probe_nodes].any(), (
-            "Kutta probes must be free dofs")
-        cols_free = np.searchsorted(self.free, probe_nodes)
-        assert np.array_equal(self.free[cols_free], probe_nodes)
-        rows = np.concatenate([wc.te_station, wc.te_station])
-        w = 1.0 / counts[wc.te_station]
-        vals = np.concatenate([w, -w])
-        self.K = sp.coo_matrix(
-            (vals, (rows, cols_free)), shape=(self.n_st, self.n_free),
-        ).tocsr()
-        # F_j = taper_j * mean(probe jumps)_j - Gamma_j, so dF/dphi picks up
-        # the SAME constant factor (taper is phi-independent). Scaling the
-        # rows keeps the Jacobian exact; taper == 1 leaves K untouched.
-        if self._taper_active:
-            self.K = sp.diags(self.tip_taper) @ self.K
+        if wc is None:
+            # G10.1: no Kutta row -- K is the empty (0, n_free) operator, so
+            # the coupled step's K @ x, B K and Woodbury S = I + K @ JB all
+            # reduce to the plain phi system with the driver expressions
+            # unchanged.
+            self.K = sp.csr_matrix((0, self.n_free), dtype=np.float64)
+        else:
+            # K = dF/dphi_free: station row j holds +1/n_j at that station's
+            # upper TE probes and -1/n_j at the lower (kutta_targets is the
+            # per-station MEAN of probe jumps, so shared probes -- adjacent
+            # stations reusing a node, the P5-recorded robustness item --
+            # simply appear in both rows, which IS the derivative).
+            counts = np.bincount(wc.te_station, minlength=self.n_st).astype(
+                np.float64)
+            probe_nodes = np.concatenate([wc.kutta_upper, wc.kutta_lower])
+            assert np.all(probe_nodes < self.n_red), (
+                "Kutta probes must be original (non-slave) nodes")
+            assert not is_dir[probe_nodes].any(), (
+                "Kutta probes must be free dofs")
+            cols_free = np.searchsorted(self.free, probe_nodes)
+            assert np.array_equal(self.free[cols_free], probe_nodes)
+            rows = np.concatenate([wc.te_station, wc.te_station])
+            w = 1.0 / counts[wc.te_station]
+            vals = np.concatenate([w, -w])
+            self.K = sp.coo_matrix(
+                (vals, (rows, cols_free)), shape=(self.n_st, self.n_free),
+            ).tocsr()
+            # F_j = taper_j * mean(probe jumps)_j - Gamma_j, so dF/dphi picks up
+            # the SAME constant factor (taper is phi-independent). Scaling the
+            # rows keeps the Jacobian exact; taper == 1 leaves K untouched.
+            if self._taper_active:
+                self.K = sp.diags(self.tip_taper) @ self.K
 
         self.m_inf = None
         self.beta = None
@@ -362,11 +461,18 @@ class NewtonWorkspace:
             raise ValueError(f"Newton driver needs 0 <= M_inf < 1, got {m_inf}")
         self.m_inf = float(m_inf)
         self.beta = float(np.sqrt(1.0 - m_inf ** 2))
-        _, vals0 = farfield_dirichlet(
-            self.mesh_cut, self.wc, self.alpha_deg, np.zeros(self.n_st),
-            self.u_inf, self.vortex_center, beta=self.beta,
-            spanwise_gamma=self.spanwise,
-        )
+        if self.wc is None:
+            # G10.1: freestream-only (Mach-independent) far field. The
+            # unit-Gamma probing loop below runs zero times (n_st = 0), so
+            # V_red stays the empty (n_dir, 0) basis.
+            _, vals0 = _farfield_dirichlet_nonlifting(
+                self.mesh_cut, self.alpha_deg, self.u_inf)
+        else:
+            _, vals0 = farfield_dirichlet(
+                self.mesh_cut, self.wc, self.alpha_deg, np.zeros(self.n_st),
+                self.u_inf, self.vortex_center, beta=self.beta,
+                spanwise_gamma=self.spanwise,
+            )
         self.vals0_red = self._reduce_ff_values(vals0)
         V = np.empty((len(self.dir_red), self.n_st), dtype=np.float64)
         for j in range(self.n_st):
@@ -442,7 +548,13 @@ class NewtonWorkspace:
             R_vol = R_vol - self.external_rhs
         R_red = self.con.T.T @ R_vol
         R_free = R_red[self.free]
-        if self.kutta_estimator == "pressure":
+        if self.wc is None:
+            # G10.1: no Kutta residual (n_st = 0) -- F is the empty vector,
+            # so the shared merit |R|^2 + |F|^2 and the driver's
+            # f_norm < tol_gamma check (already guarded on n_st > 0) run
+            # unchanged.
+            F = np.zeros(0, dtype=np.float64)
+        elif self.kutta_estimator == "pressure":
             # P14: sigma-scaled pressure-equality residual; sigma frozen at
             # the first evaluation of this workspace (class docstring).
             F_raw = self.cvs.residual_stations(phi_cut)
@@ -1018,18 +1130,32 @@ def solve_newton_lifting(
                  else np.atleast_1d(np.asarray(gamma_init,
                                                dtype=np.float64)).copy())
     elif n_picard_seed > 0:
-        from pyfp3d.solve.picard import solve_subsonic_lifting
+        if wc is None:
+            # G10.1: non-lifting Picard seed on the raw mesh, on the
+            # workspace's own freestream far field -- seed and Newton solve
+            # share the same discrete boundary data.
+            from pyfp3d.solve.picard import solve_subsonic
 
-        seed = solve_subsonic_lifting(
-            mesh_cut, wc, m_inf=m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
-            gamma_air=gamma_air, vortex_center=vortex_center,
-            upwind_c=upwind_c, m_crit=m_crit, m_cap=m_cap,
-            n_picard_max=n_picard_seed, tol_rho=1e-3, rtol=rtol_seed,
-            farfield_spanwise_gamma=farfield_spanwise_gamma,
-        )
-        phi_red0 = np.asarray(seed["phi"], dtype=np.float64)[:ws.n_red].copy()
-        gamma = np.atleast_1d(np.asarray(seed["gamma"],
-                                         dtype=np.float64)).copy()
+            seed = solve_subsonic(
+                mesh_cut.nodes, mesh_cut.elements, ws.dir_red, ws.vals0_red,
+                m_inf=m_inf, gamma_air=gamma_air, u_inf=u_inf,
+                n_picard_max=n_picard_seed, tol_rho=1e-3, rtol=rtol_seed,
+            )
+            phi_red0 = np.asarray(seed["phi"], dtype=np.float64)[:ws.n_red].copy()
+            gamma = np.zeros(ws.n_st, dtype=np.float64)
+        else:
+            from pyfp3d.solve.picard import solve_subsonic_lifting
+
+            seed = solve_subsonic_lifting(
+                mesh_cut, wc, m_inf=m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
+                gamma_air=gamma_air, vortex_center=vortex_center,
+                upwind_c=upwind_c, m_crit=m_crit, m_cap=m_cap,
+                n_picard_max=n_picard_seed, tol_rho=1e-3, rtol=rtol_seed,
+                farfield_spanwise_gamma=farfield_spanwise_gamma,
+            )
+            phi_red0 = np.asarray(seed["phi"], dtype=np.float64)[:ws.n_red].copy()
+            gamma = np.atleast_1d(np.asarray(seed["gamma"],
+                                             dtype=np.float64)).copy()
     else:
         phi_red0 = freestream_phi(mesh_cut.nodes[:ws.n_red], alpha_deg,
                                   u_inf)
@@ -1672,6 +1798,103 @@ def solve_newton_lifting(
         "kutta_weld_sign": ws.kutta_weld_sign,
         "workspace": ws,
     }
+
+
+def solve_newton_nonlifting(
+    mesh,
+    m_inf: float,
+    alpha_deg: float = 0.0,
+    u_inf: float = 1.0,
+    gamma_air: float = 1.4,
+    upwind_c: float = 1.5,
+    m_crit: float = 0.95,
+    m_cap: float = 3.0,
+    rho_floor: float = 0.05,
+    phi_init: Optional[np.ndarray] = None,
+    n_picard_seed: int = 0,
+    n_newton_max: int = 30,
+    tol_residual: float = 1e-10,
+    ew_eta0: float = 1e-6,
+    ew_gamma: float = 0.9,
+    ew_eta_max: float = 1e-6,
+    amg_rebuild_every: int = 2,
+    precond: str = "amg",
+    direct_refactor_every: int = 1,
+    direct_reuse_rtol: float = 1e-8,
+    gmres_restart: int = 60,
+    gmres_maxiter: int = 10,
+    line_search: bool = True,
+    rtol_seed: float = 1e-7,
+    tol_residual_loose: Optional[float] = None,
+    tol_residual_rel: Optional[float] = None,
+    accept_on_stall: bool = False,
+    freeze_tol: Optional[float] = None,
+    freeze_refresh_max: int = 2,
+    freeze_max_reverts: int = 3,
+    workspace: Optional[NewtonWorkspace] = None,
+    entropy_correction: bool = True,
+    sigma_soft_eps: float = 0.0,
+    sigma_soft_q: float = 1.0,
+    verbose: bool = False,
+) -> Dict[str, object]:
+    """
+    G10.1 (W2.2a): the PRODUCTION Newton driver on a RAW (uncut) mesh --
+    the non-lifting entry. This is NOT a second driver: it calls
+    solve_newton_lifting with wc = None, which runs the SAME
+    NewtonWorkspace (generalized: identity reduction, n_st = 0, no Kutta
+    row, no Gamma unknowns, freestream-only far field) and the SAME Newton
+    loop. Everything that distinguishes the production driver from the
+    rewritten bench loops is therefore in place here: m_cap / rho_floor
+    with the clamp accounting (n_limited / n_floored / clamped, and the
+    clamp-not-silent refusal to report convergence), the entropy
+    correction (DEFAULT ON, GS1b.11 -- inert bitwise at subsonic states,
+    where sigma == 1 exactly), accept_reason, residual_history,
+    newton_orders, eta_history, step_records, timings.
+
+    Args:
+        mesh: the RAW mesh (NOT passed through cut_wake); needs
+            boundary_faces["farfield"] -- the far field prescribed there is
+            freestream_phi(alpha_deg, u_inf), no vortex basis.
+        m_inf, alpha_deg, u_inf, gamma_air: freestream state.
+        upwind_c / m_crit / m_cap / rho_floor, phi_init, n_picard_seed,
+        n_newton_max, tol_residual, ew_*, amg_rebuild_every, precond,
+        direct_*, gmres_*, line_search, rtol_seed, tol_residual_loose,
+        tol_residual_rel, accept_on_stall, freeze_*, workspace,
+        entropy_correction, sigma_soft_*, verbose: exactly as in
+            solve_newton_lifting (same semantics, same defaults), minus the
+            wake/Kutta parameters that have no meaning on a raw mesh
+            (vortex_center, farfield_spanwise_gamma, gamma_init, tip_taper,
+            gamma_target, kutta_estimator, external_rhs). The Mach-RAMP
+            wrapper solve_newton_transonic stays lifting-only (G10.1
+            scope); a raw-mesh level solve is all this entry is.
+
+    Returns the solve_newton_lifting result dict verbatim (phi on the RAW
+    mesh, n_nodes entries). Keys that are Kutta concepts are present but
+    empty/inert: gamma is the (0,) array, gamma_history a list of those,
+    F_history a list of 0.0, kutta_sigma / kutta_weld_sign are None and
+    kutta_estimator reads "probe" (the only value the wc=None workspace
+    accepts). At m_inf = 0 the problem is linear and -- with an exact
+    inner solve (precond="direct") -- one Newton step reproduces the P1
+    Laplace solution to machine roundoff (A55 C2).
+    """
+    return solve_newton_lifting(
+        mesh, None, m_inf, alpha_deg=alpha_deg, u_inf=u_inf,
+        gamma_air=gamma_air, upwind_c=upwind_c, m_crit=m_crit, m_cap=m_cap,
+        rho_floor=rho_floor, phi_init=phi_init, gamma_init=None,
+        n_picard_seed=n_picard_seed, n_newton_max=n_newton_max,
+        tol_residual=tol_residual, ew_eta0=ew_eta0, ew_gamma=ew_gamma,
+        ew_eta_max=ew_eta_max, amg_rebuild_every=amg_rebuild_every,
+        precond=precond, direct_refactor_every=direct_refactor_every,
+        direct_reuse_rtol=direct_reuse_rtol, gmres_restart=gmres_restart,
+        gmres_maxiter=gmres_maxiter, line_search=line_search,
+        rtol_seed=rtol_seed, tol_residual_loose=tol_residual_loose,
+        tol_residual_rel=tol_residual_rel, accept_on_stall=accept_on_stall,
+        freeze_tol=freeze_tol, freeze_refresh_max=freeze_refresh_max,
+        freeze_max_reverts=freeze_max_reverts, workspace=workspace,
+        entropy_correction=entropy_correction,
+        sigma_soft_eps=sigma_soft_eps, sigma_soft_q=sigma_soft_q,
+        verbose=verbose,
+    )
 
 
 def _ramp_honesty_fields(level_results, m_inf: float, converged: bool) -> dict:
