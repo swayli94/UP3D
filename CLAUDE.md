@@ -598,6 +598,14 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    `test_g41_transonic_medium_gate`, whose non-strict xfail records "converges
    at 16t, not at 8t", now **converges at 8 numba threads with BLAS pinned**,
    i.e. the flip was BLAS all along (the mark's retirement is registered).
+   ★★ **证据生成与证据验证跑必须在暖缓存态**（2026-10-11，第 44 轮）：IBL 松耦合门
+   （D08/D13）的答案随 numba 缓存出处态漂移 1e-3…3.6e-2（实测，四个各自可复现的
+   状态）；「冷编译后暖跑」复现 committed 证据到 ≤ 5e-10。⇒ 任何 pyfp3d 重编译 /
+   清 `__pycache__` 之后，**先白跑一遍再刷新或验证证据**；新 clone 的第一跑会飘、
+   第二跑绿 —— 这不是缺陷，是编译扰动测量。依据：
+   `docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节；
+   D08/D13 的证据锁已按此改成两层（出处层 1e-6 + 散布带层），见两门锁类的
+   docstring。
    Previous: **674 passed + 33 skipped +
    2 xfailed, 0 failed** (2026-08-28, **measured in full @1055.94 s @8 threads at
    load 12.8**, phase-six rounds 10–28).

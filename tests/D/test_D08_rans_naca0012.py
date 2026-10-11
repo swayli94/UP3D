@@ -111,7 +111,8 @@ from pyfp3d.viscous.coupling import (CouplingConfig, build_airfoil_case,
                                      make_picard_lifting_driver,
                                      run_loose_coupling)
 from tests.D._cfl3d_cp import band_from_two, cp_rms, read_2d_cp
-from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
+from tests._gate_evidence import (assert_matches_committed, assert_within_spread,
+                                  blas_thread_count, fmt)
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
 REF_DIR = os.path.join(str(REPO_ROOT), "cases", "reference_data", "cfl3d",
@@ -357,21 +358,51 @@ class TestReferenceIsLoadBearing:
 
 
 class TestCommittedEvidenceIsLoadBearing:
-    MEASURED = ("cp_rms_upper_sst", "cp_rms_upper_sa", "cp_rms_lower_sst",
-                "cp_rms_lower_sa", "cp_band_width_upper", "cl", "blas_threads")
+    r"""★★★ 两层锁（2026-10-11，第 44 轮；裁决 =
+    `docs/dev_phase_six/20261011-1800-process-history-determinism.md` §5 选项 1+2，
+    逐列实测散布见同日的 M1 表与该文件勘误节）：
+
+    - **出处/参照层**（1e-6 值锁，走 `assert_matches_committed`）：
+      `blas_threads` + 参照侧派生的 `cp_band_width_upper` —— 防出处漂移，
+      这层跨全部实测状态逐位稳定。
+    - **散布带层**（`assert_within_spread`，逐列绝对带）：求解器产出列
+      （cl、cp_rms_upper_sst/sa、cp_rms_lower_sst/sa）。M1 实测它们随 numba
+      缓存出处态漂移 1e-3…4e-2（且 xtr030 coarse 连 converged 都翻）——
+      1e-6 值锁在原理上守不住 ⇒ 带 = 实测散布 × **2**（安全系数是标定：
+      今日实测的状态数有限；推导表在下）。
+    ★ `converged` / `n_outer` 这类状态列不进锁，留在 CSV 作记录。
+    """
+
+    LAYER1 = ("cp_band_width_upper", "blas_threads")
+    #: 散布带（逐列绝对值）= M1 实测的跨态最大偏移（对 committed）× 2（安全系数 2，标定）。
+    #: 逐列推导（散布 = max((a) 后台全套缓存态偏移, (c) 冷编译态偏移)，对 committed；
+    #: (a) 与进程历史态 (b) 逐位相同 ⇒ 进程历史项为零）：
+    #:   cl:               max(9.58e-3, 8.69e-3) = 9.58e-3
+    #:   cp_rms_upper_sst: max(4.75e-3, 4.31e-3) = 4.75e-3
+    #:   cp_rms_upper_sa:  max(4.88e-3, 4.43e-3) = 4.88e-3
+    #:   cp_rms_lower_sst: max(1.94e-3, 1.77e-3) = 1.94e-3
+    #:   cp_rms_lower_sa:  max(1.67e-3, 1.53e-3) = 1.67e-3
+    SPREAD_TOL = {"cl": 1.92e-2,
+                  "cp_rms_upper_sst": 9.49e-3, "cp_rms_upper_sa": 9.76e-3,
+                  "cp_rms_lower_sst": 3.89e-3, "cp_rms_lower_sa": 3.33e-3}
 
     def test_matches_committed_summary(self, runs, gate_evidence_dir):
-        #: ★ 跟着 `MEASURED` 走，不要硬编码列名 —— 本门原来写死 {"cl": ...}，
-        #:   于是新加的 cp_rms 列在**本次运行**这一侧根本不存在，锁比不到它们。
-        #:   唯一例外是 blas_threads：它不在 runs 里（是库实际在用的 BLAS 线程数，
-        #:   不是算出来的量 —— H30 实测答案只随它动），从库读、单独塞进 fresh。
-        fresh = {f"{nm}|{lv}": {**{k: fmt(runs[(nm, lv)][k])
-                                   for k in self.MEASURED
-                                   if k != "blas_threads"},
-                                "blas_threads": fmt(blas_thread_count())}
-                 for nm, *_ in CASES for lv in LEVELS}
+        #: ★ blas_threads 不在 runs 里（它是库实际在用的 BLAS 线程数，不是算出来
+        #:   的量 —— H30 实测答案只随它动），从库读、单独塞进 fresh。
+        fresh1 = {f"{nm}|{lv}": {"cp_band_width_upper":
+                                 fmt(runs[(nm, lv)]["cp_band_width_upper"]),
+                                 "blas_threads": fmt(blas_thread_count())}
+                  for nm, *_ in CASES for lv in LEVELS}
         assert_matches_committed(
-            gate_evidence_dir, fresh, self.MEASURED,
+            gate_evidence_dir, fresh1, self.LAYER1,
+            key_of=lambda r: f"{r['case']}|{r['level']}",
+            refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
+                         "tests/D/test_D08_rans_naca0012.py")
+        #: 散布带层给**原值**（浮点），不走 fmt；逐列带是绝对的。
+        fresh2 = {f"{nm}|{lv}": {k: runs[(nm, lv)][k] for k in self.SPREAD_TOL}
+                  for nm, *_ in CASES for lv in LEVELS}
+        assert_within_spread(
+            gate_evidence_dir, fresh2, self.SPREAD_TOL,
             key_of=lambda r: f"{r['case']}|{r['level']}",
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
                          "tests/D/test_D08_rans_naca0012.py")
@@ -389,12 +420,16 @@ def test_export_evidence(runs, band, gate_evidence_dir):
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w",
               newline="") as fh:
         w = csv.writer(fh)
+        #: ★ state_spread = 该行被锁散布列的实测散布包络（第 44 轮 M1，逐列带
+        #:   见锁的 SPREAD_TOL 注释；这里写包络 = 逐列散布的最大者）。散布本身
+        #:   进证据 —— 单点不报散布等于声明零不确定性。
+        spread_env = max(TestCommittedEvidenceIsLoadBearing.SPREAD_TOL.values()) / 2
         w.writerow(["case", "level", "n_threads", "blas_threads", "x_tr",
                     "cp_rms_upper_sst", "cp_rms_upper_sa",
                     "cp_rms_lower_sst", "cp_rms_lower_sa",
                     "cp_band_width_upper", "cl", "cl_sst",
                     "cl_sa", "band_lo", "band_hi", "rel_to_band",
-                    "n_outer", "converged"])
+                    "n_outer", "converged", "state_spread"])
         for nm, cid, _m, _a, _re, xtr in CASES:
             d = band[cid]
             lo, hi = sorted((d["sst"]["cl"], d["sa"]["cl"]))
@@ -407,7 +442,8 @@ def test_export_evidence(runs, band, gate_evidence_dir):
                             f'{d["sst"]["cl"]:.6f}', f'{d["sa"]["cl"]:.6f}',
                             f"{lo:.6f}", f"{hi:.6f}",
                             f'{_rel_to_band(r["cl"], lo, hi):+.6e}',
-                            r["n_outer"], int(r["converged"])])
+                            r["n_outer"], int(r["converged"]),
+                            f"{spread_env:.9e}"])
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     for k, (nm, cid, _m, _a, _re, xtr) in enumerate(CASES):

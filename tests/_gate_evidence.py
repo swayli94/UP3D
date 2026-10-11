@@ -168,3 +168,80 @@ def assert_matches_committed(gate_dir, fresh, measured, rel_tol=DEFAULT_REL_TOL,
                 f"要么让它真的被算出来，要么把它从 `measured` 里去掉。")
         raise AssertionError("\n".join(msg))
     return n
+
+
+def assert_within_spread(gate_dir, fresh, spread_tol, key_of=None,
+                         refresh_hint=None, filename="summary.csv"):
+    """**散布带层**:|fresh − committed| ≤ spread_tol[col](逐列**绝对**标定带)。
+
+    ★ 与 `assert_matches_committed` 的分工:那台机器问「答案动了吗」
+    (机器级 rel_tol 1e-6);这台问「答案动得比它自己的**实测环境散布**还多了吗」。
+    只用于被实测证明「1e-6 原理上守不住」的列(IBL 松耦合腿 —— 见
+    `docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节:
+    求解器产出列随 numba 缓存出处态漂移 1e-3…3.6e-2,且最敏感腿连 converged 都翻)。
+    ★ `spread_tol` 的推导(哪次测量、哪个安全系数)必须在调用方的注释里写明;
+    **带做成恒真是 bug 不是宽松** —— G-TEETH 必须见过它红(带内扰动绿、
+    出带扰动红,两条都要)。
+    ★ fresh 给**原值**(浮点),不是 fmt 字符串;committed 侧从 CSV 读。
+    """
+    path = os.path.join(str(gate_dir), filename)
+    assert os.path.exists(path), (
+        f"已提交的证据 {path} 不存在。生成:{refresh_hint or 'PYFP3D_GATE_FIGURES=1 pytest <本门>'}")
+    with open(path, newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        header = list(reader.fieldnames or [])
+        rows = list(reader)
+    assert rows, f"{path} 是空的"
+
+    #: 与姊妹机同一条规矩:列不在表头 = schema 漂移 = 响,不静默跳过。
+    missing = [c for c in spread_tol if c not in header]
+    assert not missing, (
+        f"{path} 的表头缺少散布带锁的列 {missing}(表头现有:{header})—— "
+        "schema 漂移,不是容差问题。刷新:"
+        f"{refresh_hint or 'PYFP3D_GATE_FIGURES=1 pytest <本门>'}")
+
+    if key_of is None:
+        def key_of(r):
+            return tuple(r[k] for k in ("level", "surface", "case", "x_c", "nx", "leg")
+                         if k in r)
+
+    seen = {}
+    for r in rows:
+        k = key_of(r)
+        if k in seen:
+            raise AssertionError(
+                f"{path} 里键 {k} 出现多次(第 {seen[k]} 行与本行)—— "
+                "键列不能唯一标识一行,锁会比错行而且可能静默通过。")
+        seen[k] = len(seen) + 1
+
+    n = 0
+    per_col = {c: 0 for c in spread_tol}
+    for r in rows:
+        k = key_of(r)
+        if k not in fresh:
+            continue
+        for col, tol in spread_tol.items():
+            if r[col] in ("", "-", "nan"):
+                continue
+            got = fresh[k].get(col)
+            if got is None:
+                continue
+            want = float(r[col])
+            diff = abs(float(got) - want)
+            n += 1
+            per_col[col] += 1
+            assert diff <= tol, (
+                f"{k} 的 {col}:本次算出 {float(got):.9e},已提交证据是 "
+                f"{want:.9e}(绝对差 {diff:.2e} > 散布带 {tol:.2e})\n"
+                f"  ★ 散布带 = 实测环境散布 × 安全系数(见调用方注释的推导表);"
+                f"超出说明动得比环境散布还大 —— 那是真回归,不是出处态漂移。\n"
+                f"  ★ 若这是有意的代码改动:{refresh_hint or 'PYFP3D_GATE_FIGURES=1 pytest <本门>'}"
+                " 刷新证据,并按纪律 11 grep 被移动的数字。")
+    assert n > 0, (
+        f"{path} 里没有一行与本次运行的键对上(比了 0 个数)—— "
+        "键的构造变了?这种情况下断言会**静默通过**,所以这一条必须在。")
+    never = [c for c, v in per_col.items() if v == 0]
+    assert not never, (
+        f"{path}:散布带列一次都没有被比较:{never} —— 它们现在是装饰,"
+        "改了不会让任何东西变红。")
+    return n

@@ -6,6 +6,7 @@
 |---|---|
 | 谁写它 | `tests/C/*` 与 `tests/D/*`，经 `gate_evidence_dir` fixture |
 | 何时写 | ★ 只在 **`PYFP3D_GATE_FIGURES=1`** 时；平时跑**不写盘**，断言对着已提交的 `summary.csv` |
+| 什么状态下写/验 | ★ **暖缓存态**（2026-10-11，第 44 轮）：任何 pyfp3d 重编译 / 清 `__pycache__` 之后，先白跑一遍再刷新或验证证据；新 clone 的第一跑可能在证据锁上飘、第二跑绿 —— 这不是缺陷，是编译扰动测量（`docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节） |
 | 为什么这样 | 图与断言来自**同一次计算**（构造保证）；平时不写 ⇒ 一次普通 `pytest` **不脏工作树** |
 | 刷新 | `PYFP3D_GATE_FIGURES=1 pytest tests/C tests/D` —— 数字变了要走再基线的**勘误清单**纪律 |
 
