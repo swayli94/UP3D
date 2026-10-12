@@ -6,7 +6,8 @@ clean same-geometry A/B, which is why the cylinder is the first leg: it has an E
 potential solution, and the unstructured baseline is already measured (uncorrected wall Cp
 error converging at ~1.0 order, tests/C/test_C02_cylinder_wall_correction.py).
 
-Pipeline: `structured.cylinder_o_grid_2d` (analytic, no gmsh size field) -> each quad cut on
+Pipeline: `structured.cylinder_o_grid_2d` (analytic, no gmsh size field; 2026-10-12 起
+接缝 θ=0 带 **wake** 组 —— 圆柱没有尖尾缘，但环量通道需要一个分支切口) -> each quad cut on
 a fixed diagonal into 2 triangles -> `extrude_single_layer` (prism -> 3 tets, globally
 consistent orientation, already locked by tests) => 6 tets per hex.
 
@@ -48,12 +49,13 @@ LEVELS = {
 
 def build(level: str):
     p = LEVELS[level]
-    pts, tris, edges, info = cylinder_o_grid_2d(
+    pts, tris, edges, interior, info = cylinder_o_grid_2d(
         radius=RADIUS, r_far=R_FAR, n_theta=p["n_theta"],
         h_wall_normal=p["h_wall_normal"], growth=GROWTH)
-    mesh = extrude_single_layer(pts, tris, edges, dz=p["dz"],
+    mesh = extrude_single_layer(pts, tris, edges,
+                               interior_edge_groups=interior, dz=p["dz"],
                                name=f"cylinder_hex_{level}")
-    return mesh, info, (pts, tris, edges)
+    return mesh, info, (pts, tris, edges, interior)
 
 
 def wall_facet_normal_error(mesh) -> dict:
@@ -75,7 +77,8 @@ def wall_facet_normal_error(mesh) -> dict:
                 normal_err_mean_deg=float(ang.mean()))
 
 
-def write_inspection_png(path, points2d, triangles, edge_groups, level, r_far):
+def write_inspection_png(path, points2d, triangles, edge_groups, level, r_far,
+                         interior_groups=None):
     """Headless artifact (hard rule: every visual gate needs one; matplotlib Agg).
 
     ★ Added 2026-08-11 after the user pointed out this family shipped WITHOUT one while every
@@ -88,16 +91,17 @@ def write_inspection_png(path, points2d, triangles, edge_groups, level, r_far):
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 6))
-    colors = {"wall": "tab:red", "farfield": "tab:blue"}
+    colors = {"wall": "tab:red", "farfield": "tab:blue", "wake": "tab:green"}
     for ax, lim in zip(axes, [r_far * 1.05, 1.35]):
         ax.triplot(points2d[:, 0], points2d[:, 1], triangles,
                    linewidth=0.25, color="0.6")
-        for tag, edges in edge_groups.items():
+        for tag, edges in {**edge_groups, **(interior_groups or {})}.items():
             for seg in points2d[np.asarray(edges)]:
                 ax.plot(seg[:, 0], seg[:, 1], color=colors.get(tag, "k"), linewidth=1.2)
         ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim); ax.set_aspect("equal")
     axes[0].set_title(f"cylinder_hex_2.5d {level}: structured O-grid + tags")
-    axes[1].set_title("near-wall zoom -- the orthogonal graded layer (wall=red)")
+    axes[1].set_title("near-wall zoom -- the orthogonal graded layer "
+                      "(wall=red, wake=green)")
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
 
@@ -122,12 +126,13 @@ def main():
         row.update(dz=LEVELS[level]["dz"], r_far_requested=R_FAR,
                    n_nodes=len(mesh.nodes), n_tets=len(mesh.elements),
                    n_tris_wall=len(mesh.boundary_faces["wall"]),
-                   n_tris_farfield=len(mesh.boundary_faces["farfield"]))
+                   n_tris_farfield=len(mesh.boundary_faces["farfield"]),
+                   n_tris_wake=len(mesh.boundary_faces["wake"]))
         row.update(wall_facet_normal_error(mesh))
         row.update({f"stats_{k}": v for k, v in st.items()
                     if isinstance(v, (int, float))})
         write_inspection_png(OUT_DIR / f"{level}_layer.png", planar[0], planar[1],
-                             planar[2], level, R_FAR)
+                             planar[2], level, R_FAR, interior_groups=planar[3])
         with open(OUT_DIR / f"{level}_stats.csv", "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(row)); w.writeheader(); w.writerow(row)
         print(f"  {level:7} n_theta {info['n_theta']:>4} n_radial {info['n_radial']:>3} "

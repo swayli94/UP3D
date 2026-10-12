@@ -1,0 +1,13 @@
+{
+  "bytes": 1122492,
+  "n_nodes": 7104,
+  "n_tets": 20736,
+  "n_tris": {
+    "farfield": 192,
+    "symmetry": 13824,
+    "wake": 72,
+    "wall": 192
+  },
+  "schema": 1,
+  "sha256": "bdd93a291fd1d11506dba19bf5bc126b22f54926eddccf6a628fb80a1f580ae7"
+}

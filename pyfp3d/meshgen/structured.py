@@ -115,10 +115,18 @@ def cylinder_o_grid_2d(
         growth         -> grading rate ONLY
         r_far          -> domain size ONLY (appends outward layers)
 
-    Returns (points2d, triangles, edge_groups, info) where `edge_groups` has "wall" (inner
+    Returns (points2d, triangles, edge_groups, interior_edge_groups, info) -- the
+    five-value convention of `airfoil_hybrid_2d`. `edge_groups` has "wall" (inner
     circle) and "farfield" (outer), matching `cylinder_annulus_2d`'s contract so the
-    downstream pipeline is unchanged. `info` reports the achieved outer radius and the layer
-    count, both DERIVED rather than requested.
+    downstream pipeline is unchanged. `info` reports the achieved outer radius and the
+    layer count, both DERIVED rather than requested.
+
+    ★ 2026-10-12(W2.6 落地):`interior_edge_groups` 带 **wake** —— 它就是 O-grid
+    的接缝(θ = 0,从壁面点 (radius, 0) 沿 +x 一路排到远场)。圆柱没有尖尾缘,
+    但环量通道需要一个分支切口;接缝就是它,与 naca0012_hex 族同一句
+    「the wake line is its seam -- which is where the wake belongs anyway」。
+    每条接缝边本来就是四边形的竖边(固定对角线剖分保留四边形的四条边),
+    所以**只加组、不动任何已有节点或几何**。
     """
     radii = wall_anchored_radii(radius, r_far, h_wall_normal, growth)
     n_r = len(radii)
@@ -151,11 +159,15 @@ def cylinder_o_grid_2d(
     top = (n_r - 1) * n_theta
     far = np.stack([top + np.arange(n_theta),
                     top + (np.arange(n_theta) + 1) % n_theta], axis=1)
+    #: θ = 0 的接缝边:壁面点 (radius, 0) 起,沿 +x 逐环向外 —— 圆柱的 wake。
+    wake = np.stack([np.arange(n_r - 1) * n_theta,
+                     (np.arange(n_r - 1) + 1) * n_theta], axis=1)
     info = dict(n_theta=n_theta, n_radial=n_r, r_achieved=float(radii[-1]),
                 h_wall_normal=float(h_wall_normal), growth=float(growth),
                 h_wall_tangential=float(2.0 * np.pi * radius / n_theta))
-    return pts, tris.astype(np.int64), {"wall": wall.astype(np.int64),
-                                        "farfield": far.astype(np.int64)}, info
+    return (pts, tris.astype(np.int64),
+            {"wall": wall.astype(np.int64), "farfield": far.astype(np.int64)},
+            {"wake": wake.astype(np.int64)}, info)
 
 
 def airfoil_layer_block_2d(

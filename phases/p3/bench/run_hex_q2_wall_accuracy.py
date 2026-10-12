@@ -92,7 +92,7 @@ def main():
 
         # ---- structured, n_theta SET to match the wall DOF exactly ----------
         assert n_wall % 2 == 0, f"{level}: odd wall-node target {n_wall}"
-        pts, tris, edges, info = cylinder_o_grid_2d(
+        pts, tris, edges, _interior, info = cylinder_o_grid_2d(
             radius=1.0, r_far=R_FAR, n_theta=n_wall // 2, h_wall_normal=h_n, growth=GROWTH)
         mh = extrude_single_layer(pts, tris, edges, dz=dz, name=f"cyl_hex_{level}")
         rh = run_cylinder_case(None, mesh=mh)

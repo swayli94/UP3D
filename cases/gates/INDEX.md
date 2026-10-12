@@ -187,6 +187,36 @@ amg（本案收敛，18 步）。读数**在带内但方向混合**：超声速 
 *C09_prandtl_glauert_peak/G3.1/v3_1_sphere_cp.png*
 
 
+## C10_hex_cylinder_crosscheck
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`C10_hex_cylinder_crosscheck/summary.csv`](C10_hex_cylinder_crosscheck/summary.csv) — 4 行（nl_hex / nl_tet / lift_hex / lift_tet），列 `leg, blas_threads, n_nodes, n_tets, converged, cp_rms, cp_max, cl, cd, cl_rel, n_kutta, residual`
+
+★★★ **攻击点：hex 生成器若有系统缺陷，所有用它的门共享该缺陷。** 同几何
+（半径 1 圆柱）两拓扑对照，预注册
+`docs/dev_phase_six/20261012-1300-c10-hex-cylinder-prereg.md`；带推导与实测表在
+`tests/C/test_C10_hex_cylinder_crosscheck.py` docstring（带 = max 实测 + 两族
+实现噪声合成，不是拍的）。
+
+★★ **非升力腿（Γ=0，m_inf=0 的 Laplace 极限）**：两族在同一精确解
+Cp = 1 − 4 sin²θ 上 —— hex cp_rms **0.0365** / tet **0.0321**（带 0.06），
+cp_max **0.0630** / **0.0590**（带 0.11），两族差 **0.0044**（交叉带 0.017）；
+d'Alembert 对照 |cl| ≤ 2.5e-5、|cd| ≤ 1.5e-5（带各 2e-3）。
+★ 升力腿的 tet 参照是 C06 的内存族（半径 0.5、弦 1）：已提交的 cylinder_2.5d 族
+**没有 wake 组，承载不了环量** —— hex 族的 wake（O-grid 接缝 θ=0）是本门
+2026-10-12 才补进生成器的（既有组几何差 0.0，重生成 sha256 逐位一致）。
+
+★★ **升力腿（Γ=0.6，各对各自精确 cl = 2Γ/(U·c)，口径：hex 弦 2 ⇒ 0.6，
+C06 族弦 1 ⇒ 1.2）**：hex cl_rel **0.42 %** / tet **1.14 %**，共用带 1.6 %；
+两族偏置差 **0.71 pp**（登记带 1.2 pp）。注意读法：两族误差水平**本来就不同**
+（hex 壁面法向更细），交叉断言的不是相等，是各自落在今天登记的位置 ——
+一族出系统缺陷时它自己炸出带。
+
+![c10_hex_cylinder_crosscheck.png](C10_hex_cylinder_crosscheck/c10_hex_cylinder_crosscheck.png)
+
+*C10_hex_cylinder_crosscheck/c10_hex_cylinder_crosscheck.png*
+
+
 ## D01_naca0012_incompressible_panel
 
 **判据读的 CSV**（平时跑就是对着它断言）：
