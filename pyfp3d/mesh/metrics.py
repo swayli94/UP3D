@@ -12,6 +12,8 @@ Reference: design.md §7 (Architecture), standard FEM geometry formulas
 All functions use SoA arrays and are @njit-compatible.
 """
 
+import os
+
 import numba
 import numpy as np
 from typing import Tuple
@@ -23,7 +25,19 @@ _FACE_KEY_TYPE = numba.types.UniTuple(numba.int32, 3)
 _FACE_VALUE_TYPE = numba.int64
 
 
-@numba.njit(cache=True)
+#: ★ PYFP3D_NOJIT=1 把 @njit 换成恒等(调试/覆盖率;与 kernels/entropy.py 同款)。
+#: 没有它,coverage 看不见 njit 函数体(2026-10-12 实测:metrics 读成 10%,
+#: 是仪器失明不是覆盖事实)。
+if os.environ.get("PYFP3D_NOJIT", "0") == "1":
+    def _njit(*args, **kwargs):
+        def deco(fn):
+            return fn
+        return deco
+else:
+    _njit = numba.njit
+
+
+@_njit(cache=True)
 def tet_volume_and_jacobian(nodes: np.ndarray, tet: np.ndarray) -> Tuple[float, np.ndarray]:
     """
     Compute volume and reference Jacobian for a tetrahedral element.
@@ -70,7 +84,7 @@ def tet_volume_and_jacobian(nodes: np.ndarray, tet: np.ndarray) -> Tuple[float, 
     return volume, J
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def compute_tet_volumes(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
     """
     Compute volumes for all tetrahedral elements.
@@ -92,7 +106,7 @@ def compute_tet_volumes(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
     return volumes
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def linear_basis_gradient(J_inv: np.ndarray, basis_node: int) -> np.ndarray:
     """
     Compute gradient of linear basis function on a tet.
@@ -126,7 +140,7 @@ def linear_basis_gradient(J_inv: np.ndarray, basis_node: int) -> np.ndarray:
     return grad_phi
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def element_gradients(nodes: np.ndarray, elements: np.ndarray, tet_index: int) -> np.ndarray:
     """
     Compute basis function gradients for all nodes of a single tet.
@@ -173,7 +187,7 @@ def element_gradients(nodes: np.ndarray, elements: np.ndarray, tet_index: int) -
     return grads
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def precompute_element_geometry(
     nodes: np.ndarray, elements: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -204,7 +218,7 @@ def precompute_element_geometry(
     return B, V
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def build_face_adjacency(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Build element-to-element adjacency via faces.
@@ -278,7 +292,7 @@ def build_face_adjacency(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return face_neighbors, face_orientations
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def compute_edge_lengths(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
     """
     Compute all edge lengths in the mesh.
@@ -311,7 +325,7 @@ def compute_edge_lengths(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
     return np.array(edge_lengths_list, dtype=np.float64)
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def compute_aspect_ratios(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
     """
     Compute aspect ratio (longest / shortest edge) for each tet.
@@ -353,7 +367,7 @@ def compute_aspect_ratios(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray
     return aspect_ratios
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def compute_min_dihedral_angles(nodes: np.ndarray, elements: np.ndarray) -> np.ndarray:
     """
     Compute the minimum dihedral angle (degrees) of each tet.
