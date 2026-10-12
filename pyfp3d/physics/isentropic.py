@@ -23,9 +23,9 @@ import numpy as np
 GAMMA = 1.4  # Specific heat ratio for air
 R_GAS = 287.05  # Gas constant (J/kg·K)
 
-# These constants should be exposed in config later; here are defaults
-M_CRIT_DEFAULT = 0.95  # Cutoff Mach for density upwinding
-UPWIND_CONST_DEFAULT = 1.5  # Upwinding coefficient C
+#: (2026-10-12,使用者裁决):M_CRIT_DEFAULT / UPWIND_CONST_DEFAULT 已删 ——
+#: 它们唯一的读者是已删除的 `upwind_factor`;生产默认值活在 `solve/newton.py`
+#: 的签名里(A53 锁着),这里再放一份只会漂移。
 
 
 #: ★ PYFP3D_NOJIT=1 把 @njit 换成恒等(调试/覆盖率;与 kernels/entropy.py 同款)。
