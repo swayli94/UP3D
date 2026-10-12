@@ -54,9 +54,19 @@ coloring 三个有 njit 的模块不响应** ⇒ 它们的 njit 函数体在覆�
 | T3 INDEX cf 更正 | ✅ 每数可指(站位、列) |
 | T4 覆盖率实测 | 见 §4.2(只测,不设阈值) |
 
-### 4.2 W3.8 覆盖率(A+B+F,NOJIT,branch)
+### 4.2 W3.8 覆盖率(A+B+F,NOJIT,branch;命令:`PYFP3D_NOJIT=1 coverage run --source=pyfp3d --branch -m pytest tests/A tests/B tests/F`)
 
-(回填)
+**TOTAL 80 %**(8737 语句 / 2400 分支;632 passed / 17 skipped / 0 failed @1:15:47)。
+★ **仪器修复前后**:metrics 10 %→**86 %**、isentropic 36 %→**72 %**、
+coloring 62 %→**83 %** —— 三个差值全部是仪器失明,不是覆盖缺口。
+
+强:kernels(entropy 96 / jacobian 98 / residual 96 / upwind 79)、
+viscous/closures 98、ibl3 94、solve/newton 90、solve/picard 90、wake_cut 92。
+真低(读时注意口径 —— 本轮只跑 A+B+F):post/shock 15 %、solve/wall_correction 19 %、
+meshgen/planar 26 %、meshgen/wing3d 26 %(这两族由 cases/ 生成器消费,不在测试收集)、
+post/section_cut 48 %、viscous/coupling 56 %、viscous/tight_driver 60 %
+(这几族的消费者在 C/D 层 —— 低读数是**范围**属性,不必然是缺口;
+全套 NOJIT 覆盖率是更全的图,成本数小时,登记未做)。
 
 ## 5. 判定
 
@@ -76,4 +86,6 @@ W3.8 的覆盖率第一次是实测数字而不是印象。**
 
 ## 基线行
 
-(收口全套回填)
+**820 passed / 32 skipped / 2 xfailed / 0 failed @1559.57 s @16 线程(BLAS=1,暖机后)**
+—— 与第 44 轮逐项相同;本轮改动(D03 退役、INDEX、A01 skip、NOJIT 扩展三模块)
+未移动任何答案。
