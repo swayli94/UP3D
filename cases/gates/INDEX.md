@@ -528,3 +528,26 @@ iter 1 (mdot_max = 6.218e-02)`，与 GV5.0 的 δ*↔ṁ↔u_e 失控一致。
 medium（3.5 h）不重跑，归档读数引用并标注。
 ★ 参考带 |SST−SA| = **3.07 %**，是参考自身网格差（0.35 %）的 **9.5 倍**
 ⇒ 将来设门时主导不确定度是**湍流模型**而非网格。
+
+---
+
+## D15_hex_naca_boundary — hex 族 NACA 能力边界（「缺陷仍在」式，红 = 好消息）
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`D15_hex_naca_boundary/summary.csv`](D15_hex_naca_boundary/summary.csv) — 4 行（hex coarse/medium/fine + tet medium 锚），列 `leg, n_nodes, blas_threads, n_threads, cl, cd, x_shock, bubble_max_cp, bubble_x_at_max, converged, residual, n_newton, n_limited, n_floored, sigma_frozen, sigma_churn`
+
+★★★ **它断言「缺陷还在」，红 = 好消息**（修好了才红，红了走勘误，不许改宽换绿）。
+缺陷内容（p6 第 47 轮归因）：hex 族在 M1 靶子工况收敛到 tet 从未出现的上翼面中部
+气泡/双激波结构 —— cl 亏损 24 %（medium 0.2582 vs tet 0.3413，加细不收缩），
+指纹 = 气泡随加细涌现、增强、前移（coarse −0.297 → medium **+0.199** → fine +0.383），
+亏损 100 % 在前中段+激波区，激波位置两族一致（0.010 c）。
+**图上直接可见**：红阴影是气泡计窗口 [0.2,0.55]，hex medium/fine 在那里 Cp > 0
+（减速气泡），tet medium 贴在其下。
+
+★ **残余拆分探针**（本轮顺带项，两臂时间盒）：熵 OFF 与 N5 冻结 OFF **都把气泡拆没了**
+（E0 cl 0.3596 / F0 cl 0.3272）—— 残余从「分不开」偏向**求解器侧的冻结/熵修正路径**；
+两臂不是干净析因，如实登记。证据 `bench/studies/hex_residual_split/`。
+
+![d15_hex_naca_boundary.png](D15_hex_naca_boundary/d15_hex_naca_boundary.png)
+
+*D15_hex_naca_boundary/d15_hex_naca_boundary.png*

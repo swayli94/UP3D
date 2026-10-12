@@ -11,6 +11,10 @@ phase 6 的 4 个(`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investiga
 `hex_cl_attribution`)移入 [`phases/p6/bench/studies/`](../../phases/p6/bench/studies/)。
 ⇒ 本目录现在**只剩被测试加载的 7 个**;一次性研究一进仓库就该指向自己的阶段归档。
 
+★ **2026-10-12(phase 7 第 3 轮)**:新一次性研究 `hex_residual_split/`（hex 气泡缺陷的
+残余拆分探针，两臂：熵 OFF / 冻结 OFF）**在 phase 7 期间留在原位**，随 phase 7 收口
+归档进 `phases/p7/`。它不被任何测试加载（锚读 committed 的 D15 门证据）。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
