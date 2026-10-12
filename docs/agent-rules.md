@@ -6,15 +6,17 @@
 
 ## 当前阶段
 
-**phase 6（全面梳理 + 门重建）已收口归档（2026-10-12）；下一阶段尚未开工，开工内容 = 使用者裁决。**
+**phase 7（可信收敛：预条件子 × 敏感腿 × 多吸引子 + 两条星标移交项）2026-10-12 立项开工。**
 
+- **工作面**：`docs/dev_phase_seven/`（入口 = 立项文书
+  [20261012-2100-initiation.md](dev_phase_seven/20261012-2100-initiation.md)；
+  范围裁决在 §2、轮次序列在 §3）。阶段结束后归档进 `phases/p7/`。
 - **现行能力声明**（实测边界，引用能力时以它为准）：
   `phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md`（2026-10-11）。
-- **套件基线**（2026-10-12 实测）：未门控 **825 passed / 0 failed / 33 skipped / 2 xfailed**；
-  门控全集 812/21/3/1（1 XPASS）；快层 5/5。**BLAS 由库运行时钉成单线程**（读库不读 env）。
-- 下一阶段候选工作项登记在 `docs/overview.md` 的「下一阶段」节（全部未排期）。
-- 阶段工作面（轮次台账、prereg/verdict）的最近实例：`phases/p6/docs/dev_phase_six/`；
-  轮次文件模板：`phases/p2/docs/dev_phase_two/_TEMPLATE.md`。
+- **套件基线**（p6 收口判定基线行，2026-10-12）：未门控 **831 passed / 0 failed / 33 skipped / 2 xfailed**
+  @16 线程（BLAS=1）；门控全集 812/21/3/1（1 XPASS）；快层 5/5。
+  **BLAS 由库运行时钉成单线程**（读库不读 env）。
+- 轮次文件模板：`phases/p2/docs/dev_phase_two/_TEMPLATE.md`。
 
 ★ 本块只写指针与实测基线——会烂的散文一律进当阶段的 progress.md，不进这里。
 
