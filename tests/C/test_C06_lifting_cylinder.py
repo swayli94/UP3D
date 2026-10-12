@@ -65,12 +65,15 @@ R_FAR = 15.0
 ORDER_MIN = 1.0          # ★ 判据，不是实测值：实测最小 1.417，留 40 % 余量
 CP_MAX_MEDIUM = 0.15     # 实测 0.1009
 CP_RMS_MEDIUM = 0.08     # 实测 0.0517
-CL_REL_MEDIUM = 0.02     # 实测 0.01136
-CL_CONTRACTION = 2.0     # coarse -> medium 至少收缩 2x；实测 3.477/1.136 = 3.06
-#: ★★ 2026-09-06 审计实测：coarse 的 cl_rel 在跨网格实现时落在 [1.81 %, 3.90 %]
-#: ⇒ 上面这个比值的取值范围是 [1.90, 4.10]，**跨过 2.0 这个阈值**。
-#: 注释里的「余量 53 %」小于它自己输入量的未测噪声。**登记未修**（改它要走再基线），
-#: 而下面 W1.3 的两条判据正是照着这个教训设计的。
+CL_REL_MEDIUM = 0.02     # 实测 0.01136；跨实现（r_far ∈ {15,…,40}）实测
+                         # [0.95 %, 1.14 %] —— medium 的绝对带是稳的
+#: ★★★ 2026-10-12（W2.5，预注册 20261012-0900 的 kill criterion 触发）：cl 收缩比
+#: 判据**不可判**，`CL_CONTRACTION` 已移除（曾是 coarse→medium ≥ 2.0；实测 3.06，
+#: 注释写过「余量 53 %」）。实测：同一 `_one_level`、只动 `r_far` 惰性旋钮的 5 个
+#: 实现里，xc→m 的 cl_rel 收缩比落 **[0.01, 9.10]**（逐实现表见 TestKuttaJoukowski
+#: 的 docstring）—— r_far=30 的 xcoarse 恰好压在精确解上（0.009 %，对消侥幸），
+#: 任何非平凡阈值都被它打掉。这是**比值本身失效**，不是带窄；cl 的设门只剩
+#: CL_REL_MEDIUM（medium 绝对带，跨实现稳）。
 #: —— W1.3 / H14（标定；依据见 TestDAlembertSpuriousDrag 的两张表）——
 CD_MAX_MEDIUM = 8.0e-3       # 实测实现最大 4.637e-3（r_far 扫描），余量 1.7x
 CD_CONTRACTION_FULL = 10.0   # xcoarse -> medium 实测 62x
@@ -235,7 +238,8 @@ class TestDAlembertSpuriousDrag:
     (b) 收缩比**跨两级**取（xcoarse → medium，实测 **62x**），因为相邻级的比值
         在跨实现时落进 [3.3, 12.0]，一个 3.0 的阈值只剩 1.1x 余量 —— 那正是
         本文件自己的 `CL_CONTRACTION`（3.06 vs 2.0，注释写「余量 53 %」）
-        踩到的坑。
+        踩到的坑；2026-10-12 实测把它整个打掉（收缩比跨实现落 [0.01, 9.10]，
+        判据不可判，已移除，逐实现表见 TestKuttaJoukowski）。
     """
 
     def test_spurious_drag_at_medium(self, sweep):
@@ -271,19 +275,31 @@ class TestKuttaJoukowski:
             f"medium cl_p = {d['cl']:.6f} vs 精确 {d['cl_exact']:.6f}"
             f"（相对 {100*d['cl_rel']:.3f} % > {100*CL_REL_MEDIUM:.1f} %，实测 1.136 %）")
 
-    def test_lift_error_contracts_with_refinement(self, sweep):
-        """★★ 只判 medium 的绝对值会被一个**不收敛**的实现蒙混过去，所以还要判收缩。
+    def test_lift_error_contraction_is_undefined_on_this_family(self, sweep):
+        """★★★ 2026-10-12（W2.5，kill criterion 触发）：收缩比在本族**不可判**。
 
-        ★ 但收缩只从 **coarse -> medium** 判，因为 **xcoarse -> coarse 实测是平的**
-        （3.393 % -> 3.477 %，阶 -0.035）—— 那一级只有 598 节点、h_far = 12 而域半径
-        才 15，仍在前渐近区。**如实 RECORDED，不塞进判据**：把一个已知处于前渐近区的
-        点纳入收敛判据，是本项目记过的「判据覆盖不了被比较量的定义域」。
+        实测（预注册 20261012-0900；同一 `_one_level`，只动 `r_far` 惰性旋钮 ——
+        与 2026-09-06 测 cd 噪声同一把尺）：
+
+        | r_far | cl_rel xcoarse | coarse | medium | 收缩比 xc→m |
+        |---|---|---|---|---|
+        | 15 | 3.393 % | 3.477 % | 1.136 % | 2.99× |
+        | 20 | 7.919 % | 2.841 % | 0.970 % | 8.16× |
+        | 25 | 8.944 % | 3.755 % | 0.983 % | 9.10× |
+        | 30 | **0.009 %** | 1.808 % | 0.953 % | **0.01×** |
+        | 40 | 7.731 % | 2.910 % | 0.963 % | 8.03× |
+
+        ⇒ 极差 [0.01, 9.10]：r_far=30 的 xcoarse 恰好压在精确解上（0.009 %，
+        对消侥幸），任何非平凡阈值都被它打掉。注意 medium 的绝对误差带跨实现
+        稳在 [0.95 %, 1.14 %] —— 噪声在 **xcoarse**（前渐近区）那一头。
+        本条锁的是「比值被算出来并进证据」这件事本身；若哪天网格族改到
+        收缩比跨实现稳定，把判据写回来并重测噪声。
         """
-        c, m = sweep["coarse"], sweep["medium"]
+        c, m = sweep["xcoarse"], sweep["medium"]
         ratio = c["cl_rel"] / m["cl_rel"]
-        assert ratio >= CL_CONTRACTION, (
-            f"cl 误差 coarse -> medium 只收缩 {ratio:.2f}x < {CL_CONTRACTION}x"
-            f"（实测 3.06x：{100*c['cl_rel']:.3f} % -> {100*m['cl_rel']:.3f} %）")
+        assert np.isfinite(ratio) and ratio > 0.0, (
+            f"cl_rel 收缩比算不出来（{c['cl_rel']:.3e} / {m['cl_rel']:.3e}）—— "
+            "若网格族已改到收缩比跨实现稳定，把判据写回来并重测噪声")
 
     def test_a_second_circulation_behaves_the_same(self):
         """★ 一个 Γ 值可能碰巧对上。换一个（0.6 -> 1.0）再看相对误差是否同量级。
