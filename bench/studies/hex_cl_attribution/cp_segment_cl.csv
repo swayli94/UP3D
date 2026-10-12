@@ -1,0 +1,22 @@
+# 分段 cl 贡献 ∫(cp_lower − cp_upper) dx；段边界事前写死：LE_peak [0.0,0.05], front [0.05,0.45], shock [0.45,0.75], TE_unload [0.75,1.0]
+family,level,segment,x0,x1,cl_seg
+hex,coarse,LE_peak,0.0,0.05,2.798391561e-02
+hex,coarse,front,0.05,0.45,2.369749813e-01
+hex,coarse,shock,0.45,0.75,3.091617213e-02
+hex,coarse,TE_unload,0.75,1.0,4.184216713e-03
+hex,coarse,TOTAL,0.0,1.0,3.000574693e-01
+hex,medium,LE_peak,0.0,0.05,2.373976092e-02
+hex,medium,front,0.05,0.45,1.807184000e-01
+hex,medium,shock,0.45,0.75,5.106753432e-02
+hex,medium,TE_unload,0.75,1.0,4.154317586e-03
+hex,medium,TOTAL,0.0,1.0,2.596760050e-01
+hex,fine,LE_peak,0.0,0.05,2.416750691e-02
+hex,fine,front,0.05,0.45,9.314535689e-02
+hex,fine,shock,0.45,0.75,1.333782136e-01
+hex,fine,TE_unload,0.75,1.0,6.206609453e-03
+hex,fine,TOTAL,0.0,1.0,2.568907920e-01
+tet,medium,LE_peak,0.0,0.05,2.400792468e-02
+tet,medium,front,0.05,0.45,2.147947890e-01
+tet,medium,shock,0.45,0.75,1.020110808e-01
+tet,medium,TE_unload,0.75,1.0,1.571920770e-03
+tet,medium,TOTAL,0.0,1.0,3.423852400e-01
