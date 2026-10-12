@@ -42,6 +42,9 @@ Newton 收敛到 **`converged=True`, `reason=tol`, |R| = 1.30e-15**，而激波�
 SPD Picard 块上压不住它，精确 LU 步才恢复二次收敛），本案规模的生产配方（M1/E01）
 本来就是 `direct`。ilu 腿（10 步、机器零）与 direct 的读数差 1.8e-08 个单元，
 佐证「预条件子只是加速手段」。这不是本轮的新缺陷。
+★ 机制后来闭合（p6 第 47 轮，证据 `phases/p6/bench/studies/c05_amg_investigation/`）：
+层级建在不含 Term-3 激波耦合的 Picard 块上，对激波中心近零模态无反演；适用边界
+（含失效标志与处置、以及 M6 fine 这个带激波反例）见 `docs/design.md` §8.2。
 
 **实测读数（nx=200，2026-10-11）** —— 预注册 §4 的 kill 形状**触发了，如实记录**：
 
