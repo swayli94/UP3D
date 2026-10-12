@@ -88,7 +88,7 @@ b. **签名波及**:phase-3 两个 bench 脚本按 4 元组解包。g0 已修并
    (`phases/p3/cases/...` 不存在,本轮之前就跑不到解包行),不修 —— 修
    路径会让它重写 tracked 的 `bench/gate_results/hex_q2_wall_accuracy.csv`,
    属重刷其他证据,超出本轮授权。**登记**:q2 脚本需要一轮自己的布局修复。
-c. 主线交接原话让 §9 指向 `bench/studies/hex_cl_attribution/README.md`;
+c. 主线交接原话让 §9 指向 `phases/p6/bench/studies/hex_cl_attribution/README.md`;
    核实该 README **没有** r_far 记录,真实出处是
    `20261012-1000-w25-w26-verdict.md` §4.2(顺带发现)与 §6(裁决 c)——
    按真实出处写。

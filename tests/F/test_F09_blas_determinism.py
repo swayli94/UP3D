@@ -2,7 +2,7 @@ r"""F09 — **BLAS 归约顺序不得影响答案**(W2/H30 2026-09-06;**重写 2
 
 ## 为什么有这道门
 
-审计实测(`bench/studies/gate_audit_20260905/results/thread_attribution_D05_M080.csv`,
+审计实测(`phases/p6/bench/studies/gate_audit_20260905/results/thread_attribution_D05_M080.csv`,
 D05 的 M0.80/α1.25 medium,9 条腿单变量):
 
 | 分组 | 每档内不同的 cl 值 |

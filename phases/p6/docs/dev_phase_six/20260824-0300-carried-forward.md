@@ -20,7 +20,7 @@ phase 6 在自己的文档里指向或跟踪它们 —— 以前的分析和文�
 
 | 参数 | 实测默认 | 它为什么在这里 |
 |---|---|---|
-| `ew_eta0` / `ew_eta_max` | **1e-06** / **1e-06** | ★★ 这一条是 `DECISION-2026-08-02-precond.md` 归档前唯一被挡住的**可测理由**：EW forcing 1e-6 **是当前默认**。决策记录（含**被排除的选项与推翻条件**）在 [`phases/p2/docs/dev_phase_two/DECISION-2026-08-02-precond.md`](../../phases/p2/docs/dev_phase_two/DECISION-2026-08-02-precond.md) |
+| `ew_eta0` / `ew_eta_max` | **1e-06** / **1e-06** | ★★ 这一条是 `DECISION-2026-08-02-precond.md` 归档前唯一被挡住的**可测理由**：EW forcing 1e-6 **是当前默认**。决策记录（含**被排除的选项与推翻条件**）在 [`phases/p2/docs/dev_phase_two/DECISION-2026-08-02-precond.md`](../../../../phases/p2/docs/dev_phase_two/DECISION-2026-08-02-precond.md) |
 | `upwind_c` | **1.5** | 人工密度强度 `C`。M1c 扫 `C ∈ {1.0, 1.5, 3.0}` |
 | `m_crit` | **0.95** | 人工密度开关的 `M_c` |
 | `m_cap` | **3.0** | 限幅的是**局部 Mach**（不是 M²）；判据是 `q2 >= q2_at_mach(m_cap, ...)` |
@@ -39,7 +39,7 @@ phase 6 在自己的文档里指向或跟踪它们 —— 以前的分析和文�
 
 ## 2. 仍然在管事的裁决 D1–D5
 
-原件：[`phases/p2/docs/dev_phase_two/roadmap.md`](../../phases/p2/docs/dev_phase_two/roadmap.md)。
+原件：[`phases/p2/docs/dev_phase_two/roadmap.md`](../../../../phases/p2/docs/dev_phase_two/roadmap.md)。
 ★ 归档前它被挡住的理由是「**没有任何后续计划文件承接 D1–D5**」——**本节就是那次承接**：
 
 | 裁决 | 内容 | 现在的状态（实测） |
@@ -61,7 +61,7 @@ phase 6 在自己的文档里指向或跟踪它们 —— 以前的分析和文�
 
 | | |
 |---|---|
-| 参考原件 | [`phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md`](../../phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md) —— 含五条指标的目标/实测/可达性、**14 条已排除路线**、未解释亏空、真实缺陷、证据完整性边界 |
+| 参考原件 | [`phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md`](../../../../phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md) —— 含五条指标的目标/实测/可达性、**14 条已排除路线**、未解释亏空、真实缺陷、证据完整性边界 |
 | **八条产品指标的当前读数** | 在 [`progress.md`](progress.md) 的**产品指标追踪**表 —— 那是本阶段的活台账 |
 | ★★ **phase 6 的交付** | **一份属于 phase 6 的能力边界**。在它产出之前，**引用能力声明就必须引用归档原件**，不许凭记忆转述 |
 
@@ -82,7 +82,7 @@ Steinhoff–Jameson 非唯一性。**两句话之间的矛盾此前没有任何�
 | 场景 | 可信上界 | 依据 |
 |---|---|---|
 | **有升力**（α ≠ 0，M6 / 翼身的生产工况） | 声明的 0.87 **未被本轮推翻** —— 本轮**没有在 α ≠ 0 上做同样的探针** | 未测，明写 |
-| **α = 0 对称翼型** | **实测落在 M 0.78 与 0.80 之间** | `tests/D/test_D14`（能力边界门，红 = 好消息）+ `bench/studies/gate_audit_20260905/` |
+| **α = 0 对称翼型** | **实测落在 M 0.78 与 0.80 之间** | `tests/D/test_D14`（能力边界门，红 = 好消息）+ `phases/p6/bench/studies/gate_audit_20260905/` |
 
 ★★ **这一条是 phase 6 那份能力边界文书的必备输入**：目前唯一在陈述能力的
 是归档的 `PHASE_TWO_CAPABILITY_BOUNDARY.md`，而它**写不出上面这张表**
@@ -114,17 +114,17 @@ Steinhoff–Jameson 非唯一性。**两句话之间的矛盾此前没有任何�
 
 | 原位置 | 现在 |
 |---|---|
-| `docs/dev_phase_two/`（7 个） | [`phases/p2/docs/dev_phase_two/`](../../phases/p2/docs/dev_phase_two/)（并入原有 85 个轮次文件） |
-| `docs/dev_phase_three/`（68） | [`phases/p3/docs/dev_phase_three/`](../../phases/p3/docs/dev_phase_three/) |
-| `docs/dev_phase_four/`（82） | [`phases/p4/docs/dev_phase_four/`](../../phases/p4/docs/dev_phase_four/) |
-| `docs/dev_phase_five/`（61，含 `progress.md`） | [`phases/p5/docs/dev_phase_five/`](../../phases/p5/docs/dev_phase_five/) |
-| `docs/inspection/` | ★ **已删除**。8 份 phase-1 报告在 [`phases/p1/docs/inspection/`](../../phases/p1/docs/inspection/)；2026-07-28 奠基审计 + exp1–exp6 在 [`phases/p2/docs/inspection/`](../../phases/p2/docs/inspection/)；2026-08-16 独立审计在 [`phases/p3/docs/inspection/`](../../phases/p3/docs/inspection/) |
+| `docs/dev_phase_two/`（7 个） | [`phases/p2/docs/dev_phase_two/`](../../../../phases/p2/docs/dev_phase_two/)（并入原有 85 个轮次文件） |
+| `docs/dev_phase_three/`（68） | [`phases/p3/docs/dev_phase_three/`](../../../../phases/p3/docs/dev_phase_three/) |
+| `docs/dev_phase_four/`（82） | [`phases/p4/docs/dev_phase_four/`](../../../../phases/p4/docs/dev_phase_four/) |
+| `docs/dev_phase_five/`（61，含 `progress.md`） | [`phases/p5/docs/dev_phase_five/`](../../../../phases/p5/docs/dev_phase_five/) |
+| `docs/inspection/` | ★ **已删除**。8 份 phase-1 报告在 [`phases/p1/docs/inspection/`](../../../../phases/p1/docs/inspection/)；2026-07-28 奠基审计 + exp1–exp6 在 [`phases/p2/docs/inspection/`](../../../../phases/p2/docs/inspection/)；2026-08-16 独立审计在 [`phases/p3/docs/inspection/`](../../../../phases/p3/docs/inspection/) |
 
 `docs/` 现在只有 **7 个文件**：`overview.md`、`design.md`、`design_track_v.md`、
 `agent-rules.md`，加 `dev_phase_six/` 的 4 个（立项、本文件、GS6.1-a 判定、`progress.md`）。
 
 ★ **轮次文件格式**：模板已归档 ⇒ 引用
-[`phases/p2/docs/dev_phase_two/_TEMPLATE.md`](../../phases/p2/docs/dev_phase_two/_TEMPLATE.md)。
+[`phases/p2/docs/dev_phase_two/_TEMPLATE.md`](../../../../phases/p2/docs/dev_phase_two/_TEMPLATE.md)。
 判定码不变：**PASS / FAIL / RECORDED / UNDEFINED**（收敛腿 < 2 报 UNDEFINED，不报方向）。
 
 ## 7. ★ 本文件自己的风险，写下来

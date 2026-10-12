@@ -2,9 +2,9 @@
 
 判定 note：[`docs/dev_phase_six/20260905-0200-independent-gate-audit.md`](../../../docs/dev_phase_six/20260905-0200-independent-gate-audit.md)
 
-    python bench/studies/gate_audit_20260905/run_probes.py            # 两个都跑
-    python bench/studies/gate_audit_20260905/run_probes.py --probe A  # ~30 s
-    python bench/studies/gate_audit_20260905/run_probes.py --probe B  # ~8 min @8t
+    python phases/p6/bench/studies/gate_audit_20260905/run_probes.py            # 两个都跑
+    python phases/p6/bench/studies/gate_audit_20260905/run_probes.py --probe A  # ~30 s
+    python phases/p6/bench/studies/gate_audit_20260905/run_probes.py --probe B  # ~8 min @8t
 
 ★ `pyfp3d/` **未改动**；两个探针都从 `tests/` 里 import 被审的门自己的常数与配方
 （C06 的几何常数、D05 的 `RECIPE`），**不重打一遍** —— 免得探针与它测量的门口径分叉。

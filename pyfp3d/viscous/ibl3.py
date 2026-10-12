@@ -2,7 +2,7 @@
 integral boundary-layer equations on a SurfaceMesh, analytic Jacobian, and a
 pseudo-time-globalized Newton solver.
 
-Binding references: Drela AIAA 2013-2437 ("D13") and docs/design_track_v.md
+Binding references: Drela AIAA 2013-2437 ("D13") and phases/p1/docs/design_track_v.md
 (§2.2 equations, §5 discretization). Equations (steady form, D13 (24)(26)
 (28)(29)(31); design doc §2.2):
 
@@ -21,9 +21,9 @@ Defect fluxes M, J, E, Ko, Q, Qo, wall shear and dissipation are assembled
 # not "is defined there" -- the audit classified each by whether any record says
 # WHAT THE DECISION IS:
 #
-#   D-CT    DEFINED   docs/design_track_v.md sec 3.2 + its decision table
-#   D-HB    DEFINED   docs/design_track_v.md decision table
-#   D-QUAD  DEFINED   docs/design_track_v.md decision table -- ★ but its text still
+#   D-CT    DEFINED   phases/p1/docs/design_track_v.md sec 3.2 + its decision table
+#   D-HB    DEFINED   phases/p1/docs/design_track_v.md decision table
+#   D-QUAD  DEFINED   phases/p1/docs/design_track_v.md decision table -- ★ but its text still
 #                     claims the quadrature was set "by polynomial exactness and
 #                     Spalding resolution, unit-tested", and BOTH halves were
 #                     measured false in phase-5 rounds 2 and 3. An erratum is

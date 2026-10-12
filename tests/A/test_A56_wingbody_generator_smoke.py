@@ -1,5 +1,5 @@
 """A56 -- 翼身生成器的生成-比对冒烟门（A 类；预注册
-docs/dev_phase_six/20261011-1600-code-surface-prereg.md §2.3）。
+phases/p6/docs/dev_phase_six/20261011-1600-code-surface-prereg.md §2.3）。
 
 ★ 由来：`pyfp3d/meshgen/wingbody.py` 的 9 个定义（含 443 行的
 `onera_m6_wingbody_mesh`）此前只被 `cases/meshes/onera_m6_wingbody*` 的两个

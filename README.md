@@ -88,10 +88,10 @@ this project has logged repeatedly).
 
 | Document | Authoritative for |
 |---|---|
-| [phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md) | **what the solver can do, which routes are closed, which gaps are open** |
-| [phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md](phases/p3/docs/dev_phase_three/20260816-1000-gs41-initiation.md) | **the single entry point for phase 4** — read its §0 first |
-| [phases/p2/docs/dev_phase_two/roadmap.md](phases/p2/docs/dev_phase_two/roadmap.md) | the plan: product metrics M1–M5, stages S0–S6, working principles, rulings D1–D7 |
-| [phases/p4/docs/dev_phase_four/progress.md](phases/p4/docs/dev_phase_four/progress.md) | current phase, one row per round |
+| [phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md) | **what the solver can do, which routes are closed, which gaps are open** (2026-10-11; the phase-2 original stays at `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` for statements phase 6 did not re-measure) |
+| [docs/overview.md](docs/overview.md) | what the project is, what each phase did, next-phase candidates |
+| [phases/README.md](phases/README.md) | the archive: what each phase produced and where its materials live |
+| [phases/p6/docs/dev_phase_six/progress.md](phases/p6/docs/dev_phase_six/progress.md) | the most recent phase ledger (50 rounds, one row per round) — the format every phase uses |
 | [docs/design.md](docs/design.md) | theory and numerics: equations, wake/Kutta, discretization, kernel rules |
 | [phases/p1/docs/inspection/](phases/p1/docs/inspection/) · [p2](phases/p2/docs/inspection/) · [p3](phases/p3/docs/inspection/) | independent audits, archived with their phase (`docs/inspection/` deleted 2026-08-24) |
 | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | layout, per-module status, known gaps |

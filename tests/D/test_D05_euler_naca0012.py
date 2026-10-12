@@ -13,7 +13,7 @@ M0.778/α2.03 · M0.803/α−0.1。参考侧的档 **L1–L4**，本门读**最�
 BLAS/OMP**。由此得出的"跨声速举力腿不能设门"是**测量条件的产物**：
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md），本表已按现行证据整表
+phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md），本表已按现行证据整表
 同步：**CFL3D 列改读 L4**（原 0.284256/0.348239/0.490875/−0.028789 是 L3 档读数，
 Δcl 列随之按 L4 重算）；M0.778 medium 的 pyFP3D cl 0.706178 → 0.706233；
 **收敛列改按 committed CSV 读**（8t·BLAS=24 与 16t·BLAS=1 两档逐行一致）——

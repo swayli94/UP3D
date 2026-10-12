@@ -19,7 +19,7 @@ Pieces here (all plain NumPy orchestration like coupling.py -- nothing is
 hot next to the kernels):
 
 1. ``build_wake_sheet_case`` -- the wake ``SurfaceMesh`` (V1 layout reused
-   as a second instance, design_track_v.md section 6 point 1) on
+   as a second instance, phases/p1/docs/design_track_v.md section 6 point 1) on
    ``wc.wake_faces_minus`` plus an open-chain station table (TE = min-x
    endpoint -> downstream end) with the per-node arc length s from the TE,
    and the master->slave fold pairing. The W3 sanity asserts of the

@@ -10,7 +10,7 @@ Reference-data generator: CFL3D 6.7 Euler and RANS solutions for the
         # derived CSVs (shock.csv, grid_convergence.csv, turbulence_spread.csv)
         # from the committed cp_*.csv + forces.csv, with NO solver run
 
-★ What this is and is NOT (data request note, docs/dev_phase_six/
+★ What this is and is NOT (data request note, phases/p6/docs/dev_phase_six/
   20260824-0400-gate-taxonomy-analysis.md section 4):
   **a CFL3D solution is another NUMERICAL solution, not truth.** Every gate
   built on it must read "difference from a recognised solver's Euler/RANS

@@ -8,7 +8,7 @@ of which had any cadence before 2026-09-03:
    requested ``RKAP0``.  Measured cost of not having this guard: the whole M6
    Euler ladder and the whole M6 RANS ladder ran first order and were discarded
    (cd was wrong by -57.6 %).  See
-   ``docs/dev_phase_six/20260903-0200-cfl3d-first-order-defect.md``.
+   ``phases/p6/docs/dev_phase_six/20260903-0200-cfl3d-first-order-defect.md``.
 
 2. ``implied_order`` -- the estimator that decides whether a published quantity
    gets an error bar.  It is checked against SYNTHETIC data whose answer is

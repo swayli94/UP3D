@@ -9,7 +9,7 @@ r"""D12 — RAE2822 Case 7 / Case 9 实验 Cp：**无粘模型的过升偏置**�
 ★★★ **实测（medium，`smooth_passes=1`，生产配方，实验攻角不修正）**：
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；Case 7 medium 的
+phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；Case 7 medium 的
 rms_upper / shock_offset / cn 三格已同步（0.3257 → 0.3253、+0.1243 → +0.1241、
 1.0174 → 1.0170）；cn_rel 在引用精度下未动（+54.7 %）。
 

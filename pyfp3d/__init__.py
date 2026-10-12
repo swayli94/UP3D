@@ -22,7 +22,7 @@ import os
 
 #: ★★★ W2/H30(2026-09-06,使用者裁决):**把 BLAS 固定成单线程。**
 #:
-#: 实测(`bench/studies/gate_audit_20260905/results/thread_attribution_D05_M080.csv`,
+#: 实测(`phases/p6/bench/studies/gate_audit_20260905/results/thread_attribution_D05_M080.csv`,
 #: D05 的 M0.80/α1.25 medium,9 条腿单变量):
 #:   * 按 **BLAS** 线程数分组,每档只有一个 cl 值   {1:1, 8:1, 16:1}
 #:   * 按 numba 线程数分组,每档有多个 cl 值        {1:3, 8:2, 16:2}

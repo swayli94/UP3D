@@ -1,6 +1,6 @@
 """A55 -- G10.1:生产 Newton 驱动器的**非升力入口**(A 类:机制/一致性,无外部真值)。
 
-约束文本(判据事前写死):docs/dev_phase_six/20261011-1100-w22a-prereg.md (W2.2a),
+约束文本(判据事前写死):phases/p6/docs/dev_phase_six/20261011-1100-w22a-prereg.md (W2.2a),
 判据原文 = phases/p1/docs/roadmap/track_p.md:1066 (G10.1)。
 
 `solve_newton_nonlifting` 不是第二个驱动器:它以 `wc=None` 调 `solve_newton_lifting`

@@ -2,7 +2,7 @@ r"""D13 — 松耦合 IBL 对 XFOIL 6.99：**上游设门、下游锁结构**（
 
 工况与 `cases/reference_data/naca0012_viscous_xfoil/` **逐字一致**：NACA0012、
 **M 0.5 / Re 3.0e6 / α 2° / x_tr 0.05 双面**（`CouplingConfig` 的 `x_tr` 默认就是 0.05）。
-侦察记录：`docs/dev_phase_six/20260828-0100-ibl-xfoil-recon.md`。
+侦察记录：`phases/p6/docs/dev_phase_six/20260828-0100-ibl-xfoil-recon.md`。
 
 ★★ **XFOIL 是本项目对边界层量的指定参照**（使用者常设）。它是外部代码（Drela, MIT），
 不是本仓依赖、不是 Python、不由被它检验的求解器派生 —— 这是它能当参照的理由。
@@ -24,7 +24,7 @@ r"""D13 — 松耦合 IBL 对 XFOIL 6.99：**上游设门、下游锁结构**（
 松耦合环 run-to-run 不可复现，所以「重跑一遍刷新它」这个动作本身就是错的。
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）。coarse 行的物理列
+phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）。coarse 行的物理列
 **逐位不动**；两个 medium 行已同步到新 CSV（同档两次独立运行逐位复现）——
 **本表自此以 committed CSV 为准**。
 
@@ -69,7 +69,7 @@ H 偏小/不敏感 ⇒ 边界层对压力梯度响应弱 ⇒ **既长不快，�
 ★ 2026-10-10（BLAS=1 重刷）：medium 的 cl 0.280600 → 0.283333（**+0.97 %**，与 D08
 xtr005 是**同一求解**，两门两级 cl 逐位一致）；coarse 级的物理列与各参考列逐位不动。
 跨 BLAS 档的多吸引子登记见 D08 docstring 的「2026-10-10：BLAS 吸引子切换登记」
-与 docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md §5。
+与 phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md §5。
 """
 import os
 
@@ -304,7 +304,7 @@ class TestCommittedEvidenceIsLoadBearing:
 
     ★ 零额外计算：本条用的是 `runs` fixture 已经算好的结果。
 
-    ★★★ 2026-10-11（第 44 轮；裁决 = `docs/dev_phase_six/20261011-1800-process-history-determinism.md`
+    ★★★ 2026-10-11（第 44 轮；裁决 = `phases/p6/docs/dev_phase_six/20261011-1800-process-history-determinism.md`
     §5 选项 1+2，逐列实测散布见同日 M1 表与该文件勘误节）：锁改**两层** ——
     `blas_threads` 留在 1e-6 **出处层**；求解器产出列（dstar_ibl / cf_ibl /
     asym_ibl / cl）改**散布带层**（绝对带 `SPREAD_TOL`）：M1 实测它们随 numba
@@ -398,7 +398,7 @@ class TestCommittedEvidenceIsLoadBearing:
                     "`PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D13_ibl_vs_xfoil.py` "
                     "刷新证据，**并按纪律 11 grep 被移动的数字** —— "
                     "本门 docstring 的两张表、`cases/gates/INDEX.md` 的 D13 条目、"
-                    "以及 `docs/dev_phase_six/20260828-0100-ibl-xfoil-recon.md` 都引用它们。")
+                    "以及 `phases/p6/docs/dev_phase_six/20260828-0100-ibl-xfoil-recon.md` 都引用它们。")
         assert n >= 100, f"只比了 {n} 个数，证据 CSV 可能被截断了"
 
 

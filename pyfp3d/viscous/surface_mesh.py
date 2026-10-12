@@ -1,6 +1,6 @@
 """
 Compact wall-surface mesh for the Track V IBL3 integral boundary layer
-(design_track_v.md §5.1/§5.2 discretization, §6 data-layout points).
+(phases/p1/docs/design_track_v.md §5.1/§5.2 discretization, §6 data-layout points).
 
 ``SurfaceMesh`` builds the compact surface DOF numbering that the rest of
 ``pyfp3d/viscous`` runs on: wall triangulations elsewhere in the repo
@@ -10,7 +10,7 @@ P1 surface-FE geometry tables the IBL3 Galerkin kernels consume as SoA flat
 arrays (design.md §7 rule 1):
 
 - per-triangle area / unit normal / P1 shape gradients in GLOBAL XYZ;
-- per-node lumped area and local Cartesian basis (design_track_v.md §2.1:
+- per-node lumped area and local Cartesian basis (phases/p1/docs/design_track_v.md §2.1:
   ŷ = area-weighted vertex normal, x̂ = Gram-Schmidt against a global seed,
   ẑ = ŷ×x̂; residual equations are assembled in this local basis, which makes
   the scheme invariant under in-surface rotation so the TE kink needs no
@@ -19,19 +19,19 @@ arrays (design.md §7 rule 1):
   solve/wall_correction.py: exact for quadratics, N = 1/2 on the edge nodes);
 - greedy 3-node element coloring (mesh/coloring.py algorithm generalized to
   ``elements.shape[1]`` nodes per element -- serial color loop + prange
-  within a color gives bit-deterministic scatter order, design_track_v.md
+  within a color gives bit-deterministic scatter order, phases/p1/docs/design_track_v.md
   §5.2);
 - symbolic CSR sparsity of the 6-dof/node Newton system plus an
   ``elem_to_csr`` scatter map (kernels/jacobian.py::build_csr_pattern /
   build_elem_to_csr idiom, block 6x6 per node pair).
 
-Group awareness (design_track_v.md §6 point 1): the node table is
+Group awareness (phases/p1/docs/design_track_v.md §6 point 1): the node table is
 group-aware by construction -- one ``SurfaceMesh`` instance per boundary
 group, carrying the group ``name``. V1 builds the single "wall" group only;
 the V6 wake sheet reuses the same layout with wake closures. No multi-group
 machinery is built here.
 
-Master-map hook (design_track_v.md §6 point 2): ``volume_node_of`` keeps the
+Master-map hook (phases/p1/docs/design_track_v.md §6 point 2): ``volume_node_of`` keeps the
 surface-id -> volume-node-id map so an IBL surface mesh built on the UNCUT
 wall can later pull u_e from a cut-mesh (LS) solution. Keep this name.
 
@@ -75,7 +75,7 @@ QUAD_N = np.array(
     [[0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]], dtype=np.float64
 )
 
-# Crease fallback for the vertex normal (design_track_v.md §2.1 ŷ): if the
+# Crease fallback for the vertex normal (phases/p1/docs/design_track_v.md §2.1 ŷ): if the
 # area-weighted normal sum nearly cancels at a node (sharp fold), fall back
 # to the unit normal of the largest-area incident triangle instead of
 # raising -- the TE-kink case must survive.
@@ -172,7 +172,7 @@ def _color_partition_csr(elements, n_nodes):
     order. A serial color loop + prange within a color is race-free (no two
     same-color elements share a node) and the scatter order is fixed by the
     color sequence alone => bit-deterministic assembly across runs and
-    thread counts (design_track_v.md §5.2)."""
+    thread counts (phases/p1/docs/design_track_v.md §5.2)."""
     node_offsets, node_elems = _node_to_element_csr(elements, n_nodes)
     colors = _greedy_coloring_kernel(
         np.ascontiguousarray(elements), node_offsets, node_elems
@@ -259,11 +259,11 @@ class SurfaceMesh:
     Attributes:
         name (str): boundary group name. V1 is single-group ("wall"); the
             V6 wake sheet reuses this layout as a second instance
-            (design_track_v.md §6 point 1).
+            (phases/p1/docs/design_track_v.md §6 point 1).
         n_node (int): number of compact surface nodes n_s.
         n_tri (int): number of surface triangles F.
         volume_node_of (n_s,) int64: surface id -> volume node id, sorted
-            unique. MASTER-MAP HOOK (design_track_v.md §6 point 2): keeps
+            unique. MASTER-MAP HOOK (phases/p1/docs/design_track_v.md §6 point 2): keeps
             the link to the volume mesh so a later coupling stage can pull
             u_e from a (cut-mesh) volume solution. Keep this name.
         node_map (N,) int64: volume node id -> surface id, or -1 for volume
@@ -287,7 +287,7 @@ class SurfaceMesh:
         node_area (n_s,) f64: lumped nodal area (area/3 scattered per
             vertex; volume mass-lumping idiom np.add.at, solve/picard.py).
         basis_x, basis_y, basis_z (n_s,3) f64: per-node local Cartesian
-            basis (design_track_v.md §2.1). basis_y = area-weighted vertex
+            basis (phases/p1/docs/design_track_v.md §2.1). basis_y = area-weighted vertex
             normal, normalized; crease fallback to the largest-area incident
             triangle's unit normal when |sum(a*n̂)|/sum(a) < 0.05 (no raise:
             the TE-kink case must survive). basis_x = normalize(seed -
@@ -387,7 +387,7 @@ class SurfaceMesh:
         )
         self.node_area = node_area
 
-        # --- per-node local basis (design_track_v.md §2.1) ---------------
+        # --- per-node local basis (phases/p1/docs/design_track_v.md §2.1) ---------------
         contrib = self.area_tri[:, None] * self.normal_tri  # (F,3)
         normal_sum = np.zeros((n_surf, 3), dtype=np.float64)
         weight_sum = np.zeros(n_surf, dtype=np.float64)

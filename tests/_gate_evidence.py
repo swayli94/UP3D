@@ -177,7 +177,7 @@ def assert_within_spread(gate_dir, fresh, spread_tol, key_of=None,
     ★ 与 `assert_matches_committed` 的分工:那台机器问「答案动了吗」
     (机器级 rel_tol 1e-6);这台问「答案动得比它自己的**实测环境散布**还多了吗」。
     只用于被实测证明「1e-6 原理上守不住」的列(IBL 松耦合腿 —— 见
-    `docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节:
+    `phases/p6/docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节:
     求解器产出列随 numba 缓存出处态漂移 1e-3…3.6e-2,且最敏感腿连 converged 都翻)。
     ★ `spread_tol` 的推导(哪次测量、哪个安全系数)必须在调用方的注释里写明;
     **带做成恒真是 bug 不是宽松** —— G-TEETH 必须见过它红(带内扰动绿、

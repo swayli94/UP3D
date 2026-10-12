@@ -10,8 +10,8 @@
 ```
 conda activate up3d
 PYTHONNOUSERSITE=1 PYTHONPATH=<repo> NUMBA_NUM_THREADS=16 \
-    python bench/studies/hex_cl_attribution/run.py            # 4 腿求解 + 分析 + 图（~2.5 min）
-python bench/studies/hex_cl_attribution/run.py --analysis-only   # 不求解，从 CSV 重出分析
+    python phases/p6/bench/studies/hex_cl_attribution/run.py            # 4 腿求解 + 分析 + 图（~2.5 min）
+python phases/p6/bench/studies/hex_cl_attribution/run.py --analysis-only   # 不求解，从 CSV 重出分析
 ```
 
 - 工况 M0.80/α1.25；生产配方与 D05 逐字一致（`upwind_c=1.5, m_crit=0.95,

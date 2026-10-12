@@ -1,237 +1,171 @@
-# `phases/` —— phase 1–5 的归档
+# `phases/` —— 已结束阶段的归档
 
-**这里放的是已结束阶段的材料。** phase 6 的工作面在仓库的原位置
-(`pyfp3d/`、`tests/`、`bench/`、`cases/`、`docs/`)。
+这里放的是 **phase 1–6** 的材料。当前阶段的工作面在仓库原位置
+（`pyfp3d/`、`tests/`、`bench/`、`cases/`、`docs/`）。
 
-★★★ **2026-08-24 使用者裁决:phase 2–5 的文档全部移入 `phases/p*/`,`docs/inspection/` 删除。**
-「以前的分析和文档都只是参考」—— phase 6 在自己的文档里指向或跟踪它们。
-⇒ `docs/` 现在只剩 **4 份活文档 + 当前阶段目录**(`overview` / `design` / `design_track_v` /
-`agent-rules` + `dev_phase_six/`)。
-
-★★ 这次裁决**覆盖了** `p2/docs/dev_phase_two/README.md` 那份逐文件检查单挡下的 4 个文件。
-挡它们的两条理由是**可测的事实**(EW forcing 1e-6 仍是库默认;它是唯一的能力声明),
-所以**归档的同时必须有一个新的落点**,否则那不是归档而是丢失 ⇒
-**[`docs/dev_phase_six/20260824-0300-carried-forward.md`](../docs/dev_phase_six/20260824-0300-carried-forward.md)**
-就是那个落点(实测的库默认值、仍在管事的裁决、不许重开的封闭负结果、东西都搬到哪了)。
-★ 而**能力边界仍然只有归档那一份** —— 产出 phase 6 自己的那一份是**phase 6 的交付**;
-在那之前引用能力声明**必须引用归档原件**,不许凭记忆转述。
-
-**测试代码一个文件都没有移动 —— 见下面「为什么测试不归档」。**
-
-整理于 **2026-08-10**,基准提交 **`d224223`**(phase two 的 PR #25 合并点)。
-
-## ★★★ 2026-08-24 第二次归档:`bench/` 的 89 个一次性研究脚本
-
-**恢复点(保证能跑的树)**:
+**归档是目录重组，不是取消证据**：所有归档文件仍被 git 跟踪，已提交的 CSV/PNG 都还在原位
+（归档里）。要一个**保证能跑**的历史树，用恢复点而不是从归档里跑脚本：
 
 ```bash
-git worktree add ../up3d-prebench 1dc4647     # bench 归档之前的完整状态
+git worktree add ../up3d-prereorg d224223     # 2026-08-10 大整理之前（phase 1/2 全貌）
+git worktree add ../up3d-prebench 1dc4647     # 2026-08-24 bench 大归档之前
+git worktree add ../up3d-prep6    1544c8c     # 2026-10-12 phase 6 归档之前
 ```
 
-★★ **这一次没有机械修深度表达式,而那是有理由的**:实测 `bench/` 的 **63 / 101** 个脚本有
-「找 repo root」的深度依赖,而且是**三种写法** —— `parents[N]` 3 处、`.parent.parent` 20 处、
-`os.path.join(HERE, "..", "..", "..")` **50 处**。
-★★★ 上一节写的仪器(`grep parents[N]`)**只命中 3 个,会漏 60 个** ——
-因为**那 58 处 `parents[N]` 在 `cases/` 里**,`bench/` 用的是别的写法。
-**一个照另一个总体标定的仪器。**
-
-而上一次**机械修了 121 处**深度表达式,最后仍然只能写「**没有逐一验证到"能真的跑起来"**」,
-事后还发现 3 个归档测试连收集都不动。⇒ **重复那 63 处只会重复那个结局。**
-本轮改为:**不修深度,把合约写清并钉死上面那个恢复点** ——
-`git worktree` 是**保证**的,63 处不可验证的编辑不是。
-
-### ★★ 而「保留规则只算一跳」这个坑,本轮**又踩了一次**
-
-上一节记着 2026-08-10 因此把 15 个目录搬回原位。本轮同样:种子 **5 个**被活测试加载,
-传递闭包 **7 个** —— `v3_loose_coupling` 与 `v5_1b_scaled_newton` **一跳规则会漏掉**。
-
-★★★ 而这次漏掉它们的**不是规则,是仪器**:那些测试的路径是
-`os.path.join(os.path.dirname(__file__), "..", "bench", "studies", "<name>", "run.py")`
-—— **逐段拼出来的**,一个找 `"bench/studies/..."` 字面量的正则**在原理上看不见它**。
-**第一次归档后 `pytest --collect-only` 直接报 2 个 `FileNotFoundError`,才暴露出来。**
-⇒ 这是「**先证明仪器有牙,再信它**」在本轮的第二次兑现:**收集检查就是那颗牙**。
-
-| 去处 | 内容 | 文件数 |
-|---|---|---|
-| `p2/bench/` | Track A/V 的 studies(`a1..a4`、`b9`、`b26`、`c1`、`p14`、`v1`、`v2`、`v5_3/5_4/5_5`、`v5_ibl_floor`、`v5_m6_bridge`、`v6_2`)+ `run_le_response`、`run_gs31_precond` | 454 |
-| `p3/bench/` | `run_task3_*`(26)· `run_hex_*`(3)· `run_gs40*`(10) | 39 |
-| `p4/bench/` | `gs41_*`(14 个 studies) | 58 |
-| `p5/bench/` | `r11..r22`、`m1a/m1b/m1e`、`n1/n2`(17 个 studies) | 91 |
-
-`bench/` 留下 **12 个脚本 + 7 个 studies**,全部**按角色命名**(见
-[`bench/README_ROLES.md`](../bench/README_ROLES.md))。★ `artifacts/` 同日**删除** ——
-它是 gitignored 的本地 scratch,从不进 HEAD,按纪律 3 从来就不是证据。
-
-## 分类口径(量出来的,不是凭印象)
-
-相位归属 = **文件首次提交的日期**,边界 **2026-07-28**(phase two 纲领建立日)。
-按此,整理前的 1606 个被跟踪文件里 phase 1 约 1029、phase 2 约 524。
-
-## ★ 什么留在原位:被保留代码引用的东西
-
-规则是**可测的**:**如果一个仍然存在的测试或脚本读它,它就是 phase 3 仍然需要的,于是留在原位。**
-按这条规则,`cases/demo` 的 33 个子目录里 **9 个留下**、`cases/analysis` 的 33 个里 **10 个留下** ——
-例如 `cases/demo/p11_curved_walls/`,`tests/test_laplace_sphere.py` 要读它来跑 **G1.6 Option C 的活判据**。
-
-留在原位的还有:`pyfp3d/` 全部、`cases/reference_data/`(外部真值,永不编辑)、`cases/meshes/`、
-73 个测试文件(**全部 conforming 锚点**)、`bench/` 的 7 个指标脚本闭包 + `bench/gate_results/`
-(能力边界按路径引用那些 CSV)、以及 `docs/` 的 overview / design / design_track_v / agent-rules /
-inspection 与 6 个 phase-3 要用的 phase-two 文件。
-
-## 第二轮再减(2026-08-10,同日)
-
-第一轮之后 `docs`/`bench` 里仍剩很多,**量了一下发现两处是我保守多留的**:
-
-| | 第一轮后 | 再减后 | 依据 |
-|---|---|---|---|
-| `bench/` | 255 | **19** | `gate_results/` 的 246 个里,**被保留代码点名的只有 7 个 CSV**,`capability/` 的 189 个**一个都没有** ⇒ 只留 9 个被代码或 phase-3 文档点名的 + `capability_summary.json`,其余 **244 个**入 `p2/bench/gate_results/` |
-| `docs/` | 31 | **23** | `inspection/` 的 21 个里 **8 个是 phase-1 审查报告** ⇒ 入 p1;留下 2026-07-28 的**奠基审计**及其 `20260728-audit/` 的 exp1–exp6(roadmap 把它当作 phase two 全部判断的基线) |
-| `cases/` | 403 | **403** | ★ **测出来必须留**:`onera_m6_wakefree` 与 `naca0012_wakefree_2.5d` 两个 LS 专用族**仍被 4 个保留测试引用**(`test_b1_cut_elements` / `test_b3_lifting` / `test_b45_farfield` / `test_b7_onera_m6` —— 删除清单里"摘腿"的那批),要等 phase 3 摘掉 LS 腿才能走;19 个保留的 demo/analysis 是自洽的证据单元 |
-
-★ 移走 244 个 CSV 之后,能力边界文件里"每条都指到提交的产物"那句话**就地更正**了产物的位置
-(两处都写明,并强调**全部仍被跟踪** —— 归档是目录重组,不是取消证据)。
-
-## 目录
-
-| | 内容 |
-|---|---|
-| `p1/` | phase 1(Track P/M/B/V/A):24 个 demo + 23 个 analysis 证据链、phase-1 的 roadmap 与 demo_report、`design_track_b.md`、`analysis/`、`archive/`、**18 个纯 level-set 测试**、8 份审查报告 |
-| `p2/` | phase 2:45 个 bench 脚本 + `s1_duct/`、**92 个文件**的 `dev_phase_two/`(2026-08-24 补入全部 7 个:`progress.md`、`LEVELSET_DELETION_INVENTORY.md`、`roadmap.md`(裁决 D1–D5)、`PHASE_TWO_CAPABILITY_BOUNDARY.md`(★ **仍是唯一的能力声明**)、`DECISION-2026-08-02-precond.md`、`_TEMPLATE.md`(★ **轮次格式仍在用**)、`README.md`(那份检查单))、**2026-07-28 奠基审计 + exp1–exp6** |
-| `p3/` | phase 3:**68 个轮次文件** + **2026-08-16 独立审计**(触发 GS4.0) |
-| `p4/` | phase 4(GS4.1 二维 strip IBL / 剪应力滞后):**82 个轮次文件** |
-| `p5/` | phase 5(M1 二维无粘标定):**61 个文件**,含 `progress.md`(★ 它的 **§A 仍然成立 / §B 已撤回**两张表是 phase 6 的前置阅读 —— 引用 phase 5 任何数字之前先读那两张表) |
-
-## ★ 第三轮:15 个目录搬回原位(保留规则原来只算了一跳)
-
-全套复跑抓到 **2 failed**,机制是**传递依赖**:
-`tests/test_meshgen_rae2822.py` → `bench/studies/v5_2_rae2822/run.py`(保留)
-→ `_load("gv3_run", "bench/studies/v3_loose_coupling/run.py")`(**第二跳,被移走了**)。
-
-⇒ 保留规则改为**传递闭包**,并且**判据先校验**:第一版闭包按"目录名出现在文本里"算,报 22 个,
-而全套实测只坏 1 个 ⇒ 太松(把注释里的提及也算了);改成只认**路径样字面量**
-`cases/(demo|analysis)/<name>/`,并断言它**必须包含那个已被实测证明会坏的** `v3_loose_coupling`,
-才拿来用。据此 **15 个目录搬回原位**(`cases/` 403 → 601,`phases/` 1023 → 825)。
-
-搬回不只是挪文件:那些目录里被改过的路径表达式要**反向还原**(41 处深度 + 归档前缀),
-oracle 复验 **26 个文件里 0 处失败**;`b6_transonic` 回到原位后,**归档文档里指向它的 3 处链接又断了**
-—— 移动是双向的,链接也得双向修。
-
-★ 同轮还修掉一处更隐蔽的破坏:**快层 `run_capability_locks.py` 有 2 条锁指向已归档的 LS 测试**。
-处置是**删掉而不是指进归档** —— 按 D5 那条路线已放弃、phase 3 第一件事就是删它们,而
-**把一条活的收口门指进归档比没有这道门更糟**:它会跑、会绿、并为一条没人维护的路线断言能力。
-⇒ 快层现在 **5 组、482 s、5/5 green**;conforming 锚点一条不少。
-
-## ★ 归档保持旧布局是故意的
-
-活的一侧在 2026-08-10 把 `cases/analysis/` **合并进了 `bench/studies/`**(使用者裁决:
-`bench/` 与 `cases/analysis/` 本是同一件事的两个家)。**归档不跟这次改名** ——
-`phases/p1/cases/analysis/` 保持原样,因为归档是**历史快照**,重命名它会让"当年长什么样"失真。
-所以看到两种路径不必奇怪:**活的在 `bench/studies/`,历史的在 `phases/p1/cases/analysis/`**。
-
-## ★ 已知限制(2026-08-11 补记):归档测试的兄弟模块导入没修
-
-**3 个归档测试文件在归档里收集不动**:`test_b2_multivalued`、`test_b31_tip_fringe`、
-`test_b8_span_blend` —— 它们用**兄弟模块导入**(`mesh_utils` / `_tol` / `conftest`),
-而那些 helper 留在 `tests/`。
-
-⚠ **这是本次整理引入的、而当时没验证到的一类** —— 下一节声称"三类路径断裂已修并验证",
-**归档测试的 helper 导入不在那三类里**。发现它是在 phase 3 核门控账的时候
-(`git worktree` 回到删除前的提交去数归档测试的项数,3 个文件报 ImportError)。
-
-**处置:如实记,不修。** 归档不用于运行;而下一节给出的可运行配方
-`git worktree add ../up3d-prereorg d224223` 指向**整理之前**的提交,本来就绕过这个问题。
-
-## ★★ 归档脚本的可运行性:如实说
-
-移动会打断脚本找路的方式,已**机械修好并验证**的有三类:
-1. **58 处 `parents[N]`** 深度(两种写法:`Path(__file__).resolve().parents[k]` 与
-   `HERE.parents[k]`,二者相差 1);
-2. **22 处指向已移动目录的路径字面量**(只改真的移动了的,`cases/meshes/` 与留下的 demo 不动);
-3. **41 个归档 bench 脚本的 `gate_results` 指向** —— 那个目录**留在** `bench/`,所以归档脚本
-   是**横向**去取,不是往自己下面找;每一个都验证过解析结果落在含 CSV 的目录上。
-
-**没有逐一验证到"能真的跑起来"。** 残留的少数交叉引用依赖被 import 的兄弟脚本来设置 `sys.path`,
-静态检查看不透。所以口径是:
-
-- **证据是已提交的 CSV / PNG**(项目纪律:"没有提交产物的说法不算证据"),它们**都还在,且仍被跟踪**;
-- **脚本是出处(provenance)**;若要一个**保证能跑**的 phase 1/2 树,用一条命令:
-
-```bash
-git worktree add ../up3d-prereorg d224223     # 整理之前的完整状态
-```
-
-## 为什么是跟踪而不是 gitignore
-
-最初的要求是把归档 gitignore。**改为跟踪**(使用者 2026-08-10 裁决),理由是:
-gitignore 意味着**新 clone 里没有这些文件** —— 而那会让 phase 1/2 的每一个结论在 HEAD 上
-**失去提交产物**,与本项目的头号纪律直接冲突。目录整洁的效果不变,证据仍在。
+**归档脚本的可运行性如实说**：移动会打断脚本找路的方式（深度表达式、拼出来的路径、
+写死的绝对路径）。历史轮次修过能机械验证的三类，但**没有逐一验证到「能真的跑起来」**。
+⇒ 证据是已提交的 CSV/PNG（纪律：没有提交产物的说法不算证据）；脚本是出处（provenance）。
 
 ---
 
-## ★★★ 2026-08-24 这一轮:两个**本文件上一节没列**的断裂类,以及为什么测试不归档
+## 各阶段一览
 
-### 为什么**测试代码一个文件都没有移动**
+| 阶段 | 时间 | 一句话 | 归档 |
+|---|---|---|---|
+| p1 | 2026-07-06 → 07-25 | 从零建起求解器：五条 track（P 求解 / M 网格 / B level-set 尾迹 / V 粘性 / A 校验） | `p1/` |
+| p2 | 2026-07-28 → 08-10 | 纲领重建：五条产品指标、S0–S6、激波台 S1、熵修正、第一版能力边界 | `p2/` |
+| p3 | 2026-08-10 → 08-16 | 删 level-set（D5）；hex 剖分路线判死；M0.80 多解实测；GS4.0 审计修复 | `p3/` |
+| p4 | 2026-08-18 → 08-20 | GS4.1：二维 strip IBL / 剪应力滞后（粘性重启的第一块） | `p4/` |
+| p5 | 2026-08-21 → 08-23 | M1 二维无粘标定（网格收敛阶梯、产品指标第一次设门） | `p5/` |
+| p6 | 2026-08-24 → 10-12 | 全面梳理 + 门重建：门号治理、CFL3D/XFOIL 对标、BLAS 确定论、能力边界换代 | `p6/` |
 
-使用者要求梳理「phase 2–5 的文档**和测试代码**」。文档移了,**测试一个都没移**,理由是**可测的**:
+---
 
-- 本文件第 59–61 行自己写着:**「把一条活的收口门指进归档比没有这道门更糟」** ——
-  它会跑、会绿、并为一条没人维护的路线断言能力。
-- 而 **72 个测试文件在门控全集里全部有通过项**(604 passed / 1 skipped / 4 xfailed,
-  1:44:32 @8 线程),即**每一个都在检验活的 `pyfp3d/` 代码**。
-- phase 1 的 18 个测试之所以能归档,是因为**它们那条路(level-set)被删除了**。
-  **phase 2–5 没有删除任何路线** ⇒ 按同一条规则,**没有一个测试文件可归档**。
+## phase 1（`p1/`）—— 建 solver
 
-★ 唯一的例外是一条**该删不该归档**的:`tests/test_v6_wake_sheet.py::test_ab_bit_identity_gate_free_library`
-是 2026-07-29 因**前提为假**而 `mark.skip` 的(松循环 run-to-run 不可复现)。
-登记给 phase 6:**删除,而不是移进归档** —— 归档一条已知前提为假的测试等于把它藏起来。
+**做了什么**：从空仓库到可用的三维全势流求解器。Track P（求解器：Picard → Newton、
+Mach 延拓、人工密度迎风、Kutta/尾迹、P14 壁压相等 Kutta 估计器）、Track M（网格：
+挤出 2.5D、翼身、M6）、Track B（level-set 尾迹线 B1–B32，含翼身跨声速 M0.84）、
+Track V（粘性耦合 V1–V6：IBL3 核心、transpiration 通道、松耦合、紧耦合增广 Newton、
+wake sheet）、Track A（校验：A1 计时、A2 TE/Kutta 归因、A3 独立审查响应）。
 
-### ★★ 断裂类 4:**根相对路径字面量**(本文件"已修的三类"里没有它)
+**主要问题（已结论的）**：G1.6 球面 Cp 误差 = P1 场在 h=0.08 的固有能力（P11 重归因，
+Option C 重定规格采纳）；conforming-vs-LS 升力分歧 = Kutta 形式误差（P14 消除）；
+翼尖片终止奇点（B31 cure + B32 tip_taper）；松耦合回路 run-to-run 不可复现。
 
-上一节列了三类已机械修好的断裂(`parents[N]` 深度、移动目录的路径字面量、`gate_results` 横向指向)。
-**这一轮实测出第四类**:活脚本里的**绑定文本行** ——
+**归档内容**：`cases/`（24 demo + 23 analysis 证据链）、`docs/`（roadmap + 五 track
+台账、demo_report 证据档案、design_track_b.md、inspection 审查报告、archive）、
+**18 个纯 level-set 测试**（唯一能归档的测试——它们那条路后来被删除了）。
 
-```
-Binding gate text: phases/p1/docs/roadmap/track_v.md GV1.1(a)-(e)
-```
+## phase 2（`p2/`）—— 纲领与激波台
 
-这是 `bench/studies/` 的研究**指向管它的门**的审计链。2026-08-10 整理把
-`phases/p1/docs/roadmap/` 移进了 `p1/`,**而这些绑定行一条都没有重指**:实测**仍有 139 处**
-指向已不存在的 `docs/` 目录(`phases/p1/docs/roadmap/` 94、`docs/discussion_notes/` 17、
-`phases/p1/docs/analysis/` 14、`phases/p1/docs/demo_report/` 11、`phases/p1/docs/archive/` 3),
-另有 **184 处**死的 `docs/**/*.md` 文件字面量(`phases/p1/docs/roadmap/track_v.md` 57、`phases/p1/docs/roadmap.md` 50 领头)。
+**做了什么**：2026-07-28 奠基审计（无粘亚声速健康；跨声速激波位置由调参和网格决定）
+⇒ 立第二阶段纲领：五条产品指标 M1–M5、八条原则、S0–S6 阶段划分。S0 地基（wheel 56 文件、
+bench 基线 + bitcheck 逐位工具）、S1 激波判据台（Laval 喷管精确解）、GS1b.3 熵修正实现
+（三级 cl 跳幅 +40.5% → +13.8%）、预条件子决策（DECISION-2026-08-02，EW forcing 1e-6
+至今是库默认）、**第一版能力边界**（PHASE_TWO_CAPABILITY_BOUNDARY.md——仍是 phase 2 那
+些声明的唯一原件）。
 
-★★★ **本轮不修它们**,理由写下来:把一次目录搬迁和一次 184+139 处的链接修复混在一个提交里,
-**两件事都变得无法验证**。⇒ 登记为 **phase 6 GS6.1 的对象**,并且它现在**有仪器了**(下节)。
+**主要问题**：M1 如实 FAIL（激波 0.6581 带外、两级 cl +101%）——可信包线实测 M_max ≲ 1.2，
+M1 工况落在包线外；鲁棒性随加密变差；PTC 被否证并删除；σ 光滑化、σ 绑 freeze 两条路线
+均为实测负结果（kill criterion 照章）。
 
-### ★★ 断裂类 5:**相对 markdown 链接** —— 而这一类只有它自己的仪器看得见
+**归档内容**：`bench/`（45 个 Track A/V studies 脚本 + gate_results/capability）、
+`docs/dev_phase_two/`（92 个文件：progress.md、roadmap.md（裁决 D1–D5）、
+PHASE_TWO_CAPABILITY_BOUNDARY.md、DECISION-2026-08-02-precond.md、**_TEMPLATE.md**
+（轮次格式模板，至今在用）、README.md）、2026-07-28 奠基审计 + exp1–exp6。
 
-`[x](../inspection/y.md)` 是**相对被引用文件自己的目录**解析的,
-所以一个根相对的正则**在原理上看不见它**。实测代价:本轮搬迁**造成 239 条断链**
-(移动前基线 9 → 移动后 248),其中最大一块是 `phases/p5/docs/dev_phase_five/progress.md`
-**留在原位而它的 60 个轮次文件搬走了** —— 11 条兄弟链接当场断掉。
+## phase 3（`p3/`）—— 删路线、判死路线、多解
 
-修法与验证:按**唯一 basename** 重指并重算相对路径(唯一命中才改,0 或 >1 报告不动)——
-自动修 **231** 条,**12 条**因为 `progress.md` / `roadmap.md` / `README.md` 这类通名重复而按意图手改,
-复验剩 **5 条,全部是 `[φ](TE) = Γ` 这个数学记号**,即本仓库唯一被明确允许的例外。
+**做了什么**：执行裁决 D5 **删除 level-set 路线**（9 库文件 / −4624 行，账目逐位闭合）；
+六面体→四面体剖分路线 (A) 两条判据 FAIL、kill criterion 成立（壁面精度由 O(h) 刻面几何
+决定，与网格结构无关；熵修正的供体确定性问题**本来不存在**）；加密悖论调查答成了
+**M0.80/α1.25 离散解不唯一**（固定网格只换种子，x_shock 撑开 0.168c）；GS4.0 =
+2026-08-16 独立审计的六条活缺陷修复。
 
-### ★ 这一轮的方法论,一句话
+**归档内容**：`bench/`（run_task3_* 26 + run_hex_* 3 + run_gs40* 10）、
+`docs/dev_phase_three/`（68 个轮次文件）、`docs/inspection/`（2026-08-16 独立审计，
+触发 GS4.0）。
 
-**先给搬迁做仪器,并先证明仪器有牙。** 顺序是:
-① 移动前取基线(A=12 / C=9 / D=139);② `git mv`;
-③ **移动后、改写前**跑仪器,**A 必须从 12 跳到 152** —— 这一步就是 G-TEETH,
-一个报 0 的仪器在这里是坏的而不是好的;④ 改写;⑤ 复验回到基线。
+## phase 4（`p4/`）—— 二维 strip IBL
 
-★★ 而**第一版仪器是错的,且是被抽样检查抓住的**:它把
-`[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)` 这种**markdown 显示文本**算成了路径引用
-(CLAUDE.md 的文档地图明写那个名字是历史的),于是报出 277 条"断裂"。
-**这与本文件上一节记的"第一版闭包太松(把注释里的提及也算了)"是同一个错误的第二次出现。**
-⇒ 口径:**报一个数之前,先抽样看那个数里的东西是不是你以为的东西。**
+**做了什么**：GS4.1：二维 strip IBL / 剪应力滞后——粘性重启的第一块（S4 的进入前置
+GS4.0 在 p3）。二维条带积分边界层求解器、剪应力滞后闭包、对 XFOIL 的标定腿。
 
-### ★ 库文件被改了 8 个,而它是**纯文档改动 —— 用 AST 证明的,不是靠读 diff**
+**归档内容**：`bench/studies/gs41_*`（14 个 studies）、`docs/dev_phase_four/`（82 个轮次文件）。
 
-绑定文本也写在 `pyfp3d/` 的模块 docstring 里,所以重指改到了 8 个库文件
-(`kernels/entropy.py`、`meshgen/structured.py`、`meshgen/wing3d.py`、`solve/newton.py`、
-`viscous/closures.py`、`viscous/closures_2d.py`、`viscous/ibl3.py`、`viscous/strip2d.py`;23 insertions / 23 deletions)。
-判据不是"看起来都在 docstring 里",而是:**把每个 docstring 清空之后比较 AST**,
-8 个文件对移动前的基线**逐位相同** ⇒ 代码零改动。
-(基线取自 `git worktree add <tmp> HEAD` —— 未提交状态下 HEAD 就是移动前的树。)
+## phase 5（`p5/`）—— M1 二维无粘标定
+
+**做了什么**：M1 产品指标的二维无粘标定：网格收敛阶梯、三级 cl 一致性的第一次设门尝试。
+27 轮（R11–R23、M1a/M1b/M1e、N1/N2）。
+
+**读它之前必读**：`p5/docs/dev_phase_five/progress.md` 开头的 **§A 仍然成立 / §B 已撤回**
+两张表——引用 phase 5 任何数字之前先读那两张表。
+
+**归档内容**：`bench/studies/`（r11..r22、m1a/m1b/m1e、n1/n2 共 17 个）、
+`docs/dev_phase_five/`（61 个文件，含 progress.md）。
+
+## phase 6（`p6/`）—— 全面梳理 + 门重建
+
+**做了什么**（使用者 2026-08-24 裁决立项：梳理代码、文档、测试、算例，为测试案例建合理的
+门；50 轮 + 两次独立审计）：
+
+- **门号治理**：AST 逐条读完 556 条断言做归类；测试全量重编号进 `tests/A..F`（A/B 未门控
+  机制、C/E 快层、D 门控全集、F 仪器）；证据锁机器 `tests/_gate_evidence.py`（16/19 证据
+  CSV 曾只写不读，现已新鲜复算对已提交 CSV）；删掉 gitignored 的 `artifacts/`（它作为证据
+  形式自相矛盾），C/D 门证据落到被跟踪的 `cases/gates/<gate_id>/`。
+- **CFL3D / XFOIL 对标**：三层参照按模型层级对齐（无粘↔CFL3D Euler 设门 D05/D06/D07、
+  有粘↔RANS 设门 D08、对实验记录偏置不设门 D11/D12、IBL↔XFOIL D13）；M6 结构化 C-H 网格
+  生成器交付；查出两条 M6 阶梯全程跑的是一阶（NITFO≥NCYC 缺陷）；加第四档翻掉 31% 判定
+  ⇒ 判定改三分制（yes/no/unstable/undefined）。
+- **能力边界换代**：`p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md`（2026-10-11）
+  取代 phase 2 原件成为**现行能力声明**。三个实测真边界：α=0 可信上界 M 0.78–0.80（D14，
+  Steinhoff–Jameson 非唯一）；有粘耦合在举力机翼上跑不起来（D09/D10）；生产配置在精确解
+  上的已登记代价（C05）。
+- **确定论**：H30 —— BLAS 由库运行时钉单线程（pytest 里设 env 不生效，OpenBLAS 只在
+  numpy 首载时读）；numba 编译缓存出处态是第三个环境变量 ⇒ D08/D13 锁拆两层 + 暖态纪律
+  （重编译后先白跑再测）。
+- **两个归因研究**：C05 上 amg 不收敛 = AMG 层级建在不含激波耦合的 Picard 块上
+  （激波腿不该用 amg 当默认）；hex 族 NACA medium 全收敛下 cl 比 tet 低 24% = 收敛到
+  tet 从未出现的双激波/气泡结构（残余：生成器缺陷 vs 熵冻结交互未分开）。
+- 基线：开工 595/12/2 → 收口 **831 passed / 33 skipped / 2 xfailed / 0 failed**（16 线程、
+  BLAS=1）；门控全集 812/21/3/1 XPASS；快层 5/5。
+
+**遗留（登记为「留到下一阶段」，见能力边界 §9 与收口判定 §5）**：M3b 速度指标锁、
+W3.1 G-TEETH 定量化、W3.3 ZPG 湍流平板锚、W3.4 非线性 MMS、W3.6 E01/E03 升格评估、
+hex 族能力边界门（红=好消息式）、C05 预条件子文书 + 「amg 能否修」研究、xtr030 多吸引子、
+tet medium 在 r_far 20/30 重生成变体上不收敛。
+
+**归档内容**：`docs/dev_phase_six/`（54 个文件：立项、承接台账、两次审计、50 轮
+prereg/verdict、PHASE_SIX_CAPABILITY_BOUNDARY.md、progress.md 轮次总账）、
+`bench/studies/`（4 个一次性研究：ibl_xfoil_recon、gate_audit_20260905、
+c05_amg_investigation、hex_cl_attribution）、`bench/gate_results/`（m3a_smoothing_ab/
+shock.csv，仅被 m3a 勘误文书引用）、`docs/`（**phase 6 结束时退役的四份纲领文档旧版**：
+`agent-rules.md`、`design.md`——一直维护到 phase 6 的活文档的归档；另两份内容停在
+phase 1 的（`overview.md`、`design_track_v.md`）按内容归属入 `p1/docs/`）。
+
+---
+
+## 归档口径（量出来的规则）
+
+1. **相位归属 = 文件首次提交日期**（边界 2026-07-28 = phase two 纲领建立日）。
+2. **留在原位的判据是可测的**：如果一个仍然存在的测试或脚本读它，它就留在原位。
+   注意**传递闭包**（一跳规则曾漏掉 `v3_loose_coupling`/`v5_1b_scaled_newton`，全套复跑
+   才抓到），且路径可以是**逐段拼出来的**——只认字面量的判据不完整。
+3. **测试代码不归档**（phase 2 起）：每一个测试都在检验活的 `pyfp3d/` 代码；把一条活的
+   收口门指进归档比没有这道门更糟（它会跑、会绿、并为一条没人维护的路线断言能力）。
+   phase 1 的 18 个测试能归档，是因为它们那条路（level-set）被删除了。
+4. **归档保持旧布局是故意的**：归档是历史快照，不追活的一侧的改名（活的在
+   `bench/studies/`，历史的在 `phases/p1/cases/analysis/`）。
+5. **搬迁必须修两类断裂**：根相对路径字面量（绑定文本行）与相对 markdown 链接
+   （`](../…)` 按被引用文件自己的目录解析，搬迁后深度全变）。方法学顺序：**先取基线 →
+   `git mv` → 先证明仪器有牙 → 改写 → 复验回基线**；替换前必须排除「已落在正确路径里」
+   的出现（朴素子串替换曾造出 37 处 `phases/p1/phases/p1/…`）。
+6. **归档脚本里的引用修复**只做能机械验证的，其余如实登记不装死——见顶部可运行性口径。
+
+## 本次（p6）归档做了什么（2026-10-12）
+
+- `git mv`：`docs/dev_phase_six/`（54 文件）→ `p6/docs/dev_phase_six/`；
+  `bench/studies/` 的 4 个一次性研究 → `p6/bench/studies/`（`bench/studies/README.md`
+  自己点名的「不被测试加载」二分；其余 7 个被活测试运行时加载，留下）；
+  `bench/gate_results/m3a_smoothing_{ab,shock}.csv` → `p6/bench/gate_results/`；
+  退役纲领文档：`agent-rules.md`、`design.md` → `p6/docs/`，`overview.md`、
+  `design_track_v.md` → `p1/docs/`（内容归属）。
+- 引用修复：活树 55 处 `docs/dev_phase_six/` 根相对引用重指；归档内 13 处 `](../../`
+  链接深度 +4 个研究的证据指针；`pyfp3d/viscous/` 的 `design_track_v.md` § 引用重指到
+  `p1/docs/` 归档原件；`bench/studies/README.md` 的一次性名单清零。
+- **留在原位**（有活引用）：`tests/` 全部（含 F07–F10 治理锁——它们断言活仓库状态）、
+  `cases/gates/`（活测试证据目录）、`cases/reference_data/cfl3d/`（D05–D10/F08 运行时读）、
+  两个新网格族（rae2822_2.5d、cylinder_hex_2.5d）、`bench/` 根的 12+7 结构与
+  `bench/gate_results/` 其余、`pyfp3d/` 全部。
+- `tools/`（CFL3D/XFOIL 工具链）从不被 git 跟踪，无档可归。

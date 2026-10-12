@@ -2,7 +2,7 @@ r"""D 类门的**我方**三级网格收敛表 —— `grid_convergence_ours.csv
 
 ★ 为什么需要它：参照侧（CFL3D）每个量有四档 + 观察阶 + 三分判定，我方此前
 全两档 —— 一个网格一个数，没有数值不确定度可读（合并分析
-`docs/dev_phase_six/20260906-0100-gate-audit-synthesis.md` §5 W2.1 / H8）。
+`phases/p6/docs/dev_phase_six/20260906-0100-gate-audit-synthesis.md` §5 W2.1 / H8）。
 xcoarse 档进来后（每族三级），我方腿也能读一个**三级**的阶。
 
 ★ 仪器是参照侧的，**不重写**：`implied_order` import 自

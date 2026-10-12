@@ -64,7 +64,7 @@ _name = out_name or ("m3_budget_head.csv" if taper else "m3_budget.csv")
 
 平滑只作用在**后处理**，所以正确的 A/B 不是跑两遍求解（那样 taper、线程、收敛路径都会一起动），
 而是 **解一次、用同一个 φ 提取两次**。
-**证据（已提交）：`bench/gate_results/m3a_smoothing_ab.csv`** —— 4 行 = 2 次求解 × 2 次提取：
+**证据（已提交）：`phases/p6/bench/gate_results/m3a_smoothing_ab.csv`** —— 4 行 = 2 次求解 × 2 次提取：
 
 | taper | smooth | pooled_rms_5 | band_LE_upper | band_MID_upper |
 |---|---|---|---|---|
@@ -147,7 +147,7 @@ no-taper 腿没收敛，不能替它作证。**把它写成「taper 造成的」
 ## 6 x_shock 不动 ⇒ (a) 类判据安全
 
 `xshock_*` 也走 `curves`，而**激波位置是使用者裁定的 (a) 类门判据**，所以必须单独量
-，**证据（已提交）：`bench/gate_results/m3a_smoothing_shock.csv`**，同样一次求解两次提取：
+，**证据（已提交）：`phases/p6/bench/gate_results/m3a_smoothing_shock.csv`**，同样一次求解两次提取：
 
 ★ 该 CSV 复跑过一次：|R| **8.67e-15** 与全部 x_shock **逐位相同**，而墙钟从 ~3 min 变成 **22 min**
 （负载 12 → **44**）—— 又一次「**墙钟是机器的标定，答案才是结果**」。

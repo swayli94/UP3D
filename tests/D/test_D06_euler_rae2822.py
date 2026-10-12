@@ -13,7 +13,7 @@ Case 7 M0.725/α2.55 · Case 9/10 M0.730/α3.19（`euler_rae2822/`，2 工况 ×
 项目纪律 #1 是**上限 16，含 BLAS/OMP**。@16 线程重测：
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md §3）。M0.725 medium 是
+phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md §3）。M0.725 medium 是
 **近简并敏感腿**：跨 BLAS 档落在邻近吸引子上，cl 1.016752 → 1.016375、dx +0.0319 →
 +0.0318、Δcl +3.58 % → +3.55 %。
 ★ 同日：本表 **CFL3D 列与全部派生量已改读 L4**（M0.730 行整行同步：cl 1.113852、

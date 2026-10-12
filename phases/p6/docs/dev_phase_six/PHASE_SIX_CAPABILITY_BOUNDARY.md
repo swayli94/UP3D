@@ -1,7 +1,7 @@
 # pyFP3D 能力边界(phase six · 2026-10-11)
 
 **这份文书取代什么 / 承接什么。** 归档原件
-[phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](../../phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
+[phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](../../../../phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
 是 phase 2 的收尾交付,在本文件出现之前是唯一的能力声明。本文件是 **phase 6 自己的
 能力边界**(立项文书与 CLAUDE.md 都把它列为本阶段交付物)。**数字原则不变:一个数
 没有已提交的产物就不算证据;本文件每个能力数字都注明已提交来源。**
@@ -157,7 +157,7 @@
    激波捕捉的守恒形式(全速势是等熵+无旋,熵修正是模型修正)、
    翼身外部参照(§6)。★ 2026-10-12 更新:hex 网格族的**圆柱**拓扑对照
    已有门(C10,非升力+升力腿全绿);hex 族在 **NACA** 上测出系统性
-   **cl −24 %**(中部气泡结构,归因见 `bench/studies/hex_cl_attribution/`)——
+   **cl −24 %**(中部气泡结构,归因见 `phases/p6/bench/studies/hex_cl_attribution/`)——
    NACA 腿的门形状留作裁决。
 
 ## 8. 已排除 / 不许重开(承接 + 新增)
@@ -185,14 +185,14 @@
 **留到下一阶段的(使用者裁决 2026-10-12,两条)**:
 - ★ **hex 族 NACA 的能力边界门**(「缺陷仍在」式):钉住「上翼面中部气泡
   仍在、cl −24 % 仍在」—— 红 = 好消息(修好了才红)。归因已完成
-  (§5 第 2 条;`bench/studies/hex_cl_attribution/`)。**为什么留**:门建在
+  (§5 第 2 条;`phases/p6/bench/studies/hex_cl_attribution/`)。**为什么留**:门建在
   归因之后更准,而生成器 vs 熵冻结的归属还没分开。
 - ★ **C05/预条件子**:写文书(含激波腿用 direct/ilu,amg 只适用无激波/亚声速)
   + **研究「amg 能否修」**:机制已闭合(预条件子建在不含 Term-3 激波耦合的
   Picard 块上 ⇒ 对激波软模态无反演);**可修的方向存在** —— 把 AMG 建在
   完整的 J_ff 上(而非 Picard 块),或混合预条件(AMG 打底 + 激波方向的低秩
   校正);两者都要量代价(建 J_ff 的 AMG 层级比 A_ff 贵多少)。不改默认值。
-  出处:`bench/studies/c05_amg_investigation/`。
+  出处:`phases/p6/bench/studies/c05_amg_investigation/`。
 
 **研究**(可能改写能力声明):
 - xtr030 多吸引子(裁决②);M0.50 cl 阶 1.24 的归因;激波定位(S2,与 G1.6、

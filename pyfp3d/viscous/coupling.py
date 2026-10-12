@@ -104,7 +104,7 @@ class CouplingConfig:
     tol_ds: loose-loop convergence, max|ds_new - ds_prev| / max|ds_new|
         (GV3.2's 1e-3 criterion).
     eps_diff / eps_diff_s: IBL3 artificial diffusion (load-bearing V1
-        calibration, design_track_v.md §9.4 -- do not zero here).
+        calibration, phases/p1/docs/design_track_v.md §9.4 -- do not zero here).
     """
 
     re_chord: float

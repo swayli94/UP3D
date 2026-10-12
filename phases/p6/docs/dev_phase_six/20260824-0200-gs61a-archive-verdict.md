@@ -1,7 +1,7 @@
 # 20260824-0200 — **第六阶段第一轮（GS6.1-a）判定**：phase 2–5 文档归档 —— **移了 210 个文件，测试一个都没移**，而搬迁本身造成 **239 条断链**（已修回基线）
 
 **性质**：判定。使用者指示 2026-08-24：**梳理 phase 2–5 的文档与测试代码、以及
-`docs/inspection/`，移入 `phases/p*/`**，参照 [`phases/README.md`](../../phases/README.md)。
+`docs/inspection/`，移入 `phases/p*/`**，参照 [`phases/README.md`](../../../../phases/README.md)。
 **`pyfp3d/` 代码零改动 —— 用 AST 证明（§4）。**
 
 ---

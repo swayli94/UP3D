@@ -5,7 +5,7 @@
 第一步是**先量再决定门的形状**。
 
 **产物**：`bench/gate_results/ibl_vs_xfoil_recon.csv`（56 行插值读数 + 2 行 cl），
-再生脚本 `bench/studies/ibl_xfoil_recon/run.py`（约 95 s 出图）。
+再生脚本 `phases/p6/bench/studies/ibl_xfoil_recon/run.py`（约 95 s 出图）。
 **未建任何门，未改任何库代码。**
 
 ---
@@ -92,7 +92,7 @@ FD 精确性、`δ*=0` 时右端项严格为零、站点表闭环）。**没有�
 ## ★ 勘误 2026-09-06（门审计 W0.5 / H5）
 
 本文件开头把 `bench/gate_results/ibl_vs_xfoil_recon.csv` 列为本轮产物，
-progress.md 的台账行还把 `bench/studies/ibl_xfoil_recon/run.py` 写成它的再生脚本。
+progress.md 的台账行还把 `phases/p6/bench/studies/ibl_xfoil_recon/run.py` 写成它的再生脚本。
 **实测：`run.py` 不写这个 CSV** —— 它写的是 `d13_recon.png`（其 docstring 自述
 「侦察产物，写 scratchpad（未提交）」）与 `d13_data.pkl` 缓存。
 ⇒ 该 CSV **没有生产者，也没有读者**（全仓唯一引用曾是 D13 的一行 docstring，

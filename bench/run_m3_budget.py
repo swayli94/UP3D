@@ -295,7 +295,7 @@ def main(levels=("coarse",), legs=LEGS, taper=True, out_name=None, probe_seed=0,
                 #: ★ `xshock_*` 虽也走 curves，但 5 个未遮蔽站最大只动 **+0.0028 x/c**
                 #: （比激波位置带小一个量级）⇒ (a) 类判据安全。
                 #: ★ 那三个 CSV **刻意不重生成**：重生成 = 静默给一个已关闭轮次再基线。
-                #: 全部证据与推理：`docs/dev_phase_six/20260826-0100-m3a-smoothing-erratum.md`。
+                #: 全部证据与推理：`phases/p6/docs/dev_phase_six/20260826-0100-m3a-smoothing-erratum.md`。
                 curves[eta] = section_cp_curve(mc, phi, eta=eta, smooth_passes=1,
                                                b_semi=B_SEMI, m_inf=M_INF)
             per = {}

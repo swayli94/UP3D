@@ -1,6 +1,6 @@
 # c05_amg_investigation —— Q1:C05 喷管生产腿上 `precond="amg"` 为什么 40 步停在 |R|~3.9e-6
 
-预注册:`docs/dev_phase_six/20261012-1000-research-amg-hex-prereg.md` §Q1。
+预注册:`phases/p6/docs/dev_phase_six/20261012-1000-research-amg-hex-prereg.md` §Q1。
 性质:**研究/测量**,不建门、不改判据、不改库(库与判据零改动,本目录为唯一新增)。
 
 ## 结论:机制 ① —— 预条件子没近似到激波块(GMRES+amg 从第一步起就不动)
@@ -68,7 +68,7 @@ sigma frozen-in-transient 警告(amg 腿 last |dσ|=4.8e-3,tail n_shock
 ```
 cd /home/lrz/codes/UP3D
 PYTHONNOUSERSITE=1 NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16 \
-  conda run -n up3d --no-capture-output python bench/studies/c05_amg_investigation/probe1_reproduce_and_extract.py
+  conda run -n up3d --no-capture-output python phases/p6/bench/studies/c05_amg_investigation/probe1_reproduce_and_extract.py
 # 依次再跑 probe2、probe3(各自 ~1–2 min;探针内 sys.path 钉死仓库根)
 ```
 

@@ -5,7 +5,7 @@ unknowns (delta, A, B, Psi, Ctau1, Ctau2).
 
 Binding reference: Drela, AIAA 2013-2437 ("D13"), equations cited by their
 paper numbers. Implementation decisions for the points D13 leaves
-under-specified are recorded in docs/design_track_v.md §3–§4 (D-CT, D-QUAD,
+under-specified are recorded in phases/p1/docs/design_track_v.md §3–§4 (D-CT, D-QUAD,
 D-TR, D-STRESS-2); the binding text is the design doc, this module implements
 it.
 
@@ -43,9 +43,9 @@ are computed but unused upstream of x_tr).
 # not "is defined there" -- the audit classified each by whether any record says
 # WHAT THE DECISION IS:
 #
-#   D-CT    DEFINED   docs/design_track_v.md sec 3.2 + its decision table
-#   D-HB    DEFINED   docs/design_track_v.md decision table
-#   D-QUAD  DEFINED   docs/design_track_v.md decision table -- ★ but its text still
+#   D-CT    DEFINED   phases/p1/docs/design_track_v.md sec 3.2 + its decision table
+#   D-HB    DEFINED   phases/p1/docs/design_track_v.md decision table
+#   D-QUAD  DEFINED   phases/p1/docs/design_track_v.md decision table -- ★ but its text still
 #                     claims the quadrature was set "by polynomial exactness and
 #                     Spalding resolution, unit-tested", and BOTH halves were
 #                     measured false in phase-5 rounds 2 and 3. An erratum is

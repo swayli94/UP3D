@@ -41,7 +41,7 @@
 - ★ 全套跑完后工作树多了 3 个改动的已跟踪文件(D01/D02 的历史子目录证据,见 §4.8),
   **不是有意的修改**,已按 CLAUDE.md 用 `git checkout HEAD -- <paths>` 还原。
 - 工作区原有的两样东西**没动**:`tests/A/test_A52_newton_driver_properties.py` 的未提交改动、
-  未跟踪的 `bench/studies/gate_audit_20260905/results/layer_attribution_D.csv`(处置见 §6)。
+  未跟踪的 `phases/p6/bench/studies/gate_audit_20260905/results/layer_attribution_D.csv`(处置见 §6)。
 
 ## 3. 怎么测的
 

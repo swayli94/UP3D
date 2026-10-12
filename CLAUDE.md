@@ -12,16 +12,17 @@ workstation-scale (minutes for 1–3 M nodes).
 ## Document map (read the relevant one before coding)
 
 ★★ **LAYOUT — read this before following any path below.** Finished phases are archived
-into **`phases/p1/` … `phases/p5/`** (tracked, not gitignored, so the evidence stays in HEAD).
+into **`phases/p1/` … `phases/p6/`** (tracked, not gitignored, so the evidence stays in HEAD).
 The link targets in this map were repointed mechanically, so a line reading
 `[phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md)` means: **the name is historical, the file now
 lives in the archive.** What stays in place is what the CURRENT phase needs, and the rule is
-measurable — *if a surviving test or script reads it, it stays*. Measured state **2026-08-24**:
+measurable — *if a surviving test or script reads it, it stays*. Measured state **2026-10-12**
+(phase 6 close-out):
 
-- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **72 test files** — ★ **every one of
-  them exercises live code** (all 72 have passing items in the gated set), so by the archive's
-  own rule **no test file is archivable**; the 18 pure level-set files went with their deleted
-  route, and phase 2–5 deleted no route. Phase 1's number here used to read "73"; it is 72.
+- `pyfp3d/`, `cases/reference_data/`, `cases/meshes/`, and **99 test files** under
+  `tests/A`–`tests/F` — ★ **every one of them exercises live code** (all have passing items in
+  the gated set), so by the archive's own rule **no test file is archivable**; the 18 pure
+  level-set files went with their deleted route (phase 3), and phase 2–6 deleted no route.
 - `bench/` keeps the **7-module closure** behind the product metrics **plus
   `bench/gate_results/`** — the capability boundary cites those CSVs by path;
 - `cases/demo/` keeps **6** subdirectories, the ones kept tests actually read (e.g.
@@ -29,26 +30,31 @@ measurable — *if a surviving test or script reads it, it stays*. Measured stat
   Option C gate). ★ **`cases/analysis/` NO LONGER EXISTS** — merged into `bench/studies/` in
   `7edce18` (user ruling: `bench/` and `cases/analysis/` were two homes for one thing). The
   historical copy keeps the old name at `phases/p1/cases/analysis/`, deliberately.
-- ★★★ `docs/` holds **only 4 living documents plus the current phase**: `overview.md`,
-  `design.md`, `design_track_v.md`, `agent-rules.md`, and `dev_phase_six/`. **User ruling
-  2026-08-24: every phase-2…5 document moved into `phases/p*/`, and `docs/inspection/` was
-  DELETED** — audit reports now archive with their phase (`phases/p{1,2,3}/docs/inspection/`),
-  and a new report is written into the current phase's directory. Prior analysis and documents
-  are **reference material only**; phase 6 tracks what is still in force itself.
-  ⇒ **`docs/dev_phase_six/20260824-0300-carried-forward.md` is the single live landing point**
+- ★★★ `docs/` holds **only 4 living documents**: `overview.md`,
+  `design.md`, `design_track_v.md`, `agent-rules.md` (all four **rewritten in Chinese at the
+  phase-6 close-out, 2026-10-12**; their pre-phase-7 versions are archived with the phase their
+  content belonged to — see `phases/README.md`). **Phase working documents always archive with
+  their phase**: phase 6's working documents (54 files — 50 rounds of prereg/verdict, two
+  audits, the ledger, and the current capability boundary) live at
+  `phases/p6/docs/dev_phase_six/`,
+  and a new phase writes its rounds into its own `docs/dev_phase_<n>/` directory which will
+  itself be archived at that phase's close-out. `docs/inspection/` was DELETED 2026-08-24 —
+  audit reports archive with their phase (`phases/p{1,2,3}/docs/inspection/`).
+  Prior phases' analysis and documents are **reference material only**.
+  ⇒ **`phases/p6/docs/dev_phase_six/20260824-0300-carried-forward.md` is the single live landing point**
   for anything the archived files used to state: the **measured** library defaults (`ew_eta0` =
   `ew_eta_max` = 1e-6, `entropy_correction=True`, `tip_cap="round"`, `upwind_c=1.5`, `m_crit`
   0.95, `m_cap` 3.0 — read with `inspect.signature`, not copied), the rulings still in force
   (D5 executed, D2 activated; ★ D1/D3/D4 explicitly **not** re-checked), and the do-not-reopen
   list. ★ Phase 6's own capability boundary now exists:
-  **[docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md)
+  **[phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md)
   (2026-10-11)** — cite IT for the current state. The phase-2 original stays archived at
   `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md`; cite it only for
   statements the phase-6 document has not re-measured (it is a historical snapshot,
   not the live state).
   ★ Round-file template: `phases/p2/docs/dev_phase_two/_TEMPLATE.md`.
 
-**Start here:** [docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md),
+**Start here:** [phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md),
 then [phases/README.md](phases/README.md) for what was archived and how to get a
 guaranteed-runnable phase-1/2 tree (`git worktree add ../up3d-prereorg d224223`).
 
@@ -56,52 +62,23 @@ Docs were split by track on 2026-07-15; the old monolith paths remain as thin
 indexes, so historical references like "roadmap.md Track B" or "demo_report §P4"
 resolve through one hop.
 
-- [docs/overview.md](docs/overview.md) — human-readable snapshot: per-track
-  status table, **document map** (which file is authoritative for what, and when
-  to update it), regression-baseline lineage, long-standing open items.
-- [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md) — **active tracker index**: working rules,
-  gate-ID/renumbering conventions, one-line status per track. The phase entries,
-  gate checklists and progress ledgers live in **[phases/p1/docs/roadmap/](phases/p1/docs/roadmap)**
+- [docs/overview.md](docs/overview.md) — human-readable overview: what the project is,
+  the live repo map, what each phase did, and the registered next-phase candidates.
+- [phases/p1/docs/roadmap.md](phases/p1/docs/roadmap.md) — **phase-1 tracker index (FROZEN
+  history)**: phase-1's working rules, gate-ID conventions, and per-track ledgers
   (`track_p.md` P0–P14 solver, `track_m.md` M0–M5 meshing, `track_b.md` B1–B32
-  level-set wake — **B16/B17 far-field aux pin + `pin_gamma`, B18 wing-body
-  transonic, B19 LS-Jacobian exactness, all ✓ CLOSED 2026-07-18; B20
-  mixed-plain main-field density ADOPTED PERMANENTLY + re-baselined and B21
-  N1 freeze-capture fix (restores the M6-medium M0.84 ramp; GB20.7's
-  "capability loss" verdict overturned), both ✓ CLOSED 2026-07-19; B23
-  junction discriminator (the pocket = the wake inboard free-edge
-  singularity), B24 waterline-extension route closed (negative) and B25
-  `inboard_clip` CURES the pocket (corrM 14.66→0.63, default None
-  bit-identical), all ✓ CLOSED 2026-07-19; B26 post-cure LS ceiling
-  re-measured = the conforming site (medium 0.7625 / coarse 0.84 reached)
-  and B27 B18 demo refresh (checks 8/8 PASS, 336/336 bit-identical;
-  transonic cross-model M0.65 2.4% PASS / M0.75 2.5%), both ✓ CLOSED
-  2026-07-20 — the B18 "junction-limited" story is RETIRED; B28 cl_fus
-  decoupling + GB9.4 re-spec (the "fuselage spurious lift" label retired;
-  out-band cross-model ≤15%, medium 7.0% PASS) and B29 flat-fragment adopted
-  as the wing-body LS production config, both ✓ CLOSED 2026-07-20; B30
-  (b)-class ceiling attribution (conforming stall and LS+clip death = the
-  SAME wing-tip P13 free-edge singularity + high-M Newton, not a wake-model
-  pocket) ✓ CLOSED 2026-07-21; B31 C-class wing-tip cure (production
-  pressure+taper cures the conforming 0.83 dying level via the FD-verified
-  Gamma-pin row blend; LS-side C-class closed negative) and B32 conforming
-  tip_taper adopted (wing-body medium ceiling M0.79 → **M0.84 reached**,
-  cl_p 0.2738, 0 clamps; weld-sign per-step refresh rolled back as
-  ill-posed), both ✓ CLOSED 2026-07-22; **P11
-  curved wall elements ✓ CLOSED 2026-07-19 in track_p — measured NEGATIVE,
-  G1.6 re-attributed to intrinsic P1 capability at h=0.08 (not the wall
-  variational crime), route fork = user's call** —
-  `track_v.md` V1–V4 viscous, designed-not-started, `track_a.md` A1–A3
-  verification & analysis; **A3 ✓ CLOSED 2026-07-18** = the response to the
-  2026-07-17 independent inspection (phases/p1/docs/inspection/; the 2026-07-19
-  second-round inspection's N1/D1–D10 findings were executed by B21 + the
-  errata wave). **Next phase = user's call.**)
-  "What phase are we in" and "what gate is open" live there, nowhere
-  else. Track B numerics live in a separate spec,
+  level-set wake — the route was deleted in phase 3, `track_v.md` V1–V6 viscous,
+  `track_a.md` A1–A3 verification). Phase 2 onward, the per-phase ledger is
+  `phases/pN/docs/dev_phase_*/progress.md` and "what phase are we in" lives in
+  [docs/agent-rules.md](docs/agent-rules.md). Track B numerics spec:
   [phases/p1/docs/design_track_b.md](phases/p1/docs/design_track_b.md) (it supersedes DN1).
-- [docs/design.md](docs/design.md) — theory & numerics reference: equations (§2–§3),
-  wake/Kutta (§4), BCs (§5), discretization (§6), Numba kernel rules (§7), solver
-  strategy (§8), V0–V6 validation ladder (§10), risks/mitigations (§12); §11 is a
-  pointer to roadmap.md + phases/p1/docs/roadmap/ since 2026-07-15.
+- [docs/design.md](docs/design.md) — theory & numerics reference (rewritten in Chinese at
+  the phase-6 close-out): equations (§2–§3), wake/Kutta (§4), BCs (§5), discretization (§6),
+  Numba kernel rules (§7), solver strategy (§8), V0–V6 validation ladder (§10),
+  risks/mitigations with per-risk gate pointers (§12, mechanically indexed by F10).
+- [docs/design_track_v.md](docs/design_track_v.md) — the viscous-coupling line (Track V):
+  design summary, current boundaries (D08–D13), and open items; the phase-1 design record
+  it cites by section lives at `phases/p1/docs/design_track_v.md`.
 - [phases/p1/docs/demo_report.md](phases/p1/docs/demo_report.md) — **evidence dossier index** (per-
   phase directory table); the evidence sections live in
   **[phases/p1/docs/demo_report/](phases/p1/docs/demo_report)** (`track_p.md`, `track_m.md`,
@@ -603,7 +580,7 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    状态）；「冷编译后暖跑」复现 committed 证据到 ≤ 5e-10。⇒ 任何 pyfp3d 重编译 /
    清 `__pycache__` 之后，**先白跑一遍再刷新或验证证据**；新 clone 的第一跑会飘、
    第二跑绿 —— 这不是缺陷，是编译扰动测量。依据：
-   `docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节；
+   `phases/p6/docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节；
    D08/D13 的证据锁已按此改成两层（出处层 1e-6 + 散布带层），见两门锁类的
    docstring。
    Previous: **674 passed + 33 skipped +

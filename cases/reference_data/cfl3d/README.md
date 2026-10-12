@@ -1,7 +1,7 @@
 # CFL3D reference data — Euler and RANS, 2-D (gates D05 / D06 / D08 / D09)
 
 Answers the reference-data request in
-[docs/dev_phase_six/20260824-0400-gate-taxonomy-analysis.md](../../../docs/dev_phase_six/20260824-0400-gate-taxonomy-analysis.md)
+[phases/p6/docs/dev_phase_six/20260824-0400-gate-taxonomy-analysis.md](../../../phases/p6/docs/dev_phase_six/20260824-0400-gate-taxonomy-analysis.md)
 §4 (Euler, cases 2D-1…2D-6) and §4.7 (RANS, cases R-1…R-6), under
 **裁决三 — three-layer reference, aligned by model level**:
 
@@ -663,7 +663,7 @@ re-measured on 2026-09-04 after two defects were found and fixed:
 still requested `RKAP0 = 0.3333`, and `ICHK = 0` left CFL3D's **positivity
 limiter off**, which killed three of the four rungs the moment second order
 switched on. Full record:
-`docs/dev_phase_six/20260903-0200-cfl3d-first-order-defect.md`.
+`phases/p6/docs/dev_phase_six/20260903-0200-cfl3d-first-order-defect.md`.
 
 The recipe is identical on all four rungs: `cfl 0.2 → 5.0`, `iflagts 1500`,
 `NITFO 500`, `NCYC 1500`, `ICHK 2`, `mseq 3`.

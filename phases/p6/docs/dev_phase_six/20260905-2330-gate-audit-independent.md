@@ -213,7 +213,7 @@ Trefftz 诱导阻力(grep 零命中)、非升力 Newton 入口(G10.1 开项)。
    自己的 schema 守卫拒写(设计如此,但该矩阵在 HEAD 不可复现/不可续跑);
    `capability/` 是空目录而 docstring 声称其产物 TRACKED。
 5. `bench/gate_results/ibl_vs_xfoil_recon.csv` **无生产者**(study 的 run.py 不写此 CSV),
-   证据链断;`bench/studies/ibl_xfoil_recon/` 无 PRE_REGISTRATION/VERDICT,不符合
+   证据链断;`phases/p6/bench/studies/ibl_xfoil_recon/` 无 PRE_REGISTRATION/VERDICT,不符合
    studies 纪律;`bench/studies/README.md` 的"被谁加载"表是重编号前测试名,且
    v6_1_wake_sheet 在 HEAD 已无测试加载其 run.py。
 6. `tests/D/test_D05/D06` 模块 docstring 陈旧(写"读 L3",代码已读 L4;D05 的错误消息

@@ -1,5 +1,5 @@
 r"""hex 族 NACA0012 M0.80/α1.25 的 cl −24 % 归因（预注册 Q2：
-docs/dev_phase_six/20261012-1000-research-amg-hex-prereg.md）。
+phases/p6/docs/dev_phase_six/20261012-1000-research-amg-hex-prereg.md）。
 
 实测背景（W2.6，20261012-1000-w25-w26-verdict.md §4.2）：hex medium 全收敛下
 cl 0.2582 vs tet medium committed 0.341340（D05），x_shock 一致（差 0.010 c），

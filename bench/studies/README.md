@@ -1,4 +1,4 @@
-# `bench/studies/` —— 被活测试实际加载的 **7 个** + **一次性研究 4 个**
+# `bench/studies/` —— 被活测试实际加载的 **7 个**
 
 ★★ **2026-08-24 归档**：原本 48 个目录，其中 **41 个是一次性研究**，已随各自阶段移入
 `phases/p*/bench/studies/`。留在这里的 **7 个**，每一个都**被 `tests/` 里的某个文件在运行时
@@ -6,8 +6,10 @@
 **重编号前**的旧名 —— 现行文件名在 `tests/A/` 里,如 test_v5_above_band_seed →
 test_A48_*,映射见 progress.md 第 10 轮）：
 
-★ 另有一次性研究目录 **4 个**(不被测试加载,按纪律 3 承担已提交证据):
-`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investigation`、`hex_cl_attribution`。
+★ **2026-10-12(phase 6 收口归档)**:一次性研究目录也全部随阶段归档 ——
+phase 6 的 4 个(`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investigation`、
+`hex_cl_attribution`)移入 [`phases/p6/bench/studies/`](../../phases/p6/bench/studies/)。
+⇒ 本目录现在**只剩被测试加载的 7 个**;一次性研究一进仓库就该指向自己的阶段归档。
 
 | 目录 | 被谁加载 |
 |---|---|
@@ -41,6 +43,7 @@ test_A48_*,映射见 progress.md 第 10 轮）：
 | phase 3 | [`phases/p3/bench/`](../../phases/p3/bench/) | `run_task3_*`（26）· `run_hex_*`（3）· `run_gs40*`（10） |
 | phase 4（GS4.1） | [`phases/p4/bench/`](../../phases/p4/bench/) | `gs41_*`（14 个 studies） |
 | phase 5（M1） | [`phases/p5/bench/`](../../phases/p5/bench/) | `r11..r22`、`m1a/m1b/m1e`、`n1/n2`（17 个 studies） |
+| phase 6（梳理+门重建） | [`phases/p6/bench/`](../../phases/p6/bench/) | `ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investigation`、`hex_cl_attribution`（4 个一次性研究）+ `m3a_smoothing_*` 证据 CSV |
 
 ★ **证据仍被 git 跟踪** —— 归档是目录重组，不是取消证据。
 ★★ **但归档脚本不保证能跑**：见 [`phases/README.md`](../../phases/README.md) 的可运行性口径与

@@ -1,5 +1,5 @@
 """C10 — hex 结构族 vs tet 族的**圆柱交叉门**（C 类；预注册
-docs/dev_phase_six/20261012-1300-c10-hex-cylinder-prereg.md）。
+phases/p6/docs/dev_phase_six/20261012-1300-c10-hex-cylinder-prereg.md）。
 
 ★★★ **攻击点**：若 hex 生成器（`pyfp3d/meshgen/structured.py`）有一个**系统
 缺陷**，所有用它的门共享该缺陷。同几何（半径 1 的圆柱）两拓扑对照：

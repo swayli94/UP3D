@@ -10,7 +10,7 @@ r"""D08 — pyFP3D FP+IBL vs CFL3D RANS — NACA0012（R-1..R-4）。
 后者要武断地挑一个湍流模型当真值。前者用的正是两模型设计的用意。
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；两个 medium 格已同步
+phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；两个 medium 格已同步
 （xtr005 0.280600 → 0.283333、xtr030 0.257033 → 0.282068），移动登记见文末
 「2026-10-10：BLAS 吸引子切换登记」。带的区间按参考文件 L4 逐字核对。
 
@@ -81,7 +81,7 @@ max relative 1.024）。⇒ 那个"穿带"结论**建立在一个不稳定的读
 ## ★ 2026-10-10：BLAS 吸引子切换登记
 
 证据在真 BLAS=1 下重刷（预注册：
-`docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md`）。两个 coarse 行的
+`phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md`）。两个 coarse 行的
 **物理列逐位不动**；两个 medium 行移动：
 
 | 腿 | 量 | 旧（BLAS=24 档） | 新（BLAS=1） |
@@ -359,7 +359,7 @@ class TestReferenceIsLoadBearing:
 
 class TestCommittedEvidenceIsLoadBearing:
     r"""★★★ 两层锁（2026-10-11，第 44 轮；裁决 =
-    `docs/dev_phase_six/20261011-1800-process-history-determinism.md` §5 选项 1+2，
+    `phases/p6/docs/dev_phase_six/20261011-1800-process-history-determinism.md` §5 选项 1+2，
     逐列实测散布见同日的 M1 表与该文件勘误节）：
 
     - **出处/参照层**（1e-6 值锁，走 `assert_matches_committed`）：

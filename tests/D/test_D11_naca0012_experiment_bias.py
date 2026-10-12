@@ -11,7 +11,7 @@ r"""D11 — NACA0012 三工况实验 Cp：**记录无粘模型对实验的偏置
 ★★★ **三个工况按"粘性物理有多重要"干净分层，这就是本门的读数**（medium，`smooth_passes=1`）：
 
 ★ 2026-10-10：证据按真 BLAS=1 重刷（登记见
-docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；物理列移动 ≤ 2.4e-4
+phases/p6/docs/dev_phase_six/20261010-1300-evidence-relock-blas1-prereg.md）；物理列移动 ≤ 2.4e-4
 相对，动了哪格改哪格。M0.778 medium 在 BLAS=1 下**仍是 limit_cycle**（converged=False、
 400 步封顶、|R| 2.9e-07，见新 CSV）。
 

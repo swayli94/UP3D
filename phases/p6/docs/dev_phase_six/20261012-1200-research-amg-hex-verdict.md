@@ -4,7 +4,7 @@
 阶段 / 门:无门(研究)—— 预注册:
 [20261012-1000-research-amg-hex-prereg.md](20261012-1000-research-amg-hex-prereg.md)
 提交:分支 `claude/phase-six-audit`(本文件随判定提交)
-证据:`bench/studies/c05_amg_investigation/`、`bench/studies/hex_clattribution/`(已提交)
+证据:`phases/p6/bench/studies/c05_amg_investigation/`、`bench/studies/hex_clattribution/`(已提交)
 
 ---
 
@@ -28,7 +28,7 @@
   ⇒ Newton 步恒近零 ⇒ 40 步烧满预算停在 |R| 3.9e-6。
 - **与既有登记咬合**:这正是 N6 的「激波软模态在预条件子、不在 η」的机制,
   现在有了逐件证据(σ_min、奇异矢定位、错配剖面)。
-- 证据:`bench/studies/c05_amg_investigation/`(GMRES 残差序列、错配剖面、
+- 证据:`phases/p6/bench/studies/c05_amg_investigation/`(GMRES 残差序列、错配剖面、
   三个可复算探针)。
 - ★ 推论(登记,不在本轮做):**amg 在含激波的腿上都不该当默认** ——
   生产默认 `precond="amg"` 的适用范围需要在能力边界文书里写清
@@ -48,7 +48,7 @@
 - kill criterion 触发并照记:hex fine 400 步帽下 |R| 振荡 2.2–2.5e-7 不收敛
   (激波结构极限环)—— 没换网格糊弄;x_shock 按物理口径仍可读(0.629,
   朝 CFL3D L4 的 0.6405 走)。
-- 证据:`bench/studies/hex_cl_attribution/`(阶梯 CSV、Cp 分段差、
+- 证据:`phases/p6/bench/studies/hex_cl_attribution/`(阶梯 CSV、Cp 分段差、
   气泡指标、残差史、三张图)。
 
 ## 3. 判据逐条(预注册)

@@ -1,7 +1,7 @@
 # `bench/` 留下的 12 个 —— **按角色命名，不再按阶段**
 
 ★★ **2026-08-24**：`bench/` 从 **99 个脚本 / 48 个 studies** 收敛到 **12 + 7**。
-判据是三条（缺一不可，见 [phase-6 普查](../docs/dev_phase_six/20260824-0600-bench-audit.md)）：
+判据是三条（缺一不可，见 [phase-6 普查](../phases/p6/docs/dev_phase_six/20260824-0600-bench-audit.md)）：
 ① `tests/` 的传递闭包 ② 有 cadence 的 runner / 工具 ③ 产品指标门。
 
 | 文件 | 角色 | 备注 |

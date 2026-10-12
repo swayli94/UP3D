@@ -843,41 +843,16 @@ cases/                     # inputs and demos only, now that analysis/ merged in
 │                           #   they go when phase 3 amputates those LS legs.
 └── demo/                  # ✓ per-phase self-checking demos with committed figures
 
-docs/                      # only what phase 3 needs; the phase-1 plan/evidence is in phases/p1
-├── dev_phase_two/          # ★ six files kept:
-│   ├── PHASE_TWO_CAPABILITY_BOUNDARY.md   # ★★ READ FIRST when picking the project up
-│   ├── LEVELSET_DELETION_INVENTORY.md     # ★ phase three's first task, counted by AST
-│   ├── roadmap.md, progress.md            #   the plan + the 70-round ledger and its tables
-│   ├── DECISION-2026-08-02-precond.md     #   a decision record with refutation conditions
-│   └── _TEMPLATE.md         #   the round-file format (pre-registrations are committed BEFORE
-│                           #   the measurement they govern -- that ordering is the point).
-│                           #   The 85 executed round files are in phases/p2/docs/dev_phase_two/
-├── dev_phase_three/        # ★★ THE ACTIVE PHASE (added here 2026-08-16 -- this document is the
-│                           #   surface the close-out ritual flags as the one that silently rots,
-│                           #   and it had carried only phase 3's FIRST round until now).
-│                           #   68 round files, one pre-registration + one verdict per round, each
-│                           #   pre-registration committed BEFORE the code it governs.
-│   ├── progress.md          # ★ THE INDEX: one row per round (36 rows), plus the task ①②③ status
-│   ├── 20260811-*           #   task ① delete the level-set route; task ② hexahedral body-fitted
-│   │                        #   mesh (Q1 donor determinism, Q2 wall accuracy -- both FAIL, ruling
-│   │                        #   D6 stopped the route)
-│   ├── 20260811..0813-*     #   task ③ part 1: the refinement paradox, non-uniqueness, and seven
-│   │                        #   sigma rounds (selection / strength / charge count / freeze / soft
-│   │                        #   membership / magnitude-preserving / capture) -- the sigma line
-│   │                        #   closed with a trade-off statement in the capability boundary
-│   ├── 20260813..0815-*     #   task ③ part 2: the M6 LE line -- staleness triage, chordwise
-│   │                        #   registration, tip gate, offset-vs-scatter, isoparametric-P2
-│   │                        #   read-only assessment, fixed-budget allocation, self-convergence
-│   ├── 20260815..0816-*     #   task ③ part 3: the non-convergence discriminator chain, then the
-│   │                        #   turn to product metrics -- S4's premise check, its cost trend, and
-│   │                        #   20260816-1000-gs41-initiation.md (a proposal, not an opened gate)
-│   └── (the level-set deletion verdict is 20260811-0100)
-├── design.md, design_track_v.md            # theory/numerics reference (current); track_b is
-│                           #   archived with the level-set route (ruling D5)
-├── agent-rules.md          # imported by CLAUDE.md via @; phase-one "Current phase" narrative
-│                           #   is frozen, the session disciplines still apply
-├── overview.md             # phase-one snapshot (frozen)
-└── inspection/             # independent audits -- the 2026-07-28 full audit founded phase two
+docs/                      # ★ only FOUR living documents (rewritten in Chinese at the phase-6
+│                          #   close-out, 2026-10-12). Phase working documents archive with their
+│                          #   phase: phase N's rounds live in phases/pN/docs/dev_phase_*/
+│                          #   (index: phases/README.md). docs/inspection/ was deleted 2026-08-24.
+├── overview.md            # what the project is, live repo map, per-phase summary, next-phase candidates
+├── design.md              # theory/numerics reference (§1–§13; §12 risk↔gate index is F10-checked)
+├── design_track_v.md      # Track V viscous coupling: design summary, boundaries, open items
+│                          #   (the phase-1 design record it cites by section is at
+│                          #   phases/p1/docs/design_track_v.md)
+└── agent-rules.md         # imported by CLAUDE.md via @; current-phase pointer + disciplines
 
 pyproject.toml            # ✓ Project metadata and dependencies
 setup.py                  # ✓ Legacy setup (pyproject.toml preferred)
@@ -1680,8 +1655,13 @@ the tree). What phase five added, none of it navigable from the tree until now:
     tests/F/test_F05_usability_anchor.py         # 9 locks on the usability criterion
     phases/p5/docs/dev_phase_five/      # ★ 27 rounds + prereg/verdict/errata + progress.md
                                         #   (ARCHIVED 2026-08-24 by user ruling, with all of
-                                        #    phase 2-5; docs/ now holds 4 living documents
-                                        #    plus dev_phase_six/, and docs/inspection/ is GONE)
+                                        #    phase 2-5; docs/inspection/ is GONE)
+    phases/p6/                          # ★ phase 6 (2026-08-24 .. 2026-10-12, ARCHIVED 2026-10-12):
+                                        #   docs/dev_phase_six/ (54 files: 50 rounds + 2 audits +
+                                        #   the CURRENT capability boundary), bench/studies/ (the 4
+                                        #   one-shot studies), docs/ (the four pre-rewrite
+                                        #   programmatic docs). docs/ now holds 4 living documents,
+                                        #   rewritten in Chinese at the close-out.
 
 ★★ **The one `pyfp3d/` change in phase five**: `solve/newton.py` gained `gamma_target`
 (prescribed circulation, R19) -- **20 non-comment lines**, generalising B31's Gamma-pin target
@@ -1690,7 +1670,10 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **803 passed / 32 skipped / 2 xfailed, 0 failed** (2026-10-10, measured @16 threads, runtime BLAS pinning active; gated 812/21/3/1 @8t same day; previous 674/33/2 on 2026-08-28
+Baselines: always-on **825 passed / 33 skipped / 2 xfailed, 0 failed** (2026-10-12, phase-6
+close-out, measured @16 threads with runtime BLAS pinning; gated full set 812/21/3/1 XPASS
+@1:14:28; fast tier 5/5 — see phases/p6/docs/dev_phase_six/20261012-1500-phase6-closeout-verdict.md).
+Previous: **803 passed / 32 skipped / 2 xfailed, 0 failed** (2026-10-10, measured @16 threads, runtime BLAS pinning active; gated 812/21/3/1 @8t same day; previous 674/33/2 on 2026-08-28
 full @1055.94 s @8 threads at load 12.8, phase-six 第 10–28 轮).
 ★★★ D03 的 M0.80 跨声速激波门此前**在任何周期上都不跑**（重编号把图开关加在了物理判据上，
 需两个标志同开）—— 已拆开。★★ **19 道**写证据的 C/D 门现在都对已提交 CSV 做新鲜复算比对（2026-10-10 实数：C 类 8 + D 类 11；证据 CSV 带 `blas_threads` 出处列）。
@@ -1752,9 +1735,11 @@ phases/p3/docs/dev_phase_three/20260811-0100-ls-deletion-verdict.md.
 ⚠ `phases/p1/` still imports the deleted modules and is NOT runnable; the archive is a
 snapshot, and a working tree is `git worktree add ../up3d-prereorg d224223`.
 
-★★ **PHASE TWO (2026-07-28 .. 2026-08-10) — read
-[phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md)
-first.** The whole block below this line is the PHASE-ONE footer, frozen with the
+★★ **PHASE TWO (2026-07-28 .. 2026-08-10).** Phase 6 closed 2026-10-12 and the CURRENT
+capability boundary is
+[phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md);
+the phase-two original below stays citable for what phase 6 did not re-measure. The whole
+block below this line is the PHASE-ONE footer, frozen with the
 phase-one docs on 2026-07-28 (phases/p2/docs/dev_phase_two/roadmap.md §8); its status verdicts
 are history, its technical facts stay citable as phase-one records.
 

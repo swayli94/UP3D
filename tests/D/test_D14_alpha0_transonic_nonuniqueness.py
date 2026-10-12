@@ -22,7 +22,7 @@ r"""D14 — **α = 0 跨声速非唯一性：一条能力边界门**（W1.5 / H1
 （`|cl| ≤ ZERO_LIFT_CL_MAX = 0.005`）。本门**不改那条判据**，只把它的工况点
 往上延伸，并按能力边界的方式记录结果。
 
-## 实测（`bench/studies/gate_audit_20260905/`，α = 0，冷启动，生产配方）
+## 实测（`phases/p6/bench/studies/gate_audit_20260905/`，α = 0，冷启动，生产配方）
 
 | M∞ | medium cl | \|cl\| / 0.005 | 收敛 |
 |---|---|---|---|
@@ -210,7 +210,7 @@ class TestCommittedEvidenceIsLoadBearing:
 
     #: ★ 2026-10-11（第 44 轮）：`residual` 摘出值锁 —— H30 已在 D05/D06/D07
     #: 执行过「residual 不进值锁」（机器零附近它比的是舍入对舍入）；
-    #: `docs/dev_phase_six/20261011-1800-process-history-determinism.md` §4
+    #: `phases/p6/docs/dev_phase_six/20261011-1800-process-history-determinism.md` §4
     #: 登记了 D14 这条尾巴（它曾在 4e-13 上摆 15 %）。它留在 CSV 作记录。
     COLS = ("cl", "cl_over_band")
 
