@@ -15,6 +15,9 @@ phase 6 的 4 个(`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investiga
 残余拆分探针，两臂：熵 OFF / 冻结 OFF）**在 phase 7 期间留在原位**，随 phase 7 收口
 归档进 `phases/p7/`。它不被任何测试加载（锚读 committed 的 D15 门证据）。
 
+★ **2026-10-12(phase 7 第 4 轮)**:`amg_shock_fix/`（「amg 能否修」研究：方向 1
+实测负、方向 2 可修 + 代价表）同上 —— phase 7 期间留原位，收口归档，无测试加载。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
