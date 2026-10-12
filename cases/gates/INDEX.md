@@ -6,6 +6,7 @@
 |---|---|
 | 谁写它 | `tests/C/*` 与 `tests/D/*`，经 `gate_evidence_dir` fixture |
 | 何时写 | ★ 只在 **`PYFP3D_GATE_FIGURES=1`** 时；平时跑**不写盘**，断言对着已提交的 `summary.csv` |
+| 什么状态下写/验 | ★ **暖缓存态**（2026-10-11，第 44 轮）：任何 pyfp3d 重编译 / 清 `__pycache__` 之后，先白跑一遍再刷新或验证证据；新 clone 的第一跑可能在证据锁上飘、第二跑绿 —— 这不是缺陷，是编译扰动测量（`docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节） |
 | 为什么这样 | 图与断言来自**同一次计算**（构造保证）；平时不写 ⇒ 一次普通 `pytest` **不脏工作树** |
 | 刷新 | `PYFP3D_GATE_FIGURES=1 pytest tests/C tests/D` —— 数字变了要走再基线的**勘误清单**纪律 |
 
@@ -63,11 +64,19 @@
 ## C05_nozzle_quasi1d
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`C05_nozzle_quasi1d/summary.csv`](C05_nozzle_quasi1d/summary.csv) — 4 行（3 级阶梯 + **反例腿**），列 `nx, h, n_max, converged, reason, n_newton, residual, x_shock, x_s_exact, err_x, err_cells`
+- [`C05_nozzle_quasi1d/summary.csv`](C05_nozzle_quasi1d/summary.csv) — 5 行（3 级阶梯 + **反例腿** + **生产腿**），列 `nx, h, n_max, converged, reason, n_newton, residual, x_shock, x_s_exact, err_x, err_cells`
 
 ★★★ **项目里唯一带激波的精确解。** 左图三级 u(x) 全部贴在精确准一维解上，激波稳定落在
 精确位置 x_s = 12 的**上游**约 0.7 个单元；右图 `|err_x|` 沿一阶线走（实测阶 **0.927 / 0.834**），
 而 `|err_cells|` 几乎是平的（0.651 / 0.685 / 0.768）—— **位置在收敛，捕捉宽度保持亚单元**。
+
+★★★ **W2.2b（2026-10-11）：精确解从本轮起也经过生产驱动器。** CSV 第 5 行
+（`leg=production`，nx = 200）是 `solve_newton_nonlifting` 腿：熵修正 ON、m_cap/
+钳制记账在位、`precond="direct"`（amg 在本案不收敛，N6 登记的激波软模态机制）。
+**实测它出带**：err_cells = **−2.7752**（阶梯腿带内最大 |0.77|）—— 归因对照
+（生产驱动器 + 熵 OFF）与 DuctSystem 腿**逐位全等**，所以出带完全来自熵修正
+（sigma_min = 0.988 把激波往上游多抹 2.1 个单元）。按预注册 §4 记录为生产配置在
+精确解上的**已知代价**，判据带不放宽；断言以「缺陷仍在」的形状锁住它。
 
 ★★★ **CSV 第 4 行不是阶梯的一部分，它是本门最值钱的一条**：从 x_s = 8 的解出发
 （边界数据仍是 x_s = 12 的真值），nx = 200 收敛到 **`reason=tol`、|R| = 1.3e-15**（机器零），
@@ -136,11 +145,18 @@ oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1
 ## C08_ringleb
 
 **判据读的 CSV**（平时跑就是对着它断言）：
-- [`C08_ringleb/summary.csv`](C08_ringleb/summary.csv) — 5 行（`upwind_c` 扫描 + `m_crit` 腿），列 `leg, h, upwind_c, m_crit, converged, reason, n_newton, residual, r_exact, rms, rms_sup, rms_sub, n_sup, n_cell, m_num_max, m_ex_max`
+- [`C08_ringleb/summary.csv`](C08_ringleb/summary.csv) — 6 行（`upwind_c` 扫描 + `m_crit` 腿 + **生产腿**），列 `leg, h, upwind_c, m_crit, converged, reason, n_newton, residual, r_exact, rms, rms_sup, rms_sub, n_sup, n_cell, m_num_max, m_ex_max`
 
 ★★★ **唯一 2-D 跨声速精确解，而且是全速势方程本身的解。** 与 C05 的分工是它存在的理由：
 喷管里**有激波** ⇒ 数值解本该与等熵精确解不同，那里只能判**激波位置**；Ringleb 的超声速
 口袋是**无激波、光滑**的 ⇒ **人工密度加的每一分耗散都是纯误差**。
+
+★★★ **W2.2b（2026-10-11）：精确解从本轮起也经过生产驱动器。** CSV 第 6 行
+（`leg=production`，h = 0.08）是 `solve_newton_nonlifting` 腿：熵修正 ON、生产默认
+amg（本案收敛，18 步）。读数**在带内但方向混合**：超声速 RMS 0.1001 → **0.1269**
+（带 0.13，熵修正在无激波口袋开火，n_shock = 53 = GS1b.10 的过生产机制）；
+峰值 Mach 却从低估 −2.26 % 变**高估 +1.01 %**（1.2590 vs 精确 1.2464）——
+绝对值更准、符号翻了。两个方向都登记（G-DOMAIN），不当好消息收下。
 
 ★★★ **左图把归因画死了**：速度误差**几乎只存在于精确声速线（黑）圈出的口袋里** ——
 口袋内低估、紧下游高估，其余全场近零。右图是**剂量-响应**：超声速区 RMS
@@ -169,6 +185,36 @@ oracle 采样加密 5×（匹配距 3.5e-05→6e-06）只让 LE RMS 0.1594→0.1
 ![v3_1_sphere_cp.png](C09_prandtl_glauert_peak/G3.1/v3_1_sphere_cp.png)
 
 *C09_prandtl_glauert_peak/G3.1/v3_1_sphere_cp.png*
+
+
+## C10_hex_cylinder_crosscheck
+
+**判据读的 CSV**（平时跑就是对着它断言）：
+- [`C10_hex_cylinder_crosscheck/summary.csv`](C10_hex_cylinder_crosscheck/summary.csv) — 4 行（nl_hex / nl_tet / lift_hex / lift_tet），列 `leg, blas_threads, n_nodes, n_tets, converged, cp_rms, cp_max, cl, cd, cl_rel, n_kutta, residual`
+
+★★★ **攻击点：hex 生成器若有系统缺陷，所有用它的门共享该缺陷。** 同几何
+（半径 1 圆柱）两拓扑对照，预注册
+`docs/dev_phase_six/20261012-1300-c10-hex-cylinder-prereg.md`；带推导与实测表在
+`tests/C/test_C10_hex_cylinder_crosscheck.py` docstring（带 = max 实测 + 两族
+实现噪声合成，不是拍的）。
+
+★★ **非升力腿（Γ=0，m_inf=0 的 Laplace 极限）**：两族在同一精确解
+Cp = 1 − 4 sin²θ 上 —— hex cp_rms **0.0365** / tet **0.0321**（带 0.06），
+cp_max **0.0630** / **0.0590**（带 0.11），两族差 **0.0044**（交叉带 0.017）；
+d'Alembert 对照 |cl| ≤ 2.5e-5、|cd| ≤ 1.5e-5（带各 2e-3）。
+★ 升力腿的 tet 参照是 C06 的内存族（半径 0.5、弦 1）：已提交的 cylinder_2.5d 族
+**没有 wake 组，承载不了环量** —— hex 族的 wake（O-grid 接缝 θ=0）是本门
+2026-10-12 才补进生成器的（既有组几何差 0.0，重生成 sha256 逐位一致）。
+
+★★ **升力腿（Γ=0.6，各对各自精确 cl = 2Γ/(U·c)，口径：hex 弦 2 ⇒ 0.6，
+C06 族弦 1 ⇒ 1.2）**：hex cl_rel **0.42 %** / tet **1.14 %**，共用带 1.6 %；
+两族偏置差 **0.71 pp**（登记带 1.2 pp）。注意读法：两族误差水平**本来就不同**
+（hex 壁面法向更细），交叉断言的不是相等，是各自落在今天登记的位置 ——
+一族出系统缺陷时它自己炸出带。
+
+![c10_hex_cylinder_crosscheck.png](C10_hex_cylinder_crosscheck/c10_hex_cylinder_crosscheck.png)
+
+*C10_hex_cylinder_crosscheck/c10_hex_cylinder_crosscheck.png*
 
 
 ## D01_naca0012_incompressible_panel
@@ -293,8 +339,11 @@ RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9
 · **右上**：灰带是 (a) 的设门区间（x ≤ 0.30）。**实线（上表面）在带内，虚线（下表面）冲到 1.5–1.74**
 —— 这就是 (a) **只门上表面**的理由：两面共用一个带子要放宽到 0.8–1.85，近乎空判据。
 带外一路**单调下滑到 0.47–0.70** = **(c)**。
-· **左下** c_f：转捩峰形状对得上，但 XFOIL 峰 0.0079 / 我们 0.0055，而**下游我们反而更高**
-（0.0027 vs 0.0010）。
+· **左下** c_f：转捩峰形状对得上，但 XFOIL 峰 **0.0069** / 我们 **0.0042**
+（committed CSV medium upper，转捩区 x=0.10 站位），而**下游我们反而更高**
+（尾缘 x=1.00：**0.0025 vs 0.0010**）—— 定性结论同 2026-08-28 初版，
+数字于 2026-10-11 按现行 committed CSV 更正到站位口径（旧文 0.0079/0.0055
+与 0.0027/0.0010 是 recon 时代的松散引用）。
 · **右下**（最干净的一张）：上/下 δ* 之比，**XFOIL 全程 1.26–1.49**（α=+2° 该有的上厚下薄），
 **我们贴着 1.0、前半弦还倒过来** ⇒ **耦合分不开上下表面** = **(e)**。
 
@@ -312,6 +361,17 @@ RAE2822 尾缘段下表面 y 为正 ⇒ 被判成上表面：`x_lower` 在 **0.9
 ---
 
 ## D05 — pyFP3D 无粘 vs CFL3D Euler，NACA0012
+
+★ 2026-10-10(W2.1a):证据加 **xcoarse 第三档**;我方三级网格收敛读数在
+[`D05_euler_naca0012/grid_convergence_ours.csv`](D05_euler_naca0012/grid_convergence_ours.csv)
+(RECORDED,不进值锁;`implied_order` 与三分判定词汇与参照侧逐字一致,
+三档看不到 unstable —— 判定口径写在文件头)。
+
+★ 2026-10-11(W2.1b):设门腿的带改写为 **min(标定带, u_val)**
+(u_val = √(u_num² + u_D²),带永不变宽)—— 逐腿体制:M0.50 / M0.80 **floor**、
+M0.72 / M0.75 **tightened**(带 0.005 → 0.00196 / 0.00255,仍绿)、
+M0.803 **resolved-model-error 2.7×**(收紧会红 ⇒ 按 kill criterion 改 RECORDED
+形状,不硬收)。读数见上表新增的 `u_num/u_D/u_val/regime` 列。
 
 **七条腿里五条设门**（含 **M1 靶子条件 M0.80/α1.25 本身**，Δcl −2.16 %），
 两条只记录。设门/记录的划分依据是**分歧的大小**，不是收敛旗标 —— 见下。
@@ -348,8 +408,15 @@ limit_cycle —— 旗标随 (numba × BLAS) 联合漂移，CSV 现带 `n_thread
 
 ## D06 — pyFP3D 无粘 vs CFL3D Euler，RAE2822
 
+★ 2026-10-10(W2.1a):同 D05,第三档 + 我方收敛读数在
+[`D06_euler_rae2822/grid_convergence_ours.csv`](D06_euler_rae2822/grid_convergence_ours.csv)。
+
 两条腿**都设门**（@16 线程均收敛）：M0.725/α2.55 **+3.55 %**、
 M0.730/α3.19 **+0.06 %**（Δcl 均为 L4 口径，2026-10-10 同步）。
+
+★ 2026-10-11(W2.1b):带改写为 **min(标定带, u_val)** —— M0.725 **floor**
+(u_val ≈ 0.10 > 带 0.06,带不变)、M0.730 **no-bar**(梯子 coarse 腿 clamping
+⇒ u_num 无定义,带 = 标定带);读数见上表新增的 `u_num/u_D/u_val/regime` 列。
 
 ★★★ 这道门里曾有一条 `assert not converged` —— 把一个**环境依赖结果里坏的
 那一侧**焊进门里（M0.730 在 4/6 线程不收敛、8/12/16 线程收敛，cl 只差 0.15 %）。

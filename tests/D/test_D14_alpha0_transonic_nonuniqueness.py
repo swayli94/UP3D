@@ -208,7 +208,11 @@ _UNSTABLE_SWEEP = [("medium", m) for m in MACHS if m >= 0.80]
 class TestCommittedEvidenceIsLoadBearing:
     r"""新鲜计算 vs 已提交 `summary.csv`，**只对稳定腿**（口径见模块 docstring）。"""
 
-    COLS = ("cl", "cl_over_band", "residual")
+    #: ★ 2026-10-11（第 44 轮）：`residual` 摘出值锁 —— H30 已在 D05/D06/D07
+    #: 执行过「residual 不进值锁」（机器零附近它比的是舍入对舍入）；
+    #: `docs/dev_phase_six/20261011-1800-process-history-determinism.md` §4
+    #: 登记了 D14 这条尾巴（它曾在 4e-13 上摆 15 %）。它留在 CSV 作记录。
+    COLS = ("cl", "cl_over_band")
 
     def test_the_unstable_legs_are_excluded_for_a_measured_reason(self):
         """前提断言：被排除的正好是那四条，且它们**确实**在非唯一带里。
@@ -230,7 +234,7 @@ class TestCommittedEvidenceIsLoadBearing:
             key_of=lambda r: f"{r['arm']}|{r['key']}|{r['mach']}",
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest "
                          "tests/D/test_D14_alpha0_transonic_nonuniqueness.py")
-        assert n >= 33, f"只比了 {n} 个数（11 条稳定腿 x 3 列 = 33）"
+        assert n >= 22, f"只比了 {n} 个数（11 条稳定腿 x 2 列 = 22）"
 
     def test_the_unstable_legs_still_give_a_stable_VERDICT(self, sweep):
         """不锁数值，但**判定**必须稳：那四条跨线程都远在带外（1.3x … 104x）。"""

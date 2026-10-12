@@ -7,6 +7,8 @@ It validates that ∇²φ = 0 with φ = x (linear freestream) yields R ≈ 0.
 Run with: pytest tests/A/test_A01_freestream_preservation.py -xvs
 """
 
+import os
+
 import pytest
 import numpy as np
 
@@ -16,6 +18,10 @@ from tests.mesh_utils import generate_structured_cube_mesh, cube_boundary_mask
 def test_import_pyfp3d():
     """Smoke test: can we import the main package?"""
     import pyfp3d
+    if os.environ.get("PYFP3D_NOJIT", "0") == "1":
+        import pytest
+        pytest.skip("intentional NOJIT run (e.g. coverage) -- this assert guards "
+                    "ACCIDENTAL NOJIT in normal runs")
     assert pyfp3d.NOJIT is False, "PYFP3D_NOJIT not set (OK for CI)"
 
 

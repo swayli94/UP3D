@@ -40,13 +40,15 @@ measurable — *if a surviving test or script reads it, it stays*. Measured stat
   `ew_eta_max` = 1e-6, `entropy_correction=True`, `tip_cap="round"`, `upwind_c=1.5`, `m_crit`
   0.95, `m_cap` 3.0 — read with `inspect.signature`, not copied), the rulings still in force
   (D5 executed, D2 activated; ★ D1/D3/D4 explicitly **not** re-checked), and the do-not-reopen
-  list. ★ The capability boundary is now archived at
-  `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md` and is still the only
-  document stating what the solver can do — **producing phase 6's own is a phase-6 deliverable**;
-  until then, cite the archived original rather than paraphrasing it.
+  list. ★ Phase 6's own capability boundary now exists:
+  **[docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md)
+  (2026-10-11)** — cite IT for the current state. The phase-2 original stays archived at
+  `phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md`; cite it only for
+  statements the phase-6 document has not re-measured (it is a historical snapshot,
+  not the live state).
   ★ Round-file template: `phases/p2/docs/dev_phase_two/_TEMPLATE.md`.
 
-**Start here:** [phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md](phases/p2/docs/dev_phase_two/PHASE_TWO_CAPABILITY_BOUNDARY.md),
+**Start here:** [docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md](docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md),
 then [phases/README.md](phases/README.md) for what was archived and how to get a
 guaranteed-runnable phase-1/2 tree (`git worktree add ../up3d-prereorg d224223`).
 
@@ -587,7 +589,24 @@ Nothing was lost, because the changes were COMMITTED — which is the whole poin
    GUI-only check.
 2. After any kernel or assembly change, run the primary regression first:
    `pytest tests/A/test_A01_freestream_preservation.py`
-3. Full suite: `pytest tests/` — current baseline **674 passed + 33 skipped +
+3. Full suite: `pytest tests/` — current baseline **803 passed + 32 skipped +
+   2 xfailed, 0 failed** (2026-10-10, **measured in full @1591–1633 s @16 threads,
+   three consecutive close-outs**, phase-six rounds 33–36; runtime BLAS pinning
+   active, so the answer-bearing thread count is 1 and numba is not a variable).
+   Gated full set re-measured same day: **812 passed + 21 skipped + 3 xfailed +
+   1 xpassed, 0 failed @1:14:28 @8 threads** — and the XPASS is the point:
+   `test_g41_transonic_medium_gate`, whose non-strict xfail records "converges
+   at 16t, not at 8t", now **converges at 8 numba threads with BLAS pinned**,
+   i.e. the flip was BLAS all along (the mark's retirement is registered).
+   ★★ **证据生成与证据验证跑必须在暖缓存态**（2026-10-11，第 44 轮）：IBL 松耦合门
+   （D08/D13）的答案随 numba 缓存出处态漂移 1e-3…3.6e-2（实测，四个各自可复现的
+   状态）；「冷编译后暖跑」复现 committed 证据到 ≤ 5e-10。⇒ 任何 pyfp3d 重编译 /
+   清 `__pycache__` 之后，**先白跑一遍再刷新或验证证据**；新 clone 的第一跑会飘、
+   第二跑绿 —— 这不是缺陷，是编译扰动测量。依据：
+   `docs/dev_phase_six/20261011-1800-process-history-determinism.md` 及其勘误节；
+   D08/D13 的证据锁已按此改成两层（出处层 1e-6 + 散布带层），见两门锁类的
+   docstring。
+   Previous: **674 passed + 33 skipped +
    2 xfailed, 0 failed** (2026-08-28, **measured in full @1055.94 s @8 threads at
    load 12.8**, phase-six rounds 10–28).
    ★★★ **D03's M0.80 transonic shock gate ran on NO cadence** — the 2026-08-24

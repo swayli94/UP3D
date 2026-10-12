@@ -303,12 +303,30 @@ class TestCommittedEvidenceIsLoadBearing:
     因为它们是**标定**不是测量。
 
     ★ 零额外计算：本条用的是 `runs` fixture 已经算好的结果。
+
+    ★★★ 2026-10-11（第 44 轮；裁决 = `docs/dev_phase_six/20261011-1800-process-history-determinism.md`
+    §5 选项 1+2，逐列实测散布见同日 M1 表与该文件勘误节）：锁改**两层** ——
+    `blas_threads` 留在 1e-6 **出处层**；求解器产出列（dstar_ibl / cf_ibl /
+    asym_ibl / cl）改**散布带层**（绝对带 `SPREAD_TOL`）：M1 实测它们随 numba
+    缓存出处态漂移 1e-3…3e-2，1e-6 值锁在原理上守不住。物理判据
+    （TestGated / TestRecorded）不动 —— 那是另一层。
     """
 
     #: 实测的新鲜计算 vs 已提交 CSV 的最大相对差（见 test 内的断言消息）。
     #: ★ 解是确定性的（Picard + IBL，无随机源），所以这个容差是**机器/线程**级别的余量，
     #: 不是物理容差。若它需要放宽，那本身就是一个要查的信号。
+    #: ★ 2026-10-11：本常量现在只管**出处层**（blas_threads）。
     REL_TOL = 1e-6
+
+    #: 散布带（逐列绝对值）= M1 实测的跨态最大偏移（对 committed）× 2（安全系数 2，
+    #: 标定：今日实测的状态数有限）。逐列推导（散布 = max((a) 后台全套缓存态偏移,
+    #: (c) 冷编译态偏移）；(a) 与进程历史态 (b) 逐位相同 ⇒ 进程历史项为零）：
+    #:   dstar_ibl: max(8.85e-6, 4.44e-5) = 4.44e-5
+    #:   cf_ibl:    max(1.09e-4, 7.19e-5) = 1.09e-4
+    #:   asym_ibl:  max(2.80e-2, 9.74e-3) = 2.80e-2
+    #:   cl:        max(1.45e-3, 4.69e-4) = 1.45e-3
+    SPREAD_TOL = {"dstar_ibl": 8.87e-5, "cf_ibl": 2.17e-4,
+                  "asym_ibl": 5.60e-2, "cl": 2.89e-3}
 
     def test_fresh_run_reproduces_the_committed_summary(self, runs):
         r"""逐行比对 `cases/gates/D13_ibl_vs_xfoil/summary.csv` 的**实测列**
@@ -361,9 +379,21 @@ class TestCommittedEvidenceIsLoadBearing:
                 rel = abs(got - want) / max(abs(want), 1e-30)
                 if rel > worst:
                     worst = rel
-                assert rel <= self.REL_TOL, (
+                if name == "blas_threads":
+                    #: 出处层仍在机器级 1e-6 —— 它防的是「出处漂移」，
+                    #: 不是物理回归。
+                    assert rel <= self.REL_TOL, (
+                        f"{lv}/{r['surface']}/x={r['x_c']} 的 {name}："
+                        f"本次 {got:.6e}，已提交 {want:.6e}（相对差 {rel:.2e}）"
+                        " —— 出处漂移，不是散布。")
+                    continue
+                diff = abs(got - want)
+                assert diff <= self.SPREAD_TOL[name], (
                     f"{lv}/{r['surface']}/x={r['x_c']} 的 {name}："
-                    f"本次算出 {got:.6e}，已提交证据是 {want:.6e}（相对差 {rel:.2e}）\n"
+                    f"本次算出 {got:.6e}，已提交证据是 {want:.6e}"
+                    f"（绝对差 {diff:.2e} > 散布带 {self.SPREAD_TOL[name]:.2e}）\n"
+                    "  ★ 散布带 = 第 44 轮 M1 实测环境散布 × 2（推导见 SPREAD_TOL 注释）；"
+                    "超出说明动得比环境散布还大 —— 那是真回归，不是出处态漂移。\n"
                     "  ★ 若这是有意的代码改动：用 "
                     "`PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D13_ibl_vs_xfoil.py` "
                     "刷新证据，**并按纪律 11 grep 被移动的数字** —— "
@@ -421,9 +451,14 @@ def test_export_ibl_xfoil_figure(runs, ref, gate_evidence_dir):
 
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["level", "surface", "x_c", "blas_threads", "dstar_ibl",
-                    "dstar_xfoil", "dstar_ratio", "cf_ibl", "cf_xfoil",
-                    "asym_ibl", "asym_xfoil"])
+        #: ★ state_spread = 该行被锁散布列的实测散布包络（第 44 轮 M1；逐列带
+        #:   见锁的 SPREAD_TOL 注释）—— 散布本身进证据。
+        st = TestCommittedEvidenceIsLoadBearing.SPREAD_TOL
+        env_station = max(st["dstar_ibl"], st["cf_ibl"], st["asym_ibl"]) / 2
+        env_cl = st["cl"] / 2
+        w.writerow(["level", "surface", "x_c", "blas_threads", "state_spread",
+                    "dstar_ibl", "dstar_xfoil", "dstar_ratio", "cf_ibl",
+                    "cf_xfoil", "asym_ibl", "asym_xfoil"])
         for lv in LEVELS:
             d = runs[lv]
             for side in ("upper", "lower"):
@@ -434,12 +469,12 @@ def test_export_ibl_xfoil_figure(runs, ref, gate_evidence_dir):
                     #: 而那**不是求解器的差异，是写盘精度**。⇒ **证据要按真值精度存，
                     #: 不是按显示精度存**，否则它当不了真值来源。
                     w.writerow([lv, side, f"{xq:.2f}", blas_thread_count(),
-                                f"{s['ds'][i]:.9e}",
+                                f"{env_station:.9e}", f"{s['ds'][i]:.9e}",
                                 f"{s['ds_ref'][i]:.9e}", f"{s['ratio'][i]:.9e}",
                                 f"{s['cf'][i]:.9e}", f"{s['cf_ref'][i]:.9e}",
                                 f"{d['upper']['ds'][i]/d['lower']['ds'][i]:.9e}",
                                 f"{d['upper']['ds_ref'][i]/d['lower']['ds_ref'][i]:.9e}"])
-            w.writerow([lv, "cl", "-", blas_thread_count(), f"{d['cl']:.9e}",
-                        f"{CL_XFOIL_VISCOUS:.9e}",
+            w.writerow([lv, "cl", "-", blas_thread_count(), f"{env_cl:.9e}",
+                        f"{d['cl']:.9e}", f"{CL_XFOIL_VISCOUS:.9e}",
                         f"{d['cl']/CL_XFOIL_VISCOUS:.9e}", "-",
                         f"{CL_INVISCID:.9e}", "-", "-"])

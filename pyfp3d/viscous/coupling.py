@@ -64,7 +64,6 @@ __all__ = [
     "build_wing_case",
     "make_picard_lifting_driver",
     "make_newton_lifting_driver",
-    "make_picard_nonlifting_driver",
     "run_loose_coupling",
     "station_average",
 ]
@@ -668,29 +667,6 @@ def make_newton_lifting_driver(mc, wc, m_inf: float, alpha_deg: float, **kw) -> 
             **kw,
         )
         return r["phi"], r["gamma"], r
-
-    return solve
-
-
-def make_picard_nonlifting_driver(
-    nodes, elements, dirichlet_nodes, dirichlet_values, m_inf: float, **kw
-) -> FpSolve:
-    """Non-lifting compressible Picard (GV3.3 body of revolution):
-    solve_subsonic with body_source_rhs (uncut mesh, no wake/Kutta)."""
-    from pyfp3d.solve.picard import solve_subsonic
-
-    def solve(rhs, seed):
-        r = solve_subsonic(
-            nodes,
-            elements,
-            dirichlet_nodes,
-            dirichlet_values,
-            m_inf=m_inf,
-            body_source_rhs=rhs,
-            phi_init=None if seed is None else seed.phi,
-            **kw,
-        )
-        return r["phi"], None, r
 
     return solve
 

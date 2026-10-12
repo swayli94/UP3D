@@ -82,34 +82,6 @@ def write_vtu(
             print(f"  Cell fields: {list(cell_data_dict.keys())}")
 
 
-def write_nodal_field_heatmap(
-    filepath: Path | str,
-    nodes: np.ndarray,
-    elements: np.ndarray,
-    field: np.ndarray,
-    field_name: str = "field",
-    verbose: bool = False,
-) -> None:
-    """
-    Write a nodal field as VTU (convenient wrapper).
-    
-    Args:
-        filepath: Output .vtu path
-        nodes: (n_nodes, 3) coordinates
-        elements: (n_tets, 4) connectivity
-        field: (n_nodes,) or (n_nodes, k) field values
-        field_name: Name for the field in output
-        verbose: Print info
-    """
-    write_vtu(
-        filepath,
-        nodes,
-        elements,
-        point_data={field_name: field},
-        verbose=verbose,
-    )
-
-
 def read_vtu(filepath: Path | str) -> Tuple[np.ndarray, np.ndarray, Dict]:
     """
     Read mesh and fields from .vtu file.
@@ -135,60 +107,6 @@ def read_vtu(filepath: Path | str) -> Tuple[np.ndarray, np.ndarray, Dict]:
                 fields[f"cell_{name}"] = np.asarray(block_data["tetra"], dtype=np.float64)
 
     return nodes, elements, fields
-
-
-def export_error_heatmap(
-    nodes: np.ndarray,
-    elements: np.ndarray,
-    errors: np.ndarray,
-    output_dir: Path | str,
-    gate_id: str,
-    verbose: bool = False,
-) -> Path:
-    """
-    Export nodal error field as VTU + magnitude statistics.
-    
-    Common pattern for gate validation: compare computed vs exact, export errors.
-    
-    Args:
-        nodes: (n_nodes, 3)
-        elements: (n_tets, 4)
-        errors: (n_nodes,) absolute errors
-        output_dir: Where to save artifacts
-        gate_id: Gate identifier (e.g., "G0.1")
-        verbose: Print info
-        
-    Returns:
-        Path to generated VTU file
-    """
-    output_dir = Path(output_dir) / gate_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Write VTU
-    vtu_file = output_dir / "error_heatmap.vtu"
-    write_vtu(
-        vtu_file,
-        nodes,
-        elements,
-        point_data={"error": errors},
-        verbose=verbose,
-    )
-    
-    # Write CSV summary
-    csv_file = output_dir / "summary.csv"
-    with open(csv_file, 'w') as f:
-        f.write("metric,value\n")
-        f.write(f"max_error,{np.max(errors):.6e}\n")
-        f.write(f"mean_error,{np.mean(errors):.6e}\n")
-        f.write(f"rms_error,{np.sqrt(np.mean(errors**2)):.6e}\n")
-        f.write(f"min_error,{np.min(errors):.6e}\n")
-    
-    if verbose:
-        print(f"Exported error heatmap to {output_dir}")
-        print(f"  Max error: {np.max(errors):.6e}")
-        print(f"  Mean error: {np.mean(errors):.6e}")
-    
-    return vtu_file
 
 
 def export_matplotlib_plot(

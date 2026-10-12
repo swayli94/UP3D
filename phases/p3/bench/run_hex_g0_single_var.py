@@ -56,7 +56,7 @@ def radii_of(pts, n_theta):
 
 
 def main():
-    p0, t0, e0, i0 = cylinder_o_grid_2d(**BASE)
+    p0, t0, e0, _interior0, i0 = cylinder_o_grid_2d(**BASE)
     r0 = radii_of(p0, i0["n_theta"])
     nt0 = i0["n_theta"]
     print("G0: single-variable check on the structured O-grid (bit-identity, not 'small')\n")
@@ -64,7 +64,7 @@ def main():
           f"h_t {i0['h_wall_tangential']:.8f}, r_achieved {i0['r_achieved']:.6f}\n")
     rows, all_ok = [], True
     for name, override, invariant, allowed in ARMS:
-        p, t, e, i = cylinder_o_grid_2d(**dict(BASE, **override))
+        p, t, e, _interior, i = cylinder_o_grid_2d(**dict(BASE, **override))
         nt = i["n_theta"]
         r = radii_of(p, nt)
         checks = {}

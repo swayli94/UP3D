@@ -28,6 +28,30 @@ Ringleb 的超声速口袋是**无激波、光滑**的 ⇒ **人工密度在那�
 · **绝对值**判在**解**上。而**解的误差不随 h 收敛**（实测 RMS 6.4e-2 → 5.9e-2 → 7.3e-2）
   —— **那不是缺陷也不是 bug，是模型误差**：人工密度不随 h 消失。
   **证明它是模型误差的不是论证，是上表的剂量-响应**：误差随 `upwind_c` 单调下降。
+
+---
+
+★★★ **W2.2b（2026-10-11，预注册 20261011-1300）：精确解从本轮起也经过生产驱动器。**
+新增「生产腿」（`TestProductionDriverLeg`，与 DuctSystem 腿**并列、不取代**）：
+同一离散、同一进出口 Dirichlet 数据，走 `solve_newton_nonlifting` ——
+熵修正 ON（GS1b.11 默认）、m_cap/钳制记账在位、`precond` 为生产默认 **amg**
+（本案它能收敛：18 步到 |R| = 3.9e-13；喷管 C05 的 amg 不收敛是那一门的登记事项）。
+
+**实测读数（h = 0.08，2026-10-11）**，与 DuctSystem 腿（committed）并列：
+
+| 读数 | DuctSystem（熵 OFF） | 生产腿（熵 ON） | 带 |
+|---|---|---|---|
+| 超声速区 RMS | 0.10014 | **0.12685** | ≤ 0.13 ✓（余量 2.4 %） |
+| 亚声速区 RMS | 0.04683 | 0.06358 | — |
+| 比值 sup/sub | 2.14x | 2.00x | — |
+| 数值 M_max | 1.2182（−2.26 %） | **1.2590（+1.01 %）** | — |
+
+★ **G-DOMAIN 照实记，方向混合**：熵修正在这个**无激波**口袋里开了火
+（n_shock = 53 —— 检测器把光滑再压缩的超声→亚声沿链转换当成了激波，
+正是 GS1b.10 登记的过生产机制），超声速区误差**变差**（0.100 → 0.127，
+仍在带内）；而峰值 Mach 从**低估 −2.26 % 变成高估 +1.01 %** —— 绝对值更准，
+但**符号翻了**。两条都记录，不当好消息悄悄收下（H10 的论点：DuctSystem 腿的
+带里一直含着一个驱动器配置差，现在它是数）。
 """
 import os
 
@@ -35,6 +59,7 @@ import numpy as np
 import pytest
 
 from pyfp3d.physics.isentropic import mach_number_squared
+from pyfp3d.solve.newton import solve_newton_nonlifting
 from tests import _ringleb_case as RB
 from tests._nozzle_case import DuctSystem
 from tests._gate_evidence import assert_matches_committed, fmt
@@ -76,6 +101,44 @@ def _solve(case, C=UPWIND_PROD, m_crit=MCRIT_PROD, n_max=60):
         q2=q2, err=e)
 
 
+def _solve_production(case, n_newton_max=30):
+    """W2.2b 生产腿:同一离散、同一 Dirichlet 数据(精确解 φ 压在 inlet∪outlet),
+    走生产驱动器 `solve_newton_nonlifting`(熵 ON、m_cap/钳制记账在位、生产默认
+    amg)。后处理与 `_solve` 逐字同族(q2 视图要 copy 的同一条注也适用,
+    只是这里 velocities 来自后处理用的 DuctSystem 实例 —— 只做读取,不做求解)。"""
+    mesh = case["mesh"]
+    dir_nodes = np.unique(np.concatenate([
+        mesh.boundary_faces["inlet"].ravel(),
+        mesh.boundary_faces["outlet"].ravel()]))
+    dir_vals = case["phi_exact"][dir_nodes]
+    r = solve_newton_nonlifting(mesh, m_inf=RB.M_INF, upwind_c=UPWIND_PROD,
+                                m_crit=MCRIT_PROD, dirichlet_nodes=dir_nodes,
+                                dirichlet_values=dir_vals,
+                                phi_init=case["phi_exact"].copy(),
+                                n_newton_max=n_newton_max)
+    s = DuctSystem(mesh, m_inf=RB.M_INF, upwind_c=UPWIND_PROD,
+                   m_crit=MCRIT_PROD)
+    r0, _ = s.residual(case["phi_exact"])
+    r_exact = float(np.max(np.abs(r0.copy()[s.free])))
+    _, q2 = s.op.velocities(np.asarray(r["phi"], float))
+    q2 = q2.copy()
+    e = np.sqrt(q2) - case["qhat_cell"]
+    sup = case["mach_cell"] > 1.0
+    m_num = np.sqrt(np.maximum(mach_number_squared(q2, RB.M_INF, RB.G), 0.0))
+    return dict(
+        r_exact=r_exact, converged=bool(r["converged"]),
+        reason=str(r["accept_reason"]), n_newton=int(r["n_newton"]),
+        res=float(r["residual_history"][-1]),
+        rms=float(np.sqrt(np.mean(e**2))), max=float(np.abs(e).max()),
+        rms_sup=float(np.sqrt(np.mean(e[sup]**2))),
+        rms_sub=float(np.sqrt(np.mean(e[~sup]**2))),
+        n_sup=int(sup.sum()), n_cell=int(sup.size),
+        m_num_max=float(m_num.max()), m_ex_max=float(case["mach_cell"].max()),
+        n_limited=int(r["n_limited"]), n_floored=int(r["n_floored"]),
+        sigma_min=(None if r["sigma_min"] is None else float(r["sigma_min"])),
+        n_shock_cells=r["n_shock_cells"], q2=q2, err=e)
+
+
 @pytest.fixture(scope="module")
 def cases():
     return {h: RB.build_case(h) for h in LEVELS}
@@ -92,6 +155,53 @@ def sweep(cases):
     out = {C: _solve(c, C=C) for C in C_SWEEP}
     out["mcrit120"] = _solve(c, C=UPWIND_PROD, m_crit=1.20)
     return out
+
+
+@pytest.fixture(scope="module")
+def prod_newton(cases):
+    return _solve_production(cases[H_STUDY])
+
+
+class TestProductionDriverLeg:
+    """★★★ W2.2b:精确解第一次走**生产** Newton 驱动器(读数表见模块 docstring)。
+
+    ★ 判据带**不放宽**:生产腿的超声速 RMS 判在既有腿的同一个带 SUP_RMS_MAX
+    (实测 0.12685,余量 2.4 %);方向混合的 G-DOMAIN 读数(峰值 Mach 翻号变准)
+    记在 docstring 与断言消息里,不悄悄收下。"""
+
+    def test_production_leg_converges_with_clamp_books_clean(self, prod_newton):
+        """前提:生产腿收敛、钳制记账在位且干净、熵修正确实作用于流场。"""
+        d = prod_newton
+        assert d["converged"] and d["reason"] == "tol", (
+            f"生产腿不收敛(reason={d['reason']}, |R|={d['res']:.2e})—— 前提变了")
+        assert d["n_limited"] == 0 and d["n_floored"] == 0, (
+            f"生产腿出现钳制(lim={d['n_limited']}, flr={d['n_floored']})—— "
+            "m_cap/rho_floor 介入了,这本身是要登记的现象")
+        assert d["sigma_min"] is not None and d["sigma_min"] < 1.0, (
+            "熵修正没有真的开火(sigma_min=1)—— 生产腿没跑在生产配置;"
+            "注意:无激波口袋里开火是 GS1b.10 登记的过生产机制,不是激波")
+
+    def test_production_leg_lands_in_the_same_band(self, prod_newton, prod):
+        """C2:生产腿的超声速区 RMS 判在**既有腿的同一个带**(不借名义放宽)。"""
+        assert prod_newton["rms_sup"] <= SUP_RMS_MAX, (
+            f"生产腿 rms_sup = {prod_newton['rms_sup']:.4e} > {SUP_RMS_MAX} "
+            f"(DuctSystem 腿 {prod['rms_sup']:.4e})—— 预注册 §4 kill:"
+            "熵修正在精确解上的代价出带了,停下记录,不许放宽带")
+        #: G-DOMAIN 双向记录:变差的方向(rms_sup)与翻号变准的方向(m_num_max)
+        print(f"  [W2.2b] 生产腿 vs DuctSystem: rms_sup "
+              f"{prod_newton['rms_sup']:.5e} vs {prod['rms_sup']:.5e}, "
+              f"m_num_max {prod_newton['m_num_max']:.4f} vs "
+              f"{prod['m_num_max']:.4f}(精确 {prod_newton['m_ex_max']:.4f})")
+
+    def test_peak_mach_sign_flip_is_recorded(self, prod_newton):
+        """G-DOMAIN:生产腿的峰值 Mach 从 DuctSystem 腿的**低估**变**高估**
+        (1.2590 = +1.01 % vs 精确 1.2464;既有腿 1.2182 = −2.26 %)——
+        绝对值更准但符号翻了。锁符号翻转本身:翻回去说明熵修正的剂量变了。"""
+        rel = (prod_newton["m_num_max"] - prod_newton["m_ex_max"]
+               ) / prod_newton["m_ex_max"]
+        assert rel > 0, (
+            f"生产腿峰值 Mach 回到低估({100*rel:+.2f} %)—— docstring 的 W2.2b "
+            "表与本条前提变了,请重测并重读")
 
 
 class TestTheExactSolutionIsAConsistentDiscreteSolution:
@@ -198,9 +308,10 @@ class TestArtificialDissipationPricedAgainstTruth:
 
 class TestCommittedEvidenceIsLoadBearing:
     r"""★★★ 新鲜计算 vs 已提交 `summary.csv`。设计与三个坑见 `tests/_gate_evidence.py`。
-    ★ 零额外计算：用 `sweep` 已算好的五条腿（`upwind_c` 扫描 + `m_crit` 腿）。"""
+    ★ 零额外计算：用 `sweep` 已算好的五条腿（`upwind_c` 扫描 + `m_crit` 腿）
+    加 W2.2b 的生产腿（`prod_newton` fixture 已算）。"""
 
-    def test_fresh_run_reproduces_the_committed_summary(self, sweep):
+    def test_fresh_run_reproduces_the_committed_summary(self, sweep, prod_newton):
         fresh = {}
         for C in C_SWEEP:
             d = sweep[C]
@@ -211,16 +322,21 @@ class TestCommittedEvidenceIsLoadBearing:
         fresh[("m_crit=1.20",)] = dict(r_exact=d["r_exact"], rms=d["rms"],
                                        rms_sup=d["rms_sup"], rms_sub=d["rms_sub"],
                                        m_num_max=d["m_num_max"])
+        #: ★ W2.2b:生产腿行进同一个锁(新增行;既有行逐位不动,锁自证)。
+        d = prod_newton
+        fresh[("production",)] = dict(r_exact=d["r_exact"], rms=d["rms"],
+                                      rms_sup=d["rms_sup"], rms_sub=d["rms_sub"],
+                                      m_num_max=d["m_num_max"])
         n = assert_matches_committed(
             os.path.join(str(REPO_ROOT), "cases", "gates", "C08_ringleb"), fresh,
             ("r_exact", "rms", "rms_sup", "rms_sub", "m_num_max"),
             key_of=lambda r: (r["leg"],),
             refresh_hint="PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C08_ringleb.py")
-        assert n >= 25, f"只比了 {n} 个数（5 腿 x 5 列 = 25）"
+        assert n >= 30, f"只比了 {n} 个数（(5 扫描腿 + 1 生产腿) x 5 列 = 30）"
 
 @pytest.mark.skipif(not gate_figures_enabled(),
                     reason="图证据是 opt-in：PYFP3D_GATE_FIGURES=1")
-def test_export_ringleb_figure(cases, prod, sweep, gate_evidence_dir):
+def test_export_ringleb_figure(cases, prod, sweep, prod_newton, gate_evidence_dir):
     import csv
 
     import matplotlib
@@ -266,5 +382,12 @@ def test_export_ringleb_figure(cases, prod, sweep, gate_evidence_dir):
         d = sweep["mcrit120"]
         w.writerow(["m_crit=1.20", H_STUDY, UPWIND_PROD, 1.20, d["converged"], d["reason"],
                     d["n_newton"], f"{d['res']:.3e}", fmt(d["r_exact"]),
+                    fmt(d["rms"]), fmt(d["rms_sup"]), fmt(d["rms_sub"]),
+                    d["n_sup"], d["n_cell"], fmt(d["m_num_max"]), fmt(d["m_ex_max"])])
+        #: ★ W2.2b:生产腿行(`residual` = 驱动器末残差,`r_exact` 列与
+        #: C=1.5 行同值 —— 它量的是离散化,不是驱动器)。既有行逐位不动。
+        d = prod_newton
+        w.writerow(["production", H_STUDY, UPWIND_PROD, MCRIT_PROD, d["converged"],
+                    d["reason"], d["n_newton"], f"{d['res']:.3e}", fmt(d["r_exact"]),
                     fmt(d["rms"]), fmt(d["rms_sup"]), fmt(d["rms_sub"]),
                     d["n_sup"], d["n_cell"], fmt(d["m_num_max"]), fmt(d["m_ex_max"])])

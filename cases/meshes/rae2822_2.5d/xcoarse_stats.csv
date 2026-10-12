@@ -1,0 +1,15 @@
+metric,value
+n_nodes,1490
+n_elements,4236
+total_volume,55.46542714973461
+min_volume,8.829406712933532e-06
+max_volume,0.4848471688190439
+mean_volume,0.01309382132902139
+min_edge_length,0.024452648711263947
+max_edge_length,7.993328650061623
+mean_edge_length,0.3982876213162062
+n_2d_triangles,1412
+n_wake_faces,248
+dz,0.08
+h_wall,0.04
+te_wedge_deg_ordinates,12.910932158681408

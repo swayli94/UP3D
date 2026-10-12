@@ -1,0 +1,11 @@
+# hex 族 coarse/medium/fine 三级读数（对照 tet 族 committed xcoarse/coarse/medium，后者抄自 D05 grid_convergence_ours.csv）。
+# 仪器 = tests/D/_grid_convergence.py 的 ladder_readout （参照侧 implied_order + 三分词汇）；h ∝ N^(−1/2)。
+# hex N: coarse 5304 / medium 12366 / fine 22274；tet N: xcoarse 1426 / coarse 5610 / medium 20888
+# ★ 收敛口径：strict = 门的 converged 旗标（fine 的 cl/cd 被判 not_converged）；physical = |R| ≤ 1e-6 的物理解（fine |R|=2.25e-7，进物理族——收敛旗标本身是线程依赖噪声，见 D05 docstring）。
+family,quantity,level1,level2,level3,delta_12,delta_23,ratio,implied_order,verdict,basis,u_num_l23
+hex,cl,2.965458449e-01,2.582225783e-01,2.560587699e-01,-3.832326657e-02,-2.163808413e-03,,,,not_converged,
+hex,cd,7.799720192e-03,9.587817617e-03,1.506132292e-02,+1.788097425e-03,+5.473505307e-03,,,,not_converged,
+hex,x_shock,5.101914009e-01,6.094228594e-01,6.294629762e-01,+9.923145847e-02,+2.004011678e-02,0.202,3.33,yes (3-rung),c-m-f (physical),2.004011678e-02
+tet,cl,2.969721606e-01,4.071081255e-01,3.413401232e-01,+1.101359649e-01,-6.576800230e-02,0.597,0.71,yes (3-rung),xc-c-m,6.576800230e-02
+tet,cd,1.636499100e-02,1.984674337e-02,1.817490584e-02,+3.481752370e-03,-1.671837530e-03,0.480,1.03,yes (3-rung),xc-c-m,1.671837530e-03
+tet,x_shock,5.329215123e-01,6.142432360e-01,5.990943735e-01,+8.132172370e-02,-1.514886250e-02,0.186,2.43,"yes (3-rung, unchecked)",xc-c-m,1.514886250e-02

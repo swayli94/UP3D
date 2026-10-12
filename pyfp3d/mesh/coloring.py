@@ -12,6 +12,8 @@ once at startup; it produces the color partition that the @njit assembly
 kernels consume. It is intentionally NOT numba-jitted itself.
 """
 
+import os
+
 import numba
 import numpy as np
 from typing import Tuple, List, Dict
@@ -62,7 +64,19 @@ def node_to_element_csr(elements: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return offsets, flat_elems[order]
 
 
-@numba.njit(cache=True)
+#: ★ PYFP3D_NOJIT=1 把 @njit 换成恒等(调试/覆盖率;与 kernels/entropy.py 同款)。
+#: 没有它,coverage 看不见 njit 函数体(2026-10-12 实测:metrics 读成 10%,
+#: 是仪器失明不是覆盖事实)。
+if os.environ.get("PYFP3D_NOJIT", "0") == "1":
+    def _njit(*args, **kwargs):
+        def deco(fn):
+            return fn
+        return deco
+else:
+    _njit = numba.njit
+
+
+@_njit(cache=True)
 def _greedy_coloring_kernel(
     elements: np.ndarray, node_offsets: np.ndarray, node_elems: np.ndarray
 ) -> np.ndarray:

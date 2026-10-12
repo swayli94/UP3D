@@ -115,10 +115,18 @@ def cylinder_o_grid_2d(
         growth         -> grading rate ONLY
         r_far          -> domain size ONLY (appends outward layers)
 
-    Returns (points2d, triangles, edge_groups, info) where `edge_groups` has "wall" (inner
+    Returns (points2d, triangles, edge_groups, interior_edge_groups, info) -- the
+    five-value convention of `airfoil_hybrid_2d`. `edge_groups` has "wall" (inner
     circle) and "farfield" (outer), matching `cylinder_annulus_2d`'s contract so the
-    downstream pipeline is unchanged. `info` reports the achieved outer radius and the layer
-    count, both DERIVED rather than requested.
+    downstream pipeline is unchanged. `info` reports the achieved outer radius and the
+    layer count, both DERIVED rather than requested.
+
+    ★ 2026-10-12(W2.6 落地):`interior_edge_groups` 带 **wake** —— 它就是 O-grid
+    的接缝(θ = 0,从壁面点 (radius, 0) 沿 +x 一路排到远场)。圆柱没有尖尾缘,
+    但环量通道需要一个分支切口;接缝就是它,与 naca0012_hex 族同一句
+    「the wake line is its seam -- which is where the wake belongs anyway」。
+    每条接缝边本来就是四边形的竖边(固定对角线剖分保留四边形的四条边),
+    所以**只加组、不动任何已有节点或几何**。
     """
     radii = wall_anchored_radii(radius, r_far, h_wall_normal, growth)
     n_r = len(radii)
@@ -151,114 +159,16 @@ def cylinder_o_grid_2d(
     top = (n_r - 1) * n_theta
     far = np.stack([top + np.arange(n_theta),
                     top + (np.arange(n_theta) + 1) % n_theta], axis=1)
+    #: θ = 0 的接缝边:壁面点 (radius, 0) 起,沿 +x 逐环向外 —— 圆柱的 wake。
+    wake = np.stack([np.arange(n_r - 1) * n_theta,
+                     (np.arange(n_r - 1) + 1) * n_theta], axis=1)
     info = dict(n_theta=n_theta, n_radial=n_r, r_achieved=float(radii[-1]),
                 h_wall_normal=float(h_wall_normal), growth=float(growth),
                 h_wall_tangential=float(2.0 * np.pi * radius / n_theta))
-    return pts, tris.astype(np.int64), {"wall": wall.astype(np.int64),
-                                        "farfield": far.astype(np.int64)}, info
-
-
-def _outward_normals_closed(pts: np.ndarray) -> np.ndarray:
-    """Outward unit normals of a CLOSED polyline (n, 2), one per vertex.
-
-    Averages the two adjacent edge normals, then fixes the global sign so the normals point
-    AWAY from the centroid. Averaging (rather than taking one edge's normal) is what keeps the
-    first offset layer smooth through the LE, where the edge directions turn fastest.
-    """
-    n = len(pts)
-    e = np.roll(pts, -1, axis=0) - pts                       # edge i: pts[i] -> pts[i+1]
-    en = np.stack([e[:, 1], -e[:, 0]], axis=1)               # right-hand normal per edge
-    en /= np.linalg.norm(en, axis=1, keepdims=True)
-    v = en + np.roll(en, 1, axis=0)                           # average with previous edge
-    v /= np.linalg.norm(v, axis=1, keepdims=True)
-    c = pts.mean(axis=0)
-    if np.mean(np.einsum("ij,ij->i", v, pts - c)) < 0.0:
-        v = -v
-    return v
-
-
-def airfoil_o_grid_2d(
-    surface: np.ndarray,
-    r_far: float = 20.0,
-    h_wall_normal: float = 0.004,
-    growth: float = 1.15,
-    circularize_from: float = 0.5,
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray],
-             Dict[str, np.ndarray], Dict[str, float]]:
-    """Structured O-grid around a CLOSED airfoil polyline, returned as a triangulation.
-
-    Returns (points2d, triangles, edge_groups, interior_edge_groups, info) -- five values, one
-    more than the cylinder, because a lifting airfoil needs the tagged wake sheet (see below).
-
-    `surface` is (n_theta, 2), closed (first != last; the wrap is implicit) -- e.g.
-    `planar.naca0012_coordinates(n_half)[:-1]`. Layers march outward along averaged vertex
-    normals and are BLENDED toward a circle as they go, because a pure normal offset
-    self-intersects in the concave region behind a sharp trailing edge. The blend weight is a
-    function of the ACCUMULATED WALL DISTANCE only.
-
-    ★ That last sentence is what preserves the single-variable property proved by G0: the radii
-    come from `wall_anchored_radii`, which is prefix-stable, and the blend depends on the same
-    prefix-stable accumulated distance -- so enlarging `r_far` appends layers and leaves every
-    earlier node bit-identical, exactly as on the cylinder. Had the blend been written as
-    "fraction of the way to r_far" it would have coupled every interior layer to the domain
-    size, recreating the very defect this module exists to avoid.
-
-    `circularize_from` is the wall distance (in chords) at which the blend reaches 1, i.e.
-    where the layers have become circles.
-    """
-    surf = np.asarray(surface, dtype=np.float64)
-    if surf.ndim != 2 or surf.shape[1] != 2:
-        raise ValueError(f"surface must be (n, 2), got {surf.shape}")
-    n_theta = len(surf)
-    nrm = _outward_normals_closed(surf)
-    centre = surf.mean(axis=0)
-    #: wall-anchored radial spacings, reused verbatim from the cylinder construction
-    r_seq = wall_anchored_distances(r_far, h_wall_normal, growth)
-    n_r = len(r_seq)
-
-    pts = np.empty((n_r * n_theta, 2), dtype=np.float64)
-    ang = np.arctan2(surf[:, 1] - centre[1], surf[:, 0] - centre[0])
-    for j, d in enumerate(r_seq):
-        w = min(1.0, d / circularize_from) if circularize_from > 0 else 1.0
-        offset = surf + nrm * d
-        radius = d + 0.5                     # circle radius grows with the wall distance
-        circle = centre + np.stack([radius * np.cos(ang), radius * np.sin(ang)], axis=1)
-        pts[j * n_theta:(j + 1) * n_theta] = (1.0 - w) * offset + w * circle
-
-    def idx(i, j):
-        return j * n_theta + (i % n_theta)
-
-    tris = np.empty((2 * n_theta * (n_r - 1), 3), dtype=np.int64)
-    k = 0
-    for j in range(n_r - 1):
-        for i in range(n_theta):
-            a, b = idx(i, j), idx(i + 1, j)
-            c, d_ = idx(i + 1, j + 1), idx(i, j + 1)
-            tris[k] = (a, b, c); k += 1
-            tris[k] = (a, c, d_); k += 1
-
-    wall = np.stack([np.arange(n_theta), (np.arange(n_theta) + 1) % n_theta], axis=1)
-    top = (n_r - 1) * n_theta
-    far = np.stack([top + np.arange(n_theta),
-                    top + (np.arange(n_theta) + 1) % n_theta], axis=1)
-    #: ★★ THE WAKE IS A GRID LINE. A lifting airfoil needs a tagged interior sheet for
-    #: `cut_wake` to duplicate nodes across (the circulation branch cut). On an O-grid this has
-    #: a natural home: `naca0012_coordinates` starts at the TE, so column i = 0 is the radial
-    #: line running from the TE straight out to the far field -- the seam of the O-grid IS the
-    #: wake. Nothing about the topology changes; this is TAGGING, the same thing
-    #: `planar.naca0012_wake_2d` does for the unstructured family, except there the sheet has to
-    #: be cut through arbitrary triangles while here it follows the grid.
-    wake = np.stack([np.arange(n_r - 1) * n_theta,
-                     (np.arange(n_r - 1) + 1) * n_theta], axis=1)
-    seg = np.linalg.norm(np.roll(surf, -1, axis=0) - surf, axis=1)
-    info = dict(n_theta=n_theta, n_radial=n_r, h_wall_normal=float(h_wall_normal),
-                growth=float(growth), d_achieved=float(r_seq[-1]),
-                h_wall_tangential_min=float(seg.min()),
-                h_wall_tangential_max=float(seg.max()),
-                circularize_from=float(circularize_from))
     return (pts, tris.astype(np.int64),
             {"wall": wall.astype(np.int64), "farfield": far.astype(np.int64)},
             {"wake": wake.astype(np.int64)}, info)
+
 
 def airfoil_layer_block_2d(
     surface: np.ndarray,

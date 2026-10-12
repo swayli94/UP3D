@@ -62,6 +62,18 @@ NACA0012 上**实测是上游**（4/5），而 RAE2822 上是**下游**（D06）
 2-D 参考表只有 `delta_L2_L3`，**没有** 3-D 那套"相邻差是否在缩小"的渐近检验
 （D07 上第四档把 cl 从"收敛得极好"翻成"不渐近"）。所以这里的 `delta_L2_L3`
 是**最后一步的差**，不是经检验的误差棒。M0.50 的 `cd` 相对差 **−48 %** 就是例子。
+
+★ 2026-10-10（W2.1a）：证据加 **xcoarse** 第三档 —— 只进证据 / 锁 / 图 /
+`grid_convergence_ours.csv`（RECORDED，用参照侧 `implied_order` 仪器），
+**不进任何判据**；判据的定义域是 `GATE_LEVELS`。
+
+★ 2026-10-11（W2.1b）：|S−D| 判据改写为 **min(标定带, u_val)**（u_val = √(u_num²
++ u_D²)，u_num = 我方梯子最细差、u_D = 参照散布，带永不变宽）。逐腿体制：
+M0.50 **floor**、M0.72 / M0.75 **tightened**（带 0.005 → 0.00196 / 0.00255，
+今天仍绿）、M0.80 **floor**、M0.803 **resolved-model-error 2.7×** —— 收紧会红 ⇒
+按预注册 §4 kill criterion 改 RECORDED（分辨倍数）形状，不硬收。
+仪器与词汇见 `tests/D/_grid_convergence.py`，逐腿读数见
+`cases/gates/D05_euler_naca0012/grid_convergence_ours.csv` 的 regime 列。
 """
 import os
 
@@ -75,6 +87,7 @@ from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
 from tests.D._cfl3d_cp import cp_rms, read_2d_cp
+from tests.D._grid_convergence import leg_uncertainty, mesh_h
 from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
@@ -94,21 +107,30 @@ CASES = (
     ("M0.778_a2.03", "n0012_m0778_a2.03", 0.778, 2.03, "record"),
     ("M0.803_a-0.10", "n0012_m0803_am0.10", 0.803, -0.10, "record"),
 )
-LEVELS = ("coarse", "medium")
+#: 判据的定义域 —— 带、收缩比、激波判别全部只在这两级上校准，不随证据加档
+#: （W2.1a 预注册 C2：xcoarse 进任何既有物理判据即越界）。
+GATE_LEVELS = ("coarse", "medium")
+#: 证据层级（runs fixture / summary.csv / 证据锁 / 对照图 /
+#: grid_convergence_ours.csv）。xcoarse 只进证据与误差棒，不进判据。
+LEVELS = ("xcoarse", "coarse", "medium")
 
 # —— 判据（标定，不是实测值；实测基线见 docstring 的表）——
-SUBCRIT_CL_MAX = 0.010      # 亚临界 |Δcl|/cl：实测 medium 0.0005
-SUBCRIT_CONTRACT = 2.0      # coarse -> medium 必须收缩：实测 0.0243/0.0005 = 50x
-ZERO_LIFT_CL_MAX = 0.005    # α=0 的 |cl| 绝对带：实测 0.0012 / 0.0013
-TRANSONIC_CL_MAX = 0.05     # M0.80/α1.25（M1 靶子）|Δcl|/cl：实测 0.0216
+#: ★ 2026-10-11（W2.1b）：|S−D| 腿的带改写为 **min(标定带, u_val)**，
+#:   u_val = √(u_num² + u_D²)（u_num = 我方梯子最细差，u_D = 参照散布）——
+#:   **带永不变宽**；逐腿体制（tightened / floor / no-bar / resolved-model-error）
+#:   写在每条注释尾巴与 `grid_convergence_ours.csv` 的 regime 列。
+SUBCRIT_CL_MAX = 0.010      # 亚临界 |Δcl|/cl：实测 medium 0.0005；W2.1b：u_val 0.024 > 带 ⇒ floor（带不变）
+SUBCRIT_CONTRACT = 2.0      # coarse -> medium 必须收缩：实测 0.0243/0.0005 = 50x（收缩比不是 |S−D| 形，W2.1b 不改写）
+ZERO_LIFT_CL_MAX = 0.005    # α=0 的 |cl| 绝对带：实测 0.0012 / 0.0013；W2.1b：对零判据（D=0、u_D=0）收紧到 u_num 0.00196 / 0.00255 ⇒ tightened，仍绿
+TRANSONIC_CL_MAX = 0.05     # M0.80/α1.25（M1 靶子）|Δcl|/cl：实测 0.0216；W2.1b：u_val 0.19 ≫ 带 ⇒ floor（带不变）
 #: ★ 近零升力用**绝对**带（参考 cl = −0.0286（L4），相对判据的分母近零）
-NEAR_ZERO_ABS_MAX = 0.05    # M0.803/α−0.1 |Δcl| 绝对：实测 0.0137
+NEAR_ZERO_ABS_MAX = 0.05    # M0.803/α−0.1 |Δcl| 绝对：实测 0.0137；W2.1b：收紧会红（0.0137 = 2.7× u_val）⇒ 按预注册 §4 改 RECORDED（分辨倍数），本常量退为外包络
 #: ★ 与参考自身不确定度比较时的"可分辨"下限，形式与 D07 的 RESOLVE_FRAC 相同：
-#: 差必须超过参照物自身 L2→L3 差的这个倍数才谈得上比较。
+#: 差必须超过参照物自身**散布**的这个倍数才谈得上比较。
 RESOLVABLE_FRAC = 1.0
 #: —— W1.3 / H14 的三条（标定；依据见 TestDAlembertOnTheProductionPath 的表）——
 #: ★ 网格已提交 ⇒ 无网格实现噪声，带可以比 C06 紧。
-DALEMBERT_CD_MAX = 3.0e-3      # 无激波腿 medium |cd|：实测 1.564e-3 / 1.266e-3
+DALEMBERT_CD_MAX = 3.0e-3      # 无激波腿 medium |cd|：实测 1.564e-3 / 1.266e-3；W2.1b：D=0、u_D=0 ⇒ M0.50 floor（带不变），M0.72 tightened 到 2.8e-3，仍绿
 DALEMBERT_CONTRACTION = 2.0    # coarse -> medium：实测 3.18x / 3.23x
 WAVE_DRAG_MIN = 5.0e-3         # 带激波腿 medium |cd| 下界：实测 7.6e-3 … 3.8e-2
 
@@ -159,6 +181,35 @@ def _read_reference_delta(path=None):
                 delta=abs(float(r["delta_L2_L3"])) if r["delta_L2_L3"] else float("nan"),
                 asymptotic=r["asymptotic"].split(" (")[0])
     return out
+
+
+MESH_DIR = os.path.join(str(REPO_ROOT), "cases", "meshes", "naca0012_2.5d")
+
+
+def _reference_scatter():
+    """参照侧各档极差 = **u_D**。读法与 D06 的 `_reference_uncertainty` 逐字同款
+    （同一生成器的同一格式），只是读 euler_naca0012。"""
+    import csv
+    out = {}
+    with open(os.path.join(REF_DIR, "grid_convergence.csv")) as fh:
+        for r in csv.DictReader(fh):
+            vals = [float(r[lv]) for lv in ("L1", "L2", "L3", "L4")
+                    if r.get(lv)]
+            out[(r["case"], r["quantity"])] = (max(vals) - min(vals)
+                                               if len(vals) >= 2
+                                               else float("nan"))
+    return out
+
+
+def _reference_shock(case):
+    """参照侧激波位置（L4，upper）。读法与 D06 的 `_reference_shock` 逐字同款。"""
+    import csv
+    with open(os.path.join(REF_DIR, "shock.csv")) as fh:
+        for r in csv.DictReader(fh):
+            if (r["case"] == case and r["level"] == "L4"
+                    and r["surface"] == "upper" and r.get("x_shock")):
+                return float(r["x_shock"])
+    return float("nan")
 
 
 def _one(level, m_inf, alpha):
@@ -226,20 +277,31 @@ class TestWhatIsGateable:
 
     def test_subcritical_lift_matches_cfl3d_euler(self, runs, ref):
         """M0.50/α2.0：全位势与 Euler 在亚临界下应当一致，因为两者的模型差
-        （熵、涡量）在无激波时消失。实测 medium 0.05 %（L4 口径）。"""
+        （熵、涡量）在无激波时消失。实测 medium 0.05 %（L4 口径）。
+
+        ★ 2026-10-11（W2.1b）：带 = **min(标定带, u_val)**。该腿 u_val ≈ 0.024
+        （相对）> 标定带 0.010 ⇒ **floor** —— 组合不确定度比标定还宽，
+        标定带仍管事，但这件事被说出来（`grid_convergence_ours.csv` 的 regime 列）。"""
         got = runs[("M0.50_a2.00", "medium")]["cl"]
         want = ref["n0012_m0500_a2.00"]["cl"]
         rel = abs(got - want) / abs(want)
         assert runs[("M0.50_a2.00", "medium")]["converged"]
-        assert rel <= SUBCRIT_CL_MAX, (
+        #: 相对带 ⇒ 梯子与 u_D 都按 |参考| 归一（同一单位才能 min）。
+        u = leg_uncertainty([runs[("M0.50_a2.00", lv)]["cl"] / abs(want)
+                             for lv in LEVELS], mesh_h(MESH_DIR),
+                            _reference_scatter()[("n0012_m0500_a2.00", "cl")]
+                            / abs(want), SUBCRIT_CL_MAX, sd=rel)
+        assert rel <= u["band"], (
             f"subcritical cl {got:.6f} vs CFL3D Euler {want:.6f} "
-            f"= {rel*100:.3f} % > {SUBCRIT_CL_MAX*100:.1f} %")
+            f"= {rel*100:.3f} % > band {u['band']*100:.2f} % = min(标定 "
+            f"{SUBCRIT_CL_MAX*100:.1f} %, u_val);regime {u['regime']}, "
+            f"u_num {u['u_num']}, u_D {u['u_D']}")
 
     def test_subcritical_lift_contracts_with_refinement(self, runs, ref):
         """★ 一个不收缩的一致只是巧合。coarse 2.43 % -> medium 0.05 %（L4 口径）。"""
         want = ref["n0012_m0500_a2.00"]["cl"]
         e = {lv: abs(runs[("M0.50_a2.00", lv)]["cl"] - want) / abs(want)
-             for lv in LEVELS}
+             for lv in GATE_LEVELS}
         assert e["coarse"] / e["medium"] >= SUBCRIT_CONTRACT, (
             f"subcritical cl error must contract: coarse {e['coarse']*100:.3f} % "
             f"-> medium {e['medium']*100:.3f} % is only "
@@ -247,25 +309,40 @@ class TestWhatIsGateable:
 
     @pytest.mark.parametrize("name", ["M0.72_a0.00", "M0.75_a0.00"])
     def test_zero_incidence_carries_no_lift(self, runs, name):
-        """★★ **绝对**带，不是相对：两侧 cl 都 ≈ 0，相对判据要除以零。"""
+        """★★ **绝对**带，不是相对：两侧 cl 都 ≈ 0，相对判据要除以零。
+
+        ★ 2026-10-11（W2.1b）：对零判据 D = 0（对称）、u_D = 0、u_num 来自梯子
+        ⇒ 带 = min(0.005, u_num) —— M0.72 收紧到 0.00196、M0.75 到 0.00255
+        （**tightened**），今天仍绿。"""
         got = runs[(name, "medium")]["cl"]
         assert runs[(name, "medium")]["converged"]
-        assert abs(got) <= ZERO_LIFT_CL_MAX, (
+        u = leg_uncertainty([runs[(name, lv)]["cl"] for lv in LEVELS],
+                            mesh_h(MESH_DIR), 0.0, ZERO_LIFT_CL_MAX, sd=abs(got))
+        assert abs(got) <= u["band"], (
             f"{name}: symmetric section at alpha 0 gives cl {got:+.6f}, "
-            f"outside the absolute band {ZERO_LIFT_CL_MAX}")
+            f"outside the band {u['band']:.2e} = min({ZERO_LIFT_CL_MAX}, u_val);"
+            f"regime {u['regime']}, u_num {u['u_num']}")
 
 
     def test_m1_target_condition_lift(self, runs, ref):
         """★★ M0.80/α1.25 = **M1 靶子本身**。@16 线程收敛，Δcl −2.16 %（L4 口径）。
 
         ★ 本条**不断言 `converged`** —— 那个旗标在 8/12 线程是 False、16 线程
-        是 True，而 cl 只差 0.36 %。断言旗标就是把线程数焊进门里。"""
+        是 True，而 cl 只差 0.36 %。断言旗标就是把线程数焊进门里。
+        ★ 2026-10-11（W2.1b）：带 = min(0.05, u_val)；该腿梯子差大
+        （u_val ≈ 0.19 相对）⇒ **floor**，带不变。"""
         got = runs[("M0.80_a1.25", "medium")]["cl"]
         want = ref["n0012_m0800_a1.25"]["cl"]
         rel = abs(got - want) / abs(want)
-        assert rel <= TRANSONIC_CL_MAX, (
+        u = leg_uncertainty([runs[("M0.80_a1.25", lv)]["cl"] / abs(want)
+                             for lv in LEVELS], mesh_h(MESH_DIR),
+                            _reference_scatter()[("n0012_m0800_a1.25", "cl")]
+                            / abs(want), TRANSONIC_CL_MAX, sd=rel)
+        assert rel <= u["band"], (
             f"M1-target cl {got:.6f} vs CFL3D Euler {want:.6f} = "
-            f"{rel*100:.2f} % > {TRANSONIC_CL_MAX*100:.0f} %")
+            f"{rel*100:.2f} % > band {u['band']*100:.2f} % = min("
+            f"{TRANSONIC_CL_MAX*100:.0f} %, u_val);regime {u['regime']}, "
+            f"u_num {u['u_num']}, u_D {u['u_D']}")
 
 
 class TestDAlembertOnTheProductionPath:
@@ -301,9 +378,10 @@ class TestDAlembertOnTheProductionPath:
 
     #: 无激波腿由 x_shock 为 NaN **判别**出来，不是按名字写死
     def _shock_free(self, runs):
+        #: ★ 判据域是 GATE_LEVELS（收缩带在这两级上校准）—— xcoarse 不参与判别。
         return [nm for nm, _c, _m, _a, _k in CASES
                 if all(not np.isfinite(runs[(nm, lv)]["x_shock"])
-                       for lv in LEVELS)]
+                       for lv in GATE_LEVELS)]
 
     def test_the_shock_free_set_is_what_we_think_it_is(self, runs):
         """前提断言：判别式必须挑出恰好那两条腿。"""
@@ -313,10 +391,16 @@ class TestDAlembertOnTheProductionPath:
             "re-read the table in this class's docstring before touching bands")
 
     def test_shock_free_pressure_drag_approaches_zero(self, runs):
+        """★ 2026-10-11（W2.1b）：带 = min(标定带, u_num) —— 本条的 D = 0 是
+        **理论值**（无参考梯子散布可用，u_D = 0）。M0.50 梯子差 3.4e-3 > 带 ⇒
+        **floor**（带不变）；M0.72 收紧到 2.8e-3（**tightened**）且仍绿。"""
         for nm in self._shock_free(runs):
             got = abs(runs[(nm, "medium")]["cd"])
-            assert got <= DALEMBERT_CD_MAX, (
-                f"{nm}: spurious cd {got:.4e} > {DALEMBERT_CD_MAX:.1e} "
+            u = leg_uncertainty([runs[(nm, lv)]["cd"] for lv in LEVELS],
+                                mesh_h(MESH_DIR), 0.0, DALEMBERT_CD_MAX, sd=got)
+            assert got <= u["band"], (
+                f"{nm}: spurious cd {got:.4e} > band {u['band']:.2e} "
+                f"= min({DALEMBERT_CD_MAX:.1e}, u_val) [regime {u['regime']}] "
                 f"-- exact is 0 (no shock, 2-D, inviscid)")
 
     def test_shock_free_pressure_drag_contracts(self, runs):
@@ -364,15 +448,36 @@ class TestWhatIsOnlyRecorded:
         assert isinstance(r["sigma_frozen"], bool)
         assert isinstance(r["sigma_churn"], bool)
 
-    def test_near_zero_lift_uses_an_absolute_band(self, runs, ref):
+    def test_near_zero_lift_is_a_resolved_model_error(self, runs, ref):
         """★★ M0.803/α−0.1 的"−48 %"分母近零（参考 cl −0.0286，L4）。
         绝对差 0.0137 —— 大，但只有相对数字的三分之一那么骇人。
-        **RECORDED**：它超出 M0.50 的绝对误差 100 倍，是真实分歧。"""
+        **RECORDED**：它超出 M0.50 的绝对误差 100 倍，是真实分歧。
+
+        ★★★ 2026-10-11（W2.1b，kill criterion 触发记录）：本条原名
+        `test_near_zero_lift_uses_an_absolute_band`，断言 |Δcl| ≤ 0.05。
+        带改 min(标定带, u_val) 后它**会红**：u_val = √(u_num² + u_D²)
+        = √(0.0044² + 0.0025²) ≈ 0.0051，而 |Δcl| = 0.0137 = **2.7× u_val**。
+        那不是收紧失败，是**模型形式误差被分辨出来了**（跨声速熵产生 ——
+        熵修正正是为它存在）⇒ 按预注册 §4 改成 RECORDED（分辨倍数）形状，
+        **不硬收**：断言误差保持被分辨（sd > u_val）且不出旧外包络
+        （NEAR_ZERO_ABS_MAX 不变）。落回 u_val 以内 = 好消息，走纪律 11 勘误。"""
         got = runs[("M0.803_a-0.10", "medium")]["cl"]
         want = ref["n0012_m0803_am0.10"]["cl"]
-        assert abs(got - want) <= NEAR_ZERO_ABS_MAX, (
-            f"near-zero-lift |dcl| {abs(got-want):.6f} exceeds the absolute "
-            f"band {NEAR_ZERO_ABS_MAX}")
+        sd = abs(got - want)
+        u = leg_uncertainty([runs[("M0.803_a-0.10", lv)]["cl"] for lv in LEVELS],
+                            mesh_h(MESH_DIR),
+                            _reference_scatter()[("n0012_m0803_am0.10", "cl")],
+                            NEAR_ZERO_ABS_MAX, sd=sd)
+        assert u["u_val"] is not None, (
+            f"M0.803 的梯子读不出阶了（verdict {u['verdict']}）—— "
+            "u_num 无定义，分辨倍数体制的前提变了，重读本条")
+        assert sd > u["u_val"], (
+            f"near-zero-lift |dcl| {sd:.4f} 落回 u_val {u['u_val']:.4f} 以内 "
+            f"—— 模型误差不再被分辨（regime 应从 resolved-model-error 变走），"
+            "好消息，但本条的形状前提变了，走纪律 11 勘误")
+        assert sd <= NEAR_ZERO_ABS_MAX, (
+            f"near-zero-lift |dcl| {sd:.6f} 超出旧标定外包络 "
+            f"{NEAR_ZERO_ABS_MAX} —— 那不只是模型误差被分辨，是误差本身涨出去了")
 
     def test_m075_shock_is_unresolvable_against_this_reference(self, runs):
         """★★★ pyFP3D 与 CFL3D 差 0.0047，而 CFL3D 自身的 L2→L3 差是 0.018。
@@ -530,6 +635,58 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
                             int(d["sigma_frozen"]), int(d["sigma_churn"]),
                             f"{cref:.6f}", dcl])
 
+    #: ★ W2.1a/W2.1b：我方三级网格收敛读数（RECORDED，不进值锁）—— 估计器与
+    #:   判定词汇都是参照侧的（tests/D/_grid_convergence.py）；u_D = 参照散布，
+    #:   sd / band = 该腿判据的 |S−D| 与标定带（**原生单位**）；cp_rms_* 参照侧
+    #:   没有同名阶梯量 ⇒ u_D 缺 ⇒ no-bar。
+    from tests.D._grid_convergence import write_grid_convergence_ours
+    scat = _reference_scatter()
+    cids = {nm: cid for nm, cid, *_ in CASES}
+    #: 与 TestDAlembertOnTheProductionPath._shock_free 同一判别式（判据域 GATE_LEVELS）
+    shock_free = [nm for nm, *_ in CASES
+                  if all(not np.isfinite(runs[(nm, lv)]["x_shock"])
+                       for lv in GATE_LEVELS)]
+
+    def _u_d_of(case, q):
+        if q == "cd" and case in shock_free:
+            return 0.0  # d'Alembert 腿的 D 是理论零，不是参照梯子 ⇒ u_D = 0（与门同口径）
+        key = {"cl": "cl", "cd": "cd", "x_shock": "x_shock_upper"}.get(q)
+        return None if key is None else scat.get((cids[case], key))
+
+    def _sd_of(case, q):
+        d, cid = runs[(case, "medium")], cids[case]
+        if q == "cl":
+            return abs(d["cl"] - ref[cid]["cl"])
+        if q == "cd":
+            return (abs(d["cd"]) if case in shock_free
+                    else abs(d["cd"] - ref[cid]["cd"]))
+        if q == "x_shock":
+            xr = _reference_shock(cid)
+            return (None if not (np.isfinite(d["x_shock"]) and np.isfinite(xr))
+                    else abs(d["x_shock"] - xr))
+        return d[q]  # cp_rms_* 本身就是 |S−D|
+
+    def _band_of(case, q):
+        cid = cids[case]
+        if q == "cl":
+            if case == "M0.50_a2.00":
+                return SUBCRIT_CL_MAX * abs(ref[cid]["cl"])
+            if case in ("M0.72_a0.00", "M0.75_a0.00"):
+                return ZERO_LIFT_CL_MAX
+            if case == "M0.80_a1.25":
+                return TRANSONIC_CL_MAX * abs(ref[cid]["cl"])
+            if case == "M0.803_a-0.10":
+                return NEAR_ZERO_ABS_MAX
+            return None  # M0.778 纯记录，无带
+        if q == "cd":
+            return DALEMBERT_CD_MAX if case in shock_free else None
+        return None  # x_shock / cp_rms 无标定带
+
+    write_grid_convergence_ours(
+        os.path.join(str(gate_evidence_dir), "grid_convergence_ours.csv"),
+        runs, [nm for nm, *_ in CASES], LEVELS,
+        MESH_DIR, u_d_of=_u_d_of, sd_of=_sd_of, band_of=_band_of)
+
     # ★★★ Cp 分布是主图。柱状图只留一格作附注 —— 一个 cl 是一个数，
     #     两条曲线差 2 % 可能来自激波位置、前缘峰或尾缘卸载中的任何一处，
     #     甚至来自互相抵消的两处；**Cp 显示差在哪里**。
@@ -541,7 +698,8 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
             if side in rc:
                 ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
                         label="CFL3D Euler L4" if side == "upper" else None)
-        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+        for lv, sty in (("xcoarse", dict(lw=0.7, ls="--", color="#c7ccd4")),
+                        ("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
                         ("medium", dict(lw=1.4, color="#1a56db"))):
             cur = runs[(nm, lv)]["curve"]
             for side in ("upper", "lower"):

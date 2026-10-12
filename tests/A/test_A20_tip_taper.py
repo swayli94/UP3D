@@ -25,7 +25,8 @@ These tests lock:
   * that the taper reaches the transonic driver through newton_kw.
 
 The quantitative regularization evidence (p -> 0, M6 fine becoming a genuine
-discrete solution) lives in cases/demo/p13_tip_edge_singularity/.
+discrete solution) lives in phases/p1/cases/demo/p13_tip_edge_singularity/
+(archived 2026-08-10 with the rest of the demo family).
 """
 import numpy as np
 import pytest

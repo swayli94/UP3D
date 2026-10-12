@@ -468,9 +468,8 @@ def rho_tilde_sweep(
 ) -> None:
     """nu switch (3.2) + upwinded density (3.1') per element.
 
-    Same guarded form as physics.isentropic.upwind_factor:
-    nu = C * max(0, 1 - M_c^2 / max(M^2, M_c^2)) -- exactly 0.0 in the
-    subcritical range, no division hazard at stagnation.
+    Guarded form: nu = C * max(0, 1 - M_c^2 / max(M^2, M_c^2)) -- exactly 0.0
+    in the subcritical range, no division hazard at stagnation.
 
     rho_floor: positivity safeguard. With C > 1 a transient iterate can
     drive rho_tilde <= 0 at a nascent shock (measured: the M 0.70 -> 0.75

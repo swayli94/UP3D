@@ -67,7 +67,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from pyfp3d.mesh.reader import Mesh
-from pyfp3d.meshgen import wing3d
 from pyfp3d.meshgen.wing3d import (
     B_SEMI,
     C_ROOT,

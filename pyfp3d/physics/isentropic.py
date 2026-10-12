@@ -14,6 +14,8 @@ Typical gamma = 1.4 (air at low Mach), but exposed as parameter for flexibility.
 Reference: design.md §2 (Governing Equations and Normalization)
 """
 
+import os
+
 import numba
 import numpy as np
 
@@ -21,12 +23,24 @@ import numpy as np
 GAMMA = 1.4  # Specific heat ratio for air
 R_GAS = 287.05  # Gas constant (J/kg·K)
 
-# These constants should be exposed in config later; here are defaults
-M_CRIT_DEFAULT = 0.95  # Cutoff Mach for density upwinding
-UPWIND_CONST_DEFAULT = 1.5  # Upwinding coefficient C
+#: (2026-10-12,使用者裁决):M_CRIT_DEFAULT / UPWIND_CONST_DEFAULT 已删 ——
+#: 它们唯一的读者是已删除的 `upwind_factor`;生产默认值活在 `solve/newton.py`
+#: 的签名里(A53 锁着),这里再放一份只会漂移。
 
 
-@numba.njit(cache=True)
+#: ★ PYFP3D_NOJIT=1 把 @njit 换成恒等(调试/覆盖率;与 kernels/entropy.py 同款)。
+#: 没有它,coverage 看不见 njit 函数体(2026-10-12 实测:metrics 读成 10%,
+#: 是仪器失明不是覆盖事实)。
+if os.environ.get("PYFP3D_NOJIT", "0") == "1":
+    def _njit(*args, **kwargs):
+        def deco(fn):
+            return fn
+        return deco
+else:
+    _njit = numba.njit
+
+
+@_njit(cache=True)
 def density_isentropic(q_squared, M_inf, gamma=GAMMA):
     r"""
     Isentropic density from (2.2) in design.md.
@@ -58,25 +72,7 @@ def density_isentropic(q_squared, M_inf, gamma=GAMMA):
     return base ** exponent
 
 
-@numba.njit(cache=True)
-def speed_of_sound_squared(q_squared, M_inf, gamma=GAMMA):
-    r"""
-    Nondimensional speed of sound squared, a² = 1/M∞² + (γ−1)/2 · (1 − q²).
-
-    Derived from (2.4) in design.md.
-
-    Args:
-        q_squared: Nondimensional speed squared
-        M_inf: Freestream Mach number
-        gamma: Specific heat ratio
-
-    Returns:
-        a² (nondimensional)
-    """
-    return 1.0 / (M_inf ** 2) + 0.5 * (gamma - 1.0) * (1.0 - q_squared)
-
-
-@numba.njit(cache=True)
+@_njit(cache=True)
 def mach_number_squared(q_squared, M_inf, gamma=GAMMA):
     r"""
     Local Mach number squared: M²(q²) = q² M∞² / a².
@@ -97,7 +93,7 @@ def mach_number_squared(q_squared, M_inf, gamma=GAMMA):
     return numerator / denominator
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def critical_speed_squared(M_inf, gamma=GAMMA):
     r"""
     Critical speed squared where local Mach M = 1.
@@ -118,7 +114,7 @@ def critical_speed_squared(M_inf, gamma=GAMMA):
     return numerator / denominator
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def pressure_coefficient(q_squared, M_inf, gamma=GAMMA):
     r"""
     Exact (nonlinear) isentropic pressure coefficient.
@@ -143,7 +139,7 @@ def pressure_coefficient(q_squared, M_inf, gamma=GAMMA):
     return cp
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def pressure_coefficient_incompressible(q_squared):
     r"""
     Incompressible (Bernoulli) pressure coefficient, Cp = 1 − q²/U∞².
@@ -160,7 +156,7 @@ def pressure_coefficient_incompressible(q_squared):
     return 1.0 - q_squared
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def density_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
     r"""
     Derivative dρ/d(q²) evaluated at q².
@@ -180,7 +176,7 @@ def density_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
     return -0.5 * M_inf ** 2 * (rho ** (2.0 - gamma))
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def mach_squared_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
     r"""
     Derivative dM²/d(q²) evaluated at q².
@@ -206,33 +202,7 @@ def mach_squared_derivative_wrt_q_sq(q_squared, M_inf, gamma=GAMMA):
     return M_inf ** 2 * (1.0 + 0.5 * (gamma - 1.0) * M_inf ** 2) / (D * D)
 
 
-@numba.njit(cache=True)
-def upwind_factor(q_squared, M_inf, M_crit=M_CRIT_DEFAULT, C=UPWIND_CONST_DEFAULT, gamma=GAMMA):
-    r"""
-    Artificial compressibility upwinding factor ν.
-
-    ν(q²) = C · max(0, 1 − M_c² / M²)
-
-    Activates (ν > 0) only when local Mach exceeds critical threshold M_c ≈ 0.95–1.0.
-    Subsonic regions (ν = 0) remain central and second-order accurate.
-
-    From design.md §3, equation (3.2).
-
-    Args:
-        q_squared: Nondimensional speed squared
-        M_inf: Freestream Mach number
-        M_crit: Critical Mach for switch (default 0.95)
-        C: Upwinding coefficient (default 1.5)
-        gamma: Specific heat ratio
-
-    Returns:
-        ν ∈ [0, C], the upwinding weight
-    """
-    M_sq = mach_number_squared(q_squared, M_inf, gamma)
-    return C * max(0.0, 1.0 - (M_crit ** 2) / max(M_sq, M_crit ** 2))
-
-
-@numba.njit(cache=True)
+@_njit(cache=True)
 def density_field(q_squared, M_inf, gamma=GAMMA):
     r"""
     Elementwise isentropic density over an array of q² values (the per-
@@ -258,7 +228,7 @@ def density_field(q_squared, M_inf, gamma=GAMMA):
     return out
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def q2_at_mach(mach, M_inf, gamma=GAMMA):
     r"""
     Invert (2.3): the q² at which the local Mach equals `mach`.
@@ -289,7 +259,7 @@ def q2_at_mach(mach, M_inf, gamma=GAMMA):
     )
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def limit_q2_field(q_squared, M_inf, m_cap, gamma=GAMMA):
     r"""
     Elementwise speed limiter: q²_eff = min(q², q²(M_cap)) (see q2_at_mach
@@ -314,7 +284,7 @@ def limit_q2_field(q_squared, M_inf, m_cap, gamma=GAMMA):
     return out
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def mach_squared_field(q_squared, M_inf, gamma=GAMMA):
     r"""
     Elementwise local M² over an array of q² values (supersonic-zone
@@ -334,7 +304,7 @@ def mach_squared_field(q_squared, M_inf, gamma=GAMMA):
     return out
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def density_derivative_wrt_q_sq_field(q_squared, M_inf, gamma=GAMMA):
     r"""Elementwise dρ/d(q²) over an array of q² values -- the field
     counterpart of `density_derivative_wrt_q_sq` (same formula, vectorized;
@@ -354,7 +324,7 @@ def density_derivative_wrt_q_sq_field(q_squared, M_inf, gamma=GAMMA):
     return out
 
 
-@numba.njit(cache=True)
+@_njit(cache=True)
 def mach_squared_derivative_wrt_q_sq_field(q_squared, M_inf, gamma=GAMMA):
     r"""Elementwise dM²/d(q²) over an array of q² values -- the field
     counterpart of `mach_squared_derivative_wrt_q_sq` (same formula,

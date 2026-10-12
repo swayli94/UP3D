@@ -1181,18 +1181,23 @@ second — otherwise model error and code error are confounded.
    not duplicated" spec was re-specced with divergence evidence during P2
    (the single-valued TE is quantitatively wrong; Kutta needs the secant with
    b≈0.93). See §4 and the P2 phase entry.
+   **守它的门**:`tests/A/test_A28_wingbody_topology.py`（翼身拓扑/结合部）、`tests/B/test_B04_vtk_io.py`（wake 切割 roundtrip）、`tests/F/test_F01_provenance.py`（网格 manifest 指纹）。〔2026-10-12,W3.2〕
 2. **FP non-uniqueness** (M∞ ≈ 0.82–0.85, low α, conventional airfoils):
    continuation direction can select different branches. Document; always ramp
    Mach upward from a subcritical converged state.
+   **守它的门**:`tests/D/test_D14_alpha0_transonic_nonuniqueness.py`（α=0 非唯一带的能力边界门）；运行时缓解：`newton.py` 的 `_FP_NONUNIQUE_MACH` 冷启动提示（W2.4）。〔2026-10-12,W3.2〕
 3. **Strong shocks** (M_local > 1.3): isentropic jump under-predicts shock
    pressure rise, shock sits aft of Euler. Not a bug; state validity envelope
    in the README and warn at runtime when max(M) exceeds 1.35.
+   **守它的门**:**无门（登记）** —— 有运行时缓解（`newton.py` 的 `_FP_SHOCK_VALIDITY_MACH` 的 print 警告,W2.4),没有任何测试断言它触发;登记：可加一条警告触发的机制测试。〔2026-10-12,W3.2〕
 4. **Picard stall on shocked cases**: symptoms — residual plateau with shock
    oscillating one cell. Mitigations in order: raise C in (3.2), lower ω,
    continuation, then Newton+PTC.
+   **守它的门**:`tests/A/test_A30_seed_fallback_contract.py`（冷启动种子回退合约）、`bench/failure_modes.py::classify_failure`（五模式分类,经 D11/D12 使用）。〔2026-10-12,W3.2〕
 5. **Numba compile-time friction** during vibe coding: keep kernels small and
    argument lists explicit; `cache=True`; a `PYFP3D_NOJIT=1` env switch that
    swaps `njit` for identity decorator makes pdb-debugging possible.
+   **守它的门**:`tests/A/test_A01_freestream_preservation.py::test_import_pyfp3d`（守 NOJIT 默认值语义）；机制通道本身 = `PYFP3D_NOJIT` 各模块级开关 + 暖态纪律（CLAUDE.md 全套基线段）。〔2026-10-12,W3.2〕
 
 ---
 

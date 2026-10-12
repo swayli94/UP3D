@@ -1,6 +1,14 @@
 # pyFP3D Agent Rules
 
-Current phase: **GV5.6 ✓ CLOSED 2026-07-25 (NEWEST; Track V / V5 —
+Current phase: **第六阶段（全面梳理 + 门重建），进行中** —— 工作面与轮次台账在
+`docs/dev_phase_six/`（`progress.md` 是唯一轮次账，最新轮次见表尾）；
+能力边界（2026-10-11 起为现行）：`docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md`；
+套件基线（2026-10-12 实测）：未门控 **825 passed / 0 failed / 33 skipped / 2 xfailed**，
+门控全集 812/21/3/1（2026-10-10），快层 5/5；**BLAS 由库运行时钉成单线程**
+（H30 + 第 33 轮；证据 CSV 带 `blas_threads` 出处列，读库不读 env）。
+★ 本块只写指针与实测基线 —— 会烂的散文一律进 progress.md，不进这里。
+
+阶段前史（原「Current phase」记录，逐字保留，勿据其行事）: **GV5.6 ✓ CLOSED 2026-07-25 (当时最新; Track V / V5 —
 the GV5.4 registered Schur-aware preconditioner follow-up, opening
 user-adjudicated; 0 PASS / 1 FAIL / 17 RECORDED;
 `phases/p1/cases/analysis/v5_6_schur_prec/` — the GV5.4 system/seed/protocol

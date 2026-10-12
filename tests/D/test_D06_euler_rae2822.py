@@ -47,6 +47,16 @@ RAE2822 参考自身的激波位置**散布**（L1–L4 极差）是 **0.0032 / 
 **同一条判据，两个相反的结论 —— 参照物的分辨率是逐例的性质。**
 （口径：0.00088 / 0.00100 与 "35×" 是旧的 L2→L3 最后差，2026-09-05 已更正为**散布** ——
 见 `test_shock_difference_is_resolvable_against_this_reference` 的更正记录；数值为 2026-10-10 现行 CSV。）
+
+★ 2026-10-10（W2.1a）：证据加 **xcoarse** 第三档 —— 只进证据 / 锁 / 图 /
+`grid_convergence_ours.csv`（RECORDED，用参照侧 `implied_order` 仪器），
+**不进任何判据**（本门判据全部点名层级，不经过 `LEVELS`）。
+
+★ 2026-10-11（W2.1b）：|S−D| 判据改写为 **min(标定带, u_val)**（u_val = √(u_num²
++ u_D²)，u_num 来自三级梯子、u_D 来自参照散布，带永不变宽）。逐腿体制：
+M0.725 **floor**（u_val ≈ 0.10 > 带 0.06，带不变）、M0.730 **no-bar**
+（梯子 coarse 腿 clamping ⇒ u_num 无定义，带 = 标定带 0.03）。
+逐腿读数见 `grid_convergence_ours.csv` 的 regime 列。
 """
 import os
 
@@ -60,6 +70,7 @@ from pyfp3d.post.shock import shock_report
 from pyfp3d.post.surface import wall_force_coefficients
 from pyfp3d.solve.newton import solve_newton_lifting
 from tests.D._cfl3d_cp import cp_rms, read_2d_cp
+from tests.D._grid_convergence import leg_uncertainty, mesh_h
 from tests._gate_evidence import assert_matches_committed, blas_thread_count, fmt
 from tests.conftest import REPO_ROOT, gate_figures_enabled
 
@@ -72,12 +83,19 @@ CASES = (
     ("M0.725_a2.55", "rae2822_m0725_a2.55", 0.725, 2.55, "gate"),
     ("M0.730_a3.19", "rae2822_m0730_a3.19", 0.730, 3.19, "gate"),
 )
-LEVELS = ("coarse", "medium")
+#: 证据层级（runs / summary.csv / 证据锁 / 图 / grid_convergence_ours.csv）。
+#: xcoarse 只进证据：本门判据全部用 "coarse" / "medium" 字面量点名层级、
+#: 不经过 LEVELS，所以扩档碰不到判据域 —— W2.1a 预注册 C2。
+#: （D05 的同结构判据域由 GATE_LEVELS 显式隔开。）
+LEVELS = ("xcoarse", "coarse", "medium")
 
 # —— 判据（标定，不是实测值）——
-CL_BAND = 0.06              # M0.725 medium |Δcl|：实测 0.0355
-CL_BAND_M0730 = 0.03        # M0.730 medium |Δcl|：实测 0.0006
-RESOLVABLE_FRAC = 1.0       # 与参考自身 L2→L3 差比较的可分辨下限
+#: ★ 2026-10-11（W2.1b）：|S−D| 腿的带改写为 **min(标定带, u_val)**，
+#:   u_val = √(u_num² + u_D²)（u_num = 我方梯子最细差，u_D = 参照散布）——
+#:   **带永不变宽**；逐腿体制写在注释尾巴与 `grid_convergence_ours.csv` 的 regime 列。
+CL_BAND = 0.06              # M0.725 medium |Δcl|：实测 0.0355；W2.1b：u_val 0.10 > 带 ⇒ floor（带不变）
+CL_BAND_M0730 = 0.03        # M0.730 medium |Δcl|：实测 0.0006；W2.1b：梯子 coarse 腿是 clamping ⇒ u_num 无定义 ⇒ no-bar（带 = 标定带）
+RESOLVABLE_FRAC = 1.0       # 与参考自身散布比较的可分辨下限（W2.1b 不改写：它是前提锁，不是 |S−D| 带）
 
 
 def _read_reference(path=None):
@@ -122,6 +140,9 @@ def _reference_shock(case):
                     and r["surface"] == "upper" and r.get("x_shock")):
                 return float(r["x_shock"])
     return float("nan")
+
+
+MESH_DIR = os.path.join(str(REPO_ROOT), "cases", "meshes", "rae2822_2.5d")
 
 
 def _one(level, m_inf, alpha):
@@ -179,22 +200,38 @@ def ref():
 class TestWhatIsGateable:
     def test_m0725_lift_magnitude(self, runs, ref):
         """幅度带，**不是**收缩判据：误差跨零（coarse −6.79 % → medium +3.55 %），
-        所以不能要求单调收缩，只能要求 medium 的幅度在带内。"""
+        所以不能要求单调收缩，只能要求 medium 的幅度在带内。
+
+        ★ 2026-10-11（W2.1b）：带 = min(0.06, u_val)；该腿梯子差大
+        （u_val ≈ 0.10 相对）⇒ **floor**，带不变。"""
         got = runs[("M0.725_a2.55", "medium")]["cl"]
         want = ref["rae2822_m0725_a2.55"]["cl"]
         rel = abs(got - want) / abs(want)
-        assert rel <= CL_BAND, (
+        u = leg_uncertainty([runs[("M0.725_a2.55", lv)]["cl"] / abs(want)
+                             for lv in LEVELS], mesh_h(MESH_DIR),
+                            _reference_uncertainty()[("rae2822_m0725_a2.55", "cl")]
+                            / abs(want), CL_BAND, sd=rel)
+        assert rel <= u["band"], (
             f"M0.725 cl {got:.6f} vs CFL3D Euler {want:.6f} = {rel*100:.2f} % "
-            f"> {CL_BAND*100:.0f} %")
+            f"> band {u['band']*100:.2f} % = min({CL_BAND*100:.0f} %, u_val);"
+            f"regime {u['regime']}, u_num {u['u_num']}, u_D {u['u_D']}")
 
     def test_m0730_lift_magnitude(self, runs, ref):
-        """@16 线程 Δcl = +0.06 %（L4 口径）。★ 同样**不断言 `converged`**。"""
+        """@16 线程 Δcl = +0.06 %（L4 口径）。★ 同样**不断言 `converged`**。
+
+        ★ 2026-10-11（W2.1b）：梯子 coarse 腿是 clamping ⇒ u_num 无定义 ⇒
+        **no-bar**，带 = 标定带 0.03（本条现在是没有误差棒的锁，写明）。"""
         got = runs[("M0.730_a3.19", "medium")]["cl"]
         want = ref["rae2822_m0730_a3.19"]["cl"]
         rel = abs(got - want) / abs(want)
-        assert rel <= CL_BAND_M0730, (
+        u = leg_uncertainty([runs[("M0.730_a3.19", lv)]["cl"] / abs(want)
+                             for lv in LEVELS], mesh_h(MESH_DIR),
+                            _reference_uncertainty()[("rae2822_m0730_a3.19", "cl")]
+                            / abs(want), CL_BAND_M0730, sd=rel)
+        assert rel <= u["band"], (
             f"M0.730 cl {got:.6f} vs CFL3D Euler {want:.6f} = {rel*100:.2f} % "
-            f"> {CL_BAND_M0730*100:.0f} %")
+            f"> band {u['band']*100:.2f} % = min({CL_BAND_M0730*100:.0f} %, u_val);"
+            f"regime {u['regime']}, u_num {u['u_num']}, u_D {u['u_D']}")
 
     def test_shock_difference_is_resolvable_against_this_reference(self, runs):
         """★★ 与 D05 的 M0.75 相反：这里的差远大于参考自身的散布，**可分辨**。
@@ -333,6 +370,38 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
                             f"{xr:.6f}", f"{dx:+.6f}", f"{u:.6f}",
                             f"{abs(dx) / u:.2f}"])
 
+    #: ★ W2.1a/W2.1b：我方三级网格收敛读数（RECORDED，不进值锁）—— 估计器与
+    #:   判定词汇都是参照侧的（tests/D/_grid_convergence.py）；u_D = 参照散布，
+    #:   sd / band = 该腿判据的 |S−D| 与标定带（原生单位）；cp_rms_* 参照侧
+    #:   没有同名阶梯量 ⇒ u_D 缺 ⇒ no-bar。
+    from tests.D._grid_convergence import write_grid_convergence_ours
+    cids = {nm: cid for nm, cid, *_ in CASES}
+
+    def _u_d_of(case, q):
+        key = {"cl": "cl", "cd": "cd", "x_shock": "x_shock_upper"}.get(q)
+        return None if key is None else unc.get((cids[case], key))
+
+    def _sd_of(case, q):
+        d, cid = runs[(case, "medium")], cids[case]
+        if q in ("cl", "cd"):
+            return abs(d[q] - ref[cid][q])
+        if q == "x_shock":
+            xr = _reference_shock(cid)
+            return (None if not (np.isfinite(d["x_shock"]) and np.isfinite(xr))
+                    else abs(d["x_shock"] - xr))
+        return d[q]  # cp_rms_* 本身就是 |S−D|
+
+    def _band_of(case, q):
+        if q != "cl":
+            return None  # cd / x_shock / cp_rms 在本门没有标定带
+        return ((CL_BAND if case == "M0.725_a2.55" else CL_BAND_M0730)
+                * abs(ref[cids[case]]["cl"]))
+
+    write_grid_convergence_ours(
+        os.path.join(str(gate_evidence_dir), "grid_convergence_ours.csv"),
+        runs, [nm for nm, *_ in CASES], LEVELS,
+        MESH_DIR, u_d_of=_u_d_of, sd_of=_sd_of, band_of=_band_of)
+
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     for k, (nm, cid, m, a, kind) in enumerate(CASES):
         ax = axes[k]
@@ -340,7 +409,8 @@ def test_export_evidence(runs, ref, gate_evidence_dir):
         for side, ls in (("upper", "-"), ("lower", "--")):
             ax.plot(rc[side][0], rc[side][1], ls, color="#c0392b", lw=1.6,
                     label="CFL3D Euler L4" if side == "upper" else None)
-        for lv, sty in (("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
+        for lv, sty in (("xcoarse", dict(lw=0.7, ls="--", color="#c7ccd4")),
+                        ("coarse", dict(lw=0.9, ls=":", color="#9aa0a6")),
                         ("medium", dict(lw=1.4, color="#1a56db"))):
             cur = runs[(nm, lv)]["curve"]
             for side in ("upper", "lower"):

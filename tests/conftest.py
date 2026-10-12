@@ -33,7 +33,7 @@ def gate_evidence_dir(request):
       `cases/gates/` 下 **19 个证据 CSV 里 16 个无人读** —— 门重算一遍然后对着测试文件里的
       **硬编码字面量**断言，CSV 是**只写不读**的产物。现已由 `tests/_gate_evidence.py`
       （`fmt` + `assert_matches_committed`）逐门补上「**新鲜计算 → 与 CSV 比**」的锁；
-      **14 道全部转换完毕**（C01/C02/C03/C05–C09/D01/D02/D03/D11/D12/D13）⇒ 这句话现在是真的。
+      **19 道全部转换完毕**（C 类 8 + D 类 11；2026-10-10 起证据 CSV 还带 `blas_threads` 出处列并进锁）⇒ 这句话现在是真的。
       ★ C04 与 D04 不在其列：它们**不写证据 CSV**（无证据可锁）。
       - `PYFP3D_GATE_FIGURES=1`：同一次计算重写 `summary.csv` + `<门号>/*.png`。
     ⇒ 图与断言来自**同一次计算，构造保证**；刷新走本项目已有的再基线勘误纪律。

@@ -1,8 +1,13 @@
-# `bench/studies/` —— **只剩被活测试实际加载的 7 个**
+# `bench/studies/` —— 被活测试实际加载的 **7 个** + **一次性研究 4 个**
 
 ★★ **2026-08-24 归档**：原本 48 个目录，其中 **41 个是一次性研究**，已随各自阶段移入
 `phases/p*/bench/studies/`。留在这里的 **7 个**，每一个都**被 `tests/` 里的某个文件在运行时
-`spec_from_file_location` 加载**（不是提及，是执行）：
+`spec_from_file_location` 加载**（不是提及，是执行；★ 2026-10-12 注：下表的测试名是
+**重编号前**的旧名 —— 现行文件名在 `tests/A/` 里,如 test_v5_above_band_seed →
+test_A48_*,映射见 progress.md 第 10 轮）：
+
+★ 另有一次性研究目录 **4 个**(不被测试加载,按纪律 3 承担已提交证据):
+`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investigation`、`hex_cl_attribution`。
 
 | 目录 | 被谁加载 |
 |---|---|

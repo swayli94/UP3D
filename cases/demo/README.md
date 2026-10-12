@@ -1,7 +1,11 @@
 # Per-phase demo cases
 
-★★ **归档说明(2026-08-10)**:本目录只保留**仍被现存测试/脚本读取**的条目(9 个,共 33 个)。其余已移入 [`phases/p1/cases/demo/`](../../phases/p1/cases/demo/) —— **证据(CSV/PNG)仍被跟踪**,只是不在原位置。下表中指向已归档目录的行,链接已重定向。
+★★ **归档说明(2026-08-10)**:本目录只保留**仍被现存测试/脚本读取**的条目。其余已移入 [`phases/p1/cases/demo/`](../../phases/p1/cases/demo/) —— **证据(CSV/PNG)仍被跟踪**,只是不在原位置。下表中指向已归档目录的行,链接已重定向。
 判定规则是可测的:**被保留代码读取 ⇒ phase 3 仍需要 ⇒ 留在原位**。
+★ 更正(2026-10-12,实测):当年写下的「9 个,共 33 个」早已不实 —— **现存 6 个**
+(p1_laplace、p4_transonic、p5_onera_m6、p9_grid_discrimination、p10_newton_usability、
+p11_curved_walls);其中 tests/ **真读文件**的只有 `p11_curved_walls`(tests/C/test_C03
+读它的 `results/`),其余在 tests/ 里只有 docstring/历史引用(p9 零提及)。
 
 One self-contained, self-checking demo per completed roadmap phase. Each
 `run_demo.py` regenerates every figure/CSV in its `results/` folder and
