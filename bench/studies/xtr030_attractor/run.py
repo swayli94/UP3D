@@ -578,6 +578,7 @@ def analyze():
     metrics.update(repeat_e_cl=ecl, repeat_e_ds=eds, repeat_valid=repeat_valid)
     if cross is not None:
         metrics.update(native_separated=separated(cross["d_cl"], cross["d_delta_max"], ecl, eds),
+                       native_converged_pair=bool(cross["converged_pair"]),
                        native_d_cl=cross["d_cl"], native_d_delta_max=cross["d_delta_max"],
                        k0_phi_equal=cross["k0_phi_equal"],
                        k0_gamma_equal=cross["k0_gamma_equal"])
@@ -598,6 +599,8 @@ def analyze():
     if cross is not None:
         if repeat_valid is False:
             verdict = "UNDEFINED_PROVENANCE"
+        elif not metrics["native_converged_pair"]:
+            verdict = "UNDEFINED_NATIVE_NONCONVERGENCE"
         elif not metrics["native_separated"]:
             verdict = "RECORDED_NO_B16_SEPARATION"
         elif tight_native is None or tight_common is None:
@@ -628,6 +631,7 @@ def decision_tree_self_test():
         "frozen": "PASS_FROZEN_INFLOW_PATH",
         "multi": "PASS_MULTIPLE_FIXED_POINTS",
         "provenance": "UNDEFINED_PROVENANCE",
+        "nonconverged": "UNDEFINED_NATIVE_NONCONVERGENCE",
     }
     rows = []
     try:
@@ -656,6 +660,8 @@ def decision_tree_self_test():
                 add("native_xtr030_b1_r2", 0.02 if scenario == "provenance" else 0.0)
                 add("native_xtr030_b16_r1", 0.02, 0.001)
                 add("native_xtr030_b16_r2", 0.02, 0.001)
+                if scenario == "nonconverged":
+                    synthetic[2]["converged"] = "0"
                 add("tight_b1seed_native")
                 add("tight_b1seed_commonB1")
                 add("tight_b16seed_native", 0.0 if scenario == "early" else 0.02)
@@ -880,7 +886,8 @@ def main():
         return
     run_replays(state)
     metrics = analyze()
-    if metrics.get("repeat_valid") and metrics.get("native_separated"):
+    if (metrics.get("repeat_valid") and metrics.get("native_converged_pair")
+            and metrics.get("native_separated")):
         for spec in tight_specs():
             run_coupling_leg(spec, state)
         analyze()
