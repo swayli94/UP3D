@@ -114,12 +114,20 @@ def separated(dcl, dds, ecl, eds):
     return dcl > max(1e-4, 20 * ecl) or dds > max(1e-7, 20 * eds)
 
 
-def make_recorder(original, captured, seed_U=None, frozen_bc=None):
+def make_recorder(original, captured, seed_U=None, frozen_bc=None, replay_input=None):
     import numpy as np
 
     class Recorder(original):
         def __init__(self, smesh, u_e, rho, mu, mach, turbulent_flags,
                      inflow_mask, inflow_state, *args, **kwargs):
+            if replay_input is not None:
+                u_e = np.asarray(replay_input["ue"], dtype=float)
+                rho = np.asarray(replay_input["rho"], dtype=float)
+                mu = np.asarray(replay_input["mu"], dtype=float)
+                mach = np.asarray(replay_input["mach"], dtype=float)
+                turbulent_flags = np.asarray(replay_input["flags"], dtype=np.int64)
+                inflow_mask = np.asarray(replay_input["inflow_mask"], dtype=bool)
+                inflow_state = np.asarray(replay_input["inflow_state"], dtype=float)
             if frozen_bc is not None:
                 inflow_mask = np.asarray(frozen_bc["inflow_mask"], dtype=bool)
                 inflow_state = np.asarray(frozen_bc["inflow_state"], dtype=float)
@@ -306,22 +314,38 @@ def replay_worker(spec):
         require_blas(spec["blas"], blas_thread_count)
         from pyfp3d.mesh.reader import read_mesh
         from pyfp3d.mesh.wake_cut import cut_wake
-        from pyfp3d.viscous.coupling import CouplingConfig, build_airfoil_case
-        from pyfp3d.viscous.ibl3 import IBL3Solver
+        from pyfp3d.post.surface import wall_force_coefficients
+        import pyfp3d.viscous.coupling as coupling
 
-        mc, _wc = cut_wake(read_mesh(str(MESH)))
-        cfg = CouplingConfig(re_chord=3.0e6, m_inf=0.5, alpha_deg=2.0,
-                             x_tr_upper=0.30, x_tr_lower=0.30)
-        case = build_airfoil_case(mc.nodes, mc.elements,
-                                  mc.boundary_faces["wall"], cfg)
-        f = np.load(WORK / "first_native_xtr030_b1_r1.npz")
-        solver = IBL3Solver(
-            case.sm, f["ue"], f["rho"], f["mu"], f["mach"], f["flags"],
-            f["inflow_mask"], f["inflow_state"], eps_diff=cfg.eps_diff,
-            eps_diff_s=cfg.eps_diff_s,
+        mc, wc = cut_wake(read_mesh(str(MESH)))
+        cfg = coupling.CouplingConfig(
+            re_chord=3.0e6, m_inf=0.5, alpha_deg=2.0,
+            x_tr_upper=0.30, x_tr_lower=0.30, n_outer_max=1,
         )
-        U, info = solver.solve(f["U0"], tol=cfg.ibl_tol,
-                               max_iter=cfg.ibl_max_iter)
+        case = coupling.build_airfoil_case(
+            mc.nodes, mc.elements, mc.boundary_faces["wall"], cfg)
+        dz = float(np.ptp(mc.nodes[:, 2]))
+        driver = coupling.make_picard_lifting_driver(mc, wc, 0.5, 2.0)
+
+        def probe(phi, gamma, k):
+            force = wall_force_coefficients(
+                mc.nodes, mc.elements, mc.boundary_faces["wall"], phi,
+                alpha_deg=2.0, u_inf=1.0, s_ref=dz, m_inf=0.5)
+            return {"cl": float(force["cl"]), "cd_p": float(force["cd_pressure"])}
+
+        f = np.load(WORK / "first_native_xtr030_b1_r1.npz")
+        captured = {}
+        recorder = make_recorder(
+            coupling.IBL3Solver, captured, seed_U=f["U0"], replay_input=f)
+        original = coupling.IBL3Solver
+        coupling.IBL3Solver = recorder
+        try:
+            res = coupling.run_loose_coupling(driver, case, cfg, probe=probe)
+        finally:
+            coupling.IBL3Solver = original
+        U = captured["U_first"]
+        info = captured["info_first"]
+        write_leg_tables(f"replay_b{spec['blas']}", res, case)
         np.savez_compressed(WORK / f"replay_b{spec['blas']}.npz", U=U)
         native = f["U_first"]
         result = dict(
@@ -713,6 +737,22 @@ def self_test():
     record("frozen_bc_override_has_teeth",
            np.array_equal(captured["constructor"]["inflow_mask"], [True, False])
            and np.array_equal(captured["constructor"]["inflow_state"], np.full((1, 6), 3.0)))
+    replay_input = dict(
+        ue=np.full((2, 3), 4.0), rho=np.full(2, 5.0), mu=np.array(6.0),
+        mach=np.full(2, 7.0), flags=np.array([0, 1]),
+        inflow_mask=np.array([True, False]), inflow_state=np.full((1, 6), 8.0))
+    replay_captured = {}
+    replay_solver = make_recorder(
+        Dummy, replay_captured, seed_U=np.zeros((2, 6)),
+        replay_input=replay_input)(*args)
+    replay_solver.solve(np.full((2, 6), 2.0))
+    record("full_replay_input_override_has_teeth",
+           np.array_equal(replay_captured["constructor"]["ue"], np.full((2, 3), 4.0))
+           and np.array_equal(replay_captured["constructor"]["rho"], np.full(2, 5.0))
+           and np.array_equal(replay_captured["constructor"]["mu"], 6.0)
+           and np.array_equal(replay_captured["constructor"]["mach"], np.full(2, 7.0))
+           and np.array_equal(replay_captured["constructor"]["flags"], [0, 1])
+           and np.array_equal(replay_captured["U0"], np.zeros((2, 6))))
     U_second, _ = solver.solve(np.zeros((2, 6)))
     record("seed_override_first_outer_only",
            np.array_equal(U_second, np.ones((2, 6))))
