@@ -18,6 +18,10 @@ phase 6 的 4 个(`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investiga
 ★ **2026-10-12(phase 7 第 4 轮)**:`amg_shock_fix/`（「amg 能否修」研究：方向 1
 实测负、方向 2 可修 + 代价表）同上 —— phase 7 期间留原位，收口归档，无测试加载。
 
+★ **2026-11-03(phase 7 第 5 轮)**:`tet_rfar/`（tet medium r_far 20/30 不收敛归因：
+6 条基线 + 同网格 continuation/entropy-off 诊断）同上 —— phase 7 期间留原位，
+收口归档，无测试加载；`_work/` 变体网格不跟踪，指纹与逐步历史 CSV 是证据。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
