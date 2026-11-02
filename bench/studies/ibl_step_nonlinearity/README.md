@@ -67,3 +67,19 @@ python -m pytest tests/F/test_F07_repo_invariants.py -q
   而第 8 轮导出的是浮点 `U_after-U_before`。所有 `F/Rpt/dF` 回写已通过、末态也逐位一致，
   仅实际状态差的末位字符串守卫触发；在 SVD 和非线性测量前停止。失败证据保留，修正后自测
   增至 **27/27**，不以完整重启动或低精度状态替代。
+
+## 判定
+
+第 9 轮判定：[`20261103-0601-ibl-step-nonlinearity-verdict.md`](../../../docs/dev_phase_seven/20261103-0601-ibl-step-nonlinearity-verdict.md) —— **RECORDED**。
+
+- 18 步全部通过 `f12` 回写和末态逐位守卫；一次 SVD 的谱与 `capture20` 全部回写第 8 轮，
+  投影/向量重构守卫全过。
+- full 与左补空间直接向量均 **18/18 LINEAR_DOMINATED、BOTH_REDUCED**；补空间 `A/Psi`
+  源方程也均 18/18 线性且同向下降，pooled `N/P` 分别 **0.0395649 / 0.0207072**。
+- `delta/B` 为 MIXED，但 324 个事件×源方程×区域条目无一 `NONLINEAR_DOMINATED`。
+  唯一方向不一致是迭代 10 的 `B` 源方程，该步仍为线性主导且处于近平坦符号翻转区。
+- 结论仅限这 18 个接受步；拒绝 trial、整体 IBL 地板和 S5 多吸引子根因仍未判，不启动修复或
+  新外部对照。
+
+所有数值以 `criteria.csv`、`verdict_metrics.csv`、`event_summary.csv`、
+`event_equation_metrics.csv`、`equation_summary.csv`、逐节点 CSV 和 PNG 为准。
