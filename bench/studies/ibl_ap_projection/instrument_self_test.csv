@@ -13,6 +13,7 @@ projection_class_rejects_hard_spectrum,0,0,1
 trace_normal_replay,True,True,1
 trace_normal_one_accept,1,1,1
 trace_normal_zero_residual,AP_REDUCED,AP_REDUCED,1
+trace_export_normal,True,True,1
 trace_bad_replay,True,True,1
 trace_bad_all_rejected,True,True,1
 no_accepted_steps,NO_ACCEPTED_STEPS,NO_ACCEPTED_STEPS,1

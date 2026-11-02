@@ -419,6 +419,7 @@ def event_metrics(event):
 
 
 def write_trace(leg, role, contexts, events):
+    import numpy as np
     event_by_iter = {e["iter"]: e for e in events}
     iteration_rows = []
     for ctx in contexts:
@@ -700,6 +701,20 @@ def self_test():
     check("trace_normal_one_accept", 1, lambda: len(normal_events))
     check("trace_normal_zero_residual", "AP_REDUCED",
           lambda: event_metrics(normal_events[0])["ap_step_class"])
+
+    def export_normal_trace():
+        paths = [HERE / f"{prefix}_selftest.csv" for prefix in (
+            "iteration_trace", "accepted_steps", "accepted_event_metrics")]
+        try:
+            iterations, steps, summaries = write_trace(
+                "selftest", "control", normal_contexts, normal_events)
+            return (len(iterations) == 2 and len(steps) == 6 and len(summaries) == 1
+                    and all(path.exists() for path in paths))
+        finally:
+            for path in paths:
+                path.unlink(missing_ok=True)
+
+    check("trace_export_normal", True, export_normal_trace)
 
     bad = _self_test_fake_solver(bad=True)
     bad_baseline_U, bad_baseline_info = IBL3Solver.solve(
