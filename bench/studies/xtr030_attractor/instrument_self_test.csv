@@ -1,0 +1,10 @@
+case,passed,detail
+fixed_point_same,True,
+fixed_point_distinct,True,
+fixed_point_grey,True,
+fixed_point_nonconverged,True,
+separation_teeth,True,
+blas_missing_is_loud,True,
+seed_override_has_teeth,True,
+frozen_bc_override_has_teeth,True,
+seed_override_first_outer_only,True,

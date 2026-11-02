@@ -22,6 +22,10 @@ phase 6 的 4 个(`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investiga
 6 条基线 + 同网格 continuation/entropy-off 诊断）同上 —— phase 7 期间留原位，
 收口归档，无测试加载；`_work/` 变体网格不跟踪，指纹与逐步历史 CSV 是证据。
 
+★ **2026-11-03(phase 7 第 6 轮)**:`xtr030_attractor/`（xtr030 跨 BLAS 落点归因：
+原生重复腿 + xtr005 对照 + 同输入 IBL 重放 + 紧容差种子/冻结入流 2×2）同上 ——
+phase 7 期间留原位，收口归档，无测试加载；`_work/` 数组缓存不跟踪，CSV/PNG 是证据。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
