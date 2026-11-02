@@ -1,0 +1,13 @@
+metric,value
+amg_A_setup_s,0.007621973054483533
+amg_J_setup_s,0.009174638893455267
+softmodes20_s,0.04495390597730875
+newton_ctrl_direct_wall_s,0.12574990116991103
+newton_ctrl_direct_steps,7
+newton_ctrl_direct_converged,1
+newton_amg_on_Jff_wall_s,18.51450786413625
+newton_amg_on_Jff_steps,40
+newton_amg_on_Jff_converged,0
+newton_defl_k4_wall_s,3.433548618108034
+newton_defl_k4_steps,8
+newton_defl_k4_converged,1

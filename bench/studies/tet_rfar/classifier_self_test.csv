@@ -1,0 +1,6 @@
+case,expected,actual,period,period_score,passed
+converged,converged,converged,,,True
+clamped,clamped,clamped,,,True
+period4,periodic_limit_cycle,periodic_limit_cycle,4,8.989501143808e-15,True
+bounded_nonperiodic,bounded_stall,bounded_stall,7,2.690231491082e-01,True
+fixed_point,fixed_point_stall,fixed_point_stall,1,1.000000000000e+00,True

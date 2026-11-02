@@ -844,9 +844,12 @@ cases/                     # inputs and demos only, now that analysis/ merged in
 └── demo/                  # ✓ per-phase self-checking demos with committed figures
 
 docs/                      # ★ only FOUR living documents (rewritten in Chinese at the phase-6
-│                          #   close-out, 2026-10-12). Phase working documents archive with their
+│                          #   close-out, 2026-10-12), PLUS the ACTIVE phase working surface.
+│                          #   Phase working documents archive with their
 │                          #   phase: phase N's rounds live in phases/pN/docs/dev_phase_*/
 │                          #   (index: phases/README.md). docs/inspection/ was deleted 2026-08-24.
+├── dev_phase_seven/       # ★ ACTIVE: phase 7 working surface (initiation + progress.md +
+│                          #   rounds), opened 2026-10-12; archives to phases/p7/ at close-out
 ├── overview.md            # what the project is, live repo map, per-phase summary, next-phase candidates
 ├── design.md              # theory/numerics reference (§1–§13; §12 risk↔gate index is F10-checked)
 ├── design_track_v.md      # Track V viscous coupling: design summary, boundaries, open items
@@ -1670,9 +1673,11 @@ existing FD locks still cover it) and `gamma_target=None` takes the original exp
 verbatim, so the legacy path is bit-identical **by construction**. Verified by `array_equal`
 against two committed caches and by the suite closing at 580 + 9 = 589 exactly.
 
-Baselines: always-on **825 passed / 33 skipped / 2 xfailed, 0 failed** (2026-10-12, phase-6
+Baselines: always-on **831 passed / 33 skipped / 2 xfailed, 0 failed** (2026-10-12, phase-6
 close-out, measured @16 threads with runtime BLAS pinning; gated full set 812/21/3/1 XPASS
 @1:14:28; fast tier 5/5 — see phases/p6/docs/dev_phase_six/20261012-1500-phase6-closeout-verdict.md).
+★ 勘误 2026-10-12（phase 7 立项轮）：本行此前写 825，那是第 48 轮后的数；收口判定基线行 = 831
+（825 + F10 四条 + A57 两条，两处闭合都在台账）。
 Previous: **803 passed / 32 skipped / 2 xfailed, 0 failed** (2026-10-10, measured @16 threads, runtime BLAS pinning active; gated 812/21/3/1 @8t same day; previous 674/33/2 on 2026-08-28
 full @1055.94 s @8 threads at load 12.8, phase-six 第 10–28 轮).
 ★★★ D03 的 M0.80 跨声速激波门此前**在任何周期上都不跑**（重编号把图开关加在了物理判据上，

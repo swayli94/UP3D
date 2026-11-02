@@ -6,15 +6,17 @@
 
 ## 当前阶段
 
-**phase 6（全面梳理 + 门重建）已收口归档（2026-10-12）；下一阶段尚未开工，开工内容 = 使用者裁决。**
+**phase 7（可信收敛：预条件子 × 敏感腿 × 多吸引子 + 两条星标移交项）2026-10-12 立项开工。**
 
+- **工作面**：`docs/dev_phase_seven/`（入口 = 立项文书
+  [20261012-2100-initiation.md](dev_phase_seven/20261012-2100-initiation.md)；
+  范围裁决在 §2、轮次序列在 §3）。阶段结束后归档进 `phases/p7/`。
 - **现行能力声明**（实测边界，引用能力时以它为准）：
   `phases/p6/docs/dev_phase_six/PHASE_SIX_CAPABILITY_BOUNDARY.md`（2026-10-11）。
-- **套件基线**（2026-10-12 实测）：未门控 **825 passed / 0 failed / 33 skipped / 2 xfailed**；
-  门控全集 812/21/3/1（1 XPASS）；快层 5/5。**BLAS 由库运行时钉成单线程**（读库不读 env）。
-- 下一阶段候选工作项登记在 `docs/overview.md` 的「下一阶段」节（全部未排期）。
-- 阶段工作面（轮次台账、prereg/verdict）的最近实例：`phases/p6/docs/dev_phase_six/`；
-  轮次文件模板：`phases/p2/docs/dev_phase_two/_TEMPLATE.md`。
+- **套件基线**（p6 收口判定基线行，2026-10-12）：未门控 **831 passed / 0 failed / 33 skipped / 2 xfailed**
+  @16 线程（BLAS=1）；门控全集 812/21/3/1（1 XPASS）；快层 5/5。
+  **BLAS 由库运行时钉成单线程**（读库不读 env）。
+- 轮次文件模板：`phases/p2/docs/dev_phase_two/_TEMPLATE.md`。
 
 ★ 本块只写指针与实测基线——会烂的散文一律进当阶段的 progress.md，不进这里。
 
@@ -34,9 +36,11 @@
    声明；保留 Mach 爬坡（G10.3 判定）；折叠附近**忌**松的中间容差（G10.2b）。
 5. **M6 fine（~45 万自由度）conforming Newton 配方**：`precond="amg"` + 紧 EW forcing
    （η=1e-8）+ `m_start=0.30, n_picard_seed=12`——medium 配方的 `direct` 是 4h39m/26GB 的
-   splu 陷阱（P9；24 GB RSS 是标志）。★ phase 6 边界：amg 在**带激波**的腿上会失效
+   splu 陷阱（P9；24 GB RSS 是标志）。★ phase 6 边界：amg 在**带激波**的腿上可能失效
    （C05 喷管腿停在 |R|~3.9e-6，机制已归因：AMG 层级建在不含激波耦合的 Picard 块上）——
-   含激波腿的预条件子选择见能力边界 §9 登记。
+   适用边界、失效标志（GMRES 对真残差平台）与处置（换 direct/ilu，不拧 EW）见
+   `docs/design.md` §8.2（phase 7 第 2 轮成文）。★ 这不是全称命题：M6 fine 配方本身
+   就是带激波用 amg 的实测反例，分野只能实测。
 6. **门控测试**：重型跨声速/Newton/M6 门只在 `PYFP3D_TRANSONIC_GATES=1` 下跑；M6 `.msh`
    被 gitignore（用 `cases/meshes/onera_m6/generate_onera_m6.py` 重新生成，~30 s）。
 7. **不重开已关闭的负结果**（没有新证据时）：G1.6 的修复路线（h-加密/恢复微调/Nitsche/
