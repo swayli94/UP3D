@@ -531,6 +531,9 @@ def analyze():
     cross = None
     if all(f"native_xtr030_b{b}_r1" in rows for b in (1, 16)):
         cross = add("cross_native|native_xtr030_b1_r1|native_xtr030_b16_r1")
+    control = None
+    if all(f"control_xtr005_b{b}" in rows for b in (1, 16)):
+        control = add("cross_control|control_xtr005_b1|control_xtr005_b16")
     tight_repeat = None
     if all(k in rows for k in ("tight_b1seed_native", "tight_b1seed_commonB1")):
         tight_repeat = add("repeat_tight|tight_b1seed_native|tight_b1seed_commonB1")
@@ -568,13 +571,20 @@ def analyze():
             row["fixed_point_label"] = ""
     write_csv(HERE / "comparisons.csv", comp_fields, comparisons)
 
-    metrics["repeat_e_cl"] = ecl
-    metrics["repeat_e_ds"] = eds
+    repeat_valid = None
+    if len(repeat_rows) == 2:
+        repeat_valid = all(r["k0_phi_equal"] and r["k0_gamma_equal"]
+                           for r in repeat_rows.values()) and ecl <= 1e-6 and eds <= 1e-8
+    metrics.update(repeat_e_cl=ecl, repeat_e_ds=eds, repeat_valid=repeat_valid)
     if cross is not None:
         metrics.update(native_separated=separated(cross["d_cl"], cross["d_delta_max"], ecl, eds),
                        native_d_cl=cross["d_cl"], native_d_delta_max=cross["d_delta_max"],
                        k0_phi_equal=cross["k0_phi_equal"],
                        k0_gamma_equal=cross["k0_gamma_equal"])
+    if control is not None:
+        metrics.update(control_d_cl=control["d_cl"],
+                       control_d_delta_max=control["d_delta_max"],
+                       control_k0_phi_equal=control["k0_phi_equal"])
     metrics.update(replay_comparison())
     if tight_native is not None:
         metrics["tight_native_label"] = fixed_point_label(
@@ -586,7 +596,9 @@ def analyze():
             converged=bool(tight_common["converged_pair"]))
     verdict = "PENDING"
     if cross is not None:
-        if not metrics["native_separated"]:
+        if repeat_valid is False:
+            verdict = "UNDEFINED_PROVENANCE"
+        elif not metrics["native_separated"]:
             verdict = "RECORDED_NO_B16_SEPARATION"
         elif tight_native is None or tight_common is None:
             verdict = "PENDING_TIGHT"
@@ -797,17 +809,25 @@ def main():
     require_self_test()
     require_gate_checks()
     state = run_state()
-    for spec in native_specs() + control_specs():
+    for spec in native_specs():
         if not run_coupling_leg(spec, state):
             analyze()
             raise RuntimeError(f"baseline leg failed: {spec['leg']}")
+    metrics = analyze()
+    if metrics.get("repeat_valid") is False:
+        plot_results()
+        return
+    for spec in control_specs():
+        if not run_coupling_leg(spec, state):
+            analyze()
+            raise RuntimeError(f"control leg failed: {spec['leg']}")
     if args.baseline_only:
         analyze()
         plot_results()
         return
     run_replays(state)
     metrics = analyze()
-    if metrics.get("native_separated"):
+    if metrics.get("repeat_valid") and metrics.get("native_separated"):
         for spec in tight_specs():
             run_coupling_leg(spec, state)
         analyze()

@@ -4,7 +4,7 @@
     16
   ],
   "cache_policy": "no cache deletion; two gate warm/check runs first",
-  "commit": "6e050506e65d991472b2b838b05b85a48774c30f",
+  "commit": "f2232f0a0cc60cf3fa01a09189e5ea0f67755176",
   "coupling_time_budget_s": 4500.0,
   "gate_time_budget_s": 1800.0,
   "max_coupling_legs": 10,
