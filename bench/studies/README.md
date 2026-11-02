@@ -34,6 +34,10 @@ phase 7 期间留原位，收口归档，无测试加载；`_work/` 数组缓存
 Jacobian 投影 + 生产接受步逐方程分解）同上 —— phase 7 期间留原位，收口归档，无测试加载；
 每腿一次 dense SVD、零条新耦合/外部对照腿，CSV/PNG 是证据。
 
+★ **2026-11-03(phase 7 第 9 轮)**:`ibl_step_nonlinearity/`（xtr030 B1 的 18 个强回溯
+接受步非线性余项 + 固定左补空间逐源方程分解）同上 —— phase 7 期间留原位，收口归档，无测试
+加载；离线重放不调用生产 solve，一次原生点投影基重建，零条新耦合/外部对照腿，CSV/PNG 是证据。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
