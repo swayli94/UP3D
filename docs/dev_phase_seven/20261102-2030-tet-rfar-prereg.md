@@ -37,12 +37,17 @@ D05 最新差异是 M0.80 medium `cp_rms_upper` 相对差 2.43e-6，并非上述
   `cases/meshes/naca0012_2.5d/generate_naca0012.py::LEVELS`。用
   `naca0012_wake_2d` + `extrude_single_layer` 在研究目录的 gitignored 工作区生成，
   **不覆盖 `cases/meshes/`**。参数、节点/单元/边界组计数与 SHA-256 入 CSV。
-- r=15 两级新生成网格必须与已上传 committed mesh 的 manifest SHA-256 一致；
+- r=15 两级新生成网格必须与已上传 committed mesh 的 直接文件 SHA-256 一致；
   每个变体同参数生成两次，SHA-256 必须一致。网格本身不是提交证据，生成脚本、
   参数与指纹 CSV 才是可复算出处。
 - 流场：M0.80/α1.25，`solve_newton_lifting`，D05 `RECIPE` 原样
   （direct、400 步上限、5 次 Picard seed、原冻结设置）。每条腿保存残差/F/Gamma/
   clamp/步长/线性求解与熵修正诊断，以及 cl/cd/x_shock/Cp。
+
+> **实施前勘误（2026-11-03，尚未开始任何流场测量）**：初版写“r=15 与 committed
+> manifest 相合”，实测该族只有 gitignored fine 有 manifest；coarse/medium 本身是
+> Git 跟踪文件。改为对 r=15 重生成文件与仓库内 committed coarse/medium `.msh`
+> 直接计算并比较 SHA-256。实验矩阵、判据强度、时间盒均不变。
 
 ## 3. 实验矩阵与判据（事前写死）
 
@@ -52,7 +57,7 @@ D05 最新差异是 M0.80 medium `cp_rms_upper` 相对差 2.43e-6，并非上述
 
 | 判据 | G-DOMAIN（相反结果落在哪） |
 |---|---|
-| 6 腿都有完整摘要、网格指纹和逐步历史；r=15 指纹与 manifest 相合，所有变体重复生成 SHA 相合。原观察若复现，r=20/30 medium 应撞帽而 r=15 medium 不撞帽。 | 原观察不复现也是合格结果：记 **RECORDED**，说明它在当前 Gmsh/机器/出处态不可复现；不得改网格或配方去追撞帽。指纹不合则停止流场测量，判 **UNDEFINED（仪器出处不可判）**。 |
+| 6 腿都有完整摘要、网格指纹和逐步历史；r=15 指纹与 committed 文件直接 SHA-256 相合，所有变体重复生成 SHA 相合。原观察若复现，r=20/30 medium 应撞帽而 r=15 medium 不撞帽。 | 原观察不复现也是合格结果：记 **RECORDED**，说明它在当前 Gmsh/机器/出处态不可复现；不得改网格或配方去追撞帽。指纹不合则停止流场测量，判 **UNDEFINED（仪器出处不可判）**。 |
 
 ### C2 — 失败分类器及其牙齿
 
