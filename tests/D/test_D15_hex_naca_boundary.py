@@ -302,7 +302,7 @@ def test_export_evidence(runs, gated_runs, gate_evidence_dir):
 
     with open(os.path.join(str(gate_evidence_dir), "summary.csv"), "w",
               newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         #: ★ 出处列：n_threads 是 numba 旋钮，blas_threads 读库（H30 的教训）
         w.writerow(["leg", "n_nodes", "blas_threads", "n_threads",
                     "cl", "cd", "x_shock", "bubble_max_cp", "bubble_x_at_max",

@@ -94,7 +94,7 @@ def main():
         rows = [run_arm("E0_entropy_off", entropy_correction=False),
                 run_arm("F0_freeze_off", freeze_tol=None)]
         with open(path, "w", newline="") as fh:
-            w = csv.writer(fh)
+            w = csv.writer(fh, lineterminator="\n")
             w.writerow(["arm", "blas_threads", "cl", "x_shock", "bubble_max_cp",
                         "bubble_x_at_max", "converged", "residual", "n_newton",
                         "n_limited", "n_floored", "sigma_frozen"])

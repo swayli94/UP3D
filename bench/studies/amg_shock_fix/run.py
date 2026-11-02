@@ -242,7 +242,7 @@ def main():
 
     # ---------------------------------------------------------- 落盘
     with open(os.path.join(HERE, "freeze_point_gmres.csv"), "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["variant", "iter", "true_res"])
         for tag, seq in (("amg_on_Jff", seq1), ("amg_on_Aff", seq_amg),
                          ("ilu_on_Jff", seq_ilu)):
@@ -251,18 +251,18 @@ def main():
             for i, v in enumerate(seq):
                 w.writerow([tag, i, f"{v:.16e}"])
     with open(os.path.join(HERE, "deflation_sweep.csv"), "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["k", "iters", "info", "rel_true_res", "x_err_vs_direct"])
         for k, n, info, rel, err in defl_rows:
             w.writerow([k, n, info, f"{rel:.6e}", f"{err:.6e}"])
     with open(os.path.join(HERE, "newton_legs.csv"), "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["variant", "step", "residual_inf"])
         for leg in legs:
             for i, v in enumerate(leg["hist"]):
                 w.writerow([leg["tag"], i, f"{v:.16e}"])
     with open(os.path.join(HERE, "cost_table.csv"), "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["metric", "value"])
         for k, v in cost.items():
             w.writerow([k, v])
