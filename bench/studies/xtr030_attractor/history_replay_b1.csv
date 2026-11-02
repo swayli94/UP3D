@@ -1,0 +1,3 @@
+leg,k,cl,cd_p,ds_max,ds_change_rel,ds_neg_floored,mdot_max,ibl_n_iter,ibl_converged,ibl_final_residual,inflow_n_pinned,inflow_q_ref
+replay_b1,0,2.843718338482e-01,1.564337606866e-03,,,,0.000000000000e+00,,,,,
+replay_b1,1,2.788191610530e-01,1.793851177245e-03,5.102546529665e-03,inf,0.000000000000e+00,1.319966710598e-01,100,0.000000000000e+00,2.109157992340e-06,14,1.088362031523e+00

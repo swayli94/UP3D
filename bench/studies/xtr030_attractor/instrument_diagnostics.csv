@@ -1,0 +1,9 @@
+check,value,source,meaning
+standalone_b1_vs_native_maxabs,2.937189929449e+01,replay_standalone_invalid.csv,standalone IBL 重放未复现原生首解，仪器守卫停止
+one_outer_b1_vs_native_maxabs,0.000000000000e+00,"summary.csv; _work 数组比较","生产 run_loose_coupling 的 1 外迭代诊断逐位复现原生首 IBL"
+standalone_initial_R_maxabs,0.000000000000e+00,本表诊断记录,standalone 与生产路径在相同 U0 的初始残差逐位相同
+standalone_initial_J_maxabs,0.000000000000e+00,本表诊断记录,standalone 与生产路径在相同 U0 的初始 Jacobian 逐位相同
+warm_fp_standalone_vs_native_maxabs,2.937189929449e+01,本表诊断记录,仅先做 k=0 FP 仍不能使 standalone 复现原生首解
+wrapper_vs_original_second_maxabs,0.000000000000e+00,本表诊断记录,Recorder 与同进程原 solver 的重放结果逐位相同，wrapper 不改变算术
+corrected_b1_native_maxabs,0.000000000000e+00,replay.csv,生产首外迭代内覆盖全部输入后 B1 逐位复现原生首 IBL
+corrected_b16_native_maxabs,0.000000000000e+00,replay.csv,相同输入下 B16 与 B1 首 IBL 逐位相同

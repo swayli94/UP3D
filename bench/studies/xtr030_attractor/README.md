@@ -44,4 +44,16 @@ python bench/studies/xtr030_attractor/run.py --analyze-only
 | `run_state.json` | fresh 腿数、累计成本与时间盒 |
 | `trajectories.png` / `delta_profiles.png` | 轨迹/停止历史与最终 delta* 对照 |
 
-判定尚待正式测量；完成后在此链接第 6 轮 verdict。
+## 判定
+
+第 6 轮判定：[`20261103-0335-xtr030-attractor-verdict.md`](../../../docs/dev_phase_seven/20261103-0335-xtr030-attractor-verdict.md) —— **UNDEFINED（多吸引子根因不可判）**。
+
+- 同档重复逐位一致；跨档首差位于 k=0 FP 的 `phi/gamma`，生产路径同输入 B1/B16
+  首 IBL 解逐位相同，首 IBL 没有直接 BLAS 响应。
+- B1 原生腿 10 外迭代未收敛；B16 仅通过外层 `tol_ds=1e-3`，各腿 IBL 内求解均未达
+  自身判据。紧容差 2×2 未启动，提前停止、冻结入流和真正多不动点均未判。
+- standalone 重放失败证据保留在 `replay_standalone_invalid.csv`；修正后的生产路径
+  重放见 `replay.csv`，仪器诊断见 `instrument_diagnostics.csv`。
+
+所有结论以 `criteria.csv`、`verdict_metrics.csv`、`summary.csv`、`comparisons.csv`、
+逐腿历史和判定文件为准；生产库、测试判据和 committed gate 证据未改。
