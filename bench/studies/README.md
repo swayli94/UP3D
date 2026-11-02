@@ -30,6 +30,10 @@ phase 7 期间留原位，收口归档，无测试加载；`_work/` 数组缓存
 同状态同边数据重启动）同上 —— phase 7 期间留原位，收口归档，无测试加载；零条新耦合腿，
 `_work/` 数组缓存不跟踪，输入指纹与 committed S5 summary 绑定，CSV/PNG 是证据。
 
+★ **2026-11-03(phase 7 第 8 轮)**:`ibl_ap_projection/`（四个既有末态的均衡化
+Jacobian 投影 + 生产接受步逐方程分解）同上 —— phase 7 期间留原位，收口归档，无测试加载；
+每腿一次 dense SVD、零条新耦合/外部对照腿，CSV/PNG 是证据。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
