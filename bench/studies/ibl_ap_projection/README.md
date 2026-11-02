@@ -54,6 +54,29 @@ python bench/studies/ibl_ap_projection/run.py --analyze-only
 本研究不被测试加载；自测在正式复算前显式运行，收尾另跑 F07 仓库不变量。
 phase 7 收口时随一次性研究归档。
 
+## 启动与仪器勘误记录
+
+- `startup_failure_base_*`：第一次误从 anaconda `base` 启动，worker 的 BLAS 出处为
+  `None`，在任何 SVD/重启动前停止；改用 `conda activate up3d` 后实际 BLAS=1。
+- `instrument_failure_name_error_*`：第二次首腿 SVD 和求解完成后，接受步导出函数遗漏
+  `numpy` 导入而停止，未通过 replay、未纳入任何物理判定。已补 `trace_export_normal`
+  自测，正式自测增至 **26/26**，随后从头重跑四腿。
+
+两次失败均不作为物理证据；只有正式 `summary.csv` 中全部出处/native/SVD/replay 守卫通过的
+腿才进入判定。
+
 ## 判定
 
-正式测量尚未完成；最终判定、数值和证据指针以随后提交的 verdict 与本目录 CSV/PNG 为准。
+第 8 轮判定：[`20261103-0516-ibl-ap-projection-verdict.md`](../../../docs/dev_phase_seven/20261103-0516-ibl-ap-projection-verdict.md) —— **FAIL（主导 `A/Psi` 投影假设；仪器全部通过）**。
+
+- 四腿 bottom-20 右子空间的 `A/Psi` 份额均为 0.6006–0.6163，谱软化条件也全过；
+  但 `capture20(AP)` 仅为 **3.982458e-5 … 1.783390e-4**，全部远低于 0.50，
+  也低于 20/2460=0.00813008 的维数基线。两条主腿超过 99.989% 的 `A/Psi` 残差能量
+  位于其余 2440 维左补空间。
+- xtr030 B1 的 18 个接受步全部小幅消减 `A/Psi`，合计能量变化 **-5.384154e-4**；
+  其余三腿 `NO_ACCEPTED_STEPS`。接受步伪时间 merit 全降不等于纯六方程残差全降。
+- 四腿最终 `U` 和逐节点残差与第 7 轮逐位一致；SVD/native/replay/出处守卫全过。
+- S5 根因仍 UNDEFINED，2×2 不启动；不追加换 K/缩放的谱计算，不新跑外部对照。
+
+所有结论以 `criteria.csv`、`verdict_metrics.csv`、`provenance.csv`、`summary.csv`、
+逐模态/逐接受步 CSV 和 PNG 为准；生产库、测试判据和 committed gate 证据未改。

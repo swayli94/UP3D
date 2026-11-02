@@ -1,0 +1,15 @@
+{
+  "completed": [
+    "native_xtr030_b1_r1",
+    "native_xtr030_b16_r1",
+    "control_xtr005_b1",
+    "control_xtr005_b16"
+  ],
+  "cumulative_wall_s": 38.08357735723257,
+  "fresh_restarts": 4,
+  "fresh_svd": 4,
+  "max_restarts": 4,
+  "max_svd": 4,
+  "time_budget_s": 1800.0,
+  "worker_budget_s": 600.0
+}

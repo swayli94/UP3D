@@ -847,7 +847,7 @@ def plot_results():
     rows = [r for r in read_csv(HERE / "summary.csv") if r.get("status") == "ok"]
     if not rows:
         return
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.5))
     for row in rows:
         modes = read_csv(HERE / f"projection_modes_{row['leg']}.csv")
         sigma_rel = np.array([float(r["sigma_rel"]) for r in modes])
@@ -861,16 +861,25 @@ def plot_results():
     axes[0].legend(fontsize=7)
     labels = [r["leg"] for r in rows]
     x = np.arange(len(rows))
-    width = 0.25
-    for offset, key, name in ((-width, "right_AP_share20", "right A/Psi share"),
-                              (0.0, "capture20_AP", "A/Psi residual capture"),
-                              (width, "capture20_BD", "B/delta residual capture")):
+    width = 0.35
+    for offset, key, name in ((-width / 2, "right_AP_share20", "A/Psi"),
+                              (width / 2, "right_BD_share20", "B/delta")):
         axes[1].bar(x + offset, [float(r[key]) for r in rows], width, label=name)
     axes[1].axhline(DOMINANT, color="gray", ls=":", lw=0.8)
     axes[1].set_xticks(x, labels, rotation=20, ha="right")
-    axes[1].set(ylim=(0.0, 1.05), title="Bottom-20 projection signatures")
+    axes[1].set(ylim=(0.0, 1.05), title="Bottom-20 right-variable energy")
     axes[1].grid(axis="y", alpha=0.25)
     axes[1].legend(fontsize=7)
+    for offset, key, name in ((-width / 2, "capture20_AP", "A/Psi"),
+                              (width / 2, "capture20_BD", "B/delta")):
+        axes[2].bar(x + offset, [float(r[key]) for r in rows], width, label=name)
+    axes[2].axhline(float(rows[0]["dimension_baseline20"]), color="gray", ls="--",
+                    lw=0.8, label="20/2460 baseline")
+    axes[2].axhline(DOMINANT, color="gray", ls=":", lw=0.8, label="dominant threshold")
+    axes[2].set_xticks(x, labels, rotation=20, ha="right")
+    axes[2].set(yscale="log", ylim=(1.0e-6, 2.0), title="Bottom-20 residual capture")
+    axes[2].grid(axis="y", alpha=0.25)
+    axes[2].legend(fontsize=7)
     fig.tight_layout()
     fig.savefig(HERE / "projection.png", dpi=150)
     plt.close(fig)
