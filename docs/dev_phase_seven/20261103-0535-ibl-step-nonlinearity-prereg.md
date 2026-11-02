@@ -113,9 +113,18 @@ E_region,e(X) = ||region0(X_e)||2^2,  region ∈ {FULL, BOTTOM20, COMPLEMENT}
 ```
 
 `M_e` 是每节点六方程展平顺序中的第 `e` 个方程 mask。先投影再取输出方程是另一个量，不得
-与上述定义混写。六源方程能量之和必须分别等于对应 full 向量的 FULL/BOTTOM20/COMPLEMENT
-能量；每事件每区域另验证 `FULL = BOTTOM20 + COMPLEMENT`（相对误差 `<=1e-10`）。零目标
-可以记录零能量，但不得产生伪造的 0/NaN 比值或方向票。
+与上述定义混写。每事件每源方程验证 `FULL = BOTTOM20 + COMPLEMENT`（相对误差 `<=1e-10`），
+并验证六源方程在同一区域的**投影向量之和**等于直接投影 full 向量。零目标可以记录零能量，
+但不得产生伪造的 0/NaN 比值或方向票。
+
+**正式测量前勘误（合成自测发现，尚无正式数值）**：原文误写“六源方程能量之和在三个区域都
+等于 full 能量”。投影是线性的，故 `sum_e region0(X_e)=region0(X)`；但不同源方程投影后的
+向量一般不正交，`sum_e||region0(X_e)||²` 在 BOTTOM20/COMPLEMENT 通常不等于
+`||region0(X)||²`，交叉项不能丢弃。自测已用已知正交基使错误能量守卫变红。现将硬守卫改为
+上述**向量重构**恒等式；逐源方程能量仍按定义提交，但不得当作可加份额。每事件/区域的
+`P/D/N` 另提交 `source_energy_sum=sum_e E_region,e`、直接 full 能量及
+`cross_energy=full_energy-source_energy_sum`，event summary 的分类使用直接 full 向量，
+equation summary 的分类使用各源方程自身跨步能量，两者不混写。
 
 ## 3. 测量、分类与 G-DOMAIN
 
@@ -185,8 +194,9 @@ C2 是方向测量，不把 BOTH_REDUCED 写成收敛，也不把 DIRECTION_MISM
 
 - 独立二次残差 `F(U)=J(U-Uref)+0.5Q(U)` 的解析 `P/D/N` 与数值计算一致；线性案例
   `Q=0` 得零余项，构造的非线性主导、MIXED、EXACT_ZERO 和零分母案例均分类正确；
-- 已知正交 bottom 基上 FULL=BOTTOM+COMPLEMENT，六源方程能量求和恒等，mask 展平顺序
-  和“先 mask 后投影”不被换成另一种定义；错误投影或错误余项必须触发 FAIL；
+- 已知正交 bottom 基上 FULL=BOTTOM+COMPLEMENT，六源方程投影向量求和恒等，并构造
+  非零交叉项使旧的错误能量求和守卫变红；mask 展平顺序和“先 mask 后投影”不被换成另一种
+  定义；错误投影或错误余项必须触发 FAIL；
 - 用生产 `IBL3Solver.solve` 驱动合成求解器生成短轨迹后，离线重放可复现接受事件；改一个
   committed CFL/omega、末态或 CSV 单元格必须让重放/回写守卫变红，不得静默换路径；
 - `BOTH_REDUCED/BOTH_AMPLIFIED/BOTH_FLAT/DIRECTION_MISMATCH` 及零 before 正反案例，
