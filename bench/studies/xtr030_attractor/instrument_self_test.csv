@@ -8,3 +8,7 @@ blas_missing_is_loud,True,
 seed_override_has_teeth,True,
 frozen_bc_override_has_teeth,True,
 seed_override_first_outer_only,True,
+decision_tree_early,True,PASS_EARLY_STOP
+decision_tree_frozen,True,PASS_FROZEN_INFLOW_PATH
+decision_tree_multi,True,PASS_MULTIPLE_FIXED_POINTS
+decision_tree_provenance,True,UNDEFINED_PROVENANCE

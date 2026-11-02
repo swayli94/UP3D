@@ -617,6 +617,58 @@ def analyze():
     return metrics
 
 
+def decision_tree_self_test():
+    import numpy as np
+    import tempfile
+
+    global HERE, WORK
+    real_here, real_work = HERE, WORK
+    expected = {
+        "early": "PASS_EARLY_STOP",
+        "frozen": "PASS_FROZEN_INFLOW_PATH",
+        "multi": "PASS_MULTIPLE_FIXED_POINTS",
+        "provenance": "UNDEFINED_PROVENANCE",
+    }
+    rows = []
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for scenario, want in expected.items():
+                HERE = root / scenario
+                WORK = HERE / "_work"
+                WORK.mkdir(parents=True)
+                synthetic = []
+
+                def add(leg, offset=0.0, k0_offset=0.0):
+                    name = f"state_{leg}.npz"
+                    np.savez(WORK / name,
+                             phi=np.array([1.0, 2.0]) + offset,
+                             gamma=np.array([0.2]) + offset,
+                             U=np.zeros((2, 6)) + offset,
+                             delta_star=np.array([0.1, 0.2]) + offset,
+                             k0_phi=np.array([1.0, 2.0]) + k0_offset,
+                             k0_gamma=np.array([0.2]) + k0_offset)
+                    synthetic.append(dict(
+                        leg=leg, status="ok", converged="1", cl=0.28 + offset,
+                        state_file=f"_work/{name}"))
+
+                add("native_xtr030_b1_r1")
+                add("native_xtr030_b1_r2", 0.02 if scenario == "provenance" else 0.0)
+                add("native_xtr030_b16_r1", 0.02, 0.001)
+                add("native_xtr030_b16_r2", 0.02, 0.001)
+                add("tight_b1seed_native")
+                add("tight_b1seed_commonB1")
+                add("tight_b16seed_native", 0.0 if scenario == "early" else 0.02)
+                add("tight_b16seed_commonB1", 0.02 if scenario == "multi" else 0.0)
+                write_csv(HERE / "summary.csv", list(synthetic[0]), synthetic)
+                got = analyze()["verdict"]
+                rows.append(dict(case=f"decision_tree_{scenario}",
+                                 passed=got == want, detail=got))
+    finally:
+        HERE, WORK = real_here, real_work
+    return rows
+
+
 def self_test():
     import numpy as np
     rows = []
@@ -658,6 +710,7 @@ def self_test():
     U_second, _ = solver.solve(np.zeros((2, 6)))
     record("seed_override_first_outer_only",
            np.array_equal(U_second, np.ones((2, 6))))
+    rows.extend(decision_tree_self_test())
     write_csv(HERE / "instrument_self_test.csv", ("case", "passed", "detail"), rows)
     for row in rows:
         print(f"[self-test] {row['case']}: {row['passed']}")
