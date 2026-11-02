@@ -92,7 +92,9 @@ capture20(g) = ||P20(g)||2^2 / ||g||2^2
 ### C1 — 四状态 Jacobian 投影与主假设
 
 每腿提交：完整奇异值谱、每模态 `sigma_rel`、右六变量能量、全残差/`AP`/`BD` 左投影系数，
-以及 `capture20(full/AP/BD)`、`right_AP_share20`、均衡化前后条件数和缩放范围。
+以及 `capture20(full/AP/BD)`、`right_AP_share20`、均衡化后条件数和缩放范围。
+**代码前勘误**：raw `J` 的条件数也需要一次独立 SVD，不能塞进“每腿一次完整 SVD”的预算；
+本轮不另算 raw 谱或 raw 条件数，完整谱明确指 `Js`，行列范数范围仍完整记录。
 
 逐腿的 **DOMINANT_AP_PROJECTION** 必须同时满足：
 
