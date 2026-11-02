@@ -62,13 +62,21 @@ U_old = 上一个接受事件的 U_before（首步 = U0）
 dt_inv = q / (cfl_k * h)
 Rpt0, Jpt = solver.residual_jacobian(U_before, dt_inv=dt_inv, U_old=U_old)
 delta = spsolve(Jpt, -Rpt0.ravel())
-dU = omega_k * delta.reshape(n,6)
-U_after = U_before + dU
+scaled_dU = omega_k * delta.reshape(n,6)
+U_after = U_before + scaled_dU
+dU = U_after - U_before                   # 浮点状态的实际增量
 Rpt1 = solver.residual(U_after, dt_inv=dt_inv, U_old=U_old)
 F0 = solver.residual(U_before)
 F1 = solver.residual(U_after)
 _, J = solver.residual_jacobian(U_before)   # 纯定常；无 dt_inv/U_old
 ```
+
+**首次正式重放的仪器勘误（未进入 SVD/物理测量）**：初版代码把 `omega*delta` 当作 committed
+`dU`，但第 8 轮实际导出的是浮点 `U_after-U_before`。首次重放的 `F0/F1/Rpt0/Rpt1/dF`
+回写 mismatch 全为 0、末态 `U/F` 均逐位一致，仅 `dU` 因加法舍入出现每步 1772–2178 个末位
+字符串差异（绝对差最大 `2.64e-14`）。现将 `scaled_dU` 仅用于形成 `U_after`，实际 `dU`
+和后续 `JdU` 一律使用 `U_after-U_before`；判据、容差、事件和预算不变，失败证据以
+`instrument_failure_du_rounding_*` 留档，不用完整重启动或低精度状态替代。
 
 拒绝迭代不改变 `U/U_old`，故不在离线路径中重算；其省略是否影响数值只能由下面的硬守卫
 判定，不能靠口头假设。每一步的 `F0/F1/Rpt0/Rpt1/dU` 必须按第 8 轮相同 `f12` 格式与

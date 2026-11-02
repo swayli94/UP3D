@@ -204,8 +204,9 @@ def replay_path(solver, U0, event_specs):
         delta = spla.spsolve(Jpt, -Rpt0.ravel())
         if not np.all(np.isfinite(delta)):
             raise RuntimeError("non-finite offline Newton direction")
-        dU = (omega * delta).reshape(U.shape)
-        U_after = U_before + dU
+        scaled_dU = (omega * delta).reshape(U.shape)
+        U_after = U_before + scaled_dU
+        dU = U_after - U_before
         Rpt1 = solver.residual(U_after, dt_inv=dt_inv, U_old=U_old)
         F0 = solver.residual(U_before)
         F1 = solver.residual(U_after)
@@ -675,6 +676,12 @@ def self_test():
     replayed, final_U = replay_path(fake, np.ones((1, 6)), specs)
     check("offline_replay_normal", True, lambda: len(replayed) == 1 and np.array_equal(
         replayed[0]["U_after"], events[0]["U_after"]) and np.array_equal(final_U, baseline_U))
+    tiny, _ = replay_path(fake, np.ones((1, 6)),
+                          [dict(iter=0, cfl=1.0, omega=2.0 ** -53)])
+    check("offline_dU_is_float_state_difference", True, lambda: np.array_equal(
+        tiny[0]["U_after"], np.ones((1, 6))) and np.array_equal(
+            tiny[0]["dU"], tiny[0]["U_after"] - np.ones((1, 6)))
+        and not np.array_equal(tiny[0]["dU"], np.full((1, 6), -2.0 ** -54)))
     changed = [dict(specs[0], omega=specs[0]["omega"] * 0.5)]
     changed_replay, changed_final = replay_path(fake, np.ones((1, 6)), changed)
     check("offline_replay_omega_has_teeth", True,
@@ -838,8 +845,10 @@ def main():
         output_path.write_text(str(exc), encoding="utf-8")
         raise RuntimeError("formal worker timeout") from exc
     elapsed = time.monotonic() - started
+    fresh_svd = int((HERE / "projection_guard.csv").exists())
+    direction_replays = len(read_csv(HERE / "replay_guard.csv"))
     write_json(state_path, dict(completed=process.returncode == 0, cumulative_wall_s=elapsed,
-                                fresh_svd=MAX_SVD, offline_direction_replays=MAX_EVENTS,
+                                fresh_svd=fresh_svd, offline_direction_replays=direction_replays,
                                 production_solve_restarts=0, max_svd=MAX_SVD,
                                 worker_budget_s=WORKER_BUDGET_S, time_budget_s=TIME_BUDGET_S))
     analyze()

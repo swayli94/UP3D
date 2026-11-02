@@ -60,3 +60,10 @@ python -m pytest tests/F/test_F07_repo_invariants.py -q
 | `criteria.csv` / `verdict_metrics.csv` / `nonlinearity.png` | 机器可读判定与证据图 |
 
 本研究不被测试加载；自测在正式复算前显式运行，phase 7 收口时随一次性研究归档。
+
+## 仪器勘误记录
+
+- `instrument_failure_du_rounding_*`：首次正式离线重放把 `omega*delta` 误作 committed `dU`，
+  而第 8 轮导出的是浮点 `U_after-U_before`。所有 `F/Rpt/dF` 回写已通过、末态也逐位一致，
+  仅实际状态差的末位字符串守卫触发；在 SVD 和非线性测量前停止。失败证据保留，修正后自测
+  增至 **27/27**，不以完整重启动或低精度状态替代。
