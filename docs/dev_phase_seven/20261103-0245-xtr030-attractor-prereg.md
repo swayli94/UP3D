@@ -77,6 +77,16 @@ inflow_state/U0`，在相同 SurfaceMesh 上分别用 B1/B16 重放一次 `IBL3S
   证明所有后续 IBL 调用都无关；
 - 输出不同 ⇒ IBL 自身也是独立扰动入口，记录首差量与残差，不把全部效应仍归给 FP。
 
+> **失败后仪器勘误（首轮 C3 停止后）**：standalone 新建 `IBL3Solver` 的 B1 重放
+> 没有复现原生首 IBL（`native_array_equal=False`），仪器守卫照章停止。后续诊断确认：
+> 原生首 IBL 可由生产路径的 1 外迭代腿逐位复现；standalone 与原生腿的初始残差和
+> Jacobian 逐位相同，但 100 步轨迹不同；简单 FP 暖跑和 Recorder 本身均不解释差异。
+> 因此 standalone 不代表生产构造路径。修正为：B1/B16 各自调用**同一生产
+> `run_loose_coupling`、只走 1 外迭代**，在 solver wrapper 中覆盖上述全部首 IBL 输入，
+> 再做 B1/B16 比较；B1 仍须逐位复现原生首 IBL，否则 C3 判仪器 FAIL。
+> 另用 1 条 `instrument_one_outer_b1` 诊断腿证明原生可复现，计入剩余腿预算、不作机制
+> 证据。总上限 10 腿不变；C1 已出现 B1 原生未收敛，C4 不启动，节省的腿不用于扩扫。
+
 ### C4 — 紧容差、统一种子/冻结边界的 2×2（4 腿，仅 C1 分离时启动）
 
 全部固定 **B1**、`tol_ds=1e-8`、最多 30 外迭代，除以下两个因子外其余配置相同：
