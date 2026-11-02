@@ -1,0 +1,6 @@
+criterion,verdict,evidence,reading
+I0,PASS,instrument_self_test.csv; provenance.csv; summary.csv,"self-test=20/20, provenance=True, native_residual=True"
+C1,RECORDED,residual_anatomy_*.csv; residual_map.png; summary.csv,old-floor residual signature on 2/4 states
+C2,RECORDED,restart_history_*.csv; restart_trajectories.png; summary.csv,native_xtr030_b1_r1=CONTROLLER_FLOOR; native_xtr030_b16_r1=CONTROLLER_FLOOR; control_xtr005_b1=CONTROLLER_FLOOR; control_xtr005_b16=CONTROLLER_FLOOR
+C3,UNDEFINED,criteria.csv; verdict_metrics.csv,"primary=2, controls=2, decision=UNDEFINED"
+OVERALL,UNDEFINED,verdict_metrics.csv,UNDEFINED

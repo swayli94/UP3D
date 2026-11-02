@@ -46,3 +46,16 @@ python bench/studies/ibl_floor_restart/run.py --analyze-only
 | `residual_map.png` / `restart_trajectories.png` | 残差空间分布和重启动轨迹 |
 
 本研究不被测试加载；自测在每次正式复算前显式运行，收尾另跑 F07 仓库不变量。
+
+## 判定
+
+第 7 轮判定：[`20261103-0442-ibl-floor-verdict.md`](../../../docs/dev_phase_seven/20261103-0442-ibl-floor-verdict.md) —— **UNDEFINED（xtr030 是否属于同一已知公式层地板不可判）**。
+
+- 四腿输入指纹和原生残差重建全部通过；四次原样重启动均不收敛，CFL 均到 `1e-3`，
+  末段纯残差平台化，分类均为 `CONTROLLER_FLOOR`。
+- xtr005 两腿复现旧 TE `(B,δ)` 签名；xtr030 两腿的 `B+delta` 合并份额为
+  0.882496/0.861668，低于预注册 0.90，且 `A/Psi` 份额更大，不能事后降阈值合并机制。
+- S5 仍没有外层与 IBL 内层都收敛的两条腿，2×2 继续不启动。
+
+所有结论以 `criteria.csv`、`verdict_metrics.csv`、`provenance.csv`、`summary.csv`、
+逐节点/逐迭代 CSV 和 PNG 为准；生产库、测试判据和 committed gate 证据未改。
