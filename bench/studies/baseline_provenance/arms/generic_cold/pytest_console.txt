@@ -1,0 +1,193 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.18, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/lrz/code/up3d-baseline-prov
+configfile: pyproject.toml
+plugins: timeout-2.4.0, platformdirs-4.14.2
+collected 120 items
+
+tests/C/test_C05_nozzle_quasi1d.py ...............Fs                     [ 14%]
+tests/C/test_C07_karman_trefftz.py ..........Fs                          [ 24%]
+tests/C/test_C08_ringleb.py .........F.Fs                                [ 35%]
+tests/D/test_D05_euler_naca0012.py ..............Fs                      [ 48%]
+tests/D/test_D06_euler_rae2822.py ......Fs                               [ 55%]
+tests/D/test_D08_rans_naca0012.py .........Fs                            [ 64%]
+tests/D/test_D11_naca0012_experiment_bias.py .......Fs                   [ 71%]
+tests/D/test_D12_rae2822_experiment_bias.py ......Fs                     [ 78%]
+tests/D/test_D13_ibl_vs_xfoil.py .....FFs                                [ 85%]
+tests/D/test_D14_alpha0_transonic_nonuniqueness.py .....F.s              [ 91%]
+tests/D/test_D15_hex_naca_boundary.py ......s.Fs                         [100%]
+
+=================================== FAILURES ===================================
+_ TestCommittedEvidenceIsLoadBearing.test_fresh_run_reproduces_the_committed_summary _
+tests/C/test_C05_nozzle_quasi1d.py:508: in test_fresh_run_reproduces_the_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: ('ladder', '100') 的 x_shock：本次算出 1.186931169e+01，已提交证据是 1.186985439e+01（相对差 4.57e-05 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C05_nozzle_quasi1d.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+_ TestCommittedEvidenceIsLoadBearing.test_fresh_run_reproduces_the_committed_summary _
+tests/C/test_C07_karman_trefftz.py:300: in test_fresh_run_reproduces_the_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: ('medium',) 的 gamma：本次算出 2.982693706e-01，已提交证据是 2.982678510e-01（相对差 5.09e-06 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C07_karman_trefftz.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+_ TestArtificialDissipationPricedAgainstTruth.test_m_crit_is_the_cheaper_lever _
+tests/C/test_C08_ringleb.py:295: in test_m_crit_is_the_cheaper_lever
+    assert a["converged"], f"m_crit=1.20 腿不收敛（{a['reason']}）"
+E   AssertionError: m_crit=1.20 腿不收敛（cap）
+E   assert False
+_ TestCommittedEvidenceIsLoadBearing.test_fresh_run_reproduces_the_committed_summary _
+tests/C/test_C08_ringleb.py:330: in test_fresh_run_reproduces_the_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: ('C=0.0',) 的 rms：本次算出 1.918648401e-02，已提交证据是 1.917261776e-02（相对差 7.23e-04 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/C/test_C08_ringleb.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+______ TestCommittedEvidenceIsLoadBearing.test_matches_committed_summary _______
+tests/D/test_D05_euler_naca0012.py:589: in test_matches_committed_summary
+    assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: M0.80_a1.25|medium 的 cp_rms_upper：本次算出 1.573547788e-01，已提交证据是 1.573535037e-01（相对差 8.10e-06 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D05_euler_naca0012.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+______ TestCommittedEvidenceIsLoadBearing.test_matches_committed_summary _______
+tests/D/test_D06_euler_rae2822.py:310: in test_matches_committed_summary
+    assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: M0.725_a2.55|medium 的 cp_rms_upper：本次算出 1.436609303e-01，已提交证据是 1.432788297e-01（相对差 2.67e-03 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D06_euler_rae2822.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+______ TestCommittedEvidenceIsLoadBearing.test_matches_committed_summary _______
+tests/D/test_D08_rans_naca0012.py:404: in test_matches_committed_summary
+    assert_within_spread(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:233: in assert_within_spread
+    assert diff <= tol, (
+           ^^^^^^^^^^^
+E   AssertionError: xtr030|medium 的 cp_rms_lower_sst:本次算出 1.920717326e-02,已提交证据是 2.443537573e-02(绝对差 5.23e-03 > 散布带 3.89e-03)
+E     ★ 散布带 = 实测环境散布 × 安全系数(见调用方注释的推导表);超出说明动得比环境散布还大 —— 那是真回归,不是出处态漂移。
+E     ★ 若这是有意的代码改动:PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D08_rans_naca0012.py 刷新证据,并按纪律 11 grep 被移动的数字。
+_ TestCommittedEvidenceIsLoadBearing.test_fresh_run_reproduces_the_committed_summary _
+tests/D/test_D11_naca0012_experiment_bias.py:302: in test_fresh_run_reproduces_the_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: ('M0.803_a-0.10', 'medium') 的 cl_p：本次算出 -4.231421137e-02，已提交证据是 -4.231436051e-02（相对差 3.52e-06 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D11_naca0012_experiment_bias.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+_ TestCommittedEvidenceIsLoadBearing.test_fresh_run_reproduces_the_committed_summary _
+tests/D/test_D12_rae2822_experiment_bias.py:270: in test_fresh_run_reproduces_the_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: ('Case7_M0.725_a2.55', 'medium') 的 mach_max：本次算出 1.340873637e+00，已提交证据是 1.340709302e+00（相对差 1.23e-04 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D12_rae2822_experiment_bias.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+________________ TestRecorded.test_surface_asymmetry_is_missing ________________
+tests/D/test_D13_ibl_vs_xfoil.py:280: in test_surface_asymmetry_is_missing
+    assert float(a_us.max()) <= ASYM_OURS_MAX, (
+E   AssertionError: coarse: 我们的上/下不对称度最高 1.152 > 1.15（实测 0.90–1.12）—— 若耦合真的学会区分两面了这是好消息，请走勘误
+E   assert 1.1523819079972915 <= 1.15
+E    +  where 1.1523819079972915 = float(np.float64(1.1523819079972915))
+E    +    where np.float64(1.1523819079972915) = <built-in method max of numpy.ndarray object at 0x7f9d30873510>()
+E    +      where <built-in method max of numpy.ndarray object at 0x7f9d30873510> = array([1.0760609 , 0.93305503, 0.94160154, 0.9722526 , 1.03649094,\n       1.03250225, 1.03016978, 1.03462373, 1.03555341, 1.03979019,\n       1.0490272 , 1.15238191]).max
+_ TestCommittedEvidenceIsLoadBearing.test_fresh_run_reproduces_the_committed_summary _
+tests/D/test_D13_ibl_vs_xfoil.py:391: in test_fresh_run_reproduces_the_committed_summary
+    assert diff <= self.SPREAD_TOL[name], (
+E   AssertionError: coarse/upper/x=1.00 的 dstar_ibl：本次算出 3.897352e-03，已提交证据是 3.735643e-03（绝对差 1.62e-04 > 散布带 8.87e-05）
+E       ★ 散布带 = 第 44 轮 M1 实测环境散布 × 2（推导见 SPREAD_TOL 注释）；超出说明动得比环境散布还大 —— 那是真回归，不是出处态漂移。
+E       ★ 若这是有意的代码改动：用 `PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D13_ibl_vs_xfoil.py` 刷新证据，**并按纪律 11 grep 被移动的数字** —— 本门 docstring 的两张表、`cases/gates/INDEX.md` 的 D13 条目、以及 `phases/p6/docs/dev_phase_six/20260828-0100-ibl-xfoil-recon.md` 都引用它们。
+E   assert 0.00016170967347743214 <= 8.87e-05
+______ TestCommittedEvidenceIsLoadBearing.test_matches_committed_summary _______
+tests/D/test_D14_alpha0_transonic_nonuniqueness.py:232: in test_matches_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: sweep|coarse|0.86 的 cl：本次算出 6.146287876e-02，已提交证据是 6.146441738e-02（相对差 2.50e-05 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D14_alpha0_transonic_nonuniqueness.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+______ TestCommittedEvidenceIsLoadBearing.test_matches_committed_summary _______
+tests/D/test_D15_hex_naca_boundary.py:276: in test_matches_committed_summary
+    n = assert_matches_committed(
+../UP3D/bench/results/baseline_provenance_20261104/prov_plugin.py:87: in wrapper
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+tests/_gate_evidence.py:145: in assert_matches_committed
+    assert rel <= rel_tol, (
+           ^^^^^^^^^^^^^^
+E   AssertionError: tet|medium 的 cl：本次算出 3.413391695e-01，已提交证据是 3.413401232e-01（相对差 2.79e-06 > 1e-06）
+E     ★ 若这是有意的代码改动：PYFP3D_TRANSONIC_GATES=1 PYFP3D_GATE_FIGURES=1 pytest tests/D/test_D15_hex_naca_boundary.py
+E       刷新证据，**并按纪律 11 grep 被移动的数字** —— 门 docstring 的表、`cases/gates/INDEX.md` 的条目、以及引用它们的判定文件都要一起改。
+- generated xml file: /home/lrz/code/UP3D/bench/results/baseline_provenance_20261104/generic_cold/junit.xml -
+============================= slowest 15 durations =============================
+318.17s setup    tests/D/test_D08_rans_naca0012.py::TestWhatIsGateable::test_the_cp_band_is_the_resolution_floor_in_cp
+138.95s setup    tests/D/test_D05_euler_naca0012.py::TestWhatIsGateable::test_subcritical_lift_matches_cfl3d_euler
+115.08s setup    tests/D/test_D14_alpha0_transonic_nonuniqueness.py::TestTheCapabilityLimitIsRecorded::test_the_alpha0_band_still_holds_at_the_last_good_mach
+94.80s setup    tests/D/test_D11_naca0012_experiment_bias.py::TestWhatIsGateableAgainstExperiment::test_pre_shock_cp_at_near_zero_lift
+84.58s setup    tests/D/test_D13_ibl_vs_xfoil.py::TestGated::test_the_loop_converges_on_the_xfoil_condition
+80.09s setup    tests/C/test_C08_ringleb.py::TestProductionDriverLeg::test_production_leg_converges_with_clamp_books_clean
+72.13s setup    tests/D/test_D06_euler_rae2822.py::TestWhatIsGateable::test_m0725_lift_magnitude
+70.11s setup    tests/D/test_D12_rae2822_experiment_bias.py::TestWhatIsGateable::test_the_experimental_normal_force_is_the_committed_one
+23.38s setup    tests/D/test_D15_hex_naca_boundary.py::TestTheDefectIsStillThere::test_the_bubble_is_still_on_hex_medium
+18.27s setup    tests/D/test_D14_alpha0_transonic_nonuniqueness.py::TestTheCapabilityLimitIsRecorded::test_the_solution_is_not_unique
+16.46s setup    tests/C/test_C05_nozzle_quasi1d.py::TestProductionDriverLeg::test_production_leg_converges_with_clamp_books_clean
+10.11s call     tests/C/test_C05_nozzle_quasi1d.py::TestCriterionIsOnPosition::test_position_is_invariant_to_the_iteration_cap
+6.72s call     tests/C/test_C05_nozzle_quasi1d.py::TestExactSolutionIsWellPosed::test_the_shocked_solution_is_the_only_one_meeting_the_imposed_phi
+4.66s call     tests/C/test_C05_nozzle_quasi1d.py::TestConvergedIsNotCorrect::test_a_machine_zero_residual_can_be_wrong_by_forty_cells
+3.83s setup    tests/C/test_C05_nozzle_quasi1d.py::TestProductionDriverLeg::test_entropy_off_control_reproduces_the_ductsystem_leg
+=========================== short test summary info ============================
+FAILED tests/C/test_C05_nozzle_quasi1d.py::TestCommittedEvidenceIsLoadBearing::test_fresh_run_reproduces_the_committed_summary
+FAILED tests/C/test_C07_karman_trefftz.py::TestCommittedEvidenceIsLoadBearing::test_fresh_run_reproduces_the_committed_summary
+FAILED tests/C/test_C08_ringleb.py::TestArtificialDissipationPricedAgainstTruth::test_m_crit_is_the_cheaper_lever
+FAILED tests/C/test_C08_ringleb.py::TestCommittedEvidenceIsLoadBearing::test_fresh_run_reproduces_the_committed_summary
+FAILED tests/D/test_D05_euler_naca0012.py::TestCommittedEvidenceIsLoadBearing::test_matches_committed_summary
+FAILED tests/D/test_D06_euler_rae2822.py::TestCommittedEvidenceIsLoadBearing::test_matches_committed_summary
+FAILED tests/D/test_D08_rans_naca0012.py::TestCommittedEvidenceIsLoadBearing::test_matches_committed_summary
+FAILED tests/D/test_D11_naca0012_experiment_bias.py::TestCommittedEvidenceIsLoadBearing::test_fresh_run_reproduces_the_committed_summary
+FAILED tests/D/test_D12_rae2822_experiment_bias.py::TestCommittedEvidenceIsLoadBearing::test_fresh_run_reproduces_the_committed_summary
+FAILED tests/D/test_D13_ibl_vs_xfoil.py::TestRecorded::test_surface_asymmetry_is_missing
+FAILED tests/D/test_D13_ibl_vs_xfoil.py::TestCommittedEvidenceIsLoadBearing::test_fresh_run_reproduces_the_committed_summary
+FAILED tests/D/test_D14_alpha0_transonic_nonuniqueness.py::TestCommittedEvidenceIsLoadBearing::test_matches_committed_summary
+FAILED tests/D/test_D15_hex_naca_boundary.py::TestCommittedEvidenceIsLoadBearing::test_matches_committed_summary
+============ 13 failed, 95 passed, 12 skipped in 1063.65s (0:17:43) ============
+ERROR conda.cli.main_run:execute(142): `conda run env PYTHONNOUSERSITE=1 NUMBA_NUM_THREADS=16 OMP_NUM_THREADS=16 OPENBLAS_NUM_THREADS=16 MKL_NUM_THREADS=16 MPLBACKEND=Agg NUMBA_CACHE_DIR=/home/lrz/code/UP3D/bench/results/baseline_provenance_20261104/cache_generic PROV_OUT_DIR=/home/lrz/code/UP3D/bench/results/baseline_provenance_20261104/generic_cold PROV_WORKTREE=/home/lrz/code/up3d-baseline-prov PYTHONPATH=/home/lrz/code/UP3D/bench/results/baseline_provenance_20261104 NUMBA_CPU_NAME=generic python -m pytest tests/C/test_C05_nozzle_quasi1d.py tests/C/test_C07_karman_trefftz.py tests/C/test_C08_ringleb.py tests/D/test_D05_euler_naca0012.py tests/D/test_D06_euler_rae2822.py tests/D/test_D08_rans_naca0012.py tests/D/test_D11_naca0012_experiment_bias.py tests/D/test_D12_rae2822_experiment_bias.py tests/D/test_D13_ibl_vs_xfoil.py tests/D/test_D14_alpha0_transonic_nonuniqueness.py tests/D/test_D15_hex_naca_boundary.py -q -rfE --durations=15 -p no:cacheprovider -p prov_plugin --junitxml=/home/lrz/code/UP3D/bench/results/baseline_provenance_20261104/generic_cold/junit.xml` failed. (See above for error)

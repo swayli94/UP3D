@@ -1,0 +1,5 @@
+arm,dispatchers,dispatchers_used,hits,misses,cpu
+native_cold,61,49,0,50,icelake-server
+native_warm,61,34,34,0,icelake-server
+generic_cold,61,49,0,50,generic
+generic_warm,61,34,34,0,generic

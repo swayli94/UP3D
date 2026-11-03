@@ -17,7 +17,7 @@
 |---|---|
 | **开工** | 2026-10-12（phase 6 收口归档 `dfac561` 同日；分支 `kimi/phase7-charter`） |
 | **靶子** | 可信收敛：预条件子 × 敏感腿 × 多吸引子 + 两条星标移交项（hex NACA 门、C05 预条件子文书） |
-| **轮次** | 10（立项 + S1 预条件子文书 + S2 门 + S3/S4/S5 研究 + 三轮 IBL 独立归因 + devflow 采用审计） |
+| **轮次** | 11（立项 + S1 预条件子文书 + S2 门 + S3/S4/S5 研究 + 三轮 IBL 独立归因 + devflow 采用审计 + 迁移机 12 红出处测量） |
 | **交接基线** | 未门控 **831 / 0 / 33 / 2**；门控全集 **812 / 21 / 3 / 1 XPASS**；快层 **5/5** |
 
 ## 产品指标追踪
@@ -40,6 +40,7 @@
 
 | # | 日期 | 轮次文件 | 内容 | 一句话结论 | 判定 | 测试状态 |
 |---|---|---|---|---|---|---|
+| 11 | 2026-11-04 | [判定](20261104-0640-baseline-provenance-verdict.md)（登记 = 第 10 轮审计 §3.4/§12） | **迁移机 12 红四臂出处测量（native/generic × 冷/暖）** | `native_warm` 恰复现原 12 红，且与早上定向重跑（不同缓存目录）显示精度全等、D13 不对称度 `repr` 全等 ⇒ 暖态可复现、与缓存编译历史无关。8 门（C05 C07 D05 D06 D11 D12 D14 D15）冷/暖 ≤ 3.6e-12（舍入门 ≤ 1e-9），不是冷编译扰动；其中 7 门的缺口与 numba JIT codegen 扰动同量级（ISA/gap 0.4×–7.6×；一致，未证明），**C07 不是 JIT**（ISA ≤ 6.7e-9 vs gap 4.5e-4，只在 medium）；C08/D08/D13 另随缓存态移动，D08 同机绿红翻转；D06/D12 的 RAE coarse M0.73 腿在 generic 暖下跳到 cl 2.0185（不物理），native 对 committed 已差 2.9 %。numba：暖 0 miss / 冷 50 miss（61 dispatcher），前提 (a) 试点正面、G-TEETH 未做；分类标签事后描述、未预注册 | **RECORDED**（不是单一根因；处置待使用者裁决） | 库/测试/默认值/证据零改动；11 门文件 ×4 臂（1009/1045/1066/927 s @16 线程）；未跑全套，当前机全套仍为 12 failed / 827 passed |
 | 10 | 2026-11-04 | [审计](20261104-0524-devflow-adoption-audit.md) | **openspec-devflow 采用审计 + adoption Change 草案** | 采用可行但只做治理/证据叠加层。四个前置阻塞：① 迁移机 12 条证据锁红（暖态复现，首要候选跨机 codegen；baseline-provenance 四臂 native/generic×冷/暖已启动，未闭合）；② 集成分支未对齐 —— **已解除**（PR #34 合入第 6–9 轮，`main` = `9b4f425`）；③ 被忽略网格与 numba 编译出处 devflow 默认看不见 —— 网格走外部 Case raw，换机走有效 codegen 伪包，缓存态**裁决方案 A**（Run 自证暖态：测量进程零 `cache_misses`，否则 fail），两前提待实测；④ JUnit 把 xfail 计作 skip —— **裁决方案 A**（Check 定义里 deselect 图导出腿，xfail 随整个门文件成不声明 `data` 的 Check，wrapper 只以非零退出判红；只含 xfail 的 Check 会被判 skip）。外部审计五项意见逐条复测全成立并入，自查修正 3 处。草案 `openspec/changes/adopt-devflow/` 在带 schema 的副本里 `validate --strict` 通过；阻塞 1 处置前不 `start` | **RECORDED** | 库/测试/默认值/参考数据/committed 证据零改动；合并前当前机 F07+F10 **11 passed**；devflow 最小实验与 JUnit 实验输出已提交；历史基线承 **839 / 0 / 35 / 2**，当前机全套 12 failed / 827 passed（未处置，不冒充绿） |
 | 9 | 2026-11-03 | [预注册](20261103-0535-ibl-step-nonlinearity-prereg.md) → [判定](20261103-0601-ibl-step-nonlinearity-verdict.md) | **IBL 独立研究：18 个强回溯接受步的 `F+JdU`/实际响应 + 固定左补空间逐源方程分解** | 重放/谱/投影守卫全过。full 与 complement 直接向量均 18/18 一阶主导且同向下降；补空间 `A/Psi` 也 18/18 线性，pooled `N/P=0.03956/0.02071`；`delta/B` 为 MIXED，但 324 条事件×方程×区域无一非线性主导。迭代 10 `B` 唯一方向翻转仍线性主导。1 投影基 SVD+18 离线方向 8.8334 s，0 重启动/新耦合/外部对照；接受步非线性主导签名不成立，整体地板/S5 仍 UNDEFINED，库/测试/默认值/committed 证据零改动 | **RECORDED** | 自测 **27/27**；`up3d` F07 **7 passed**；不重跑贵重全套/D08/D13，历史基线承 **839 / 0 / 35 / 2**，非当前机全套复测 |
 | 8 | 2026-11-03 | [预注册](20261103-0454-ibl-ap-projection-prereg.md) → [判定](20261103-0516-ibl-ap-projection-verdict.md) | **IBL 独立研究：均衡化 Jacobian 投影 + 生产接受步逐方程分解** | 四腿出处/native/SVD/replay 全过。bottom-20 右 `A/Psi` 份额 0.6006–0.6163、谱软化全过，但 `capture20(AP)` 仅 3.98e-5…1.78e-4，远低于 0.50 和 20/2460 基线；主腿 >99.989% `A/Psi` 残差在左补空间 ⇒ 主导投影假设被否定。B1 18 接受步全消减 AP（总能量 −0.0538%），其余三腿零接受步；4 SVD+4 重启动 38.0836 s，0 新耦合/外部对照；S5 仍 UNDEFINED，2×2 不启动，库/测试/默认值/committed 证据零改动 | **FAIL**（主导 AP 投影假设；非仪器失败；C2 RECORDED） | 自测 **26/26**；`up3d` F07 **7 passed**；不重跑贵重全套/D08/D13，历史基线承 **839 / 0 / 35 / 2**，非当前机全套复测 |

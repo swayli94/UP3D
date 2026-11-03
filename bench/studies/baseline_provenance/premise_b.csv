@@ -1,0 +1,13 @@
+row_key,col,targeted_run_9e,native_warm_repr,equal_at_9e
+"('ladder', '100')",x_shock,1.187112466e+01,11.871124661825439,True
+"('medium',)",gamma,2.982693707e-01,0.29826937070361037,True
+"('C=0.0',)",rms,1.916373176e-02,0.019163731764359777,True
+M0.80_a1.25|medium,cp_rms_upper,1.573531214e-01,0.1573531214,True
+M0.725_a2.55|medium,cp_rms_upper,1.438197572e-01,0.1438197572,True
+xtr030|medium,cp_rms_lower_sst,1.900686815e-02,0.01900686815295343,True
+"('M0.778_a2.03', 'medium')",mach_max,1.456461619e+00,1.4564616190971977,True
+"('Case7_M0.725_a2.55', 'medium')",mach_max,1.340944924e+00,1.3409449240173734,True
+coarse/upper/x=0.90,dstar_ibl,2.906987e-03,,unmatched
+sweep|coarse|0.86,cl,6.148051443e-02,0.06148051443,True
+tet|medium,bubble_max_cp,-8.906307627e-01,-0.8906307627,True
+D13 coarse max asym,asym,1.2022292349421009,1.2022292349421009,repr-equal=True

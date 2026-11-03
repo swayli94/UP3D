@@ -42,6 +42,10 @@ Jacobian 投影 + 生产接受步逐方程分解）同上 —— phase 7 期间�
 支撑产物：devflow 指纹/JUnit 判定最小实验 + 12 红定向重跑原始日志）同上 —— phase 7 期间留原位，
 收口归档，无测试加载；零条求解腿，实验输出与日志是证据。
 
+★ **2026-11-04(phase 7 第 11 轮)**:`baseline_provenance/`（迁移机 12 红所在 11 个门文件的
+native/generic × 冷/暖四臂出处测量；只记录不改判定的 pytest 插件 + 分类脚本）同上 —— phase 7 期间留原位，
+收口归档，无测试加载；numba 缓存目录不跟踪，四臂 junit/fresh/npz/统计与 `classify.py` 的 CSV 是证据。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |
