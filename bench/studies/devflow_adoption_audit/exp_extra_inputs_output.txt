@@ -1,0 +1,5 @@
+arm1 dirty baseline: []
+arm1 extra-input hash changed: True | dirty after ignored edit: []
+arm1 ignored in-checkout raw: hash changed: True | dirty: []
+arm2 (tracked control) dirty after edit: ['cases/meshes/m6.msh']
+arm3 absent ignored extra-input: {'cases/meshes/m6.msh': None} | dirty: []

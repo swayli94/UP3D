@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "id": "adopt-devflow",
+  "branch": "claude/adopt-devflow",
+  "worktree": {
+    "id": "adopt-devflow",
+    "machine": "aliyun",
+    "path": "runs/worktrees/adopt-devflow"
+  },
+  "planning": {
+    "dependencies": [],
+    "lane": "L1"
+  },
+  "impact": {
+    "capabilities": [],
+    "cases": [],
+    "checks": [],
+    "risks": [],
+    "resources": ["solver-cpu"]
+  },
+  "requirements": {
+    "platforms": ["Linux"],
+    "manualChecks": [],
+    "independentReview": true,
+    "milestone": false
+  }
+}
