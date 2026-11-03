@@ -1,125 +1,163 @@
 # UP3D 迁移到 openspec-devflow：清场重启方案
 
-日期：2026-11-04  
-状态：待执行  
-唯一执行顺序：`bootstrap-devflow` → `restart-solver-core` → 后续单功能 Change
+日期：2026-11-04
+状态：待执行
+唯一执行顺序：`bootstrap-devflow` → `restart-solver-core` → 后续单能力 Change
 
-## 1. 决策
+## 1. 决策与边界
 
-立即停止旧的 phase 7 开发方式，UP3D 从现在起改用 openspec-devflow 管理全部新开发。
+立即停止旧的 phase 7 开发方式。UP3D 从现在起使用 openspec-devflow 重新开发，不以修复旧求解器、保持旧 API、让旧测试转绿或复现旧结果作为前提。
 
-这次迁移的目标不是修复旧求解器、保持旧测试全绿或保留旧 API，而是尽快在新框架下重新做出可验证的产品。旧代码可以删除，旧科学结果只作为历史资料；需要重新开发的功能，通过新的 OpenSpec spec 定义。
+本次是用户明确授权的产品重启，不是行为保持型重构：
 
-两项旧审计仍然正确定位了旧体系的问题：数值答案受平台、JIT 和缓存出处影响，旧测试、证据、文档与流程彼此缠绕。但它们回答的是“如何无损保留旧系统”，不是本次“如何重新开始”。因此：
+- 允许删除旧代码、旧测试和旧流程文件，不建立第二套 `legacy/` 活跃目录。
+- 不处置旧红，不修复旧 bug 后再切换，不跑旧基线或新旧一致性实验。
+- 不迁移旧 phase、gate、任务台账、测试账目和历史证据，不反向补写旧系统规格。
+- 新实现只接受新 specs、活跃 Change 和新 Checks 的约束；不得用 skip、xfail 或 optional 掩盖新代码的必需检查失败。
 
-- 不再处置或再基线旧 12 红，不跑四臂出处实验，不修复旧 bug 后才允许切换。
-- 不迁移旧 phase、轮次、progress 台账、门编号、测试账目或证据体系。
-- 不反向为旧仓库补规格，不追求新旧结果一致。
-- 不把旧测试先登记为 devflow 必需 Check 再豁免；它们随旧实现退出活跃产品树。
+迁移后，当前开发权威只有：
 
-这是对重构指南中“保持旧行为”的明确例外：本次是用户授权的**产品重启**，不是行为保持型重构。新框架仍须如实验证新实现，不能用删除测试、skip 或 optional 掩盖新代码的失败。
+1. 新的 `AGENTS.md`；`CLAUDE.md` 只作为指向它的入口。
+2. `openspec/specs/` 中的当前产品行为。
+3. 活跃 Change 的提案、设计、spec delta、`change.json` 和 `tasks.md`。
+4. `devflow protocol execution` 发布的执行协议。
 
-## 2. 目标状态
+旧文档、旧测试和旧证据不产生当前任务、Check 或验收条件。本方案只指导下列三步迁移，也不成为后续开发的并行流程或进度台账。
 
-迁移完成后，仓库只保留一套当前事实来源：
+## 2. 统一的 devflow 生命周期
 
-| 内容 | 唯一事实来源 |
-|---|---|
-| 当前产品行为 | `openspec/specs/` |
-| 正在做什么、为什么做 | 活跃 Change 的 `proposal.md`、`design.md`、spec delta |
-| 任务与完成状态 | 活跃 Change 的 `tasks.md`，由 devflow 更新 |
-| 分支、worktree、验证、复核、批准、归档 | devflow |
-| 产品代码与新测试 | `pyfp3d/`、`tests/` |
-| 历史实现与旧研究 | Git 历史中的只读归档，不参与当前开发 |
+### 2.1 每次创建 Change worktree 之前
 
-日常开发只有一条规则：**一个 Change 做完当前任务就验证，验证通过后提交并完成该任务；不再写另一份进度台账。**
+除第一步唯一豁免 `devflow start` 外，每个 Change 都先完成 propose，再在主 checkout 执行：
 
-push、PR、merge、archive 仍需用户分别明确批准；本地任务提交按 Change 授权执行。
+```bash
+git switch main
+git fetch origin
+git merge --ff-only origin/main
+git status --short
+devflow start --change <change-id> --create
+```
 
-## 3. 三步迁移
+执行 `start --create` 前必须确认：
 
-### 第一步：`bootstrap-devflow` —— 最小接入，不碰旧产品
+- 本地 `HEAD` 与 `origin/main` 一致，不只是本地 `main` 可自行 fast-forward。
+- 除新 Change 目录 `openspec/changes/<change-id>/` 的未跟踪文件外，主 checkout 没有其他修改或未跟踪文件；不得为通过检查而清理他人工作。
+- `openspec/project.json` 使用 `"integrationBranch": "main"` 和 `"integrationRemote": "origin"`。不得设为 `null` 绕过远程同步检查。
+- Change 声明独立 branch/worktree；Kimi 的分支使用 `kimi/<topic>`，不在 `main` 直接开发或提交。
 
-这是唯一允许手工引导的 Change，因为框架尚不存在，不能假装它已经能管理自己的安装。
+`devflow start` 不代替上述 fetch 和 fast-forward 对齐。进入其报告的 worktree 后，先运行 `devflow resume` 或 `devflow next`，再选择任务。
 
-只做以下事项：
+### 2.2 每个任务和整个 Change 的顺序
 
-1. 固定工具版本：devflow `v0.2.0` / `cc0a9f1`，OpenSpec CLI `1.16.0`；devflow 使用独立的 Python 3.12 环境，不改变旧求解环境。
-2. 运行 `devflow install --host claude --host kimi`，提交 schema、agent 适配器和安装记录。
-3. 新建最小 `openspec/config.yaml`、`openspec/project.json`、`package.json` 和 lockfile；`integrationBranch` 为 `main`。
-4. 只注册一个自动 Check：`framework-smoke`，检查安装完整性、配置可读取以及一个无求解依赖的 `python -m pytest` 冒烟测试。
-5. 将 `AGENTS.md` 重写为简短的 devflow 协作规则，`CLAUDE.md` 只保留入口指针；删除当前 `openspec/changes/adopt-devflow/` 旧草案，以本方案为准重新建立最小 Change。
-6. `.gitignore` 增加 `runs/`、`node_modules/`；运行证据不提交。
-
-明确不做：旧测试接入、Numba/codegen provider、暖缓存 wrapper、外部网格 Case、skip/xfail 适配、资源锁、CI、roadmap  HTML、历史规格迁移。需要时由后续 Change 单独增加。
-
-完成条件：
-
-- `devflow install --check` 为 `current`；`devflow list-checks` 和 `devflow list-cases` 正常。
-- `framework-smoke` 真实通过，OpenSpec strict validation 通过。
-- 独立复核后，由用户批准归档和 PR/merge；主分支包含可用的最小框架。
-
-### 第二步：`restart-solver-core` —— 首个真实 devflow Change
-
-这是迁移的关键验收：从主分支用 `devflow start --change restart-solver-core --create` 创建独立 branch/worktree，完整走新生命周期。
-
-在同一个行为变更 Change 中：
-
-1. 删除旧 `pyfp3d/`、`tests/`、`bench/`、`phases/` 和旧 phase 工作文档；旧内容已由 Git 历史保存，不复制成第二套 `legacy/` 活跃目录。`cases/reference_data/` 和原始参考文献可保留为只读参考资料，但不再自动构成验收基线。
-2. 建立全新的最小包与测试布局，重新编写当前 README 和依赖清单。
-3. 只实现一个最小纵向闭环：读取一个极小四面体网格，施加均匀无黏来流，输出速度场与自由流保持误差。暂不求解跨声速、升力、Kutta、IBL、AMG 或复杂边界条件。
-4. 为该行为写新的 spec delta 和新测试；至少包括一个 API 测试和一个从真实入口读取输入、产生输出的端到端测试。
-5. 每个任务依次执行：实现 → 项目快速检查 → 提交 → `devflow verify --task` → `devflow complete`。
-6. 最后运行 affected verification，由未参与实现的独立 agent 复核，用户批准后再 archive；push、PR、merge 另行批准。
-
-第一步只负责让框架可用，第二步才证明新开发方式可用。不要在第一步顺手删除旧代码，也不要把第二步扩成完整 CFD 重建计划。
-
-### 第三步：后续开发 —— 一次只增加一个可观察能力
-
-`restart-solver-core` 归档并合入后，再确定下一个 Change。每个 Change 必须能回答：
-
-1. 用户或调用方能观察到什么新能力？
-2. 哪条 spec 和哪个真实入口测试证明它？
-3. 能否在一个独立 worktree 内小步完成并回滚？
-
-建议顺序是：最小势流离散 → 亚声速边界条件与求解 → 一个外部校验算例 → 单个更复杂能力。这里只是依赖顺序，不是预先承诺的大型路线图；每次只规划下一个 Change。
-
-## 4. 新框架下的固定工作方式
-
-每个新 Change 都遵循：
+所有 Change，包括 bootstrap，都遵守同一顺序：
 
 ```text
 propose
-  → devflow start --create
-  → devflow next / run --task
-  → 实现一个任务
-  → 提交
-  → devflow verify --task
-  → devflow complete
-  → affected verify
-  → independent review
-  → 用户批准 archive
-  → 用户另行批准 push / PR / merge
+  → start --create（仅 bootstrap 改为手工建独立 branch/worktree）
+  → devflow next / devflow run --task
+  → 实现当前任务并做项目快速检查
+  → 提交当前任务及全部声明输入
+  → devflow verify --change <id> --task <task-id>
+  → devflow complete --change <id> --task <task-id>
+  → 提交 tasks.md、执行记录和本次 Run 元数据所形成的状态变更
+  → 下一任务，直至全部完成
+  → devflow verify --change <id> --profile affected
+  → 独立复核并关闭全部发现
+  → 用户明确批准 archive
+  → devflow archive --change <id> --approval "<用户批准>"
+  → 提交 spec 同步（如有）、acceptance 和归档结果
+  → 分别取得用户对 push、PR、merge 的明确授权
 ```
 
-约束只有六条：
+具体约束：
 
-1. 不在 `main` 直接开发；一个 Change 一个 branch/worktree。
-2. 一个任务只做一件事，完成当前任务后再选下一个。
-3. 新代码的必需 Check 必须真实通过；失败可以记录，但不能伪造成通过。
-4. 科学结论可以是 FAIL、RECORDED 或 UNDEFINED；这不等于 devflow 任务失败，交付约定证据即可完成任务。
-5. 独立复核之后再有产品改动，必须重新验证和复核。
-6. 不恢复旧 phase 文书体系，不新增与 `tasks.md` 并行的进度状态。
+- 快速检查只用于及时反馈，不能代替正式 `verify --task`。正式 Run 所覆盖的声明输入必须先提交。
+- `devflow complete` 会更新任务复选框和执行记录，因此完成后还要提交任务状态；不能手工勾选复选框。
+- 根目录 `/runs/` 中的本地证据、worktree 和资源状态不提交；Change 内需要持久化的任务状态、执行记录和 Run 元数据按 devflow 生命周期提交。
+- 每个任务至少声明一个必需 Check。affected verification 的必需 Run 必须对当前内容有效；失败或过期时先修正当前任务，不借助旧基线豁免。
+- 独立复核必须由未参与实现的其他上下文以只读方式完成。复核后的产品改动会使既有复核失效，必须重新验证和复核。
+- archive 不自动执行 `git commit`，也不等于 push、PR 或 merge。归档产生的 specs 变更、`acceptance.json`、归档目录和执行记录必须检查后再提交。
+- push、开 PR、merge 是三件事，分别授权；任何一项都不由任务完成、archive 或本方案自动授权。
 
-## 5. 回滚与迁移完成判据
+## 3. 三步迁移
 
-回滚很简单：第一步之前继续使用旧 `main`；第一步之后、第二步之前只回滚框架接入提交；第二步之后旧实现仍可从迁移前 commit 建立只读 worktree。任何恢复旧代码为当前产品的行为都必须另开行为变更 Change，不能直接把旧目录复制回来。
+### 第一步：`bootstrap-devflow` —— 最小工具接入
+
+这一步只让框架可用，不删除旧产品代码，不接入旧测试，也不实现求解器功能。
+
+**唯一流程例外：**不运行 `devflow start --create`。先按第 2.1 节同步并确认 `main` 干净，再从该提交手工创建独立 branch/worktree：
+
+```bash
+git worktree add -b kimi/bootstrap-devflow runs/worktrees/bootstrap-devflow HEAD
+```
+
+随后只在该 worktree 工作。按 devflow schema 建立 Change，并如实填写 `change.json`：`id`、上述分支、实际 worktree 相对路径和所属机器必须一致；`impact.capabilities` 为空，`impact.checks` 至少包含 `framework-smoke`，并声明真实平台和 `independentReview: true`。不得保留模板占位值或虚构不存在的分配。
+
+它是 tooling-only Change，因此必须同时满足：
+
+- `.openspec.yaml` 设置 `skip_specs: true`。
+- `proposal.md` 的 New Capabilities 和 Modified Capabilities 都为空，`change.json` 的 `impact.capabilities` 也为空。
+- 不创建任何 spec delta，不为通过校验而虚构产品能力。
+
+除不用 `devflow start` 外，没有第二个流程豁免：任务提交、`verify --task`、`complete`、任务状态提交、affected verification、独立复核、用户批准、archive 和归档后提交全部照常执行。由于当前工具没有 `devflow init`，按最小项目模板手工编写初始配置是安装方式，不是跳过上述门槛的理由。
+
+工作范围固定为：
+
+1. 固定 devflow `v0.2.0` / `cc0a9f1`、OpenSpec CLI `1.16.0`；devflow 使用独立 Python 3.12 环境，OpenSpec 由项目 `package.json` 和 lockfile 固定。
+2. 运行 `devflow install --host claude --host kimi`，提交 schema、agent 适配器和安装记录；新建最小 `openspec/config.yaml` 与 `openspec/project.json`。
+3. 只注册一个自动 Check：`framework-smoke`。它检查安装完整性、配置可读取以及一个不依赖求解器的新 pytest 冒烟测试，并如实声明全部输入路径。
+4. 将 `AGENTS.md` 重写为简短的新 devflow 协作规则，`CLAUDE.md` 只保留入口指针；删除 `openspec/changes/adopt-devflow/` 旧草案，以本 Change 为唯一接入 Change。
+5. `.gitignore` 忽略根目录 `/runs/` 和 `node_modules/`。不提交机器本地证据，不增加旧流程台账。
+6. 每个任务严格执行第 2.2 节；全部任务结束后运行 affected verification、独立复核，取得用户 archive 批准，归档并提交归档结果。
+
+明确不做：旧测试接入、旧 bug 修复、Numba/codegen provider、缓存包装、外部网格 Case、skip/xfail 适配、CI、roadmap HTML 和历史规格迁移。确有新需求时由后续 Change 单独提出。
+
+第一步完成条件：
+
+- `devflow install --check` 报告 `current`，`devflow list-checks` 和 `devflow list-cases` 正常。
+- `framework-smoke` 真实通过，OpenSpec strict validation 通过，affected verification 和独立复核均有效。
+- 用户已批准 archive，归档结果已提交；随后经分别授权的 push、PR、merge，使 `main` 包含最小可用框架。
+
+### 第二步：`restart-solver-core` —— 清场并重建最小闭环
+
+第一步归档并合入后，先通过 OpenSpec propose 新行为、写新的 spec delta 和任务，再按第 2.1 节同步 `main` 并执行：
+
+```bash
+devflow start --change restart-solver-core --create
+```
+
+该 Change 在一个独立 worktree 中完成以下工作：
+
+1. 删除旧 `pyfp3d/`、`tests/`、`bench/`、`phases/`，再建立全新的最小 `pyfp3d/` 包和 `tests/` 布局；重写当前 README 和依赖清单。
+2. 删除旧 `cases/gates/`、`cases/demo/`、旧网格生成与 case 运行脚本，以及其余旧 case 配置。只保留明确列为只读资料的 `cases/reference_data/` 和原始论文，不复制旧 case 到新框架。
+3. 删除旧 phase/gate 工作文档、旧审计报告和旧流程规则；新开发只由新 `AGENTS.md`、specs、活跃 Change 和 devflow protocol 约束。
+4. 只实现一个最小纵向闭环：从一个新的极小四面体网格入口读取输入，施加均匀无黏来流，从真实入口输出速度场和自由流保持误差。新 spec 明确输出契约和误差判据。
+5. 添加新的 API 测试和端到端测试，注册对应的新必需 Checks。测试只证明新 spec，不引用旧期望值、旧测试账目或历史性能基线。
+6. 每个任务均按“实现/快速检查 → 提交 → `verify --task` → `complete` → 提交任务状态”执行；最后完成 affected verification、独立复核、用户批准、archive 和归档后提交。
+
+清场后的边界必须保持清楚：
+
+- 旧文档、旧测试、旧 case 和旧证据即使仍能从 Git 历史读取，也不生成当前任务、Check 或验收条件。
+- `cases/reference_data/` 和原始论文只读，不自动进入 Check 输入，不构成数值真值或验收门槛；不得为迁移重算或补交历史证据。
+- 本 Change 不追求跨声速、升力、Kutta、IBL、AMG、复杂边界条件或完整 CFD 功能。
+
+第二步完成以新最小闭环的真实 API/端到端验证和完整 devflow 生命周期为准，不以任何旧测试是否通过为准。归档结果提交后，再分别授权 push、PR、merge。
+
+### 第三步：后续开发 —— 一次增加一个可观察能力
+
+`restart-solver-core` 归档、提交并合入后，只规划下一个 Change。每个 Change 必须能用一条新或修改后的 spec、一个真实入口测试和独立 worktree 说明其可观察能力及回滚边界。
+
+后续可以从最小势流离散、亚声速边界条件与求解、一个新定义的外部校验算例中选择一个开始，但不预设大型路线图，不批量启动 Change。每个都从 **propose → 同步并检查 main → start --create → next** 开始，再重复第 2.2 节的任务与验收顺序。
+
+## 4. 回滚与迁移完成判据
+
+回滚不涉及恢复旧流程：第一步之前保留旧 `main`；第一步之后、第二步之前只回滚框架接入提交；第二步之后如需读取旧实现，只能从迁移前 commit 建只读 worktree。把旧代码恢复为当前产品必须另开带 spec delta 的行为 Change，不直接复制旧目录，也不要求先修复旧系统。
 
 只有同时满足以下条件，才称迁移完成：
 
-- 最小框架已合入主分支，干净 clone 能安装并运行 `framework-smoke`。
-- `restart-solver-core` 已在独立 worktree 中完整走通 propose、任务提交、verify、独立复核、用户批准和 archive。
-- 当前产品只由新 specs、新代码和新测试描述；旧红、旧证据与旧流程不再阻塞新开发。
-- 下一个开发任务能够从 `devflow next` 开始，而不需要阅读历史会话或旧 phase 台账。
+- 最小框架已合入 `main`，干净 clone 能安装并运行 `framework-smoke`。
+- `restart-solver-core` 已在独立 worktree 中走通 propose、任务提交、逐任务 verify/complete、任务状态提交、affected verification、独立复核、用户批准、archive 和归档后提交，并经授权合入。
+- 当前产品只由新 specs、新代码和新测试描述；旧红、旧文档、旧 case 和历史证据不再阻塞新开发。
+- 下一个 Change 能从 **propose → start --create → next** 开始，无需阅读历史会话、旧 phase 台账或旧审计。
 
-迁移完成不表示求解器功能完整或没有 bug，只表示**UP3D 已经能够在 openspec-devflow 下持续开发**。
+迁移完成不表示求解器功能完整或没有 bug，只表示 UP3D 已能在 openspec-devflow 下持续进行可验证的新开发。
