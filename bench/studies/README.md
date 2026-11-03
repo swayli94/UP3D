@@ -22,6 +22,22 @@ phase 6 的 4 个(`ibl_xfoil_recon`、`gate_audit_20260905`、`c05_amg_investiga
 6 条基线 + 同网格 continuation/entropy-off 诊断）同上 —— phase 7 期间留原位，
 收口归档，无测试加载；`_work/` 变体网格不跟踪，指纹与逐步历史 CSV 是证据。
 
+★ **2026-11-03(phase 7 第 6 轮)**:`xtr030_attractor/`（xtr030 跨 BLAS 落点归因：
+原生重复腿 + xtr005 对照 + 同输入 IBL 重放 + 紧容差种子/冻结入流 2×2）同上 ——
+phase 7 期间留原位，收口归档，无测试加载；`_work/` 数组缓存不跟踪，CSV/PNG 是证据。
+
+★ **2026-11-03(phase 7 第 7 轮)**:`ibl_floor_restart/`（四个既有末态的 IBL 残差解剖 +
+同状态同边数据重启动）同上 —— phase 7 期间留原位，收口归档，无测试加载；零条新耦合腿，
+`_work/` 数组缓存不跟踪，输入指纹与 committed S5 summary 绑定，CSV/PNG 是证据。
+
+★ **2026-11-03(phase 7 第 8 轮)**:`ibl_ap_projection/`（四个既有末态的均衡化
+Jacobian 投影 + 生产接受步逐方程分解）同上 —— phase 7 期间留原位，收口归档，无测试加载；
+每腿一次 dense SVD、零条新耦合/外部对照腿，CSV/PNG 是证据。
+
+★ **2026-11-03(phase 7 第 9 轮)**:`ibl_step_nonlinearity/`（xtr030 B1 的 18 个强回溯
+接受步非线性余项 + 固定左补空间逐源方程分解）同上 —— phase 7 期间留原位，收口归档，无测试
+加载；离线重放不调用生产 solve，一次原生点投影基重建，零条新耦合/外部对照腿，CSV/PNG 是证据。
+
 | 目录 | 被谁加载 |
 |---|---|
 | `v5_1c_above_band_window/` | `tests/test_v5_above_band_seed.py` |

@@ -1,0 +1,29 @@
+{
+  "blas_threads": 1,
+  "cache_policy": "no cache deletion; warm cache; fresh worker per state",
+  "commit": "e94b07c3eaca8c0b9bb8152f75221d22b49d4367",
+  "dense_svd_per_leg": 1,
+  "fresh_coupling_legs": 0,
+  "fresh_external_sa_sst": 0,
+  "iterative_solvers": 0,
+  "max_dense_svd": 4,
+  "max_restarts": 4,
+  "mesh": "cases/meshes/naca0012_2.5d/medium.msh",
+  "mesh_sha256": "2cf7fc8bb4eae028a82c0c6876ee47bf289a48b04a447d33b78f422462262692",
+  "numba_threads": 16,
+  "omp_threads": 16,
+  "packages": {
+    "meshio": "5.3.5",
+    "numba": "0.66.0",
+    "numpy": "2.4.6",
+    "pyamg": "5.3.0",
+    "pytest": "9.2.0",
+    "scipy": "1.17.1"
+  },
+  "platform": "Linux-5.10.134-19.2.al8.x86_64-x86_64-with-glibc2.32",
+  "processor": "x86_64",
+  "projection_rank": 20,
+  "python": "3.11.18 (main, Oct 26 2026, 11:35:17) [GCC 15.3.0]",
+  "time_budget_s": 1800.0,
+  "worker_budget_s": 600.0
+}

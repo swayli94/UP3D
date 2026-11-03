@@ -1,0 +1,10 @@
+{
+  "completed": true,
+  "cumulative_wall_s": 8.833371296525002,
+  "fresh_svd": 1,
+  "max_svd": 1,
+  "offline_direction_replays": 18,
+  "production_solve_restarts": 0,
+  "time_budget_s": 900.0,
+  "worker_budget_s": 600.0
+}

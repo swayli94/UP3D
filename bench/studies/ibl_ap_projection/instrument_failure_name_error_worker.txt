@@ -1,0 +1,13 @@
+
+
+Traceback (most recent call last):
+  File "/home/lrz/code/UP3D/bench/studies/ibl_ap_projection/run.py", line 964, in <module>
+    main()
+  File "/home/lrz/code/UP3D/bench/studies/ibl_ap_projection/run.py", line 917, in main
+    coupling_worker(read_json(args.worker))
+  File "/home/lrz/code/UP3D/bench/studies/ibl_ap_projection/run.py", line 509, in coupling_worker
+    write_trace(spec["leg"], spec["role"], contexts, events)
+  File "/home/lrz/code/UP3D/bench/studies/ibl_ap_projection/run.py", line 429, in write_trace
+    pure_inf="" if ctx["F_before"] is None else f12(np.max(np.abs(ctx["F_before"]))),
+                                                    ^^
+NameError: name 'np' is not defined

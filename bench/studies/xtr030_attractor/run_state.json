@@ -1,0 +1,16 @@
+{
+  "completed": [
+    "native_xtr030_b1_r1",
+    "native_xtr030_b1_r2",
+    "native_xtr030_b16_r1",
+    "native_xtr030_b16_r2",
+    "control_xtr005_b1",
+    "control_xtr005_b16",
+    "instrument_one_outer_b1"
+  ],
+  "cumulative_coupling_s": 873.3984602726996,
+  "fresh_coupling_legs": 7,
+  "max_coupling_legs": 10,
+  "replay_s": 107.94279489666224,
+  "time_budget_s": 4500.0
+}
