@@ -103,14 +103,28 @@ devflow review --change <id> --reviewer <独立复核者> --approved
      "integrationRemote": "origin",
      "evidenceRoot": "runs/evidence",
      "resourceStateRoot": "runs/devflow",
-     "productPaths": ["pyfp3d"],
+     "productPaths": [
+       "pyfp3d",
+       "AGENTS.md",
+       "CLAUDE.md",
+       "package.json",
+       "package-lock.json",
+       ".claude/skills",
+       ".kimi-code/skills",
+       "openspec/config.yaml",
+       "openspec/project.json",
+       "openspec/devflow-install.json",
+       "openspec/schemas",
+       "openspec/checks",
+       "openspec/framework_smoke.py"
+     ],
      "taskLayerPaths": ["pyfp3d"],
      "environmentPackages": [],
      "resources": {}
    }
    ```
 
-   `pyfp3d` 当前真实存在，第二步清场后也必须在同一路径重建。省略 `packageVersionProvider`，不引入任何环境 provider。
+   上述 `productPaths` 是第一步最小完整交付清单，必须逐项存在并 Git 跟踪；不得改成整个 `openspec/`，也不得纳入 `openspec/changes/`，否则执行记录会进入 review/archive 的产品指纹。`pyfp3d` 当前真实存在，第二步清场后也必须在同一路径重建。省略 `packageVersionProvider`，不引入任何环境 provider。
 
    新建并 Git 跟踪 `openspec/framework_smoke.py` 和 `openspec/checks/framework-smoke.json`。脚本本身只导入 Python 标准库，通过固定 devflow CLI 检查安装完整性、配置可读取和 registry 可加载；不导入 `pyfp3d`，不读取 `tests/`。Check 使用 `python openspec/framework_smoke.py`，`required: true`，只声明 `console` evidence，不使用 pytest 或 JUnit。`sourcePaths` 逐项覆盖脚本、`openspec/checks`、项目配置、安装记录、schema 和两类 agent adapters；所有声明路径必须真实存在并被 Git 跟踪。
 
@@ -138,14 +152,16 @@ devflow next --change restart-solver-core
 
 该 Change 在一个独立 worktree 中完成：
 
-1. 删除旧 `pyfp3d/`、`tests/`、`bench/`、`phases/`，在新的最小 `pyfp3d/` 包中重建产品代码和新的测试布局，重写 README 与依赖清单。`productPaths` 保持 `["pyfp3d"]`。
-2. 删除旧 `cases/gates/`、`cases/demo/`、旧网格生成与 case 运行脚本及其余旧 case 配置。只保留只读资料 `cases/reference_data/` 和原始论文，不复制旧 case。
-3. 删除旧 phase/gate 工作文档、旧审计报告和旧流程规则。保留第一步的 `openspec/framework_smoke.py` 与 `framework-smoke` Check；它们不依赖旧 `tests/`，因此清场后仍必须真实通过。
-4. 只实现一个最小纵向闭环：从一个新的极小四面体网格入口读取输入，施加均匀无黏来流，从真实入口输出速度场和自由流保持误差。新 spec 明确输出契约和误差判据。
-5. **此时才为新 API/E2E 产品测试选择并固定测试框架**，添加新测试及对应必需 Checks。测试只证明新 spec，不引用旧期望值、旧测试账目或历史性能基线；bootstrap 的 `framework-smoke` 不因此改用该框架。
-6. 全部任务、验证、复核记录、用户批准、archive 和归档后提交均按第 2 节执行。
+1. **原子产品重启：以下改动必须在同一个任务、同一个提交中完成，不得先提交纯删除。**
+   - 删除旧 `pyfp3d/`、`tests/`、`bench/`、`phases/`，同时建立含 `__init__.py`、可导入的新最小 `pyfp3d/` 包，重写 README 与实际需要的依赖清单。
+   - 只实现一个最小纵向闭环：从一个新的极小四面体网格入口读取输入，施加均匀无黏来流，从真实入口输出速度场和自由流保持误差。新 spec 明确输出契约和误差判据。
+   - 此时才为新 API/E2E 测试选择并固定测试框架，创建新 `tests/` 和对应必需 Checks。测试只证明新 spec，不引用旧期望值、旧测试账目或历史性能基线；bootstrap 的 `framework-smoke` 不改用该框架。
+   - 在创建 `tests/` 的同一提交更新 `openspec/project.json`：把 `tests` 加入 `productPaths`；若这些测试承担 task-profile，也加入 `taskLayerPaths`。实际保留或修改的根级依赖清单（从 `pyproject.toml`、`setup.py`、`environment.yml`、`package.json`、`package-lock.json` 中按实际结果确定）同样加入或保留在 `productPaths`，其 Checks 承担 task-profile 时也加入 `taskLayerPaths`。已删除的文件或目录不得留在 `productPaths`、`taskLayerPaths` 或任何 Check 的 `sourcePaths` 中，不得声明不存在的路径。
+2. 删除旧 `cases/gates/`、`cases/demo/`、旧网格生成与 case 运行脚本及其余旧 case 配置，只保留已跟踪的只读资料 `cases/reference_data/`，不复制旧 case。删除旧 phase/gate 工作文档、旧审计报告和旧流程规则；保留第一步的 `openspec/framework_smoke.py` 与 `framework-smoke` Check，清场后仍须真实通过。
+3. 同步清理 `.gitignore`：删除已删除 case/gate/bench 的专属忽略规则及过时注释；保留根级 `/reference/`、`/docs/references/`、`/tools/` 的明确本地忽略规则。原始论文和工具可留在原 checkout 的这些本机忽略目录，不为迁移提交 PDF 或工具，也不把它们作为干净 worktree 的输入或验收依赖。
+4. 全部任务、验证、复核记录、用户批准、archive 和归档后提交均按第 2 节执行。
 
-`cases/reference_data/` 和原始论文不自动进入 Check 输入，不构成数值真值或验收门槛。本 Change 不做 Numba、旧网格或外部网格、缓存适配，也不追求跨声速、升力、Kutta、IBL、AMG、复杂边界条件或完整 CFD 功能。完成只以新最小闭环的真实 API/E2E 验证和完整 devflow 生命周期为准；归档提交后，再分别授权 push、PR、merge。
+`cases/reference_data/` 不自动进入 Check 输入，不构成数值真值或验收门槛。本 Change 不做 Numba、旧网格或外部网格、缓存适配，也不追求跨声速、升力、Kutta、IBL、AMG、复杂边界条件或完整 CFD 功能。完成只以新最小闭环的真实 API/E2E 验证和完整 devflow 生命周期为准；归档提交后，再分别授权 push、PR、merge。
 
 ### 第三步：后续开发 —— 一次增加一个可观察能力
 
