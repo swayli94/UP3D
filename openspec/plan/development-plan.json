@@ -1,19 +1,16 @@
 {
   "formatVersion": 1,
   "nextChange": {
-    "id": "upgrade-devflow-0-3-1",
-    "capability": "development-workflow",
-    "observable": "devflow 仅在 v0.3.1 与安装清单版本及提交一致时通过框架验证",
-    "entry": "conda run -n devflow --no-capture-output devflow protocol execution 与 conda run -n devflow --no-capture-output python openspec/framework_smoke.py",
-    "input": "tag v0.3.1 的非 editable VCS 安装、现有 OpenSpec 配置和安装清单",
-    "output": "engineVersion 0.3.1 与完整 engineCommit 一致的清单及可执行的新版协议和 Checks",
-    "tests": "版本与提交负例无写入、严格 Registry、框架 smoke、workflow-contract 及现有 API/E2E",
-    "rollback": "合入前移除本升级流程改动并重装 v0.2.0 tag；合入后另开带新 spec 的 Change"
+    "id": "tetrahedron-p1-gradient",
+    "capability": "tetrahedron-p1-gradient",
+    "observable": "从节点势函数计算每个四面体单元的常梯度",
+    "entry": "公共 run_p1_gradient(path) 与 python -m pyfp3d p1-gradient <input.json>",
+    "input": "vertices、tetrahedra 和与顶点一一对应的有限 nodal_potential",
+    "output": "按单元输入顺序排列的 N×3 gradients",
+    "tests": "仿射场精确梯度、手工推导的非仿射节点值、输入错误及真实 API/E2E",
+    "rollback": "只移除新势函数输入、梯度入口、spec、测试和 Checks，保留现有自由流 API/CLI 与回归"
   },
   "backlog": [
-    {
-      "title": "四面体 P1 节点势函数梯度（tetrahedron-p1-gradient）"
-    },
     {
       "title": "评估后续单元场重建能力"
     }
