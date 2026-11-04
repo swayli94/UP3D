@@ -1,4 +1,0 @@
-path,converged,n_iter,res_final,n_lim,n_flr,wall_s
-neumann,False,5,5.787e+05,,,
-freestream_legacy,False,40,5.254e+00,11,1,59.9
-freestream_pin,True,4,1.492e-13,0,0,20.7

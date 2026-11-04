@@ -1,5 +1,0 @@
-leg,role,restart_n_accepted,restart_n_rejected_iterations,ap_steps_reduced,ap_steps_amplified,ap_steps_flat,ap_accept_energy_before,ap_accept_energy_after,ap_accept_energy_rel_change,accepted_step_class,wall_restart_s
-native_xtr030_b1_r1,primary,18,21,18,0,0,2.034692492499e-10,2.033596982721e-10,-5.384154027102e-04,AP_REDUCED,5.179814349860e+00
-native_xtr030_b16_r1,primary,0,11,0,0,0,0.000000000000e+00,0.000000000000e+00,,NO_ACCEPTED_STEPS,1.477603189647e+00
-control_xtr005_b1,control,0,11,0,0,0,0.000000000000e+00,0.000000000000e+00,,NO_ACCEPTED_STEPS,1.505687028170e+00
-control_xtr005_b16,control,0,11,0,0,0,0.000000000000e+00,0.000000000000e+00,,NO_ACCEPTED_STEPS,1.316069763154e+00

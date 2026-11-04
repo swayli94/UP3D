@@ -1,7 +1,0 @@
-criterion,verdict,evidence,reading
-C1,UNDEFINED,"summary.csv; comparisons.csv; history_native_xtr030_b1_r1.csv","同档重复逐位一致且跨档分离成立，但 B1 原生腿 10 外迭代未收敛；历史两个收敛落点未在本机复现"
-C2,RECORDED,"summary.csv; comparisons.csv; history_control_xtr005_*.csv","xtr005 两档仅外层收敛，跨档 cl 差 5.013988232e-4，敏感幅度小于 xtr030；不是零敏感负对照"
-C3,PASS,"comparisons.csv; replay.csv","k=0 FP phi/gamma 已分家；生产路径同输入 B1/B16 首 IBL 解逐位相同，首 IBL 无直接 BLAS 响应"
-C4,UNDEFINED,"verdict_metrics.csv","B1 原生不收敛且两档 IBL 内求解均未达自身判据，未启动紧容差 2×2；不判提前停止、冻结入流或多不动点"
-C5,PASS,"instrument_self_test.csv; gate_checks.csv; run_state.json; criteria.csv; instrument_diagnostics.csv","15/15 自测、两遍门检查、完整 CSV/PNG 与成本闭合；生产库/测试/门证据零改动"
-OVERALL,UNDEFINED,"verdict_metrics.csv","FP 首差和首 IBL 直接响应已闭合；多吸引子根因不可判"

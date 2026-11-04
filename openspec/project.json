@@ -6,6 +6,10 @@
   "resourceStateRoot": "runs/devflow",
   "productPaths": [
     "pyfp3d",
+    "tests",
+    "README.md",
+    "environment.yml",
+    "pyproject.toml",
     "AGENTS.md",
     "CLAUDE.md",
     "package.json",
@@ -17,9 +21,20 @@
     "openspec/devflow-install.json",
     "openspec/schemas",
     "openspec/checks",
-    "openspec/framework_smoke.py"
+    "openspec/framework_smoke.py",
+    "openspec/package_version_provider.py",
+    "openspec/pytest_evidence.py"
   ],
-  "taskLayerPaths": [],
-  "environmentPackages": [],
+  "taskLayerPaths": [
+    "pyfp3d",
+    "tests"
+  ],
+  "evidenceDirectoryVariable": "UP3D_EVIDENCE_DIR",
+  "environmentPackages": [
+    "python",
+    "pytest",
+    "openspec-devflow"
+  ],
+  "packageVersionProvider": "openspec.package_version_provider:package_version",
   "resources": {}
 }

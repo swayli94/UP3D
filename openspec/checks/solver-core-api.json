@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "id": "solver-core-api",
+  "executionKey": "solver-core-api",
+  "title": "Validate the tetrahedron free-stream Python API",
+  "capabilities": [
+    "tetrahedron-freestream"
+  ],
+  "cases": [],
+  "command": [
+    "conda",
+    "run",
+    "-n",
+    "pyfp3d-core",
+    "--no-capture-output",
+    "python",
+    "-m",
+    "pytest",
+    "-p",
+    "openspec.pytest_evidence",
+    "tests/api"
+  ],
+  "platforms": [
+    "Linux"
+  ],
+  "data": [],
+  "resources": [],
+  "cost": "fast",
+  "slow": false,
+  "required": true,
+  "profiles": [
+    "task",
+    "affected"
+  ],
+  "evidence": [
+    "console",
+    "junit"
+  ],
+  "manual": false,
+  "sourcePaths": [
+    "pyfp3d",
+    "tests/api",
+    "tests/fixtures",
+    "environment.yml",
+    "pyproject.toml",
+    "openspec/project.json",
+    "openspec/package_version_provider.py",
+    "openspec/pytest_evidence.py",
+    "openspec/checks/solver-core-api.json"
+  ]
+}

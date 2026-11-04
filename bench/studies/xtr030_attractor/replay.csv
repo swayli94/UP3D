@@ -1,3 +1,0 @@
-leg,blas_threads,status,converged,n_iter,final_residual,native_array_equal,native_max_abs,U_sha256,wall_s
-replay_b1,1,ok,0,100,2.109157992340e-06,True,0.000000000000e+00,baee0bc79ce74441fbc0fcf16adf1bb3267e33c4545b3317943eb7aacb38bbc3,4.903910053149e+01
-replay_b16,16,ok,0,100,2.109157992340e-06,True,0.000000000000e+00,baee0bc79ce74441fbc0fcf16adf1bb3267e33c4545b3317943eb7aacb38bbc3,5.009272410348e+01

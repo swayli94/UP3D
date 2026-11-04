@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "id": "solver-core-e2e",
+  "executionKey": "solver-core-e2e",
+  "title": "Validate the tetrahedron free-stream command-line entry",
+  "capabilities": [
+    "tetrahedron-freestream"
+  ],
+  "cases": [],
+  "command": [
+    "conda",
+    "run",
+    "-n",
+    "pyfp3d-core",
+    "--no-capture-output",
+    "python",
+    "-m",
+    "pytest",
+    "-p",
+    "openspec.pytest_evidence",
+    "tests/e2e"
+  ],
+  "platforms": [
+    "Linux"
+  ],
+  "data": [],
+  "resources": [],
+  "cost": "fast",
+  "slow": false,
+  "required": true,
+  "profiles": [
+    "task",
+    "affected"
+  ],
+  "evidence": [
+    "console",
+    "junit"
+  ],
+  "manual": false,
+  "sourcePaths": [
+    "pyfp3d",
+    "tests/e2e",
+    "tests/fixtures",
+    "environment.yml",
+    "pyproject.toml",
+    "README.md",
+    "openspec/project.json",
+    "openspec/package_version_provider.py",
+    "openspec/pytest_evidence.py",
+    "openspec/checks/solver-core-e2e.json"
+  ]
+}

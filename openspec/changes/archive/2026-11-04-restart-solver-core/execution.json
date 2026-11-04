@@ -1,0 +1,32 @@
+{
+  "formatVersion": 1,
+  "tasks": {
+    "1.1": {
+      "checks": [
+        "framework-smoke",
+        "solver-core-api",
+        "solver-core-e2e"
+      ]
+    },
+    "1.2": {
+      "dependsOn": [
+        "1.1"
+      ],
+      "checks": [
+        "framework-smoke",
+        "solver-core-api",
+        "solver-core-e2e"
+      ]
+    },
+    "1.3": {
+      "dependsOn": [
+        "1.2"
+      ],
+      "checks": [
+        "framework-smoke",
+        "solver-core-api",
+        "solver-core-e2e"
+      ]
+    }
+  }
+}

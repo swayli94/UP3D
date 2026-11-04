@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "change": "restart-solver-core",
+  "profile": "affected",
+  "commit": "2165f8a65a19ec63e9df40e7241d0c36812d7ded",
+  "productFingerprint": "24582cb3468314b6f00682fa9d3c5f922f5a3636a5e150a70bdebdd3a19948b7",
+  "checks": [
+    {
+      "check": "framework-smoke",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T123058-7d0dbcf468d3-framework-smoke-8d1d7652",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-api",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T123101-7d0dbcf468d3-solver-core-api-0b246465",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-e2e",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T123107-7d0dbcf468d3-solver-core-e2e-0b848b51",
+      "status": "pass"
+    }
+  ],
+  "verified": true,
+  "review": "b75689f2029e4ddfa136b50d059ebfc2",
+  "approval": "用户明确批准 archive restart-solver-core",
+  "actor": "lrz",
+  "at": "2026-11-04T13:45:34.966848+00:00"
+}
