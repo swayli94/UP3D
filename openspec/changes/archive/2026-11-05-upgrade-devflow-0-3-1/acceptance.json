@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "change": "upgrade-devflow-0-3-1",
+  "profile": "affected",
+  "commit": "ec3e328d8b38dcf7b394b4998b1b2d0c03715ad3",
+  "productFingerprint": "67d2f3dc79c64fbace8443c6a1767842ae34dad5c09d61085d95277b166148f0",
+  "checks": [
+    {
+      "check": "framework-smoke",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T173131-41d39bb2858d-framework-smoke-ea7c92e5",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-api",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T173135-41d39bb2858d-solver-core-api-af9678a8",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-e2e",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T173140-41d39bb2858d-solver-core-e2e-35dccea8",
+      "status": "pass"
+    },
+    {
+      "check": "workflow-contract",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T173623-3552b2f81bce-workflow-contract-fee85a39",
+      "status": "pass"
+    }
+  ],
+  "verified": true,
+  "review": "ec1aadb2801b4f829cd94d2df57c3f1c",
+  "approval": "用户明确回复：批准 archive",
+  "actor": "lrz",
+  "at": "2026-11-04T17:59:14.952990+00:00"
+}
