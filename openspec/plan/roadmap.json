@@ -65,7 +65,7 @@
               "code": "R0",
               "title": "采用 canonical roadmap",
               "kind": "proposal",
-              "status": "planned",
+              "status": "done",
               "summary": "建立唯一协调 graph、官方视图和直接验证。",
               "deps": ["upgrade-devflow-0-3-1"],
               "changes": ["adopt-roadmap"]
