@@ -198,7 +198,9 @@ node --version                                   # >= v22.12
 
 ### 4.7 Agent 本机状态
 
-Claude 的项目记忆按路径 `/home/lrz/code/UP3D` 存放，新项目会继承全部旧产品记忆。迁移前复制一份到备份路径对应的记忆目录；新项目只保留仍适用的机器、环境、git 类条目，其余标注“属于备份”或删除。Kimi 的本机状态同理。
+Claude 的项目记忆按路径 `/home/lrz/code/UP3D` 存放，新项目会继承全部旧产品记忆。迁移前复制一份到备份路径对应的记忆目录；新项目只保留仍适用的机器、环境、git 类条目，其余标注“属于备份”或删除。2026-11-04 已核实：旧记忆完整保留在 `/home/lrz/.claude/projects/-home-lrz-code-up3d-backup/memory/`，当前项目只保留线程上限、devflow 环境/拓扑和用户重启裁决，本项完成。
+
+Kimi 没有 Claude 式独立持久 `memory` 目录，无需建立 `up3d_backup` 工作区或复制会话。`~/.kimi-code/sessions/` 下的旧 `UP3D_kimi` 与当前 `UP3D` 会话原样保留，仅作为可显式恢复的历史记录，不自动注入新会话；不移动、重命名或删除 session 文件，以免破坏索引。
 
 ## 5. 第 1 步：`bootstrap-devflow` —— 最小工具接入
 
