@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T123058-7d0dbcf468d3-framework-smoke-8d1d7652",
+  "change": "restart-solver-core",
+  "commit": "7d0dbcf468d380293cc5913e58d2188fc2b81ccf",
+  "executionKey": "framework-smoke",
+  "command": [
+    "python",
+    "openspec/framework_smoke.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T12:30:58.286951+00:00",
+  "finishedAt": "2026-11-04T12:30:58.704676+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.2.0+commit.cc0a9f12704fdce38ae98d5750c32b338207790f"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "framework-smoke",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "71614c5f51976f63bb6a877b4171676d4b7a0aff9afe384faf82f02cfcaf02d0"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/restart-solver-core/20261104T123058-7d0dbcf468d3-framework-smoke-8d1d7652/output.log",
+    "files": {
+      "runs/evidence/restart-solver-core/20261104T123058-7d0dbcf468d3-framework-smoke-8d1d7652/output.log": "e850562368202f2a77c39ebb755012258694b1fed2908d7d8b659c1254f45458"
+    }
+  }
+}
