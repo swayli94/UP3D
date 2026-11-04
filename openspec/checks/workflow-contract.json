@@ -33,6 +33,7 @@
     "openspec/plan",
     "openspec/workflow_check.py",
     "openspec/project.json",
+    "openspec/devflow-install.json",
     "openspec/checks"
   ]
 }

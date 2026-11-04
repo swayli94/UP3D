@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T173145-41d39bb2858d-workflow-contract-be8ff8d1",
+  "change": "upgrade-devflow-0-3-1",
+  "commit": "41d39bb2858d46ecc6367be1bacf905a98810ad2",
+  "executionKey": "workflow-contract",
+  "command": [
+    "python",
+    "openspec/workflow_check.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T17:31:45.080326+00:00",
+  "finishedAt": "2026-11-04T17:31:45.118344+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "workflow-contract",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "7b9f3de053e65f0029593004f2797c561a1b5bfbcaf34055fb1c5932f40d6771"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/upgrade-devflow-0-3-1/20261104T173145-41d39bb2858d-workflow-contract-be8ff8d1/output.log",
+    "files": {
+      "runs/evidence/upgrade-devflow-0-3-1/20261104T173145-41d39bb2858d-workflow-contract-be8ff8d1/output.log": "2814d12f4ebb320e983a23ca42ee1c7bcbcb4c82f341407b54b2392f527d58a4"
+    }
+  }
+}

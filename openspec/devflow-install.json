@@ -1,5 +1,6 @@
 {
-  "engineVersion": "0.2.0",
+  "engineCommit": "1c7ab6f223d4301aea8ea1deeb4dde2b246de37a",
+  "engineVersion": "0.3.1",
   "files": {
     ".claude/skills/devflow-coordinate/SKILL.md": "3f05c22d79f472f6d21b153c522c7a0811498866811c3415c7b2c5b9422129fd",
     ".claude/skills/devflow-refactor/SKILL.md": "222412b49a28cb90b26dc66ab49e64a167a3f44fa0d716634fe85f180e60639e",

@@ -1,0 +1,41 @@
+{
+  "formatVersion": 1,
+  "id": "upgrade-devflow-0-3-1",
+  "branch": "kimi/upgrade-devflow-0-3-1",
+  "worktree": {
+    "id": "upgrade-devflow-0-3-1",
+    "machine": "aliyun",
+    "path": "runs/worktrees/upgrade-devflow-0-3-1"
+  },
+  "planning": {
+    "dependencies": [],
+    "lane": "L1"
+  },
+  "impact": {
+    "capabilities": [
+      "development-workflow"
+    ],
+    "cases": [],
+    "checks": [
+      "framework-smoke",
+      "solver-core-api",
+      "solver-core-e2e",
+      "workflow-contract"
+    ],
+    "risks": [
+      "engine-version-cutover",
+      "installed-commit-preflight",
+      "static-plan-priority",
+      "uncommitted-framework-inputs"
+    ],
+    "resources": []
+  },
+  "requirements": {
+    "platforms": [
+      "Linux"
+    ],
+    "manualChecks": [],
+    "independentReview": true,
+    "milestone": false
+  }
+}

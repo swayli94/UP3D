@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T173140-41d39bb2858d-solver-core-e2e-35dccea8",
+  "change": "upgrade-devflow-0-3-1",
+  "commit": "41d39bb2858d46ecc6367be1bacf905a98810ad2",
+  "executionKey": "solver-core-e2e",
+  "command": [
+    "conda",
+    "run",
+    "-n",
+    "pyfp3d-core",
+    "--no-capture-output",
+    "python",
+    "-m",
+    "pytest",
+    "-p",
+    "openspec.pytest_evidence",
+    "tests/e2e"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T17:31:40.187140+00:00",
+  "finishedAt": "2026-11-04T17:31:42.018487+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "solver-core-e2e",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "9034a10246e880d9c4a99e96c8b77e5d924d3d48dbcb0cc37d18b3e1583f27d1"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/upgrade-devflow-0-3-1/20261104T173140-41d39bb2858d-solver-core-e2e-35dccea8/output.log",
+    "files": {
+      "runs/evidence/upgrade-devflow-0-3-1/20261104T173140-41d39bb2858d-solver-core-e2e-35dccea8/output.log": "06dfd0b0942a09e2183ca9aae3b57e37c2197022fdec71b0521120ccb805942c",
+      "runs/evidence/upgrade-devflow-0-3-1/20261104T173140-41d39bb2858d-solver-core-e2e-35dccea8/pytest.junit.xml": "44a936da5879a6514f7e1a21221767adfab0013bc75317bed1f8e466965b85b9"
+    }
+  }
+}

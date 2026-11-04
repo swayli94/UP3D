@@ -4,10 +4,15 @@ import re
 
 
 ROOT = Path(__file__).resolve().parent.parent
+DEVFLOW_VERSION = "0.3.1"
+DEVFLOW_COMMIT = "1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
 AGENT_ANCHORS = (
     "开发权威只有本文件、`openspec/specs/`、活跃 Change artifacts 和 `devflow protocol execution`",
     "`openspec/plan/development-plan.json` 只是静态能力队列",
     "`pyfp3d-core`",
+    "v0.3.1",
+    DEVFLOW_COMMIT,
+    "engineCommit",
     "一次最多规划或执行一个活跃 Change",
     "同步干净 `main` → propose → `devflow start --create` → `devflow next`/`devflow run`",
     "真实入口测试",
@@ -40,6 +45,7 @@ REQUIRED_PRODUCT_PATHS = {
     "openspec/specs",
     "openspec/plan",
     "openspec/workflow_check.py",
+    "openspec/devflow-install.json",
 }
 REQUIRED_WORKFLOW_SOURCES = {
     "AGENTS.md",
@@ -47,6 +53,7 @@ REQUIRED_WORKFLOW_SOURCES = {
     "openspec/plan",
     "openspec/workflow_check.py",
     "openspec/project.json",
+    "openspec/devflow-install.json",
     "openspec/checks",
 }
 FORBIDDEN_CHECK_DEPENDENCIES = (
@@ -78,6 +85,20 @@ def check_agents():
     for forbidden in AGENT_FORBIDDEN:
         require(forbidden not in text, f"AGENTS.md has obsolete authority reference: {forbidden}")
     return f"{len(AGENT_ANCHORS)} anchors, no obsolete authority reference"
+
+
+def check_framework_manifest():
+    manifest = read_json(ROOT / "openspec/devflow-install.json")
+    require(manifest.get("formatVersion") == 1, "Install manifest formatVersion must be 1")
+    require(
+        manifest.get("engineVersion") == DEVFLOW_VERSION,
+        f"Install manifest engineVersion must be {DEVFLOW_VERSION}",
+    )
+    require(
+        manifest.get("engineCommit") == DEVFLOW_COMMIT,
+        f"Install manifest engineCommit must be {DEVFLOW_COMMIT}",
+    )
+    return f"engineVersion={DEVFLOW_VERSION}, engineCommit={DEVFLOW_COMMIT}"
 
 
 def check_plan():
@@ -158,6 +179,7 @@ def check_project_and_checks():
 def main():
     checks = [
         ("AGENTS workflow anchors", check_agents),
+        ("devflow install manifest", check_framework_manifest),
         ("static development plan", check_plan),
         ("project and permanent Check portability", check_project_and_checks),
     ]

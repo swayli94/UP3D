@@ -12,7 +12,8 @@
 
 ## 环境
 
-- `devflow` 环境只运行 devflow 与 OpenSpec：Python 3.12，从 tag 非 editable 安装 `openspec-devflow` v0.2.0（commit `cc0a9f12704fdce38ae98d5750c32b338207790f`），Node >= 22.12。先 `conda activate devflow` 再运行命令，或使用 `conda run -n devflow --no-capture-output ...`。
+- `devflow` 环境只运行 devflow 与 OpenSpec：Python 3.12，从 tag 非 editable 安装 `openspec-devflow` v0.3.1（commit `1c7ab6f223d4301aea8ea1deeb4dde2b246de37a`），Node >= 22.12。先 `conda activate devflow` 再运行命令，或使用 `conda run -n devflow --no-capture-output ...`。
+- `openspec/devflow-install.json` 必须由该安装运行 `devflow install` 生成，记录相同的 `engineVersion` 和完整 `engineCommit`。只在清单匹配的 checkout 中运行 devflow，不得绕过 verify/archive 的安装身份预检。
 - `pyfp3d-core` 只运行当前 `pyfp3d` 及其测试，按 `environment.yml` 创建或更新；核心只使用 Python 标准库，pytest 只用于测试。产品 Check 使用 `conda run -n pyfp3d-core --no-capture-output ...`，不依赖 PATH 中偶然的 `python`，也不做 editable 安装。
 - 两套环境都必须设置 `PYTHONNOUSERSITE=1`，避免用户 site-packages 遮蔽环境依赖。代码要求而非偏好的依赖下限必须写进实际依赖清单。
 
