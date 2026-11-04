@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T153126-3c9ed0e3618d-framework-smoke-833cebec",
+  "change": "redesign-development-workflow",
+  "commit": "3c9ed0e3618d2b175e98f32008f011fa7b346697",
+  "executionKey": "framework-smoke",
+  "command": [
+    "python",
+    "openspec/framework_smoke.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T15:31:26.592949+00:00",
+  "finishedAt": "2026-11-04T15:31:26.993941+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.2.0+commit.cc0a9f12704fdce38ae98d5750c32b338207790f"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "framework-smoke",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "80a0eadf2def8024c6920ae744474af53648792c5888b58f9c6a727a060734d2"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/redesign-development-workflow/20261104T153126-3c9ed0e3618d-framework-smoke-833cebec/output.log",
+    "files": {
+      "runs/evidence/redesign-development-workflow/20261104T153126-3c9ed0e3618d-framework-smoke-833cebec/output.log": "e59333eb32b5c6e568f73dfc1684e337d46af196a40e1ba60daf459df263072b"
+    }
+  }
+}

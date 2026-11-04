@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "id": "697818336be9401cbc0c61f6bb8b4460",
+  "change": "redesign-development-workflow",
+  "commit": "c1a30dca1f32b5bab04d1799af310721ca9b8e39",
+  "reviewer": "kimi-reviewer",
+  "productFingerprint": "74799c8318daf6f4bac1e327ae8108bc65f244a6626ab19cfae907e813b6fbe4",
+  "findings": [],
+  "openFindings": [],
+  "approved": true,
+  "at": "2026-11-04T16:05:53.957215+00:00"
+}
