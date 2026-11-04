@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T193955-846a2f90e00d-solver-core-e2e-5e804f73",
+  "change": "adopt-roadmap",
+  "commit": "846a2f90e00d4049c1b490dc0947347c4ed16f50",
+  "executionKey": "solver-core-e2e",
+  "command": [
+    "conda",
+    "run",
+    "-n",
+    "pyfp3d-core",
+    "--no-capture-output",
+    "python",
+    "-m",
+    "pytest",
+    "-p",
+    "openspec.pytest_evidence",
+    "tests/e2e"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T19:39:55.825359+00:00",
+  "finishedAt": "2026-11-04T19:39:57.659046+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "solver-core-e2e",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "8fa306c5c2693e8c7b61a20a4145337bedf4b4ad2ca541ccc387d1c329d9c486"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/adopt-roadmap/20261104T193955-846a2f90e00d-solver-core-e2e-5e804f73/output.log",
+    "files": {
+      "runs/evidence/adopt-roadmap/20261104T193955-846a2f90e00d-solver-core-e2e-5e804f73/output.log": "0bdcb5efcbab54395aaa2cd828263de09d1fc159c3be887bcab52d7ffd9a2f6e",
+      "runs/evidence/adopt-roadmap/20261104T193955-846a2f90e00d-solver-core-e2e-5e804f73/pytest.junit.xml": "6144b9a6f9b408e6e35f2f9628f8605ccd6cb038ae2dafab3d7f3886b9da9d79"
+    }
+  }
+}

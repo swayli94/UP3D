@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T193556-52f11c54e117-roadmap-view-32575448",
+  "change": "adopt-roadmap",
+  "commit": "52f11c54e117685def9dafb71755beddd6cfc779",
+  "executionKey": "roadmap-view",
+  "command": [
+    "python",
+    "openspec/roadmap_view_check.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T19:35:56.359596+00:00",
+  "finishedAt": "2026-11-04T19:35:56.717686+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "roadmap-view",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "0615c32d263ff7e05224c7d2ed1782a365ea941666a04f5faf32b3f5ae838662"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/adopt-roadmap/20261104T193556-52f11c54e117-roadmap-view-32575448/output.log",
+    "files": {
+      "runs/evidence/adopt-roadmap/20261104T193556-52f11c54e117-roadmap-view-32575448/output.log": "735208fdbef67db81313135209e611c559b3a9e1a3976a45b4d2ace5c2f0e7d6"
+    }
+  }
+}

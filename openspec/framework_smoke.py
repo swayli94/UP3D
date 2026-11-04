@@ -118,7 +118,7 @@ def check_install():
 
 def check_list_checks():
     report = json.loads(run([sys.executable, "-m", "devflow", "list-checks"]))
-    expected = ["framework-smoke", "solver-core-api", "solver-core-e2e", "workflow-contract"]
+    expected = ["framework-smoke", "roadmap-contract", "roadmap-view", "solver-core-api", "solver-core-e2e", "workflow-contract"]
     if report != expected:
         raise RuntimeError(f"Unexpected list-checks output: {report}")
     return json.dumps(report, ensure_ascii=False)

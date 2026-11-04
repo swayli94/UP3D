@@ -26,7 +26,8 @@
     "openspec/checks",
     "openspec/framework_smoke.py",
     "openspec/package_version_provider.py",
-    "openspec/pytest_evidence.py"
+    "openspec/pytest_evidence.py",
+    "internal/roadmap.html"
   ],
   "taskLayerPaths": [
     "pyfp3d",
@@ -39,5 +40,9 @@
     "openspec-devflow"
   ],
   "packageVersionProvider": "openspec.package_version_provider:package_version",
+  "roadmapView": {
+    "title": "UP3D 开发路线图",
+    "locale": "zh-CN"
+  },
   "resources": {}
 }

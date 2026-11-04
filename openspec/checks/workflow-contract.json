@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "id": "workflow-contract",
   "executionKey": "workflow-contract",
-  "title": "Validate the long-term development workflow and static plan",
+  "title": "Validate the long-term development workflow and canonical roadmap",
   "capabilities": [
     "development-workflow"
   ],

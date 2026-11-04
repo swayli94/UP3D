@@ -2,12 +2,13 @@
 
 ## 开发权威与单 Change 工作流
 
-开发权威只有本文件、`openspec/specs/`、活跃 Change artifacts 和 `devflow protocol execution`。`openspec/plan/development-plan.json` 只是静态能力队列，不是额外的行为权威。旧文档、旧测试和旧证据不产生当前任务或验收条件。
+开发权威只有本文件、`openspec/specs/`、活跃 Change artifacts 和 `devflow protocol execution`。`openspec/plan/roadmap.json` 是唯一协调 graph，只约束开发顺序、依赖和 Change 关联，不是额外的产品行为权威。旧文档、旧测试和旧证据不产生当前任务或验收条件。
 
 - 一次最多规划或执行一个活跃 Change。标准入口固定为：同步干净 `main` → propose → `devflow start --create` → `devflow next`/`devflow run`。
 - 每个 Change 必须恰好包含一个新的或修改的 capability spec delta、与 capability 对应的真实入口测试、独立 worktree 和非 main 分支、可观察能力以及明确回滚边界。不得批量生成 backlog Change artifacts。
 - 每项任务必须在 `execution.json` 声明至少一个必需的任务级 Checks。流程或文档改动必须由直接读取这些内容的 Check 验证，不能只靠产品 API/E2E 退出码推定合规。
-- 静态计划至多详细描述一个 `nextChange`；backlog 只保留未展开主题。详细项完成后必须在最终验证前清空或替换，不留伪当前计划。
+- roadmap item 的存储状态只用 `planned`/`draft`/`deferred`/`done`；active/ready/archived/merged 由引擎推导。至多详细展开一个后续能力，其他主题保持 deferred；详细项完成后在最终验证前标记 done，后续节点逐个添加。
+- 普通视图由 `devflow roadmap-view` 生成到 `internal/roadmap.html` 并提交；live 视图由 `devflow roadmap-view --live` 生成到 `runs/views/roadmap.html`，只留本机。graph、brief、Change、PR、merge 或 archive 后刷新普通视图，任务、worktree、提交、锁或 merged 状态变化后刷新 live 视图；HTML 不可手改，首版不维护 `globalMap` 或 `parallelPlan`。
 - 回滚只读参考为 `/home/lrz/code/up3d_backup` 或 origin 的 `pre-devflow-restart`。不得直接恢复旧流程或旧目录；恢复任何旧行为都必须另开带新 spec 的 Change，重新推导期望值并配置新 Check。
 
 ## 环境

@@ -1,0 +1,46 @@
+{
+  "formatVersion": 1,
+  "id": "adopt-roadmap",
+  "branch": "kimi/adopt-roadmap",
+  "worktree": {
+    "id": "adopt-roadmap",
+    "machine": "aliyun",
+    "path": "runs/worktrees/adopt-roadmap"
+  },
+  "planning": {
+    "dependencies": [],
+    "lane": "L1"
+  },
+  "impact": {
+    "capabilities": [
+      "development-workflow"
+    ],
+    "cases": [],
+    "checks": [
+      "framework-smoke",
+      "solver-core-api",
+      "solver-core-e2e",
+      "workflow-contract",
+      "roadmap-contract",
+      "roadmap-view"
+    ],
+    "risks": [
+      "dual-plan-drift",
+      "roadmap-change-linkage",
+      "generated-view-staleness",
+      "premature-backlog-expansion",
+      "live-view-machine-state",
+      "plan-review-invalidation",
+      "main-checkout-cleanliness"
+    ],
+    "resources": []
+  },
+  "requirements": {
+    "platforms": [
+      "Linux"
+    ],
+    "manualChecks": [],
+    "independentReview": true,
+    "milestone": true
+  }
+}

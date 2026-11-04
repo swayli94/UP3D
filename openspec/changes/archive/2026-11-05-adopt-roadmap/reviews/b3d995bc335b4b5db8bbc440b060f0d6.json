@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "id": "b3d995bc335b4b5db8bbc440b060f0d6",
+  "change": "adopt-roadmap",
+  "commit": "2fbf9350a1c398fbddad3a1d3f56b0b78ba1fee1",
+  "reviewer": "kimi-roadmap-reviewer",
+  "productFingerprint": "e3c6498f10d30f1ae17fce8705dd2e58c3519b47c0cac4a160aab32b673c4fa2",
+  "findings": [],
+  "openFindings": [],
+  "approved": true,
+  "at": "2026-11-04T19:49:45.692483+00:00"
+}

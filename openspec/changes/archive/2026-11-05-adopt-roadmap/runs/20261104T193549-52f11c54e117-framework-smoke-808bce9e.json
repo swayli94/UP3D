@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T193549-52f11c54e117-framework-smoke-808bce9e",
+  "change": "adopt-roadmap",
+  "commit": "52f11c54e117685def9dafb71755beddd6cfc779",
+  "executionKey": "framework-smoke",
+  "command": [
+    "python",
+    "openspec/framework_smoke.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T19:35:49.152831+00:00",
+  "finishedAt": "2026-11-04T19:35:49.961017+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "framework-smoke",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "c22b807a780d21fe89889db4386434721830b07d9dcd29d1cf154bc0094d4836"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/adopt-roadmap/20261104T193549-52f11c54e117-framework-smoke-808bce9e/output.log",
+    "files": {
+      "runs/evidence/adopt-roadmap/20261104T193549-52f11c54e117-framework-smoke-808bce9e/output.log": "6b6a9d2ac5ec0cbe297ee4b06b194c63c54350e849bec6b2c64bd6c64bb9c19d"
+    }
+  }
+}

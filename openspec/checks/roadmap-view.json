@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "id": "roadmap-view",
+  "executionKey": "roadmap-view",
+  "title": "Validate deterministic and live official roadmap views",
+  "capabilities": [
+    "development-workflow"
+  ],
+  "cases": [],
+  "command": [
+    "python",
+    "openspec/roadmap_view_check.py"
+  ],
+  "platforms": [
+    "Linux"
+  ],
+  "data": [],
+  "resources": [],
+  "cost": "fast",
+  "slow": false,
+  "required": true,
+  "profiles": [
+    "task",
+    "affected"
+  ],
+  "evidence": [
+    "console"
+  ],
+  "manual": false,
+  "sourcePaths": [
+    "openspec/plan",
+    "internal/roadmap.html",
+    "openspec/roadmap_view_check.py",
+    "openspec/project.json",
+    "openspec/devflow-install.json",
+    "openspec/checks/roadmap-view.json"
+  ]
+}
