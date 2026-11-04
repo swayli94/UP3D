@@ -377,14 +377,6 @@ dl.meta dd { margin: 0; overflow-wrap: anywhere; }
 {
  "changes": [
   {
-   "archived": false,
-   "branch": "kimi/adopt-roadmap",
-   "id": "adopt-roadmap",
-   "item": "roadmap-adoption",
-   "lane": "L1",
-   "path": "adopt-roadmap"
-  },
-  {
    "archived": true,
    "branch": "kimi/bootstrap-devflow",
    "conclusion": {
@@ -411,6 +403,20 @@ dl.meta dd { margin: 0; overflow-wrap: anywhere; }
    "item": "restart-solver-core",
    "lane": "L1",
    "path": "archive/2026-11-04-restart-solver-core"
+  },
+  {
+   "archived": true,
+   "branch": "kimi/adopt-roadmap",
+   "conclusion": {
+    "approved": true,
+    "profile": "milestone",
+    "source": "acceptance",
+    "verified": true
+   },
+   "id": "adopt-roadmap",
+   "item": "roadmap-adoption",
+   "lane": "L1",
+   "path": "archive/2026-11-05-adopt-roadmap"
   },
   {
    "archived": true,
@@ -445,10 +451,10 @@ dl.meta dd { margin: 0; overflow-wrap: anywhere; }
  "globalMap": null,
  "live": null,
  "now": {
-  "active": [
-   "adopt-roadmap"
-  ],
-  "ready": []
+  "active": [],
+  "ready": [
+   "tetrahedron-p1-gradient"
+  ]
  },
  "parallelPlan": null,
  "phases": [
@@ -535,7 +541,7 @@ dl.meta dd { margin: 0; overflow-wrap: anywhere; }
        ],
        "id": "roadmap-adoption",
        "kind": "proposal",
-       "status": "active",
+       "status": "archived",
        "stored": "done",
        "summary": "建立唯一协调 graph、官方视图和直接验证。",
        "title": "采用 canonical roadmap"
@@ -554,7 +560,7 @@ dl.meta dd { margin: 0; overflow-wrap: anywhere; }
        ],
        "id": "tetrahedron-p1-gradient",
        "kind": "proposal",
-       "status": "planned",
+       "status": "ready",
        "stored": "planned",
        "summary": "从节点势函数计算每个四面体单元的常梯度。",
        "title": "P1 单元常梯度"

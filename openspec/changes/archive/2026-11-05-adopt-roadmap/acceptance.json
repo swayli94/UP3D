@@ -1,0 +1,56 @@
+{
+  "formatVersion": 1,
+  "change": "adopt-roadmap",
+  "profile": "milestone",
+  "commit": "698f71e49339c6ce97a66b773562a01011ec5209",
+  "productFingerprint": "e3c6498f10d30f1ae17fce8705dd2e58c3519b47c0cac4a160aab32b673c4fa2",
+  "checks": [
+    {
+      "check": "framework-smoke",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T193940-846a2f90e00d-framework-smoke-ae13d244",
+      "status": "pass"
+    },
+    {
+      "check": "roadmap-contract",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T193944-846a2f90e00d-roadmap-contract-d83e900b",
+      "status": "pass"
+    },
+    {
+      "check": "roadmap-view",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T193947-846a2f90e00d-roadmap-view-672e8307",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-api",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T193951-846a2f90e00d-solver-core-api-05cf9918",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-e2e",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T193955-846a2f90e00d-solver-core-e2e-5e804f73",
+      "status": "pass"
+    },
+    {
+      "check": "workflow-contract",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T194000-846a2f90e00d-workflow-contract-62534116",
+      "status": "pass"
+    }
+  ],
+  "verified": true,
+  "review": "b3d995bc335b4b5db8bbc440b060f0d6",
+  "approval": "用户明确批准 archive adopt-roadmap，并分别授权后续 push、PR、merge",
+  "actor": "lrz",
+  "at": "2026-11-04T19:58:54.783020+00:00"
+}
