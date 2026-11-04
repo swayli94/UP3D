@@ -1,92 +1,27 @@
 [build-system]
-requires = ["setuptools>=65.0", "wheel"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyfp3d"
-version = "0.0.1"
-description = "3D Unstructured-mesh Full-Potential Transonic Flow Solver"
-authors = [
-    {name = "swayli94", email = "swayli94@users.noreply.github.com"},
-]
+version = "0.1.0"
+description = "Minimal tetrahedron free-stream preservation API"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.11"
-keywords = ["CFD", "aerodynamics", "full-potential", "transonic", "unstructured mesh"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Physics",
-]
-
-dependencies = [
-    "numpy>=1.23",
-    "scipy>=1.10",
-    "numba>=0.56",
-    "meshio>=5.3",
-    "pyamg>=4.2",
-    "matplotlib>=3.6",
-]
+requires-python = ">=3.12"
+dependencies = []
 
 [project.optional-dependencies]
-# GS0.1: gmsh drives every mesh generator under cases/meshes/ and several
-# demos; it was declared only in environment.yml, so a pip-based install could
-# not regenerate the (gitignored) meshes. On a headless Linux box the gmsh
-# wheel also needs the system libraries libGLU.so.1 and libOpenGL.so.0 --
-# see README.md ("Headless Linux Workflow").
-mesh = [
-    "gmsh>=4.11",
+test = [
+    "pytest>=8",
 ]
-viz = [
-    "pyvista>=0.37",
-    "vtk>=9.2",
-]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0",
-]
-all = ["pyfp3d[mesh,viz,dev]"]
-
-[project.urls]
-Repository = "https://github.com/swayli94/UP3D"
-Documentation = "https://github.com/swayli94/UP3D/tree/main/docs"
 
 [tool.setuptools.packages.find]
-# GS0.1 (phase two): this used to be `packages = ["pyfp3d"]`, which lists ONLY
-# the top-level package -- the built wheel contained a single file
-# (pyfp3d/__init__.py) and every subpackage (solve, kernels, mesh, viscous,
-# post, ...) was missing, so `pip install .` produced a broken import while
-# running from the repo root happened to work. Verified by building a wheel
-# and listing it (audit 2026-07-28 §6.1).
 include = ["pyfp3d*"]
 
-[tool.setuptools.package-dir]
-"" = "."
-
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests/api", "tests/e2e"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
-
-[tool.coverage.run]
-source = ["pyfp3d"]
-omit = ["*/tests/*"]
-
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false  # Relaxed for now
-disallow_incomplete_defs = false
-
-[tool.ruff]
-target-version = "py311"
-line-length = 100
-select = ["E", "F", "W"]
-ignore = ["E501"]  # Line length handled separately

@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "id": "restart-solver-core",
+  "branch": "kimi/restart-solver-core",
+  "worktree": {
+    "id": "restart-solver-core",
+    "machine": "aliyun",
+    "path": "runs/worktrees/restart-solver-core"
+  },
+  "planning": {
+    "dependencies": [],
+    "lane": "L1"
+  },
+  "impact": {
+    "capabilities": [
+      "tetrahedron-freestream"
+    ],
+    "cases": [],
+    "checks": [
+      "framework-smoke",
+      "solver-core-api",
+      "solver-core-e2e"
+    ],
+    "risks": [
+      "atomic-product-restart",
+      "deferred-check-registration",
+      "junit-evidence-path"
+    ],
+    "resources": []
+  },
+  "requirements": {
+    "platforms": [
+      "Linux"
+    ],
+    "manualChecks": [],
+    "independentReview": true,
+    "milestone": false
+  }
+}

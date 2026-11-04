@@ -1,6 +1,0 @@
-criterion,verdict,evidence,reading
-I0,PASS,instrument_self_test.csv; provenance.csv; summary.csv,"self-test=26/26, guards=True"
-C1,FAIL,projection_modes_*.csv; projection_summary.csv; projection.png,native_xtr030_b1_r1=0; native_xtr030_b16_r1=0
-C2,RECORDED,accepted_steps_*.csv; accepted_step_summary.csv; accepted_steps.png,primary accepted events=18
-C3,FAIL,criteria.csv; verdict_metrics.csv,FAIL
-OVERALL,FAIL,verdict_metrics.csv,FAIL

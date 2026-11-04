@@ -1,6 +1,0 @@
-criterion,verdict,evidence,reading
-I0,PASS,instrument_self_test.csv; provenance.csv; replay_guard.csv; projection_guard.csv; energy_guard.csv,self-test=27/27; guards verdict=RECORDED
-C1,RECORDED,accepted_nonlinearity_*.csv; event_equation_metrics.csv; equation_summary.csv; nonlinearity.png,event-equation-region rows=324/324
-C2,RECORDED,event_equation_metrics.csv; event_summary.csv; equation_summary.csv,predicted/actual direction classes recorded
-C3,RECORDED,criteria.csv; verdict_metrics.csv,RECORDED
-OVERALL,RECORDED,verdict_metrics.csv,RECORDED

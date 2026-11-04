@@ -1,1 +1,0 @@
-C1 REFUTED on this mesh (Jacobian exact everywhere probed)

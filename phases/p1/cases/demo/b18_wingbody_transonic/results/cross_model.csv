@@ -1,5 +1,0 @@
-mach,resolution,conf,ls,gap_pct,note
-0.5,medium,0.2143,0.2184,1.9,trustworthy (B32 taper conf / B28 flat LS)
-0.6,coarse,0.2155,0.2141,0.6,transonic; increment 60%; under-resolved
-0.65,medium,0.2290,0.2296,0.3,gated <=5%
-0.75,medium,0.2450,0.2456,0.2,recorded (shock-sensitive)

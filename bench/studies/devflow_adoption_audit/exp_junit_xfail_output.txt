@@ -1,3 +1,0 @@
-console: 1 passed, 1 skipped, 1 xfailed in 0.01s
-testsuite counts: errors="0" failures="0" skipped="2" tests="3"
-skipped types: ['pytest.skip', 'pytest.xfail']

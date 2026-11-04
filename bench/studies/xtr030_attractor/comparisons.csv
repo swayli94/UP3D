@@ -1,5 +1,0 @@
-comparison,leg_a,leg_b,d_cl,d_delta_max,d_phi_max,d_phi_rms,d_gamma_max,k0_phi_equal,k0_gamma_equal,k0_d_phi_max,k0_d_gamma_max,converged_pair,repeat_e_cl,repeat_e_ds,separated,fixed_point_label
-repeat_b1|native_xtr030_b1_r1|native_xtr030_b1_r2,native_xtr030_b1_r1,native_xtr030_b1_r2,0.0,0.0,0.0,0.0,0.0,True,True,0.0,0.0,0,0.000000000000e+00,0.000000000000e+00,,
-repeat_b16|native_xtr030_b16_r1|native_xtr030_b16_r2,native_xtr030_b16_r1,native_xtr030_b16_r2,0.0,0.0,0.0,0.0,0.0,True,True,0.0,0.0,1,0.000000000000e+00,0.000000000000e+00,,
-cross_native|native_xtr030_b1_r1|native_xtr030_b16_r1,native_xtr030_b1_r1,native_xtr030_b16_r1,0.010965406517700005,0.0008301585375448975,0.005469152575026115,0.003463071240940659,0.00546915257502642,False,False,4.6811610837638185e-09,6.89226176131541e-11,0,0.000000000000e+00,0.000000000000e+00,1,
-cross_control|control_xtr005_b1|control_xtr005_b16,control_xtr005_b1,control_xtr005_b16,0.0005013988231999944,0.0001348920093237958,0.0002484236130655404,0.0001440766985059244,0.00024842361306592897,False,False,4.6811610837638185e-09,6.89226176131541e-11,1,0.000000000000e+00,0.000000000000e+00,,
