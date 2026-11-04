@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "id": "framework-smoke",
+  "executionKey": "framework-smoke",
+  "title": "Validate the pinned devflow and OpenSpec toolchain",
+  "capabilities": [],
+  "cases": [],
+  "command": [
+    "python",
+    "openspec/framework_smoke.py"
+  ],
+  "platforms": [
+    "Linux"
+  ],
+  "data": [],
+  "resources": [],
+  "cost": "fast",
+  "slow": false,
+  "required": true,
+  "profiles": [
+    "task",
+    "affected"
+  ],
+  "evidence": [
+    "console"
+  ],
+  "manual": false,
+  "sourcePaths": [
+    "openspec/framework_smoke.py",
+    "openspec/checks",
+    "openspec/config.yaml",
+    "openspec/project.json",
+    "openspec/devflow-install.json",
+    "openspec/schemas",
+    ".claude/skills",
+    ".kimi-code/skills"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "id": "change-id",
+  "branch": "docs/change-id",
+  "worktree": {
+    "id": "change-id",
+    "machine": "",
+    "path": "runs/worktrees/change-id"
+  },
+  "planning": {
+    "dependencies": [],
+    "lane": "L1"
+  },
+  "impact": {
+    "capabilities": [],
+    "cases": [],
+    "checks": [],
+    "risks": [],
+    "resources": []
+  },
+  "requirements": {
+    "platforms": [],
+    "manualChecks": [],
+    "independentReview": true,
+    "milestone": false
+  }
+}

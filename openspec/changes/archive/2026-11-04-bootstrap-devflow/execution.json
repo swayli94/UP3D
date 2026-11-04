@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "tasks": {
+    "1.1": {
+      "checks": [
+        "framework-smoke"
+      ]
+    }
+  }
+}

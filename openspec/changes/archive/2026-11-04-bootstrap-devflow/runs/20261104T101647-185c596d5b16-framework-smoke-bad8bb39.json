@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T101647-185c596d5b16-framework-smoke-bad8bb39",
+  "change": "bootstrap-devflow",
+  "commit": "185c596d5b162eeca3e745411938baa17b925952",
+  "executionKey": "framework-smoke",
+  "command": [
+    "python",
+    "openspec/framework_smoke.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T10:16:47.768485+00:00",
+  "finishedAt": "2026-11-04T10:16:48.178036+00:00",
+  "environment": {
+    "packages": {},
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "framework-smoke",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "f3370fb01874d41280e5d53189b03eac7beee02007b1cef8dd99363211467619"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/bootstrap-devflow/20261104T101647-185c596d5b16-framework-smoke-bad8bb39/output.log",
+    "files": {
+      "runs/evidence/bootstrap-devflow/20261104T101647-185c596d5b16-framework-smoke-bad8bb39/output.log": "50620c8d487e0305c44035f50b0c6d6cefebca01dcad84160d6826007bcd783d"
+    }
+  }
+}
