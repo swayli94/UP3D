@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T153130-3c9ed0e3618d-solver-core-api-bb547ce3",
+  "change": "redesign-development-workflow",
+  "commit": "3c9ed0e3618d2b175e98f32008f011fa7b346697",
+  "executionKey": "solver-core-api",
+  "command": [
+    "conda",
+    "run",
+    "-n",
+    "pyfp3d-core",
+    "--no-capture-output",
+    "python",
+    "-m",
+    "pytest",
+    "-p",
+    "openspec.pytest_evidence",
+    "tests/api"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T15:31:30.071823+00:00",
+  "finishedAt": "2026-11-04T15:31:31.805005+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.2.0+commit.cc0a9f12704fdce38ae98d5750c32b338207790f"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "solver-core-api",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "950d7e59641317946ee75fa27ec9684d6b18a4540ed7cd1dedc2715fafef98bd"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/redesign-development-workflow/20261104T153130-3c9ed0e3618d-solver-core-api-bb547ce3/output.log",
+    "files": {
+      "runs/evidence/redesign-development-workflow/20261104T153130-3c9ed0e3618d-solver-core-api-bb547ce3/output.log": "4a4a40ab24c4a8d68f52bf1a8b0309122d0e1292f0c6cbffeb9bb1a348a02211",
+      "runs/evidence/redesign-development-workflow/20261104T153130-3c9ed0e3618d-solver-core-api-bb547ce3/pytest.junit.xml": "39dbd9832a8859923e8dec19e85ba3f0eb16ee080e5d2a02c83b1a678ba93fc5"
+    }
+  }
+}
