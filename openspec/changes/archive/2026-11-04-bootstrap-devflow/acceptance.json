@@ -1,0 +1,21 @@
+{
+  "formatVersion": 1,
+  "change": "bootstrap-devflow",
+  "profile": "affected",
+  "commit": "fcb2cfee057476ba1a9c35c1ba21d5adfa93d98a",
+  "productFingerprint": "29df37b1a387bbc23cfb5aa524bfed08547597900fd55dd260f32f767c689aa1",
+  "checks": [
+    {
+      "check": "framework-smoke",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T101647-185c596d5b16-framework-smoke-bad8bb39",
+      "status": "pass"
+    }
+  ],
+  "verified": true,
+  "review": "f0dd5f42410b45e2bcee99c49da65565",
+  "approval": "用户明确批准 archive bootstrap-devflow",
+  "actor": "lrz",
+  "at": "2026-11-04T10:32:23.429143+00:00"
+}
