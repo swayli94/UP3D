@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T193552-52f11c54e117-roadmap-contract-f77f7416",
+  "change": "adopt-roadmap",
+  "commit": "52f11c54e117685def9dafb71755beddd6cfc779",
+  "executionKey": "roadmap-contract",
+  "command": [
+    "python",
+    "openspec/roadmap_contract.py"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T19:35:52.996710+00:00",
+  "finishedAt": "2026-11-04T19:35:53.295411+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "roadmap-contract",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "3184d53dccb3a626ce378013c67d80317277b7a6271978a07a5fefaa50646e01"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/adopt-roadmap/20261104T193552-52f11c54e117-roadmap-contract-f77f7416/output.log",
+    "files": {
+      "runs/evidence/adopt-roadmap/20261104T193552-52f11c54e117-roadmap-contract-f77f7416/output.log": "11af0b9c9d596dee2652b925e906b6ff93b0b34e8f3e423793ad36d6fb354f4a"
+    }
+  }
+}
