@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "id": "b75689f2029e4ddfa136b50d059ebfc2",
+  "change": "restart-solver-core",
+  "commit": "75fb7c8f53021f6a689e6bdefbde11f1e752f1ea",
+  "reviewer": "kimi-reviewer",
+  "productFingerprint": "24582cb3468314b6f00682fa9d3c5f922f5a3636a5e150a70bdebdd3a19948b7",
+  "findings": [],
+  "openFindings": [],
+  "approved": true,
+  "at": "2026-11-04T13:01:52.639532+00:00"
+}
