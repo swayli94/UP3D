@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "id": "20261104T193951-846a2f90e00d-solver-core-api-05cf9918",
+  "change": "adopt-roadmap",
+  "commit": "846a2f90e00d4049c1b490dc0947347c4ed16f50",
+  "executionKey": "solver-core-api",
+  "command": [
+    "conda",
+    "run",
+    "-n",
+    "pyfp3d-core",
+    "--no-capture-output",
+    "python",
+    "-m",
+    "pytest",
+    "-p",
+    "openspec.pytest_evidence",
+    "tests/api"
+  ],
+  "exitCode": 0,
+  "actor": "lrz",
+  "startedAt": "2026-11-04T19:39:51.032800+00:00",
+  "finishedAt": "2026-11-04T19:39:52.747850+00:00",
+  "environment": {
+    "packages": {
+      "python": "3.12.16",
+      "pytest": "9.2.0",
+      "openspec-devflow": "0.3.1+commit.1c7ab6f223d4301aea8ea1deeb4dde2b246de37a"
+    },
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "python": "3.12.16"
+    }
+  },
+  "checks": [
+    {
+      "id": "solver-core-api",
+      "required": true,
+      "status": "pass",
+      "fingerprint": "39d2dd9b4e787e7e52a7d1194963393ed84a36d2b010b46569e09e096113e7c0"
+    }
+  ],
+  "status": "pass",
+  "evidence": {
+    "log": "runs/evidence/adopt-roadmap/20261104T193951-846a2f90e00d-solver-core-api-05cf9918/output.log",
+    "files": {
+      "runs/evidence/adopt-roadmap/20261104T193951-846a2f90e00d-solver-core-api-05cf9918/output.log": "86d1cbfc11759198ef44a333768a35bca3a7c7d9ef6e1deda1d480b8a0059f04",
+      "runs/evidence/adopt-roadmap/20261104T193951-846a2f90e00d-solver-core-api-05cf9918/pytest.junit.xml": "37c0d84853c30d896a1178fe56f77ab6b61a31ecfc322896e5c65b8cd02d166e"
+    }
+  }
+}
