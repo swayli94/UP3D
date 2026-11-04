@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "change": "redesign-development-workflow",
+  "profile": "affected",
+  "commit": "3c31f57d6e23f0e7fe8fa0d764bb9a469a95bb1b",
+  "productFingerprint": "74799c8318daf6f4bac1e327ae8108bc65f244a6626ab19cfae907e813b6fbe4",
+  "checks": [
+    {
+      "check": "framework-smoke",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T153126-3c9ed0e3618d-framework-smoke-833cebec",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-api",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T153130-3c9ed0e3618d-solver-core-api-bb547ce3",
+      "status": "pass"
+    },
+    {
+      "check": "solver-core-e2e",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T153134-3c9ed0e3618d-solver-core-e2e-2f4522b9",
+      "status": "pass"
+    },
+    {
+      "check": "workflow-contract",
+      "required": true,
+      "platform": "Linux",
+      "run": "20261104T153139-3c9ed0e3618d-workflow-contract-be04f79e",
+      "status": "pass"
+    }
+  ],
+  "verified": true,
+  "review": "697818336be9401cbc0c61f6bb8b4460",
+  "approval": "用户明确批准 archive redesign-development-workflow",
+  "actor": "lrz",
+  "at": "2026-11-04T16:12:13.653541+00:00"
+}
