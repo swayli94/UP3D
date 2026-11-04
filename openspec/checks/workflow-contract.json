@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "id": "workflow-contract",
+  "executionKey": "workflow-contract",
+  "title": "Validate the long-term development workflow and static plan",
+  "capabilities": [
+    "development-workflow"
+  ],
+  "cases": [],
+  "command": [
+    "python",
+    "openspec/workflow_check.py"
+  ],
+  "platforms": [
+    "Linux"
+  ],
+  "data": [],
+  "resources": [],
+  "cost": "fast",
+  "slow": false,
+  "required": true,
+  "profiles": [
+    "task",
+    "affected"
+  ],
+  "evidence": [
+    "console"
+  ],
+  "manual": false,
+  "sourcePaths": [
+    "AGENTS.md",
+    "openspec/specs",
+    "openspec/plan",
+    "openspec/workflow_check.py",
+    "openspec/project.json",
+    "openspec/checks"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "formatVersion": 1,
+  "id": "redesign-development-workflow",
+  "branch": "kimi/redesign-development-workflow",
+  "worktree": {
+    "id": "redesign-development-workflow",
+    "machine": "aliyun",
+    "path": "runs/worktrees/redesign-development-workflow"
+  },
+  "planning": {
+    "dependencies": [],
+    "lane": "L1"
+  },
+  "impact": {
+    "capabilities": [
+      "development-workflow"
+    ],
+    "cases": [],
+    "checks": [
+      "framework-smoke",
+      "solver-core-api",
+      "solver-core-e2e",
+      "workflow-contract"
+    ],
+    "risks": [
+      "workflow-documentation-coverage",
+      "clean-clone-isolation",
+      "premature-migration-plan-removal"
+    ],
+    "resources": []
+  },
+  "requirements": {
+    "platforms": [
+      "Linux"
+    ],
+    "manualChecks": [],
+    "independentReview": true,
+    "milestone": false
+  }
+}
