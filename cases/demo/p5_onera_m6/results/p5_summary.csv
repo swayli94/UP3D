@@ -1,3 +1,0 @@
-level,n_tets,cl_pressure,cl_kj,consistency,mach_max,kutta,shock_eta44,shock_eta65,shock_eta90
-coarse,55531,0.24194,0.24788,0.02396,1.3983,5.30e-04,0.5956,0.5699,0.4246
-medium,350718,0.24533,0.24987,0.01817,1.9949,5.77e-04,0.5941,0.5257,0.3453
