@@ -1,0 +1,98 @@
+{
+  "formatVersion": 2,
+  "version": "1.0.0",
+  "updated": "2026-11-05",
+  "phases": [
+    {
+      "id": "foundation",
+      "title": "重启与治理基础",
+      "lanes": [
+        {
+          "title": "已归档 Changes",
+          "items": [
+            {
+              "id": "bootstrap-devflow",
+              "code": "F0",
+              "title": "接入 devflow 最小框架",
+              "kind": "proposal",
+              "status": "done",
+              "summary": "建立 OpenSpec 与 devflow 的最小项目接入。",
+              "changes": ["bootstrap-devflow"]
+            },
+            {
+              "id": "restart-solver-core",
+              "code": "F1",
+              "title": "重建四面体自由流最小闭环",
+              "kind": "proposal",
+              "status": "done",
+              "summary": "以新规格建立最小自由流 API、CLI 和真实回归。",
+              "deps": ["bootstrap-devflow"],
+              "changes": ["restart-solver-core"]
+            },
+            {
+              "id": "redesign-development-workflow",
+              "code": "F2",
+              "title": "建立单 Change 开发契约",
+              "kind": "proposal",
+              "status": "done",
+              "summary": "固定独立 worktree、任务 Checks、独立复核与静态计划纪律。",
+              "deps": ["restart-solver-core"],
+              "changes": ["redesign-development-workflow"]
+            },
+            {
+              "id": "upgrade-devflow-0-3-1",
+              "code": "F3",
+              "title": "固定 devflow 0.3.1 工具链",
+              "kind": "proposal",
+              "status": "done",
+              "summary": "固定引擎版本、完整安装提交和严格配置预检。",
+              "deps": ["redesign-development-workflow"],
+              "changes": ["upgrade-devflow-0-3-1"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "numerical-core",
+      "title": "数值核心重建",
+      "lanes": [
+        {
+          "title": "最小路线",
+          "items": [
+            {
+              "id": "roadmap-adoption",
+              "code": "R0",
+              "title": "采用 canonical roadmap",
+              "kind": "proposal",
+              "status": "planned",
+              "summary": "建立唯一协调 graph、官方视图和直接验证。",
+              "deps": ["upgrade-devflow-0-3-1"],
+              "changes": ["adopt-roadmap"]
+            },
+            {
+              "id": "tetrahedron-p1-gradient",
+              "code": "P1",
+              "title": "P1 单元常梯度",
+              "kind": "proposal",
+              "status": "planned",
+              "summary": "从节点势函数计算每个四面体单元的常梯度。",
+              "deps": ["roadmap-adoption"],
+              "brief": "briefs/tetrahedron-p1-gradient.md"
+            },
+            {
+              "id": "cell-field-reconstruction",
+              "code": "C1",
+              "title": "评估后续单元场重建能力",
+              "kind": "discussion",
+              "status": "deferred",
+              "summary": "完成 P1 后再评估是否展开后续单元场重建能力。",
+              "deps": ["tetrahedron-p1-gradient"],
+              "backlog": "unscheduled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
