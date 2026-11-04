@@ -4,6 +4,8 @@
     "1.1": {
       "checks": [
         "framework-smoke",
+        "roadmap-contract",
+        "roadmap-view",
         "solver-core-api",
         "solver-core-e2e",
         "workflow-contract"
@@ -15,6 +17,8 @@
       ],
       "checks": [
         "framework-smoke",
+        "roadmap-contract",
+        "roadmap-view",
         "solver-core-api",
         "solver-core-e2e",
         "workflow-contract"
@@ -26,6 +30,8 @@
       ],
       "checks": [
         "framework-smoke",
+        "roadmap-contract",
+        "roadmap-view",
         "solver-core-api",
         "solver-core-e2e",
         "workflow-contract"

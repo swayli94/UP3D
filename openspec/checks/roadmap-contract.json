@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "id": "roadmap-contract",
+  "executionKey": "roadmap-contract",
+  "title": "Validate the canonical roadmap graph and dependency gates",
+  "capabilities": [
+    "development-workflow"
+  ],
+  "cases": [],
+  "command": [
+    "python",
+    "openspec/roadmap_contract.py"
+  ],
+  "platforms": [
+    "Linux"
+  ],
+  "data": [],
+  "resources": [],
+  "cost": "fast",
+  "slow": false,
+  "required": true,
+  "profiles": [
+    "task",
+    "affected"
+  ],
+  "evidence": [
+    "console"
+  ],
+  "manual": false,
+  "sourcePaths": [
+    "openspec/plan",
+    "openspec/roadmap_contract.py",
+    "openspec/project.json",
+    "openspec/devflow-install.json",
+    "openspec/checks/roadmap-contract.json"
+  ]
+}

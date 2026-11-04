@@ -62,6 +62,7 @@ EXPECTED_CHANGES = {
     "cell-field-reconstruction": [],
 }
 REQUIRED_PRODUCT_PATHS = {
+    "internal/roadmap.html",
     "openspec/specs",
     "openspec/plan",
     "openspec/workflow_check.py",

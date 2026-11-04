@@ -26,7 +26,8 @@
     "openspec/checks",
     "openspec/framework_smoke.py",
     "openspec/package_version_provider.py",
-    "openspec/pytest_evidence.py"
+    "openspec/pytest_evidence.py",
+    "internal/roadmap.html"
   ],
   "taskLayerPaths": [
     "pyfp3d",
