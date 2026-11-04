@@ -1,11 +1,11 @@
 {
   "formatVersion": 1,
-  "id": "adopt-devflow",
-  "branch": "claude/adopt-devflow",
+  "id": "bootstrap-devflow",
+  "branch": "kimi/bootstrap-devflow",
   "worktree": {
-    "id": "adopt-devflow",
+    "id": "bootstrap-devflow",
     "machine": "aliyun",
-    "path": "runs/worktrees/adopt-devflow"
+    "path": "runs/worktrees/bootstrap-devflow"
   },
   "planning": {
     "dependencies": [],
@@ -14,12 +14,16 @@
   "impact": {
     "capabilities": [],
     "cases": [],
-    "checks": [],
+    "checks": [
+      "framework-smoke"
+    ],
     "risks": [],
-    "resources": ["solver-cpu"]
+    "resources": []
   },
   "requirements": {
-    "platforms": ["Linux"],
+    "platforms": [
+      "Linux"
+    ],
     "manualChecks": [],
     "independentReview": true,
     "milestone": false

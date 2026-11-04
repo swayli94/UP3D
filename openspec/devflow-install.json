@@ -1,0 +1,34 @@
+{
+  "engineVersion": "0.2.0",
+  "files": {
+    ".claude/skills/devflow-coordinate/SKILL.md": "3f05c22d79f472f6d21b153c522c7a0811498866811c3415c7b2c5b9422129fd",
+    ".claude/skills/devflow-refactor/SKILL.md": "222412b49a28cb90b26dc66ab49e64a167a3f44fa0d716634fe85f180e60639e",
+    ".claude/skills/devflow/SKILL.md": "f44c4b59f6081494ccb973e3bd3308acc948226e892aa47bd66841aa5da33fbf",
+    ".claude/skills/openspec-apply-change/SKILL.md": "86686604a53a1ec4346c165350fbaf0d52c2f9e5f86001d47fdd60f207de1806",
+    ".claude/skills/openspec-archive-change/SKILL.md": "a21bf890b56c1a5a2b0d957e9d4653239fd766b12586a0e81991045b7921174d",
+    ".claude/skills/openspec-explore/SKILL.md": "46c08b3cf63e3f53ed63ff436a43acf4fee41cf6b8e9dcef8ce1d71fea798461",
+    ".claude/skills/openspec-propose/SKILL.md": "28bd064223cf575e7fe91a38809fd0719ccfbc3880db5bcd89beb53628b6dbd0",
+    ".claude/skills/openspec-sync-specs/SKILL.md": "e8e8ea7d95be96114f14974710624a7fe12b1d7fb1a92b0369a3c3721053f5f4",
+    ".claude/skills/openspec-update-change/SKILL.md": "e261f65954eca0fb3bfdc2ba192f1d471b349ddb6bbd516fcbc938cc5bf62614",
+    ".kimi-code/skills/devflow-coordinate/SKILL.md": "7c4df949ed9a6a2efc7187c9b9d3689e4b6e8154b6fcd5e5d82db85e327172c0",
+    ".kimi-code/skills/devflow-refactor/SKILL.md": "b5b0efdc578c0b6f53629704c5b4a19e80678a8f65aa610650fe2d7964c04d8a",
+    ".kimi-code/skills/devflow/SKILL.md": "f38dbff2c87b6f3c9af911116a4c55bec3b24b5823fc93daf401899992d7499d",
+    ".kimi-code/skills/openspec-apply-change/SKILL.md": "86686604a53a1ec4346c165350fbaf0d52c2f9e5f86001d47fdd60f207de1806",
+    ".kimi-code/skills/openspec-archive-change/SKILL.md": "a21bf890b56c1a5a2b0d957e9d4653239fd766b12586a0e81991045b7921174d",
+    ".kimi-code/skills/openspec-explore/SKILL.md": "9cedb50f83b6c75248f4966b9e5116f11f488676a8f7ce1f2385c05d898235a6",
+    ".kimi-code/skills/openspec-propose/SKILL.md": "b6e688eec799f4c0b0fd991398647a35c6bad4b9dd7f4820adc863ef1527e0c3",
+    ".kimi-code/skills/openspec-sync-specs/SKILL.md": "6654040b2b0e2e89cdfe33b2ec00a0392da5a13eac25ed7f1a8f805670843b23",
+    ".kimi-code/skills/openspec-update-change/SKILL.md": "a2a3c801abf3d2f10bc7b628f0cdf48571151fc4b7e2c9c4de6077a26ab46378",
+    "openspec/schemas/devflow/schema.yaml": "d4e083fe8d811bf86d02d966141e545aa416f7a110dd7791492e6c8b75cf3505",
+    "openspec/schemas/devflow/templates/change.json": "c039ff77a718315015580ddb69170634e5f5d3f5bfc0dbe3db4e0e02a933b06e",
+    "openspec/schemas/devflow/templates/design.md": "6ccc87f5017fb190e69e8759dd4e20d5ac3320cc4dabf152708bf8f2aa5205f8",
+    "openspec/schemas/devflow/templates/proposal.md": "0dd70e35db5c696ba8ac3cc3a53e2d6561865c1e4e7d49db5a1eaa3e4a6ad86e",
+    "openspec/schemas/devflow/templates/spec.md": "1cccfb573f031c6352bed2a879b7035ff710bc909112fc23d10bdcfcdd8d4318",
+    "openspec/schemas/devflow/templates/tasks.md": "fa67d99fb4a93b12d702f89ea83e1838219d1cad1c90a4192c402278001cd30e"
+  },
+  "formatVersion": 1,
+  "hosts": [
+    "claude",
+    "kimi"
+  ]
+}

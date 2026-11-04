@@ -1,0 +1,7 @@
+{
+  "name": "up3d",
+  "private": true,
+  "devDependencies": {
+    "@fission-ai/openspec": "1.16.0"
+  }
+}

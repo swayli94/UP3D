@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "integrationBranch": "main",
+  "integrationRemote": "origin",
+  "evidenceRoot": "runs/evidence",
+  "resourceStateRoot": "runs/devflow",
+  "productPaths": [
+    "pyfp3d",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "package.json",
+    "package-lock.json",
+    ".claude/skills",
+    ".kimi-code/skills",
+    "openspec/config.yaml",
+    "openspec/project.json",
+    "openspec/devflow-install.json",
+    "openspec/schemas",
+    "openspec/checks",
+    "openspec/framework_smoke.py"
+  ],
+  "taskLayerPaths": [],
+  "environmentPackages": [],
+  "resources": {}
+}
