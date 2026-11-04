@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "id": "ec1aadb2801b4f829cd94d2df57c3f1c",
+  "change": "upgrade-devflow-0-3-1",
+  "commit": "13aaeb030b9ed2c61a681ce0688dd51e0cc9d27e",
+  "reviewer": "kimi-independent-0-3-1",
+  "productFingerprint": "67d2f3dc79c64fbace8443c6a1767842ae34dad5c09d61085d95277b166148f0",
+  "findings": [],
+  "openFindings": [],
+  "approved": true,
+  "at": "2026-11-04T17:50:30.530065+00:00"
+}
